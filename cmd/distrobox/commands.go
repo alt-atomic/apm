@@ -231,7 +231,7 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "search",
-						Usage: "Построение запроса для получения списка пакетов",
+						Usage: "Поиск пакета по названию",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:    "container",
