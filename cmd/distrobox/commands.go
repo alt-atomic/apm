@@ -148,9 +148,8 @@ func CommandList() *cli.Command {
 		Usage:   "Управление контейнерами и пакетами",
 		Commands: []*cli.Command{
 			{
-				Name:    "package",
-				Aliases: []string{"p"},
-				Usage:   "Модуль для работы с пакетами",
+				Name:  "package",
+				Usage: "Модуль для работы с пакетами",
 				Commands: []*cli.Command{
 					{
 						Name:  "update",
@@ -505,9 +504,8 @@ func CommandList() *cli.Command {
 				},
 			},
 			{
-				Name:    "container",
-				Aliases: []string{"с"},
-				Usage:   "Модуль для работы с контейнерами",
+				Name:  "container",
+				Usage: "Модуль для работы с контейнерами",
 				Commands: []*cli.Command{
 					{
 						Name:  "list",
