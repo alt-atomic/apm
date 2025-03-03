@@ -417,7 +417,7 @@ func CommandList() *cli.Command {
 								packageInfo, _ = os.GetInfoPackage(osInfo, packageName)
 							}
 
-							if cmd.Bool("export") || !packageInfo.PackageInfo.Exporting {
+							if cmd.Bool("export") && !packageInfo.PackageInfo.Exporting {
 								errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
 								if errExport != nil {
 									return response(cmd, newErrorResponse(errExport.Error()))
