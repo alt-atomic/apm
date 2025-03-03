@@ -33,7 +33,7 @@ func main() {
 			{
 				Name:      "help",
 				Aliases:   []string{"h"},
-				Usage:     "Показывать список команд или справку по каждой команде",
+				Usage:     "Показать список команд или справку по каждой команде",
 				ArgsUsage: "[command]",
 				HideHelp:  true,
 			},
