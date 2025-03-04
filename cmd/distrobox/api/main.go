@@ -236,7 +236,8 @@ func CreateContainer(image, containerName string, addPkg string) (ContainerInfo,
 
 	// Выполняем команду создания контейнера
 	if err := cmd.Run(); err != nil {
-		return ContainerInfo{}, fmt.Errorf("не удалось создать контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
+		logger.Log.Errorf("не удалось создать контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
+		return ContainerInfo{}, fmt.Errorf("не удалось создать контейнер %s: %v", containerName, err)
 	}
 
 	return GetContainerOsInfo(containerName)

@@ -191,9 +191,10 @@ func CommandList() *cli.Command {
 						Usage: "Обновить и синхронизировать списки установленных пакетов с хостом",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:    "container",
-								Usage:   "Название контейнера",
-								Aliases: []string{"c"},
+								Name:     "container",
+								Usage:    "Название контейнера",
+								Required: true,
+								Aliases:  []string{"c"},
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -225,9 +226,10 @@ func CommandList() *cli.Command {
 						Usage: "Информация о пакете",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:    "container",
-								Usage:   "Название контейнера",
-								Aliases: []string{"c"},
+								Name:     "container",
+								Usage:    "Название контейнера",
+								Aliases:  []string{"c"},
+								Required: true,
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -265,9 +267,10 @@ func CommandList() *cli.Command {
 						Usage: "Поиск пакета по названию",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:    "container",
-								Usage:   "Название контейнера",
-								Aliases: []string{"c"},
+								Name:     "container",
+								Usage:    "Название контейнера",
+								Aliases:  []string{"c"},
+								Required: true,
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -314,9 +317,10 @@ func CommandList() *cli.Command {
 						Usage: "Построение запроса для получения списка пакетов",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:    "container",
-								Usage:   "Название контейнера",
-								Aliases: []string{"c"},
+								Name:     "container",
+								Usage:    "Название контейнера",
+								Aliases:  []string{"c"},
+								Required: true,
 							},
 							&cli.StringFlag{
 								Name:  "sort",
@@ -407,9 +411,10 @@ func CommandList() *cli.Command {
 						Usage: "Установить пакет",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:    "container",
-								Usage:   "Название контейнера",
-								Aliases: []string{"c"},
+								Name:     "container",
+								Usage:    "Название контейнера",
+								Aliases:  []string{"c"},
+								Required: true,
 							},
 							&cli.BoolFlag{
 								Name:  "export",
@@ -473,9 +478,10 @@ func CommandList() *cli.Command {
 						Usage: "Удалить пакет",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:    "container",
-								Usage:   "Название контейнера",
-								Aliases: []string{"c"},
+								Name:     "container",
+								Usage:    "Название контейнера",
+								Aliases:  []string{"c"},
+								Required: true,
 							},
 							&cli.BoolFlag{
 								Name:  "only-export",
@@ -568,12 +574,14 @@ func CommandList() *cli.Command {
 						Usage: "Добавить контейнер",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:  "image",
-								Usage: "Ссылка на образ",
+								Name:     "image",
+								Usage:    "Ссылка на образ",
+								Required: true,
 							},
 							&cli.StringFlag{
-								Name:  "name",
-								Usage: "Название контейнера",
+								Name:     "name",
+								Usage:    "Название контейнера",
+								Required: true,
 							},
 							&cli.StringFlag{
 								Name:  "additional-packages",
@@ -615,8 +623,9 @@ func CommandList() *cli.Command {
 						Usage: "Удалить контейнер",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:  "name",
-								Usage: "Название контейнера",
+								Name:     "name",
+								Usage:    "Название контейнера",
+								Required: true,
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
