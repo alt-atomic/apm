@@ -258,7 +258,7 @@ func CommandList() *cli.Command {
 									"message": packageInfoPlainText(packageInfo.PackageInfo),
 									"package": packageInfo,
 								},
-								Error: true,
+								Error: false,
 							})
 						}),
 					},
