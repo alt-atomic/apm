@@ -11,6 +11,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // APIResponse описывает формат ответа
@@ -113,6 +114,7 @@ func response(cmd *cli.Command, resp APIResponse) error {
 		}
 		dbus_event.SendNotificationResponse(string(b))
 		fmt.Println(string(b))
+		time.Sleep(200 * time.Millisecond)
 	case "json":
 		if !resp.Error {
 			if dataMap, ok := resp.Data.(map[string]interface{}); ok {

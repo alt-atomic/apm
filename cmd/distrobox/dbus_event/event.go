@@ -12,6 +12,7 @@ import (
 type DBUSNotification struct {
 	Data        interface{} `json:"data"`
 	Transaction string      `json:"transaction,omitempty"`
+	Type        string      `json:"type,omitempty"`
 }
 
 var (
@@ -44,7 +45,7 @@ func SendFuncNameDBUS(state string) {
 		EventType string `json:"event_type"`
 	}
 
-	baseModel := DBUSNotification{Data: Model{EventName: parts[len(parts)-1], EventType: state}, Transaction: TRANSACTION}
+	baseModel := DBUSNotification{Data: Model{EventName: parts[len(parts)-1], EventType: state}, Transaction: TRANSACTION, Type: "event"}
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
@@ -64,6 +65,7 @@ func SendNotificationResponse(message string) {
 		logger.Log.Debug("Соединение DBus не инициализировано")
 		return
 	}
+
 	// Объектный путь, по которому отправляются сигналы
 	objPath := dbus.ObjectPath("/com/application/APM")
 	signalName := "com.application.APM.Notification"

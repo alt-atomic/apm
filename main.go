@@ -1,16 +1,14 @@
 package main
 
 import (
+	"apm/cmd/distrobox"
 	"apm/config"
 	"apm/database"
 	"apm/event"
+	"apm/logger"
 	"context"
 	"github.com/urfave/cli/v3"
 	"os"
-	"time"
-
-	"apm/cmd/distrobox"
-	"apm/logger"
 )
 
 func main() {
@@ -54,5 +52,4 @@ func main() {
 	if err := rootCommand.Run(context.Background(), os.Args); err != nil {
 		logger.Log.Error(err.Error())
 	}
-	time.Sleep(200 * time.Millisecond)
 }
