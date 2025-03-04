@@ -23,6 +23,10 @@ var (
 
 // SendFuncNameDBUS отправляет название функции в DBUS для отслеживания состояния
 func SendFuncNameDBUS(state string) {
+	if FORMAT != "dbus" {
+		return
+	}
+
 	pc, _, _, ok := runtime.Caller(1)
 	if !ok {
 		return
