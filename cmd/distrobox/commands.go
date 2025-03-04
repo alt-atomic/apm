@@ -3,6 +3,7 @@ package distrobox
 import (
 	"apm/cmd/distrobox/api"
 	"apm/cmd/distrobox/os"
+	"apm/dbus"
 	"apm/logger"
 	"context"
 	"encoding/json"
@@ -14,8 +15,9 @@ import (
 
 // APIResponse описывает формат ответа
 type APIResponse struct {
-	Data  interface{} `json:"data"`
-	Error bool        `json:"error"`
+	Data        interface{} `json:"data"`
+	Error       bool        `json:"error"`
+	Transaction string      `json:"transaction,omitempty"`
 }
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
@@ -95,14 +97,30 @@ func validateContainer(cmd *cli.Command) (string, APIResponse, error) {
 
 // response анализирует формат и выводит данные в соответствии с ним.
 func response(cmd *cli.Command, resp APIResponse) error {
-	formatVal := cmd.Root().Value("format")
-	format, ok := formatVal.(string)
-	if !ok || format == "" {
-		format = "text"
-	}
+	format := cmd.String("format")
+	resp.Transaction = cmd.String("transaction")
 
 	switch format {
+	case "dbus":
+		if !resp.Error {
+			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
+				delete(dataMap, "message")
+			}
+		}
+
+		b, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			return err
+		}
+		dbus.SendNotificationResponse(string(b))
+		fmt.Println(string(b))
 	case "json":
+		if !resp.Error {
+			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
+				delete(dataMap, "message")
+			}
+		}
+
 		b, err := json.MarshalIndent(resp, "", "  ")
 		if err != nil {
 			return err
@@ -146,6 +164,10 @@ func CommandList() *cli.Command {
 		Name:    "distrobox",
 		Aliases: []string{"d"},
 		Usage:   "Управление контейнерами и пакетами",
+		//Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+		//	logger.Log.Debugf(cmd.Root().String("format"))
+		//	return ctx, nil
+		//},
 		Commands: []*cli.Command{
 			{
 				Name:  "package",
@@ -203,10 +225,7 @@ func CommandList() *cli.Command {
 
 							packageName := cmd.Args().First()
 							if cmd.Args().Len() == 0 || packageName == "" {
-								resp = APIResponse{
-									Data:  map[string]string{"message": "Необходимо указать название пакета"},
-									Error: true,
-								}
+								return response(cmd, newErrorResponse("Необходимо указать название пакета"))
 							}
 
 							osInfo, err := api.GetContainerOsInfo(containerVal)
@@ -590,13 +609,6 @@ func CommandList() *cli.Command {
 						Action: func(ctx context.Context, cmd *cli.Command) error {
 							var resp APIResponse
 
-							//containerName := cmd.Args().First()
-							//if cmd.Args().Len() == 0 || containerName == "" {
-							//	resp = APIResponse{
-							//		Data:  map[string]string{"message": "Контейнер не указан"},
-							//		Error: true,
-							//	}
-							//}
 							nameVal := cmd.String("name")
 							if strings.TrimSpace(nameVal) == "" {
 								return response(cmd, newErrorResponse("Необходимо указать название контейнера (--name)"))

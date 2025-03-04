@@ -60,8 +60,10 @@ func getProvider(osName string) (PackageProvider, error) {
 	lowerName := strings.ToLower(osName)
 	if strings.Contains(lowerName, "ubuntu") || strings.Contains(lowerName, "debian") {
 		return NewUbuntuProvider(), nil
+	} else if strings.Contains(lowerName, "arch") {
+		return NewArchProvider(), nil
 	} else {
-		return nil, errors.New("incorrect container name: " + osName)
+		return nil, errors.New("Данный контейнер не поддерживается: " + osName)
 	}
 }
 
