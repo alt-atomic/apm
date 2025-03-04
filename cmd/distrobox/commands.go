@@ -176,7 +176,7 @@ func CommandList() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
-				Usage:   "Формат вывода: json, text, dbus1 (com.application.APM)",
+				Usage:   "Формат вывода: json, text, dbus (com.application.APM)",
 				Aliases: []string{"f"},
 				Value:   "text",
 			},
