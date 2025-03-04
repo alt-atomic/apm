@@ -3,10 +3,11 @@ package main
 import (
 	"apm/config"
 	"apm/database"
-	"apm/dbus"
+	"apm/event"
 	"context"
 	"github.com/urfave/cli/v3"
 	"os"
+	"time"
 
 	"apm/cmd/distrobox"
 	"apm/logger"
@@ -18,15 +19,16 @@ func main() {
 	config.InitConfig()
 	logger.InitLogger()
 	database.InitDatabase()
-	go dbus.InitDBus()
+	go event.InitDBus()
 
 	rootCommand := &cli.Command{
-		Name:  "apm",
-		Usage: "Atomic Packages Manager",
+		Name:                  "apm",
+		Usage:                 "Atomic Packages Manager",
+		EnableShellCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
-				Usage:   "Формат вывода: json, text, dbus (com.application.APM)",
+				Usage:   "Формат вывода: json, text",
 				Aliases: []string{"f"},
 				Value:   "text",
 			},
@@ -48,7 +50,9 @@ func main() {
 		},
 	}
 
+	rootCommand.Suggest = true
 	if err := rootCommand.Run(context.Background(), os.Args); err != nil {
 		logger.Log.Error(err.Error())
 	}
+	time.Sleep(200 * time.Millisecond)
 }

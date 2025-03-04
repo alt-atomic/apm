@@ -1,6 +1,7 @@
 package os
 
 import (
+	"apm/cmd/distrobox/dbus_event"
 	"apm/logger"
 	"bytes"
 	"errors"
@@ -69,51 +70,68 @@ func getProvider(osName string) (PackageProvider, error) {
 
 // InstallPackage установка пакета
 func InstallPackage(containerInfo api.ContainerInfo, packageName string) error {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return err
 	}
+
 	return provider.InstallPackage(containerInfo, packageName)
 }
 
 // RemovePackage удаление пакета
 func RemovePackage(containerInfo api.ContainerInfo, packageName string) error {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return err
 	}
+
 	return provider.RemovePackage(containerInfo, packageName)
 }
 
 // GetPackages получает список пакетов из контейнера.
 func GetPackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
 	}
+
 	return provider.GetPackages(containerInfo)
 }
 
 // GetPackageOwner получает название пакета, которому принадлежит указанный файл, из контейнера.
 func GetPackageOwner(containerInfo api.ContainerInfo, fileName string) (string, error) {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return "", err
 	}
+
 	return provider.GetPackageOwner(containerInfo, fileName)
 }
 
 // GetPathByPackageName получает список путей для файла пакета из контейнера.
 func GetPathByPackageName(containerInfo api.ContainerInfo, packageName, filePath string) ([]string, error) {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
 	}
+
 	return provider.GetPathByPackageName(containerInfo, packageName, filePath)
 }
 
 // GetInfoPackage возвращает информацию о пакете
 func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPackageAnswer, error) {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	// Получаем информацию о пакете из базы данных
 	info, err := GetPackageInfoByName(containerInfo.ContainerName, packageName)
 	if err != nil {
@@ -149,6 +167,8 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 
 // UpdatePackages обновляет пакеты и записывает в базу данных
 func UpdatePackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	packages, err := GetPackages(containerInfo)
 	if err != nil {
 		logger.Log.Error(err)
@@ -166,6 +186,8 @@ func UpdatePackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
 
 // GetPackagesQuery получение списка пакетов с фильтрацией и сортировкой
 func GetPackagesQuery(containerInfo api.ContainerInfo, builder PackageQueryBuilder) (PackageQueryResult, error) {
+	go dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
+	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	if builder.ForceUpdate {
 		_, err := UpdatePackages(containerInfo)
 		if err != nil {

@@ -2,8 +2,8 @@ package distrobox
 
 import (
 	"apm/cmd/distrobox/api"
+	"apm/cmd/distrobox/dbus_event"
 	"apm/cmd/distrobox/os"
-	"apm/dbus"
 	"apm/logger"
 	"context"
 	"encoding/json"
@@ -95,7 +95,6 @@ func validateContainer(cmd *cli.Command) (string, APIResponse, error) {
 	return containerVal, APIResponse{}, nil
 }
 
-// response анализирует формат и выводит данные в соответствии с ним.
 func response(cmd *cli.Command, resp APIResponse) error {
 	format := cmd.String("format")
 	resp.Transaction = cmd.String("transaction")
@@ -112,7 +111,7 @@ func response(cmd *cli.Command, resp APIResponse) error {
 		if err != nil {
 			return err
 		}
-		dbus.SendNotificationResponse(string(b))
+		dbus_event.SendNotificationResponse(string(b))
 		fmt.Println(string(b))
 	case "json":
 		if !resp.Error {
@@ -159,15 +158,27 @@ func pluralizePackage(n int) string {
 	return "пакетов"
 }
 
+func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
+	return func(ctx context.Context, cmd *cli.Command) error {
+		dbus_event.FORMAT = cmd.String("format")
+		dbus_event.TRANSACTION = cmd.String("transaction")
+		return action(ctx, cmd)
+	}
+}
+
 func CommandList() *cli.Command {
 	return &cli.Command{
 		Name:    "distrobox",
 		Aliases: []string{"d"},
 		Usage:   "Управление контейнерами и пакетами",
-		//Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-		//	logger.Log.Debugf(cmd.Root().String("format"))
-		//	return ctx, nil
-		//},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "format",
+				Usage:   "Формат вывода: json, text, dbus1 (com.application.APM)",
+				Aliases: []string{"f"},
+				Value:   "text",
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:  "package",
@@ -183,7 +194,7 @@ func CommandList() *cli.Command {
 								Aliases: []string{"c"},
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containerVal, resp, err := validateContainer(cmd)
 							if err != nil {
 								return response(cmd, resp)
@@ -205,7 +216,7 @@ func CommandList() *cli.Command {
 							}
 
 							return response(cmd, resp)
-						},
+						}),
 					},
 					{
 						Name:  "info",
@@ -217,7 +228,7 @@ func CommandList() *cli.Command {
 								Aliases: []string{"c"},
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containerVal, resp, err := validateContainer(cmd)
 							if err != nil {
 								return response(cmd, resp)
@@ -245,7 +256,7 @@ func CommandList() *cli.Command {
 								},
 								Error: true,
 							})
-						},
+						}),
 					},
 					{
 						Name:  "search",
@@ -257,7 +268,7 @@ func CommandList() *cli.Command {
 								Aliases: []string{"c"},
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containerVal, resp, err := validateContainer(cmd)
 							if err != nil {
 								return response(cmd, resp)
@@ -294,7 +305,7 @@ func CommandList() *cli.Command {
 							}
 
 							return response(cmd, resp)
-						},
+						}),
 					},
 					{
 						Name:  "list",
@@ -338,7 +349,7 @@ func CommandList() *cli.Command {
 								Value: false,
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containerVal, resp, err := validateContainer(cmd)
 							if err != nil {
 								return response(cmd, resp)
@@ -387,7 +398,7 @@ func CommandList() *cli.Command {
 							}
 
 							return response(cmd, resp)
-						},
+						}),
 					},
 					{
 						Name:  "install",
@@ -404,7 +415,7 @@ func CommandList() *cli.Command {
 								Value: true,
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containerVal, resp, err := validateContainer(cmd)
 							if err != nil {
 								return response(cmd, resp)
@@ -453,7 +464,7 @@ func CommandList() *cli.Command {
 								},
 								Error: false,
 							})
-						},
+						}),
 					},
 					{
 						Name:  "rm",
@@ -470,7 +481,7 @@ func CommandList() *cli.Command {
 								Value: false,
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containerVal, resp, err := validateContainer(cmd)
 							if err != nil {
 								return response(cmd, resp)
@@ -518,7 +529,7 @@ func CommandList() *cli.Command {
 								},
 								Error: false,
 							})
-						},
+						}),
 					},
 				},
 			},
@@ -529,7 +540,7 @@ func CommandList() *cli.Command {
 					{
 						Name:  "list",
 						Usage: "Список контейнеров",
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containers, err := api.GetContainerList(true)
 							if err != nil {
 								return response(cmd, newErrorResponse(err.Error()))
@@ -548,7 +559,7 @@ func CommandList() *cli.Command {
 								Error: false,
 							}
 							return response(cmd, resp)
-						},
+						}),
 					},
 					{
 						Name:  "add",
@@ -568,7 +579,7 @@ func CommandList() *cli.Command {
 								Value: "zsh",
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							var resp APIResponse
 							imageVal := cmd.String("image")
 							nameVal := cmd.String("name")
@@ -595,7 +606,7 @@ func CommandList() *cli.Command {
 								Error: false,
 							}
 							return response(cmd, resp)
-						},
+						}),
 					},
 					{
 						Name:  "rm",
@@ -606,7 +617,7 @@ func CommandList() *cli.Command {
 								Usage: "Название контейнера",
 							},
 						},
-						Action: func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							var resp APIResponse
 
 							nameVal := cmd.String("name")
@@ -628,7 +639,7 @@ func CommandList() *cli.Command {
 							}
 
 							return response(cmd, resp)
-						},
+						}),
 					},
 				},
 			},
