@@ -39,6 +39,7 @@ var (
 			Foreground(adaptiveItemColor)
 )
 
+// IsTTY пользователь запустил приложение в интерактивной консоли
 func IsTTY() bool {
 	return terminal.IsTerminal(int(os.Stdout.Fd()))
 }
@@ -119,6 +120,8 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 	for _, k := range keys {
 		v := data[k]
 		switch vv := v.(type) {
+		case nil:
+			t.Child(fmt.Sprintf("%s: null", k))
 		case string:
 			t.Child(fmt.Sprintf("%s: %s", k, vv))
 

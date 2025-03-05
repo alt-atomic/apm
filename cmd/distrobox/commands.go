@@ -137,8 +137,14 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера",
+						Usage:    "Название контейнера. Необходимо указать",
 						Aliases:  []string{"c"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "package",
+						Usage:    "Название пакета. Необходимо указать",
+						Aliases:  []string{"p"},
 						Required: true,
 					},
 				},
@@ -148,10 +154,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(cmd, resp)
 					}
 
-					packageName := cmd.Args().First()
-					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
-					}
+					packageName := cmd.String("package")
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
@@ -178,8 +181,14 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера",
+						Usage:    "Название контейнера. Необходимо указать",
 						Aliases:  []string{"c"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "package",
+						Usage:    "Название пакета. Необходимо указать",
+						Aliases:  []string{"p"},
 						Required: true,
 					},
 				},
@@ -189,10 +198,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(cmd, resp)
 					}
 
-					packageName := cmd.Args().First()
-					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
-					}
+					packageName := cmd.String("package")
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
@@ -226,7 +232,7 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера",
+						Usage:    "Название контейнера. Необходимо указать",
 						Aliases:  []string{"c"},
 						Required: true,
 					},
@@ -317,8 +323,14 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера",
+						Usage:    "Название контейнера. Необходимо указать",
 						Aliases:  []string{"c"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "package",
+						Usage:    "Название пакета. Необходимо указать",
+						Aliases:  []string{"p"},
 						Required: true,
 					},
 					&cli.BoolFlag{
@@ -333,15 +345,12 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(cmd, resp)
 					}
 
-					packageName := cmd.Args().First()
-					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
-					}
-
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
 						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
+
+					packageName := cmd.String("package")
 
 					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
 					if err != nil {
@@ -385,8 +394,14 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера",
+						Usage:    "Название контейнера. Необходимо указать",
 						Aliases:  []string{"c"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "package",
+						Usage:    "Название пакета. Необходимо указать",
+						Aliases:  []string{"p"},
 						Required: true,
 					},
 					&cli.BoolFlag{
@@ -401,10 +416,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(cmd, resp)
 					}
 
-					packageName := cmd.Args().First()
-					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
-					}
+					packageName := cmd.String("package")
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
@@ -479,12 +491,12 @@ func CommandList() *cli.Command {
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "image",
-								Usage:    "Ссылка на образ",
+								Usage:    "Ссылка на образ. Необходимо указать",
 								Required: true,
 							},
 							&cli.StringFlag{
 								Name:     "name",
-								Usage:    "Название контейнера",
+								Usage:    "Название контейнера. Необходимо указать",
 								Required: true,
 							},
 							&cli.StringFlag{
@@ -492,11 +504,16 @@ func CommandList() *cli.Command {
 								Usage: "Список пакетов для установки",
 								Value: "zsh",
 							},
+							&cli.StringFlag{
+								Name:  "init-hooks",
+								Usage: "Вызов хука для выполнения команд",
+							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							imageVal := cmd.String("image")
 							nameVal := cmd.String("name")
 							addPkgVal := cmd.String("additional-packages")
+							hookVal := cmd.String("init-hooks")
 
 							if strings.TrimSpace(imageVal) == "" {
 								return reply.CliResponse(cmd, newErrorResponse("Необходимо указать ссылку на образ (--image)"))
@@ -506,7 +523,7 @@ func CommandList() *cli.Command {
 								return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название контейнера (--name)"))
 							}
 
-							result, err := api.CreateContainer(imageVal, nameVal, addPkgVal)
+							result, err := api.CreateContainer(imageVal, nameVal, addPkgVal, hookVal)
 							if err != nil {
 								return reply.CliResponse(cmd, newErrorResponse(fmt.Sprintf("Ошибка создания контейнера: %v", err)))
 							}
@@ -528,7 +545,7 @@ func CommandList() *cli.Command {
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "name",
-								Usage:    "Название контейнера",
+								Usage:    "Название контейнера. Необходимо указать",
 								Required: true,
 							},
 						},

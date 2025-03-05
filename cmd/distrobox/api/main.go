@@ -203,7 +203,7 @@ func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
 }
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
-func CreateContainer(image, containerName string, addPkg string) (ContainerInfo, error) {
+func CreateContainer(image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
 	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
 	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	containers, errContainerList := GetContainerList(false)
@@ -226,7 +226,7 @@ func CreateContainer(image, containerName string, addPkg string) (ContainerInfo,
 			fmt.Errorf("контейнер уже сушествует: %s", containerName)
 	}
 
-	command := fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s", lib.Env.CommandPrefix, image, containerName, addPkg)
+	command := fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s --init-hooks %s", lib.Env.CommandPrefix, image, containerName, addPkg, hook)
 	cmd := exec.Command("sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer

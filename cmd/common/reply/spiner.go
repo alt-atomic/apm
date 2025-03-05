@@ -23,7 +23,7 @@ type model struct {
 
 // CreateSpinner — запуск спиннера в отдельной горутине.
 func CreateSpinner() {
-	if lib.Env.Format != "text" {
+	if lib.Env.Format != "text" && IsTTY() {
 		return
 	}
 
@@ -52,7 +52,7 @@ func CreateSpinner() {
 
 // StopSpinner — останавливает спиннер (ждёт, пока Bubble Tea полностью выйдет).
 func StopSpinner() {
-	if lib.Env.Format != "text" {
+	if lib.Env.Format != "text" && IsTTY() {
 		return
 	}
 
