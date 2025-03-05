@@ -72,6 +72,8 @@ func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx context.Context, cmd *cli.Command) error {
 		lib.Env.Format = cmd.String("format")
 		lib.Env.Transaction = cmd.String("transaction")
+
+		reply.CreateSpinner()
 		return action(ctx, cmd)
 	}
 }
@@ -520,8 +522,9 @@ func CommandList() *cli.Command {
 						}),
 					},
 					{
-						Name:  "rm",
-						Usage: "Удалить контейнер",
+						Name:    "remove",
+						Usage:   "Удалить контейнер",
+						Aliases: []string{"rm"},
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "name",

@@ -5,6 +5,7 @@ import (
 	"apm/lib"
 	"context"
 	"github.com/urfave/cli/v3"
+	"time"
 )
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
@@ -17,8 +18,22 @@ func newErrorResponse(message string) reply.APIResponse {
 	}
 }
 
+func withSpinnerWrapper(action cli.ActionFunc) cli.ActionFunc {
+	return func(ctx context.Context, cmd *cli.Command) error {
+		lib.Env.Format = cmd.String("format")
+		lib.Env.Transaction = cmd.String("transaction")
+
+		reply.CreateSpinner()
+		err := action(ctx, cmd)
+		reply.StopSpinner()
+
+		return err
+	}
+}
+
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx context.Context, cmd *cli.Command) error {
+
 		lib.Env.Format = cmd.String("format")
 		lib.Env.Transaction = cmd.String("transaction")
 		return action(ctx, cmd)
@@ -50,19 +65,25 @@ func CommandList() *cli.Command {
 						Aliases:  []string{"c"},
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+				Action: withSpinnerWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					// Спиннер уже крутится
 					type Test struct {
 						Container string `json:"container"`
 						Message   string `json:"message"`
 					}
+					// Долгая работа
+					time.Sleep(3 * time.Second)
 
-					return reply.CliResponse(cmd, reply.APIResponse{
+					// Теперь ничего не ломается при выводе
+					resp := reply.APIResponse{
 						Data: map[string]interface{}{
 							"message": Test{Container: "123", Message: "123"},
 							"test":    Test{Container: "2", Message: "3"},
 						},
 						Error: false,
-					})
+					}
+
+					return reply.CliResponse(cmd, resp)
 				}),
 			},
 			{
@@ -96,8 +117,9 @@ func CommandList() *cli.Command {
 				//}),
 			},
 			{
-				Name:  "rm",
-				Usage: "Поиск пакета по названию",
+				Name:    "remove",
+				Usage:   "Поиск пакета по названию",
+				Aliases: []string{"rm"},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",

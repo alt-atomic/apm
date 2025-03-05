@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/tree"
 	"github.com/urfave/cli/v3"
+	"golang.org/x/crypto/ssh/terminal"
+	"os"
 	"reflect"
 	"sort"
 	"time"
@@ -36,6 +38,10 @@ var (
 	itemStyle = lipgloss.NewStyle().
 			Foreground(adaptiveItemColor)
 )
+
+func IsTTY() bool {
+	return terminal.IsTerminal(int(os.Stdout.Fd()))
+}
 
 // buildTreeFromMap рекурсивно строит дерево (tree.Tree) из map[string]interface{}.
 func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
@@ -181,6 +187,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 
 // CliResponse рендерит ответ в зависимости от формата (dbus/json/text).
 func CliResponse(cmd *cli.Command, resp APIResponse) error {
+	StopSpinner()
 	format := cmd.String("format")
 	resp.Transaction = cmd.String("transaction")
 
