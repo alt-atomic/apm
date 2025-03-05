@@ -203,7 +203,7 @@ func CommandList() *cli.Command {
 					}
 
 					word := pluralizePackage(queryResult.TotalCount)
-					msg := fmt.Sprintf("Найдено: %d %s\n", queryResult.TotalCount, word)
+					msg := fmt.Sprintf("Найден %d %s\n", queryResult.TotalCount, word)
 
 					// Формируем ответ
 					resp = reply.APIResponse{
