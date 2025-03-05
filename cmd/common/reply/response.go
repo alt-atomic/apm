@@ -1,7 +1,7 @@
 package reply
 
 import (
-	"apm/cmd/distrobox/dbus_event"
+	"apm/cmd/common/dbus"
 	"encoding/json"
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
@@ -206,9 +206,9 @@ func CliResponse(cmd *cli.Command, resp APIResponse) error {
 		if err != nil {
 			return err
 		}
-		dbus_event.SendNotificationResponse(string(b))
+		dbus.SendNotificationResponse(string(b))
 		fmt.Println(string(b))
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 	// ---------------------------------- JSON ----------------------------------
 	case "json":

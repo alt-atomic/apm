@@ -1,4 +1,4 @@
-package dbus_event
+package dbus
 
 import (
 	"apm/lib"
@@ -6,6 +6,7 @@ import (
 	"github.com/godbus/dbus"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type DBUSNotification struct {
@@ -60,7 +61,11 @@ func SendNotificationResponse(message string) {
 
 	if lib.DBUSConn == nil {
 		lib.Log.Debug("Соединение DBus не инициализировано")
-		return
+		time.Sleep(100 * time.Millisecond)
+
+		if lib.DBUSConn == nil {
+			return
+		}
 	}
 
 	// Объектный путь, по которому отправляются сигналы

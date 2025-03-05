@@ -1,7 +1,7 @@
 package api
 
 import (
-	"apm/cmd/distrobox/dbus_event"
+	"apm/cmd/common/dbus"
 	"apm/lib"
 	"bytes"
 	"errors"
@@ -19,8 +19,8 @@ type ContainerInfo struct {
 
 // GetContainerList возвращает список объектов ContainerInfo с именами контейнеров.
 func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
-	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
-	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
+	dbus.SendFuncNameDBUS(dbus.STATE_BEFORE)
+	defer dbus.SendFuncNameDBUS(dbus.STATE_AFTER)
 	// Формируем команду с префиксом из конфигурации
 	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
 
@@ -78,8 +78,8 @@ func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 // Если isConsole == false, формируется команда экспорта GUI приложения;
 // если isConsole == true, формируются команды для каждого пути из pathList.
 func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
-	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
-	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
+	dbus.SendFuncNameDBUS(dbus.STATE_BEFORE)
+	defer dbus.SendFuncNameDBUS(dbus.STATE_AFTER)
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.
 	suffix := ""
 	if deleteApp {
@@ -133,8 +133,8 @@ func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole boo
 
 // GetContainerOsInfo возвращает объект с информацией о контейнере
 func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
-	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
-	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
+	dbus.SendFuncNameDBUS(dbus.STATE_BEFORE)
+	defer dbus.SendFuncNameDBUS(dbus.STATE_AFTER)
 	containers, errContainerList := GetContainerList(false)
 	if errContainerList != nil {
 		lib.Log.Error(errContainerList.Error())
@@ -204,8 +204,8 @@ func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
 func CreateContainer(image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
-	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
-	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
+	dbus.SendFuncNameDBUS(dbus.STATE_BEFORE)
+	defer dbus.SendFuncNameDBUS(dbus.STATE_AFTER)
 	containers, errContainerList := GetContainerList(false)
 	if errContainerList != nil {
 		lib.Log.Error(errContainerList.Error())
@@ -244,8 +244,8 @@ func CreateContainer(image, containerName string, addPkg string, hook string) (C
 
 // RemoveContainer удаление контейнера
 func RemoveContainer(containerName string) (ContainerInfo, error) {
-	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
-	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
+	dbus.SendFuncNameDBUS(dbus.STATE_BEFORE)
+	defer dbus.SendFuncNameDBUS(dbus.STATE_AFTER)
 	command := fmt.Sprintf("%s distrobox rm %s", lib.Env.CommandPrefix, containerName)
 	cmd := exec.Command("sh", "-c", command)
 
