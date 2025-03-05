@@ -2,8 +2,7 @@ package api
 
 import (
 	"apm/cmd/distrobox/dbus_event"
-	"apm/config"
-	"apm/logger"
+	"apm/lib"
 	"bytes"
 	"errors"
 	"fmt"
@@ -23,7 +22,7 @@ func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
 	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	// Формируем команду с префиксом из конфигурации
-	command := fmt.Sprintf("%s distrobox ls", config.Env.CommandPrefix)
+	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
 
 	cmd := exec.Command("sh", "-c", command)
 
@@ -57,7 +56,7 @@ func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 			if getFullInfo {
 				osInfo, err = GetContainerOsInfo(name)
 				if err != nil {
-					logger.Log.Error(err)
+					lib.Log.Error(err)
 					continue
 				}
 			} else {
@@ -92,13 +91,13 @@ func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole boo
 	if !isConsole {
 		// Команда экспорта GUI-приложения
 		appCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export --app %s %s",
-			config.Env.CommandPrefix, containerInfo.ContainerName, packageName, suffix)
+			lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, suffix)
 		commands = append(commands, appCommand)
 	} else {
 		// Формируем команду для каждого пути консольного приложения
 		for _, path := range pathList {
 			pathCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export -b %s %s",
-				config.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
+				lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
 			commands = append(commands, pathCommand)
 		}
 	}
@@ -138,7 +137,7 @@ func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
 	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	containers, errContainerList := GetContainerList(false)
 	if errContainerList != nil {
-		logger.Log.Error(errContainerList.Error())
+		lib.Log.Error(errContainerList.Error())
 
 		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, errContainerList
 	}
@@ -156,7 +155,7 @@ func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
 			fmt.Errorf("не удалось найти контейнер: %s", containerName)
 	}
 
-	command := fmt.Sprintf("%s distrobox enter %s -- cat /etc/os-release", config.Env.CommandPrefix, containerName)
+	command := fmt.Sprintf("%s distrobox enter %s -- cat /etc/os-release", lib.Env.CommandPrefix, containerName)
 
 	// Выполняем команду через оболочку.
 	cmd := exec.Command("sh", "-c", command)
@@ -165,7 +164,7 @@ func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		logger.Log.Error("Ошибка получения информации об ОС контейнера %s: %v, stderr: %s", containerName, err, stderr.String())
+		lib.Log.Error("Ошибка получения информации об ОС контейнера %s: %v, stderr: %s", containerName, err, stderr.String())
 		return ContainerInfo{ContainerName: containerName, OS: containerName, Active: false}, err
 	}
 
@@ -209,7 +208,7 @@ func CreateContainer(image, containerName string, addPkg string) (ContainerInfo,
 	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	containers, errContainerList := GetContainerList(false)
 	if errContainerList != nil {
-		logger.Log.Error(errContainerList.Error())
+		lib.Log.Error(errContainerList.Error())
 
 		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, errContainerList
 	}
@@ -227,7 +226,7 @@ func CreateContainer(image, containerName string, addPkg string) (ContainerInfo,
 			fmt.Errorf("контейнер уже сушествует: %s", containerName)
 	}
 
-	command := fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s", config.Env.CommandPrefix, image, containerName, addPkg)
+	command := fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s", lib.Env.CommandPrefix, image, containerName, addPkg)
 	cmd := exec.Command("sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer
@@ -236,7 +235,7 @@ func CreateContainer(image, containerName string, addPkg string) (ContainerInfo,
 
 	// Выполняем команду создания контейнера
 	if err := cmd.Run(); err != nil {
-		logger.Log.Errorf("не удалось создать контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
+		lib.Log.Errorf("не удалось создать контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
 		return ContainerInfo{}, fmt.Errorf("не удалось создать контейнер %s: %v", containerName, err)
 	}
 
@@ -247,7 +246,7 @@ func CreateContainer(image, containerName string, addPkg string) (ContainerInfo,
 func RemoveContainer(containerName string) (ContainerInfo, error) {
 	dbus_event.SendFuncNameDBUS(dbus_event.STATE_BEFORE)
 	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
-	command := fmt.Sprintf("%s distrobox rm %s", config.Env.CommandPrefix, containerName)
+	command := fmt.Sprintf("%s distrobox rm %s", lib.Env.CommandPrefix, containerName)
 	cmd := exec.Command("sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer

@@ -1,7 +1,6 @@
-package event
+package lib
 
 import (
-	"apm/logger"
 	"github.com/godbus/dbus"
 )
 
@@ -12,6 +11,6 @@ func InitDBus() {
 	var err error
 	DBUSConn, err = dbus.SessionBus()
 	if err != nil {
-		logger.Log.Fatal("Ошибка подключения к DBus: %v", err)
+		Log.Fatal("Ошибка подключения к DBus: %v", err)
 	}
 }

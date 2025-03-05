@@ -1,8 +1,7 @@
 package os
 
 import (
-	"apm/database"
-	"apm/logger"
+	"apm/lib"
 	"fmt"
 	"strings"
 )
@@ -21,18 +20,18 @@ func SavePackagesToDB(containerName string, packages []PackageInfo) error {
 		exporting INTEGER,
 		manager TEXT
 	)`, tableName)
-	if _, err := database.DB.Exec(createQuery); err != nil {
+	if _, err := lib.DB.Exec(createQuery); err != nil {
 		return err
 	}
 
 	// Очищаем таблицу.
 	deleteQuery := fmt.Sprintf("DELETE FROM %s", tableName)
-	if _, err := database.DB.Exec(deleteQuery); err != nil {
+	if _, err := lib.DB.Exec(deleteQuery); err != nil {
 		return err
 	}
 
 	// Начинаем транзакцию.
-	tx, err := database.DB.Begin()
+	tx, err := lib.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -75,7 +74,7 @@ func ContainerDatabaseExist(containerName string) error {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
 	var count int
-	err := database.DB.QueryRow(query).Scan(&count)
+	err := lib.DB.QueryRow(query).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -98,7 +97,7 @@ func CountTotalPackages(containerName string, filters map[string]interface{}) (i
 		query += " WHERE " + whereClause
 	}
 	var total int
-	err := database.DB.QueryRow(query, args...).Scan(&total)
+	err := lib.DB.QueryRow(query, args...).Scan(&total)
 	if err != nil {
 		return 0, err
 	}
@@ -151,7 +150,7 @@ func QueryPackages(containerName string, filters map[string]interface{}, sortFie
 	}
 
 	// Выполняем запрос.
-	rows, err := database.DB.Query(query, args...)
+	rows, err := lib.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +184,7 @@ func FindPackagesByName(containerName string, partialName string) ([]PackageInfo
 	// Используем шаблон для неточного совпадения
 	searchPattern := "%" + partialName + "%"
 
-	rows, err := database.DB.Query(query, searchPattern)
+	rows, err := lib.DB.Query(query, searchPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +216,7 @@ func UpdatePackageField(containerName, packageName, fieldName string, value bool
 		"exporting": true,
 	}
 	if !allowedFields[fieldName] {
-		logger.Log.Errorf("поле %s нельзя обновлять", fieldName)
+		lib.Log.Errorf("поле %s нельзя обновлять", fieldName)
 	}
 
 	// Экранируем имя таблицы.
@@ -232,9 +231,9 @@ func UpdatePackageField(containerName, packageName, fieldName string, value bool
 		intVal = 0
 	}
 
-	_, err := database.DB.Exec(updateQuery, intVal, packageName)
+	_, err := lib.DB.Exec(updateQuery, intVal, packageName)
 	if err != nil {
-		logger.Log.Error(err.Error())
+		lib.Log.Error(err.Error())
 	}
 }
 
@@ -245,7 +244,7 @@ func GetPackageInfoByName(containerName, packageName string) (PackageInfo, error
 
 	var pkg PackageInfo
 	var installed, exporting int
-	err := database.DB.QueryRow(query, packageName).Scan(&pkg.PackageName, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager)
+	err := lib.DB.QueryRow(query, packageName).Scan(&pkg.PackageName, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager)
 	if err != nil {
 		return PackageInfo{}, err
 	}

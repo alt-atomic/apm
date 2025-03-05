@@ -4,7 +4,7 @@ import (
 	"apm/cmd/distrobox/api"
 	"apm/cmd/distrobox/dbus_event"
 	"apm/cmd/distrobox/os"
-	"apm/logger"
+	"apm/lib"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -23,7 +23,7 @@ type APIResponse struct {
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
 func newErrorResponse(message string) APIResponse {
-	logger.Log.Error(message)
+	lib.Log.Error(message)
 
 	return APIResponse{
 		Data:  map[string]interface{}{"message": message},
@@ -172,7 +172,7 @@ func CommandList() *cli.Command {
 	return &cli.Command{
 		Name:    "distrobox",
 		Aliases: []string{"d"},
-		Usage:   "Управление контейнерами и пакетами",
+		Usage:   "Управление пакетами и контейнерами и контейнерами distrobox",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -183,363 +183,357 @@ func CommandList() *cli.Command {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:  "package",
-				Usage: "Модуль для работы с пакетами",
-				Commands: []*cli.Command{
-					{
-						Name:  "update",
-						Usage: "Обновить и синхронизировать списки установленных пакетов с хостом",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "container",
-								Usage:    "Название контейнера",
-								Required: true,
-								Aliases:  []string{"c"},
-							},
-						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							containerVal, resp, err := validateContainer(cmd)
-							if err != nil {
-								return response(cmd, resp)
-							}
-
-							osInfo, err := api.GetContainerOsInfo(containerVal)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							packages, err := os.UpdatePackages(osInfo)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							resp = APIResponse{
-								Data:  map[string]interface{}{"container": osInfo, "message": "Список пакетов успешно обновлён, пакетов всего: " + strconv.Itoa(len(packages)), "countPackage": len(packages)},
-								Error: false,
-							}
-
-							return response(cmd, resp)
-						}),
-					},
-					{
-						Name:  "info",
-						Usage: "Информация о пакете",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "container",
-								Usage:    "Название контейнера",
-								Aliases:  []string{"c"},
-								Required: true,
-							},
-						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							containerVal, resp, err := validateContainer(cmd)
-							if err != nil {
-								return response(cmd, resp)
-							}
-
-							packageName := cmd.Args().First()
-							if cmd.Args().Len() == 0 || packageName == "" {
-								return response(cmd, newErrorResponse("Необходимо указать название пакета"))
-							}
-
-							osInfo, err := api.GetContainerOsInfo(containerVal)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							packageInfo, err := os.GetInfoPackage(osInfo, packageName)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							return response(cmd, APIResponse{
-								Data: map[string]interface{}{
-									"message": packageInfoPlainText(packageInfo.PackageInfo),
-									"package": packageInfo,
-								},
-								Error: false,
-							})
-						}),
-					},
-					{
-						Name:  "search",
-						Usage: "Поиск пакета по названию",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "container",
-								Usage:    "Название контейнера",
-								Aliases:  []string{"c"},
-								Required: true,
-							},
-						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							containerVal, resp, err := validateContainer(cmd)
-							if err != nil {
-								return response(cmd, resp)
-							}
-
-							packageName := cmd.Args().First()
-							if cmd.Args().Len() == 0 || packageName == "" {
-								return response(cmd, newErrorResponse("Необходимо указать название пакета"))
-							}
-
-							osInfo, err := api.GetContainerOsInfo(containerVal)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							queryResult, err := os.GetPackageByName(osInfo, packageName)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							word := pluralizePackage(queryResult.TotalCount)
-							msg := fmt.Sprintf("Найдено: %d %s\n", queryResult.TotalCount, word)
-							for _, pkg := range queryResult.Packages {
-								msg += packageInfoPlainText(pkg)
-							}
-
-							// Формируем ответ
-							resp = APIResponse{
-								Data: map[string]interface{}{
-									"message":  msg,
-									"packages": queryResult.Packages,
-								},
-								Error: false,
-							}
-
-							return response(cmd, resp)
-						}),
-					},
-					{
-						Name:  "list",
-						Usage: "Построение запроса для получения списка пакетов",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "container",
-								Usage:    "Название контейнера",
-								Aliases:  []string{"c"},
-								Required: true,
-							},
-							&cli.StringFlag{
-								Name:  "sort",
-								Usage: "Поле для сортировки (например, packageName, version)",
-							},
-							&cli.StringFlag{
-								Name:  "order",
-								Usage: "Порядок сортировки: ASC или DESC",
-								Value: "ASC",
-							},
-							&cli.IntFlag{
-								Name:  "limit",
-								Usage: "Лимит выборки",
-								Value: 10,
-							},
-							&cli.IntFlag{
-								Name:  "offset",
-								Usage: "Смещение выборки",
-								Value: 0,
-							},
-							&cli.StringFlag{
-								Name:  "filter-field",
-								Usage: "Имя поля для фильтрации (например, packageName, version, manager)",
-							},
-							&cli.StringFlag{
-								Name:  "filter-value",
-								Usage: "Значение для фильтрации по указанному полю",
-							},
-							&cli.BoolFlag{
-								Name:  "force-update",
-								Usage: "Принудительно обновить все пакеты перед запросом",
-								Value: false,
-							},
-						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							containerVal, resp, err := validateContainer(cmd)
-							if err != nil {
-								return response(cmd, resp)
-							}
-
-							builder := os.PackageQueryBuilder{
-								ForceUpdate: cmd.Bool("force-update"),
-								Limit:       cmd.Int("limit"),
-								Offset:      cmd.Int("offset"),
-								SortField:   cmd.String("sort"),
-								SortOrder:   cmd.String("order"),
-								Filters:     make(map[string]interface{}),
-							}
-
-							filterField := cmd.String("filter-field")
-							filterValue := cmd.String("filter-value")
-							if strings.TrimSpace(filterField) != "" && strings.TrimSpace(filterValue) != "" {
-								builder.Filters[filterField] = filterValue
-							}
-
-							osInfo, err := api.GetContainerOsInfo(containerVal)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							// Вызываем функцию запроса пакетов
-							queryResult, err := os.GetPackagesQuery(osInfo, builder)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							word := pluralizePackage(queryResult.TotalCount)
-							msg := fmt.Sprintf("Найдено: %d %s\n", queryResult.TotalCount, word)
-							for _, pkg := range queryResult.Packages {
-								msg += packageInfoPlainText(pkg)
-							}
-
-							// Формируем ответ
-							resp = APIResponse{
-								Data: map[string]interface{}{
-									"message":  msg,
-									"packages": queryResult.Packages,
-									"total":    queryResult.TotalCount,
-								},
-								Error: false,
-							}
-
-							return response(cmd, resp)
-						}),
-					},
-					{
-						Name:  "install",
-						Usage: "Установить пакет",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "container",
-								Usage:    "Название контейнера",
-								Aliases:  []string{"c"},
-								Required: true,
-							},
-							&cli.BoolFlag{
-								Name:  "export",
-								Usage: "Экспортировать пакет",
-								Value: true,
-							},
-						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							containerVal, resp, err := validateContainer(cmd)
-							if err != nil {
-								return response(cmd, resp)
-							}
-
-							packageName := cmd.Args().First()
-							if cmd.Args().Len() == 0 || packageName == "" {
-								return response(cmd, newErrorResponse("Необходимо указать название пакета"))
-							}
-
-							osInfo, err := api.GetContainerOsInfo(containerVal)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							packageInfo, err := os.GetInfoPackage(osInfo, packageName)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							if !packageInfo.PackageInfo.Installed {
-								err = os.InstallPackage(osInfo, packageName)
-								if err != nil {
-									return response(cmd, newErrorResponse(err.Error()))
-								}
-
-								packageInfo.PackageInfo.Installed = true
-								os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", true)
-								packageInfo, _ = os.GetInfoPackage(osInfo, packageName)
-							}
-
-							if cmd.Bool("export") && !packageInfo.PackageInfo.Exporting {
-								errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
-								if errExport != nil {
-									return response(cmd, newErrorResponse(errExport.Error()))
-								}
-
-								packageInfo.PackageInfo.Exporting = true
-								os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", true)
-							}
-
-							return response(cmd, APIResponse{
-								Data: map[string]interface{}{
-									"message": packageInfoPlainText(packageInfo.PackageInfo),
-									"package": packageInfo,
-								},
-								Error: false,
-							})
-						}),
-					},
-					{
-						Name:  "rm",
-						Usage: "Удалить пакет",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "container",
-								Usage:    "Название контейнера",
-								Aliases:  []string{"c"},
-								Required: true,
-							},
-							&cli.BoolFlag{
-								Name:  "only-export",
-								Usage: "Удалить только экспорт, оставить пакет в контейнере",
-								Value: false,
-							},
-						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							containerVal, resp, err := validateContainer(cmd)
-							if err != nil {
-								return response(cmd, resp)
-							}
-
-							packageName := cmd.Args().First()
-							if cmd.Args().Len() == 0 || packageName == "" {
-								return response(cmd, newErrorResponse("Необходимо указать название пакета"))
-							}
-
-							osInfo, err := api.GetContainerOsInfo(containerVal)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							packageInfo, err := os.GetInfoPackage(osInfo, packageName)
-							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
-							}
-
-							if packageInfo.PackageInfo.Exporting {
-								errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
-								if errExport != nil {
-									return response(cmd, newErrorResponse(errExport.Error()))
-								}
-
-								packageInfo.PackageInfo.Exporting = false
-								os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", false)
-							}
-
-							if !cmd.Bool("only-export") && packageInfo.PackageInfo.Installed {
-								err = os.RemovePackage(osInfo, packageName)
-								if err != nil {
-									return response(cmd, newErrorResponse(err.Error()))
-								}
-
-								packageInfo.PackageInfo.Installed = false
-								os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", false)
-							}
-
-							return response(cmd, APIResponse{
-								Data: map[string]interface{}{
-									"message": packageInfoPlainText(packageInfo.PackageInfo),
-									"package": packageInfo,
-								},
-								Error: false,
-							})
-						}),
+				Name:  "update",
+				Usage: "Обновить и синхронизировать списки установленных пакетов с хостом",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "container",
+						Usage:    "Название контейнера",
+						Required: true,
+						Aliases:  []string{"c"},
 					},
 				},
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					containerVal, resp, err := validateContainer(cmd)
+					if err != nil {
+						return response(cmd, resp)
+					}
+
+					osInfo, err := api.GetContainerOsInfo(containerVal)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					packages, err := os.UpdatePackages(osInfo)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					resp = APIResponse{
+						Data:  map[string]interface{}{"container": osInfo, "message": "Список пакетов успешно обновлён, пакетов всего: " + strconv.Itoa(len(packages)), "countPackage": len(packages)},
+						Error: false,
+					}
+
+					return response(cmd, resp)
+				}),
+			},
+			{
+				Name:  "info",
+				Usage: "Информация о пакете",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "container",
+						Usage:    "Название контейнера",
+						Aliases:  []string{"c"},
+						Required: true,
+					},
+				},
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					containerVal, resp, err := validateContainer(cmd)
+					if err != nil {
+						return response(cmd, resp)
+					}
+
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+					}
+
+					osInfo, err := api.GetContainerOsInfo(containerVal)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					return response(cmd, APIResponse{
+						Data: map[string]interface{}{
+							"message": packageInfoPlainText(packageInfo.PackageInfo),
+							"package": packageInfo,
+						},
+						Error: false,
+					})
+				}),
+			},
+			{
+				Name:  "search",
+				Usage: "Поиск пакета по названию",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "container",
+						Usage:    "Название контейнера",
+						Aliases:  []string{"c"},
+						Required: true,
+					},
+				},
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					containerVal, resp, err := validateContainer(cmd)
+					if err != nil {
+						return response(cmd, resp)
+					}
+
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+					}
+
+					osInfo, err := api.GetContainerOsInfo(containerVal)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					queryResult, err := os.GetPackageByName(osInfo, packageName)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					word := pluralizePackage(queryResult.TotalCount)
+					msg := fmt.Sprintf("Найдено: %d %s\n", queryResult.TotalCount, word)
+					for _, pkg := range queryResult.Packages {
+						msg += packageInfoPlainText(pkg)
+					}
+
+					// Формируем ответ
+					resp = APIResponse{
+						Data: map[string]interface{}{
+							"message":  msg,
+							"packages": queryResult.Packages,
+						},
+						Error: false,
+					}
+
+					return response(cmd, resp)
+				}),
+			},
+			{
+				Name:  "list",
+				Usage: "Построение запроса для получения списка пакетов",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "container",
+						Usage:    "Название контейнера",
+						Aliases:  []string{"c"},
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:  "sort",
+						Usage: "Поле для сортировки (например, packageName, version)",
+					},
+					&cli.StringFlag{
+						Name:  "order",
+						Usage: "Порядок сортировки: ASC или DESC",
+						Value: "ASC",
+					},
+					&cli.IntFlag{
+						Name:  "limit",
+						Usage: "Лимит выборки",
+						Value: 10,
+					},
+					&cli.IntFlag{
+						Name:  "offset",
+						Usage: "Смещение выборки",
+						Value: 0,
+					},
+					&cli.StringFlag{
+						Name:  "filter-field",
+						Usage: "Имя поля для фильтрации (например, packageName, version, manager)",
+					},
+					&cli.StringFlag{
+						Name:  "filter-value",
+						Usage: "Значение для фильтрации по указанному полю",
+					},
+					&cli.BoolFlag{
+						Name:  "force-update",
+						Usage: "Принудительно обновить все пакеты перед запросом",
+						Value: false,
+					},
+				},
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					containerVal, resp, err := validateContainer(cmd)
+					if err != nil {
+						return response(cmd, resp)
+					}
+
+					builder := os.PackageQueryBuilder{
+						ForceUpdate: cmd.Bool("force-update"),
+						Limit:       cmd.Int("limit"),
+						Offset:      cmd.Int("offset"),
+						SortField:   cmd.String("sort"),
+						SortOrder:   cmd.String("order"),
+						Filters:     make(map[string]interface{}),
+					}
+
+					filterField := cmd.String("filter-field")
+					filterValue := cmd.String("filter-value")
+					if strings.TrimSpace(filterField) != "" && strings.TrimSpace(filterValue) != "" {
+						builder.Filters[filterField] = filterValue
+					}
+
+					osInfo, err := api.GetContainerOsInfo(containerVal)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					// Вызываем функцию запроса пакетов
+					queryResult, err := os.GetPackagesQuery(osInfo, builder)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					word := pluralizePackage(queryResult.TotalCount)
+					msg := fmt.Sprintf("Найдено: %d %s\n", queryResult.TotalCount, word)
+					for _, pkg := range queryResult.Packages {
+						msg += packageInfoPlainText(pkg)
+					}
+
+					// Формируем ответ
+					resp = APIResponse{
+						Data: map[string]interface{}{
+							"message":  msg,
+							"packages": queryResult.Packages,
+							"total":    queryResult.TotalCount,
+						},
+						Error: false,
+					}
+
+					return response(cmd, resp)
+				}),
+			},
+			{
+				Name:  "install",
+				Usage: "Установить пакет",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "container",
+						Usage:    "Название контейнера",
+						Aliases:  []string{"c"},
+						Required: true,
+					},
+					&cli.BoolFlag{
+						Name:  "export",
+						Usage: "Экспортировать пакет",
+						Value: true,
+					},
+				},
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					containerVal, resp, err := validateContainer(cmd)
+					if err != nil {
+						return response(cmd, resp)
+					}
+
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+					}
+
+					osInfo, err := api.GetContainerOsInfo(containerVal)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					if !packageInfo.PackageInfo.Installed {
+						err = os.InstallPackage(osInfo, packageName)
+						if err != nil {
+							return response(cmd, newErrorResponse(err.Error()))
+						}
+
+						packageInfo.PackageInfo.Installed = true
+						os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", true)
+						packageInfo, _ = os.GetInfoPackage(osInfo, packageName)
+					}
+
+					if cmd.Bool("export") && !packageInfo.PackageInfo.Exporting {
+						errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
+						if errExport != nil {
+							return response(cmd, newErrorResponse(errExport.Error()))
+						}
+
+						packageInfo.PackageInfo.Exporting = true
+						os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", true)
+					}
+
+					return response(cmd, APIResponse{
+						Data: map[string]interface{}{
+							"message": packageInfoPlainText(packageInfo.PackageInfo),
+							"package": packageInfo,
+						},
+						Error: false,
+					})
+				}),
+			},
+			{
+				Name:  "rm",
+				Usage: "Удалить пакет",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "container",
+						Usage:    "Название контейнера",
+						Aliases:  []string{"c"},
+						Required: true,
+					},
+					&cli.BoolFlag{
+						Name:  "only-export",
+						Usage: "Удалить только экспорт, оставить пакет в контейнере",
+						Value: false,
+					},
+				},
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					containerVal, resp, err := validateContainer(cmd)
+					if err != nil {
+						return response(cmd, resp)
+					}
+
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+					}
+
+					osInfo, err := api.GetContainerOsInfo(containerVal)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
+					if err != nil {
+						return response(cmd, newErrorResponse(err.Error()))
+					}
+
+					if packageInfo.PackageInfo.Exporting {
+						errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
+						if errExport != nil {
+							return response(cmd, newErrorResponse(errExport.Error()))
+						}
+
+						packageInfo.PackageInfo.Exporting = false
+						os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", false)
+					}
+
+					if !cmd.Bool("only-export") && packageInfo.PackageInfo.Installed {
+						err = os.RemovePackage(osInfo, packageName)
+						if err != nil {
+							return response(cmd, newErrorResponse(err.Error()))
+						}
+
+						packageInfo.PackageInfo.Installed = false
+						os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", false)
+					}
+
+					return response(cmd, APIResponse{
+						Data: map[string]interface{}{
+							"message": packageInfoPlainText(packageInfo.PackageInfo),
+							"package": packageInfo,
+						},
+						Error: false,
+					})
+				}),
 			},
 			{
 				Name:  "container",

@@ -1,8 +1,7 @@
 package dbus_event
 
 import (
-	"apm/event"
-	"apm/logger"
+	"apm/lib"
 	"encoding/json"
 	"github.com/godbus/dbus"
 	"runtime"
@@ -49,7 +48,7 @@ func SendFuncNameDBUS(state string) {
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
-		logger.Log.Debug(err.Error())
+		lib.Log.Debug(err.Error())
 	}
 
 	SendNotificationResponse(string(b))
@@ -61,8 +60,8 @@ func SendNotificationResponse(message string) {
 		return
 	}
 
-	if event.DBUSConn == nil {
-		logger.Log.Debug("Соединение DBus не инициализировано")
+	if lib.DBUSConn == nil {
+		lib.Log.Debug("Соединение DBus не инициализировано")
 		return
 	}
 
@@ -70,9 +69,9 @@ func SendNotificationResponse(message string) {
 	objPath := dbus.ObjectPath("/com/application/APM")
 	signalName := "com.application.APM.Notification"
 
-	err := event.DBUSConn.Emit(objPath, signalName, message)
+	err := lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {
-		logger.Log.Debugf("Ошибка отправки уведомления: %v", err)
+		lib.Log.Debugf("Ошибка отправки уведомления: %v", err)
 		return
 	}
 }

@@ -2,7 +2,7 @@ package os
 
 import (
 	"apm/cmd/distrobox/dbus_event"
-	"apm/logger"
+	"apm/lib"
 	"bytes"
 	"errors"
 	"fmt"
@@ -141,7 +141,7 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 	// Пробуем получить пути для GUI-приложений
 	desktopPaths, err := GetPathByPackageName(containerInfo, packageName, "/usr/share/applications/")
 	if err != nil {
-		logger.Log.Debugf(fmt.Sprintf("Ошибка получения desktop пути: %v", err))
+		lib.Log.Debugf(fmt.Sprintf("Ошибка получения desktop пути: %v", err))
 	}
 
 	if len(desktopPaths) > 0 {
@@ -155,7 +155,7 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 	// Если GUI-пути не найдены, ищем консольные приложения
 	consolePaths, err := GetPathByPackageName(containerInfo, packageName, "/usr/bin/")
 	if err != nil {
-		logger.Log.Debugf(fmt.Sprintf("Ошибка получения консольного пути %v", err))
+		lib.Log.Debugf(fmt.Sprintf("Ошибка получения консольного пути %v", err))
 	}
 
 	return InfoPackageAnswer{
@@ -171,13 +171,13 @@ func UpdatePackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
 	defer dbus_event.SendFuncNameDBUS(dbus_event.STATE_AFTER)
 	packages, err := GetPackages(containerInfo)
 	if err != nil {
-		logger.Log.Error(err)
+		lib.Log.Error(err)
 		return []PackageInfo{}, err
 	}
 
 	errorSave := SavePackagesToDB(containerInfo.ContainerName, packages)
 	if errorSave != nil {
-		logger.Log.Error(errorSave)
+		lib.Log.Error(errorSave)
 		return []PackageInfo{}, errorSave
 	}
 
@@ -191,7 +191,7 @@ func GetPackagesQuery(containerInfo api.ContainerInfo, builder PackageQueryBuild
 	if builder.ForceUpdate {
 		_, err := UpdatePackages(containerInfo)
 		if err != nil {
-			logger.Log.Error(err)
+			lib.Log.Error(err)
 			return PackageQueryResult{}, err
 		}
 	}
@@ -244,10 +244,10 @@ func GetAllApplicationsByContainer(containerInfo api.ContainerInfo) ([]string, e
 	wg.Wait()
 
 	if errDesktop != nil {
-		logger.Log.Error(fmt.Sprintf("Ошибка при получении desktop приложений для контейнера %s: %v", containerInfo.ContainerName, errDesktop))
+		lib.Log.Error(fmt.Sprintf("Ошибка при получении desktop приложений для контейнера %s: %v", containerInfo.ContainerName, errDesktop))
 	}
 	if errConsole != nil {
-		logger.Log.Error(fmt.Sprintf("Ошибка при получении консольных приложений для контейнера %s: %v", containerInfo.ContainerName, errConsole))
+		lib.Log.Error(fmt.Sprintf("Ошибка при получении консольных приложений для контейнера %s: %v", containerInfo.ContainerName, errConsole))
 	}
 
 	// Объединяем оба массива и удаляем дубли
@@ -293,7 +293,7 @@ func GetDesktopApplicationsByContainer(containerInfo api.ContainerInfo) ([]strin
 				packagePath := filepath.Join("/usr/share/applications", trimmedFileName)
 				ownerPackage, err := GetPackageOwner(containerInfo, packagePath)
 				if err != nil {
-					logger.Log.Error(fmt.Sprintf("Ошибка при получении владельца для файла %s: %v", fileName, err))
+					lib.Log.Error(fmt.Sprintf("Ошибка при получении владельца для файла %s: %v", fileName, err))
 					continue
 				}
 				if ownerPackage != "" {
@@ -334,14 +334,14 @@ func GetConsoleApplicationsByContainer(containerInfo api.ContainerInfo) ([]strin
 			fullPath := filepath.Join(localBinApps, fileName)
 			contentBytes, err := os.ReadFile(fullPath)
 			if err != nil {
-				logger.Log.Error(fmt.Sprintf("Ошибка при обработке файла %s: %v", fileName, err))
+				lib.Log.Error(fmt.Sprintf("Ошибка при обработке файла %s: %v", fileName, err))
 				continue
 			}
 			content := string(contentBytes)
 			if strings.Contains(content, marker) {
 				ownerPackage, err := GetPackageOwner(containerInfo, filepath.Join("/usr/bin", fileName))
 				if err != nil {
-					logger.Log.Error(fmt.Sprintf("Ошибка при получении владельца для файла %s: %v", fileName, err))
+					lib.Log.Error(fmt.Sprintf("Ошибка при получении владельца для файла %s: %v", fileName, err))
 					continue
 				}
 				if ownerPackage != "" {

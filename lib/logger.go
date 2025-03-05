@@ -1,7 +1,6 @@
-package logger
+package lib
 
 import (
-	"apm/config"
 	"github.com/sirupsen/logrus"
 	"os"
 )
@@ -14,16 +13,16 @@ func InitLogger() {
 		ForceColors:   false,
 	})
 
-	pathLogFile := config.Env.PathLogFile
+	pathLogFile := Env.PathLogFile
 
 	file, err := os.OpenFile(pathLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil || config.DevMode {
+	if err != nil || DevMode {
 		Log.SetOutput(os.Stdout)
 	} else {
 		Log.SetOutput(file)
 	}
 
-	if config.DevMode {
+	if DevMode {
 		Log.SetLevel(logrus.DebugLevel)
 	} else {
 		Log.SetLevel(logrus.InfoLevel)

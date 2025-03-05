@@ -2,22 +2,20 @@ package main
 
 import (
 	"apm/cmd/distrobox"
-	"apm/config"
-	"apm/database"
-	"apm/event"
-	"apm/logger"
+	"apm/cmd/system"
+	"apm/lib"
 	"context"
 	"github.com/urfave/cli/v3"
 	"os"
 )
 
 func main() {
-	logger.Log.Debugln("Starting apm")
+	lib.Log.Debugln("Starting apm")
 
-	config.InitConfig()
-	logger.InitLogger()
-	database.InitDatabase()
-	go event.InitDBus()
+	lib.InitConfig()
+	lib.InitLogger()
+	lib.InitDatabase()
+	go lib.InitDBus()
 
 	rootCommand := &cli.Command{
 		Name:                  "apm",
@@ -37,6 +35,7 @@ func main() {
 			},
 		},
 		Commands: []*cli.Command{
+			system.CommandList(),
 			distrobox.CommandList(),
 			{
 				Name:      "help",
@@ -50,6 +49,6 @@ func main() {
 
 	rootCommand.Suggest = true
 	if err := rootCommand.Run(context.Background(), os.Args); err != nil {
-		logger.Log.Error(err.Error())
+		lib.Log.Error(err.Error())
 	}
 }
