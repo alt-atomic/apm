@@ -119,9 +119,9 @@ func CommandList() *cli.Command {
 
 					resp = reply.APIResponse{
 						Data: map[string]interface{}{
-							"message":      "Список пакетов успешно обновлён",
-							"container":    osInfo,
-							"countPackage": len(packages),
+							"message":   "Список пакетов успешно обновлён",
+							"container": osInfo,
+							"count":     len(packages),
 						},
 						Error: false,
 					}
@@ -208,9 +208,9 @@ func CommandList() *cli.Command {
 					// Формируем ответ
 					resp = reply.APIResponse{
 						Data: map[string]interface{}{
-							"message":      msg,
-							"packages":     queryResult.Packages,
-							"countPackage": queryResult.TotalCount,
+							"message":  msg,
+							"packages": queryResult.Packages,
+							"count":    queryResult.TotalCount,
 						},
 						Error: false,
 					}
@@ -299,9 +299,9 @@ func CommandList() *cli.Command {
 					// Формируем ответ
 					resp = reply.APIResponse{
 						Data: map[string]interface{}{
-							"message":      msg,
-							"packages":     queryResult.Packages,
-							"countPackage": queryResult.TotalCount,
+							"message":  msg,
+							"packages": queryResult.Packages,
+							"count":    queryResult.TotalCount,
 						},
 						Error: false,
 					}
