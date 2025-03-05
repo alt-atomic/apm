@@ -377,8 +377,9 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:  "rm",
-				Usage: "Удалить пакет",
+				Name:    "remove",
+				Usage:   "Удалить пакет",
+				Aliases: []string{"rm"},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
@@ -443,8 +444,9 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:  "container",
-				Usage: "Модуль для работы с контейнерами",
+				Name:    "container",
+				Usage:   "Модуль для работы с контейнерами",
+				Aliases: []string{"c"},
 				Commands: []*cli.Command{
 					{
 						Name:  "list",

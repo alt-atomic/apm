@@ -44,7 +44,6 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 
 	// 1) Если у нас есть "message", обрабатываем его первым
 	if msgVal, haveMsg := data["message"]; haveMsg {
-		// Хотим вывести его первым узлом
 		switch vv := msgVal.(type) {
 		case string:
 			t.Child(fmt.Sprintf("message: %s", vv))
@@ -70,7 +69,6 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
 						subTree := buildTreeFromMap("message", mm)
 						t.Child(subTree)
-						// не забываем continue не нужен, мы не в цикле
 					} else {
 						t.Child(fmt.Sprintf("message: %T (неизвестный тип)", vv))
 					}
@@ -91,7 +89,6 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 							}
 						}
 						t.Child(listNode)
-						// не забываем continue не нужен, мы не в цикле
 					} else {
 						t.Child(fmt.Sprintf("message: %T (срез неизвестного типа)", vv))
 					}
