@@ -17,13 +17,11 @@ type DBUSNotification struct {
 var (
 	STATE_BEFORE = "BEFORE"
 	STATE_AFTER  = "AFTER"
-	FORMAT       = "text"
-	TRANSACTION  = ""
 )
 
 // SendFuncNameDBUS отправляет название функции в DBUS для отслеживания состояния
 func SendFuncNameDBUS(state string) {
-	if FORMAT != "dbus" {
+	if lib.Env.Format != "dbus" {
 		return
 	}
 
@@ -44,7 +42,7 @@ func SendFuncNameDBUS(state string) {
 		EventType string `json:"event_type"`
 	}
 
-	baseModel := DBUSNotification{Data: Model{EventName: parts[len(parts)-1], EventType: state}, Transaction: TRANSACTION, Type: "event"}
+	baseModel := DBUSNotification{Data: Model{EventName: parts[len(parts)-1], EventType: state}, Transaction: lib.Env.Transaction, Type: "event"}
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
@@ -56,7 +54,7 @@ func SendFuncNameDBUS(state string) {
 
 // SendNotificationResponse отправляет ответы через DBus.
 func SendNotificationResponse(message string) {
-	if FORMAT != "dbus" {
+	if lib.Env.Format != "dbus" {
 		return
 	}
 
@@ -72,6 +70,5 @@ func SendNotificationResponse(message string) {
 	err := lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {
 		lib.Log.Debugf("Ошибка отправки уведомления: %v", err)
-		return
 	}
 }

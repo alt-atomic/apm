@@ -11,6 +11,8 @@ type Environment struct {
 	Environment   string `yaml:"environment" env:"prod"`
 	PathLogFile   string `yaml:"pathLogFile" env:"apm.log"`
 	PathDBFile    string `yaml:"pathDBFile" env:"apm.db"`
+	Transaction   string // Внутреннее свойство
+	Format        string // Внутреннее свойство
 }
 
 var Env Environment

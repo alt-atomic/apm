@@ -1,70 +1,33 @@
 package distrobox
 
 import (
+	"apm/cmd/common/reply"
 	"apm/cmd/distrobox/api"
-	"apm/cmd/distrobox/dbus_event"
 	"apm/cmd/distrobox/os"
 	"apm/lib"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/urfave/cli/v3"
-	"strconv"
 	"strings"
-	"time"
 )
 
-// APIResponse описывает формат ответа
-type APIResponse struct {
-	Data        interface{} `json:"data"`
-	Error       bool        `json:"error"`
-	Transaction string      `json:"transaction,omitempty"`
-}
-
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
-func newErrorResponse(message string) APIResponse {
+func newErrorResponse(message string) reply.APIResponse {
 	lib.Log.Error(message)
 
-	return APIResponse{
+	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
 	}
 }
 
-func packageInfoPlainText(packageInfo os.PackageInfo) string {
-	installedStr := "нет"
-	if packageInfo.Installed {
-		installedStr = "да"
-	}
-	exportedStr := "нет"
-	if packageInfo.Exporting {
-		exportedStr = "да"
-	}
-
-	msg := fmt.Sprintf(
-		"\nПакет:\n"+
-			"  Название:              %s\n"+
-			"  Описание:              %s\n"+
-			"  Версия:                %s\n"+
-			"  Установлен:            %s\n"+
-			"  Экспортирован:         %s\n",
-		packageInfo.PackageName,
-		packageInfo.Description,
-		packageInfo.Version,
-		installedStr,
-		exportedStr,
-	)
-
-	return msg
-}
-
-func validateContainer(cmd *cli.Command) (string, APIResponse, error) {
-	var resp APIResponse
+func validateContainer(cmd *cli.Command) (string, reply.APIResponse, error) {
+	var resp reply.APIResponse
 	containerVal := cmd.String("container")
 	errText := "необходимо указать название контейнера (--container | -c)"
 
 	if strings.TrimSpace(containerVal) == "" {
-		resp = APIResponse{
+		resp = reply.APIResponse{
 			Data:  map[string]interface{}{"message": errText},
 			Error: true,
 		}
@@ -76,7 +39,7 @@ func validateContainer(cmd *cli.Command) (string, APIResponse, error) {
 	if errContainer != nil {
 		osInfo, err := api.GetContainerOsInfo(containerVal)
 		if err != nil {
-			resp = APIResponse{
+			resp = reply.APIResponse{
 				Data:  map[string]interface{}{"message": err.Error()},
 				Error: true,
 			}
@@ -85,7 +48,7 @@ func validateContainer(cmd *cli.Command) (string, APIResponse, error) {
 
 		_, err = os.UpdatePackages(osInfo)
 		if err != nil {
-			resp = APIResponse{
+			resp = reply.APIResponse{
 				Data:  map[string]interface{}{"message": err.Error()},
 				Error: true,
 			}
@@ -93,62 +56,7 @@ func validateContainer(cmd *cli.Command) (string, APIResponse, error) {
 		}
 	}
 
-	return containerVal, APIResponse{}, nil
-}
-
-func response(cmd *cli.Command, resp APIResponse) error {
-	format := cmd.String("format")
-	resp.Transaction = cmd.String("transaction")
-
-	switch format {
-	case "dbus":
-		if !resp.Error {
-			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
-				delete(dataMap, "message")
-			}
-		}
-
-		b, err := json.MarshalIndent(resp, "", "  ")
-		if err != nil {
-			return err
-		}
-		dbus_event.SendNotificationResponse(string(b))
-		fmt.Println(string(b))
-		time.Sleep(200 * time.Millisecond)
-	case "json":
-		if !resp.Error {
-			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
-				delete(dataMap, "message")
-			}
-		}
-
-		b, err := json.MarshalIndent(resp, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(b))
-	default:
-		var message string
-		switch data := resp.Data.(type) {
-		case map[string]interface{}:
-			if m, ok := data["message"]; ok {
-				if str, ok := m.(string); ok {
-					message = str
-				} else {
-					message = fmt.Sprintf("%v", m)
-				}
-			}
-		case map[string]string:
-			message = data["message"]
-		case string:
-			message = data
-		default:
-			message = fmt.Sprintf("%v", resp.Data)
-		}
-		fmt.Println(message)
-	}
-
-	return nil
+	return containerVal, reply.APIResponse{}, nil
 }
 
 func pluralizePackage(n int) string {
@@ -162,8 +70,8 @@ func pluralizePackage(n int) string {
 
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx context.Context, cmd *cli.Command) error {
-		dbus_event.FORMAT = cmd.String("format")
-		dbus_event.TRANSACTION = cmd.String("transaction")
+		lib.Env.Format = cmd.String("format")
+		lib.Env.Transaction = cmd.String("transaction")
 		return action(ctx, cmd)
 	}
 }
@@ -196,25 +104,29 @@ func CommandList() *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
 					if err != nil {
-						return response(cmd, resp)
+						return reply.CliResponse(cmd, resp)
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					packages, err := os.UpdatePackages(osInfo)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
-					resp = APIResponse{
-						Data:  map[string]interface{}{"container": osInfo, "message": "Список пакетов успешно обновлён, пакетов всего: " + strconv.Itoa(len(packages)), "countPackage": len(packages)},
+					resp = reply.APIResponse{
+						Data: map[string]interface{}{
+							"message":      "Список пакетов успешно обновлён",
+							"container":    osInfo,
+							"countPackage": len(packages),
+						},
 						Error: false,
 					}
 
-					return response(cmd, resp)
+					return reply.CliResponse(cmd, resp)
 				}),
 			},
 			{
@@ -231,27 +143,27 @@ func CommandList() *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
 					if err != nil {
-						return response(cmd, resp)
+						return reply.CliResponse(cmd, resp)
 					}
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
-					return response(cmd, APIResponse{
+					return reply.CliResponse(cmd, reply.APIResponse{
 						Data: map[string]interface{}{
-							"message": packageInfoPlainText(packageInfo.PackageInfo),
+							"message": "Информация о пакете",
 							"package": packageInfo,
 						},
 						Error: false,
@@ -272,40 +184,38 @@ func CommandList() *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
 					if err != nil {
-						return response(cmd, resp)
+						return reply.CliResponse(cmd, resp)
 					}
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					queryResult, err := os.GetPackageByName(osInfo, packageName)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					word := pluralizePackage(queryResult.TotalCount)
 					msg := fmt.Sprintf("Найдено: %d %s\n", queryResult.TotalCount, word)
-					for _, pkg := range queryResult.Packages {
-						msg += packageInfoPlainText(pkg)
-					}
 
 					// Формируем ответ
-					resp = APIResponse{
+					resp = reply.APIResponse{
 						Data: map[string]interface{}{
-							"message":  msg,
-							"packages": queryResult.Packages,
+							"message":      msg,
+							"packages":     queryResult.Packages,
+							"countPackage": queryResult.TotalCount,
 						},
 						Error: false,
 					}
 
-					return response(cmd, resp)
+					return reply.CliResponse(cmd, resp)
 				}),
 			},
 			{
@@ -339,7 +249,7 @@ func CommandList() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:  "filter-field",
-						Usage: "Имя поля для фильтрации (например, packageName, version, manager)",
+						Usage: "Название поля для фильтрации (например, packageName, version, manager)",
 					},
 					&cli.StringFlag{
 						Name:  "filter-value",
@@ -354,7 +264,7 @@ func CommandList() *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
 					if err != nil {
-						return response(cmd, resp)
+						return reply.CliResponse(cmd, resp)
 					}
 
 					builder := os.PackageQueryBuilder{
@@ -374,32 +284,29 @@ func CommandList() *cli.Command {
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					// Вызываем функцию запроса пакетов
 					queryResult, err := os.GetPackagesQuery(osInfo, builder)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					word := pluralizePackage(queryResult.TotalCount)
 					msg := fmt.Sprintf("Найдено: %d %s\n", queryResult.TotalCount, word)
-					for _, pkg := range queryResult.Packages {
-						msg += packageInfoPlainText(pkg)
-					}
 
 					// Формируем ответ
-					resp = APIResponse{
+					resp = reply.APIResponse{
 						Data: map[string]interface{}{
-							"message":  msg,
-							"packages": queryResult.Packages,
-							"total":    queryResult.TotalCount,
+							"message":      msg,
+							"packages":     queryResult.Packages,
+							"countPackage": queryResult.TotalCount,
 						},
 						Error: false,
 					}
 
-					return response(cmd, resp)
+					return reply.CliResponse(cmd, resp)
 				}),
 			},
 			{
@@ -421,28 +328,28 @@ func CommandList() *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
 					if err != nil {
-						return response(cmd, resp)
+						return reply.CliResponse(cmd, resp)
 					}
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					if !packageInfo.PackageInfo.Installed {
 						err = os.InstallPackage(osInfo, packageName)
 						if err != nil {
-							return response(cmd, newErrorResponse(err.Error()))
+							return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 						}
 
 						packageInfo.PackageInfo.Installed = true
@@ -453,16 +360,16 @@ func CommandList() *cli.Command {
 					if cmd.Bool("export") && !packageInfo.PackageInfo.Exporting {
 						errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
 						if errExport != nil {
-							return response(cmd, newErrorResponse(errExport.Error()))
+							return reply.CliResponse(cmd, newErrorResponse(errExport.Error()))
 						}
 
 						packageInfo.PackageInfo.Exporting = true
 						os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", true)
 					}
 
-					return response(cmd, APIResponse{
+					return reply.CliResponse(cmd, reply.APIResponse{
 						Data: map[string]interface{}{
-							"message": packageInfoPlainText(packageInfo.PackageInfo),
+							"message": fmt.Sprintf("Пакет %s установлен", packageName),
 							"package": packageInfo,
 						},
 						Error: false,
@@ -488,28 +395,28 @@ func CommandList() *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
 					if err != nil {
-						return response(cmd, resp)
+						return reply.CliResponse(cmd, resp)
 					}
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return response(cmd, newErrorResponse("Необходимо указать название пакета"))
+						return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название пакета"))
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
 					if err != nil {
-						return response(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 					}
 
 					if packageInfo.PackageInfo.Exporting {
 						errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
 						if errExport != nil {
-							return response(cmd, newErrorResponse(errExport.Error()))
+							return reply.CliResponse(cmd, newErrorResponse(errExport.Error()))
 						}
 
 						packageInfo.PackageInfo.Exporting = false
@@ -519,16 +426,16 @@ func CommandList() *cli.Command {
 					if !cmd.Bool("only-export") && packageInfo.PackageInfo.Installed {
 						err = os.RemovePackage(osInfo, packageName)
 						if err != nil {
-							return response(cmd, newErrorResponse(err.Error()))
+							return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 						}
 
 						packageInfo.PackageInfo.Installed = false
 						os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", false)
 					}
 
-					return response(cmd, APIResponse{
+					return reply.CliResponse(cmd, reply.APIResponse{
 						Data: map[string]interface{}{
-							"message": packageInfoPlainText(packageInfo.PackageInfo),
+							"message": fmt.Sprintf("Пакет %s удалён", packageName),
 							"package": packageInfo,
 						},
 						Error: false,
@@ -545,7 +452,7 @@ func CommandList() *cli.Command {
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							containers, err := api.GetContainerList(true)
 							if err != nil {
-								return response(cmd, newErrorResponse(err.Error()))
+								return reply.CliResponse(cmd, newErrorResponse(err.Error()))
 							}
 
 							var names []string
@@ -553,14 +460,13 @@ func CommandList() *cli.Command {
 								names = append(names, c.ContainerName)
 							}
 
-							resp := APIResponse{
+							resp := reply.APIResponse{
 								Data: map[string]interface{}{
-									"message":    "Список контейнеров: " + strings.Join(names, ", "),
 									"containers": containers,
 								},
 								Error: false,
 							}
-							return response(cmd, resp)
+							return reply.CliResponse(cmd, resp)
 						}),
 					},
 					{
@@ -584,32 +490,31 @@ func CommandList() *cli.Command {
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							var resp APIResponse
 							imageVal := cmd.String("image")
 							nameVal := cmd.String("name")
 							addPkgVal := cmd.String("additional-packages")
 
 							if strings.TrimSpace(imageVal) == "" {
-								return response(cmd, newErrorResponse("Необходимо указать ссылку на образ (--image)"))
+								return reply.CliResponse(cmd, newErrorResponse("Необходимо указать ссылку на образ (--image)"))
 							}
 
 							if strings.TrimSpace(nameVal) == "" {
-								return response(cmd, newErrorResponse("Необходимо указать название контейнера (--name)"))
+								return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название контейнера (--name)"))
 							}
 
 							result, err := api.CreateContainer(imageVal, nameVal, addPkgVal)
 							if err != nil {
-								return response(cmd, newErrorResponse(fmt.Sprintf("Ошибка создания контейнера: %v", err)))
+								return reply.CliResponse(cmd, newErrorResponse(fmt.Sprintf("Ошибка создания контейнера: %v", err)))
 							}
 
-							resp = APIResponse{
+							resp := reply.APIResponse{
 								Data: map[string]interface{}{
 									"message":       fmt.Sprintf("Контейнер %s успешно создан", nameVal),
 									"containerInfo": result,
 								},
 								Error: false,
 							}
-							return response(cmd, resp)
+							return reply.CliResponse(cmd, resp)
 						}),
 					},
 					{
@@ -623,19 +528,17 @@ func CommandList() *cli.Command {
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							var resp APIResponse
-
 							nameVal := cmd.String("name")
 							if strings.TrimSpace(nameVal) == "" {
-								return response(cmd, newErrorResponse("Необходимо указать название контейнера (--name)"))
+								return reply.CliResponse(cmd, newErrorResponse("Необходимо указать название контейнера (--name)"))
 							}
 
 							result, err := api.RemoveContainer(nameVal)
 							if err != nil {
-								return response(cmd, newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)))
+								return reply.CliResponse(cmd, newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)))
 							}
 
-							resp = APIResponse{
+							resp := reply.APIResponse{
 								Data: map[string]interface{}{
 									"message":       fmt.Sprintf("Контейнер %s успешно удалён", nameVal),
 									"containerInfo": result,
@@ -643,7 +546,7 @@ func CommandList() *cli.Command {
 								Error: false,
 							}
 
-							return response(cmd, resp)
+							return reply.CliResponse(cmd, resp)
 						}),
 					},
 				},
