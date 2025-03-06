@@ -27,8 +27,8 @@ type PackageInfo struct {
 
 // PackageQueryResult содержит срез найденных пакетов и общее количество записей, удовлетворяющих фильтрам.
 type PackageQueryResult struct {
-	Packages   []PackageInfo
-	TotalCount int
+	Packages   []PackageInfo `json:"packages"`
+	TotalCount int           `json:"totalCount"`
 }
 
 // PackageQueryBuilder задаёт параметры запроса.
@@ -42,9 +42,9 @@ type PackageQueryBuilder struct {
 }
 
 type InfoPackageAnswer struct {
-	PackageInfo PackageInfo
-	Paths       []string
-	IsConsole   bool
+	PackageInfo PackageInfo `json:"packageInfo"`
+	Paths       []string    `json:"paths"`
+	IsConsole   bool        `json:"isConsole"`
 }
 
 // PackageProvider задаёт интерфейс для работы с пакетами в контейнере.
