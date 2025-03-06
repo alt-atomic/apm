@@ -45,7 +45,6 @@ func CreateSpinner() {
 		if err := p.Start(); err != nil {
 			log.Println("Ошибка запуска спиннера:", err)
 		}
-		// Как только p.Start() вернулась (Quit завершён) — закрываем канал
 		close(doneChan)
 	}()
 }

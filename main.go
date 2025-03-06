@@ -1,6 +1,7 @@
 package main
 
 import (
+	"apm/cmd/common/reply"
 	"apm/cmd/distrobox"
 	"apm/cmd/system"
 	"apm/lib"
@@ -18,13 +19,13 @@ func main() {
 	go lib.InitDBus()
 
 	rootCommand := &cli.Command{
-		Name:                  "apm",
-		Usage:                 "Atomic Packages Manager",
-		EnableShellCompletion: true,
+		Name:  "apm",
+		Usage: "Atomic Packages Manager",
+		//EnableShellCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
-				Usage:   "Формат вывода: json, text",
+				Usage:   "Формат вывода: json, text, dbus (com.application.APM)",
 				Aliases: []string{"f"},
 				Value:   "text",
 			},
@@ -50,5 +51,12 @@ func main() {
 	rootCommand.Suggest = true
 	if err := rootCommand.Run(context.Background(), os.Args); err != nil {
 		lib.Log.Error(err.Error())
+
+		_ = reply.CliResponse(reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": err.Error(),
+			},
+			Error: true,
+		})
 	}
 }

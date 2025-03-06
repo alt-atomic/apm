@@ -33,14 +33,6 @@ func CommandList() *cli.Command {
 		Name:    "system",
 		Aliases: []string{"s"},
 		Usage:   "Управление системными пакетами",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "format",
-				Usage:   "Формат вывода: json, text, dbus (com.application.APM)",
-				Aliases: []string{"f"},
-				Value:   "text",
-			},
-		},
 		Commands: []*cli.Command{
 			{
 				Name:  "install",
@@ -88,10 +80,10 @@ func CommandList() *cli.Command {
 
 					packageInfo, err := os.GetPackageInfo(packageName)
 					if err != nil {
-						return reply.CliResponse(cmd, newErrorResponse(err.Error()))
+						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(cmd, reply.APIResponse{
+					return reply.CliResponse(reply.APIResponse{
 						Data: map[string]interface{}{
 							"message": "Информация о пакете",
 							"package": packageInfo,

@@ -2,11 +2,11 @@ package reply
 
 import (
 	"apm/cmd/common/dbus"
+	"apm/lib"
 	"encoding/json"
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/tree"
-	"github.com/urfave/cli/v3"
 	"golang.org/x/crypto/ssh/terminal"
 	"os"
 	"reflect"
@@ -189,10 +189,10 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 }
 
 // CliResponse рендерит ответ в зависимости от формата (dbus/json/text).
-func CliResponse(cmd *cli.Command, resp APIResponse) error {
+func CliResponse(resp APIResponse) error {
 	StopSpinner()
-	format := cmd.String("format")
-	resp.Transaction = cmd.String("transaction")
+	format := lib.Env.Format
+	resp.Transaction = lib.Env.Transaction
 
 	switch format {
 	// ---------------------------------- DBUS ----------------------------------
@@ -230,12 +230,11 @@ func CliResponse(cmd *cli.Command, resp APIResponse) error {
 
 		case map[string]interface{}:
 			var t *tree.Tree
-			//if resp.Error {
-			//	t = buildTreeFromMap("Ошибка:", data)
-			//} else {
-			//	t = buildTreeFromMap("Успешно:", data)
-			//}
-			t = buildTreeFromMap("Ответ:", data)
+			if resp.Error {
+				t = buildTreeFromMap("Ошибка:", data)
+			} else {
+				t = buildTreeFromMap("Ответ:", data)
+			}
 
 			var rootColor lipgloss.Style
 			if resp.Error {

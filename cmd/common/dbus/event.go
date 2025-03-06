@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type DBUSNotification struct {
+type Notification struct {
 	Data        interface{} `json:"data"`
 	Transaction string      `json:"transaction,omitempty"`
 	Type        string      `json:"type,omitempty"`
@@ -43,7 +43,7 @@ func SendFuncNameDBUS(state string) {
 		EventType string `json:"event_type"`
 	}
 
-	baseModel := DBUSNotification{Data: Model{EventName: parts[len(parts)-1], EventType: state}, Transaction: lib.Env.Transaction, Type: "event"}
+	baseModel := Notification{Data: Model{EventName: parts[len(parts)-1], EventType: state}, Transaction: lib.Env.Transaction, Type: "event"}
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
