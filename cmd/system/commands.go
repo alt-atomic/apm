@@ -5,7 +5,9 @@ import (
 	"apm/cmd/system/os"
 	"apm/lib"
 	"context"
+	"fmt"
 	"github.com/urfave/cli/v3"
+	"syscall"
 )
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
@@ -16,6 +18,15 @@ func newErrorResponse(message string) reply.APIResponse {
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
 	}
+}
+
+// checkRoot проверяет, запущен ли установщик от имени root
+func checkRoot() error {
+	if syscall.Geteuid() != 0 {
+		return fmt.Errorf("для запуска необходимы права администратора, используйте sudo или su")
+	}
+
+	return nil
 }
 
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
@@ -124,6 +135,38 @@ func CommandList() *cli.Command {
 				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 				//
 				//}),
+			},
+			{
+				Name:    "image",
+				Usage:   "Модуль для работы с образом",
+				Aliases: []string{"i"},
+				Commands: []*cli.Command{
+					{
+						Name:  "generate",
+						Usage: "Принудительная генерация локального образа",
+						//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+						//
+						//}),
+					},
+					{
+						Name:  "upgrade",
+						Usage: "Обновление системы",
+						//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+						//	image, err := os.GetActiveImage()
+						//
+						//	if err != nil {
+						//
+						//	}
+						//}),
+					},
+					{
+						Name:  "switch",
+						Usage: "Переключение образа",
+						//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+						//
+						//}),
+					},
+				},
 			},
 		},
 	}

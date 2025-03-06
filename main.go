@@ -11,6 +11,12 @@ import (
 )
 
 func main() {
+	//path, err := converter.ParseConfig("example.yml")
+	//fmt.Println(path[1])
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//return
 	lib.Log.Debugln("Starting apm")
 
 	lib.InitConfig()

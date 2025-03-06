@@ -7,10 +7,11 @@ import (
 )
 
 type Environment struct {
-	CommandPrefix string `yaml:"commandPrefix" env:""`
+	CommandPrefix string `yaml:"commandPrefix" env:"apm.prefix"`
 	Environment   string `yaml:"environment" env:"prod"`
 	PathLogFile   string `yaml:"pathLogFile" env:"apm.log"`
 	PathDBFile    string `yaml:"pathDBFile" env:"apm.db"`
+	PathImageFile string `yaml:"pathImageFile" env:"apm.image"`
 	Transaction   string // Внутреннее свойство
 	Format        string // Внутреннее свойство
 }

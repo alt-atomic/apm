@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+type Image struct {
+	Name           string `json:"name"`
+	IsLocalStorage bool   `json:"issLocalStorage"`
+}
+
 // runUsrOverlay проверяет и активирует наложение файловой системы.
 func runUsrOverlay() error {
 	file, err := os.Open("/proc/mounts")
@@ -44,35 +49,43 @@ func runUsrOverlay() error {
 	return nil
 }
 
-// validateAndCreateContainerFile проверяет состояние текущего образа и создает файл containerFile, если его нет.
-func validateAndCreateContainerFile() error {
-	containerFile := "/var/Containerfile"
-
-	if _, err := os.Stat(containerFile); err == nil {
-		return nil
-	}
-
+func GetActiveImage() (string, error) {
 	cmd := exec.Command("bash", "-c", "bootc status | yq '.status.booted.image.image.image'")
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to get staged image: %v", err)
+		return "", fmt.Errorf("не удалось определить образ командой bootc: %v", err)
 	}
 
 	stagedImage := strings.TrimSpace(string(output))
 	if stagedImage == "" {
-		return fmt.Errorf("unable to determine the current staged image")
+		return "", fmt.Errorf("образ оказался пустой строкой")
 	}
 
 	if strings.HasPrefix(stagedImage, "containers-storage:") {
-		return nil
+		file, err := os.Open("/var/Containerfile")
+		if err != nil {
+			return "", fmt.Errorf("не удалось открыть файл Containerfile: %v", err)
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if strings.HasPrefix(line, "FROM ") {
+				imageName := strings.TrimSpace(line[len("FROM "):])
+				if imageName != "" {
+					return imageName, nil
+				}
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			return "", fmt.Errorf("ошибка чтения Containerfile: %v", err)
+		}
+
+		return "", fmt.Errorf("не удалось определить образ дистрибутива")
 	}
 
-	content := fmt.Sprintf("FROM %s\nRUN apt-get update\n", stagedImage)
-	if err := os.WriteFile(containerFile, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to write Containerfile: %v", err)
-	}
-
-	return nil
+	return stagedImage, nil
 }
 
 // Switch переключает систему на новый образ.

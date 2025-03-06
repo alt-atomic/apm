@@ -135,7 +135,7 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 	// Получаем информацию о пакете из базы данных
 	info, err := GetPackageInfoByName(containerInfo.ContainerName, packageName)
 	if err != nil {
-		return InfoPackageAnswer{}, fmt.Errorf("не удалось получить информацию о пакете: %s %v", packageName, err)
+		return InfoPackageAnswer{}, fmt.Errorf("не удалось получить информацию о пакете: %s", packageName)
 	}
 
 	// Пробуем получить пути для GUI-приложений

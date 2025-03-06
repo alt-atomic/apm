@@ -12,9 +12,9 @@ import (
 )
 
 type ContainerInfo struct {
-	OS            string
-	ContainerName string
-	Active        bool
+	OS            string `json:"os"`
+	ContainerName string `json:"containerName"`
+	Active        bool   `json:"active"`
 }
 
 // GetContainerList возвращает список объектов ContainerInfo с именами контейнеров.
