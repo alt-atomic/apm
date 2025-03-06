@@ -1,4 +1,4 @@
-package dbus
+package reply
 
 import (
 	"apm/lib"
@@ -22,10 +22,6 @@ var (
 
 // SendFuncNameDBUS отправляет название функции в DBUS для отслеживания состояния
 func SendFuncNameDBUS(state string) {
-	if lib.Env.Format != "dbus" {
-		return
-	}
-
 	pc, _, _, ok := runtime.Caller(1)
 	if !ok {
 		return
@@ -43,12 +39,14 @@ func SendFuncNameDBUS(state string) {
 		EventType string `json:"event_type"`
 	}
 
-	baseModel := Notification{Data: Model{EventName: parts[len(parts)-1], EventType: state}, Transaction: lib.Env.Transaction, Type: "event"}
+	taskName := parts[len(parts)-1]
+	baseModel := Notification{Data: Model{EventName: taskName, EventType: state}, Transaction: lib.Env.Transaction, Type: "event"}
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
 		lib.Log.Debug(err.Error())
 	}
+	UpdateTask(taskName, getTaskViewName(taskName), state)
 
 	SendNotificationResponse(string(b))
 }
@@ -75,5 +73,41 @@ func SendNotificationResponse(message string) {
 	err := lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {
 		lib.Log.Debugf("Ошибка отправки уведомления: %v", err)
+	}
+}
+
+func getTaskViewName(task string) string {
+	switch task {
+	case "os.SavePackagesToDB":
+		return "Сохранение пакетов в базу"
+	case "api.GetContainerList":
+		return "Запрос списка контейнеров"
+	case "api.ExportingApp":
+		return "Экспорт пакета"
+	case "api.GetContainerOsInfo":
+		return "Запрос информации о контейнере"
+	case "api.CreateContainer":
+		return "Создание контейнера"
+	case "api.RemoveContainer":
+		return "Удаление контейнера"
+	case "os.InstallPackage":
+		return "Установка пакета"
+	case "os.RemovePackage":
+		return "Удаление пакета"
+	case "os.GetPackages":
+		return "Получение списка пакетов"
+	case "os.GetPackageOwner":
+		return "Определение владельца файла"
+	case "os.GetPathByPackageName":
+		return "Поиск путей пакета"
+	case "os.GetInfoPackage":
+		return "Получение информации о пакете"
+	case "os.UpdatePackages":
+		return "Обновление пакетов"
+	case "os.GetPackagesQuery":
+		return "Фильтрация пакетов"
+	default:
+		// Если имя задачи неизвестно, возвращаем его без изменений
+		return task
 	}
 }

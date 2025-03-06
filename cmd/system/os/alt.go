@@ -1,7 +1,7 @@
 package os
 
 import (
-	"apm/cmd/common/dbus"
+	"apm/cmd/common/reply"
 	"apm/lib"
 	"bytes"
 	"fmt"
@@ -23,8 +23,8 @@ type PackageInfo struct {
 // GetPackageInfo выполняет команду `rpm -qi <pkg>`, парсит результат и возвращает PackageInfo.
 // Если команда завершается с ошибкой, stderr включается в сообщение об ошибке.
 func GetPackageInfo(pkg string) (PackageInfo, error) {
-	dbus.SendFuncNameDBUS(dbus.STATE_BEFORE)
-	defer dbus.SendFuncNameDBUS(dbus.STATE_AFTER)
+	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
+	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
 	command := fmt.Sprintf("%s rpm -qi %s", lib.Env.CommandPrefix, pkg)
 	stdout, stderr, err := RunCommand(command)
 	if err != nil {

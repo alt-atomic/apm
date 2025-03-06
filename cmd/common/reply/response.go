@@ -1,7 +1,6 @@
 package reply
 
 import (
-	"apm/cmd/common/dbus"
 	"apm/lib"
 	"encoding/json"
 	"fmt"
@@ -206,7 +205,7 @@ func CliResponse(resp APIResponse) error {
 		if err != nil {
 			return err
 		}
-		dbus.SendNotificationResponse(string(b))
+		SendNotificationResponse(string(b))
 		fmt.Println(string(b))
 		time.Sleep(100 * time.Millisecond)
 

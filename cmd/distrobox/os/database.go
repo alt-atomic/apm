@@ -1,6 +1,7 @@
 package os
 
 import (
+	"apm/cmd/common/reply"
 	"apm/lib"
 	"fmt"
 	"strings"
@@ -9,6 +10,8 @@ import (
 // SavePackagesToDB сохраняет список пакетов в таблицу с именем контейнера.
 // Таблица создаётся, если не существует, затем очищается, и в неё вставляются новые записи пакетами по 1000.
 func SavePackagesToDB(containerName string, packages []PackageInfo) error {
+	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
+	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 
 	// Создаем таблицу, если её нет.
