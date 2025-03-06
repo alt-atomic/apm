@@ -33,8 +33,9 @@ type task struct {
 }
 
 type model struct {
-	spinner spinner.Model
-	tasks   []task
+	spinner      spinner.Model // Общий спинер (стиль Points)
+	tasksSpinner spinner.Model // Спинер для задач (стиль Hamburger)
+	tasks        []task
 }
 
 // CreateSpinner — запуск спинера в отдельной горутине.
@@ -50,7 +51,7 @@ func CreateSpinner() {
 		return
 	}
 	doneChan = make(chan struct{})
-	tasksDoneChan = make(chan struct{}) // Инициализируем канал для отслеживания завершения задач
+	tasksDoneChan = make(chan struct{})
 
 	p = tea.NewProgram(
 		newSpinner(),
@@ -66,13 +67,12 @@ func CreateSpinner() {
 	}()
 }
 
-// StopSpinner — останавливает спинер, ожидая, пока все задачи завершатся и галочки успеют отрендериться.
+// StopSpinner — останавливает спинер
 func StopSpinner() {
 	if lib.Env.Format != "text" && IsTTY() {
 		return
 	}
 
-	// Ждём, пока все задачи не перейдут в состояние "AFTER"
 	<-tasksDoneChan
 
 	// Небольшая задержка для финального обновления экрана
@@ -82,41 +82,47 @@ func StopSpinner() {
 	defer mu.Unlock()
 
 	if p != nil {
-		// Посылаем сигнал на завершение спинера
 		p.Quit()
-		// Ждём, пока p.Start() действительно завершится
 		<-doneChan
 		p = nil
 
-		// Очищаем вывод спинера
 		for i := 0; i < lastLines-1; i++ {
 			fmt.Print("\033[F\033[K")
 		}
 	}
 }
 
-// newSpinner инициализирует модель со спинером.
+// newSpinner инициализирует модель со спинерами.
 func newSpinner() model {
+	// Общий спинер
 	s := spinner.New()
 	s.Spinner = spinner.Points
-	return model{spinner: s}
+
+	// Спинер для задач
+	ts := spinner.New()
+	ts.Spinner = spinner.Jump
+
+	return model{
+		spinner:      s,
+		tasksSpinner: ts,
+	}
 }
 
 func (m model) Init() tea.Cmd {
-	return m.spinner.Tick
+	return tea.Batch(m.spinner.Tick, m.tasksSpinner.Tick)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
+		var cmd1, cmd2 tea.Cmd
+		m.spinner, cmd1 = m.spinner.Update(msg)
+		m.tasksSpinner, cmd2 = m.tasksSpinner.Update(msg)
+		return m, tea.Batch(cmd1, cmd2)
 	case TaskUpdateMsg:
 		updated := false
 		for i, t := range m.tasks {
 			if t.name == msg.taskName {
-				// Обновляем состояние задачи, можно при необходимости также обновить viewName
 				m.tasks[i].state = msg.state
 				m.tasks[i].viewName = msg.viewName
 				updated = true
@@ -140,7 +146,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if allFinished {
-			// Закрываем канал один раз, если он ещё не закрыт
 			select {
 			case <-tasksDoneChan:
 			default:
@@ -162,17 +167,18 @@ func UpdateTask(taskName, viewName, state string) {
 	}
 }
 
-// View формирует строку для вывода спинера и списка задач.
+// View формирует строку для вывода спинеров и списка задач.
 func (m model) View() string {
 	s := fmt.Sprintf("\r\033[K%s \033[33mВыполнение...\033[0m", m.spinner.View())
 
-	// Вывод списка задач под спинером, отображаем viewName вместо внутреннего taskName.
 	for _, t := range m.tasks {
-		mark := "[ ]"
+		var marker string
 		if t.state == "AFTER" {
-			mark = "[✓]"
+			marker = "[✓]"
+		} else {
+			marker = fmt.Sprintf("[%s]", m.tasksSpinner.View())
 		}
-		s += fmt.Sprintf("\n%s %s", mark, t.viewName)
+		s += fmt.Sprintf("\n%s %s", marker, t.viewName)
 	}
 
 	lastLines = strings.Count(s, "\n") + 1
