@@ -35,13 +35,13 @@ func SendFuncNameDBUS(state string) {
 	parts := strings.Split(fullName, "/")
 
 	type Model struct {
-		Event     string `json:"event"`
-		EventName string `json:"eventName"`
-		EventType string `json:"evenType"`
+		Event      string `json:"event"`
+		EventName  string `json:"eventName"`
+		EventState string `json:"eventState"`
 	}
 
 	taskName := parts[len(parts)-1]
-	baseModel := Notification{Data: Model{Event: taskName, EventName: getTaskViewName(taskName), EventType: state}, Transaction: lib.Env.Transaction, Type: "event"}
+	baseModel := Notification{Data: Model{Event: taskName, EventName: getTaskViewName(taskName), EventState: state}, Transaction: lib.Env.Transaction, Type: "event"}
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
