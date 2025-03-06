@@ -133,12 +133,6 @@ func CommandList() *cli.Command {
 						Aliases:  []string{"c"},
 						Required: true,
 					},
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
@@ -146,7 +140,10 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(resp)
 					}
 
-					packageName := cmd.String("package")
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например info 7zip"))
+					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
@@ -177,12 +174,6 @@ func CommandList() *cli.Command {
 						Aliases:  []string{"c"},
 						Required: true,
 					},
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					containerVal, resp, err := validateContainer(cmd)
@@ -190,7 +181,10 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(resp)
 					}
 
-					packageName := cmd.String("package")
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search 7zip"))
+					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {
@@ -319,12 +313,6 @@ func CommandList() *cli.Command {
 						Aliases:  []string{"c"},
 						Required: true,
 					},
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
 					&cli.BoolFlag{
 						Name:  "export",
 						Usage: "Экспортировать пакет",
@@ -342,7 +330,10 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					packageName := cmd.String("package")
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search 7zip"))
+					}
 
 					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
 					if err != nil {
@@ -390,12 +381,6 @@ func CommandList() *cli.Command {
 						Aliases:  []string{"c"},
 						Required: true,
 					},
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
 					&cli.BoolFlag{
 						Name:  "only-export",
 						Usage: "Удалить только экспорт, оставить пакет в контейнере",
@@ -408,7 +393,10 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(resp)
 					}
 
-					packageName := cmd.String("package")
+					packageName := cmd.Args().First()
+					if cmd.Args().Len() == 0 || packageName == "" {
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search 7zip"))
+					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
 					if err != nil {

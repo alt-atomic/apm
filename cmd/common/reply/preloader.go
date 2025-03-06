@@ -73,7 +73,11 @@ func StopSpinner() {
 		return
 	}
 
-	<-tasksDoneChan
+	// Ждём закрытия tasksDoneChan, но не более 100 мс.
+	select {
+	case <-tasksDoneChan:
+	case <-time.After(100 * time.Millisecond):
+	}
 
 	// Небольшая задержка для финального обновления экрана
 	time.Sleep(60 * time.Millisecond)

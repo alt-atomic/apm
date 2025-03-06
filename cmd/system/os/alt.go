@@ -12,12 +12,12 @@ import (
 
 // PackageInfo описывает основные сведения о пакете.
 type PackageInfo struct {
-	Name        string
-	Version     string
-	Size        string
-	URL         string
-	Summary     string
-	InstallDate string
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Size        string `json:"size"`
+	URL         string `json:"url"`
+	Summary     string `json:"summary"`
+	InstallDate string `json:"installDate"`
 }
 
 // GetPackageInfo выполняет команду `rpm -qi <pkg>`, парсит результат и возвращает PackageInfo.
