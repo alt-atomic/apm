@@ -1,8 +1,12 @@
 package converter
 
 import (
+	"apm/cmd/system/service"
+	"apm/lib"
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
+	"strings"
 )
 
 // Config описывает структуру конфигурационного файла.
@@ -13,65 +17,113 @@ type Config struct {
 		Remove  []string `yaml:"remove" json:"remove"`
 	} `yaml:"packages" json:"packages"`
 	Commands []string `yaml:"commands" json:"commands"`
-	FilePath string   `yaml:"-" json:"-"`
 }
 
-func generateFile(path string) (*Config, error) {
-	var cfg Config
-	cfg.Image = ""
-	cfg.Packages.Install = []string{}
-	cfg.Packages.Remove = []string{}
-	cfg.Commands = []string{}
-	cfg.FilePath = path
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return nil, err
+// ParseConfig читает YAML-конфигурацию из файла
+func ParseConfig() (Config, error) {
+	pathConfig := lib.Env.PathImageFile
+	if len(pathConfig) == 0 {
+		return Config{}, fmt.Errorf("необходимо указать pathImageFile переменную в comfig.yml")
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
-// ParseConfig читает YAML-конфигурацию из указанного файла,
-func ParseConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(pathConfig)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return generateFile(path)
+			return generateFile(pathConfig)
 		}
-		return nil, err
+		return Config{}, err
 	}
 
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
+		return Config{}, err
 	}
 
-	cfg.FilePath = path
-	return &cfg, nil
+	return cfg, nil
 }
 
-// ParseConfig читает и парсит YAML-конфигурацию из указанного файла,
-func (c *Config) getCommandFomFile() ([]string, error) {
-	var commands []string
+func generateFile(path string) (Config, error) {
+	var cfg Config
+	image, err := service.GetHostImage()
+	if err != nil {
+		return Config{}, err
+	}
 
-	commands = append(commands, "apt-get update")
+	cfg.Image = image.Status.Booted.Image.Image.Image
+	cfg.Packages.Install = []string{}
+	cfg.Packages.Remove = []string{}
+	cfg.Commands = []string{}
 
-	aptCmd := "apt-get -y"
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return Config{}, err
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return Config{}, err
+	}
+
+	return cfg, nil
+}
+
+// splitCommand разбивает команду на строки длиной не более 80 символов с отступом.
+func splitCommand(prefix, cmd string) []string {
+	const maxLineLength = 80
+	words := strings.Fields(cmd)
+	var lines []string
+	currentLine := prefix
+	for _, word := range words {
+		// Если добавление следующего слова превышает максимальную длину строки.
+		if len(currentLine)+len(word)+1 > maxLineLength {
+			lines = append(lines, currentLine+" \\")
+			currentLine = "    " + word // отступ для продолжения команды
+		} else {
+			if currentLine == prefix {
+				currentLine += word
+			} else {
+				currentLine += " " + word
+			}
+		}
+	}
+	if currentLine != "" {
+		lines = append(lines, currentLine)
+	}
+	return lines
+}
+
+// GenerateDockerfile генерирует содержимое Dockerfile, формируя apt-get команды с модификаторами для пакетов.
+func (c *Config) GenerateDockerfile() (string, error) {
+	// Формирование базовой apt-get команды.
+	aptCmd := "apt-get update"
+
+	// Формирование списка пакетов с суффиксами: + для установки и - для удаления.
+	var pkgs []string
 	for _, pkg := range c.Packages.Install {
-		aptCmd += " " + pkg + "+"
+		pkgs = append(pkgs, pkg+"+")
 	}
 	for _, pkg := range c.Packages.Remove {
-		aptCmd += " " + pkg + "-"
+		pkgs = append(pkgs, pkg+"-")
 	}
-	commands = append(commands, aptCmd)
-	commands = append(commands, c.Commands...)
+	if len(pkgs) > 0 {
+		aptCmd += " && apt-get -y install " + strings.Join(pkgs, " ")
+	}
 
-	return commands, nil
+	// Формирование Dockerfile.
+	var dockerfileLines []string
+	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", c.Image))
+	// Разбиваем apt-get команду по строкам.
+	aptLines := splitCommand("RUN ", aptCmd)
+	dockerfileLines = append(dockerfileLines, strings.Join(aptLines, "\n"))
+
+	// Формирование RUN блока для пользовательских команд, если они заданы.
+	if len(c.Commands) > 0 {
+		cmdCombined := strings.Join(c.Commands, " && ")
+		cmdLines := splitCommand("RUN ", cmdCombined)
+		dockerfileLines = append(dockerfileLines, strings.Join(cmdLines, "\n"))
+	}
+
+	dockerfile := strings.Join(dockerfileLines, "\n")
+	return dockerfile, nil
 }
 
 // Save записывает обратно в файл.
@@ -80,7 +132,8 @@ func (c *Config) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(c.FilePath, data, 0644)
+
+	return os.WriteFile(lib.Env.PathImageFile, data, 0644)
 }
 
 // AddCommand добавляет команду в список Commands и сохраняет изменения в файл.
@@ -123,7 +176,7 @@ func (c *Config) AddRemovePackage(pkg string) error {
 
 // removeElement удаляет элемент из среза строк.
 func removeElement(slice []string, element string) []string {
-	newSlice := []string{}
+	var newSlice []string
 	for _, v := range slice {
 		if v != element {
 			newSlice = append(newSlice, v)

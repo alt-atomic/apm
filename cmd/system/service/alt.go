@@ -1,4 +1,4 @@
-package os
+package service
 
 import (
 	"apm/cmd/common/reply"

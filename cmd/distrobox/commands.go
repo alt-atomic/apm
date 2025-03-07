@@ -3,7 +3,7 @@ package distrobox
 import (
 	"apm/cmd/common/reply"
 	"apm/cmd/distrobox/api"
-	"apm/cmd/distrobox/os"
+	"apm/cmd/distrobox/service"
 	"apm/lib"
 	"context"
 	"fmt"
@@ -34,7 +34,7 @@ func validateContainer(cmd *cli.Command) (string, reply.APIResponse, error) {
 		return "", resp, fmt.Errorf(errText)
 	}
 
-	errContainer := os.ContainerDatabaseExist(containerVal)
+	errContainer := service.ContainerDatabaseExist(containerVal)
 
 	if errContainer != nil {
 		osInfo, err := api.GetContainerOsInfo(containerVal)
@@ -46,7 +46,7 @@ func validateContainer(cmd *cli.Command) (string, reply.APIResponse, error) {
 			return "", resp, fmt.Errorf(errText)
 		}
 
-		_, err = os.UpdatePackages(osInfo)
+		_, err = service.UpdatePackages(osInfo)
 		if err != nil {
 			resp = reply.APIResponse{
 				Data:  map[string]interface{}{"message": err.Error()},
@@ -106,7 +106,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					packages, err := os.UpdatePackages(osInfo)
+					packages, err := service.UpdatePackages(osInfo)
 					if err != nil {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
@@ -151,7 +151,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
+					packageInfo, err := service.GetInfoPackage(osInfo, packageName)
 					if err != nil {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
@@ -193,7 +193,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					queryResult, err := os.GetPackageByName(osInfo, packageName)
+					queryResult, err := service.GetPackageByName(osInfo, packageName)
 					if err != nil {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
@@ -263,7 +263,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(resp)
 					}
 
-					builder := os.PackageQueryBuilder{
+					builder := service.PackageQueryBuilder{
 						ForceUpdate: cmd.Bool("force-update"),
 						Limit:       cmd.Int("limit"),
 						Offset:      cmd.Int("offset"),
@@ -284,7 +284,7 @@ func CommandList() *cli.Command {
 					}
 
 					// Вызываем функцию запроса пакетов
-					queryResult, err := os.GetPackagesQuery(osInfo, builder)
+					queryResult, err := service.GetPackagesQuery(osInfo, builder)
 					if err != nil {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
@@ -338,20 +338,20 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search package"))
 					}
 
-					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
+					packageInfo, err := service.GetInfoPackage(osInfo, packageName)
 					if err != nil {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
 					if !packageInfo.Package.Installed {
-						err = os.InstallPackage(osInfo, packageName)
+						err = service.InstallPackage(osInfo, packageName)
 						if err != nil {
 							return reply.CliResponse(newErrorResponse(err.Error()))
 						}
 
 						packageInfo.Package.Installed = true
-						os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", true)
-						packageInfo, _ = os.GetInfoPackage(osInfo, packageName)
+						service.UpdatePackageField(osInfo.ContainerName, packageName, "installed", true)
+						packageInfo, _ = service.GetInfoPackage(osInfo, packageName)
 					}
 
 					if cmd.Bool("export") && !packageInfo.Package.Exporting {
@@ -361,7 +361,7 @@ func CommandList() *cli.Command {
 						}
 
 						packageInfo.Package.Exporting = true
-						os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", true)
+						service.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", true)
 					}
 
 					return reply.CliResponse(reply.APIResponse{
@@ -407,7 +407,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
+					packageInfo, err := service.GetInfoPackage(osInfo, packageName)
 					if err != nil {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
@@ -419,17 +419,17 @@ func CommandList() *cli.Command {
 						}
 
 						packageInfo.Package.Exporting = false
-						os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", false)
+						service.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", false)
 					}
 
 					if !cmd.Bool("only-export") && packageInfo.Package.Installed {
-						err = os.RemovePackage(osInfo, packageName)
+						err = service.RemovePackage(osInfo, packageName)
 						if err != nil {
 							return reply.CliResponse(newErrorResponse(err.Error()))
 						}
 
 						packageInfo.Package.Installed = false
-						os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", false)
+						service.UpdatePackageField(osInfo.ContainerName, packageName, "installed", false)
 					}
 
 					return reply.CliResponse(reply.APIResponse{

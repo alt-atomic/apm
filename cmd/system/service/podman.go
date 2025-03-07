@@ -1,4 +1,4 @@
-package os
+package service
 
 import (
 	"bufio"
@@ -12,14 +12,14 @@ import (
 func pruneOldImages() error {
 	cmd := exec.Command("podman", "image", "prune", "-f")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to remove old images: %v, output: %s", err, string(output))
+		return fmt.Errorf("ошибка удаления старых изображений: %v, output: %s", err, string(output))
 	}
 
 	// Получаем список образов.
 	cmd = exec.Command("podman", "images", "--noheading")
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to get podman images: %v", err)
+		return fmt.Errorf("ошибка получения образа podman: %v", err)
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(output))
@@ -33,9 +33,10 @@ func pruneOldImages() error {
 			imageID := fields[2]
 			cmd = exec.Command("podman", "rmi", "-f", imageID)
 			if out, err := cmd.CombinedOutput(); err != nil {
-				fmt.Printf("Failed to remove image %s: %v, output: %s\n", imageID, err, string(out))
+				fmt.Printf("ошибка удаления образа %s: %v, output: %s\n", imageID, err, string(out))
 			}
 		}
 	}
+
 	return nil
 }

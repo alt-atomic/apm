@@ -79,7 +79,7 @@ func SendNotificationResponse(message string) {
 
 func getTaskViewName(task string) string {
 	switch task {
-	case "os.SavePackagesToDB":
+	case "service.SavePackagesToDB":
 		return "Сохранение пакетов в базу"
 	case "api.GetContainerList":
 		return "Запрос списка контейнеров"
@@ -91,21 +91,21 @@ func getTaskViewName(task string) string {
 		return "Создание контейнера"
 	case "api.RemoveContainer":
 		return "Удаление контейнера"
-	case "os.InstallPackage":
+	case "service.InstallPackage":
 		return "Установка пакета"
-	case "os.RemovePackage":
+	case "service.RemovePackage":
 		return "Удаление пакета"
-	case "os.GetPackages":
+	case "service.GetPackages":
 		return "Получение списка пакетов"
-	case "os.GetPackageOwner":
+	case "service.GetPackageOwner":
 		return "Определение владельца файла"
-	case "os.GetPathByPackageName":
+	case "service.GetPathByPackageName":
 		return "Поиск путей пакета"
-	case "os.GetInfoPackage":
+	case "service.GetInfoPackage":
 		return "Получение информации о пакете"
-	case "os.UpdatePackages":
+	case "service.UpdatePackages":
 		return "Обновление пакетов"
-	case "os.GetPackagesQuery":
+	case "service.GetPackagesQuery":
 		return "Фильтрация пакетов"
 	default:
 		// Если имя задачи неизвестно, возвращаем его без изменений
