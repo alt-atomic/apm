@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"github.com/godbus/dbus/v5"
 )
 
@@ -8,23 +9,21 @@ import (
 var DBUSConn *dbus.Conn
 
 // InitDBus устанавливает соединение с сессионной шиной DBus
-// и регистрирует имя сервиса.
-func InitDBus() {
+func InitDBus() error {
 	var err error
 	DBUSConn, err = dbus.ConnectSessionBus()
 	if err != nil {
-		Log.Error("Ошибка подключения к DBus: %v", err)
-		return
+		return err
 	}
 
 	reply, err := DBUSConn.RequestName("com.application.APM", dbus.NameFlagDoNotQueue)
 	if err != nil {
-		Log.Error("Ошибка запроса имени сервиса: %v", err)
-		return
+		return err
 	}
 
 	if reply != dbus.RequestNameReplyPrimaryOwner {
-		Log.Error("Имя сервиса уже занято!")
-		return
+		return fmt.Errorf("интерфейс com.application.APM уже занят")
 	}
+
+	return nil
 }

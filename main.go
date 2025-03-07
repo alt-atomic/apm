@@ -1,6 +1,7 @@
 package main
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/cmd/distrobox"
 	"apm/cmd/system"
@@ -41,16 +42,26 @@ func main() {
 				Usage:   "Запуск DBUS-сервиса com.application.APM",
 				Aliases: []string{"dbus"},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					lib.InitDBus()
-					actions := distrobox.NewActions()
-					dbusObj := distrobox.NewDBusWrapper(actions)
+					err := lib.InitDBus()
+					if err != nil {
+						return err
+					}
 
-					if err := lib.DBUSConn.Export(dbusObj, "/com/application/APM", "com.application.APM"); err != nil {
+					distroActions := distrobox.NewActions()
+					distroObj := distrobox.NewDBusWrapper(distroActions)
+
+					sysActions := system.NewActions()
+					sysObj := system.NewDBusWrapper(sysActions)
+
+					if err := lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
+						return err
+					}
+					if err := lib.DBUSConn.Export(sysObj, "/com/application/APM", "com.application.system"); err != nil {
 						return err
 					}
 
 					if err := lib.DBUSConn.Export(
-						introspect.Introspectable(distrobox.IntrospectXML),
+						introspect.Introspectable(helper.CombinedIntrospectXML),
 						"/com/application/APM",
 						"org.freedesktop.DBus.Introspectable",
 					); err != nil {

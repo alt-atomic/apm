@@ -2,13 +2,10 @@ package system
 
 import (
 	"apm/cmd/common/reply"
-	"apm/cmd/system/converter"
-	"apm/cmd/system/service"
 	"apm/lib"
 	"context"
 	"fmt"
 	"github.com/urfave/cli/v3"
-	"os"
 	"syscall"
 )
 
@@ -22,7 +19,7 @@ func newErrorResponse(message string) reply.APIResponse {
 	}
 }
 
-// checkRoot проверяет, запущен ли установщик от имени root
+// checkRoot проверяет, запущен ли софт от имени root
 func checkRoot() error {
 	if syscall.Geteuid() != 0 {
 		return fmt.Errorf("для выполнения необходимы права администратора, используйте sudo или su")
@@ -88,22 +85,22 @@ func CommandList() *cli.Command {
 						Required: true,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					packageName := cmd.String("package")
-
-					packageInfo, err := service.GetPackageInfo(packageName)
-					if err != nil {
-						return reply.CliResponse(newErrorResponse(err.Error()))
-					}
-
-					return reply.CliResponse(reply.APIResponse{
-						Data: map[string]interface{}{
-							"message": "Информация о пакете",
-							"package": packageInfo,
-						},
-						Error: false,
-					})
-				}),
+				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+				//	packageName := cmd.String("package")
+				//
+				//	packageInfo, err := service.GetPackageInfo(packageName)
+				//	if err != nil {
+				//		return reply.CliResponse(newErrorResponse(err.Error()))
+				//	}
+				//
+				//	return reply.CliResponse(reply.APIResponse{
+				//		Data: map[string]interface{}{
+				//			"message": "Информация о пакете",
+				//			"package": packageInfo,
+				//		},
+				//		Error: false,
+				//	})
+				//}),
 			},
 			{
 				Name:  "search",
@@ -154,32 +151,12 @@ func CommandList() *cli.Command {
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							err := checkRoot()
+							resp, err := NewActions().ImageGenerate(cmd.Bool("switch"))
 							if err != nil {
 								return reply.CliResponse(newErrorResponse(err.Error()))
 							}
 
-							config, err := converter.ParseConfig()
-							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
-							}
-
-							dockerStr, err := config.GenerateDockerfile()
-							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
-							}
-
-							err = os.WriteFile("test.txt", []byte(dockerStr), 0644)
-							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
-							}
-							return reply.CliResponse(reply.APIResponse{
-								Data: map[string]interface{}{
-									"message": "Конфигурация образа",
-									"config":  config,
-								},
-								Error: false,
-							})
+							return reply.CliResponse(resp)
 						}),
 					},
 					{

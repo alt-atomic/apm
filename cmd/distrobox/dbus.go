@@ -31,7 +31,7 @@ func (w *DBusWrapper) Update(container string) (string, *dbus.Error) {
 }
 
 // Info обёртка над actions.Info
-func (w *DBusWrapper) Info(container, packageName string) (string, *dbus.Error) {
+func (w *DBusWrapper) Info(container string, packageName string) (string, *dbus.Error) {
 	resp, err := w.actions.Info(container, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -44,7 +44,7 @@ func (w *DBusWrapper) Info(container, packageName string) (string, *dbus.Error) 
 }
 
 // Search обёртка над actions.Search
-func (w *DBusWrapper) Search(container, packageName string) (string, *dbus.Error) {
+func (w *DBusWrapper) Search(container string, packageName string) (string, *dbus.Error) {
 	resp, err := w.actions.Search(container, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -75,7 +75,7 @@ func (w *DBusWrapper) List(paramsJSON string) (string, *dbus.Error) {
 }
 
 // Install обёртка над actions.Install
-func (w *DBusWrapper) Install(container, packageName string, export bool) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(container string, packageName string, export bool) (string, *dbus.Error) {
 	resp, err := w.actions.Install(container, packageName, export)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -88,7 +88,7 @@ func (w *DBusWrapper) Install(container, packageName string, export bool) (strin
 }
 
 // Remove обёртка над actions.Remove
-func (w *DBusWrapper) Remove(container, packageName string, onlyExport bool) (string, *dbus.Error) {
+func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bool) (string, *dbus.Error) {
 	resp, err := w.actions.Remove(container, packageName, onlyExport)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -142,7 +142,56 @@ func (w *DBusWrapper) ContainerRemove(name string) (string, *dbus.Error) {
 // IntrospectXML – описание интерфейса для org.freedesktop.DBus.Introspectable.
 const IntrospectXML = `
 <node>
-    <interface name="com.application.APM">
+    <interface name="com.application.distrobox">
+        <signal name="Notification">
+            <arg type="s" name="message" direction="out"/>
+        </signal>
+        <method name="Update">
+            <arg type="s" name="container" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="Info">
+            <arg type="s" name="container" direction="in"/>
+            <arg type="s" name="packageName" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="Search">
+            <arg type="s" name="container" direction="in"/>
+            <arg type="s" name="packageName" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="List">
+            <arg type="s" name="paramsJSON" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="Install">
+            <arg type="s" name="container" direction="in"/>
+            <arg type="s" name="packageName" direction="in"/>
+            <arg type="b" name="export" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="Remove">
+            <arg type="s" name="container" direction="in"/>
+            <arg type="s" name="packageName" direction="in"/>
+            <arg type="b" name="onlyExport" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="ContainerList">
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="ContainerAdd">
+            <arg type="s" name="image" direction="in"/>
+            <arg type="s" name="name" direction="in"/>
+            <arg type="s" name="additionalPackages" direction="in"/>
+            <arg type="s" name="initHooks" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+        <method name="ContainerRemove">
+            <arg type="s" name="name" direction="in"/>
+            <arg type="s" direction="out"/>
+        </method>
+    </interface>
+    <interface name="com.application.host">
         <signal name="Notification">
             <arg type="s" name="message" direction="out"/>
         </signal>
