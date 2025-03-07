@@ -205,9 +205,8 @@ func CliResponse(resp APIResponse) error {
 		if err != nil {
 			return err
 		}
-		SendNotificationResponse(string(b))
 		fmt.Println(string(b))
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 
 	// ---------------------------------- JSON ----------------------------------
 	case "json":
