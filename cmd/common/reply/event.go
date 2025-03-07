@@ -3,7 +3,7 @@ package reply
 import (
 	"apm/lib"
 	"encoding/json"
-	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/v5"
 	"runtime"
 	"strings"
 	"time"
@@ -12,7 +12,6 @@ import (
 type Notification struct {
 	Data        interface{} `json:"data"`
 	Transaction string      `json:"transaction,omitempty"`
-	Type        string      `json:"type,omitempty"`
 }
 
 var (
@@ -41,7 +40,7 @@ func SendFuncNameDBUS(state string) {
 	}
 
 	taskName := parts[len(parts)-1]
-	baseModel := Notification{Data: Model{Event: taskName, EventName: getTaskViewName(taskName), EventState: state}, Transaction: lib.Env.Transaction, Type: "event"}
+	baseModel := Notification{Data: Model{Event: taskName, EventName: getTaskViewName(taskName), EventState: state}, Transaction: lib.Env.Transaction}
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
@@ -67,7 +66,6 @@ func SendNotificationResponse(message string) {
 		}
 	}
 
-	// Объектный путь, по которому отправляются сигналы
 	objPath := dbus.ObjectPath("/com/application/APM")
 	signalName := "com.application.APM.Notification"
 

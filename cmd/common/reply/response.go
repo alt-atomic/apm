@@ -10,7 +10,6 @@ import (
 	"os"
 	"reflect"
 	"sort"
-	"time"
 )
 
 // APIResponse описывает итоговую структуру ответа.
@@ -194,20 +193,6 @@ func CliResponse(resp APIResponse) error {
 	resp.Transaction = lib.Env.Transaction
 
 	switch format {
-	// ---------------------------------- DBUS ----------------------------------
-	case "dbus":
-		if !resp.Error {
-			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
-				delete(dataMap, "message")
-			}
-		}
-		b, err := json.MarshalIndent(resp, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(b))
-		time.Sleep(50 * time.Millisecond)
-
 	// ---------------------------------- JSON ----------------------------------
 	case "json":
 		// Если нет ошибки, убираем "message"
