@@ -124,8 +124,9 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:  "info",
-				Usage: "Информация о пакете",
+				Name:      "info",
+				Usage:     "Информация о пакете",
+				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
@@ -142,7 +143,7 @@ func CommandList() *cli.Command {
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например info 7zip"))
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например info package"))
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
@@ -165,8 +166,9 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:  "search",
-				Usage: "Поиск пакета по названию",
+				Name:      "search",
+				Usage:     "Поиск пакета по названию",
+				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
@@ -183,7 +185,7 @@ func CommandList() *cli.Command {
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search 7zip"))
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search package"))
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
@@ -304,8 +306,9 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:  "install",
-				Usage: "Установить пакет",
+				Name:      "install",
+				Usage:     "Установить пакет",
+				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
@@ -332,7 +335,7 @@ func CommandList() *cli.Command {
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search 7zip"))
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search package"))
 					}
 
 					packageInfo, err := os.GetInfoPackage(osInfo, packageName)
@@ -371,9 +374,10 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:    "remove",
-				Usage:   "Удалить пакет",
-				Aliases: []string{"rm"},
+				Name:      "remove",
+				Usage:     "Удалить пакет",
+				ArgsUsage: "package",
+				Aliases:   []string{"rm"},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
@@ -395,7 +399,7 @@ func CommandList() *cli.Command {
 
 					packageName := cmd.Args().First()
 					if cmd.Args().Len() == 0 || packageName == "" {
-						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search 7zip"))
+						return reply.CliResponse(newErrorResponse("необходимо указать название пакета, например search package"))
 					}
 
 					osInfo, err := api.GetContainerOsInfo(containerVal)
