@@ -42,9 +42,9 @@ type PackageQueryBuilder struct {
 }
 
 type InfoPackageAnswer struct {
-	PackageInfo PackageInfo `json:"packageInfo"`
-	Paths       []string    `json:"paths"`
-	IsConsole   bool        `json:"isConsole"`
+	Package   PackageInfo `json:"package"`
+	Paths     []string    `json:"paths"`
+	IsConsole bool        `json:"isConsole"`
 }
 
 // PackageProvider задаёт интерфейс для работы с пакетами в контейнере.
@@ -146,9 +146,9 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 
 	if len(desktopPaths) > 0 {
 		return InfoPackageAnswer{
-			PackageInfo: info,
-			Paths:       desktopPaths,
-			IsConsole:   false,
+			Package:   info,
+			Paths:     desktopPaths,
+			IsConsole: false,
 		}, nil
 	}
 
@@ -159,9 +159,9 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 	}
 
 	return InfoPackageAnswer{
-		PackageInfo: info,
-		Paths:       consolePaths,
-		IsConsole:   len(consolePaths) > 0,
+		Package:   info,
+		Paths:     consolePaths,
+		IsConsole: len(consolePaths) > 0,
 	}, nil
 }
 

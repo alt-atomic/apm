@@ -158,8 +158,8 @@ func CommandList() *cli.Command {
 
 					return reply.CliResponse(reply.APIResponse{
 						Data: map[string]interface{}{
-							"message": "Информация о пакете",
-							"package": packageInfo,
+							"message":     "Информация о пакете",
+							"packageInfo": packageInfo,
 						},
 						Error: false,
 					})
@@ -343,24 +343,24 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					if !packageInfo.PackageInfo.Installed {
+					if !packageInfo.Package.Installed {
 						err = os.InstallPackage(osInfo, packageName)
 						if err != nil {
 							return reply.CliResponse(newErrorResponse(err.Error()))
 						}
 
-						packageInfo.PackageInfo.Installed = true
+						packageInfo.Package.Installed = true
 						os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", true)
 						packageInfo, _ = os.GetInfoPackage(osInfo, packageName)
 					}
 
-					if cmd.Bool("export") && !packageInfo.PackageInfo.Exporting {
+					if cmd.Bool("export") && !packageInfo.Package.Exporting {
 						errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
 						if errExport != nil {
 							return reply.CliResponse(newErrorResponse(errExport.Error()))
 						}
 
-						packageInfo.PackageInfo.Exporting = true
+						packageInfo.Package.Exporting = true
 						os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", true)
 					}
 
@@ -412,23 +412,23 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(newErrorResponse(err.Error()))
 					}
 
-					if packageInfo.PackageInfo.Exporting {
+					if packageInfo.Package.Exporting {
 						errExport := api.ExportingApp(osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
 						if errExport != nil {
 							return reply.CliResponse(newErrorResponse(errExport.Error()))
 						}
 
-						packageInfo.PackageInfo.Exporting = false
+						packageInfo.Package.Exporting = false
 						os.UpdatePackageField(osInfo.ContainerName, packageName, "exporting", false)
 					}
 
-					if !cmd.Bool("only-export") && packageInfo.PackageInfo.Installed {
+					if !cmd.Bool("only-export") && packageInfo.Package.Installed {
 						err = os.RemovePackage(osInfo, packageName)
 						if err != nil {
 							return reply.CliResponse(newErrorResponse(err.Error()))
 						}
 
-						packageInfo.PackageInfo.Installed = false
+						packageInfo.Package.Installed = false
 						os.UpdatePackageField(osInfo.ContainerName, packageName, "installed", false)
 					}
 
