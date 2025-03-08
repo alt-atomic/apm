@@ -44,7 +44,7 @@ const ContainerPath = "/var/Containerfile"
 func GetHostImage() (HostImage, error) {
 	var host HostImage
 
-	command := fmt.Sprintf("%s bootc status | yq -o=json", lib.Env.CommandPrefix)
+	command := fmt.Sprintf("%s bootc status --format json", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Env = append(os.Environ(), "PATH=/home/linuxbrew/.linuxbrew/bin:"+os.Getenv("PATH"))
 	output, err := cmd.CombinedOutput()
