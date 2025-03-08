@@ -7,9 +7,12 @@ import (
 	"apm/cmd/system"
 	"apm/lib"
 	"context"
+	"fmt"
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -18,6 +21,24 @@ func main() {
 	lib.InitConfig()
 	lib.InitLogger()
 	lib.InitDatabase()
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		infoText := fmt.Sprintf("Получен сигнал %s. Завершаем работу приложения...", sig)
+
+		lib.Log.Error(infoText)
+		_ = reply.CliResponse(reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": infoText,
+			},
+			Error: true,
+		})
+
+		os.Exit(0)
+	}()
 
 	rootCommand := &cli.Command{
 		Name:  "apm",

@@ -23,8 +23,8 @@ type PackageInfo struct {
 // GetPackageInfo выполняет команду `rpm -qi <pkg>`, парсит результат и возвращает PackageInfo.
 // Если команда завершается с ошибкой, stderr включается в сообщение об ошибке.
 func GetPackageInfo(pkg string) (PackageInfo, error) {
-	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
-	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
 	command := fmt.Sprintf("%s rpm -qi %s", lib.Env.CommandPrefix, pkg)
 	stdout, stderr, err := RunCommand(command)
 	if err != nil {

@@ -6,17 +6,17 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusWrapper – структура, которая «оборачивает» ваши Actions для экспорта в DBus.
+// DBusWrapper – обёртка для системных действий, предназначенная для экспорта через DBus.
 type DBusWrapper struct {
 	actions *Actions
 }
 
-// NewDBusWrapper создаёт новую обёртку для ваших действий, которую можно экспортировать по DBus.
+// NewDBusWrapper создаёт новую обёртку над actions
 func NewDBusWrapper(a *Actions) *DBusWrapper {
 	return &DBusWrapper{actions: a}
 }
 
-// Update обёртка над actions.Update, возвращает JSON.
+// Update обёртка над actions.Update
 func (w *DBusWrapper) Update(container string) (string, *dbus.Error) {
 	resp, err := w.actions.Update(container)
 	if err != nil {

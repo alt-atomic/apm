@@ -56,6 +56,8 @@ func CreateSpinner() {
 	p = tea.NewProgram(
 		newSpinner(),
 		tea.WithOutput(os.Stdout),
+		tea.WithoutSignalHandler(),
+		tea.WithInput(nil),
 		//tea.WithAltScreen(),
 	)
 

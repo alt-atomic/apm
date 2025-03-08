@@ -10,7 +10,7 @@ type DBusWrapper struct {
 	actions *Actions
 }
 
-// NewDBusWrapper создаёт новую обёртку для системных действий.
+// NewDBusWrapper создаёт новую обёртку над actions
 func NewDBusWrapper(a *Actions) *DBusWrapper {
 	return &DBusWrapper{actions: a}
 }

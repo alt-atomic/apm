@@ -19,8 +19,8 @@ type ContainerInfo struct {
 
 // GetContainerList возвращает список объектов ContainerInfo с именами контейнеров.
 func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
-	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
-	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
 	// Формируем команду с префиксом из конфигурации
 	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
 
@@ -78,8 +78,8 @@ func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 // Если isConsole == false, формируется команда экспорта GUI приложения;
 // если isConsole == true, формируются команды для каждого пути из pathList.
 func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
-	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
-	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.
 	suffix := ""
 	if deleteApp {
@@ -116,7 +116,7 @@ func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole boo
 			cmd.Stderr = &stderr
 
 			if err := cmd.Run(); err != nil {
-				errChan <- fmt.Errorf("ошибка выполнения команды %q: %v, stderr: %s", command, err, stderr)
+				errChan <- fmt.Errorf("ошибка выполнения команды %q: %v", command, err)
 			}
 		}(cmdStr)
 	}
@@ -133,8 +133,8 @@ func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole boo
 
 // GetContainerOsInfo возвращает объект с информацией о контейнере
 func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
-	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
-	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
 	containers, errContainerList := GetContainerList(false)
 	if errContainerList != nil {
 		lib.Log.Error(errContainerList.Error())
@@ -204,8 +204,8 @@ func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
 func CreateContainer(image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
-	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
-	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
 	containers, errContainerList := GetContainerList(false)
 	if errContainerList != nil {
 		lib.Log.Error(errContainerList.Error())
@@ -226,7 +226,14 @@ func CreateContainer(image, containerName string, addPkg string, hook string) (C
 			fmt.Errorf("контейнер уже сушествует: %s", containerName)
 	}
 
-	command := fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s --init-hooks %s", lib.Env.CommandPrefix, image, containerName, addPkg, hook)
+	var command string
+	if len(hook) > 0 {
+		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s --init-hooks %s",
+			lib.Env.CommandPrefix, image, containerName, addPkg, hook)
+	} else {
+		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s",
+			lib.Env.CommandPrefix, image, containerName, addPkg)
+	}
 	cmd := exec.Command("sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer
@@ -244,8 +251,8 @@ func CreateContainer(image, containerName string, addPkg string, hook string) (C
 
 // RemoveContainer удаление контейнера
 func RemoveContainer(containerName string) (ContainerInfo, error) {
-	reply.SendFuncNameDBUS(reply.STATE_BEFORE)
-	defer reply.SendFuncNameDBUS(reply.STATE_AFTER)
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
 	command := fmt.Sprintf("%s distrobox rm %s", lib.Env.CommandPrefix, containerName)
 	cmd := exec.Command("sh", "-c", command)
 

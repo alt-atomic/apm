@@ -3,50 +3,124 @@ package reply
 import (
 	"apm/lib"
 	"encoding/json"
+	"errors"
 	"github.com/godbus/dbus/v5"
 	"runtime"
 	"strings"
 	"time"
 )
 
+// EventData содержит данные события.
+type EventData struct {
+	Name            string `json:"name"`
+	View            string `json:"view"`
+	State           string `json:"state"`
+	Type            string `json:"type"`
+	ProgressPercent int    `json:"progress"`
+}
+
+// Notification — структура для отправки уведомления.
 type Notification struct {
-	Data        interface{} `json:"data"`
-	Transaction string      `json:"transaction,omitempty"`
+	Data        EventData `json:"data"`
+	Transaction string    `json:"transaction,omitempty"`
 }
 
 var (
-	STATE_BEFORE = "BEFORE"
-	STATE_AFTER  = "AFTER"
+	EventTypeNotification = "notification"
+	EventTypeProgress     = "progress"
+
+	StateBefore = "BEFORE"
+	StateAfter  = "AFTER"
 )
 
-// SendFuncNameDBUS отправляет название функции в DBUS для отслеживания состояния
-func SendFuncNameDBUS(state string) {
-	pc, _, _, ok := runtime.Caller(1)
-	if !ok {
-		return
-	}
-	fn := runtime.FuncForPC(pc)
-	if fn == nil {
-		return
-	}
-	fullName := fn.Name()
+// NotificationOption — функция-опция для настройки EventData.
+type NotificationOption func(*EventData)
 
-	parts := strings.Split(fullName, "/")
+// WithEventName задаёт имя события.
+func WithEventName(name string) NotificationOption {
+	return func(ed *EventData) {
+		ed.Name = name
+	}
+}
 
-	type Model struct {
-		Event      string `json:"event"`
-		EventName  string `json:"eventName"`
-		EventState string `json:"eventState"`
+// WithEventView задаёт текст отображения события
+func WithEventView(name string) NotificationOption {
+	return func(ed *EventData) {
+		ed.View = name
+	}
+}
+
+// WithProgress указывает, что событие является прогрессом.
+func WithProgress(isProgress bool) NotificationOption {
+	return func(ed *EventData) {
+		if isProgress {
+			ed.Type = EventTypeProgress
+		} else {
+			ed.Type = EventTypeNotification
+		}
+	}
+}
+
+// WithProgressPercent задаёт процент выполнения.
+func WithProgressPercent(percent int) NotificationOption {
+	return func(ed *EventData) {
+		ed.ProgressPercent = percent
+	}
+}
+
+// CreateEventNotification создаёт EventData, используя заданное состояние и опции.
+func CreateEventNotification(state string, opts ...NotificationOption) {
+	// Устанавливаем значения по умолчанию.
+	ed := EventData{
+		Name:            "",
+		State:           state,
+		Type:            EventTypeNotification,
+		ProgressPercent: 0,
 	}
 
-	taskName := parts[len(parts)-1]
-	baseModel := Notification{Data: Model{Event: taskName, EventName: getTaskViewName(taskName), EventState: state}, Transaction: lib.Env.Transaction}
+	// Применяем переданные опции.
+	for _, opt := range opts {
+		opt(&ed)
+	}
+
+	// Если имя события не задано, определяем его через runtime
+	if ed.Name == "" {
+		pc, _, _, ok := runtime.Caller(1)
+		if !ok {
+			errText := "не удалось получить информацию о вызове"
+			lib.Log.Error(errors.New(errText))
+			return
+		}
+		fn := runtime.FuncForPC(pc)
+		if fn == nil {
+			errText := "FuncForPC вернул nil"
+			lib.Log.Error(errors.New(errText))
+			return
+		}
+		fullName := fn.Name()
+		parts := strings.Split(fullName, "/")
+		ed.Name = parts[len(parts)-1]
+	}
+
+	if ed.View == "" {
+		ed.View = getTaskViewName(ed.Name)
+	}
+
+	SendFuncNameDBUS(ed)
+}
+
+// SendFuncNameDBUS отправляет уведомление через DBUS.
+func SendFuncNameDBUS(eventData EventData) {
+	baseModel := Notification{
+		Data:        eventData,
+		Transaction: lib.Env.Transaction,
+	}
 
 	b, err := json.MarshalIndent(baseModel, "", "  ")
 	if err != nil {
 		lib.Log.Debug(err.Error())
 	}
-	UpdateTask(taskName, getTaskViewName(taskName), state)
+	UpdateTask(eventData.Name, eventData.View, eventData.State)
 
 	SendNotificationResponse(string(b))
 }
@@ -77,6 +151,8 @@ func SendNotificationResponse(message string) {
 
 func getTaskViewName(task string) string {
 	switch task {
+	case "api.CreateContainer.progress":
+		return "Загрузка контейнера"
 	case "service.SavePackagesToDB":
 		return "Сохранение пакетов в базу"
 	case "api.GetContainerList":
