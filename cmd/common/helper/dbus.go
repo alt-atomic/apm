@@ -95,9 +95,4 @@ const SystemIntrospectXML = `
       <arg direction="out" type="s" name="result"/>
     </method>
   </interface>
-  <interface name="org.freedesktop.DBus.Introspectable">
-    <method name="Introspect">
-      <arg direction="out" type="s" name="data"/>
-    </method>
-  </interface>
 ` + introspect.IntrospectDataString + `</node>`

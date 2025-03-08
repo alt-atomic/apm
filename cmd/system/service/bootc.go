@@ -57,7 +57,7 @@ func GetHostImage() (HostImage, error) {
 	}
 
 	transport := strings.TrimSpace(host.Status.Booted.Image.Image.Transport)
-	// Если образ пуст или начинается с "containers-storage:", ищем в файле
+	// Если образ пуст или начинается с "containers-storage", ищем в файле
 	if strings.HasPrefix(transport, "containers-storage") {
 		file, err := os.Open(ContainerPath)
 		if err != nil {
