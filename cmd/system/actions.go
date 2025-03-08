@@ -107,6 +107,11 @@ func (a *Actions) Remove(packageName string) (reply.APIResponse, error) {
 
 // ImageStatus возвращает статус актуального образа
 func (a *Actions) ImageStatus() (reply.APIResponse, error) {
+	err := checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	imageStatus, err := a.getImageStatus()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
