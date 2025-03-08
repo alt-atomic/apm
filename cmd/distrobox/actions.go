@@ -89,7 +89,7 @@ func (a *Actions) Search(container, packageName string) (reply.APIResponse, erro
 		return a.newErrorResponse(err.Error()), err
 	}
 	word := a.pluralizePackage(queryResult.TotalCount)
-	msg := fmt.Sprintf("Найден %d %s", queryResult.TotalCount, word)
+	msg := fmt.Sprintf("Найдено %d %s", queryResult.TotalCount, word)
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":  msg,
@@ -103,14 +103,14 @@ func (a *Actions) Search(container, packageName string) (reply.APIResponse, erro
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Container   string
-	Sort        string
-	Order       string
-	Limit       int64
-	Offset      int64
-	FilterField string
-	FilterValue string
-	ForceUpdate bool
+	Container   string `json:"container"`
+	Sort        string `json:"sort"`
+	Order       string `json:"order"`
+	Limit       int64  `json:"limit"`
+	Offset      int64  `json:"offset"`
+	FilterField string `json:"filterField"`
+	FilterValue string `json:"filterValue"`
+	ForceUpdate bool   `json:"forceUpdate"`
 }
 
 // List возвращает список пакетов согласно заданным параметрам.
