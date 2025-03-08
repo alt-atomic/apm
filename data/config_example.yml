@@ -1,0 +1,5 @@
+commandPrefix: ""
+pathImageFile: "image.yml"
+pathLogFile: "log/apm.log"
+pathDBFile: "db/apm.db"
+environment: "prod"

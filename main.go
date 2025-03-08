@@ -59,11 +59,10 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:    "dbus-service",
-				Usage:   "Запуск DBUS-сервиса com.application.APM",
-				Aliases: []string{"dbus"},
+				Name:  "dbus-user",
+				Usage: "Запуск DBUS-сервиса com.application.APM",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					err := lib.InitDBus()
+					err := lib.InitDBus(false)
 					if err != nil {
 						return err
 					}
@@ -71,18 +70,44 @@ func main() {
 					distroActions := distrobox.NewActions()
 					distroObj := distrobox.NewDBusWrapper(distroActions)
 
-					sysActions := system.NewActions()
-					sysObj := system.NewDBusWrapper(sysActions)
-
 					if err := lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
 						return err
 					}
+
+					if err := lib.DBUSConn.Export(
+						introspect.Introspectable(helper.UserIntrospectXML),
+						"/com/application/APM",
+						"org.freedesktop.DBus.Introspectable",
+					); err != nil {
+						return err
+					}
+
+					lib.Env.Format = "dbus"
+					select {}
+				},
+			},
+			{
+				Name:  "dbus-system",
+				Usage: "Запуск DBUS-сервиса com.application.APM",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					err := lib.InitDBus(true)
+					if err != nil {
+						return err
+					}
+
+					if syscall.Geteuid() != 0 {
+						return fmt.Errorf("для запуска необходимы права администратора")
+					}
+
+					sysActions := system.NewActions()
+					sysObj := system.NewDBusWrapper(sysActions)
+
 					if err := lib.DBUSConn.Export(sysObj, "/com/application/APM", "com.application.system"); err != nil {
 						return err
 					}
 
 					if err := lib.DBUSConn.Export(
-						introspect.Introspectable(helper.CombinedIntrospectXML),
+						introspect.Introspectable(helper.SystemIntrospectXML),
 						"/com/application/APM",
 						"org.freedesktop.DBus.Introspectable",
 					); err != nil {

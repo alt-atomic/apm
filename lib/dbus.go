@@ -9,9 +9,13 @@ import (
 var DBUSConn *dbus.Conn
 
 // InitDBus устанавливает соединение с сессионной шиной DBus
-func InitDBus() error {
+func InitDBus(isSystem bool) error {
 	var err error
-	DBUSConn, err = dbus.ConnectSessionBus()
+	if isSystem {
+		DBUSConn, err = dbus.ConnectSystemBus()
+	} else {
+		DBUSConn, err = dbus.ConnectSessionBus()
+	}
 	if err != nil {
 		return err
 	}

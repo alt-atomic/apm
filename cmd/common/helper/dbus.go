@@ -2,7 +2,7 @@ package helper
 
 import "github.com/godbus/dbus/v5/introspect"
 
-const CombinedIntrospectXML = `
+const UserIntrospectXML = `
 <node>
   <interface name="com.application.APM">
     <signal name="Notification">
@@ -54,6 +54,15 @@ const CombinedIntrospectXML = `
       <arg direction="in" type="s" name="name"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+  </interface>
+` + introspect.IntrospectDataString + `</node>`
+
+const SystemIntrospectXML = `
+<node>
+  <interface name="com.application.APM">
+    <signal name="Notification">
+      <arg type="s" name="message" direction="out"/>
+    </signal>
   </interface>
   <interface name="com.application.system">
     <method name="Install">
