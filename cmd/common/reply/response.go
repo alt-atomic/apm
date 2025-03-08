@@ -131,6 +131,10 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 			t.Child(subTree)
 
 		case []interface{}:
+			if len(vv) == 0 {
+				t.Child(fmt.Sprintf("%s: []", k))
+				continue
+			}
 			listNode := tree.New().Root(k)
 			for i, elem := range vv {
 				if mm, ok := elem.(map[string]interface{}); ok {
