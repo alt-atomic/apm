@@ -17,13 +17,13 @@ type ContainerInfo struct {
 	Active        bool   `json:"active"`
 }
 
-// GetContainerList возвращает список объектов ContainerInfo с именами контейнеров.
+// GetContainerList получает список контейнеров, а если требуется полная информация (getFullInfo),
+// то параллельно для каждого контейнера вызывается fetchOsInfo.
 func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 	reply.CreateEventNotification(reply.StateBefore)
 	defer reply.CreateEventNotification(reply.StateAfter)
-	// Формируем команду с префиксом из конфигурации
-	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
 
+	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
 
 	var out bytes.Buffer
@@ -44,6 +44,8 @@ func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 	}
 
 	var containers []ContainerInfo
+
+	var containerNames []string
 	for _, line := range lines[1:] {
 		parts := strings.Split(line, "|")
 		if len(parts) < 2 {
@@ -51,23 +53,35 @@ func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 		}
 		name := strings.TrimSpace(parts[1])
 		if name != "" {
-			var osInfo ContainerInfo
-			var err error
-			if getFullInfo {
-				osInfo, err = GetContainerOsInfo(name)
+			containerNames = append(containerNames, name)
+		}
+	}
+
+	if getFullInfo {
+		var wg sync.WaitGroup
+		mu := &sync.Mutex{}
+		for _, name := range containerNames {
+			wg.Add(1)
+			go func(n string) {
+				defer wg.Done()
+				info, err := fetchOsInfo(n)
 				if err != nil {
 					lib.Log.Error(err)
-					continue
+					info = ContainerInfo{ContainerName: n, OS: "", Active: false}
 				}
-			} else {
-				osInfo = ContainerInfo{
-					ContainerName: name,
-					OS:            "",
-					Active:        false,
-				}
-			}
-
-			containers = append(containers, osInfo)
+				mu.Lock()
+				containers = append(containers, info)
+				mu.Unlock()
+			}(name)
+		}
+		wg.Wait()
+	} else {
+		for _, name := range containerNames {
+			containers = append(containers, ContainerInfo{
+				ContainerName: name,
+				OS:            "",
+				Active:        false,
+			})
 		}
 	}
 
@@ -123,7 +137,6 @@ func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole boo
 
 	wg.Wait()
 	close(errChan)
-	// Если произошла хотя бы одна ошибка, возвращаем первую найденную
 	for err := range errChan {
 		return err
 	}
@@ -131,41 +144,19 @@ func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole boo
 	return nil
 }
 
-// GetContainerOsInfo возвращает объект с информацией о контейнере
-func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
-	containers, errContainerList := GetContainerList(false)
-	if errContainerList != nil {
-		lib.Log.Error(errContainerList.Error())
-
-		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, errContainerList
-	}
-
-	var found *ContainerInfo
-	for _, c := range containers {
-		if c.ContainerName == containerName {
-			found = &c
-			break
-		}
-	}
-
-	if found == nil {
-		return ContainerInfo{ContainerName: containerName, OS: "", Active: false},
-			fmt.Errorf("не удалось найти контейнер: %s", containerName)
-	}
-
+// fetchOsInfo выполняет команду для получения информации об ОС контейнера
+// и возвращает объект ContainerInfo.
+func fetchOsInfo(containerName string) (ContainerInfo, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- cat /etc/os-release", lib.Env.CommandPrefix, containerName)
-
-	// Выполняем команду через оболочку.
 	cmd := exec.Command("sh", "-c", command)
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		lib.Log.Error("Ошибка получения информации об ОС контейнера %s: %v, stderr: %s", containerName, err, stderr.String())
-		return ContainerInfo{ContainerName: containerName, OS: containerName, Active: false}, err
+		lib.Log.Errorf("Ошибка получения информации об ОС контейнера %s: %v, stderr: %s", containerName, err, stderr.String())
+		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, err
 	}
 
 	osReleaseContent := strings.TrimSpace(stdout.String())
@@ -187,19 +178,28 @@ func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
 		}
 	}
 
+	// Приводим имя ОС к нужному формату и определяем активность контейнера
 	lowerOsName := strings.ToLower(osName)
-	if strings.Contains(lowerOsName, "arch") {
+	active := false
+	switch {
+	case strings.Contains(lowerOsName, "arch"):
 		osName = "Arch"
-		return ContainerInfo{ContainerName: containerName, OS: osName, Active: true}, nil
-	} else if strings.Contains(lowerOsName, "alt") {
+		active = true
+	case strings.Contains(lowerOsName, "alt"):
 		osName = "Altlinux"
-		return ContainerInfo{ContainerName: containerName, OS: osName, Active: false}, nil
-	} else if strings.Contains(lowerOsName, "ubuntu") {
+	case strings.Contains(lowerOsName, "ubuntu"):
 		osName = "Ubuntu"
-		return ContainerInfo{ContainerName: containerName, OS: osName, Active: true}, nil
+		active = true
 	}
 
-	return ContainerInfo{ContainerName: containerName, OS: osName, Active: false}, nil
+	return ContainerInfo{ContainerName: containerName, OS: osName, Active: active}, nil
+}
+
+// GetContainerOsInfo теперь просто вызывает fetchOsInfo, что позволяет использовать её и отдельно.
+func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
+	return fetchOsInfo(containerName)
 }
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
