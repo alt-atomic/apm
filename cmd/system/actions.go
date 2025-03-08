@@ -5,7 +5,6 @@ import (
 	"apm/cmd/system/service"
 	"apm/lib"
 	"fmt"
-	"os"
 	"syscall"
 
 	"apm/cmd/common/reply"
@@ -17,6 +16,38 @@ type Actions struct{}
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
 	return &Actions{}
+}
+
+type ImageStatus struct {
+	Image  service.HostImage `json:"image"`
+	Status string            `json:"status"`
+	Config converter.Config  `json:"config"`
+}
+
+func (a *Actions) getImageStatus() (ImageStatus, error) {
+	hostImage, err := service.GetHostImage()
+	if err != nil {
+		return ImageStatus{}, err
+	}
+
+	config, err := converter.ParseConfig()
+	if err != nil {
+		return ImageStatus{}, err
+	}
+
+	if hostImage.Status.Booted.Image.Image.Transport == "containers-storage" {
+		return ImageStatus{
+			Status: "Изменённый образ. Файл конфигурации: " + lib.Env.PathImageFile,
+			Image:  hostImage,
+			Config: config,
+		}, nil
+	}
+
+	return ImageStatus{
+		Status: "Облачный образ без изменений",
+		Image:  hostImage,
+		Config: config,
+	}, nil
 }
 
 // Install осуществляет установку системного пакета.
@@ -74,12 +105,53 @@ func (a *Actions) Remove(packageName string) (reply.APIResponse, error) {
 	}, nil
 }
 
-// ImageGenerate осуществляет принудительную генерацию локального образа.
-// Параметр switchFlag указывает, нужно ли переключиться на локальный образ.
-func (a *Actions) ImageGenerate(switchFlag bool) (reply.APIResponse, error) {
+// ImageStatus возвращает статус актуального образа
+func (a *Actions) ImageStatus() (reply.APIResponse, error) {
+	imageStatus, err := a.getImageStatus()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	return reply.APIResponse{
+		Data: map[string]interface{}{
+			"message":     "Состояние образа",
+			"bootedImage": imageStatus,
+		},
+		Error: false,
+	}, nil
+}
+
+// ImageUpdate обновляет образ.
+func (a *Actions) ImageUpdate() (reply.APIResponse, error) {
 	err := checkRoot()
 	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	err = service.CheckAndUpdateBaseImage(true)
+	if err != nil {
 		return newErrorResponse(err.Error()), nil
+	}
+
+	imageStatus, err := a.getImageStatus()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	return reply.APIResponse{
+		Data: map[string]interface{}{
+			"message":     "Команда успешно выполнена",
+			"bootedImage": imageStatus,
+		},
+		Error: false,
+	}, nil
+}
+
+// ImageSwitchLocal переключает образ на локальное хранилище
+func (a *Actions) ImageSwitchLocal() (reply.APIResponse, error) {
+	err := checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
 	}
 
 	config, err := converter.ParseConfig()
@@ -87,42 +159,35 @@ func (a *Actions) ImageGenerate(switchFlag bool) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	dockerStr, err := config.GenerateDockerfile()
+	err = config.GenerateDockerfile()
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	err = os.WriteFile(service.ContainerPath, []byte(dockerStr), 0644)
+	imageStatus, err := a.getImageStatus()
 	if err != nil {
-		return newErrorResponse(err.Error()), nil
+		return newErrorResponse(err.Error()), err
+	}
+
+	if imageStatus.Image.Status.Booted.Image.Image.Transport == "containers-storage" {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message":     "Образ уже переключен на локальное хранилище, для применения изменений воспользуйтесь командой update",
+				"bootedImage": imageStatus,
+			},
+			Error: false,
+		}, nil
+	}
+
+	err = service.BuildAndSwitch(true)
+	if err != nil {
+		return newErrorResponse(err.Error()), err
 	}
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": "Конфигурация образа сгенерирована и сохранена по пути " + service.ContainerPath,
-			"config":  config,
-		},
-		Error: false,
-	}, nil
-}
-
-// ImageUpdate обновляет локальный образ.
-func (a *Actions) ImageUpdate() (reply.APIResponse, error) {
-	// Пустая реализация
-	return reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": "ImageUpdate action вызван",
-		},
-		Error: false,
-	}, nil
-}
-
-// ImageSwitch переключает образ.
-func (a *Actions) ImageSwitch() (reply.APIResponse, error) {
-	// Пустая реализация
-	return reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": "ImageSwitch action вызван",
+			"message":     "Переключение на локальный образ выполнено",
+			"bootedImage": imageStatus,
 		},
 		Error: false,
 	}, nil

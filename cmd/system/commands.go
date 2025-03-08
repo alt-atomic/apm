@@ -141,17 +141,22 @@ func CommandList() *cli.Command {
 				Aliases: []string{"i"},
 				Commands: []*cli.Command{
 					{
-						Name:  "generate",
-						Usage: "Принудительная генерация локального образа",
-						Flags: []cli.Flag{
-							&cli.BoolFlag{
-								Name:  "switch",
-								Usage: "Переключиться на локальный образ",
-								Value: false,
-							},
-						},
+						Name:  "switch-local",
+						Usage: "Ручное переключение на локальный образ",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageGenerate(cmd.Bool("switch"))
+							resp, err := NewActions().ImageSwitchLocal()
+							if err != nil {
+								return reply.CliResponse(newErrorResponse(err.Error()))
+							}
+
+							return reply.CliResponse(resp)
+						}),
+					},
+					{
+						Name:  "status",
+						Usage: "Статус образа",
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+							resp, err := NewActions().ImageStatus()
 							if err != nil {
 								return reply.CliResponse(newErrorResponse(err.Error()))
 							}
@@ -162,20 +167,14 @@ func CommandList() *cli.Command {
 					{
 						Name:  "update",
 						Usage: "Обновление образа",
-						//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-						//	image, err := os.GetActiveImage()
-						//
-						//	if err != nil {
-						//
-						//	}
-						//}),
-					},
-					{
-						Name:  "switch",
-						Usage: "Переключение образа",
-						//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-						//
-						//}),
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+							resp, err := NewActions().ImageUpdate()
+							if err != nil {
+								return reply.CliResponse(newErrorResponse(err.Error()))
+							}
+
+							return reply.CliResponse(resp)
+						}),
 					},
 				},
 			},

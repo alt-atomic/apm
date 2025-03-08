@@ -1,6 +1,7 @@
 package service
 
 import (
+	"apm/cmd/common/reply"
 	"apm/lib"
 	"bufio"
 	"encoding/json"
@@ -89,11 +90,11 @@ func GetHostImage() (HostImage, error) {
 	return host, nil
 }
 
-// runUsrOverlay проверяет и активирует наложение файловой системы.
-func runUsrOverlay() error {
+// EnableOverlay проверяет и активирует наложение файловой системы.
+func EnableOverlay() error {
 	file, err := os.Open("/proc/mounts")
 	if err != nil {
-		return fmt.Errorf("failed to open /proc/mounts: %v", err)
+		return fmt.Errorf("ошибка доступа к /proc/mounts: %v", err)
 	}
 	defer file.Close()
 
@@ -118,46 +119,71 @@ func runUsrOverlay() error {
 	if runOverlay {
 		cmd := exec.Command("bootc", "usr-overlay")
 		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to activate usr-overlay: %v, output: %s", err, string(output))
+			return fmt.Errorf("ошибка активации usr-overlay: %s", string(output))
 		}
 	}
 
 	return nil
 }
 
-// Switch переключает систему на новый образ.
-func Switch() error {
-	cmd := exec.Command("podman", "images", "-q", "os")
+// BuildImage сборка образа
+func BuildImage(pullImage bool) (string, error) {
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
+	command := "podman build --squash -t os /var"
+	if pullImage {
+		command = "podman build --pull=always --squash -t os /var"
+	}
+
+	cmd := exec.Command("sh", "-c", command)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("ошибка сборки образа: %s", string(output))
+	}
+
+	cmd = exec.Command("podman", "images", "-q", "os")
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to get podman image: %v", err)
+		return "", fmt.Errorf("ошибка podman образ: %v", err)
 	}
 
 	podmanImageID := strings.TrimSpace(string(output))
 	if podmanImageID == "" {
-		return fmt.Errorf("no valid image found with tag 'os'. Build the image first")
+		return "", fmt.Errorf("нет валидных образов с тегом tag 'os'. Сначало соберите образ")
 	}
 
-	cmd = exec.Command("bootc", "switch", "--transport", "containers-storage", podmanImageID)
+	return podmanImageID, nil
+}
+
+// SwitchImage переключение образа
+func SwitchImage(podmanImageID string) error {
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
+	cmd := exec.Command("bootc", "switch", "--transport", "containers-storage", podmanImageID)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to switch to the new image: %v, output: %s", err, string(output))
+		return fmt.Errorf("ошибка переключения на новый образ: %s", string(output))
 	}
 
 	return nil
 }
 
-// checkAndUpdateBaseImage проверяет обновление базового образа.
-func checkAndUpdateBaseImage() error {
+// CheckAndUpdateBaseImage проверяет обновление базового образа.
+func CheckAndUpdateBaseImage(pullImage bool) error {
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
 	image, err := GetHostImage()
 	if err != nil {
 		return fmt.Errorf("ошибка получения информации: %v", err)
 	}
 
 	if image.Status.Booted.Image.Image.Transport != "containers-storage" {
-		fmt.Println("Transport is not 'containers-storage'. Running bootc upgrade...")
-		cmd := exec.Command("bootc", "upgrade")
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("bootc upgrade failed: %v, output: %s", err, string(output))
+		cmd := exec.Command("bootc", "upgrade", "--check")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("bootc upgrade --check failed: %s", string(output))
+		}
+
+		if strings.Contains(string(output), "No changes in:") {
+			return bootcUpgrade()
 		}
 		return nil
 	}
@@ -166,17 +192,30 @@ func checkAndUpdateBaseImage() error {
 		return fmt.Errorf("ошибка, файл %s не найден", ContainerPath)
 	}
 
-	return rebuildAndSwitch()
+	return BuildAndSwitch(pullImage)
 }
 
-// rebuildAndSwitch перестраивает и переключает систему на новый образ.
-func rebuildAndSwitch() error {
-	cmd := exec.Command("podman", "build", "--pull=always", "--squash", "-t", "os", "/var")
+func bootcUpgrade() error {
+	reply.CreateEventNotification(reply.StateBefore)
+	defer reply.CreateEventNotification(reply.StateAfter)
+
+	cmd := exec.Command("bootc", "upgrade")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to rebuild the image: %v, output: %s", err, string(output))
+		return fmt.Errorf("bootc upgrade failed: %s", string(output))
 	}
 
-	if err := Switch(); err != nil {
+	return nil
+}
+
+// BuildAndSwitch перестраивает и переключает систему на новый образ.
+func BuildAndSwitch(pullImage bool) error {
+	idImage, err := BuildImage(pullImage)
+	if err != nil {
+		return err
+	}
+
+	err = SwitchImage(idImage)
+	if err != nil {
 		return err
 	}
 

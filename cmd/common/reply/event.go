@@ -151,8 +151,14 @@ func SendNotificationResponse(message string) {
 
 func getTaskViewName(task string) string {
 	switch task {
-	case "api.CreateContainer.progress":
-		return "Загрузка контейнера"
+	case "service.CheckAndUpdateBaseImage":
+		return "Проверка обновления"
+	case "service.bootcUpgrade":
+		return "Загрузка обновления"
+	case "service.SwitchImage":
+		return "Переключение на локальный образ"
+	case "service.BuildImage":
+		return "Сборка локального образа"
 	case "service.SavePackagesToDB":
 		return "Сохранение пакетов в базу"
 	case "api.GetContainerList":

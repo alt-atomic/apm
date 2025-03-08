@@ -76,14 +76,13 @@ const CombinedIntrospectXML = `
       <arg direction="in" type="s" name="packageName"/>
       <arg direction="out" type="s" name="result"/>
     </method>
-    <method name="ImageGenerate">
-      <arg direction="in" type="b" name="switchFlag"/>
+    <method name="ImageSwitchLocal">
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="ImageUpdate">
       <arg direction="out" type="s" name="result"/>
     </method>
-    <method name="ImageSwitch">
+    <method name="ImageStatus">
       <arg direction="out" type="s" name="result"/>
     </method>
   </interface>

@@ -80,9 +80,9 @@ func (w *DBusWrapper) Remove(packageName string) (string, *dbus.Error) {
 	return string(data), nil
 }
 
-// ImageGenerate – обёртка над Actions.ImageGenerate.
-func (w *DBusWrapper) ImageGenerate(switchFlag bool) (string, *dbus.Error) {
-	resp, err := w.actions.ImageGenerate(switchFlag)
+// ImageSwitchLocal – обёртка над ImageSwitchLocal.
+func (w *DBusWrapper) ImageSwitchLocal() (string, *dbus.Error) {
+	resp, err := w.actions.ImageSwitchLocal()
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -106,9 +106,9 @@ func (w *DBusWrapper) ImageUpdate() (string, *dbus.Error) {
 	return string(data), nil
 }
 
-// ImageSwitch – обёртка над Actions.ImageSwitch.
-func (w *DBusWrapper) ImageSwitch() (string, *dbus.Error) {
-	resp, err := w.actions.ImageSwitch()
+// ImageStatus – обёртка над Actions.ImageStatus.
+func (w *DBusWrapper) ImageStatus() (string, *dbus.Error) {
+	resp, err := w.actions.ImageStatus()
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

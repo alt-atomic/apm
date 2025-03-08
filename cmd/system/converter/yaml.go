@@ -47,7 +47,12 @@ func ParseConfig() (Config, error) {
 }
 
 // GenerateDockerfile генерирует содержимое Dockerfile, формируя apt-get команды с модификаторами для пакетов.
-func (c *Config) GenerateDockerfile() (string, error) {
+func (c *Config) GenerateDockerfile() error {
+	errCommands := c.CheckCommands()
+	if errCommands != nil {
+		return errCommands
+	}
+
 	// Формирование базовой apt-get команды.
 	aptCmd := "apt-get update"
 
@@ -80,8 +85,21 @@ func (c *Config) GenerateDockerfile() (string, error) {
 		dockerfileLines = append(dockerfileLines, strings.Join(cmdLines, "\n"))
 	}
 
-	dockerfile := strings.Join(dockerfileLines, "\n") + "\n"
-	return dockerfile, nil
+	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
+	err := os.WriteFile(service.ContainerPath, []byte(dockerStr), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Config) CheckCommands() error {
+	if len(c.Packages.Install) == 0 && len(c.Packages.Remove) == 0 && len(c.Commands) == 0 {
+		return fmt.Errorf("конфигурационный файл локального образа не содержит изменений")
+	}
+
+	return nil
 }
 
 // Save записывает обратно в файл.
