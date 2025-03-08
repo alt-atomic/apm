@@ -2,6 +2,7 @@ package system
 
 import (
 	"apm/cmd/system/converter"
+	"apm/cmd/system/service"
 	"apm/lib"
 	"fmt"
 	"os"
@@ -91,14 +92,14 @@ func (a *Actions) ImageGenerate(switchFlag bool) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	err = os.WriteFile("test.txt", []byte(dockerStr), 0644)
+	err = os.WriteFile(service.ContainerPath, []byte(dockerStr), 0644)
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": "Конфигурация образа",
+			"message": "Конфигурация образа сгенерирована и сохранена по пути " + service.ContainerPath,
 			"config":  config,
 		},
 		Error: false,

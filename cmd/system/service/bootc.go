@@ -38,7 +38,7 @@ type Image struct {
 	ImageDigest string    `json:"imageDigest"`
 }
 
-const containerPath = "/var/Containerfile"
+const ContainerPath = "/var/Containerfile"
 
 func GetHostImage() (HostImage, error) {
 	var host HostImage
@@ -58,9 +58,9 @@ func GetHostImage() (HostImage, error) {
 	imageName := strings.TrimSpace(host.Status.Booted.Image.Image.Image)
 	// Если образ пуст или начинается с "containers-storage:", ищем в файле
 	if imageName == "" || strings.HasPrefix(imageName, "containers-storage:") {
-		file, err := os.Open(containerPath)
+		file, err := os.Open(ContainerPath)
 		if err != nil {
-			return host, fmt.Errorf("не удалось открыть файл %s: %v", containerPath, err.Error())
+			return host, fmt.Errorf("не удалось открыть файл %s: %v", ContainerPath, err.Error())
 		}
 		defer file.Close()
 
@@ -148,7 +148,6 @@ func Switch() error {
 
 // checkAndUpdateBaseImage проверяет обновление базового образа.
 func checkAndUpdateBaseImage() error {
-
 	image, err := GetHostImage()
 	if err != nil {
 		return fmt.Errorf("ошибка получения информации: %v", err)
@@ -163,8 +162,8 @@ func checkAndUpdateBaseImage() error {
 		return nil
 	}
 
-	if _, err := os.Stat(containerPath); err != nil {
-		return fmt.Errorf("ошибка, файл %s не найден", containerPath)
+	if _, err := os.Stat(ContainerPath); err != nil {
+		return fmt.Errorf("ошибка, файл %s не найден", ContainerPath)
 	}
 
 	return rebuildAndSwitch()

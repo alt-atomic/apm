@@ -23,7 +23,7 @@ type Config struct {
 func ParseConfig() (Config, error) {
 	pathConfig := lib.Env.PathImageFile
 	if len(pathConfig) == 0 {
-		return Config{}, fmt.Errorf("необходимо указать pathImageFile переменную в comfig.yml")
+		return Config{}, fmt.Errorf("необходимо указать pathImageFile в конфигурционном файле")
 	}
 
 	data, err := os.ReadFile(pathConfig)
@@ -39,56 +39,11 @@ func ParseConfig() (Config, error) {
 		return Config{}, err
 	}
 
-	return cfg, nil
-}
-
-func generateFile(path string) (Config, error) {
-	var cfg Config
-	image, err := service.GetHostImage()
-	if err != nil {
-		return Config{}, err
-	}
-
-	cfg.Image = image.Status.Booted.Image.Image.Image
-	cfg.Packages.Install = []string{}
-	cfg.Packages.Remove = []string{}
-	cfg.Commands = []string{}
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return Config{}, err
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return Config{}, err
+	if len(cfg.Image) == 0 {
+		return Config{}, fmt.Errorf("необходимо указать image в конфигурционном файле")
 	}
 
 	return cfg, nil
-}
-
-// splitCommand разбивает команду на строки длиной не более 80 символов с отступом.
-func splitCommand(prefix, cmd string) []string {
-	const maxLineLength = 80
-	words := strings.Fields(cmd)
-	var lines []string
-	currentLine := prefix
-	for _, word := range words {
-		// Если добавление следующего слова превышает максимальную длину строки.
-		if len(currentLine)+len(word)+1 > maxLineLength {
-			lines = append(lines, currentLine+" \\")
-			currentLine = "    " + word // отступ для продолжения команды
-		} else {
-			if currentLine == prefix {
-				currentLine += word
-			} else {
-				currentLine += " " + word
-			}
-		}
-	}
-	if currentLine != "" {
-		lines = append(lines, currentLine)
-	}
-	return lines
 }
 
 // GenerateDockerfile генерирует содержимое Dockerfile, формируя apt-get команды с модификаторами для пакетов.
@@ -98,10 +53,13 @@ func (c *Config) GenerateDockerfile() (string, error) {
 
 	// Формирование списка пакетов с суффиксами: + для установки и - для удаления.
 	var pkgs []string
-	for _, pkg := range c.Packages.Install {
+	uniqueInstall := uniqueStrings(c.Packages.Install)
+	uniqueRemove := uniqueStrings(c.Packages.Remove)
+
+	for _, pkg := range uniqueInstall {
 		pkgs = append(pkgs, pkg+"+")
 	}
-	for _, pkg := range c.Packages.Remove {
+	for _, pkg := range uniqueRemove {
 		pkgs = append(pkgs, pkg+"-")
 	}
 	if len(pkgs) > 0 {
@@ -122,7 +80,7 @@ func (c *Config) GenerateDockerfile() (string, error) {
 		dockerfileLines = append(dockerfileLines, strings.Join(cmdLines, "\n"))
 	}
 
-	dockerfile := strings.Join(dockerfileLines, "\n")
+	dockerfile := strings.Join(dockerfileLines, "\n") + "\n"
 	return dockerfile, nil
 }
 
@@ -193,4 +151,66 @@ func contains(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// uniqueStrings возвращает новый срез, содержащий только уникальные элементы исходного среза.
+func uniqueStrings(input []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, s := range input {
+		if !seen[s] {
+			seen[s] = true
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func generateFile(path string) (Config, error) {
+	var cfg Config
+	hostImage, err := service.GetHostImage()
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.Image = hostImage.Status.Booted.Image.Image.Image
+	cfg.Packages.Install = []string{}
+	cfg.Packages.Remove = []string{}
+	cfg.Commands = []string{}
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return Config{}, err
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return Config{}, err
+	}
+
+	return cfg, nil
+}
+
+// splitCommand разбивает команду на строки длиной не более 80 символов с отступом.
+func splitCommand(prefix, cmd string) []string {
+	const maxLineLength = 80
+	words := strings.Fields(cmd)
+	var lines []string
+	currentLine := prefix
+	for _, word := range words {
+		// Если добавление следующего слова превышает максимальную длину строки.
+		if len(currentLine)+len(word)+1 > maxLineLength {
+			lines = append(lines, currentLine+" \\")
+			currentLine = "    " + word // отступ для продолжения команды
+		} else {
+			if currentLine == prefix {
+				currentLine += word
+			} else {
+				currentLine += " " + word
+			}
+		}
+	}
+	if currentLine != "" {
+		lines = append(lines, currentLine)
+	}
+	return lines
 }
