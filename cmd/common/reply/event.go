@@ -7,27 +7,21 @@ import (
 	"github.com/godbus/dbus/v5"
 	"runtime"
 	"strings"
-	"time"
 )
 
 // EventData содержит данные события.
 type EventData struct {
 	Name            string `json:"name"`
-	View            string `json:"view"`
+	View            string `json:"message"`
 	State           string `json:"state"`
 	Type            string `json:"type"`
 	ProgressPercent int    `json:"progress"`
-}
-
-// Notification — структура для отправки уведомления.
-type Notification struct {
-	Data        EventData `json:"data"`
-	Transaction string    `json:"transaction,omitempty"`
+	Transaction     string `json:"transaction,omitempty"`
 }
 
 var (
-	EventTypeNotification = "notification"
-	EventTypeProgress     = "progress"
+	EventTypeNotification = "NOTIFICATION"
+	EventTypeProgress     = "PROGRESS"
 
 	StateBefore = "BEFORE"
 	StateAfter  = "AFTER"
@@ -111,12 +105,9 @@ func CreateEventNotification(state string, opts ...NotificationOption) {
 
 // SendFuncNameDBUS отправляет уведомление через DBUS.
 func SendFuncNameDBUS(eventData EventData) {
-	baseModel := Notification{
-		Data:        eventData,
-		Transaction: lib.Env.Transaction,
-	}
+	eventData.Transaction = lib.Env.Transaction
 
-	b, err := json.MarshalIndent(baseModel, "", "  ")
+	b, err := json.MarshalIndent(eventData, "", "  ")
 	if err != nil {
 		lib.Log.Debug(err.Error())
 	}
@@ -132,12 +123,8 @@ func SendNotificationResponse(message string) {
 	}
 
 	if lib.DBUSConn == nil {
-		lib.Log.Debug("Соединение DBus не инициализировано")
-		time.Sleep(100 * time.Millisecond)
-
-		if lib.DBUSConn == nil {
-			return
-		}
+		lib.Log.Error("Соединение DBus не инициализировано")
+		return
 	}
 
 	objPath := dbus.ObjectPath("/com/application/APM")
@@ -145,7 +132,7 @@ func SendNotificationResponse(message string) {
 
 	err := lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {
-		lib.Log.Debugf("Ошибка отправки уведомления: %v", err)
+		lib.Log.Error("Ошибка отправки уведомления: %v", err)
 	}
 }
 
