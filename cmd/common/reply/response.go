@@ -51,9 +51,9 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 	if msgVal, haveMsg := data["message"]; haveMsg {
 		switch vv := msgVal.(type) {
 		case string:
-			t.Child(fmt.Sprintf("message: %s", vv))
+			t.Child(vv)
 		case int, float64, bool:
-			t.Child(fmt.Sprintf("message: %v", vv))
+			t.Child(fmt.Sprintf("%v", vv))
 		case map[string]interface{}:
 			subTree := buildTreeFromMap("message", vv)
 			t.Child(subTree)
@@ -218,9 +218,9 @@ func CliResponse(resp APIResponse) error {
 		case map[string]interface{}:
 			var t *tree.Tree
 			if resp.Error {
-				t = buildTreeFromMap("Ошибка:", data)
+				t = buildTreeFromMap("⚛", data)
 			} else {
-				t = buildTreeFromMap("Ответ:", data)
+				t = buildTreeFromMap("⚛", data)
 			}
 
 			var rootColor lipgloss.Style
