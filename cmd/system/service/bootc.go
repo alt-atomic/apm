@@ -56,9 +56,9 @@ func GetHostImage() (HostImage, error) {
 		return host, fmt.Errorf("не удалось распарсить JSON: %v", err)
 	}
 
-	imageName := strings.TrimSpace(host.Status.Booted.Image.Image.Image)
+	transport := strings.TrimSpace(host.Status.Booted.Image.Image.Transport)
 	// Если образ пуст или начинается с "containers-storage:", ищем в файле
-	if imageName == "" || strings.HasPrefix(imageName, "containers-storage:") {
+	if strings.HasPrefix(transport, "containers-storage:") {
 		file, err := os.Open(ContainerPath)
 		if err != nil {
 			return host, fmt.Errorf("не удалось открыть файл %s: %v", ContainerPath, err.Error())

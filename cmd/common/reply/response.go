@@ -119,7 +119,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		v := data[k]
 		switch vv := v.(type) {
 		case nil:
-			t.Child(fmt.Sprintf("%s: null", k))
+			t.Child(fmt.Sprintf("%s: []", k))
 		case string:
 			t.Child(fmt.Sprintf("%s: %s", k, vv))
 
