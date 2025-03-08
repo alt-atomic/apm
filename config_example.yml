@@ -1,4 +1,0 @@
-commandPrefix: ""
-pathLogFile: "log/apm.log"
-pathDBFile: "db/apm.db"
-environment: "prod"
