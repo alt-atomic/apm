@@ -20,7 +20,7 @@ func newErrorResponse(message string) reply.APIResponse {
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx context.Context, cmd *cli.Command) error {
 		lib.Env.Format = cmd.String("format")
-		lib.Env.Transaction = cmd.String("transaction")
+		ctx = context.WithValue(ctx, "transaction", cmd.String("transaction"))
 
 		reply.CreateSpinner()
 		return action(ctx, cmd)
@@ -45,12 +45,12 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Update(cmd.String("container"))
+					resp, err := NewActions().Update(ctx, cmd.String("container"))
 					if err != nil {
-						return reply.CliResponse(newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(resp)
+					return reply.CliResponse(ctx, resp)
 				}),
 			},
 			{
@@ -66,12 +66,12 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Info(cmd.String("container"), cmd.Args().First())
+					resp, err := NewActions().Info(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(resp)
+					return reply.CliResponse(ctx, resp)
 				}),
 			},
 			{
@@ -87,12 +87,12 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Search(cmd.String("container"), cmd.Args().First())
+					resp, err := NewActions().Search(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(resp)
+					return reply.CliResponse(ctx, resp)
 				}),
 			},
 			{
@@ -149,12 +149,12 @@ func CommandList() *cli.Command {
 						ForceUpdate: cmd.Bool("force-update"),
 					}
 
-					resp, err := NewActions().List(params)
+					resp, err := NewActions().List(ctx, params)
 					if err != nil {
-						return reply.CliResponse(newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(resp)
+					return reply.CliResponse(ctx, resp)
 				}),
 			},
 			{
@@ -175,12 +175,12 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Install(cmd.String("container"), cmd.Args().First(), cmd.Bool("export"))
+					resp, err := NewActions().Install(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("export"))
 					if err != nil {
-						return reply.CliResponse(newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(resp)
+					return reply.CliResponse(ctx, resp)
 				}),
 			},
 			{
@@ -202,12 +202,12 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Remove(cmd.String("container"), cmd.Args().First(), cmd.Bool("only-export"))
+					resp, err := NewActions().Remove(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("only-export"))
 					if err != nil {
-						return reply.CliResponse(newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(resp)
+					return reply.CliResponse(ctx, resp)
 				}),
 			},
 			{
@@ -219,12 +219,12 @@ func CommandList() *cli.Command {
 						Name:  "list",
 						Usage: "Список контейнеров",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ContainerList()
+							resp, err := NewActions().ContainerList(ctx)
 							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(resp)
+							return reply.CliResponse(ctx, resp)
 						}),
 					},
 					{
@@ -257,12 +257,12 @@ func CommandList() *cli.Command {
 							addPkgVal := cmd.String("additional-packages")
 							hookVal := cmd.String("init-hooks")
 
-							resp, err := NewActions().ContainerAdd(imageVal, nameVal, addPkgVal, hookVal)
+							resp, err := NewActions().ContainerAdd(ctx, imageVal, nameVal, addPkgVal, hookVal)
 							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(resp)
+							return reply.CliResponse(ctx, resp)
 						}),
 					},
 					{
@@ -277,12 +277,12 @@ func CommandList() *cli.Command {
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ContainerRemove(cmd.String("name"))
+							resp, err := NewActions().ContainerRemove(ctx, cmd.String("name"))
 							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(resp)
+							return reply.CliResponse(ctx, resp)
 						}),
 					},
 				},

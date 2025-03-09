@@ -3,15 +3,16 @@ package service
 import (
 	"apm/cmd/common/reply"
 	"apm/lib"
+	"context"
 	"fmt"
 	"strings"
 )
 
 // SavePackagesToDB сохраняет список пакетов в таблицу с именем контейнера.
 // Таблица создаётся, если не существует, затем очищается, и в неё вставляются новые записи пакетами по 1000.
-func SavePackagesToDB(containerName string, packages []PackageInfo) error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func SavePackagesToDB(ctx context.Context, containerName string, packages []PackageInfo) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 
 	// Создаем таблицу, если её нет.
@@ -73,7 +74,7 @@ func SavePackagesToDB(containerName string, packages []PackageInfo) error {
 }
 
 // ContainerDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.
-func ContainerDatabaseExist(containerName string) error {
+func ContainerDatabaseExist(ctx context.Context, containerName string) error {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
 	var count int
@@ -212,7 +213,7 @@ func FindPackagesByName(containerName string, partialName string) ([]PackageInfo
 }
 
 // UpdatePackageField обновляет значение одного поля (installed или exporting) для пакета с указанным packageName в таблице контейнера.
-func UpdatePackageField(containerName, packageName, fieldName string, value bool) {
+func UpdatePackageField(ctx context.Context, containerName, packageName, fieldName string, value bool) {
 	// Разрешенные поля для обновления.
 	allowedFields := map[string]bool{
 		"installed": true,

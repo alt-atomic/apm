@@ -31,7 +31,7 @@ func checkRoot() error {
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx context.Context, cmd *cli.Command) error {
 		lib.Env.Format = cmd.String("format")
-		lib.Env.Transaction = cmd.String("transaction")
+		ctx = context.WithValue(ctx, "transaction", cmd.String("transaction"))
 
 		reply.CreateSpinner()
 		return action(ctx, cmd)
@@ -144,36 +144,36 @@ func CommandList() *cli.Command {
 						Name:  "switch-local",
 						Usage: "Ручное переключение на локальный образ",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageSwitchLocal()
+							resp, err := NewActions().ImageSwitchLocal(ctx)
 							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(resp)
+							return reply.CliResponse(ctx, resp)
 						}),
 					},
 					{
 						Name:  "status",
 						Usage: "Статус образа",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageStatus()
+							resp, err := NewActions().ImageStatus(ctx)
 							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(resp)
+							return reply.CliResponse(ctx, resp)
 						}),
 					},
 					{
 						Name:  "update",
 						Usage: "Обновление образа",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageUpdate()
+							resp, err := NewActions().ImageUpdate(ctx)
 							if err != nil {
-								return reply.CliResponse(newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(resp)
+							return reply.CliResponse(ctx, resp)
 						}),
 					},
 				},

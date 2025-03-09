@@ -22,6 +22,7 @@ func main() {
 	lib.InitLogger()
 	lib.InitDatabase()
 
+	ctx := context.Background()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -30,7 +31,7 @@ func main() {
 		infoText := fmt.Sprintf("Получен сигнал %s. Завершаем работу приложения...", sig)
 
 		lib.Log.Error(infoText)
-		_ = reply.CliResponse(reply.APIResponse{
+		_ = reply.CliResponse(ctx, reply.APIResponse{
 			Data: map[string]interface{}{
 				"message": infoText,
 			},
@@ -131,10 +132,10 @@ func main() {
 	}
 
 	rootCommand.Suggest = true
-	if err := rootCommand.Run(context.Background(), os.Args); err != nil {
+	if err := rootCommand.Run(ctx, os.Args); err != nil {
 		lib.Log.Error(err.Error())
 
-		_ = reply.CliResponse(reply.APIResponse{
+		_ = reply.CliResponse(ctx, reply.APIResponse{
 			Data: map[string]interface{}{
 				"message": err.Error(),
 			},

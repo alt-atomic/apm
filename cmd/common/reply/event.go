@@ -2,6 +2,7 @@ package reply
 
 import (
 	"apm/lib"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/godbus/dbus/v5"
@@ -63,7 +64,7 @@ func WithProgressPercent(percent int) NotificationOption {
 }
 
 // CreateEventNotification создаёт EventData, используя заданное состояние и опции.
-func CreateEventNotification(state string, opts ...NotificationOption) {
+func CreateEventNotification(ctx context.Context, state string, opts ...NotificationOption) {
 	// Устанавливаем значения по умолчанию.
 	ed := EventData{
 		Name:            "",
@@ -100,12 +101,12 @@ func CreateEventNotification(state string, opts ...NotificationOption) {
 		ed.View = getTaskViewName(ed.Name)
 	}
 
-	SendFuncNameDBUS(ed)
+	SendFuncNameDBUS(ctx, ed)
 }
 
 // SendFuncNameDBUS отправляет уведомление через DBUS.
-func SendFuncNameDBUS(eventData EventData) {
-	eventData.Transaction = lib.Env.Transaction
+func SendFuncNameDBUS(ctx context.Context, eventData EventData) {
+	eventData.Transaction = ctx.Value("transaction").(string)
 
 	b, err := json.MarshalIndent(eventData, "", "  ")
 	if err != nil {

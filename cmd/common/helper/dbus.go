@@ -12,35 +12,42 @@ const UserIntrospectXML = `
   <interface name="com.application.distrobox">
     <method name="Update">
       <arg direction="in" type="s" name="container"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Info">
       <arg direction="in" type="s" name="container"/>
       <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Search">
       <arg direction="in" type="s" name="container"/>
       <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="List">
       <arg direction="in" type="s" name="paramsJSON"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Install">
       <arg direction="in" type="s" name="container"/>
       <arg direction="in" type="s" name="packageName"/>
       <arg direction="in" type="b" name="export"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Remove">
       <arg direction="in" type="s" name="container"/>
       <arg direction="in" type="s" name="packageName"/>
       <arg direction="in" type="b" name="onlyExport"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="ContainerList">
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="ContainerAdd">
@@ -48,10 +55,12 @@ const UserIntrospectXML = `
       <arg direction="in" type="s" name="name"/>
       <arg direction="in" type="s" name="additionalPackages"/>
       <arg direction="in" type="s" name="initHooks"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="ContainerRemove">
       <arg direction="in" type="s" name="name"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
   </interface>
@@ -67,31 +76,39 @@ const SystemIntrospectXML = `
   <interface name="com.application.system">
     <method name="Install">
       <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Update">
       <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>	
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Info">
       <arg direction="in" type="s" name="packageName"/>
+	  <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Search">
       <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="Remove">
       <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="ImageSwitchLocal">
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="ImageUpdate">
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     <method name="ImageStatus">
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
   </interface>

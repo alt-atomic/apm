@@ -4,15 +4,16 @@ import (
 	"apm/cmd/common/reply"
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
 )
 
 // pruneOldImages удаляет старые образы Podman.
-func pruneOldImages() error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func pruneOldImages(ctx context.Context) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	cmd := exec.Command("podman", "image", "prune", "-f")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("ошибка удаления старых изображений: %v, output: %s", err, string(output))

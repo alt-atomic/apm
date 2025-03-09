@@ -4,6 +4,7 @@ import (
 	"apm/cmd/system/converter"
 	"apm/cmd/system/service"
 	"apm/lib"
+	"context"
 	"fmt"
 	"syscall"
 
@@ -51,7 +52,7 @@ func (a *Actions) getImageStatus() (ImageStatus, error) {
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(packageName string) (reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, packageName string) (reply.APIResponse, error) {
 	// Пока пустая реализация, можно добавить реальную логику установки
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -62,7 +63,7 @@ func (a *Actions) Install(packageName string) (reply.APIResponse, error) {
 }
 
 // Update обновляет информацию или базу данных пакетов.
-func (a *Actions) Update(packageName string) (reply.APIResponse, error) {
+func (a *Actions) Update(ctx context.Context, packageName string) (reply.APIResponse, error) {
 	// Пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -73,7 +74,7 @@ func (a *Actions) Update(packageName string) (reply.APIResponse, error) {
 }
 
 // Info возвращает информацию о системном пакете.
-func (a *Actions) Info(packageName string) (reply.APIResponse, error) {
+func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIResponse, error) {
 	// пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -84,7 +85,7 @@ func (a *Actions) Info(packageName string) (reply.APIResponse, error) {
 }
 
 // Search осуществляет поиск системного пакета по названию.
-func (a *Actions) Search(packageName string) (reply.APIResponse, error) {
+func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResponse, error) {
 	// Пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -95,7 +96,7 @@ func (a *Actions) Search(packageName string) (reply.APIResponse, error) {
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(packageName string) (reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packageName string) (reply.APIResponse, error) {
 	// Пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -106,7 +107,7 @@ func (a *Actions) Remove(packageName string) (reply.APIResponse, error) {
 }
 
 // ImageStatus возвращает статус актуального образа
-func (a *Actions) ImageStatus() (reply.APIResponse, error) {
+func (a *Actions) ImageStatus(ctx context.Context) (reply.APIResponse, error) {
 	err := checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -127,13 +128,13 @@ func (a *Actions) ImageStatus() (reply.APIResponse, error) {
 }
 
 // ImageUpdate обновляет образ.
-func (a *Actions) ImageUpdate() (reply.APIResponse, error) {
+func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 	err := checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
 
-	err = service.CheckAndUpdateBaseImage(true)
+	err = service.CheckAndUpdateBaseImage(ctx, true)
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
@@ -153,7 +154,7 @@ func (a *Actions) ImageUpdate() (reply.APIResponse, error) {
 }
 
 // ImageSwitchLocal переключает образ на локальное хранилище
-func (a *Actions) ImageSwitchLocal() (reply.APIResponse, error) {
+func (a *Actions) ImageSwitchLocal(ctx context.Context) (reply.APIResponse, error) {
 	err := checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -184,7 +185,7 @@ func (a *Actions) ImageSwitchLocal() (reply.APIResponse, error) {
 		}, nil
 	}
 
-	err = service.BuildAndSwitch(true)
+	err = service.BuildAndSwitch(ctx, true)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}

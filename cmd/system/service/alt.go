@@ -4,6 +4,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -22,9 +23,9 @@ type PackageInfo struct {
 
 // GetPackageInfo выполняет команду `rpm -qi <pkg>`, парсит результат и возвращает PackageInfo.
 // Если команда завершается с ошибкой, stderr включается в сообщение об ошибке.
-func GetPackageInfo(pkg string) (PackageInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetPackageInfo(ctx context.Context, pkg string) (PackageInfo, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	command := fmt.Sprintf("%s rpm -qi %s", lib.Env.CommandPrefix, pkg)
 	stdout, stderr, err := RunCommand(command)
 	if err != nil {

@@ -2,6 +2,7 @@ package reply
 
 import (
 	"apm/lib"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
@@ -191,10 +192,10 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 }
 
 // CliResponse рендерит ответ в зависимости от формата (dbus/json/text).
-func CliResponse(resp APIResponse) error {
+func CliResponse(ctx context.Context, resp APIResponse) error {
 	StopSpinner()
 	format := lib.Env.Format
-	resp.Transaction = lib.Env.Transaction
+	resp.Transaction = ctx.Value("transaction").(string)
 
 	switch format {
 	// ---------------------------------- JSON ----------------------------------

@@ -4,6 +4,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -49,11 +50,11 @@ type InfoPackageAnswer struct {
 
 // PackageProvider задаёт интерфейс для работы с пакетами в контейнере.
 type PackageProvider interface {
-	GetPackages(containerInfo api.ContainerInfo) ([]PackageInfo, error)
-	RemovePackage(containerInfo api.ContainerInfo, packageName string) error
-	InstallPackage(containerInfo api.ContainerInfo, packageName string) error
-	GetPackageOwner(containerInfo api.ContainerInfo, fileName string) (string, error)
-	GetPathByPackageName(containerInfo api.ContainerInfo, packageName, filePath string) ([]string, error)
+	GetPackages(ctx context.Context, containerInfo api.ContainerInfo) ([]PackageInfo, error)
+	RemovePackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error
+	InstallPackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error
+	GetPackageOwner(ctx context.Context, containerInfo api.ContainerInfo, fileName string) (string, error)
+	GetPathByPackageName(ctx context.Context, containerInfo api.ContainerInfo, packageName, filePath string) ([]string, error)
 }
 
 // getProvider возвращает подходящий провайдер в зависимости от имени ОС контейнера.
@@ -69,69 +70,69 @@ func getProvider(osName string) (PackageProvider, error) {
 }
 
 // InstallPackage установка пакета
-func InstallPackage(containerInfo api.ContainerInfo, packageName string) error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func InstallPackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return err
 	}
 
-	return provider.InstallPackage(containerInfo, packageName)
+	return provider.InstallPackage(ctx, containerInfo, packageName)
 }
 
 // RemovePackage удаление пакета
-func RemovePackage(containerInfo api.ContainerInfo, packageName string) error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func RemovePackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return err
 	}
 
-	return provider.RemovePackage(containerInfo, packageName)
+	return provider.RemovePackage(ctx, containerInfo, packageName)
 }
 
 // GetPackages получает список пакетов из контейнера.
-func GetPackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetPackages(ctx context.Context, containerInfo api.ContainerInfo) ([]PackageInfo, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.GetPackages(containerInfo)
+	return provider.GetPackages(ctx, containerInfo)
 }
 
 // GetPackageOwner получает название пакета, которому принадлежит указанный файл, из контейнера.
-func GetPackageOwner(containerInfo api.ContainerInfo, fileName string) (string, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetPackageOwner(ctx context.Context, containerInfo api.ContainerInfo, fileName string) (string, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return "", err
 	}
 
-	return provider.GetPackageOwner(containerInfo, fileName)
+	return provider.GetPackageOwner(ctx, containerInfo, fileName)
 }
 
 // GetPathByPackageName получает список путей для файла пакета из контейнера.
-func GetPathByPackageName(containerInfo api.ContainerInfo, packageName, filePath string) ([]string, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetPathByPackageName(ctx context.Context, containerInfo api.ContainerInfo, packageName, filePath string) ([]string, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	provider, err := getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
 	}
 
-	return provider.GetPathByPackageName(containerInfo, packageName, filePath)
+	return provider.GetPathByPackageName(ctx, containerInfo, packageName, filePath)
 }
 
 // GetInfoPackage возвращает информацию о пакете
-func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPackageAnswer, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetInfoPackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) (InfoPackageAnswer, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	// Получаем информацию о пакете из базы данных
 	info, err := GetPackageInfoByName(containerInfo.ContainerName, packageName)
 	if err != nil {
@@ -139,7 +140,7 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 	}
 
 	// Пробуем получить пути для GUI-приложений
-	desktopPaths, err := GetPathByPackageName(containerInfo, packageName, "/usr/share/applications/")
+	desktopPaths, err := GetPathByPackageName(ctx, containerInfo, packageName, "/usr/share/applications/")
 	if err != nil {
 		lib.Log.Debugf(fmt.Sprintf("Ошибка получения desktop пути: %v", err))
 	}
@@ -153,7 +154,7 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 	}
 
 	// Если GUI-пути не найдены, ищем консольные приложения
-	consolePaths, err := GetPathByPackageName(containerInfo, packageName, "/usr/bin/")
+	consolePaths, err := GetPathByPackageName(ctx, containerInfo, packageName, "/usr/bin/")
 	if err != nil {
 		lib.Log.Debugf(fmt.Sprintf("Ошибка получения консольного пути %v", err))
 	}
@@ -166,16 +167,16 @@ func GetInfoPackage(containerInfo api.ContainerInfo, packageName string) (InfoPa
 }
 
 // UpdatePackages обновляет пакеты и записывает в базу данных
-func UpdatePackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
-	packages, err := GetPackages(containerInfo)
+func UpdatePackages(ctx context.Context, containerInfo api.ContainerInfo) ([]PackageInfo, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	packages, err := GetPackages(ctx, containerInfo)
 	if err != nil {
 		lib.Log.Error(err)
 		return []PackageInfo{}, err
 	}
 
-	errorSave := SavePackagesToDB(containerInfo.ContainerName, packages)
+	errorSave := SavePackagesToDB(ctx, containerInfo.ContainerName, packages)
 	if errorSave != nil {
 		lib.Log.Error(errorSave)
 		return []PackageInfo{}, errorSave
@@ -185,11 +186,11 @@ func UpdatePackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
 }
 
 // GetPackagesQuery получение списка пакетов с фильтрацией и сортировкой
-func GetPackagesQuery(containerInfo api.ContainerInfo, builder PackageQueryBuilder) (PackageQueryResult, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetPackagesQuery(ctx context.Context, containerInfo api.ContainerInfo, builder PackageQueryBuilder) (PackageQueryResult, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	if builder.ForceUpdate {
-		_, err := UpdatePackages(containerInfo)
+		_, err := UpdatePackages(ctx, containerInfo)
 		if err != nil {
 			lib.Log.Error(err)
 			return PackageQueryResult{}, err
@@ -213,7 +214,7 @@ func GetPackagesQuery(containerInfo api.ContainerInfo, builder PackageQueryBuild
 }
 
 // GetPackageByName поиска пакета по неточному совпадению имени
-func GetPackageByName(containerInfo api.ContainerInfo, packageName string) (PackageQueryResult, error) {
+func GetPackageByName(ctx context.Context, containerInfo api.ContainerInfo, packageName string) (PackageQueryResult, error) {
 	packages, err := FindPackagesByName(containerInfo.ContainerName, packageName)
 	if err != nil {
 		return PackageQueryResult{}, err
@@ -227,7 +228,7 @@ func GetPackageByName(containerInfo api.ContainerInfo, packageName string) (Pack
 
 // GetAllApplicationsByContainer возвращает объединённый список приложений,
 // найденных как среди десктопных, так и консольных, без дублей.
-func GetAllApplicationsByContainer(containerInfo api.ContainerInfo) ([]string, error) {
+func GetAllApplicationsByContainer(ctx context.Context, containerInfo api.ContainerInfo) ([]string, error) {
 	var wg sync.WaitGroup
 	var desktopApps, consoleApps []string
 	var errDesktop, errConsole error
@@ -235,11 +236,11 @@ func GetAllApplicationsByContainer(containerInfo api.ContainerInfo) ([]string, e
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		desktopApps, errDesktop = GetDesktopApplicationsByContainer(containerInfo)
+		desktopApps, errDesktop = GetDesktopApplicationsByContainer(ctx, containerInfo)
 	}()
 	go func() {
 		defer wg.Done()
-		consoleApps, errConsole = GetConsoleApplicationsByContainer(containerInfo)
+		consoleApps, errConsole = GetConsoleApplicationsByContainer(ctx, containerInfo)
 	}()
 	wg.Wait()
 
@@ -269,7 +270,7 @@ func GetAllApplicationsByContainer(containerInfo api.ContainerInfo) ([]string, e
 // GetDesktopApplicationsByContainer ищет .desktop файлы в каталоге "~/.local/share/applications".
 // Для каждого найденного файла, если его имя начинается с префикса контейнера,
 // удаляет префикс и формирует путь "/usr/share/applications/<trimmedFileName>" для вызова GetPackageOwner.
-func GetDesktopApplicationsByContainer(containerInfo api.ContainerInfo) ([]string, error) {
+func GetDesktopApplicationsByContainer(ctx context.Context, containerInfo api.ContainerInfo) ([]string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить домашнюю директорию: %v", err)
@@ -291,7 +292,7 @@ func GetDesktopApplicationsByContainer(containerInfo api.ContainerInfo) ([]strin
 			if strings.HasPrefix(fileName, prefix) && strings.HasSuffix(fileName, suffix) {
 				trimmedFileName := strings.TrimPrefix(fileName, prefix)
 				packagePath := filepath.Join("/usr/share/applications", trimmedFileName)
-				ownerPackage, err := GetPackageOwner(containerInfo, packagePath)
+				ownerPackage, err := GetPackageOwner(ctx, containerInfo, packagePath)
 				if err != nil {
 					lib.Log.Error(fmt.Sprintf("Ошибка при получении владельца для файла %s: %v", fileName, err))
 					continue
@@ -313,7 +314,7 @@ func GetDesktopApplicationsByContainer(containerInfo api.ContainerInfo) ([]strin
 // GetConsoleApplicationsByContainer ищет исполняемые файлы в каталоге "~/.local/bin".
 // Для каждого файла считывается его содержимое; если оно содержит маркер "# name: <containerName>",
 // вызывается GetPackageOwner с путем "/usr/bin/<fileName>".
-func GetConsoleApplicationsByContainer(containerInfo api.ContainerInfo) ([]string, error) {
+func GetConsoleApplicationsByContainer(ctx context.Context, containerInfo api.ContainerInfo) ([]string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить домашнюю директорию: %v", err)
@@ -339,7 +340,7 @@ func GetConsoleApplicationsByContainer(containerInfo api.ContainerInfo) ([]strin
 			}
 			content := string(contentBytes)
 			if strings.Contains(content, marker) {
-				ownerPackage, err := GetPackageOwner(containerInfo, filepath.Join("/usr/bin", fileName))
+				ownerPackage, err := GetPackageOwner(ctx, containerInfo, filepath.Join("/usr/bin", fileName))
 				if err != nil {
 					lib.Log.Error(fmt.Sprintf("Ошибка при получении владельца для файла %s: %v", fileName, err))
 					continue

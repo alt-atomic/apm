@@ -1,6 +1,7 @@
 package system
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/godbus/dbus/v5"
 )
@@ -16,8 +17,9 @@ func NewDBusWrapper(a *Actions) *DBusWrapper {
 }
 
 // Install – обёртка над Actions.Install.
-func (w *DBusWrapper) Install(packageName string) (string, *dbus.Error) {
-	resp, err := w.actions.Install(packageName)
+func (w *DBusWrapper) Install(packageName string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.Install(ctx, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -29,8 +31,9 @@ func (w *DBusWrapper) Install(packageName string) (string, *dbus.Error) {
 }
 
 // Update – обёртка над Actions.Update.
-func (w *DBusWrapper) Update(packageName string) (string, *dbus.Error) {
-	resp, err := w.actions.Update(packageName)
+func (w *DBusWrapper) Update(packageName string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.Update(ctx, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -42,8 +45,9 @@ func (w *DBusWrapper) Update(packageName string) (string, *dbus.Error) {
 }
 
 // Info – обёртка над Actions.Info.
-func (w *DBusWrapper) Info(packageName string) (string, *dbus.Error) {
-	resp, err := w.actions.Info(packageName)
+func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.Info(ctx, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -55,8 +59,9 @@ func (w *DBusWrapper) Info(packageName string) (string, *dbus.Error) {
 }
 
 // Search – обёртка над Actions.Search.
-func (w *DBusWrapper) Search(packageName string) (string, *dbus.Error) {
-	resp, err := w.actions.Search(packageName)
+func (w *DBusWrapper) Search(packageName string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.Search(ctx, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -68,8 +73,9 @@ func (w *DBusWrapper) Search(packageName string) (string, *dbus.Error) {
 }
 
 // Remove – обёртка над Actions.Remove.
-func (w *DBusWrapper) Remove(packageName string) (string, *dbus.Error) {
-	resp, err := w.actions.Remove(packageName)
+func (w *DBusWrapper) Remove(packageName string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.Remove(ctx, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -81,8 +87,9 @@ func (w *DBusWrapper) Remove(packageName string) (string, *dbus.Error) {
 }
 
 // ImageSwitchLocal – обёртка над ImageSwitchLocal.
-func (w *DBusWrapper) ImageSwitchLocal() (string, *dbus.Error) {
-	resp, err := w.actions.ImageSwitchLocal()
+func (w *DBusWrapper) ImageSwitchLocal(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.ImageSwitchLocal(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -94,8 +101,9 @@ func (w *DBusWrapper) ImageSwitchLocal() (string, *dbus.Error) {
 }
 
 // ImageUpdate – обёртка над Actions.ImageUpdate.
-func (w *DBusWrapper) ImageUpdate() (string, *dbus.Error) {
-	resp, err := w.actions.ImageUpdate()
+func (w *DBusWrapper) ImageUpdate(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.ImageUpdate(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -107,8 +115,9 @@ func (w *DBusWrapper) ImageUpdate() (string, *dbus.Error) {
 }
 
 // ImageStatus – обёртка над Actions.ImageStatus.
-func (w *DBusWrapper) ImageStatus() (string, *dbus.Error) {
-	resp, err := w.actions.ImageStatus()
+func (w *DBusWrapper) ImageStatus(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.ImageStatus(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

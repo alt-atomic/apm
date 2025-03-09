@@ -3,6 +3,7 @@ package service
 import (
 	"apm/cmd/distrobox/api"
 	"apm/lib"
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -18,7 +19,7 @@ func NewUbuntuProvider() *UbuntuProvider {
 
 // GetPackages получает список пакетов через выполнение команды "apt search ."
 // и парсит вывод с учётом установленных пакетов.
-func (p *UbuntuProvider) GetPackages(containerInfo api.ContainerInfo) ([]PackageInfo, error) {
+func (p *UbuntuProvider) GetPackages(ctx context.Context, containerInfo api.ContainerInfo) ([]PackageInfo, error) {
 	// Обновляем базу пакетов.
 	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	_, stderr, err := RunCommand(updateCmd)
@@ -32,7 +33,7 @@ func (p *UbuntuProvider) GetPackages(containerInfo api.ContainerInfo) ([]Package
 		return nil, fmt.Errorf("не удалось выполнить apt search: %v, stderr: %s", err, stderr)
 	}
 
-	installedPackages, err := GetAllApplicationsByContainer(containerInfo)
+	installedPackages, err := GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
 		lib.Log.Error("Ошибка получения установленных пакетов: ", err)
 		installedPackages = []string{}
@@ -46,7 +47,7 @@ func (p *UbuntuProvider) GetPackages(containerInfo api.ContainerInfo) ([]Package
 }
 
 // GetPathByPackageName возвращает список путей для файла пакета, найденных через dpkg -L.
-func (p *UbuntuProvider) GetPathByPackageName(containerInfo api.ContainerInfo, packageName, filePath string) ([]string, error) {
+func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo api.ContainerInfo, packageName, filePath string) ([]string, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- dpkg -L %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := RunCommand(command)
 	if err != nil {
@@ -66,7 +67,7 @@ func (p *UbuntuProvider) GetPathByPackageName(containerInfo api.ContainerInfo, p
 }
 
 // GetPackageOwner определяет пакет-владельца файла через dpkg -S.
-func (p *UbuntuProvider) GetPackageOwner(containerInfo api.ContainerInfo, filePath string) (string, error) {
+func (p *UbuntuProvider) GetPackageOwner(ctx context.Context, containerInfo api.ContainerInfo, filePath string) (string, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- dpkg -S %s", lib.Env.CommandPrefix, containerInfo.ContainerName, filePath)
 	stdout, _, err := RunCommand(command)
 	if err != nil {
@@ -82,7 +83,7 @@ func (p *UbuntuProvider) GetPackageOwner(containerInfo api.ContainerInfo, filePa
 }
 
 // InstallPackage устанавливает указанный пакет внутри контейнера через apt-get install.
-func (p *UbuntuProvider) InstallPackage(containerInfo api.ContainerInfo, packageName string) error {
+func (p *UbuntuProvider) InstallPackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error {
 	command := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := RunCommand(command)
 	if err != nil {
@@ -93,7 +94,7 @@ func (p *UbuntuProvider) InstallPackage(containerInfo api.ContainerInfo, package
 }
 
 // RemovePackage удаляет указанный пакет внутри контейнера через apt-get remove.
-func (p *UbuntuProvider) RemovePackage(containerInfo api.ContainerInfo, packageName string) error {
+func (p *UbuntuProvider) RemovePackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error {
 	command := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := RunCommand(command)
 	if err != nil {

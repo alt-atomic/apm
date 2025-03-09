@@ -4,6 +4,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -19,9 +20,9 @@ type ContainerInfo struct {
 
 // GetContainerList получает список контейнеров, а если требуется полная информация (getFullInfo),
 // то параллельно для каждого контейнера вызывается fetchOsInfo.
-func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetContainerList(ctx context.Context, getFullInfo bool) ([]ContainerInfo, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
 	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
@@ -91,9 +92,9 @@ func GetContainerList(getFullInfo bool) ([]ContainerInfo, error) {
 // ExportingApp экспортирует пакет в хост-систему.
 // Если isConsole == false, формируется команда экспорта GUI приложения;
 // если isConsole == true, формируются команды для каждого пути из pathList.
-func ExportingApp(containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func ExportingApp(ctx context.Context, containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.
 	suffix := ""
 	if deleteApp {
@@ -196,17 +197,17 @@ func fetchOsInfo(containerName string) (ContainerInfo, error) {
 }
 
 // GetContainerOsInfo теперь просто вызывает fetchOsInfo, что позволяет использовать её и отдельно.
-func GetContainerOsInfo(containerName string) (ContainerInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	return fetchOsInfo(containerName)
 }
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
-func CreateContainer(image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
-	containers, errContainerList := GetContainerList(false)
+func CreateContainer(ctx context.Context, image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	containers, errContainerList := GetContainerList(ctx, false)
 	if errContainerList != nil {
 		lib.Log.Error(errContainerList.Error())
 
@@ -246,13 +247,13 @@ func CreateContainer(image, containerName string, addPkg string, hook string) (C
 		return ContainerInfo{}, fmt.Errorf("не удалось создать контейнер %s: %v", containerName, err)
 	}
 
-	return GetContainerOsInfo(containerName)
+	return GetContainerOsInfo(ctx, containerName)
 }
 
 // RemoveContainer удаление контейнера
-func RemoveContainer(containerName string) (ContainerInfo, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	command := fmt.Sprintf("%s distrobox rm %s", lib.Env.CommandPrefix, containerName)
 	cmd := exec.Command("sh", "-c", command)
 
@@ -260,7 +261,7 @@ func RemoveContainer(containerName string) (ContainerInfo, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	osInfo, err := GetContainerOsInfo(containerName)
+	osInfo, err := GetContainerOsInfo(ctx, containerName)
 	if err != nil {
 		return osInfo, err
 	}

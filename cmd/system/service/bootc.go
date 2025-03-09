@@ -4,6 +4,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -127,9 +128,9 @@ func EnableOverlay() error {
 }
 
 // BuildImage сборка образа
-func BuildImage(pullImage bool) (string, error) {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func BuildImage(ctx context.Context, pullImage bool) (string, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	command := "podman build --squash -t os /var"
 	if pullImage {
 		command = "podman build --pull=always --squash -t os /var"
@@ -155,9 +156,9 @@ func BuildImage(pullImage bool) (string, error) {
 }
 
 // SwitchImage переключение образа
-func SwitchImage(podmanImageID string) error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func SwitchImage(ctx context.Context, podmanImageID string) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	cmd := exec.Command("bootc", "switch", "--transport", "containers-storage", podmanImageID)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("ошибка переключения на новый образ: %s", string(output))
@@ -167,9 +168,9 @@ func SwitchImage(podmanImageID string) error {
 }
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
-func CheckAndUpdateBaseImage(pullImage bool) error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	image, err := GetHostImage()
 	if err != nil {
 		return fmt.Errorf("ошибка получения информации: %v", err)
@@ -183,7 +184,7 @@ func CheckAndUpdateBaseImage(pullImage bool) error {
 		}
 
 		if strings.Contains(string(output), "No changes in:") {
-			return bootcUpgrade()
+			return bootcUpgrade(ctx)
 		}
 		return nil
 	}
@@ -192,12 +193,12 @@ func CheckAndUpdateBaseImage(pullImage bool) error {
 		return fmt.Errorf("ошибка, файл %s не найден", ContainerPath)
 	}
 
-	return BuildAndSwitch(pullImage)
+	return BuildAndSwitch(ctx, pullImage)
 }
 
-func bootcUpgrade() error {
-	reply.CreateEventNotification(reply.StateBefore)
-	defer reply.CreateEventNotification(reply.StateAfter)
+func bootcUpgrade(ctx context.Context) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
 	cmd := exec.Command("bootc", "upgrade")
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -208,16 +209,16 @@ func bootcUpgrade() error {
 }
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ.
-func BuildAndSwitch(pullImage bool) error {
-	idImage, err := BuildImage(pullImage)
+func BuildAndSwitch(ctx context.Context, pullImage bool) error {
+	idImage, err := BuildImage(ctx, pullImage)
 	if err != nil {
 		return err
 	}
 
-	err = SwitchImage(idImage)
+	err = SwitchImage(ctx, idImage)
 	if err != nil {
 		return err
 	}
 
-	return pruneOldImages()
+	return pruneOldImages(ctx)
 }
