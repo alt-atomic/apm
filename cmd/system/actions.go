@@ -1,12 +1,12 @@
 package system
 
 import (
-	"apm/cmd/system/converter"
 	"apm/cmd/system/service"
 	"apm/lib"
 	"context"
 	"fmt"
 	"syscall"
+	"time"
 
 	"apm/cmd/common/reply"
 )
@@ -22,7 +22,7 @@ func NewActions() *Actions {
 type ImageStatus struct {
 	Image  service.HostImage `json:"image"`
 	Status string            `json:"status"`
-	Config converter.Config  `json:"config"`
+	Config service.Config    `json:"config"`
 }
 
 func (a *Actions) getImageStatus() (ImageStatus, error) {
@@ -31,7 +31,7 @@ func (a *Actions) getImageStatus() (ImageStatus, error) {
 		return ImageStatus{}, err
 	}
 
-	config, err := converter.ParseConfig()
+	config, err := service.ParseConfig()
 	if err != nil {
 		return ImageStatus{}, err
 	}
@@ -153,14 +153,14 @@ func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 	}, nil
 }
 
-// Apply применить изменения к хосту
-func (a *Actions) Apply(ctx context.Context) (reply.APIResponse, error) {
+// ImageApply применить изменения к хосту
+func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 	err := checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
 
-	config, err := converter.ParseConfig()
+	config, err := service.ParseConfig()
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
@@ -180,10 +180,47 @@ func (a *Actions) Apply(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), err
 	}
 
+	history := service.ImageHistory{
+		ImageName: config.Image,
+		Config:    &config,
+		ImageDate: time.Now().Format(time.RFC3339),
+	}
+
+	err = service.SaveImageToDB(ctx, history)
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     "Изменения успешно применены. Необходима перезагрузка",
 			"bootedImage": imageStatus,
+		},
+		Error: false,
+	}, nil
+}
+
+// ImageHistory история изменений образа
+func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int64, offset int64) (reply.APIResponse, error) {
+	err := checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	history, err := service.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+	count, err := service.CountImageHistoriesFiltered(ctx, imageName)
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	return reply.APIResponse{
+		Data: map[string]interface{}{
+			"message": "История изменений образа",
+			"history": history,
+			"count":   count,
 		},
 		Error: false,
 	}, nil

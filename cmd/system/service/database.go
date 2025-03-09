@@ -4,18 +4,22 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
 // ImageHistory описывает сведения об образе.
+// Здесь поле Config хранится в виде ссылки на структуру Config.
 type ImageHistory struct {
-	ImageName string `json:"imageName"`
-	Config    string `json:"config"`
-	ImageDate string `json:"imageDate"`
+	ImageName string  `json:"image"`
+	Config    *Config `json:"config"`
+	ImageDate string  `json:"date"`
 }
 
 // SaveImageToDB сохраняет историю образов в БД.
+// Перед сохранением объект Config сериализуется в JSON-строку.
 func SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
@@ -30,6 +34,12 @@ func SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
 
 	if _, err := lib.DB.Exec(createQuery); err != nil {
 		return fmt.Errorf("ошибка создания таблицы: %v", err)
+	}
+
+	// Сериализуем конфиг в JSON-строку.
+	configJSON, err := json.Marshal(imageHistory.Config)
+	if err != nil {
+		return fmt.Errorf("ошибка сериализации конфига: %v", err)
 	}
 
 	tx, err := lib.DB.Begin()
@@ -50,7 +60,7 @@ func SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
 		return fmt.Errorf("ошибка парсинга даты %s: %v", imageHistory.ImageDate, err)
 	}
 
-	if _, err := stmt.Exec(imageHistory.ImageName, imageHistory.Config, parsedDate); err != nil {
+	if _, err := stmt.Exec(imageHistory.ImageName, string(configJSON), parsedDate); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("ошибка вставки данных: %v", err)
 	}
@@ -63,8 +73,12 @@ func SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
 }
 
 // GetImageHistoriesFiltered возвращает все записи из таблицы host_image_history,
-// сортируя их по дате (новые записи первыми) и фильтруя по названию образа.
-func GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string) ([]ImageHistory, error) {
+// сортируя их по дате (новые записи первыми), фильтруя по названию образа,
+// а также применяя limit и offset для пагинации.
+func GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit int64, offset int64) ([]ImageHistory, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
 	tableName := "host_image_history"
 
 	query := fmt.Sprintf("SELECT imagename, config, imagedate FROM %s", tableName)
@@ -76,9 +90,14 @@ func GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string) ([]I
 	}
 
 	query += " ORDER BY imagedate DESC"
+	query += " LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
 
 	rows, err := lib.DB.QueryContext(ctx, query, args...)
 	if err != nil {
+		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
+			return nil, fmt.Errorf("история не найдена")
+		}
 		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
 	}
 	defer rows.Close()
@@ -86,16 +105,22 @@ func GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string) ([]I
 	var histories []ImageHistory
 
 	for rows.Next() {
-		var imageName, config string
+		var imageName string
+		var configJSON string
 		var imageDate time.Time
 
-		if err := rows.Scan(&imageName, &config, &imageDate); err != nil {
+		if err := rows.Scan(&imageName, &configJSON, &imageDate); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных: %v", err)
+		}
+
+		var cfg Config
+		if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
+			return nil, fmt.Errorf("ошибка преобразования конфига: %v", err)
 		}
 
 		history := ImageHistory{
 			ImageName: imageName,
-			Config:    config,
+			Config:    &cfg,
 			ImageDate: imageDate.Format(time.RFC3339),
 		}
 		histories = append(histories, history)
@@ -106,4 +131,31 @@ func GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string) ([]I
 	}
 
 	return histories, nil
+}
+
+// CountImageHistoriesFiltered возвращает количество записей
+// фильтруя по названию образа.
+func CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (int, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
+	tableName := "host_image_history"
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+	var args []interface{}
+
+	if imageNameFilter != "" {
+		query += " WHERE imagename LIKE ?"
+		args = append(args, "%"+imageNameFilter+"%")
+	}
+
+	var count int
+	err := lib.DB.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
+			return 0, fmt.Errorf("история не найдена")
+		}
+		return 0, fmt.Errorf("ошибка выполнения запроса: %v", err)
+	}
+
+	return count, nil
 }

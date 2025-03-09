@@ -103,6 +103,13 @@ const SystemIntrospectXML = `
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+    <method name="ImageHistory">
+      <arg direction="in" type="s" name="transaction"/>
+	  <arg direction="in" type="s" name="imageName"/>
+	  <arg direction="in" type="x" name="limit"/>
+	  <arg direction="in" type="x" name="offset"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
     <method name="ImageUpdate">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>

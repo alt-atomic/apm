@@ -1,7 +1,6 @@
-package converter
+package service
 
 import (
-	"apm/cmd/system/service"
 	"apm/lib"
 	"fmt"
 	"gopkg.in/yaml.v3"
@@ -86,7 +85,7 @@ func (c *Config) GenerateDockerfile() error {
 	}
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
-	err := os.WriteFile(service.ContainerPath, []byte(dockerStr), 0644)
+	err := os.WriteFile(ContainerPath, []byte(dockerStr), 0644)
 	if err != nil {
 		return err
 	}
@@ -186,7 +185,7 @@ func uniqueStrings(input []string) []string {
 
 func generateFile(path string) (Config, error) {
 	var cfg Config
-	hostImage, err := service.GetHostImage()
+	hostImage, err := GetHostImage()
 	if err != nil {
 		return Config{}, err
 	}

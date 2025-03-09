@@ -89,7 +89,21 @@ func (w *DBusWrapper) Remove(packageName string, transaction string) (string, *d
 // ImageApply – обёртка над Actions.Apply.
 func (w *DBusWrapper) ImageApply(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Apply(ctx)
+	resp, err := w.actions.ImageApply(ctx)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// ImageHistory – обёртка над Actions.ImageHistory.
+func (w *DBusWrapper) ImageHistory(transaction string, imageName string, limit int64, offset int64) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.ImageHistory(ctx, imageName, limit, offset)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

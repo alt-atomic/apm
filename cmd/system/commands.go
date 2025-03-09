@@ -144,7 +144,7 @@ func CommandList() *cli.Command {
 						Name:  "apply",
 						Usage: "Применить изменения к хосту",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().Apply(ctx)
+							resp, err := NewActions().ImageApply(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -169,6 +169,34 @@ func CommandList() *cli.Command {
 						Usage: "Обновление образа",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							resp, err := NewActions().ImageUpdate(ctx)
+							if err != nil {
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							}
+
+							return reply.CliResponse(ctx, resp)
+						}),
+					},
+					{
+						Name:  "history",
+						Usage: "История изменений образа",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "image",
+								Usage: "Фильтрация по названию образа",
+							},
+							&cli.IntFlag{
+								Name:  "limit",
+								Usage: "Лимит выборки",
+								Value: 10,
+							},
+							&cli.IntFlag{
+								Name:  "offset",
+								Usage: "Смещение выборки",
+								Value: 0,
+							},
+						},
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+							resp, err := NewActions().ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
