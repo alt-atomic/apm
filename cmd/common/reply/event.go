@@ -106,7 +106,11 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 
 // SendFuncNameDBUS отправляет уведомление через DBUS.
 func SendFuncNameDBUS(ctx context.Context, eventData EventData) {
-	eventData.Transaction = ctx.Value("transaction").(string)
+	txVal := ctx.Value("transaction")
+	txStr, ok := txVal.(string)
+	if ok {
+		eventData.Transaction = txStr
+	}
 
 	b, err := json.MarshalIndent(eventData, "", "  ")
 	if err != nil {

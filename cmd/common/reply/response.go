@@ -195,7 +195,11 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 func CliResponse(ctx context.Context, resp APIResponse) error {
 	StopSpinner()
 	format := lib.Env.Format
-	resp.Transaction = ctx.Value("transaction").(string)
+	txVal := ctx.Value("transaction")
+	txStr, ok := txVal.(string)
+	if ok {
+		resp.Transaction = txStr
+	}
 
 	switch format {
 	// ---------------------------------- JSON ----------------------------------
