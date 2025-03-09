@@ -141,10 +141,10 @@ func CommandList() *cli.Command {
 				Aliases: []string{"i"},
 				Commands: []*cli.Command{
 					{
-						Name:  "switch-local",
-						Usage: "Ручное переключение на локальный образ",
+						Name:  "apply",
+						Usage: "Применить изменения к хосту",
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageSwitchLocal(ctx)
+							resp, err := NewActions().Apply(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}

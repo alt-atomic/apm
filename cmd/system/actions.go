@@ -153,8 +153,8 @@ func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 	}, nil
 }
 
-// ImageSwitchLocal переключает образ на локальное хранилище
-func (a *Actions) ImageSwitchLocal(ctx context.Context) (reply.APIResponse, error) {
+// Apply применить изменения к хосту
+func (a *Actions) Apply(ctx context.Context) (reply.APIResponse, error) {
 	err := checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -175,16 +175,6 @@ func (a *Actions) ImageSwitchLocal(ctx context.Context) (reply.APIResponse, erro
 		return newErrorResponse(err.Error()), err
 	}
 
-	if imageStatus.Image.Status.Booted.Image.Image.Transport == "containers-storage" {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message":     "Образ уже переключен на локальное хранилище, для применения изменений воспользуйтесь командой update",
-				"bootedImage": imageStatus,
-			},
-			Error: false,
-		}, nil
-	}
-
 	err = service.BuildAndSwitch(ctx, true)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -192,7 +182,7 @@ func (a *Actions) ImageSwitchLocal(ctx context.Context) (reply.APIResponse, erro
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Переключение на локальный образ выполнено",
+			"message":     "Изменения успешно применены. Необходима перезагрузка",
 			"bootedImage": imageStatus,
 		},
 		Error: false,

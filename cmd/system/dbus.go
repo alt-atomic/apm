@@ -86,10 +86,10 @@ func (w *DBusWrapper) Remove(packageName string, transaction string) (string, *d
 	return string(data), nil
 }
 
-// ImageSwitchLocal – обёртка над ImageSwitchLocal.
-func (w *DBusWrapper) ImageSwitchLocal(transaction string) (string, *dbus.Error) {
+// ImageApply – обёртка над Actions.Apply.
+func (w *DBusWrapper) ImageApply(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.ImageSwitchLocal(ctx)
+	resp, err := w.actions.Apply(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

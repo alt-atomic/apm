@@ -24,19 +24,30 @@ func main() {
 
 	ctx := context.Background()
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
 		sig := <-sigs
-		infoText := fmt.Sprintf("Получен сигнал %s. Завершаем работу приложения...", sig)
-
-		lib.Log.Error(infoText)
-		_ = reply.CliResponse(ctx, reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": infoText,
-			},
-			Error: true,
-		})
+		switch sig {
+		case syscall.SIGINT, syscall.SIGTERM:
+			infoText := fmt.Sprintf("Получен корректный сигнал %s. Завершаем работу приложения.", sig)
+			lib.Log.Info(infoText)
+			_ = reply.CliResponse(ctx, reply.APIResponse{
+				Data: map[string]interface{}{
+					"message": infoText,
+				},
+				Error: false,
+			})
+		default:
+			infoText := fmt.Sprintf("Получен неожиданный сигнал %s. Завершаем работу приложения с ошибкой.", sig)
+			lib.Log.Error(infoText)
+			_ = reply.CliResponse(ctx, reply.APIResponse{
+				Data: map[string]interface{}{
+					"message": infoText,
+				},
+				Error: true,
+			})
+		}
 
 		os.Exit(0)
 	}()

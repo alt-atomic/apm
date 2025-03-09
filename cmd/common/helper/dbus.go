@@ -99,7 +99,7 @@ const SystemIntrospectXML = `
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
-    <method name="ImageSwitchLocal">
+    <method name="ImageApply">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
