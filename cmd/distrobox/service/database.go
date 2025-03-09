@@ -258,3 +258,14 @@ func GetPackageInfoByName(containerName, packageName string) (PackageInfo, error
 
 	return pkg, nil
 }
+
+// DeleteContainerTable удаляет таблицу для указанного контейнера.
+func DeleteContainerTable(ctx context.Context, containerName string) error {
+	tableName := fmt.Sprintf("\"%s\"", containerName)
+	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)
+	if _, err := lib.DB.Exec(query); err != nil {
+		return fmt.Errorf("ошибка удаления таблицы %s: %v", containerName, err)
+	}
+
+	return nil
+}

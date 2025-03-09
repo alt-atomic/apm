@@ -1,14 +1,12 @@
 package system
 
 import (
+	"apm/cmd/common/reply"
 	"apm/cmd/system/service"
 	"apm/lib"
 	"context"
 	"fmt"
 	"syscall"
-	"time"
-
-	"apm/cmd/common/reply"
 )
 
 // Actions объединяет методы для выполнения системных действий.
@@ -108,7 +106,7 @@ func (a *Actions) Remove(ctx context.Context, packageName string) (reply.APIResp
 
 // ImageStatus возвращает статус актуального образа
 func (a *Actions) ImageStatus(ctx context.Context) (reply.APIResponse, error) {
-	err := checkRoot()
+	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -129,12 +127,17 @@ func (a *Actions) ImageStatus(ctx context.Context) (reply.APIResponse, error) {
 
 // ImageUpdate обновляет образ.
 func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
-	err := checkRoot()
+	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
 
-	err = service.CheckAndUpdateBaseImage(ctx, true)
+	config, err := service.ParseConfig()
+	if err != nil {
+		return newErrorResponse(err.Error()), nil
+	}
+
+	err = service.CheckAndUpdateBaseImage(ctx, true, config)
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
@@ -155,7 +158,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 
 // ImageApply применить изменения к хосту
 func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
-	err := checkRoot()
+	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -175,18 +178,7 @@ func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), err
 	}
 
-	err = service.BuildAndSwitch(ctx, true)
-	if err != nil {
-		return newErrorResponse(err.Error()), err
-	}
-
-	history := service.ImageHistory{
-		ImageName: config.Image,
-		Config:    &config,
-		ImageDate: time.Now().Format(time.RFC3339),
-	}
-
-	err = service.SaveImageToDB(ctx, history)
+	err = service.BuildAndSwitch(ctx, true, config)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -202,7 +194,7 @@ func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 
 // ImageHistory история изменений образа
 func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int64, offset int64) (reply.APIResponse, error) {
-	err := checkRoot()
+	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}

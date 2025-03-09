@@ -146,7 +146,7 @@ func getTaskViewName(task string) string {
 	case "service.CheckAndUpdateBaseImage":
 		return "Проверка обновления"
 	case "service.bootcUpgrade":
-		return "Загрузка обновления"
+		return "Загрузка обновления базового образа"
 	case "service.SwitchImage":
 		return "Переключение на локальный образ"
 	case "service.BuildImage":

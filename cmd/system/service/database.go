@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -158,4 +159,34 @@ func CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (i
 	}
 
 	return count, nil
+}
+
+// IsLatestConfigSame принимает конфигурацию newConfig, получает из БД самый последний сохранённый конфиг
+// и сравнивает их. Если они совпадают, возвращает true, иначе false.
+func IsLatestConfigSame(ctx context.Context, newConfig Config) (bool, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
+	tableName := "host_image_history"
+	query := fmt.Sprintf("SELECT config FROM %s ORDER BY imagedate DESC LIMIT 1", tableName)
+
+	var configJSON string
+	err := lib.DB.QueryRowContext(ctx, query).Scan(&configJSON)
+	if err != nil {
+		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
+			return false, nil
+		}
+		return false, fmt.Errorf("ошибка выполнения запроса: %v", err)
+	}
+
+	var latestConfig Config
+	if err := json.Unmarshal([]byte(configJSON), &latestConfig); err != nil {
+		return false, fmt.Errorf("ошибка преобразования конфига из истории: %v", err)
+	}
+
+	if reflect.DeepEqual(newConfig, latestConfig) {
+		return true, nil
+	}
+
+	return false, nil
 }

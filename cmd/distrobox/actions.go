@@ -42,7 +42,7 @@ func (a *Actions) Update(ctx context.Context, container string) (reply.APIRespon
 }
 
 // Info возвращает информацию о пакете.
-func (a *Actions) Info(ctx context.Context, container, packageName string) (reply.APIResponse, error) {
+func (a *Actions) Info(ctx context.Context, container string, packageName string) (reply.APIResponse, error) {
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -71,7 +71,7 @@ func (a *Actions) Info(ctx context.Context, container, packageName string) (repl
 }
 
 // Search выполняет поиск пакета по названию.
-func (a *Actions) Search(ctx context.Context, container, packageName string) (reply.APIResponse, error) {
+func (a *Actions) Search(ctx context.Context, container string, packageName string) (reply.APIResponse, error) {
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -153,7 +153,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 }
 
 // Install устанавливает указанный пакет и опционально экспортирует его.
-func (a *Actions) Install(ctx context.Context, container, packageName string, export bool) (reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, container string, packageName string, export bool) (reply.APIResponse, error) {
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -199,7 +199,7 @@ func (a *Actions) Install(ctx context.Context, container, packageName string, ex
 }
 
 // Remove удаляет указанный пакет. Если onlyExport равен true, удаляется только экспорт.
-func (a *Actions) Remove(ctx context.Context, container, packageName string, onlyExport bool) (reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, container string, packageName string, onlyExport bool) (reply.APIResponse, error) {
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -259,7 +259,7 @@ func (a *Actions) ContainerList(ctx context.Context) (reply.APIResponse, error) 
 }
 
 // ContainerAdd создаёт новый контейнер.
-func (a *Actions) ContainerAdd(ctx context.Context, image, name, additionalPackages, initHooks string) (reply.APIResponse, error) {
+func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, additionalPackages, initHooks string) (reply.APIResponse, error) {
 	image = strings.TrimSpace(image)
 	name = strings.TrimSpace(name)
 	if image == "" {
@@ -302,6 +302,12 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 		},
 		Error: false,
 	}
+
+	err = service.DeleteContainerTable(ctx, name)
+	if err != nil {
+		return a.newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)), err
+	}
+
 	return resp, nil
 }
 

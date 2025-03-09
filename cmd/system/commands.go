@@ -4,9 +4,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
-	"fmt"
 	"github.com/urfave/cli/v3"
-	"syscall"
 )
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
@@ -17,15 +15,6 @@ func newErrorResponse(message string) reply.APIResponse {
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
 	}
-}
-
-// checkRoot проверяет, запущен ли софт от имени root
-func checkRoot() error {
-	if syscall.Geteuid() != 0 {
-		return fmt.Errorf("для выполнения необходимы права администратора, используйте sudo или su")
-	}
-
-	return nil
 }
 
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {

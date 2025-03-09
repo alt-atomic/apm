@@ -2,10 +2,12 @@ package service
 
 import (
 	"apm/lib"
+	"context"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
 	"strings"
+	"time"
 )
 
 // Config описывает структуру конфигурационного файла.
@@ -109,6 +111,31 @@ func (c *Config) Save() error {
 	}
 
 	return os.WriteFile(lib.Env.PathImageFile, data, 0644)
+}
+
+func (c *Config) SaveToDB(ctx context.Context) error {
+	history := ImageHistory{
+		ImageName: c.Image,
+		Config:    c,
+		ImageDate: time.Now().Format(time.RFC3339),
+	}
+
+	statusSame, err := IsLatestConfigSame(ctx, *c)
+	if err != nil {
+		return err
+	}
+
+	// если последний конфиг в базе совпадает с текущим - не сохраняем в историю
+	if statusSame {
+		return nil
+	}
+
+	err = SaveImageToDB(ctx, history)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // AddCommand добавляет команду в список Commands и сохраняет изменения в файл.

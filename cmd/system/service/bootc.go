@@ -168,7 +168,7 @@ func SwitchImage(ctx context.Context, podmanImageID string) error {
 }
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
-func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool) error {
+func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	image, err := GetHostImage()
@@ -183,7 +183,7 @@ func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool) error {
 			return fmt.Errorf("bootc upgrade --check failed: %s", string(output))
 		}
 
-		if strings.Contains(string(output), "No changes in:") {
+		if !strings.Contains(string(output), "No changes in:") {
 			return bootcUpgrade(ctx)
 		}
 		return nil
@@ -193,7 +193,7 @@ func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool) error {
 		return fmt.Errorf("ошибка, файл %s не найден", ContainerPath)
 	}
 
-	return BuildAndSwitch(ctx, pullImage)
+	return BuildAndSwitch(ctx, pullImage, config)
 }
 
 func bootcUpgrade(ctx context.Context) error {
@@ -209,7 +209,12 @@ func bootcUpgrade(ctx context.Context) error {
 }
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ.
-func BuildAndSwitch(ctx context.Context, pullImage bool) error {
+func BuildAndSwitch(ctx context.Context, pullImage bool, config Config) error {
+	err := config.SaveToDB(ctx)
+	if err != nil {
+		return err
+	}
+
 	idImage, err := BuildImage(ctx, pullImage)
 	if err != nil {
 		return err
