@@ -53,6 +53,8 @@ const (
 	ErrNoHelpForThat
 	ErrChangesToBeMade
 	ErrFailedToFetchArchives
+	ErrFailedToFetch
+	ErrFailedToFetchSomeIndex
 	ErrUpgradeDisabled
 	ErrUnmetDependencies
 	ErrMissingFetchSourcePackage
@@ -124,6 +126,8 @@ var errorPatterns = []ErrorEntry{
 	{ErrSourcesListReadFailed, "The list of sources could not be read.", 0},
 	{ErrChangesToBeMade, "There are changes to be made", 0},
 	{ErrFailedToFetchArchives, "Failed to fetch some archives.", 0},
+	{ErrFailedToFetch, "Failed to fetch %s  %s", 2},
+	{ErrFailedToFetchSomeIndex, "Some index files failed to download. They have been ignored, or old ones used instead.", 0},
 	{ErrUpgradeDisabled, "'apt-get upgrade' is disabled because it can leave system in a broken state.\\n\"\n                             \"It is advised to use 'apt-get dist-upgrade' instead.\\n\"\n                             \"If you still want to use 'apt-get upgrade' despite of this warning,\\n\"\n                             \"use '--enable-upgrade' option or enable 'APT::Get::EnableUpgrade' configuration setting\"", 0},
 	{ErrUnmetDependencies, "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or specify a solution).", 0},
 	{ErrMissingFetchSourcePackage, "Must specify at least one package to fetch source for", 0},
@@ -132,6 +136,22 @@ var errorPatterns = []ErrorEntry{
 	{ErrProcessBuildDependencies, "Failed to process build dependencies", 0},
 	{ErrVirtualNoProvidersShort, "Package %s is a virtual package with no ", 1},
 	{ErrVirtualMultipleProvidersShort, "Package %s is a virtual package with multiple ", 1},
+}
+
+func ErrorLinesAnalise(lines []string) *MatchedError {
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		cleanLine := strings.ReplaceAll(trimmed, "E: ", "")
+
+		if matchedErr := CheckError(cleanLine); matchedErr != nil {
+			return matchedErr
+		}
+	}
+
+	return nil
 }
 
 // CheckError ищет ошибку в тексте requestError с учетом шаблонов и возвращает найденную ошибку с параметрами.

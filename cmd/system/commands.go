@@ -34,18 +34,11 @@ func CommandList() *cli.Command {
 		Usage:   "Управление системными пакетами",
 		Commands: []*cli.Command{
 			{
-				Name:  "install",
-				Usage: "Установка пакета в систему",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
-				},
+				Name:      "install",
+				Usage:     "Установка пакета в систему",
+				ArgsUsage: "package",
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Install(ctx, cmd.String("package"))
+					resp, err := NewActions().Install(ctx, cmd.Args().Slice())
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -56,57 +49,32 @@ func CommandList() *cli.Command {
 			{
 				Name:  "update",
 				Usage: "Обновление пакетной базы",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
-				},
-				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-				//
-				//}),
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					resp, err := NewActions().Update(ctx)
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+
+					return reply.CliResponse(ctx, resp)
+				}),
 			},
 			{
-				Name:  "info",
-				Usage: "Информация о пакете",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
-				},
-				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-				//	packageName := cmd.String("package")
-				//
-				//	packageInfo, err := service.GetPackageInfo(packageName)
-				//	if err != nil {
-				//		return reply.CliResponse(newErrorResponse(err.Error()))
-				//	}
-				//
-				//	return reply.CliResponse(reply.APIResponse{
-				//		Data: map[string]interface{}{
-				//			"message": "Информация о пакете",
-				//			"package": packageInfo,
-				//		},
-				//		Error: false,
-				//	})
-				//}),
+				Name:      "info",
+				Usage:     "Информация о пакете",
+				ArgsUsage: "package",
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					resp, err := NewActions().Info(ctx, cmd.Args().First())
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+
+					return reply.CliResponse(ctx, resp)
+				}),
 			},
 			{
-				Name:  "search",
-				Usage: "Поиск пакета по названию",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
-				},
+				Name:      "search",
+				Usage:     "Поиск пакета по названию",
+				ArgsUsage: "package",
 				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 				//	packageInfo, error := os.GetPackageInfo()
 				//
@@ -114,17 +82,10 @@ func CommandList() *cli.Command {
 				//}),
 			},
 			{
-				Name:    "remove",
-				Usage:   "Удаление пакета",
-				Aliases: []string{"rm"},
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "package",
-						Usage:    "Название пакета. Необходимо указать",
-						Aliases:  []string{"p"},
-						Required: true,
-					},
-				},
+				Name:      "remove",
+				Usage:     "Удаление пакета",
+				Aliases:   []string{"rm"},
+				ArgsUsage: "package",
 				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 				//
 				//}),

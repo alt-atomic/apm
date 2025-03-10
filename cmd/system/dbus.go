@@ -17,7 +17,7 @@ func NewDBusWrapper(a *Actions) *DBusWrapper {
 }
 
 // Install – обёртка над Actions.Install.
-func (w *DBusWrapper) Install(packageName string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(packageName []string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Install(ctx, packageName)
 	if err != nil {
@@ -31,9 +31,9 @@ func (w *DBusWrapper) Install(packageName string, transaction string) (string, *
 }
 
 // Update – обёртка над Actions.Update.
-func (w *DBusWrapper) Update(packageName string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Update(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Update(ctx, packageName)
+	resp, err := w.actions.Update(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

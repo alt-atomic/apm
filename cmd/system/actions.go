@@ -1,12 +1,14 @@
 package system
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
+	"apm/cmd/system/apt"
 	"apm/cmd/system/service"
 	"apm/lib"
 	"context"
 	"fmt"
-	"os/exec"
+	"strings"
 	"syscall"
 )
 
@@ -51,31 +53,81 @@ func (a *Actions) getImageStatus() (ImageStatus, error) {
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packageName string) (reply.APIResponse, error) {
-	command := fmt.Sprintf("%s apt-get install -y %s", lib.Env.CommandPrefix, packageName)
-	cmd := exec.Command("sh", "-c", command)
-
-	output, err := cmd.CombinedOutput()
+func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResponse, error) {
+	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
+	err = a.validateDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
 
-	fmt.Println(string(output))
+	var names []string
+	var packagesInfo []apt.Package
+	for _, pkg := range packages {
+		packageInfo, err := apt.GetPackageByName(ctx, pkg)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
 
+		packagesInfo = append(packagesInfo, packageInfo)
+		names = append(names, packageInfo.Name)
+	}
+
+	allPackageNames := strings.Join(names, " ")
+
+	packageParse, output, err := apt.NewActions().CheckInstall(ctx, allPackageNames)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if strings.Contains(output, "is already the newest version") && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": fmt.Sprintf("%s %s %s самой последней версии",
+					helper.DeclOfNum(len(packagesInfo), []string{"пакет", "пакета", "пакетов"}),
+					allPackageNames,
+					helper.DeclOfNum(len(packagesInfo), []string{"установлен", "установлены", "установлены"})),
+			},
+			Error: true,
+		}, nil
+	}
+
+	reply.StopSpinner()
+	apt.NewDialogInstall(packagesInfo, packageParse)
+
+	// пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("Install action вызван для пакета '%s'", packageName),
+			"message": "1",
+			"data":    packagesInfo,
+			"parse":   packageParse,
 		},
 		Error: false,
 	}, nil
 }
 
 // Update обновляет информацию или базу данных пакетов.
-func (a *Actions) Update(ctx context.Context, packageName string) (reply.APIResponse, error) {
-	// Пустая реализация
+func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+	err = a.validateDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	packages, err := apt.NewActions().Update(ctx)
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("Update action вызван для пакета '%s'", packageName),
+			"message": "Список пакетов успешно обновлён",
+			"count":   len(packages),
 		},
 		Error: false,
 	}, nil
@@ -83,10 +135,29 @@ func (a *Actions) Update(ctx context.Context, packageName string) (reply.APIResp
 
 // Info возвращает информацию о системном пакете.
 func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIResponse, error) {
-	// пустая реализация
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+	packageName = strings.TrimSpace(packageName)
+	if packageName == "" {
+		errMsg := "необходимо указать название пакета, например info package"
+		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
+	}
+	err = a.validateDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	packageInfo, err := apt.GetPackageByName(ctx, packageName)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("Info action вызван для пакета '%s'", packageName),
+			"message":     fmt.Sprintf("Информация о пакете %s", packageInfo.Name),
+			"packageInfo": packageInfo,
 		},
 		Error: false,
 	}, nil
@@ -94,6 +165,16 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 
 // Search осуществляет поиск системного пакета по названию.
 func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	err = a.validateDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
 	// Пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -105,6 +186,16 @@ func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResp
 
 // Remove удаляет системный пакет.
 func (a *Actions) Remove(ctx context.Context, packageName string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	err = a.validateDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
 	// Пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -239,9 +330,22 @@ func (a *Actions) checkRoot() error {
 
 // newErrorResponse создаёт ответ с ошибкой.
 func (a *Actions) newErrorResponse(message string) reply.APIResponse {
-	lib.Log.Error(message)
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
 	}
+}
+
+// validateDB проверяет, существует ли база данных
+func (a *Actions) validateDB(ctx context.Context) error {
+	// Если база не содержит данные - запускаем процесс обновления
+	if err := apt.PackageDatabaseExist(ctx); err != nil {
+		aptAction := apt.NewActions()
+		_, err = aptAction.Update(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
