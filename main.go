@@ -5,6 +5,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/cmd/distrobox"
 	"apm/cmd/system"
+	"apm/cmd/system/apt"
 	"apm/lib"
 	"context"
 	"fmt"
@@ -16,6 +17,13 @@ import (
 )
 
 func main() {
+	errMessage := "Some broken packages were found while trying to process build-dependencies for %s.\n\"You might want to run `apt-get --fix-broken install' to correct these."
+	entry := apt.CheckError(errMessage)
+	fmt.Println(entry)
+	if entry != nil {
+		fmt.Println(entry.GetText())
+	}
+
 	lib.Log.Debugln("Starting apm")
 
 	lib.InitConfig()

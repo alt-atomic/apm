@@ -2,6 +2,7 @@ package service
 
 import (
 	"apm/cmd/common/reply"
+	"apm/lib"
 	"bufio"
 	"bytes"
 	"context"
@@ -14,13 +15,15 @@ import (
 func pruneOldImages(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-	cmd := exec.Command("podman", "image", "prune", "-f")
+
+	command := fmt.Sprintf("%s podman image prune -f", lib.Env.CommandPrefix)
+	cmd := exec.Command("sh", "-c", command)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("ошибка удаления старых изображений: %v, output: %s", err, string(output))
 	}
 
-	// Получаем список образов.
-	cmd = exec.Command("podman", "images", "--noheading")
+	command = fmt.Sprintf("%s podman image prune --noheading", lib.Env.CommandPrefix)
+	cmd = exec.Command("sh", "-c", command)
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("ошибка получения образа podman: %v", err)
@@ -35,7 +38,8 @@ func pruneOldImages(ctx context.Context) error {
 		}
 		if fields[0] == "<none>" {
 			imageID := fields[2]
-			cmd = exec.Command("podman", "rmi", "-f", imageID)
+			command = fmt.Sprintf("%s podman rmi -f %s", lib.Env.CommandPrefix, imageID)
+			cmd = exec.Command("sh", "-c", command)
 			if out, err := cmd.CombinedOutput(); err != nil {
 				fmt.Printf("ошибка удаления образа %s: %v, output: %s\n", imageID, err, string(out))
 			}

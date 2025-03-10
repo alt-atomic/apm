@@ -125,9 +125,14 @@ func QueryPackages(containerName string, filters map[string]interface{}, sortFie
 	if len(filters) > 0 {
 		var conditions []string
 		for field, value := range filters {
-			// Предполагаем, что имя поля корректное (вы можете добавить проверку допустимых полей).
-			conditions = append(conditions, fmt.Sprintf("%s = ?", field))
-			args = append(args, value)
+			// Если значение строковое, используем LIKE для неточного совпадения.
+			if strVal, ok := value.(string); ok {
+				conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
+				args = append(args, fmt.Sprintf("%%%s%%", strVal))
+			} else {
+				conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+				args = append(args, value)
+			}
 		}
 		whereClause := strings.Join(conditions, " AND ")
 		query += " WHERE " + whereClause

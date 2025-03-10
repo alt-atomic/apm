@@ -118,7 +118,8 @@ func EnableOverlay() error {
 	}
 
 	if runOverlay {
-		cmd := exec.Command("bootc", "usr-overlay")
+		command := fmt.Sprintf("%s bootc usr-overlay", lib.Env.CommandPrefix)
+		cmd := exec.Command("sh", "-c", command)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("ошибка активации usr-overlay: %s", string(output))
 		}
@@ -131,9 +132,9 @@ func EnableOverlay() error {
 func BuildImage(ctx context.Context, pullImage bool) (string, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-	command := "podman build --squash -t os /var"
+	command := fmt.Sprintf("%s podman build --squash -t os /var", lib.Env.CommandPrefix)
 	if pullImage {
-		command = "podman build --pull=always --squash -t os /var"
+		command = fmt.Sprintf("%s podman build --pull=always --squash -t os /var", lib.Env.CommandPrefix)
 	}
 
 	cmd := exec.Command("sh", "-c", command)
@@ -141,7 +142,7 @@ func BuildImage(ctx context.Context, pullImage bool) (string, error) {
 		return "", fmt.Errorf("ошибка сборки образа: %s", string(output))
 	}
 
-	cmd = exec.Command("podman", "images", "-q", "os")
+	cmd = exec.Command(fmt.Sprintf("%s podman images -q os", lib.Env.CommandPrefix))
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("ошибка podman образ: %v", err)
@@ -159,7 +160,9 @@ func BuildImage(ctx context.Context, pullImage bool) (string, error) {
 func SwitchImage(ctx context.Context, podmanImageID string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-	cmd := exec.Command("bootc", "switch", "--transport", "containers-storage", podmanImageID)
+
+	command := fmt.Sprintf("%s bootc switch --transport containers-storage %s", lib.Env.CommandPrefix, podmanImageID)
+	cmd := exec.Command("sh", "-c", command)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("ошибка переключения на новый образ: %s", string(output))
 	}
@@ -177,7 +180,8 @@ func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config)
 	}
 
 	if image.Status.Booted.Image.Image.Transport != "containers-storage" {
-		cmd := exec.Command("bootc", "upgrade", "--check")
+		command := fmt.Sprintf("%s bootc upgrade --check", lib.Env.CommandPrefix)
+		cmd := exec.Command("sh", "-c", command)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("bootc upgrade --check failed: %s", string(output))
@@ -200,7 +204,7 @@ func bootcUpgrade(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
-	cmd := exec.Command("bootc", "upgrade")
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s bootc upgrade", lib.Env.CommandPrefix))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("bootc upgrade failed: %s", string(output))
 	}

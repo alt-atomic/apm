@@ -44,9 +44,14 @@ func CommandList() *cli.Command {
 						Required: true,
 					},
 				},
-				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-				//
-				//}),
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					resp, err := NewActions().Install(ctx, cmd.String("package"))
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+
+					return reply.CliResponse(ctx, resp)
+				}),
 			},
 			{
 				Name:  "update",

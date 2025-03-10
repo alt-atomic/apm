@@ -6,6 +6,7 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
+	"os/exec"
 	"syscall"
 )
 
@@ -51,7 +52,16 @@ func (a *Actions) getImageStatus() (ImageStatus, error) {
 
 // Install осуществляет установку системного пакета.
 func (a *Actions) Install(ctx context.Context, packageName string) (reply.APIResponse, error) {
-	// Пока пустая реализация, можно добавить реальную логику установки
+	command := fmt.Sprintf("%s apt-get install -y %s", lib.Env.CommandPrefix, packageName)
+	cmd := exec.Command("sh", "-c", command)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	fmt.Println(string(output))
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": fmt.Sprintf("Install action вызван для пакета '%s'", packageName),
