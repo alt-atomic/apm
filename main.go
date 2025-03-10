@@ -17,7 +17,6 @@ import (
 
 func main() {
 	lib.Log.Debugln("Starting apm")
-
 	lib.InitConfig()
 	lib.InitLogger()
 	lib.InitDatabase()

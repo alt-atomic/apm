@@ -143,7 +143,9 @@ func SendNotificationResponse(message string) {
 
 func getTaskViewName(task string) string {
 	switch task {
-	case "apt.(*Actions).CheckInstall":
+	case "apt.(*Actions).Install":
+		return "Установка пакетов"
+	case "apt.(*Actions).Check":
 		return "Анализ пакетов"
 	case "apt.(*Actions).Update":
 		return "Анализ полученных пакетов"

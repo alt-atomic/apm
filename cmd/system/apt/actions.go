@@ -19,7 +19,7 @@ func NewActions() *Actions {
 	return &Actions{}
 }
 
-// PackageChanges Структура, для хранения результатов  apt-get -s
+// PackageChanges Структура, для хранения результатов apt-get -s
 type PackageChanges struct {
 	ExtraInstalled       []string // Дополнительные пакеты для установки (из первой секции)
 	UpgradedPackages     []string // Пакеты, которые будут обновлены
@@ -46,9 +46,32 @@ type Package struct {
 	Installed     bool     `json:"installed"`
 }
 
-func (a *Actions) CheckInstall(ctx context.Context, packageName string) (PackageChanges, string, error) {
+func (a *Actions) Install(ctx context.Context, packageName string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
+	command := fmt.Sprintf("%s apt-get -y install %s", lib.Env.CommandPrefix, packageName)
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = []string{"LC_ALL=C"}
+
+	output, err := cmd.CombinedOutput()
+	outputStr := string(output)
+	lines := strings.Split(outputStr, "\n")
+	aptError := ErrorLinesAnalise(lines)
+	if aptError != nil {
+		return fmt.Errorf(aptError.GetText())
+	}
+	if err != nil {
+		return fmt.Errorf("ошибка обновления пакетов: %v", err)
+	}
+
+	return nil
+}
+
+func (a *Actions) Check(ctx context.Context, packageName string) (PackageChanges, string, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
 	command := fmt.Sprintf("%s apt-get -s install %s", lib.Env.CommandPrefix, packageName)
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}

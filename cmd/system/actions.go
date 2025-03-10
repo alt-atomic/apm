@@ -76,8 +76,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 	}
 
 	allPackageNames := strings.Join(names, " ")
-
-	packageParse, output, err := apt.NewActions().CheckInstall(ctx, allPackageNames)
+	packageParse, output, err := apt.NewActions().Check(ctx, allPackageNames)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -95,14 +94,36 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 	}
 
 	reply.StopSpinner()
-	apt.NewDialogInstall(packagesInfo, packageParse)
+	dialogStatus, err := apt.NewDialogInstall(packagesInfo, packageParse)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if !dialogStatus {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": "Отмена установки пакета",
+			},
+			Error: false,
+		}, nil
+	}
+
+	reply.CreateSpinner()
+	err = apt.NewActions().Install(ctx, allPackageNames)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
 
 	// пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": "1",
-			"data":    packagesInfo,
-			"parse":   packageParse,
+			"message": fmt.Sprintf("%d %s успешно %s и %d %s",
+				packageParse.NewInstalledCount,
+				helper.DeclOfNum(packageParse.NewInstalledCount, []string{"пакет", "пакета", "пакетов"}),
+				helper.DeclOfNum(packageParse.NewInstalledCount, []string{"установлен", "установлено", "установлены"}),
+				packageParse.UpgradedCount,
+				helper.DeclOfNum(packageParse.UpgradedCount, []string{"обновлён", "обновлено", "обновилось"}),
+			),
 		},
 		Error: false,
 	}, nil

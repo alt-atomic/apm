@@ -2,10 +2,12 @@ package apt
 
 import (
 	"apm/cmd/common/helper"
+	"apm/lib"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -17,22 +19,36 @@ type model struct {
 	pckChange PackageChanges
 	cursor    int
 	choice    string
+	vp        viewport.Model
+	canceled  bool
 }
 
 // NewDialogInstall запускает диалог отображения информации о пакете с выбором действия.
-func NewDialogInstall(packageInfo []Package, packageChange PackageChanges) bool {
-	m := model{pkg: packageInfo, pckChange: packageChange}
-	p := tea.NewProgram(m)
+func NewDialogInstall(packageInfo []Package, packageChange PackageChanges) (bool, error) {
+	// Инициализируем viewport с дефолтными размерами.
+	m := model{
+		pkg:       packageInfo,
+		pckChange: packageChange,
+		vp:        viewport.New(80, 20),
+	}
+	p := tea.NewProgram(m,
+		tea.WithOutput(os.Stdout),
+		tea.WithAltScreen(),
+		tea.WithoutSignalHandler())
 	finalModel, err := p.Run()
 	if err != nil {
-		fmt.Println("Ошибка:", err)
-		os.Exit(1)
+		lib.Log.Errorf("error start tea: %v", err)
+		return false, err
 	}
 
 	if m, ok := finalModel.(model); ok {
-		return m.choice == "Установить"
+		if m.canceled || m.choice == "" {
+			return false, fmt.Errorf("диалог был отменён")
+		}
+		return m.choice == "Установить", nil
 	}
-	return false
+
+	return false, fmt.Errorf("диалог был отменён")
 }
 
 func (m model) Init() tea.Cmd {
@@ -41,41 +57,159 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg:
+		// Обновляем размеры viewport, вычитая 5 строк для футера (меню)
+		m.vp.Width = msg.Width
+		m.vp.Height = msg.Height - 5
+		m.vp.SetContent(m.buildContent())
+		return m, nil
+
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q", "esc":
+		switch msg.Type {
+		// Отмена диалога: Esc или Ctrl+C
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.canceled = true
 			return m, tea.Quit
-		case "enter":
+
+		// Завершение выбора
+		case tea.KeyEnter:
 			m.choice = choices[m.cursor]
 			return m, tea.Quit
-		case "down", "j":
-			m.cursor++
-			if m.cursor >= len(choices) {
-				m.cursor = 0
-			}
-		case "up", "k":
+
+		// Навигация по меню с помощью стрелок
+		case tea.KeyUp:
 			m.cursor--
 			if m.cursor < 0 {
 				m.cursor = len(choices) - 1
 			}
+			return m, nil
+
+		case tea.KeyDown:
+			m.cursor++
+			if m.cursor >= len(choices) {
+				m.cursor = 0
+			}
+			return m, nil
+
+		// Прокрутка viewport
+		case tea.KeyPgUp:
+			m.vp.LineUp(5)
+			return m, nil
+
+		case tea.KeyPgDown:
+			m.vp.LineDown(5)
+			return m, nil
+
+		// Перемещение в самый верх
+		case tea.KeyHome, tea.KeyCtrlHome:
+			m.vp.GotoTop()
+			return m, nil
+
+		// Перемещение в самый низ
+		case tea.KeyEnd, tea.KeyCtrlEnd:
+			m.vp.GotoBottom()
+			return m, nil
+
+		// Обработка рун для "j" и "k"
+		case tea.KeyRunes:
+			switch msg.String() {
+			case "j":
+				m.cursor++
+				if m.cursor >= len(choices) {
+					m.cursor = 0
+				}
+				return m, nil
+			case "k":
+				m.cursor--
+				if m.cursor < 0 {
+					m.cursor = len(choices) - 1
+				}
+				return m, nil
+			}
+
+		default:
+			var cmd tea.Cmd
+			m.vp, cmd = m.vp.Update(msg)
+			return m, cmd
 		}
 	}
 	return m, nil
 }
 
 func (m model) View() string {
+	// Определяем стили для вывода
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
-	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: "#234f55",
-		Dark:  "#82a0a3",
-	}).PaddingLeft(1) // Левый отступ для ключей
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
 		Light: "#171717",
 		Dark:  "#c4c8c6",
 	})
-	wrapStyle := lipgloss.NewStyle().Width(80)
-
 	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#2bb389"))
+	// Стиль для подсказок по клавишам (невзрачный серый)
+	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Faint(true)
+
+	contentView := m.vp.View()
+
+	allLines := strings.Split(m.buildContent(), "\n")
+	totalLines := len(allLines)
+	if totalLines > m.vp.Height {
+		contentView = addScrollIndicator(contentView, m.vp.YOffset, totalLines, m.vp.Height)
+	}
+
+	// Формируем строку с подсказками по клавишам
+	keyboardShortcuts := shortcutStyle.Render("Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - начало/конец, Enter - выбрать, Esc - отмена")
+
+	// Формируем футер с выбором действия
+	var footer strings.Builder
+	footer.WriteString(titleStyle.Render("\nВыберите действие:\n"))
+	for i, choice := range choices {
+		prefix := "  "
+		if i == m.cursor {
+			prefix = "» "
+		}
+		if i == 1 {
+			footer.WriteString("\n" + valueStyle.Render(prefix+choice))
+		} else {
+			footer.WriteString("\n" + installStyle.Render(prefix+choice))
+		}
+	}
+
+	// Выводим сначала контент, затем подсказки и, наконец, меню выбора
+	return contentView + "\n" + keyboardShortcuts + "\n" + footer.String()
+}
+
+// addScrollIndicator добавляет вертикальный индикатор прокрутки справа от контента.
+func addScrollIndicator(contentView string, yOffset, totalLines, viewportHeight int) string {
+	lines := strings.Split(contentView, "\n")
+	scrollPercent := float64(yOffset) / float64(totalLines-viewportHeight)
+	thumbIndex := int(scrollPercent * float64(viewportHeight))
+	if thumbIndex >= viewportHeight {
+		thumbIndex = viewportHeight - 1
+	}
+
+	indicatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
+	for i := range lines {
+		indicator := " "
+		if i == thumbIndex {
+			indicator = indicatorStyle.Render("█")
+		}
+		lines[i] = lines[i] + indicator
+	}
+	return strings.Join(lines, "\n")
+}
+
+// buildContent генерирует основное содержимое, которое помещается в viewport.
+// Здесь выводится информация о пакетах и изменения, без интерактивного меню.
+func (m model) buildContent() string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
+	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+		Light: "#234f55",
+		Dark:  "#82a0a3",
+	}).PaddingLeft(1)
+	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+		Light: "#171717",
+		Dark:  "#c4c8c6",
+	})
 
 	var sb strings.Builder
 	const keyWidth = 18
@@ -95,48 +229,30 @@ func (m model) View() string {
 		sb.WriteString("\n" + formatLine("Категория", pkg.Section, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Мейнтейнер", pkg.Maintainer, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Версия", pkg.Version, keyWidth, keyStyle, valueStyle))
-		wrappedDepends := wrapStyle.Render(formatDependencies(pkg.Depends))
-		sb.WriteString("\n" + formatLine("Зависимости", wrappedDepends, keyWidth, keyStyle, valueStyle))
+
+		dependsStr := formatDependencies(pkg.Depends)
+		sb.WriteString("\n" + formatLine("Зависимости", dependsStr, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Размер", helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Установлен", installedText, keyWidth, keyStyle, valueStyle))
 	}
 
 	sb.WriteString(titleStyle.Render("\n\nИзменения затронут:"))
-	wrappedExtra := wrapStyle.Render(formatDependencies(m.pckChange.ExtraInstalled))
-	wrappedUpgrade := wrapStyle.Render(formatDependencies(m.pckChange.UpgradedPackages))
-	wrappedInstall := wrapStyle.Render(formatDependencies(m.pckChange.NewInstalledPackages))
-	sb.WriteString("\n" + formatLine("Экстра пакеты", wrappedExtra, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будут обновлены", wrappedUpgrade, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будут установлены", wrappedInstall, keyWidth, keyStyle, valueStyle))
+	extraStr := formatDependencies(m.pckChange.ExtraInstalled)
+	upgradeStr := formatDependencies(m.pckChange.UpgradedPackages)
+	installStr := formatDependencies(m.pckChange.NewInstalledPackages)
+	sb.WriteString("\n" + formatLine("Экстра пакеты", extraStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine("Будут обновлены", upgradeStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine("Будут установлены", installStr, keyWidth, keyStyle, valueStyle))
 
 	packageUpgradedCount := fmt.Sprintf("%d %s", m.pckChange.UpgradedCount, helper.DeclOfNum(m.pckChange.UpgradedCount, []string{"пакет", "пакета", "пакетов"}))
 	packageNewInstalledCount := fmt.Sprintf("%d %s", m.pckChange.NewInstalledCount, helper.DeclOfNum(m.pckChange.NewInstalledCount, []string{"пакет", "пакета", "пакетов"}))
 	packageRemovedCount := fmt.Sprintf("%d %s", m.pckChange.RemovedCount, helper.DeclOfNum(m.pckChange.RemovedCount, []string{"пакет", "пакета", "пакетов"}))
 	packageNotUpgradedCount := fmt.Sprintf("%d %s", m.pckChange.NotUpgradedCount, helper.DeclOfNum(m.pckChange.NotUpgradedCount, []string{"пакет", "пакета", "пакетов"}))
-
 	sb.WriteString(titleStyle.Render("\n\nИтого:"))
-	sb.WriteString("\n" + formatLine("Будет обновлено",
-		packageUpgradedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Установлено новых",
-		packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будет удалено",
-		packageRemovedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Не затронуты",
-		packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
-
-	sb.WriteString(titleStyle.Render("\n\nВыберите действие:\n"))
-	for i, choice := range choices {
-		prefix := "  "
-		if i == m.cursor {
-			prefix = "» "
-		}
-		if i == 1 {
-			sb.WriteString("\n" + valueStyle.Render(prefix+choice))
-		} else {
-			sb.WriteString("\n" + installStyle.Render(prefix+choice))
-		}
-	}
-
+	sb.WriteString("\n" + formatLine("Будет обновлено", packageUpgradedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine("Установлено новых", packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine("Будет удалено", packageRemovedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine("Не затронуты", packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
 	return sb.String()
 }
 
@@ -151,10 +267,24 @@ func formatDependencies(depends []string) string {
 	if len(filtered) == 0 {
 		return "нет"
 	}
-	if len(filtered) > 50 {
-		return strings.Join(filtered[:20], ", ") + " и т.д."
+	if len(filtered) > 500 {
+		filtered = append(filtered[:500], "и другие")
 	}
-	return strings.Join(filtered, ", ")
+	maxLen := 0
+	for _, dep := range filtered {
+		if len(dep) > maxLen {
+			maxLen = len(dep)
+		}
+	}
+	colWidth := maxLen + 2
+	var sb strings.Builder
+	for i, dep := range filtered {
+		sb.WriteString(fmt.Sprintf("%-*s", colWidth, dep))
+		if (i+1)%3 == 0 || i == len(filtered)-1 {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
 }
 
 func formatLine(key, value string, keyWidth int, keyStyle, valueStyle lipgloss.Style) string {
@@ -163,5 +293,12 @@ func formatLine(key, value string, keyWidth int, keyStyle, valueStyle lipgloss.S
 	if keyLen < keyWidth {
 		padding = strings.Repeat(" ", keyWidth-keyLen)
 	}
-	return keyStyle.Render(key+padding) + valueStyle.Render(fmt.Sprintf(": %s", value))
+	formattedKey := keyStyle.Render(key + padding)
+	lines := strings.Split(value, "\n")
+	result := formattedKey + valueStyle.Render(": "+lines[0])
+	indent := strings.Repeat(" ", keyWidth+3)
+	for _, line := range lines[1:] {
+		result += "\n" + indent + valueStyle.Render(line)
+	}
+	return result
 }
