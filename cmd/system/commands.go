@@ -107,9 +107,65 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
+				Name:  "list",
+				Usage: "Построение запроса для получения списка пакетов",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "sort",
+						Usage: "Поле для сортировки (например, name, installed)",
+					},
+					&cli.StringFlag{
+						Name:  "order",
+						Usage: "Порядок сортировки: ASC или DESC",
+						Value: "ASC",
+					},
+					&cli.IntFlag{
+						Name:  "limit",
+						Usage: "Лимит выборки",
+						Value: 10,
+					},
+					&cli.IntFlag{
+						Name:  "offset",
+						Usage: "Смещение выборки",
+						Value: 0,
+					},
+					&cli.StringFlag{
+						Name:  "filter-field",
+						Usage: "Название поля для фильтрации (например, name, version, manager, section)",
+					},
+					&cli.StringFlag{
+						Name:  "filter-value",
+						Usage: "Значение для фильтрации по указанному полю",
+					},
+					&cli.BoolFlag{
+						Name:  "force-update",
+						Usage: "Принудительно обновить все пакеты перед запросом",
+						Value: false,
+					},
+				},
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					params := ListParams{
+						Sort:        cmd.String("sort"),
+						Offset:      cmd.Int("offset"),
+						Limit:       cmd.Int("limit"),
+						FilterField: cmd.String("filter-field"),
+						FilterValue: cmd.String("filter-value"),
+						ForceUpdate: cmd.Bool("force-update"),
+					}
+
+					resp, err := NewActions().List(ctx, params)
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+
+					return reply.CliResponse(ctx, resp)
+				}),
+			},
+			{
 				Name:    "image",
 				Usage:   "Модуль для работы с образом",
 				Aliases: []string{"i"},
+				Hidden:  !lib.Env.IsAtomic,
 				Commands: []*cli.Command{
 					{
 						Name:  "apply",

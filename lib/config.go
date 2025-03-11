@@ -13,6 +13,7 @@ type Environment struct {
 	PathLogFile   string `yaml:"pathLogFile"`
 	PathDBFile    string `yaml:"pathDBFile"`
 	PathImageFile string `yaml:"pathImageFile"`
+	IsAtomic      bool   // Внутреннее свойство
 	Language      string // Внутреннее свойство
 	Format        string // Внутреннее свойство
 }
@@ -37,6 +38,12 @@ func InitConfig() {
 	// Проверяем и создаём путь для db-файла
 	if err := EnsurePath(Env.PathDBFile); err != nil {
 		panic(err)
+	}
+
+	if _, errAtomic := os.Stat("/usr/bin/ostree"); os.IsNotExist(errAtomic) {
+		Env.IsAtomic = true
+	} else {
+		Env.IsAtomic = false
 	}
 }
 

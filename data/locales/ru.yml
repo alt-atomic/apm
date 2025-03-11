@@ -1,6 +1,8 @@
 ru_RU:
   response:
     info: "Информация"
+    count: "Количество"
+    totalCount: "Всего записей"
     packages: "Список пакетов"
     packageInfo: "Информация о пакете"
     depends: "Зависимости"

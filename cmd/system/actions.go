@@ -287,6 +287,89 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 	}, nil
 }
 
+// ListParams задаёт параметры для запроса списка пакетов.
+type ListParams struct {
+	Sort        string `json:"sort"`
+	Order       string `json:"order"`
+	Limit       int64  `json:"limit"`
+	Offset      int64  `json:"offset"`
+	FilterField string `json:"filterField"`
+	FilterValue string `json:"filterValue"`
+	ForceUpdate bool   `json:"forceUpdate"`
+}
+
+func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if params.ForceUpdate {
+		_, err = apt.NewActions().Update(ctx)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
+	}
+
+	err = a.validateDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	// 4. Формируем фильтры (map[string]interface{}) из входных параметров
+	filters := make(map[string]interface{})
+	if strings.TrimSpace(params.FilterField) != "" && strings.TrimSpace(params.FilterValue) != "" {
+		filters[params.FilterField] = params.FilterValue
+	}
+
+	totalCount, err := apt.CountHostImagePackages(ctx, filters)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	packages, err := apt.QueryHostImagePackages(ctx, filters, params.Sort, params.Order, params.Limit, params.Offset)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if len(packages) == 0 {
+		return a.newErrorResponse("ничего не найдено"), fmt.Errorf("ничего не найдено")
+	}
+
+	var respPackages []PackageResponse
+	for _, packageInfo := range packages {
+		respPackages = append(respPackages, PackageResponse{
+			Name:             packageInfo.Name,
+			Section:          packageInfo.Section,
+			InstalledSize:    helper.AutoSize(packageInfo.InstalledSize),
+			Maintainer:       packageInfo.Maintainer,
+			Version:          packageInfo.Version,
+			VersionInstalled: packageInfo.VersionInstalled,
+			Depends:          packageInfo.Depends,
+			Size:             helper.AutoSize(packageInfo.Size),
+			Filename:         packageInfo.Filename,
+			Description:      packageInfo.Description,
+			Installed:        packageInfo.Installed,
+		})
+	}
+
+	msg := fmt.Sprintf(
+		"%s %d %s",
+		helper.DeclOfNum(len(packages), []string{"Найден", "Найдено", "Найдены"}),
+		len(packages),
+		helper.DeclOfNum(len(packages), []string{"пакет", "пакета", "пакетов"}),
+	)
+
+	return reply.APIResponse{
+		Data: map[string]interface{}{
+			"message":    msg,
+			"packages":   respPackages,
+			"totalCount": int(totalCount),
+		},
+		Error: false,
+	}, nil
+}
+
 // Search осуществляет поиск системного пакета по названию.
 func (a *Actions) Search(ctx context.Context, packageName string, installed bool) (reply.APIResponse, error) {
 	err := a.checkRoot()

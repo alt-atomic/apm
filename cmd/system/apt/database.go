@@ -5,6 +5,7 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -285,6 +286,231 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 	}
 
 	return result, nil
+}
+
+// QueryHostImagePackages возвращает пакеты из таблицы host_image_packages
+// с возможностью фильтрации, сортировки и ограничений.
+//
+//	filters   - словарь, где ключ — имя поля, значение - искомое значение
+//	            (строки => LIKE '%...%', для остальных типов => "=").
+//	sortField - имя поля для сортировки (если пустое, сортировка не применяется).
+//	sortOrder - "ASC" или "DESC" (по умолчанию ASC, если задано неверно).
+//	limit     - максимальное количество возвращаемых строк (если <= 0, не применяется).
+//	offset    - смещение, с которого начинаем выборку (если <= 0, не применяется).
+func QueryHostImagePackages(
+	ctx context.Context,
+	filters map[string]interface{},
+	sortField, sortOrder string,
+	limit, offset int64,
+) ([]Package, error) {
+
+	tableName := "host_image_packages"
+
+	query := fmt.Sprintf(`
+        SELECT 
+            name,
+            section,
+            installed_size,
+            maintainer,
+            version,
+            versionInstalled,
+            depends,
+            size,
+            filename,
+            description,
+            changelog,
+            installed
+        FROM %s
+    `, tableName)
+
+	var args []interface{}
+
+	// Формируем WHERE-условие, если есть фильтры.
+	if len(filters) > 0 {
+		var conditions []string
+		for field, value := range filters {
+			// Если фильтруем по полю "installed", делаем особую логику
+			if field == "installed" {
+				switch val := value.(type) {
+				case string:
+					// Если пришло "true"/"false", конвертируем в 1/0
+					lower := strings.ToLower(val)
+					if lower == "true" {
+						conditions = append(conditions, "installed = ?")
+						args = append(args, 1)
+					} else if lower == "false" {
+						conditions = append(conditions, "installed = ?")
+						args = append(args, 0)
+					} else {
+						// Если пришло что-то иное, например "1"/"0", пробуем парсить как int
+						iv, err := strconv.Atoi(val)
+						if err == nil {
+							conditions = append(conditions, "installed = ?")
+							args = append(args, iv)
+						} else {
+						}
+					}
+
+				case bool:
+					if val {
+						conditions = append(conditions, "installed = 1")
+					} else {
+						conditions = append(conditions, "installed = 0")
+					}
+
+				default:
+					if intVal, ok := val.(int); ok {
+						conditions = append(conditions, "installed = ?")
+						args = append(args, intVal)
+					} else {
+					}
+				}
+
+			} else {
+				// Обычная логика: если строка -> LIKE, иначе "="
+				if strVal, ok := value.(string); ok {
+					conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
+					args = append(args, fmt.Sprintf("%%%s%%", strVal))
+				} else {
+					conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+					args = append(args, value)
+				}
+			}
+		}
+
+		if len(conditions) > 0 {
+			whereClause := strings.Join(conditions, " AND ")
+			query += " WHERE " + whereClause
+		}
+	}
+
+	// Добавляем сортировку, если указаны поле и порядок
+	if sortField != "" {
+		upperOrder := strings.ToUpper(sortOrder)
+		if upperOrder != "ASC" && upperOrder != "DESC" {
+			upperOrder = "ASC"
+		}
+		query += fmt.Sprintf(" ORDER BY %s %s", sortField, upperOrder)
+	}
+
+	// Добавляем LIMIT/OFFSET
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+		if offset > 0 {
+			query += " OFFSET ?"
+			args = append(args, offset)
+		}
+	}
+
+	// Выполняем запрос
+	rows, err := lib.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
+	}
+	defer rows.Close()
+
+	var result []Package
+
+	for rows.Next() {
+		var pkg Package
+		var dependsStr string
+		var installedInt int
+
+		if err := rows.Scan(
+			&pkg.Name,
+			&pkg.Section,
+			&pkg.InstalledSize,
+			&pkg.Maintainer,
+			&pkg.Version,
+			&pkg.VersionInstalled,
+			&dependsStr,
+			&pkg.Size,
+			&pkg.Filename,
+			&pkg.Description,
+			&pkg.Changelog,
+			&installedInt,
+		); err != nil {
+			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
+		}
+
+		if dependsStr != "" {
+			pkg.Depends = strings.Split(dependsStr, ",")
+		} else {
+			pkg.Depends = []string{}
+		}
+
+		pkg.Installed = installedInt != 0
+		result = append(result, pkg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка при обработке строк: %w", err)
+	}
+
+	return result, nil
+}
+
+// CountHostImagePackages возвращает количество записей из таблицы host_image_packages
+// с учётом переданных фильтров (строки => LIKE '%...%', для остальных типов "=").
+func CountHostImagePackages(ctx context.Context, filters map[string]interface{}) (int64, error) {
+	tableName := "host_image_packages"
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+
+	var args []interface{}
+	if len(filters) > 0 {
+		var conditions []string
+		for field, value := range filters {
+			if field == "installed" {
+				switch val := value.(type) {
+				case string:
+					lower := strings.ToLower(val)
+					if lower == "true" {
+						conditions = append(conditions, "installed = ?")
+						args = append(args, 1)
+					} else if lower == "false" {
+						conditions = append(conditions, "installed = ?")
+						args = append(args, 0)
+					} else {
+						if iv, err := strconv.Atoi(val); err == nil {
+							conditions = append(conditions, "installed = ?")
+							args = append(args, iv)
+						}
+					}
+				case bool:
+					if val {
+						conditions = append(conditions, "installed = 1")
+					} else {
+						conditions = append(conditions, "installed = 0")
+					}
+				default:
+					if intVal, ok := val.(int); ok {
+						conditions = append(conditions, "installed = ?")
+						args = append(args, intVal)
+					}
+				}
+			} else {
+				if strVal, ok := value.(string); ok {
+					conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
+					args = append(args, "%"+strVal+"%")
+				} else {
+					conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+					args = append(args, value)
+				}
+			}
+		}
+		if len(conditions) > 0 {
+			whereClause := strings.Join(conditions, " AND ")
+			query += " WHERE " + whereClause
+		}
+	}
+
+	var totalCount int64
+	if err := lib.DB.QueryRowContext(ctx, query, args...).Scan(&totalCount); err != nil {
+		return 0, fmt.Errorf("ошибка при подсчёте количества пакетов: %w", err)
+	}
+
+	return totalCount, nil
 }
 
 // PackageDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.
