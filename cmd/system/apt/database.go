@@ -208,10 +208,13 @@ func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[stri
 	return nil
 }
 
-// SearchPackagesByName ищет пакеты в таблице по части названия
-func SearchPackagesByName(ctx context.Context, namePart string) ([]Package, error) {
+// SearchPackagesByName ищет пакеты в таблице по части названия.
+// Параметр `installed` определяет, нужно ли показывать только установленные пакеты.
+func SearchPackagesByName(ctx context.Context, namePart string, installed bool) ([]Package, error) {
 	tableName := "host_image_packages"
-	query := fmt.Sprintf(`
+
+	// Базовый запрос
+	baseQuery := fmt.Sprintf(`
 		SELECT 
 			name, 
 			section, 
@@ -224,15 +227,20 @@ func SearchPackagesByName(ctx context.Context, namePart string) ([]Package, erro
 			filename, 
 			description, 
 			changelog, 
-			installed 
+			installed
 		FROM %s
 		WHERE name LIKE ?
 	`, tableName)
 
+	// Если нужно искать только среди установленных
+	if installed {
+		baseQuery += " AND installed = 1"
+	}
+
 	// Подготавливаем шаблон для поиска, например "%имя%"
 	searchPattern := "%" + namePart + "%"
 
-	rows, err := lib.DB.QueryContext(ctx, query, searchPattern)
+	rows, err := lib.DB.QueryContext(ctx, baseQuery, searchPattern)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
@@ -243,7 +251,7 @@ func SearchPackagesByName(ctx context.Context, namePart string) ([]Package, erro
 	for rows.Next() {
 		var pkg Package
 		var dependsStr string
-		var installed int
+		var installedInt int
 
 		if err := rows.Scan(
 			&pkg.Name,
@@ -257,7 +265,7 @@ func SearchPackagesByName(ctx context.Context, namePart string) ([]Package, erro
 			&pkg.Filename,
 			&pkg.Description,
 			&pkg.Changelog,
-			&installed,
+			&installedInt,
 		); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
 		}
@@ -268,7 +276,7 @@ func SearchPackagesByName(ctx context.Context, namePart string) ([]Package, erro
 			pkg.Depends = []string{}
 		}
 
-		pkg.Installed = installed != 0
+		pkg.Installed = installedInt != 0
 		result = append(result, pkg)
 	}
 

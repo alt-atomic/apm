@@ -59,9 +59,9 @@ func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbu
 }
 
 // Search – обёртка над Actions.Search.
-func (w *DBusWrapper) Search(packageName string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Search(packageName string, transaction string, installed bool) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Search(ctx, packageName)
+	resp, err := w.actions.Search(ctx, packageName, installed)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

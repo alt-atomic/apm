@@ -89,8 +89,16 @@ func CommandList() *cli.Command {
 				Name:      "search",
 				Usage:     "Поиск пакета по названию",
 				ArgsUsage: "package",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "installed",
+						Usage:   "Только установленные",
+						Aliases: []string{"i"},
+						Value:   false,
+					},
+				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Search(ctx, cmd.Args().First())
+					resp, err := NewActions().Search(ctx, cmd.Args().First(), cmd.Bool("installed"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

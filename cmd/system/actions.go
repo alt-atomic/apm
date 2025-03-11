@@ -240,7 +240,6 @@ type PackageResponse struct {
 	Size             string   `json:"size"`
 	Filename         string   `json:"filename"`
 	Description      string   `json:"description"`
-	Changelog        string   `json:"lastChangelog"`
 	Installed        bool     `json:"installed"`
 }
 
@@ -276,7 +275,6 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 		Size:             helper.AutoSize(packageInfo.Size),
 		Filename:         packageInfo.Filename,
 		Description:      packageInfo.Description,
-		Changelog:        packageInfo.Changelog,
 		Installed:        packageInfo.Installed,
 	}
 
@@ -290,7 +288,7 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 }
 
 // Search осуществляет поиск системного пакета по названию.
-func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResponse, error) {
+func (a *Actions) Search(ctx context.Context, packageName string, installed bool) (reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -301,7 +299,7 @@ func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResp
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	packages, err := apt.SearchPackagesByName(ctx, packageName)
+	packages, err := apt.SearchPackagesByName(ctx, packageName, installed)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -323,12 +321,12 @@ func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResp
 			Size:             helper.AutoSize(packageInfo.Size),
 			Filename:         packageInfo.Filename,
 			Description:      packageInfo.Description,
-			Changelog:        packageInfo.Changelog,
 			Installed:        packageInfo.Installed,
 		})
 	}
 
-	msg := fmt.Sprintf("Найдено %d %s",
+	msg := fmt.Sprintf("%s %d %s",
+		helper.DeclOfNum(len(packages), []string{"Найден", "Найдено", "Найдены"}),
 		len(packages),
 		helper.DeclOfNum(len(packages), []string{"пакет", "пакета", "пакетов"}),
 	)
