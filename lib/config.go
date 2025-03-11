@@ -41,10 +41,11 @@ func InitConfig() {
 	}
 
 	if _, errAtomic := os.Stat("/usr/bin/ostree"); os.IsNotExist(errAtomic) {
-		Env.IsAtomic = true
-	} else {
 		Env.IsAtomic = false
+	} else {
+		Env.IsAtomic = true
 	}
+
 }
 
 func EnsurePath(path string) error {

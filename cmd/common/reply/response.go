@@ -262,6 +262,7 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 		switch data := resp.Data.(type) {
 
 		case map[string]interface{}:
+			// если ошибка и message с маленькой буквы - делаем заглавную.
 			if resp.Error {
 				if rawMsg, haveMsg := data["message"]; haveMsg {
 					if msgStr, ok := rawMsg.(string); ok && len(msgStr) > 0 {
