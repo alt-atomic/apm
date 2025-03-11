@@ -18,9 +18,23 @@ func NewDBusWrapper(a *Actions) *DBusWrapper {
 }
 
 // Install – обёртка над Actions.Install.
-func (w *DBusWrapper) Install(packages []string, apply bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Install(ctx, packages, apply)
+	resp, err := w.actions.Install(ctx, packages, applyAtomic)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// Remove – обёртка над Actions.Remove.
+func (w *DBusWrapper) Remove(packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.Remove(ctx, packages, applyAtomic)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -110,20 +124,6 @@ func (w *DBusWrapper) CheckRemove(packages []string, transaction string) (string
 func (w *DBusWrapper) Search(packageName string, transaction string, installed bool) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Search(ctx, packageName, installed)
-	if err != nil {
-		return "", dbus.MakeFailedError(err)
-	}
-	data, jerr := json.Marshal(resp)
-	if jerr != nil {
-		return "", dbus.MakeFailedError(jerr)
-	}
-	return string(data), nil
-}
-
-// Remove – обёртка над Actions.Remove.
-func (w *DBusWrapper) Remove(packages []string, apply bool, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Remove(ctx, packages, apply)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
