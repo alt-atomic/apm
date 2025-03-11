@@ -1,4 +1,4 @@
-# APM (Atomic Packages Manager)
+# APM (Atomic Package Manager)
 
 APM — это консольный менеджер пакетов для атомарного образа системы и управления distrobox, предоставляющий возможности управления через DBUS. 
 
