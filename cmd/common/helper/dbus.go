@@ -69,6 +69,11 @@ const UserIntrospectXML = `
 const SystemIntrospectXML = `
 <node>
   <interface name="com.application.APM">
+    <signal name="Notification">
+      <arg type="s" name="message" direction="out"/>
+    </signal>
+  </interface>
+  <interface name="com.application.system">
     <method name="Install">
       <arg direction="in" type="as" name="packages"/>
       <arg direction="in" type="s" name="transaction"/>
@@ -139,9 +144,5 @@ const SystemIntrospectXML = `
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
-
-    <signal name="Notification">
-      <arg type="s" name="message" direction="out"/>
-    </signal>
   </interface>
 ` + introspect.IntrospectDataString + `</node>`
