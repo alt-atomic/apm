@@ -128,8 +128,8 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: значение == nil
 		case nil:
-			//t.Child(fmt.Sprintf("%s: нет", translateKey(k)))
-			t.Child(fmt.Sprintf("%s: []", translateKey(k)))
+			t.Child(fmt.Sprintf("%s: нет", translateKey(k)))
+			//t.Child(fmt.Sprintf("%s: []", translateKey(k)))
 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: строка
@@ -166,7 +166,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		// СЛУЧАЙ: срез (slice) из interface{}
 		case []interface{}:
 			if len(vv) == 0 {
-				t.Child(fmt.Sprintf("%s: нет", translateKey(k))) // пустой срез
+				t.Child(fmt.Sprintf("%s: []", translateKey(k))) // пустой срез
 				continue
 			}
 			listNode := tree.New().Root(translateKey(k))

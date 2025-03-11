@@ -484,7 +484,7 @@ func (a *Actions) ImageStatus(ctx context.Context) (reply.APIResponse, error) {
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Состояние образа",
+			"message":     "Статус образа",
 			"bootedImage": imageStatus,
 		},
 		Error: false,
