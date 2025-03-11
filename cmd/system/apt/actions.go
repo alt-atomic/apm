@@ -21,30 +21,31 @@ func NewActions() *Actions {
 
 // PackageChanges Структура, для хранения результатов apt-get -s
 type PackageChanges struct {
-	ExtraInstalled       []string
-	UpgradedPackages     []string
-	NewInstalledPackages []string
-	RemovedPackages      []string
+	ExtraInstalled       []string `json:"extraInstalled"`
+	UpgradedPackages     []string `json:"upgradedPackages"`
+	NewInstalledPackages []string `json:"newInstalledPackages"`
+	RemovedPackages      []string `json:"removedPackages"`
 
-	UpgradedCount     int
-	NewInstalledCount int
-	RemovedCount      int
-	NotUpgradedCount  int
+	UpgradedCount     int `json:"upgradedCount"`
+	NewInstalledCount int `json:"newInstalledCount"`
+	RemovedCount      int `json:"removedCount"`
+	NotUpgradedCount  int `json:"notUpgradedCount"`
 }
 
 // Package описывает структуру для хранения информации о пакете.
 type Package struct {
-	Name          string   `json:"name"`
-	Section       string   `json:"section"`
-	InstalledSize int      `json:"installedSize"`
-	Maintainer    string   `json:"maintainer"`
-	Version       string   `json:"version"`
-	Depends       []string `json:"depends"`
-	Size          int      `json:"size"`
-	Filename      string   `json:"filename"`
-	Description   string   `json:"description"`
-	Changelog     string   `json:"lastChangelog"`
-	Installed     bool     `json:"installed"`
+	Name             string   `json:"name"`
+	Section          string   `json:"section"`
+	InstalledSize    int      `json:"installedSize"`
+	Maintainer       string   `json:"maintainer"`
+	Version          string   `json:"version"`
+	VersionInstalled string   `json:"versionInstalled"`
+	Depends          []string `json:"depends"`
+	Size             int      `json:"size"`
+	Filename         string   `json:"filename"`
+	Description      string   `json:"description"`
+	Changelog        string   `json:"lastChangelog"`
+	Installed        bool     `json:"installed"`
 }
 
 func (a *Actions) Install(ctx context.Context, packageName string) error {
@@ -96,7 +97,6 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
 	command := fmt.Sprintf("%s apt-get -s %s %s", lib.Env.CommandPrefix, aptCommand, packageName)
-	fmt.Println(command)
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
 
@@ -182,7 +182,12 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 			case "Maintainer":
 				pkg.Maintainer = value
 			case "Version":
-				pkg.Version = value
+				versionValue, errVersion := GetVersionFromAptCache(value)
+				if errVersion != nil {
+					pkg.Version = value
+				} else {
+					pkg.Version = versionValue
+				}
 			case "Depends":
 				depList := strings.Split(value, ",")
 				seen := make(map[string]bool)
@@ -238,6 +243,12 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
 	}
 
+	// Обновляем информацию о том, установлены ли пакеты локально
+	packages, err = updateInstalledInfo(packages)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка обновления информации об установленных пакетах: %w", err)
+	}
+
 	err = SavePackagesToDB(ctx, packages)
 	if err != nil {
 		return nil, err
@@ -266,6 +277,83 @@ func aptUpdate(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
+func updateInstalledInfo(packages []Package) ([]Package, error) {
+	installed, err := GetInstalledPackages()
+	if err != nil {
+		return nil, err
+	}
+
+	for i, pkg := range packages {
+		if version, found := installed[pkg.Name]; found {
+			packages[i].Installed = true
+			packages[i].VersionInstalled = version
+		}
+	}
+
+	return packages, nil
+}
+
+// GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
+func GetInstalledPackages() (map[string]string, error) {
+	command := fmt.Sprintf("%s rpm -qia", lib.Env.CommandPrefix)
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = []string{"LC_ALL=C"}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения команды rpm -qia: %w", err)
+	}
+
+	installed := make(map[string]string)
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
+	var currentName, currentVersion string
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		if strings.HasPrefix(line, "Name") {
+			if currentName != "" {
+				installed[currentName] = currentVersion
+				currentName, currentVersion = "", ""
+			}
+		}
+		if line == "" {
+			if currentName != "" {
+				installed[currentName] = currentVersion
+				currentName, currentVersion = "", ""
+			}
+			continue
+		}
+
+		if strings.HasPrefix(line, "Name") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				currentName = strings.TrimSpace(parts[1])
+			}
+			continue
+		}
+
+		if strings.HasPrefix(line, "Version") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				currentVersion = strings.TrimSpace(parts[1])
+			}
+			continue
+		}
+	}
+
+	if currentName != "" {
+		installed[currentName] = currentVersion
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка сканирования вывода rpm: %w", err)
+	}
+
+	return installed, nil
 }
 
 func extractLastMessage(changelog string) string {
@@ -371,4 +459,26 @@ func parseAptOutput(output string) (PackageChanges, error) {
 	}
 
 	return *pc, nil
+}
+
+func GetVersionFromAptCache(s string) (string, error) {
+	parts := strings.Split(s, ":")
+	var candidate string
+	if len(parts) > 1 && regexp.MustCompile(`^\d+$`).MatchString(parts[0]) {
+		candidate = parts[1]
+	} else {
+		candidate = parts[0]
+	}
+
+	if idx := strings.Index(candidate, "-alt"); idx != -1 {
+		numericPart := candidate[:idx]
+		if strings.Contains(numericPart, ".") {
+			candidate = numericPart
+		}
+	}
+
+	if candidate == "" {
+		return "", fmt.Errorf("version not found")
+	}
+	return candidate, nil
 }

@@ -96,12 +96,18 @@ func (a *Actions) Remove(ctx context.Context, packages []string) (reply.APIRespo
 
 	removePackageNames := strings.Join(packageParse.RemovedPackages, ",")
 
+	err = a.updateAllPackagesDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": fmt.Sprintf("%s успешно %s",
 				removePackageNames,
 				helper.DeclOfNum(packageParse.RemovedCount, []string{"удалён", "удалены", "удалены"}),
 			),
+			"info": packageParse,
 		},
 		Error: false,
 	}, nil
@@ -178,6 +184,11 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 		return a.newErrorResponse(err.Error()), err
 	}
 
+	err = a.updateAllPackagesDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": fmt.Sprintf("%d %s успешно %s и %d %s",
@@ -187,6 +198,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 				packageParse.UpgradedCount,
 				helper.DeclOfNum(packageParse.UpgradedCount, []string{"обновлён", "обновлено", "обновилось"}),
 			),
+			"info": packageParse,
 		},
 		Error: false,
 	}, nil
@@ -218,17 +230,18 @@ func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
 }
 
 type PackageResponse struct {
-	Name          string   `json:"name"`
-	Section       string   `json:"section"`
-	InstalledSize string   `json:"installedSize"`
-	Maintainer    string   `json:"maintainer"`
-	Version       string   `json:"version"`
-	Depends       []string `json:"depends"`
-	Size          string   `json:"size"`
-	Filename      string   `json:"filename"`
-	Description   string   `json:"description"`
-	Changelog     string   `json:"lastChangelog"`
-	Installed     bool     `json:"installed"`
+	Name             string   `json:"name"`
+	Section          string   `json:"section"`
+	InstalledSize    string   `json:"installedSize"`
+	Maintainer       string   `json:"maintainer"`
+	Version          string   `json:"version"`
+	VersionInstalled string   `json:"versionInstalled"`
+	Depends          []string `json:"depends"`
+	Size             string   `json:"size"`
+	Filename         string   `json:"filename"`
+	Description      string   `json:"description"`
+	Changelog        string   `json:"lastChangelog"`
+	Installed        bool     `json:"installed"`
 }
 
 // Info возвращает информацию о системном пакете.
@@ -253,17 +266,18 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 	}
 
 	resp := PackageResponse{
-		Name:          packageInfo.Name,
-		Section:       packageInfo.Section,
-		InstalledSize: helper.AutoSize(packageInfo.InstalledSize),
-		Maintainer:    packageInfo.Maintainer,
-		Version:       packageInfo.Version,
-		Depends:       packageInfo.Depends,
-		Size:          helper.AutoSize(packageInfo.Size),
-		Filename:      packageInfo.Filename,
-		Description:   packageInfo.Description,
-		Changelog:     packageInfo.Changelog,
-		Installed:     packageInfo.Installed,
+		Name:             packageInfo.Name,
+		Section:          packageInfo.Section,
+		InstalledSize:    helper.AutoSize(packageInfo.InstalledSize),
+		Maintainer:       packageInfo.Maintainer,
+		Version:          packageInfo.Version,
+		VersionInstalled: packageInfo.VersionInstalled,
+		Depends:          packageInfo.Depends,
+		Size:             helper.AutoSize(packageInfo.Size),
+		Filename:         packageInfo.Filename,
+		Description:      packageInfo.Description,
+		Changelog:        packageInfo.Changelog,
+		Installed:        packageInfo.Installed,
 	}
 
 	return reply.APIResponse{
@@ -436,6 +450,21 @@ func (a *Actions) validateDB(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// updateAllPackagesDB обновляет состояние всех пакетов в базе данных
+func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
+	installedPackages, err := apt.GetInstalledPackages()
+	if err != nil {
+		return err
+	}
+
+	err = apt.SyncPackageInstallationInfo(ctx, installedPackages)
+	if err != nil {
+		return err
 	}
 
 	return nil

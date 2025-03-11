@@ -6,10 +6,16 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 )
+
+// syncDBMutex защищает операции синхронизации базы пакетов.
+var syncDBMutex sync.Mutex
 
 // SavePackagesToDB сохраняет список пакетов
 func SavePackagesToDB(ctx context.Context, packages []Package) error {
+	syncDBMutex.Lock()
+	defer syncDBMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -23,6 +29,7 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 		installed_size INTEGER,
 		maintainer TEXT,
 		version TEXT,
+		versionInstalled TEXT,
 		depends TEXT,
 		size INTEGER,
 		filename TEXT,
@@ -58,7 +65,7 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 		var placeholders []string
 		var args []interface{}
 		for _, pkg := range batch {
-			placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+			placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 			// Преобразуем срез зависимостей в одну строку, разделённую запятыми.
 			dependsStr := strings.Join(pkg.Depends, ",")
 			var installed int
@@ -73,6 +80,7 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 				pkg.InstalledSize,
 				pkg.Maintainer,
 				pkg.Version,
+				pkg.VersionInstalled,
 				dependsStr,
 				pkg.Size,
 				pkg.Filename,
@@ -82,7 +90,7 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 			)
 		}
 
-		query := fmt.Sprintf("INSERT INTO %s (name, section, installed_size, maintainer, version, depends, size, filename, description, changelog, installed) VALUES %s",
+		query := fmt.Sprintf("INSERT INTO %s (name, section, installed_size, maintainer, version, versionInstalled, depends, size, filename, description, changelog, installed) VALUES %s",
 			tableName, strings.Join(placeholders, ","))
 		if _, err := tx.Exec(query, args...); err != nil {
 			tx.Rollback()
@@ -96,10 +104,10 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 	return nil
 }
 
-// GetPackageByName возвращает запись пакета с указанным именем из таблицы host_image_packages.
+// GetPackageByName возвращает запись пакета
 func GetPackageByName(ctx context.Context, packageName string) (Package, error) {
 	query := `
-		SELECT name, section, installed_size, maintainer, version, depends, size, filename, description, changelog, installed 
+		SELECT name, section, installed_size, maintainer, version, versionInstalled, depends, size, filename, description, changelog, installed 
 		FROM host_image_packages 
 		WHERE name = ?`
 
@@ -113,6 +121,7 @@ func GetPackageByName(ctx context.Context, packageName string) (Package, error) 
 		&pkg.InstalledSize,
 		&pkg.Maintainer,
 		&pkg.Version,
+		&pkg.VersionInstalled,
 		&dependsStr,
 		&pkg.Size,
 		&pkg.Filename,
@@ -134,6 +143,71 @@ func GetPackageByName(ctx context.Context, packageName string) (Package, error) 
 	pkg.Installed = installed != 0
 
 	return pkg, nil
+}
+
+// SyncPackageInstallationInfo синхронизирует базу пакетов с результатом выполнения apt.GetInstalledPackages().
+func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[string]string) error {
+	syncDBMutex.Lock()
+	defer syncDBMutex.Unlock()
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
+	tx, err := lib.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("ошибка начала транзакции: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	createTempTableQuery := `
+        CREATE TEMPORARY TABLE tmp_installed (
+            name TEXT PRIMARY KEY,
+            version TEXT
+        );
+    `
+	if _, err := tx.ExecContext(ctx, createTempTableQuery); err != nil {
+		return fmt.Errorf("ошибка создания временной таблицы: %w", err)
+	}
+
+	var placeholders []string
+	var args []interface{}
+	for name, version := range installedPackages {
+		placeholders = append(placeholders, "(?, ?)")
+		args = append(args, name, version)
+	}
+
+	if len(placeholders) > 0 {
+		insertQuery := fmt.Sprintf("INSERT INTO tmp_installed (name, version) VALUES %s", strings.Join(placeholders, ", "))
+		if _, err := tx.ExecContext(ctx, insertQuery, args...); err != nil {
+			return fmt.Errorf("ошибка пакетной вставки во временную таблицу: %w", err)
+		}
+	}
+
+	// 3. Обновляем таблицу host_image_packages на основе временной таблицы
+	updateQuery := `
+        UPDATE host_image_packages
+        SET 
+            installed = CASE 
+                WHEN EXISTS (SELECT 1 FROM tmp_installed t WHERE t.name = host_image_packages.name) THEN 1 
+                ELSE 0 
+            END,
+            versionInstalled = COALESCE(
+                (SELECT t.version FROM tmp_installed t WHERE t.name = host_image_packages.name), 
+                ''
+            )
+    `
+	if _, err := tx.ExecContext(ctx, updateQuery); err != nil {
+		return fmt.Errorf("ошибка обновления пакетов: %w", err)
+	}
+
+	// 4. Фиксируем транзакцию
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("ошибка коммита транзакции: %w", err)
+	}
+	return nil
 }
 
 // PackageDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.

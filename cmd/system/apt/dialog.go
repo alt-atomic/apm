@@ -2,6 +2,7 @@ package apt
 
 import (
 	"apm/cmd/common/helper"
+	"apm/cmd/common/reply"
 	"apm/lib"
 	"fmt"
 	"os"
@@ -33,6 +34,10 @@ type model struct {
 
 // NewDialog запускает диалог отображения информации о пакете с выбором действия.
 func NewDialog(packageInfo []Package, packageChange PackageChanges, action DialogAction) (bool, error) {
+	if lib.Env.Format != "text" && reply.IsTTY() {
+		return true, nil
+	}
+
 	switch action {
 	case ActionInstall:
 		choices = []string{"Установить", "Отмена"}
