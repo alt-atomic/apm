@@ -367,7 +367,6 @@ func QueryHostImagePackages(
 				}
 
 			} else {
-				// Обычная логика: если строка -> LIKE, иначе "="
 				if strVal, ok := value.(string); ok {
 					conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
 					args = append(args, fmt.Sprintf("%%%s%%", strVal))

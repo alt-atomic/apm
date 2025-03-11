@@ -125,12 +125,14 @@ func CommandList() *cli.Command {
 						Value: 0,
 					},
 					&cli.StringFlag{
-						Name:  "filter-field",
-						Usage: "Название поля для фильтрации (например, packageName, version, manager)",
+						Name:    "filter-field",
+						Usage:   "Название поля для фильтрации (например, packageName, version, manager)",
+						Aliases: []string{"ff"},
 					},
 					&cli.StringFlag{
-						Name:  "filter-value",
-						Usage: "Значение для фильтрации по указанному полю",
+						Name:    "filter-value",
+						Usage:   "Значение для фильтрации по указанному полю",
+						Aliases: []string{"fv"},
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
