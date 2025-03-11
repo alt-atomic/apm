@@ -69,54 +69,79 @@ const UserIntrospectXML = `
 const SystemIntrospectXML = `
 <node>
   <interface name="com.application.APM">
-    <signal name="Notification">
-      <arg type="s" name="message" direction="out"/>
-    </signal>
-  </interface>
-  <interface name="com.application.system">
     <method name="Install">
+      <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="Update">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="List">
+      <arg direction="in" type="s" name="paramsJSON"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="Info">
       <arg direction="in" type="s" name="packageName"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
-    <method name="Update">
-      <arg direction="in" type="s" name="packageName"/>
-      <arg direction="in" type="s" name="transaction"/>	
+    
+    <method name="CheckInstall">
+      <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
-    <method name="Info">
-      <arg direction="in" type="s" name="packageName"/>
-	  <arg direction="in" type="s" name="transaction"/>
+
+    <method name="CheckRemove">
+      <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+    
     <method name="Search">
       <arg direction="in" type="s" name="packageName"/>
       <arg direction="in" type="s" name="transaction"/>
+      <arg direction="in" type="b" name="installed"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+    
     <method name="Remove">
-      <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="as" name="packages"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+    
     <method name="ImageApply">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+    
     <method name="ImageHistory">
       <arg direction="in" type="s" name="transaction"/>
-	  <arg direction="in" type="s" name="imageName"/>
-	  <arg direction="in" type="x" name="limit"/>
-	  <arg direction="in" type="x" name="offset"/>
+      <arg direction="in" type="s" name="imageName"/>
+      <arg direction="in" type="x" name="limit"/>
+      <arg direction="in" type="x" name="offset"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+    
     <method name="ImageUpdate">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+    
     <method name="ImageStatus">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
+
+    <signal name="Notification">
+      <arg type="s" name="message" direction="out"/>
+    </signal>
   </interface>
 ` + introspect.IntrospectDataString + `</node>`

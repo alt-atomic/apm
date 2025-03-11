@@ -26,6 +26,59 @@ type ImageStatus struct {
 	Config service.Config    `json:"config"`
 }
 
+func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.APIResponse, error) {
+	allPackageNames := strings.Join(packages, " ")
+	packageParse, _, err := apt.NewActions().Check(ctx, allPackageNames, "remove")
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if packageParse.RemovedCount == 0 {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": "Кандидатов на удаление не найдено",
+			},
+			Error: true,
+		}, nil
+	}
+
+	return reply.APIResponse{
+		Data: map[string]interface{}{
+			"message": "Информация о проверке",
+			"info":    packageParse,
+		},
+		Error: false,
+	}, nil
+}
+
+func (a *Actions) CheckInstall(ctx context.Context, packages []string) (reply.APIResponse, error) {
+	allPackageNames := strings.Join(packages, " ")
+	packageParse, output, err := apt.NewActions().Check(ctx, allPackageNames, "install")
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if strings.Contains(output, "is already the newest version") && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": fmt.Sprintf("%s %s %s самой последней версии",
+					helper.DeclOfNum(len(packages), []string{"пакет", "пакета", "пакетов"}),
+					allPackageNames,
+					helper.DeclOfNum(len(packages), []string{"установлен", "установлены", "установлены"})),
+			},
+			Error: true,
+		}, nil
+	}
+
+	return reply.APIResponse{
+		Data: map[string]interface{}{
+			"message": "Информация о проверке",
+			"info":    packageParse,
+		},
+		Error: false,
+	}, nil
+}
+
 // Remove удаляет системный пакет.
 func (a *Actions) Remove(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	err := a.checkRoot()
@@ -245,18 +298,13 @@ type PackageResponse struct {
 
 // Info возвращает информацию о системном пакете.
 func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return newErrorResponse(err.Error()), err
-	}
-
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := "необходимо указать название пакета, например info package"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
-	err = a.validateDB(ctx)
+	err := a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -301,19 +349,14 @@ type ListParams struct {
 }
 
 func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
-	}
-
 	if params.ForceUpdate {
-		_, err = apt.NewActions().Update(ctx)
+		_, err := apt.NewActions().Update(ctx)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
 	}
 
-	err = a.validateDB(ctx)
+	err := a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -374,12 +417,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 
 // Search осуществляет поиск системного пакета по названию.
 func (a *Actions) Search(ctx context.Context, packageName string, installed bool) (reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return newErrorResponse(err.Error()), err
-	}
-
-	err = a.validateDB(ctx)
+	err := a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}

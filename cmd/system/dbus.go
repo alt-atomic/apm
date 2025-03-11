@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/godbus/dbus/v5"
 )
 
@@ -17,9 +18,9 @@ func NewDBusWrapper(a *Actions) *DBusWrapper {
 }
 
 // Install – обёртка над Actions.Install.
-func (w *DBusWrapper) Install(packageName []string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(packages []string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Install(ctx, packageName)
+	resp, err := w.actions.Install(ctx, packages)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -44,10 +45,57 @@ func (w *DBusWrapper) Update(transaction string) (string, *dbus.Error) {
 	return string(data), nil
 }
 
+// List – обёртка над Actions.List.
+func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	var params ListParams
+	if err := json.Unmarshal([]byte(paramsJSON), &params); err != nil {
+		return "", dbus.MakeFailedError(fmt.Errorf("не удалось разобрать JSON: %w", err))
+	}
+
+	resp, err := w.actions.List(ctx, params)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // Info – обёртка над Actions.Info.
 func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Info(ctx, packageName)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckInstall – обёртка над Actions.CheckInstall.
+func (w *DBusWrapper) CheckInstall(packages []string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.CheckInstall(ctx, packages)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckRemove – обёртка над Actions.CheckRemove.
+func (w *DBusWrapper) CheckRemove(packages []string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.CheckRemove(ctx, packages)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
