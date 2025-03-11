@@ -146,6 +146,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor = len(choices) - 1
 				}
 				return m, nil
+			case "q":
+				m.canceled = true
+				return m, tea.Quit
 			}
 
 		default:
@@ -181,7 +184,7 @@ func (m model) View() string {
 	}
 
 	// Формируем строку с подсказками по клавишам
-	keyboardShortcuts := shortcutStyle.Render("Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - начало/конец, Enter - выбрать, Esc - отмена")
+	keyboardShortcuts := shortcutStyle.Render("Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - начало/конец, Enter - выбрать, Esc/q - отмена")
 
 	// Формируем футер с выбором действия
 	var footer strings.Builder
