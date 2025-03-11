@@ -386,7 +386,6 @@ func QueryHostImagePackages(
 	// Добавляем сортировку, если указаны поле и порядок
 	if sortField != "" {
 		upperOrder := strings.ToUpper(sortOrder)
-		fmt.Println(upperOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
 			upperOrder = "ASC"
 		}
