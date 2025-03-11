@@ -2,8 +2,12 @@ ru_RU:
   response:
     info: "Информация"
     count: "Количество"
+    container: "Контейнер"
+    containers: "Контейнеры"
+    history: "История"
+    list: "Список"
     totalCount: "Всего записей"
-    packages: "Список пакетов"
+    packages: "Пакеты"
     packageInfo: "Информация о пакете"
     depends: "Зависимости"
     description: "Описание"

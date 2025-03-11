@@ -93,9 +93,9 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 	msg := fmt.Sprintf("Найдено %d %s", queryResult.TotalCount, word)
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":  msg,
-			"packages": queryResult.Packages,
-			"count":    queryResult.TotalCount,
+			"message":    msg,
+			"packages":   queryResult.Packages,
+			"totalCount": queryResult.TotalCount,
 		},
 		Error: false,
 	}
@@ -143,9 +143,9 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 	msg := fmt.Sprintf("Найдено: %d %s", queryResult.TotalCount, word)
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":  msg,
-			"packages": queryResult.Packages,
-			"count":    queryResult.TotalCount,
+			"message":    msg,
+			"packages":   queryResult.Packages,
+			"totalCount": queryResult.TotalCount,
 		},
 		Error: false,
 	}
@@ -190,8 +190,8 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("Пакет %s установлен", packageName),
-			"package": packageInfo,
+			"message":     fmt.Sprintf("Пакет %s установлен", packageName),
+			"packageInfo": packageInfo,
 		},
 		Error: false,
 	}
@@ -235,8 +235,8 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("Пакет %s удалён", packageName),
-			"package": packageInfo,
+			"message":     fmt.Sprintf("Пакет %s удалён", packageName),
+			"packageInfo": packageInfo,
 		},
 		Error: false,
 	}
