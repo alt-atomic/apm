@@ -249,11 +249,13 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
+
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := "необходимо указать название пакета, например info package"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
+
 	err = a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -380,6 +382,12 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 	err = a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
+	}
+
+	packageName = strings.TrimSpace(packageName)
+	if packageName == "" {
+		errMsg := "необходимо указать название пакета, например search package"
+		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
 	packages, err := apt.SearchPackagesByName(ctx, packageName, installed)
