@@ -149,8 +149,6 @@ func GetPackageByName(ctx context.Context, packageName string) (Package, error) 
 func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[string]string) error {
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
 	tx, err := lib.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -208,6 +206,77 @@ func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[stri
 		return fmt.Errorf("ошибка коммита транзакции: %w", err)
 	}
 	return nil
+}
+
+// SearchPackagesByName ищет пакеты в таблице по части названия
+func SearchPackagesByName(ctx context.Context, namePart string) ([]Package, error) {
+	tableName := "host_image_packages"
+	query := fmt.Sprintf(`
+		SELECT 
+			name, 
+			section, 
+			installed_size, 
+			maintainer, 
+			version, 
+			versionInstalled, 
+			depends, 
+			size, 
+			filename, 
+			description, 
+			changelog, 
+			installed 
+		FROM %s
+		WHERE name LIKE ?
+	`, tableName)
+
+	// Подготавливаем шаблон для поиска, например "%имя%"
+	searchPattern := "%" + namePart + "%"
+
+	rows, err := lib.DB.QueryContext(ctx, query, searchPattern)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
+	}
+	defer rows.Close()
+
+	var result []Package
+
+	for rows.Next() {
+		var pkg Package
+		var dependsStr string
+		var installed int
+
+		if err := rows.Scan(
+			&pkg.Name,
+			&pkg.Section,
+			&pkg.InstalledSize,
+			&pkg.Maintainer,
+			&pkg.Version,
+			&pkg.VersionInstalled,
+			&dependsStr,
+			&pkg.Size,
+			&pkg.Filename,
+			&pkg.Description,
+			&pkg.Changelog,
+			&installed,
+		); err != nil {
+			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
+		}
+
+		if dependsStr != "" {
+			pkg.Depends = strings.Split(dependsStr, ",")
+		} else {
+			pkg.Depends = []string{}
+		}
+
+		pkg.Installed = installed != 0
+		result = append(result, pkg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка при обработке строк: %w", err)
+	}
+
+	return result, nil
 }
 
 // PackageDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.

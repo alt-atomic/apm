@@ -157,6 +157,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+var (
+	deleteStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#a81c1f"))
+	installStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#2bb389"))
+)
+
 func (m model) View() string {
 	// Определяем стили для вывода
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
@@ -164,8 +169,6 @@ func (m model) View() string {
 		Light: "#171717",
 		Dark:  "#c4c8c6",
 	})
-	deleteStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
-	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#2bb389"))
 	// Стиль для подсказок по клавишам (невзрачный серый)
 	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Faint(true)
 
@@ -246,22 +249,38 @@ func (m model) buildContent() string {
 	sb.WriteString(titleStyle.Render(infoPackage))
 	for i, pkg := range m.pkg {
 		if len(m.pkg) > 1 {
+			sb.WriteString(titleStyle.Render("\n"))
 			sb.WriteString(titleStyle.Render(fmt.Sprintf("\nПакет %d:", i+1)))
 		}
-		installedText := "нет"
+		installedText := deleteStyle.Render("нет")
 		if pkg.Installed {
-			installedText = "да"
+			installedText = installStyle.Render("да")
 		}
 
 		sb.WriteString("\n" + formatLine("Название", pkg.Name, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Категория", pkg.Section, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Мейнтейнер", pkg.Maintainer, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine("Версия", pkg.Version, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine("Установлен", installedText, keyWidth, keyStyle, valueStyle))
+
+		if pkg.Installed {
+			// Выводим "Версия в облаке" обычным стилем
+			sb.WriteString("\n" + formatLine("Версия в облаке", pkg.Version, keyWidth, keyStyle, valueStyle))
+			// Сравниваем версию в системе и облаке
+			var systemVersionColored string
+			if pkg.VersionInstalled == pkg.Version {
+				systemVersionColored = installStyle.Render(pkg.VersionInstalled)
+			} else {
+				systemVersionColored = deleteStyle.Render(pkg.VersionInstalled)
+			}
+			// Выводим "Версия в системе", уже с раскрашенным текстом
+			sb.WriteString("\n" + formatLine("Версия в системе", systemVersionColored, keyWidth, keyStyle, valueStyle))
+		} else {
+			sb.WriteString("\n" + formatLine("Версия в облаке", pkg.Version, keyWidth, keyStyle, valueStyle))
+		}
+		sb.WriteString("\n" + formatLine("Размер", helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
 
 		dependsStr := formatDependencies(pkg.Depends)
 		sb.WriteString("\n" + formatLine("Зависимости", dependsStr, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine("Размер", helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine("Установлен", installedText, keyWidth, keyStyle, valueStyle))
 	}
 
 	sb.WriteString(titleStyle.Render("\n\nИзменения затронут:"))

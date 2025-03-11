@@ -186,11 +186,9 @@ func QueryPackages(containerName string, filters map[string]interface{}, sortFie
 // FindPackagesByName ищет пакеты в таблице контейнера по неточному совпадению имени.
 // Используется оператор LIKE для поиска, возвращается срез найденных записей.
 func FindPackagesByName(containerName string, partialName string) ([]PackageInfo, error) {
-	// Экранируем имя таблицы
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	// Формируем запрос с условием LIKE
 	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s WHERE packageName LIKE ?", tableName)
-	// Используем шаблон для неточного совпадения
 	searchPattern := "%" + partialName + "%"
 
 	rows, err := lib.DB.Query(query, searchPattern)

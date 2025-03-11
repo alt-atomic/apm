@@ -7,11 +7,13 @@ import (
 )
 
 type Environment struct {
-	CommandPrefix string `yaml:"commandPrefix" env:"apm.prefix"`
-	Environment   string `yaml:"environment" env:"prod"`
-	PathLogFile   string `yaml:"pathLogFile" env:"apm.log"`
-	PathDBFile    string `yaml:"pathDBFile" env:"apm.db"`
-	PathImageFile string `yaml:"pathImageFile" env:"apm.image"`
+	CommandPrefix string `yaml:"commandPrefix"`
+	Environment   string `yaml:"environment"`
+	PathLocales   string `yaml:"pathLocales"`
+	PathLogFile   string `yaml:"pathLogFile"`
+	PathDBFile    string `yaml:"pathDBFile"`
+	PathImageFile string `yaml:"pathImageFile"`
+	Language      string // Внутреннее свойство
 	Format        string // Внутреннее свойство
 }
 

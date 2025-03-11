@@ -89,11 +89,14 @@ func CommandList() *cli.Command {
 				Name:      "search",
 				Usage:     "Поиск пакета по названию",
 				ArgsUsage: "package",
-				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-				//	packageInfo, error := os.GetPackageInfo()
-				//
-				//	return reply.CliResponse(cmd, resp)
-				//}),
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					resp, err := NewActions().Search(ctx, cmd.Args().First())
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+
+					return reply.CliResponse(ctx, resp)
+				}),
 			},
 			{
 				Name:    "image",

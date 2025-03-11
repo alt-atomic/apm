@@ -145,7 +145,7 @@ func getTaskViewName(task string) string {
 	switch task {
 	case "apt.(*Actions).Install":
 		return "Установка"
-	case "apt.(*Actions).updateAllPackagesDB":
+	case "system.(*Actions).updateAllPackagesDB":
 		return "Обновление состояния пакетов"
 	case "apt.(*Actions).Remove":
 		return "Удаление"

@@ -282,7 +282,7 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     fmt.Sprintf("Информация о пакете %s", packageInfo.Name),
+			"message":     "Найден пакет",
 			"packageInfo": resp,
 		},
 		Error: false,
@@ -301,10 +301,43 @@ func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResp
 		return a.newErrorResponse(err.Error()), err
 	}
 
+	packages, err := apt.SearchPackagesByName(ctx, packageName)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if len(packages) == 0 {
+		return a.newErrorResponse("Ничего не найдено"), fmt.Errorf("ничего не найдено")
+	}
+
+	var respPackages []PackageResponse
+	for _, packageInfo := range packages {
+		respPackages = append(respPackages, PackageResponse{
+			Name:             packageInfo.Name,
+			Section:          packageInfo.Section,
+			InstalledSize:    helper.AutoSize(packageInfo.InstalledSize),
+			Maintainer:       packageInfo.Maintainer,
+			Version:          packageInfo.Version,
+			VersionInstalled: packageInfo.VersionInstalled,
+			Depends:          packageInfo.Depends,
+			Size:             helper.AutoSize(packageInfo.Size),
+			Filename:         packageInfo.Filename,
+			Description:      packageInfo.Description,
+			Changelog:        packageInfo.Changelog,
+			Installed:        packageInfo.Installed,
+		})
+	}
+
+	msg := fmt.Sprintf("Найдено %d %s",
+		len(packages),
+		helper.DeclOfNum(len(packages), []string{"пакет", "пакета", "пакетов"}),
+	)
+
 	// Пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("Search action вызван для пакета '%s'", packageName),
+			"message":  msg,
+			"packages": respPackages,
 		},
 		Error: false,
 	}, nil
