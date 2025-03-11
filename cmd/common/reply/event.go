@@ -144,17 +144,19 @@ func SendNotificationResponse(message string) {
 func getTaskViewName(task string) string {
 	switch task {
 	case "apt.(*Actions).Install":
-		return "Установка пакетов"
+		return "Установка"
+	case "apt.(*Actions).updateAllPackagesDB":
+		return "Обновление состояния пакетов"
 	case "apt.(*Actions).Remove":
-		return "Удаление пакетов"
+		return "Удаление"
 	case "apt.(*Actions).Check":
 		return "Анализ пакетов"
 	case "apt.(*Actions).Update":
-		return "Обновление пакетов"
+		return "Общий процесс обновления"
 	case "apt.SavePackagesToDB":
 		return "Сохранение пакетов в базу"
 	case "apt.aptUpdate":
-		return "Загрузка списка пакетов"
+		return "Загрузка списка пакетов из репозитория ALT"
 	case "service.CheckAndUpdateBaseImage":
 		return "Проверка обновления"
 	case "service.bootcUpgrade":

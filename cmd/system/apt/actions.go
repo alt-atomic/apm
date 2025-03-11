@@ -11,7 +11,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+// syncAptMutex защищает операции apt-get от дублированного вызова
+var syncAptMutex sync.Mutex
 
 type Actions struct{}
 
@@ -49,6 +53,8 @@ type Package struct {
 }
 
 func (a *Actions) Install(ctx context.Context, packageName string) error {
+	syncAptMutex.Lock()
+	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -71,6 +77,8 @@ func (a *Actions) Install(ctx context.Context, packageName string) error {
 }
 
 func (a *Actions) Remove(ctx context.Context, packageName string) error {
+	syncAptMutex.Lock()
+	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -258,6 +266,8 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 }
 
 func aptUpdate(ctx context.Context) error {
+	syncAptMutex.Lock()
+	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 

@@ -457,6 +457,9 @@ func (a *Actions) validateDB(ctx context.Context) error {
 
 // updateAllPackagesDB обновляет состояние всех пакетов в базе данных
 func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
 	installedPackages, err := apt.GetInstalledPackages()
 	if err != nil {
 		return err
