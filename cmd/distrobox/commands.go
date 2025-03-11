@@ -31,7 +31,7 @@ func CommandList() *cli.Command {
 	return &cli.Command{
 		Name:    "distrobox",
 		Aliases: []string{"d"},
-		Usage:   "Управление пакетами и контейнерами и контейнерами distrobox",
+		Usage:   "Управление пакетами и контейнерами distrobox",
 		Commands: []*cli.Command{
 			{
 				Name:  "update",
