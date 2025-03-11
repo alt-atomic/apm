@@ -1,6 +1,7 @@
 package apt
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
@@ -331,41 +332,16 @@ func QueryHostImagePackages(
 		for field, value := range filters {
 			// Если фильтруем по полю "installed", делаем особую логику
 			if field == "installed" {
-				switch val := value.(type) {
-				case string:
-					// Если пришло "true"/"false", конвертируем в 1/0
-					lower := strings.ToLower(val)
-					if lower == "true" {
-						conditions = append(conditions, "installed = ?")
-						args = append(args, 1)
-					} else if lower == "false" {
-						conditions = append(conditions, "installed = ?")
-						args = append(args, 0)
-					} else {
-						// Если пришло что-то иное, например "1"/"0", пробуем парсить как int
-						iv, err := strconv.Atoi(val)
-						if err == nil {
-							conditions = append(conditions, "installed = ?")
-							args = append(args, iv)
-						} else {
-						}
-					}
-
-				case bool:
-					if val {
-						conditions = append(conditions, "installed = 1")
-					} else {
-						conditions = append(conditions, "installed = 0")
-					}
-
-				default:
-					if intVal, ok := val.(int); ok {
-						conditions = append(conditions, "installed = ?")
-						args = append(args, intVal)
-					} else {
-					}
+				boolVal, ok := helper.ParseBool(value)
+				if !ok {
+					continue
 				}
-
+				conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+				if boolVal {
+					args = append(args, 1)
+				} else {
+					args = append(args, 0)
+				}
 			} else {
 				if strVal, ok := value.(string); ok {
 					conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))

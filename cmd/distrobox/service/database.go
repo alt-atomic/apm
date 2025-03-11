@@ -1,6 +1,7 @@
 package service
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
@@ -94,11 +95,34 @@ func CountTotalPackages(containerName string, filters map[string]interface{}) (i
 	if len(filters) > 0 {
 		var conditions []string
 		for field, value := range filters {
-			conditions = append(conditions, fmt.Sprintf("%s = ?", field))
-			args = append(args, value)
+			// Проверяем: если поле — installed или exporting, пытаемся его трактовать как bool.
+			if field == "installed" || field == "exporting" {
+				boolVal, ok := helper.ParseBool(value)
+				if !ok {
+					continue
+				}
+				conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+				if boolVal {
+					args = append(args, 1)
+				} else {
+					args = append(args, 0)
+				}
+			} else {
+				// Остальные поля
+				if strVal, ok := value.(string); ok {
+					// Для строк, как и раньше, используем LIKE
+					conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
+					args = append(args, "%"+strVal+"%")
+				} else {
+					// Для всего прочего — точное совпадение
+					conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+					args = append(args, value)
+				}
+			}
 		}
-		whereClause := strings.Join(conditions, " AND ")
-		query += " WHERE " + whereClause
+		if len(conditions) > 0 {
+			query += " WHERE " + strings.Join(conditions, " AND ")
+		}
 	}
 	var total int
 	err := lib.DB.QueryRow(query, args...).Scan(&total)
@@ -113,34 +137,47 @@ func CountTotalPackages(containerName string, filters map[string]interface{}) (i
 // sortField - имя поля для сортировки (если пустое, сортировка не применяется).
 // sortOrder - "ASC" или "DESC" (по умолчанию ASC, если задано неверно, то ASC).
 // limit и offset - ограничения выборки. Если limit <= 0, то ограничение не применяется.
-func QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit int64, offset int64) ([]PackageInfo, error) {
-	// Экранируем имя таблицы
+func QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit, offset int64) ([]PackageInfo, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 
-	// Базовый запрос
 	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s", tableName)
 	var args []interface{}
 
-	// Формируем WHERE-условие, если есть фильтры.
 	if len(filters) > 0 {
 		var conditions []string
 		for field, value := range filters {
-			// Если значение строковое, используем LIKE для неточного совпадения.
-			if strVal, ok := value.(string); ok {
-				conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
-				args = append(args, fmt.Sprintf("%%%s%%", strVal))
-			} else {
+			// Проверяем: если поле — installed или exporting, пытаемся его трактовать как bool.
+			if field == "installed" || field == "exporting" {
+				boolVal, ok := helper.ParseBool(value)
+				if !ok {
+					continue
+				}
 				conditions = append(conditions, fmt.Sprintf("%s = ?", field))
-				args = append(args, value)
+				if boolVal {
+					args = append(args, 1)
+				} else {
+					args = append(args, 0)
+				}
+			} else {
+				// Остальные поля
+				if strVal, ok := value.(string); ok {
+					// Для строк, как и раньше, используем LIKE
+					conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
+					args = append(args, "%"+strVal+"%")
+				} else {
+					// Для всего прочего — точное совпадение
+					conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+					args = append(args, value)
+				}
 			}
 		}
-		whereClause := strings.Join(conditions, " AND ")
-		query += " WHERE " + whereClause
+		if len(conditions) > 0 {
+			query += " WHERE " + strings.Join(conditions, " AND ")
+		}
 	}
 
-	// Добавляем сортировку, если задано поле сортировки.
+	// Сортировка
 	if sortField != "" {
-		// Проверяем направление сортировки.
 		upperOrder := strings.ToUpper(sortOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
 			upperOrder = "ASC"
@@ -148,7 +185,7 @@ func QueryPackages(containerName string, filters map[string]interface{}, sortFie
 		query += fmt.Sprintf(" ORDER BY %s %s", sortField, upperOrder)
 	}
 
-	// Добавляем LIMIT и OFFSET, если limit > 0.
+	// Лимит
 	if limit > 0 {
 		query += " LIMIT ?"
 		args = append(args, limit)
@@ -158,7 +195,6 @@ func QueryPackages(containerName string, filters map[string]interface{}, sortFie
 		}
 	}
 
-	// Выполняем запрос.
 	rows, err := lib.DB.Query(query, args...)
 	if err != nil {
 		return nil, err

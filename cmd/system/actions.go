@@ -400,9 +400,9 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(packages), []string{"Найден", "Найдено", "Найдены"}),
-		len(packages),
-		helper.DeclOfNum(len(packages), []string{"пакет", "пакета", "пакетов"}),
+		helper.DeclOfNum(len(respPackages), []string{"Найден", "Найдено", "Найдены"}),
+		len(respPackages),
+		helper.DeclOfNum(len(respPackages), []string{"запись", "записи", "записей"}),
 	)
 
 	return reply.APIResponse{
@@ -454,10 +454,11 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 		})
 	}
 
-	msg := fmt.Sprintf("%s %d %s",
-		helper.DeclOfNum(len(packages), []string{"Найден", "Найдено", "Найдены"}),
-		len(packages),
-		helper.DeclOfNum(len(packages), []string{"пакет", "пакета", "пакетов"}),
+	msg := fmt.Sprintf(
+		"%s %d %s",
+		helper.DeclOfNum(len(respPackages), []string{"Найден", "Найдено", "Найдены"}),
+		len(respPackages),
+		helper.DeclOfNum(len(respPackages), []string{"запись", "записи", "записей"}),
 	)
 
 	// Пустая реализация
@@ -569,16 +570,23 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
-	count, err := service.CountImageHistoriesFiltered(ctx, imageName)
+	totalCount, err := service.CountImageHistoriesFiltered(ctx, imageName)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
 
+	msg := fmt.Sprintf(
+		"%s %d %s",
+		helper.DeclOfNum(len(history), []string{"Найден", "Найдено", "Найдены"}),
+		len(history),
+		helper.DeclOfNum(len(history), []string{"запись", "записи", "записей"}),
+	)
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": "История изменений образа",
-			"history": history,
-			"count":   count,
+			"message":    msg,
+			"history":    history,
+			"totalCount": totalCount,
 		},
 		Error: false,
 	}, nil

@@ -1,6 +1,7 @@
 package distrobox
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/cmd/distrobox/api"
 	"apm/cmd/distrobox/service"
@@ -89,13 +90,17 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	word := a.pluralizePackage(queryResult.TotalCount)
-	msg := fmt.Sprintf("Найдено %d %s", queryResult.TotalCount, word)
+	msg := fmt.Sprintf(
+		"%s %d %s",
+		helper.DeclOfNum(len(queryResult.Packages), []string{"Найден", "Найдено", "Найдены"}),
+		len(queryResult.Packages),
+		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
+	)
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":    msg,
-			"packages":   queryResult.Packages,
-			"totalCount": queryResult.TotalCount,
+			"message":  msg,
+			"packages": queryResult.Packages,
 		},
 		Error: false,
 	}
@@ -139,8 +144,13 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	word := a.pluralizePackage(queryResult.TotalCount)
-	msg := fmt.Sprintf("Найдено: %d %s", queryResult.TotalCount, word)
+	msg := fmt.Sprintf(
+		"%s %d %s",
+		helper.DeclOfNum(len(queryResult.Packages), []string{"Найден", "Найдено", "Найдены"}),
+		len(queryResult.Packages),
+		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
+	)
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
@@ -318,16 +328,6 @@ func (a *Actions) newErrorResponse(message string) reply.APIResponse {
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
 	}
-}
-
-// pluralizePackage возвращает слово "пакет" в правильной форме.
-func (a *Actions) pluralizePackage(n int) string {
-	if n%10 == 1 && n%100 != 11 {
-		return "пакет"
-	} else if n%10 >= 2 && n%10 <= 4 && !(n%100 >= 12 && n%100 <= 14) {
-		return "пакета"
-	}
-	return "пакетов"
 }
 
 // validateContainer проверяет, что имя контейнера не пустое и обновляет пакеты, если нужно.

@@ -87,7 +87,7 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "search",
-				Usage:     "Поиск пакета по названию",
+				Usage:     "Быстрый поиск пакетов по названию",
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
