@@ -35,10 +35,24 @@ func CommandList() *cli.Command {
 		Commands: []*cli.Command{
 			{
 				Name:      "install",
-				Usage:     "Установка пакета в систему",
-				ArgsUsage: "package",
+				Usage:     "Список пакетов на установку",
+				ArgsUsage: "packages",
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					resp, err := NewActions().Install(ctx, cmd.Args().Slice())
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+
+					return reply.CliResponse(ctx, resp)
+				}),
+			},
+			{
+				Name:      "remove",
+				Usage:     "Список пакетов на удаление",
+				Aliases:   []string{"rm"},
+				ArgsUsage: "packages",
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					resp, err := NewActions().Remove(ctx, cmd.Args().Slice())
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -79,15 +93,6 @@ func CommandList() *cli.Command {
 				//	packageInfo, error := os.GetPackageInfo()
 				//
 				//	return reply.CliResponse(cmd, resp)
-				//}),
-			},
-			{
-				Name:      "remove",
-				Usage:     "Удаление пакета",
-				Aliases:   []string{"rm"},
-				ArgsUsage: "package",
-				//Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-				//
 				//}),
 			},
 			{

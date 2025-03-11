@@ -21,9 +21,10 @@ func NewActions() *Actions {
 
 // PackageChanges Структура, для хранения результатов apt-get -s
 type PackageChanges struct {
-	ExtraInstalled       []string // Дополнительные пакеты для установки (из первой секции)
-	UpgradedPackages     []string // Пакеты, которые будут обновлены
-	NewInstalledPackages []string // Пакеты, которые будут установлены как новые
+	ExtraInstalled       []string
+	UpgradedPackages     []string
+	NewInstalledPackages []string
+	RemovedPackages      []string
 
 	UpgradedCount     int
 	NewInstalledCount int
@@ -62,17 +63,40 @@ func (a *Actions) Install(ctx context.Context, packageName string) error {
 		return fmt.Errorf(aptError.GetText())
 	}
 	if err != nil {
-		return fmt.Errorf("ошибка обновления пакетов: %v", err)
+		return fmt.Errorf("ошибка установки пакетов: %v", err)
 	}
 
 	return nil
 }
 
-func (a *Actions) Check(ctx context.Context, packageName string) (PackageChanges, string, error) {
+func (a *Actions) Remove(ctx context.Context, packageName string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
-	command := fmt.Sprintf("%s apt-get -s install %s", lib.Env.CommandPrefix, packageName)
+	command := fmt.Sprintf("%s apt-get -y remove %s", lib.Env.CommandPrefix, packageName)
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = []string{"LC_ALL=C"}
+
+	output, err := cmd.CombinedOutput()
+	outputStr := string(output)
+	lines := strings.Split(outputStr, "\n")
+	aptError := ErrorLinesAnalise(lines)
+	if aptError != nil {
+		return fmt.Errorf(aptError.GetText())
+	}
+	if err != nil {
+		return fmt.Errorf("ошибка удаления пакетов: %v", err)
+	}
+
+	return nil
+}
+
+func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, string, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
+	command := fmt.Sprintf("%s apt-get -s %s %s", lib.Env.CommandPrefix, aptCommand, packageName)
+	fmt.Println(command)
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
 
@@ -83,13 +107,14 @@ func (a *Actions) Check(ctx context.Context, packageName string) (PackageChanges
 	if aptError != nil {
 		return PackageChanges{}, "", fmt.Errorf(aptError.GetText())
 	}
+
 	if err != nil {
-		return PackageChanges{}, "", fmt.Errorf("ошибка обновления пакетов: %v", err)
+		return PackageChanges{}, "", fmt.Errorf("ошибка проверки пакетов: %v", err)
 	}
 
 	packageParse, err := parseAptOutput(outputStr)
 	if err != nil {
-		return PackageChanges{}, "", fmt.Errorf("парсинга пакета: %v", err)
+		return PackageChanges{}, "", fmt.Errorf("ошибка проверки пакета: %v", err)
 	}
 
 	return packageParse, outputStr, nil
@@ -298,6 +323,11 @@ func parseAptOutput(output string) (PackageChanges, error) {
 			currentSection = "new_installed"
 			continue
 		}
+		if strings.HasPrefix(line, "The following packages will be REMOVED:") {
+			currentSection = "removed"
+			continue
+		}
+
 		// Если строка содержит статистику, то обрабатываем отдельно
 		if matched, _ := regexp.MatchString(`\d+ upgraded, \d+ newly installed, \d+ removed and \d+ not upgraded\.`, line); matched {
 			// Пример строки: "3 upgraded, 2 newly installed, 0 removed and 249 not upgraded."
@@ -334,6 +364,9 @@ func parseAptOutput(output string) (PackageChanges, error) {
 		case "new_installed":
 			pkgs := strings.Fields(line)
 			pc.NewInstalledPackages = append(pc.NewInstalledPackages, pkgs...)
+		case "removed":
+			pkgs := strings.Fields(line)
+			pc.RemovedPackages = append(pc.RemovedPackages, pkgs...)
 		}
 	}
 

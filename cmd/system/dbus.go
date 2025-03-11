@@ -73,9 +73,9 @@ func (w *DBusWrapper) Search(packageName string, transaction string) (string, *d
 }
 
 // Remove – обёртка над Actions.Remove.
-func (w *DBusWrapper) Remove(packageName string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Remove(packages []string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Remove(ctx, packageName)
+	resp, err := w.actions.Remove(ctx, packages)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

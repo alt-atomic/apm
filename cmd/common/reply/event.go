@@ -145,14 +145,16 @@ func getTaskViewName(task string) string {
 	switch task {
 	case "apt.(*Actions).Install":
 		return "Установка пакетов"
+	case "apt.(*Actions).Remove":
+		return "Удаление пакетов"
 	case "apt.(*Actions).Check":
 		return "Анализ пакетов"
 	case "apt.(*Actions).Update":
-		return "Анализ полученных пакетов"
+		return "Обновление пакетов"
 	case "apt.SavePackagesToDB":
 		return "Сохранение пакетов в базу"
 	case "apt.aptUpdate":
-		return "Загружается список пакетов"
+		return "Загрузка списка пакетов"
 	case "service.CheckAndUpdateBaseImage":
 		return "Проверка обновления"
 	case "service.bootcUpgrade":

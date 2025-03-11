@@ -12,24 +12,39 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type DialogAction int
+
+const (
+	ActionInstall DialogAction = iota
+	ActionRemove
+)
+
 var choices = []string{"Установить", "Отмена"}
 
 type model struct {
-	pkg       []Package
-	pckChange PackageChanges
-	cursor    int
-	choice    string
-	vp        viewport.Model
-	canceled  bool
+	pkg        []Package
+	pckChange  PackageChanges
+	cursor     int
+	choice     string
+	vp         viewport.Model
+	canceled   bool
+	choiceType DialogAction
 }
 
-// NewDialogInstall запускает диалог отображения информации о пакете с выбором действия.
-func NewDialogInstall(packageInfo []Package, packageChange PackageChanges) (bool, error) {
-	// Инициализируем viewport с дефолтными размерами.
+// NewDialog запускает диалог отображения информации о пакете с выбором действия.
+func NewDialog(packageInfo []Package, packageChange PackageChanges, action DialogAction) (bool, error) {
+	switch action {
+	case ActionInstall:
+		choices = []string{"Установить", "Отмена"}
+	case ActionRemove:
+		choices = []string{"Удалить", "Отмена"}
+	}
+
 	m := model{
-		pkg:       packageInfo,
-		pckChange: packageChange,
-		vp:        viewport.New(80, 20),
+		pkg:        packageInfo,
+		pckChange:  packageChange,
+		vp:         viewport.New(80, 20),
+		choiceType: action,
 	}
 	p := tea.NewProgram(m,
 		tea.WithOutput(os.Stdout),
@@ -45,7 +60,7 @@ func NewDialogInstall(packageInfo []Package, packageChange PackageChanges) (bool
 		if m.canceled || m.choice == "" {
 			return false, fmt.Errorf("диалог был отменён")
 		}
-		return m.choice == "Установить", nil
+		return m.choice == "Установить" || m.choice == "Удалить", nil
 	}
 
 	return false, fmt.Errorf("диалог был отменён")
@@ -144,6 +159,7 @@ func (m model) View() string {
 		Light: "#171717",
 		Dark:  "#c4c8c6",
 	})
+	deleteStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000"))
 	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#2bb389"))
 	// Стиль для подсказок по клавишам (невзрачный серый)
 	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Faint(true)
@@ -167,11 +183,18 @@ func (m model) View() string {
 		if i == m.cursor {
 			prefix = "» "
 		}
-		if i == 1 {
-			footer.WriteString("\n" + valueStyle.Render(prefix+choice))
+		// Выбираем стиль в зависимости от типа диалога и выбранной кнопки
+		var btnStyle lipgloss.Style
+		if i == 0 {
+			if m.choiceType == ActionRemove {
+				btnStyle = deleteStyle
+			} else {
+				btnStyle = installStyle
+			}
 		} else {
-			footer.WriteString("\n" + installStyle.Render(prefix+choice))
+			btnStyle = valueStyle
 		}
+		footer.WriteString("\n" + btnStyle.Render(prefix+choice))
 	}
 
 	// Выводим сначала контент, затем подсказки и, наконец, меню выбора
@@ -240,9 +263,11 @@ func (m model) buildContent() string {
 	extraStr := formatDependencies(m.pckChange.ExtraInstalled)
 	upgradeStr := formatDependencies(m.pckChange.UpgradedPackages)
 	installStr := formatDependencies(m.pckChange.NewInstalledPackages)
+	removeStr := formatDependencies(m.pckChange.RemovedPackages)
 	sb.WriteString("\n" + formatLine("Экстра пакеты", extraStr, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine("Будут обновлены", upgradeStr, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine("Будут установлены", installStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine("Будут удалены", removeStr, keyWidth, keyStyle, valueStyle))
 
 	packageUpgradedCount := fmt.Sprintf("%d %s", m.pckChange.UpgradedCount, helper.DeclOfNum(m.pckChange.UpgradedCount, []string{"пакет", "пакета", "пакетов"}))
 	packageNewInstalledCount := fmt.Sprintf("%d %s", m.pckChange.NewInstalledCount, helper.DeclOfNum(m.pckChange.NewInstalledCount, []string{"пакет", "пакета", "пакетов"}))
@@ -250,7 +275,7 @@ func (m model) buildContent() string {
 	packageNotUpgradedCount := fmt.Sprintf("%d %s", m.pckChange.NotUpgradedCount, helper.DeclOfNum(m.pckChange.NotUpgradedCount, []string{"пакет", "пакета", "пакетов"}))
 	sb.WriteString(titleStyle.Render("\n\nИтого:"))
 	sb.WriteString("\n" + formatLine("Будет обновлено", packageUpgradedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Установлено новых", packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine("Будет установлено", packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine("Будет удалено", packageRemovedCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine("Не затронуты", packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
 	return sb.String()

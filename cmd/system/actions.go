@@ -26,34 +26,8 @@ type ImageStatus struct {
 	Config service.Config    `json:"config"`
 }
 
-func (a *Actions) getImageStatus() (ImageStatus, error) {
-	hostImage, err := service.GetHostImage()
-	if err != nil {
-		return ImageStatus{}, err
-	}
-
-	config, err := service.ParseConfig()
-	if err != nil {
-		return ImageStatus{}, err
-	}
-
-	if hostImage.Status.Booted.Image.Image.Transport == "containers-storage" {
-		return ImageStatus{
-			Status: "Изменённый образ. Файл конфигурации: " + lib.Env.PathImageFile,
-			Image:  hostImage,
-			Config: config,
-		}, nil
-	}
-
-	return ImageStatus{
-		Status: "Облачный образ без изменений",
-		Image:  hostImage,
-		Config: config,
-	}, nil
-}
-
-// Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResponse, error) {
+// Remove удаляет системный пакет.
+func (a *Actions) Remove(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -61,6 +35,15 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 	err = a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
+	}
+
+	if len(packages) == 0 {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": "Необходимо указать хотя бы один пакет, например remove package",
+			},
+			Error: true,
+		}, nil
 	}
 
 	var names []string
@@ -76,7 +59,88 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 	}
 
 	allPackageNames := strings.Join(names, " ")
-	packageParse, output, err := apt.NewActions().Check(ctx, allPackageNames)
+	packageParse, _, err := apt.NewActions().Check(ctx, allPackageNames, "remove")
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if packageParse.RemovedCount == 0 {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": "Кандидатов на удаление не найдено",
+			},
+			Error: true,
+		}, nil
+	}
+
+	reply.StopSpinner()
+	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, apt.ActionRemove)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if !dialogStatus {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": "Отмена диалога удаления",
+			},
+			Error: false,
+		}, nil
+	}
+
+	reply.CreateSpinner()
+	err = apt.NewActions().Remove(ctx, allPackageNames)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	removePackageNames := strings.Join(packageParse.RemovedPackages, ",")
+
+	return reply.APIResponse{
+		Data: map[string]interface{}{
+			"message": fmt.Sprintf("%s успешно %s",
+				removePackageNames,
+				helper.DeclOfNum(packageParse.RemovedCount, []string{"удалён", "удалены", "удалены"}),
+			),
+		},
+		Error: false,
+	}, nil
+}
+
+// Install осуществляет установку системного пакета.
+func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+	err = a.validateDB(ctx)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	if len(packages) == 0 {
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": "Необходимо указать хотя бы один пакет, например install package",
+			},
+			Error: true,
+		}, nil
+	}
+
+	var names []string
+	var packagesInfo []apt.Package
+	for _, pkg := range packages {
+		packageInfo, err := apt.GetPackageByName(ctx, pkg)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
+
+		packagesInfo = append(packagesInfo, packageInfo)
+		names = append(names, packageInfo.Name)
+	}
+
+	allPackageNames := strings.Join(names, " ")
+	packageParse, output, err := apt.NewActions().Check(ctx, allPackageNames, "install")
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -94,7 +158,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 	}
 
 	reply.StopSpinner()
-	dialogStatus, err := apt.NewDialogInstall(packagesInfo, packageParse)
+	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, apt.ActionInstall)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -102,7 +166,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 	if !dialogStatus {
 		return reply.APIResponse{
 			Data: map[string]interface{}{
-				"message": "Отмена установки пакета",
+				"message": "Отмена диалога установки",
 			},
 			Error: false,
 		}, nil
@@ -114,7 +178,6 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	// пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": fmt.Sprintf("%d %s успешно %s и %d %s",
@@ -154,6 +217,20 @@ func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
 	}, nil
 }
 
+type PackageResponse struct {
+	Name          string   `json:"name"`
+	Section       string   `json:"section"`
+	InstalledSize string   `json:"installedSize"`
+	Maintainer    string   `json:"maintainer"`
+	Version       string   `json:"version"`
+	Depends       []string `json:"depends"`
+	Size          string   `json:"size"`
+	Filename      string   `json:"filename"`
+	Description   string   `json:"description"`
+	Changelog     string   `json:"lastChangelog"`
+	Installed     bool     `json:"installed"`
+}
+
 // Info возвращает информацию о системном пакете.
 func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIResponse, error) {
 	err := a.checkRoot()
@@ -175,10 +252,24 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 		return a.newErrorResponse(err.Error()), err
 	}
 
+	resp := PackageResponse{
+		Name:          packageInfo.Name,
+		Section:       packageInfo.Section,
+		InstalledSize: helper.AutoSize(packageInfo.InstalledSize),
+		Maintainer:    packageInfo.Maintainer,
+		Version:       packageInfo.Version,
+		Depends:       packageInfo.Depends,
+		Size:          helper.AutoSize(packageInfo.Size),
+		Filename:      packageInfo.Filename,
+		Description:   packageInfo.Description,
+		Changelog:     packageInfo.Changelog,
+		Installed:     packageInfo.Installed,
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     fmt.Sprintf("Информация о пакете %s", packageInfo.Name),
-			"packageInfo": packageInfo,
+			"packageInfo": resp,
 		},
 		Error: false,
 	}, nil
@@ -200,27 +291,6 @@ func (a *Actions) Search(ctx context.Context, packageName string) (reply.APIResp
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": fmt.Sprintf("Search action вызван для пакета '%s'", packageName),
-		},
-		Error: false,
-	}, nil
-}
-
-// Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packageName string) (reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return newErrorResponse(err.Error()), err
-	}
-
-	err = a.validateDB(ctx)
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
-	}
-
-	// Пустая реализация
-	return reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": fmt.Sprintf("Remove action вызван для пакета '%s'", packageName),
 		},
 		Error: false,
 	}, nil
@@ -369,4 +439,30 @@ func (a *Actions) validateDB(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (a *Actions) getImageStatus() (ImageStatus, error) {
+	hostImage, err := service.GetHostImage()
+	if err != nil {
+		return ImageStatus{}, err
+	}
+
+	config, err := service.ParseConfig()
+	if err != nil {
+		return ImageStatus{}, err
+	}
+
+	if hostImage.Status.Booted.Image.Image.Transport == "containers-storage" {
+		return ImageStatus{
+			Status: "Изменённый образ. Файл конфигурации: " + lib.Env.PathImageFile,
+			Image:  hostImage,
+			Config: config,
+		}, nil
+	}
+
+	return ImageStatus{
+		Status: "Облачный образ без изменений",
+		Image:  hostImage,
+		Config: config,
+	}, nil
 }
