@@ -34,7 +34,7 @@ func main() {
 		sig := <-sigs
 		switch sig {
 		case syscall.SIGINT, syscall.SIGTERM:
-			infoText := fmt.Sprintf("Получен корректный сигнал %s. Завершаем работу приложения.", sig)
+			infoText := fmt.Sprintf("Получен корректный сигнал %s. Завершаем работу приложения", sig)
 			lib.Log.Info(infoText)
 			_ = reply.CliResponse(ctx, reply.APIResponse{
 				Data: map[string]interface{}{
@@ -43,7 +43,7 @@ func main() {
 				Error: false,
 			})
 		default:
-			infoText := fmt.Sprintf("Получен неожиданный сигнал %s. Завершаем работу приложения с ошибкой.", sig)
+			infoText := fmt.Sprintf("Получен неожиданный сигнал %s. Завершаем работу приложения с ошибкой", sig)
 			lib.Log.Error(infoText)
 			_ = reply.CliResponse(ctx, reply.APIResponse{
 				Data: map[string]interface{}{

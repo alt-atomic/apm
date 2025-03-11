@@ -37,8 +37,17 @@ func CommandList() *cli.Command {
 				Name:      "install",
 				Usage:     "Список пакетов на установку",
 				ArgsUsage: "packages",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "apply",
+						Usage:   "Применить к образу",
+						Aliases: []string{"a"},
+						Value:   false,
+						Hidden:  !lib.Env.IsAtomic,
+					},
+				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Install(ctx, cmd.Args().Slice())
+					resp, err := NewActions().Install(ctx, cmd.Args().Slice(), cmd.Bool("apply"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -51,8 +60,17 @@ func CommandList() *cli.Command {
 				Usage:     "Список пакетов на удаление",
 				Aliases:   []string{"rm"},
 				ArgsUsage: "packages",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "apply",
+						Usage:   "Применить к образу",
+						Aliases: []string{"a"},
+						Value:   false,
+						Hidden:  !lib.Env.IsAtomic,
+					},
+				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Remove(ctx, cmd.Args().Slice())
+					resp, err := NewActions().Remove(ctx, cmd.Args().Slice(), cmd.Bool("apply"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

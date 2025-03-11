@@ -45,7 +45,6 @@ func InitConfig() {
 	} else {
 		Env.IsAtomic = true
 	}
-
 }
 
 func EnsurePath(path string) error {

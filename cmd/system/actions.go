@@ -80,7 +80,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (reply.AP
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string) (reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -154,20 +154,30 @@ func (a *Actions) Remove(ctx context.Context, packages []string) (reply.APIRespo
 		return a.newErrorResponse(err.Error()), err
 	}
 
+	messageAnswer := fmt.Sprintf("%s успешно %s",
+		removePackageNames,
+		helper.DeclOfNum(packageParse.RemovedCount, []string{"удалён", "удалены", "удалены"}))
+
+	if apply {
+		err = a.applyChange(ctx, packages, false)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
+
+		messageAnswer += ". Образ системы был изменен"
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("%s успешно %s",
-				removePackageNames,
-				helper.DeclOfNum(packageParse.RemovedCount, []string{"удалён", "удалены", "удалены"}),
-			),
-			"info": packageParse,
+			"message": messageAnswer,
+			"info":    packageParse,
 		},
 		Error: false,
 	}, nil
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -242,16 +252,26 @@ func (a *Actions) Install(ctx context.Context, packages []string) (reply.APIResp
 		return a.newErrorResponse(err.Error()), err
 	}
 
+	messageAnswer := fmt.Sprintf("%d %s успешно %s и %d %s",
+		packageParse.NewInstalledCount,
+		helper.DeclOfNum(packageParse.NewInstalledCount, []string{"пакет", "пакета", "пакетов"}),
+		helper.DeclOfNum(packageParse.NewInstalledCount, []string{"установлен", "установлено", "установлены"}),
+		packageParse.UpgradedCount,
+		helper.DeclOfNum(packageParse.UpgradedCount, []string{"обновлён", "обновлено", "обновилось"}))
+
+	if apply {
+		err = a.applyChange(ctx, packages, true)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
+
+		messageAnswer += ". Образ системы был изменен"
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": fmt.Sprintf("%d %s успешно %s и %d %s",
-				packageParse.NewInstalledCount,
-				helper.DeclOfNum(packageParse.NewInstalledCount, []string{"пакет", "пакета", "пакетов"}),
-				helper.DeclOfNum(packageParse.NewInstalledCount, []string{"установлен", "установлено", "установлены"}),
-				packageParse.UpgradedCount,
-				helper.DeclOfNum(packageParse.UpgradedCount, []string{"обновлён", "обновлено", "обновилось"}),
-			),
-			"info": packageParse,
+			"message": messageAnswer,
+			"info":    packageParse,
 		},
 		Error: false,
 	}, nil
@@ -596,6 +616,44 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() != 0 {
 		return fmt.Errorf("для выполнения необходимы права администратора, используйте sudo или su")
+	}
+
+	return nil
+}
+
+// applyChange применяет изменения к образу системы
+func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall bool) error {
+	if !lib.Env.IsAtomic {
+		return fmt.Errorf("опция доступна только для атомарной системы")
+	}
+
+	config, err := service.ParseConfig()
+	if err != nil {
+		return err
+	}
+
+	for _, pkg := range packages {
+		if isInstall {
+			err = config.AddInstallPackage(pkg)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = config.AddRemovePackage(pkg)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	err = config.GenerateDockerfile()
+	if err != nil {
+		return err
+	}
+
+	err = service.BuildAndSwitch(ctx, true, config)
+	if err != nil {
+		return err
 	}
 
 	return nil
