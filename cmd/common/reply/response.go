@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"unicode"
 )
 
 // APIResponse описывает итоговую структуру ответа.
@@ -261,6 +262,18 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 		switch data := resp.Data.(type) {
 
 		case map[string]interface{}:
+			if resp.Error {
+				if rawMsg, haveMsg := data["message"]; haveMsg {
+					if msgStr, ok := rawMsg.(string); ok && len(msgStr) > 0 {
+						runes := []rune(msgStr)
+						if unicode.IsLower(runes[0]) {
+							runes[0] = unicode.ToUpper(runes[0])
+							data["message"] = string(runes)
+						}
+					}
+				}
+			}
+
 			var t *tree.Tree
 			if resp.Error {
 				t = buildTreeFromMap("⚛", data)
