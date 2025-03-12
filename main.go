@@ -57,7 +57,7 @@ func main() {
 
 	rootCommand := &cli.Command{
 		Name:  "apm",
-		Usage: "Atomic Packages Manager",
+		Usage: "Atomic Package Manager",
 		//EnableShellCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
