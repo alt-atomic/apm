@@ -420,7 +420,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(respPackages), []string{"Найден", "Найдено", "Найдены"}),
+		helper.DeclOfNum(len(respPackages), []string{"Найдена", "Найдено", "Найдены"}),
 		len(respPackages),
 		helper.DeclOfNum(len(respPackages), []string{"запись", "записи", "записей"}),
 	)
@@ -476,7 +476,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(respPackages), []string{"Найден", "Найдено", "Найдены"}),
+		helper.DeclOfNum(len(respPackages), []string{"Найдена", "Найдено", "Найдены"}),
 		len(respPackages),
 		helper.DeclOfNum(len(respPackages), []string{"запись", "записи", "записей"}),
 	)
@@ -597,7 +597,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(history), []string{"Найден", "Найдено", "Найдены"}),
+		helper.DeclOfNum(len(history), []string{"Найдена", "Найдено", "Найдены"}),
 		len(history),
 		helper.DeclOfNum(len(history), []string{"запись", "записи", "записей"}),
 	)
@@ -616,6 +616,13 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() != 0 {
 		return fmt.Errorf("для выполнения необходимы права администратора, используйте sudo или su")
+	}
+
+	if lib.Env.IsAtomic {
+		err := service.EnableOverlay()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -651,10 +658,10 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	err = service.BuildAndSwitch(ctx, true, config)
-	if err != nil {
-		return err
-	}
+	//err = service.BuildAndSwitch(ctx, true, config)
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }

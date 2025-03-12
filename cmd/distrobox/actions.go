@@ -92,7 +92,7 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 	}
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(queryResult.Packages), []string{"Найден", "Найдено", "Найдены"}),
+		helper.DeclOfNum(len(queryResult.Packages), []string{"Найдена", "Найдено", "Найдены"}),
 		len(queryResult.Packages),
 		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
 	)
@@ -146,7 +146,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 	}
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(queryResult.Packages), []string{"Найден", "Найдено", "Найдены"}),
+		helper.DeclOfNum(len(queryResult.Packages), []string{"Найдена", "Найдено", "Найдены"}),
 		len(queryResult.Packages),
 		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
 	)

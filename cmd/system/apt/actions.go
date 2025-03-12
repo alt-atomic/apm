@@ -70,7 +70,8 @@ func (a *Actions) Install(ctx context.Context, packageName string) error {
 		return fmt.Errorf(aptError.GetText())
 	}
 	if err != nil {
-		return fmt.Errorf("ошибка установки пакетов: %v", err)
+		lib.Log.Errorf("ошибка установки: %s", outputStr)
+		return fmt.Errorf("ошибка установки: %v", err)
 	}
 
 	return nil
@@ -94,6 +95,7 @@ func (a *Actions) Remove(ctx context.Context, packageName string) error {
 		return fmt.Errorf(aptError.GetText())
 	}
 	if err != nil {
+		lib.Log.Errorf("ошибка установки: %s", outputStr)
 		return fmt.Errorf("ошибка удаления пакетов: %v", err)
 	}
 
@@ -117,6 +119,7 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 	}
 
 	if err != nil {
+		lib.Log.Errorf("ошибка проверки пакетов: %s", outputStr)
 		return PackageChanges{}, "", fmt.Errorf("ошибка проверки пакетов: %v", err)
 	}
 

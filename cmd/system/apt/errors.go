@@ -63,6 +63,7 @@ const (
 	ErrProcessBuildDependencies
 	ErrVirtualNoProvidersShort
 	ErrVirtualMultipleProvidersShort
+	ErrRpmDatabaseLock
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -109,6 +110,7 @@ var errorPatterns = []ErrorEntry{
 	{ErrFixMissingUnsupported, "--fix-missing and media swapping is not currently supported", 0},
 	{ErrCorrectMissingFailed, "Unable to correct missing packages", 0},
 	{ErrAbortingInstall, "Aborting Install", 0},
+	{ErrRpmDatabaseLock, "Could not open RPM database", 0},
 	{ErrParseNameFailed, "Couldn't parse name '%s'", 1},
 	{ErrWriteStdoutFailed, "Write to stdout failed", 0},
 	{ErrMaxArgumentsExceeded, "Exceeded maximum number of command arguments", 0},
