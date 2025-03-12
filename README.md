@@ -390,7 +390,7 @@ sudo apm s image status
     │   ├── Образ: ghcr.io/alt-gnome/alt-atomic:latest-nv
     │   ╰── Пакеты
     │       ├── Установить
-    │       │   ╰── 1) apa
+    │       │   ╰── 1) redis
     │       ╰── Удалить: []
     ├── Образ
     │   ├── Спецификация
@@ -429,7 +429,7 @@ cat /etc/apm/image.yml
 image: ghcr.io/alt-gnome/alt-atomic:latest-nv
 packages:
     install:
-        - apa
+        - memcached
         - redis
     remove: []
 commands: []
@@ -447,7 +447,7 @@ sudo apm s image apply
     │   ├── Образ: ghcr.io/alt-gnome/alt-atomic:latest-nv
     │   ╰── Пакеты
     │       ├── Установить
-    │       │   ╰── 1) apa
+    │       │   ╰── 1) redis
     │       ╰── Удалить: []
     ├── Образ
     │   ├── Спецификация
