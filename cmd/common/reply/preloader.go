@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -70,7 +69,7 @@ func CreateSpinner() {
 
 	go func() {
 		if err := p.Start(); err != nil {
-			log.Println("Ошибка запуска spinner:", err)
+			lib.Log.Error(err.Error())
 		}
 		close(doneChan)
 	}()
