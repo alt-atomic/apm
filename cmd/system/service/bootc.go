@@ -214,6 +214,11 @@ func bootcUpgrade(ctx context.Context) error {
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ.
 func BuildAndSwitch(ctx context.Context, pullImage bool, config Config) error {
+	statusSame, err := config.ConfigIsChange(ctx)
+	if !statusSame {
+		return fmt.Errorf("образ не изменился, сборка приостановлена")
+	}
+
 	idImage, err := BuildImage(ctx, pullImage)
 	if err != nil {
 		return err

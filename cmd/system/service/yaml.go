@@ -113,6 +113,21 @@ func (c *Config) Save() error {
 	return os.WriteFile(lib.Env.PathImageFile, data, 0644)
 }
 
+// ConfigIsChange проверяем, изменился ли новый конфиг
+func (c *Config) ConfigIsChange(ctx context.Context) (bool, error) {
+	statusSame, err := IsLatestConfigSame(ctx, *c)
+	if err != nil {
+		return false, err
+	}
+
+	if statusSame {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// SaveToDB сохраняем в историю
 func (c *Config) SaveToDB(ctx context.Context) error {
 	history := ImageHistory{
 		ImageName: c.Image,
@@ -120,19 +135,17 @@ func (c *Config) SaveToDB(ctx context.Context) error {
 		ImageDate: time.Now().Format(time.RFC3339),
 	}
 
-	statusSame, err := IsLatestConfigSame(ctx, *c)
+	statusSame, err := c.ConfigIsChange(ctx)
 	if err != nil {
 		return err
 	}
 
-	// если последний конфиг в базе совпадает с текущим - не сохраняем в историю
+	// если изменился - сохраняем в базу
 	if statusSame {
-		return nil
-	}
-
-	err = SaveImageToDB(ctx, history)
-	if err != nil {
-		return err
+		err = SaveImageToDB(ctx, history)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

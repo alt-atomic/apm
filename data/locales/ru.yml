@@ -22,6 +22,7 @@ ru_RU:
     installedSize: "Займёт на диске"
     lastChangelog: "Последнее изменение"
     maintainer: "Мэйнтейнер"
+    date: "Дата"
     section: "Раздел"
     version: "Версия"
     versionInstalled: "Установленная версия"
