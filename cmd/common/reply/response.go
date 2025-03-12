@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"time"
 	"unicode"
 )
 
@@ -234,6 +235,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 
 // CliResponse рендерит ответ в зависимости от формата (dbus/json/text).
 func CliResponse(ctx context.Context, resp APIResponse) error {
+	time.Sleep(5 * time.Second)
 	StopSpinner()
 	format := lib.Env.Format
 	txVal := ctx.Value("transaction")

@@ -25,7 +25,6 @@ func main() {
 
 	lib.Env.Language = helper.GetSystemLocale()
 
-	//fmt.Println(lib.T("response.name", ""))
 	ctx := context.Background()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)

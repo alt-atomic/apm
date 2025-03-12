@@ -137,12 +137,12 @@ func BuildImage(ctx context.Context, pullImage bool) (string, error) {
 		command = fmt.Sprintf("%s podman build --pull=always --squash -t os /var", lib.Env.CommandPrefix)
 	}
 
-	cmd := exec.Command("sh", "-c", command)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("ошибка сборки образа: %s", string(output))
+	err := PullAndProgress(ctx, command)
+	if err != nil {
+		return "", fmt.Errorf("ошибка сборки образа: %v", err)
 	}
 
-	cmd = exec.Command(fmt.Sprintf("%s podman images -q os", lib.Env.CommandPrefix))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s podman images -q os", lib.Env.CommandPrefix))
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("ошибка podman образ: %v", err)
@@ -214,17 +214,17 @@ func bootcUpgrade(ctx context.Context) error {
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ.
 func BuildAndSwitch(ctx context.Context, pullImage bool, config Config) error {
-	err := config.SaveToDB(ctx)
-	if err != nil {
-		return err
-	}
-
 	idImage, err := BuildImage(ctx, pullImage)
 	if err != nil {
 		return err
 	}
 
 	err = SwitchImage(ctx, idImage)
+	if err != nil {
+		return err
+	}
+
+	err = config.SaveToDB(ctx)
 	if err != nil {
 		return err
 	}

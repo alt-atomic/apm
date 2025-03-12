@@ -19,7 +19,7 @@ ru_RU:
     filename: "Имя файла"
     installed: "Установлено"
     exporting: "Экспортировано"
-    installedSize: "Установленный размер"
+    installedSize: "Займёт на диске"
     lastChangelog: "Последнее изменение"
     maintainer: "Мэйнтейнер"
     section: "Раздел"

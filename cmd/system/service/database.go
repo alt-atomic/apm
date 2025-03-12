@@ -164,9 +164,6 @@ func CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (i
 // IsLatestConfigSame принимает конфигурацию newConfig, получает из БД самый последний сохранённый конфиг
 // и сравнивает их. Если они совпадают, возвращает true, иначе false.
 func IsLatestConfigSame(ctx context.Context, newConfig Config) (bool, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-
 	tableName := "host_image_history"
 	query := fmt.Sprintf("SELECT config FROM %s ORDER BY imagedate DESC LIMIT 1", tableName)
 

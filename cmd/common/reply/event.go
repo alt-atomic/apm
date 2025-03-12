@@ -12,12 +12,12 @@ import (
 
 // EventData содержит данные события.
 type EventData struct {
-	Name            string `json:"name"`
-	View            string `json:"message"`
-	State           string `json:"state"`
-	Type            string `json:"type"`
-	ProgressPercent int    `json:"progress"`
-	Transaction     string `json:"transaction,omitempty"`
+	Name            string  `json:"name"`
+	View            string  `json:"message"`
+	State           string  `json:"state"`
+	Type            string  `json:"type"`
+	ProgressPercent float64 `json:"progress"`
+	Transaction     string  `json:"transaction,omitempty"`
 }
 
 var (
@@ -57,7 +57,7 @@ func WithProgress(isProgress bool) NotificationOption {
 }
 
 // WithProgressPercent задаёт процент выполнения.
-func WithProgressPercent(percent int) NotificationOption {
+func WithProgressPercent(percent float64) NotificationOption {
 	return func(ed *EventData) {
 		ed.ProgressPercent = percent
 	}
@@ -116,8 +116,13 @@ func SendFuncNameDBUS(ctx context.Context, eventData EventData) {
 	if err != nil {
 		lib.Log.Debug(err.Error())
 	}
-	UpdateTask(eventData.Name, eventData.View, eventData.State)
 
+	eventType := "PROGRESS"
+	if eventData.Type != "PROGRESS" {
+		eventType = "TASK"
+	}
+
+	UpdateTask(eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent)
 	SendNotificationResponse(string(b))
 }
 
@@ -143,6 +148,10 @@ func SendNotificationResponse(message string) {
 
 func getTaskViewName(task string) string {
 	switch task {
+	case "service.pruneOldImages":
+		return "Очистка старых образов"
+	case "service.SaveImageToDB":
+		return "Сохранение истории образа в базу данных"
 	case "apt.(*Actions).Install":
 		return "Установка"
 	case "system.(*Actions).updateAllPackagesDB":

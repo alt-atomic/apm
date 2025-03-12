@@ -3,6 +3,7 @@ package reply
 import (
 	"apm/lib"
 	"fmt"
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"log"
@@ -15,30 +16,37 @@ import (
 var (
 	p             *tea.Program
 	doneChan      chan struct{}
-	tasksDoneChan chan struct{} // Канал, сигнализирующий о завершении всех задач
+	tasksDoneChan chan struct{}
 	mu            sync.Mutex
-	lastLines     int // Количество строк, выведенных спинером
+	lastLines     int
 )
 
+// TaskUpdateMsg TASK" или "PROGRESS"
 type TaskUpdateMsg struct {
-	taskName string
-	viewName string // Отображаемое имя задачи
-	state    string // "BEFORE" или "AFTER"
+	eventType     string
+	taskName      string
+	viewName      string
+	state         string
+	progressValue float64
 }
 
 type task struct {
-	name     string // Внутреннее имя задачи
-	viewName string // Отображаемое имя
-	state    string
+	eventType string
+	name      string
+	viewName  string
+	state     string
+
+	progressModel *progress.Model
+	percent       float64
 }
 
 type model struct {
-	spinner      spinner.Model // Общий спинер (стиль Points)
-	tasksSpinner spinner.Model // Спинер для задач (стиль Hamburger)
+	spinner      spinner.Model
+	tasksSpinner spinner.Model
 	tasks        []task
 }
 
-// CreateSpinner — запуск спинера в отдельной горутине.
+// CreateSpinner Создание и запуск Bubble Tea
 func CreateSpinner() {
 	if lib.Env.Format != "text" && IsTTY() {
 		return
@@ -54,34 +62,33 @@ func CreateSpinner() {
 	tasksDoneChan = make(chan struct{})
 
 	p = tea.NewProgram(
-		newSpinner(),
+		newModel(),
 		tea.WithOutput(os.Stdout),
 		tea.WithoutSignalHandler(),
 		tea.WithInput(nil),
-		//tea.WithAltScreen(),
 	)
 
 	go func() {
 		if err := p.Start(); err != nil {
-			log.Println("Ошибка запуска спинера:", err)
+			log.Println("Ошибка запуска spinner:", err)
 		}
 		close(doneChan)
 	}()
 }
 
-// StopSpinner — останавливает спинер
+// StopSpinner Остановка и очистка вывода
 func StopSpinner() {
 	if lib.Env.Format != "text" && IsTTY() {
 		return
 	}
 
-	// Ждём закрытия tasksDoneChan, но не более 100 мс.
+	// Ждём, пока все задачи не завершены, но не более 100мс
 	select {
 	case <-tasksDoneChan:
 	case <-time.After(100 * time.Millisecond):
 	}
 
-	// Небольшая задержка для финального обновления экрана
+	// Небольшая пауза
 	time.Sleep(60 * time.Millisecond)
 
 	mu.Lock()
@@ -92,25 +99,57 @@ func StopSpinner() {
 		<-doneChan
 		p = nil
 
+		// Удалим с экрана последние строки, чтобы «убрать» артефакты
 		for i := 0; i < lastLines-1; i++ {
 			fmt.Print("\033[F\033[K")
 		}
 	}
 }
 
-// newSpinner инициализирует модель со спинерами.
-func newSpinner() model {
-	// Общий спинер
+// UpdateTask  Функция для внешнего вызова: отправить задачу/прогресс в модель ===
+// Пример:
+//
+//	// Начать прогресс (0%)
+//	UpdateTask("PROGRESS", "downloadTask", "Загрузка...", "BEFORE", "0")
+//
+//	// Обновить до 10%
+//	UpdateTask("PROGRESS", "downloadTask", "Загрузка...", "BEFORE", "10")
+//
+//	// Завершить (100%)
+//	UpdateTask("PROGRESS", "downloadTask", "Загрузка...", "AFTER", "100")
+//
+//	// Обычная задача
+//	UpdateTask("TASK", "install", "Установка пакетов", "BEFORE", "")
+//	UpdateTask("TASK", "install", "Установка пакетов", "AFTER", "")
+func UpdateTask(eventType string, taskName string, viewName string, state string, progressValue float64) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if p != nil {
+		p.Send(TaskUpdateMsg{
+			eventType:     eventType,
+			taskName:      taskName,
+			viewName:      viewName,
+			state:         state,
+			progressValue: progressValue,
+		})
+	}
+}
+
+// === Инициализация модели ===
+func newModel() model {
+	// «Общий» спиннер
 	s := spinner.New()
 	s.Spinner = spinner.Points
 
-	// Спинер для задач
+	// Спиннер для задач
 	ts := spinner.New()
 	ts.Spinner = spinner.Jump
 
 	return model{
 		spinner:      s,
 		tasksSpinner: ts,
+		tasks:        []task{},
 	}
 }
 
@@ -118,73 +157,165 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick, m.tasksSpinner.Tick)
 }
 
+// Update === Bubble Tea: Update() ===
+//
+// Здесь мы:
+//   - Обрабатываем spinner.TickMsg
+//   - Перехватываем progress.FrameMsg для анимации прогресса
+//   - Обновляем задачу при TaskUpdateMsg
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
 	case spinner.TickMsg:
 		var cmd1, cmd2 tea.Cmd
 		m.spinner, cmd1 = m.spinner.Update(msg)
 		m.tasksSpinner, cmd2 = m.tasksSpinner.Update(msg)
 		return m, tea.Batch(cmd1, cmd2)
-	case TaskUpdateMsg:
-		updated := false
-		for i, t := range m.tasks {
-			if t.name == msg.taskName {
-				m.tasks[i].state = msg.state
-				m.tasks[i].viewName = msg.viewName
-				updated = true
-				break
-			}
-		}
-		if !updated && msg.state == "BEFORE" {
-			m.tasks = append(m.tasks, task{
-				name:     msg.taskName,
-				viewName: msg.viewName,
-				state:    msg.state,
-			})
-		}
 
-		// Проверяем, что все задачи завершены (имеют статус "AFTER")
-		allFinished := true
-		for _, t := range m.tasks {
-			if t.state != "AFTER" {
-				allFinished = false
-				break
+	case progress.FrameMsg:
+		var cmds []tea.Cmd
+		for i, t := range m.tasks {
+			if t.eventType == "PROGRESS" && t.state != "AFTER" && t.progressModel != nil {
+				updatedProg, cmd := t.progressModel.Update(msg)
+				// Разыменовываем, чтобы переписать содержимое
+				*(m.tasks[i].progressModel) = updatedProg.(progress.Model)
+
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
 			}
 		}
-		if allFinished {
-			select {
-			case <-tasksDoneChan:
-			default:
-				close(tasksDoneChan)
-			}
-		}
+		return m, tea.Batch(cmds...)
+
+	case TaskUpdateMsg:
+		return m.updateTask(msg)
+
+	default:
 		return m, nil
 	}
-	return m, nil
 }
 
-// UpdateTask отправляет сообщение об обновлении задачи в модель спинера.
-func UpdateTask(taskName, viewName, state string) {
-	mu.Lock()
-	defer mu.Unlock()
+// TaskUpdateMsg обновление task
+func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
+	updated := false
+	var batchCmds []tea.Cmd
 
-	if p != nil {
-		p.Send(TaskUpdateMsg{taskName: taskName, viewName: viewName, state: state})
-	}
-}
-
-// View формирует строку для вывода спинеров и списка задач.
-func (m model) View() string {
-	s := fmt.Sprintf("\r\033[K%s \033[33mВыполнение...\033[0m", m.spinner.View())
-
-	for _, t := range m.tasks {
-		var marker string
-		if t.state == "AFTER" {
-			marker = "[✓]"
-		} else {
-			marker = fmt.Sprintf("[%s]", m.tasksSpinner.View())
+	var newPercent float64
+	if msg.eventType == "PROGRESS" {
+		val := msg.progressValue
+		if val < 0 {
+			val = 0
+		} else if val > 100 {
+			val = 100
 		}
-		s += fmt.Sprintf("\n%s %s", marker, t.viewName)
+
+		newPercent = val / 100
+	}
+
+	for i, t := range m.tasks {
+		if t.name == msg.taskName {
+			// Задача уже существует – обновим поля
+			m.tasks[i].eventType = msg.eventType
+			m.tasks[i].viewName = msg.viewName
+			m.tasks[i].state = msg.state
+
+			// Если это ПРОГРЕСС
+			if msg.eventType == "PROGRESS" {
+				// Инициализируем progressModel, если впервые
+				if m.tasks[i].progressModel == nil {
+					pm := progress.New(progress.WithDefaultGradient())
+					pm.Width = 40
+					m.tasks[i].progressModel = &pm
+				}
+
+				if msg.state != "AFTER" {
+					cmd := m.tasks[i].progressModel.SetPercent(newPercent)
+					batchCmds = append(batchCmds, cmd)
+				}
+			}
+			updated = true
+			break
+		}
+	}
+
+	// Если мы не нашли задачу – значит это первая посылка "BEFORE"
+	if !updated && msg.state == "BEFORE" {
+		newT := task{
+			eventType: msg.eventType,
+			name:      msg.taskName,
+			viewName:  msg.viewName,
+			state:     msg.state,
+		}
+
+		if msg.eventType == "PROGRESS" {
+			// Создаём прогресс-бар
+			pm := progress.New(progress.WithDefaultGradient())
+			pm.Width = 40
+			newT.progressModel = &pm
+
+			// Устанавливаем начальный процент
+			cmd := newT.progressModel.SetPercent(newPercent)
+			batchCmds = append(batchCmds, cmd)
+		}
+		m.tasks = append(m.tasks, newT)
+	}
+
+	// Проверяем, все ли задачи (TASK и PROGRESS) завершены
+	allFinished := true
+	for _, t := range m.tasks {
+		if t.state != "AFTER" {
+			allFinished = false
+			break
+		}
+	}
+	if allFinished {
+		select {
+		case <-tasksDoneChan:
+		default:
+			close(tasksDoneChan)
+		}
+	}
+
+	return m, tea.Batch(batchCmds...)
+}
+
+// View общее отображение
+func (m model) View() string {
+	// Общий спиннер + фраза
+	s := fmt.Sprintf("\r\033[K%s \033[33mВыполнение задач\033[0m", m.spinner.View())
+
+	// Перебираем все задачи
+	for _, t := range m.tasks {
+		switch t.eventType {
+
+		// Обычная задача
+		case "TASK":
+			if t.state == "AFTER" {
+				s += fmt.Sprintf("\n[✓] %s", t.viewName)
+			} else {
+				s += fmt.Sprintf("\n[%s] %s", m.tasksSpinner.View(), t.viewName)
+			}
+
+		// Прогресс-бар
+		case "PROGRESS":
+			if t.state == "AFTER" {
+				s += fmt.Sprintf("\n[✓] Прогресс завершён")
+			} else {
+				if t.progressModel != nil {
+					bar := t.progressModel.View()
+					s += fmt.Sprintf("\n%s %s", bar, t.viewName)
+				} else {
+					s += fmt.Sprintf("\n[....] %s", t.viewName)
+				}
+			}
+
+		default:
+			if t.state == "AFTER" {
+				s += fmt.Sprintf("\n[✓] %s", t.viewName)
+			} else {
+				s += fmt.Sprintf("\n[%s] %s", m.tasksSpinner.View(), t.viewName)
+			}
+		}
 	}
 
 	lastLines = strings.Count(s, "\n") + 1

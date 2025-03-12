@@ -167,6 +167,10 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 		messageAnswer += ". Образ системы был изменен"
 	}
 
+	if !apply && lib.Env.IsAtomic {
+		messageAnswer += ". Образ системы не был изменён! Для применения изменений необходим запуск с флагом -a"
+	}
+
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": messageAnswer,
@@ -266,6 +270,10 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		}
 
 		messageAnswer += ". Образ системы был изменен"
+	}
+
+	if !apply && lib.Env.IsAtomic {
+		messageAnswer += ". Образ системы не был изменён! Для применения изменений необходим запуск с флагом -a"
 	}
 
 	return reply.APIResponse{
@@ -658,10 +666,10 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	//err = service.BuildAndSwitch(ctx, true, config)
-	//if err != nil {
-	//	return err
-	//}
+	err = service.BuildAndSwitch(ctx, true, config)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
