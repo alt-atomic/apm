@@ -23,7 +23,7 @@ apm -help
 ```
 
 ## Установка
-Для установки вручную выполните в консоли:
+APM пока не добавлен в репозиторий ALT. Для установки текущей версии выполните в консоли:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/alt-atomic/apm/main/data/install.sh | sudo bash
