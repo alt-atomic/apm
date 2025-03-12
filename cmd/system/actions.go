@@ -164,7 +164,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 			return a.newErrorResponse(err.Error()), err
 		}
 
-		messageAnswer += ". Образ системы был изменен"
+		messageAnswer += ". Образ системы был изменён"
 	}
 
 	if !apply && lib.Env.IsAtomic {
@@ -269,7 +269,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			return a.newErrorResponse(err.Error()), err
 		}
 
-		messageAnswer += ". Образ системы был изменен"
+		messageAnswer += ". Образ системы был изменён"
 	}
 
 	if !apply && lib.Env.IsAtomic {
