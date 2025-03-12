@@ -13,11 +13,17 @@ import (
 )
 
 // Actions объединяет методы для выполнения системных действий.
-type Actions struct{}
+type Actions struct {
+	serviceHostImage  *service.HostImageService
+	serviceAptActions *apt.Actions
+}
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
-	return &Actions{}
+	return &Actions{
+		serviceHostImage:  service.NewHostImageService(),
+		serviceAptActions: apt.NewActions(),
+	}
 }
 
 type ImageStatus struct {
@@ -28,7 +34,7 @@ type ImageStatus struct {
 
 func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
-	packageParse, _, err := apt.NewActions().Check(ctx, allPackageNames, "remove")
+	packageParse, _, err := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -53,7 +59,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.API
 
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
-	packageParse, output, err := apt.NewActions().Check(ctx, allPackageNames, "install")
+	packageParse, output, err := a.serviceAptActions.Check(ctx, allPackageNames, "install")
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -113,7 +119,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	allPackageNames := strings.Join(names, " ")
-	packageParse, _, err := apt.NewActions().Check(ctx, allPackageNames, "remove")
+	packageParse, _, err := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -143,7 +149,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	reply.CreateSpinner()
-	err = apt.NewActions().Remove(ctx, allPackageNames)
+	err = a.serviceAptActions.Remove(ctx, allPackageNames)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -210,18 +216,55 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		names = append(names, packageInfo.Name)
 	}
 	allPackageNames := strings.Join(names, " ")
-	packageParse, output, err := apt.NewActions().Check(ctx, allPackageNames, "install")
+	packageParse, output, err := a.serviceAptActions.Check(ctx, allPackageNames, "install")
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
 
 	if strings.Contains(output, "is already the newest version") && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
+		messageAlreadyExist := fmt.Sprintf("%s %s %s самой последней версии",
+			helper.DeclOfNum(len(packagesInfo), []string{"пакет", "пакета", "пакетов"}),
+			allPackageNames,
+			helper.DeclOfNum(len(packagesInfo), []string{"установлен", "установлены", "установлены"}))
+
+		if apply && lib.Env.IsAtomic {
+			config, errConfig := service.ParseConfig()
+			if errConfig != nil {
+				return a.newErrorResponse(errConfig.Error()), err
+			}
+
+			// обнаруживаем пакеты, которые были ранее установлены, но не зафиксированы в образе
+			// добавляем такие пакеты в конфиг и запускаем сборку
+			notFoundPackage := false
+			for _, pkg := range packagesInfo {
+				found := false
+				for _, configPkg := range config.Packages.Install {
+					if pkg.Name == configPkg {
+						found = true
+						break
+					}
+				}
+				if !found {
+					if err = config.AddInstallPackage(pkg.Name); err != nil {
+						return a.newErrorResponse(err.Error()), err
+					}
+					notFoundPackage = true
+				}
+			}
+
+			if notFoundPackage {
+				err = a.applyChange(ctx, packages, true)
+				if err != nil {
+					return a.newErrorResponse(err.Error()), err
+				}
+
+				messageAlreadyExist += ". Но пакет не был найден в образе, поэтому образ был изменён"
+			}
+		}
+
 		return reply.APIResponse{
 			Data: map[string]interface{}{
-				"message": fmt.Sprintf("%s %s %s самой последней версии",
-					helper.DeclOfNum(len(packagesInfo), []string{"пакет", "пакета", "пакетов"}),
-					allPackageNames,
-					helper.DeclOfNum(len(packagesInfo), []string{"установлен", "установлены", "установлены"})),
+				"message": messageAlreadyExist,
 			},
 			Error: true,
 		}, nil
@@ -245,7 +288,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 	reply.CreateSpinner()
 
-	err = apt.NewActions().Install(ctx, allPackageNames)
+	err = a.serviceAptActions.Install(ctx, allPackageNames)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -267,6 +310,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
+
 		messageAnswer += ". Образ системы был изменён"
 	}
 
@@ -295,7 +339,7 @@ func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	packages, err := apt.NewActions().Update(ctx)
+	packages, err := a.serviceAptActions.Update(ctx)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -377,7 +421,7 @@ type ListParams struct {
 
 func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIResponse, error) {
 	if params.ForceUpdate {
-		_, err := apt.NewActions().Update(ctx)
+		_, err := a.serviceAptActions.Update(ctx)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
@@ -502,7 +546,7 @@ func (a *Actions) ImageStatus(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), err
 	}
 
-	imageStatus, err := a.getImageStatus()
+	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -528,12 +572,12 @@ func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	err = service.NewHostImageService().CheckAndUpdateBaseImage(ctx, true, config)
+	err = a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, config)
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	imageStatus, err := a.getImageStatus()
+	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -564,12 +608,12 @@ func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	imageStatus, err := a.getImageStatus()
+	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
 
-	err = service.NewHostImageService().BuildAndSwitch(ctx, true, config)
+	err = a.serviceHostImage.BuildAndSwitch(ctx, true, config, true)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -624,7 +668,7 @@ func (a *Actions) checkRoot() error {
 	}
 
 	if lib.Env.IsAtomic {
-		err := service.NewHostImageService().EnableOverlay()
+		err := a.serviceHostImage.EnableOverlay()
 		if err != nil {
 			return err
 		}
@@ -663,7 +707,7 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	err = service.NewHostImageService().BuildAndSwitch(ctx, true, config)
+	err = a.serviceHostImage.BuildAndSwitch(ctx, true, config, false)
 	if err != nil {
 		return err
 	}
@@ -688,8 +732,7 @@ func (a *Actions) validateDB(ctx context.Context) error {
 			return err
 		}
 
-		aptAction := apt.NewActions()
-		_, err = aptAction.Update(ctx)
+		_, err = a.serviceAptActions.Update(ctx)
 		if err != nil {
 			return err
 		}
@@ -715,8 +758,8 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 	return nil
 }
 
-func (a *Actions) getImageStatus() (ImageStatus, error) {
-	hostImage, err := service.NewHostImageService().GetHostImage()
+func (a *Actions) getImageStatus(ctx context.Context) (ImageStatus, error) {
+	hostImage, err := a.serviceHostImage.GetHostImage()
 	if err != nil {
 		return ImageStatus{}, err
 	}

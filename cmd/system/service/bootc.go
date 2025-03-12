@@ -82,7 +82,7 @@ func (h *HostImageService) GetImageFromDocker() (string, error) {
 
 	transport := strings.TrimSpace(host.Status.Booted.Image.Image.Transport)
 	if !strings.HasPrefix(transport, "containers-storage") {
-		return "", fmt.Errorf("транспорт %q не поддерживает получение образа из docker-файла", transport)
+		return host.Status.Booted.Image.Image.Image, nil
 	}
 
 	file, err := os.Open(h.containerPath)
@@ -106,7 +106,7 @@ func (h *HostImageService) GetImageFromDocker() (string, error) {
 		return "", fmt.Errorf("ошибка чтения файла %s: %w", h.containerPath, err)
 	}
 
-	return "", fmt.Errorf("не удалось определить образ дистрибутива")
+	return "", fmt.Errorf("не удалось определить образ дистрибутива, укажите его вручную в файле: %s", lib.Env.PathImageFile)
 }
 
 // EnableOverlay проверяет и активирует наложение файловой системы.
@@ -215,7 +215,7 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 		return fmt.Errorf("ошибка, файл %s не найден", h.containerPath)
 	}
 
-	return h.BuildAndSwitch(ctx, pullImage, config)
+	return h.BuildAndSwitch(ctx, pullImage, config, false)
 }
 
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
@@ -230,10 +230,10 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 	return nil
 }
 
-// BuildAndSwitch перестраивает и переключает систему на новый образ.
-func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, config Config) error {
+// BuildAndSwitch перестраивает и переключает систему на новый образ. checkSame - включена ли проверка на изменение конфигурации
+func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, config Config, checkSame bool) error {
 	statusSame, err := config.ConfigIsChange(ctx)
-	if !statusSame {
+	if !statusSame && checkSame {
 		return fmt.Errorf("образ не изменился, сборка приостановлена")
 	}
 
