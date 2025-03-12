@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+var ContainerFile = "/var/Containerfile"
+
 type HostImage struct {
 	Spec struct {
 		Image ImageInfo `json:"image"`
@@ -40,59 +42,75 @@ type Image struct {
 	ImageDigest string    `json:"imageDigest"`
 }
 
-const ContainerPath = "/var/Containerfile"
+// HostImageService — единый сервис для операций с образом (build, switch и т.д.).
+type HostImageService struct {
+	commandPrefix string
+	containerPath string
+}
 
-func GetHostImage() (HostImage, error) {
+// NewHostImageService — конструктор сервиса
+func NewHostImageService() *HostImageService {
+	return &HostImageService{
+		commandPrefix: lib.Env.CommandPrefix,
+		containerPath: ContainerFile,
+	}
+}
+
+func (h *HostImageService) GetHostImage() (HostImage, error) {
 	var host HostImage
 
 	command := fmt.Sprintf("%s bootc status --format json", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
-	cmd.Env = append(os.Environ(), "PATH=/home/linuxbrew/.linuxbrew/bin:"+os.Getenv("PATH"))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return host, fmt.Errorf("не удалось выполнить команду bootc: %v", string(output))
 	}
 
-	if err := json.Unmarshal(output, &host); err != nil {
+	if err = json.Unmarshal(output, &host); err != nil {
 		return host, fmt.Errorf("не удалось распарсить JSON: %v", err)
-	}
-
-	transport := strings.TrimSpace(host.Status.Booted.Image.Image.Transport)
-	// Если образ пуст или начинается с "containers-storage", ищем в файле
-	if strings.HasPrefix(transport, "containers-storage") {
-		file, err := os.Open(ContainerPath)
-		if err != nil {
-			return host, fmt.Errorf("не удалось открыть файл %s: %v", ContainerPath, err.Error())
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		found := false
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if strings.HasPrefix(line, "FROM ") {
-				candidate := strings.TrimSpace(line[len("FROM "):])
-				candidate = strings.Trim(candidate, "\"")
-				if candidate != "" {
-					host.Status.Booted.Image.Image.Image = candidate
-					found = true
-					break
-				}
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			return host, fmt.Errorf("ошибка чтения файла Containerfile: %v", err)
-		}
-		if !found {
-			return host, fmt.Errorf("не удалось определить образ дистрибутива")
-		}
 	}
 
 	return host, nil
 }
 
+// GetImageFromDocker ищет название образа в docker-файле.
+func (h *HostImageService) GetImageFromDocker() (string, error) {
+	host, err := h.GetHostImage()
+	if err != nil {
+		return "", err
+	}
+
+	transport := strings.TrimSpace(host.Status.Booted.Image.Image.Transport)
+	if !strings.HasPrefix(transport, "containers-storage") {
+		return "", fmt.Errorf("транспорт %q не поддерживает получение образа из docker-файла", transport)
+	}
+
+	file, err := os.Open(h.containerPath)
+	if err != nil {
+		return "", fmt.Errorf("не удалось открыть файл %s: %w", h.containerPath, err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "FROM ") {
+			candidate := strings.Trim(strings.TrimSpace(line[len("FROM "):]), "\"")
+			if candidate != "" {
+				return candidate, nil
+			}
+		}
+	}
+
+	if err = scanner.Err(); err != nil {
+		return "", fmt.Errorf("ошибка чтения файла %s: %w", h.containerPath, err)
+	}
+
+	return "", fmt.Errorf("не удалось определить образ дистрибутива")
+}
+
 // EnableOverlay проверяет и активирует наложение файловой системы.
-func EnableOverlay() error {
+func (h *HostImageService) EnableOverlay() error {
 	file, err := os.Open("/proc/mounts")
 	if err != nil {
 		return fmt.Errorf("ошибка доступа к /proc/mounts: %v", err)
@@ -129,7 +147,7 @@ func EnableOverlay() error {
 }
 
 // BuildImage сборка образа
-func BuildImage(ctx context.Context, pullImage bool) (string, error) {
+func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (string, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	command := fmt.Sprintf("%s podman build --squash -t os /var", lib.Env.CommandPrefix)
@@ -157,7 +175,7 @@ func BuildImage(ctx context.Context, pullImage bool) (string, error) {
 }
 
 // SwitchImage переключение образа
-func SwitchImage(ctx context.Context, podmanImageID string) error {
+func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -171,10 +189,10 @@ func SwitchImage(ctx context.Context, podmanImageID string) error {
 }
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
-func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
+func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-	image, err := GetHostImage()
+	image, err := h.GetHostImage()
 	if err != nil {
 		return fmt.Errorf("ошибка получения информации: %v", err)
 	}
@@ -188,19 +206,19 @@ func CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config)
 		}
 
 		if !strings.Contains(string(output), "No changes in:") {
-			return bootcUpgrade(ctx)
+			return h.bootcUpgrade(ctx)
 		}
 		return nil
 	}
 
-	if _, err := os.Stat(ContainerPath); err != nil {
-		return fmt.Errorf("ошибка, файл %s не найден", ContainerPath)
+	if _, err := os.Stat(h.containerPath); err != nil {
+		return fmt.Errorf("ошибка, файл %s не найден", h.containerPath)
 	}
 
-	return BuildAndSwitch(ctx, pullImage, config)
+	return h.BuildAndSwitch(ctx, pullImage, config)
 }
 
-func bootcUpgrade(ctx context.Context) error {
+func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -213,18 +231,18 @@ func bootcUpgrade(ctx context.Context) error {
 }
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ.
-func BuildAndSwitch(ctx context.Context, pullImage bool, config Config) error {
+func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, config Config) error {
 	statusSame, err := config.ConfigIsChange(ctx)
 	if !statusSame {
 		return fmt.Errorf("образ не изменился, сборка приостановлена")
 	}
 
-	idImage, err := BuildImage(ctx, pullImage)
+	idImage, err := h.BuildImage(ctx, pullImage)
 	if err != nil {
 		return err
 	}
 
-	err = SwitchImage(ctx, idImage)
+	err = h.SwitchImage(ctx, idImage)
 	if err != nil {
 		return err
 	}

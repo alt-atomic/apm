@@ -528,7 +528,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	err = service.CheckAndUpdateBaseImage(ctx, true, config)
+	err = service.NewHostImageService().CheckAndUpdateBaseImage(ctx, true, config)
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
@@ -569,7 +569,7 @@ func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), err
 	}
 
-	err = service.BuildAndSwitch(ctx, true, config)
+	err = service.NewHostImageService().BuildAndSwitch(ctx, true, config)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -624,7 +624,7 @@ func (a *Actions) checkRoot() error {
 	}
 
 	if lib.Env.IsAtomic {
-		err := service.EnableOverlay()
+		err := service.NewHostImageService().EnableOverlay()
 		if err != nil {
 			return err
 		}
@@ -663,7 +663,7 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	err = service.BuildAndSwitch(ctx, true, config)
+	err = service.NewHostImageService().BuildAndSwitch(ctx, true, config)
 	if err != nil {
 		return err
 	}
@@ -716,7 +716,7 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 }
 
 func (a *Actions) getImageStatus() (ImageStatus, error) {
-	hostImage, err := service.GetHostImage()
+	hostImage, err := service.NewHostImageService().GetHostImage()
 	if err != nil {
 		return ImageStatus{}, err
 	}

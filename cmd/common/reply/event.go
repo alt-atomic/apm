@@ -166,13 +166,13 @@ func getTaskViewName(task string) string {
 		return "Сохранение пакетов в базу"
 	case "apt.aptUpdate":
 		return "Загрузка списка пакетов из репозитория ALT"
-	case "service.CheckAndUpdateBaseImage":
+	case "service.(*HostImageService).CheckAndUpdateBaseImage":
 		return "Проверка обновления"
-	case "service.bootcUpgrade":
+	case "service.(*HostImageService).bootcUpgrade":
 		return "Загрузка обновления базового образа"
-	case "service.SwitchImage":
+	case "service.(*HostImageService).SwitchImage":
 		return "Переключение на локальный образ"
-	case "service.BuildImage":
+	case "service.(*HostImageService).BuildImage":
 		return "Сборка локального образа"
 	case "service.SavePackagesToDB":
 		return "Сохранение пакетов в базу"

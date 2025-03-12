@@ -87,7 +87,7 @@ func (c *Config) GenerateDockerfile() error {
 	}
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
-	err := os.WriteFile(ContainerPath, []byte(dockerStr), 0644)
+	err := os.WriteFile(ContainerFile, []byte(dockerStr), 0644)
 	if err != nil {
 		return err
 	}
@@ -225,12 +225,12 @@ func uniqueStrings(input []string) []string {
 
 func generateFile(path string) (Config, error) {
 	var cfg Config
-	hostImage, err := GetHostImage()
+	imageName, err := NewHostImageService().GetImageFromDocker()
 	if err != nil {
 		return Config{}, err
 	}
 
-	cfg.Image = hostImage.Status.Booted.Image.Image.Image
+	cfg.Image = imageName
 	cfg.Packages.Install = []string{}
 	cfg.Packages.Remove = []string{}
 	cfg.Commands = []string{}
