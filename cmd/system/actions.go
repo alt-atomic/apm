@@ -683,6 +683,11 @@ func (a *Actions) newErrorResponse(message string) reply.APIResponse {
 func (a *Actions) validateDB(ctx context.Context) error {
 	// Если база не содержит данные - запускаем процесс обновления
 	if err := apt.PackageDatabaseExist(ctx); err != nil {
+		err = a.checkRoot()
+		if err != nil {
+			return err
+		}
+
 		aptAction := apt.NewActions()
 		_, err = aptAction.Update(ctx)
 		if err != nil {
