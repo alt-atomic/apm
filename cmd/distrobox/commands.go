@@ -274,7 +274,7 @@ func CommandList() *cli.Command {
 						}),
 					},
 					{
-						Name:  "manual-create",
+						Name:  "create-manual",
 						Usage: "Ручное добавление контейнера",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
