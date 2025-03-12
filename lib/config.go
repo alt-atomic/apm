@@ -22,7 +22,16 @@ var Env Environment
 var DevMode bool
 
 func InitConfig() {
-	err := cleanenv.ReadConfig("config.yml", &Env)
+	var configPath string
+	if _, err := os.Stat("/etc/apm/config.yml"); err == nil {
+		configPath = "/etc/apm/config.yml"
+	} else if _, err := os.Stat("config.yml"); err == nil {
+		configPath = "config.yml"
+	} else {
+		panic("Конфигурационный файл не найден ни в /etc/apm/config.yml, ни в локальной директории")
+	}
+
+	err := cleanenv.ReadConfig(configPath, &Env)
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +49,7 @@ func InitConfig() {
 		panic(err)
 	}
 
-	if _, errAtomic := os.Stat("/usr/bin/ostree"); os.IsNotExist(errAtomic) {
+	if _, errAtomic := os.Stat("/usr/bin/bootc"); os.IsNotExist(errAtomic) {
 		Env.IsAtomic = false
 	} else {
 		Env.IsAtomic = true
