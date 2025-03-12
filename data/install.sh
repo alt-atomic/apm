@@ -6,16 +6,19 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+if [ -f "/usr/bin/bootc" ]; then
+  echo "Файл /usr/bin/bootc найден. Выполнение команды: bootc usr-overlay..."
+  bootc usr-overlay
+fi
+
 # Проверка наличия Go
 if ! command -v go &> /dev/null; then
-  echo "Go не установлен. Установите Go и повторите попытку."
-  exit 1
+  apt-get install -y go
 fi
 
 # Проверка наличия Git
 if ! command -v git &> /dev/null; then
-  echo "Git не установлен. Установите Git и повторите попытку."
-  exit 1
+  apt-get install -y git
 fi
 
 REPO_URL="https://github.com/alt-atomic/apm"
@@ -60,11 +63,6 @@ fi
 echo "Копирование папки локалей из $LOCALES_SRC в /var/apm/locales..."
 rm -rf /var/apm/locales
 cp -r "$LOCALES_SRC" /var/apm/locales || { echo "Не удалось скопировать папку локалей!"; exit 1; }
-
-if [ -f "/usr/bin/bootc" ]; then
-  echo "Файл /usr/bin/bootc найден. Выполнение команды: bootc usr-overlay..."
-  bootc usr-overlay
-fi
 
 # Копирование бинарного файла в /usr/bin/apm
 echo "Копирование бинарного файла в /usr/bin/apm..."
