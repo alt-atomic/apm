@@ -187,7 +187,8 @@ func fetchOsInfo(containerName string) (ContainerInfo, error) {
 		osName = "Arch"
 		active = true
 	case strings.Contains(lowerOsName, "alt"):
-		osName = "Altlinux"
+		osName = "Altinux"
+		active = true
 	case strings.Contains(lowerOsName, "ubuntu"):
 		osName = "Ubuntu"
 		active = true
@@ -196,10 +197,31 @@ func fetchOsInfo(containerName string) (ContainerInfo, error) {
 	return ContainerInfo{ContainerName: containerName, OS: osName, Active: active}, nil
 }
 
-// GetContainerOsInfo теперь просто вызывает fetchOsInfo, что позволяет использовать её и отдельно.
+// GetContainerOsInfo запрос информации о контейнере.
+// Зачем мы запрашиваем список контейнеров внутри? Потому что distrobox будет создавать контейнер автоматически
+// если не указать правильно название.
 func GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
+	// Получаем список контейнеров
+	containers, err := GetContainerList(ctx, false)
+	if err != nil {
+		return ContainerInfo{}, fmt.Errorf("не удалось получить список контейнеров: %v", err)
+	}
+
+	var found bool
+	for _, c := range containers {
+		if c.ContainerName == containerName {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return ContainerInfo{}, fmt.Errorf("контейнер %s не найден", containerName)
+	}
+
 	return fetchOsInfo(containerName)
 }
 
@@ -229,10 +251,10 @@ func CreateContainer(ctx context.Context, image, containerName string, addPkg st
 
 	var command string
 	if len(hook) > 0 {
-		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s --init-hooks %s",
+		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages '%s' --init-hooks '%s'",
 			lib.Env.CommandPrefix, image, containerName, addPkg, hook)
 	} else {
-		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages %s",
+		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages '%s'",
 			lib.Env.CommandPrefix, image, containerName, addPkg)
 	}
 	cmd := exec.Command("sh", "-c", command)

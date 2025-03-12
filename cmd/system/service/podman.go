@@ -48,7 +48,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) error {
 			parseProgressLine(ctx, line, allBlobs)
 		}
 		if scanErr := scanner.Err(); scanErr != nil && scanErr != io.EOF {
-			lib.Log.Error("Ошибка сканирования вывода: %v\n", scanErr)
+			//lib.Log.Error("Ошибка сканирования вывода: %v\n", scanErr)
 		}
 	}()
 

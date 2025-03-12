@@ -85,6 +85,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
+
 	err = a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -148,7 +149,6 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	removePackageNames := strings.Join(packageParse.RemovedPackages, ",")
-
 	err = a.updateAllPackagesDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -157,13 +157,11 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	messageAnswer := fmt.Sprintf("%s успешно %s",
 		removePackageNames,
 		helper.DeclOfNum(packageParse.RemovedCount, []string{"удалён", "удалены", "удалены"}))
-
 	if apply {
 		err = a.applyChange(ctx, packages, false)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
-
 		messageAnswer += ". Образ системы был изменён"
 	}
 
@@ -186,6 +184,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
+
 	err = a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -207,11 +206,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
-
 		packagesInfo = append(packagesInfo, packageInfo)
 		names = append(names, packageInfo.Name)
 	}
-
 	allPackageNames := strings.Join(names, " ")
 	packageParse, output, err := apt.NewActions().Check(ctx, allPackageNames, "install")
 	if err != nil {
@@ -231,6 +228,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	reply.StopSpinner()
+
 	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, apt.ActionInstall)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -246,6 +244,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	reply.CreateSpinner()
+
 	err = apt.NewActions().Install(ctx, allPackageNames)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -268,7 +267,6 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
-
 		messageAnswer += ". Образ системы был изменён"
 	}
 
@@ -291,6 +289,7 @@ func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
+
 	err = a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -383,7 +382,6 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 			return a.newErrorResponse(err.Error()), err
 		}
 	}
-
 	err := a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -394,7 +392,6 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 	if strings.TrimSpace(params.FilterField) != "" && strings.TrimSpace(params.FilterValue) != "" {
 		filters[params.FilterField] = params.FilterValue
 	}
-
 	totalCount, err := apt.CountHostImagePackages(ctx, filters)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -489,7 +486,6 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 		helper.DeclOfNum(len(respPackages), []string{"запись", "записи", "записей"}),
 	)
 
-	// Пустая реализация
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":  msg,
@@ -598,6 +594,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
+
 	totalCount, err := service.CountImageHistoriesFiltered(ctx, imageName)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
@@ -700,7 +697,6 @@ func (a *Actions) validateDB(ctx context.Context) error {
 func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-
 	installedPackages, err := apt.GetInstalledPackages()
 	if err != nil {
 		return err

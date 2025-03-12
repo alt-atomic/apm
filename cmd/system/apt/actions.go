@@ -1,6 +1,7 @@
 package apt
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bufio"
@@ -193,7 +194,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 			case "Maintainer":
 				pkg.Maintainer = value
 			case "Version":
-				versionValue, errVersion := GetVersionFromAptCache(value)
+				versionValue, errVersion := helper.GetVersionFromAptCache(value)
 				if errVersion != nil {
 					pkg.Version = value
 				} else {
@@ -241,13 +242,13 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		packages = append(packages, pkg)
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		if errors.Is(err, bufio.ErrTooLong) {
 			return nil, fmt.Errorf("слишком большая строка: (over %dMB) - ", maxCapacity/(1024*1024))
 		}
 		return nil, fmt.Errorf("ошибка сканера: %w", err)
 	}
-	if err := cmd.Wait(); err != nil {
+	if err = cmd.Wait(); err != nil {
 		return nil, fmt.Errorf("ошибка выполнения команды: %w", err)
 	}
 	for i := range packages {
@@ -472,26 +473,4 @@ func parseAptOutput(output string) (PackageChanges, error) {
 	}
 
 	return *pc, nil
-}
-
-func GetVersionFromAptCache(s string) (string, error) {
-	parts := strings.Split(s, ":")
-	var candidate string
-	if len(parts) > 1 && regexp.MustCompile(`^\d+$`).MatchString(parts[0]) {
-		candidate = parts[1]
-	} else {
-		candidate = parts[0]
-	}
-
-	if idx := strings.Index(candidate, "-alt"); idx != -1 {
-		numericPart := candidate[:idx]
-		if strings.Contains(numericPart, ".") {
-			candidate = numericPart
-		}
-	}
-
-	if candidate == "" {
-		return "", fmt.Errorf("version not found")
-	}
-	return candidate, nil
 }

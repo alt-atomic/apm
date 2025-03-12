@@ -2,9 +2,33 @@ package helper
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+// GetVersionFromAptCache преобразует полную версию пакетов из apt ALT в коротких вид
+func GetVersionFromAptCache(s string) (string, error) {
+	parts := strings.Split(s, ":")
+	var candidate string
+	if len(parts) > 1 && regexp.MustCompile(`^\d+$`).MatchString(parts[0]) {
+		candidate = parts[1]
+	} else {
+		candidate = parts[0]
+	}
+
+	if idx := strings.Index(candidate, "-alt"); idx != -1 {
+		numericPart := candidate[:idx]
+		if strings.Contains(numericPart, ".") {
+			candidate = numericPart
+		}
+	}
+
+	if candidate == "" {
+		return "", fmt.Errorf("version not found")
+	}
+	return candidate, nil
+}
 
 // DeclOfNum отвечает за склонение слов
 func DeclOfNum(number int, titles []string) string {

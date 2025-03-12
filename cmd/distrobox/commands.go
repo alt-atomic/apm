@@ -107,7 +107,7 @@ func CommandList() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: "Поле для сортировки (например, packageName, version)",
+						Usage: "Поле для сортировки, например: packageName, version",
 					},
 					&cli.StringFlag{
 						Name:  "order",
@@ -126,7 +126,7 @@ func CommandList() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:    "filter-field",
-						Usage:   "Название поля для фильтрации (например, packageName, version, manager)",
+						Usage:   "Название поля для фильтрации, например: packageName, version, manager",
 						Aliases: []string{"ff"},
 					},
 					&cli.StringFlag{
@@ -231,8 +231,51 @@ func CommandList() *cli.Command {
 						}),
 					},
 					{
-						Name:  "add",
+						Name:  "create",
 						Usage: "Добавить контейнер",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "image",
+								Usage:    "Контейнер. Необходимо указать, варианты: alt, ubuntu, arch",
+								Required: true,
+							},
+						},
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+							imageVal := cmd.String("image")
+							allowedImages := []string{"alt", "ubuntu", "arch"}
+							valid := false
+							for _, img := range allowedImages {
+								if imageVal == img {
+									valid = true
+									break
+								}
+							}
+							if !valid {
+								return reply.CliResponse(ctx,
+									newErrorResponse("значение для image должно быть одно из: alt, ubuntu, arch"))
+							}
+
+							var imageLink string
+							switch imageVal {
+							case "arch":
+								imageLink = "archlinux:latest"
+							case "ubuntu":
+								imageLink = "ubuntu:latest"
+							case "alt":
+								imageLink = "registry.altlinux.org/sisyphus/base:latest"
+							}
+
+							resp, err := NewActions().ContainerAdd(ctx, imageLink, "atomic-"+imageVal, "zsh mc nano", "")
+							if err != nil {
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							}
+
+							return reply.CliResponse(ctx, resp)
+						}),
+					},
+					{
+						Name:  "manual-create",
+						Usage: "Ручное добавление контейнера",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "image",

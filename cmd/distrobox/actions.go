@@ -96,7 +96,6 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 		len(queryResult.Packages),
 		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
 	)
-
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":  msg,
@@ -104,6 +103,7 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 		},
 		Error: false,
 	}
+
 	return resp, nil
 }
 
@@ -150,7 +150,6 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 		len(queryResult.Packages),
 		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
 	)
-
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
@@ -159,6 +158,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 		},
 		Error: false,
 	}
+
 	return resp, nil
 }
 
@@ -205,6 +205,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		},
 		Error: false,
 	}
+
 	return resp, nil
 }
 
@@ -214,19 +215,23 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
+
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := "необходимо указать название пакета, например remove package"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
+
 	osInfo, err := api.GetContainerOsInfo(ctx, cont)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
+
 	packageInfo, err := service.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
+
 	if packageInfo.Package.Exporting {
 		errExport := api.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
 		if errExport != nil {
@@ -235,6 +240,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 		packageInfo.Package.Exporting = false
 		service.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", false)
 	}
+
 	if !onlyExport && packageInfo.Package.Installed {
 		err = service.RemovePackage(ctx, osInfo, packageName)
 		if err != nil {
@@ -243,6 +249,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 		packageInfo.Package.Installed = false
 		service.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", false)
 	}
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     fmt.Sprintf("Пакет %s удалён", packageName),
@@ -250,6 +257,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 		},
 		Error: false,
 	}
+
 	return resp, nil
 }
 
@@ -259,12 +267,14 @@ func (a *Actions) ContainerList(ctx context.Context) (reply.APIResponse, error) 
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"containers": containers,
 		},
 		Error: false,
 	}
+
 	return resp, nil
 }
 
@@ -276,14 +286,17 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 		errMsg := "необходимо указать ссылку на образ (--image)"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
+
 	if name == "" {
 		errMsg := "необходимо указать название контейнера (--name)"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
+
 	result, err := api.CreateContainer(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
 		return a.newErrorResponse(fmt.Sprintf("Ошибка создания контейнера: %v", err)), err
 	}
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":       fmt.Sprintf("Контейнер %s успешно создан", name),
@@ -291,6 +304,7 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 		},
 		Error: false,
 	}
+
 	return resp, nil
 }
 
@@ -301,10 +315,12 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 		errMsg := "необходимо указать название контейнера (--name)"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
+
 	result, err := api.RemoveContainer(ctx, name)
 	if err != nil {
 		return a.newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)), err
 	}
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":       fmt.Sprintf("Контейнер %s успешно удалён", name),
@@ -324,6 +340,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 // newErrorResponse создаёт ответ с ошибкой.
 func (a *Actions) newErrorResponse(message string) reply.APIResponse {
 	lib.Log.Error(message)
+
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
@@ -336,6 +353,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (stri
 	if container == "" {
 		return "", fmt.Errorf("необходимо указать название контейнера")
 	}
+
 	// Если база не содержит данные, обновляем пакеты.
 	if err := service.ContainerDatabaseExist(ctx, container); err != nil {
 		osInfo, err := api.GetContainerOsInfo(ctx, container)
@@ -346,5 +364,6 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (stri
 			return "", err
 		}
 	}
+
 	return container, nil
 }

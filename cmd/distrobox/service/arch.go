@@ -50,7 +50,7 @@ func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo api.Contai
 
 // RemovePackage удаляет указанный пакет с помощью pacman -R.
 func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo sudo pacman -Rs --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Rs --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := RunCommand(cmdStr)
 	if err != nil {
 		return fmt.Errorf("не удалось удалить пакет %s: %v, stderr: %s", packageName, err, stderr)
@@ -60,7 +60,7 @@ func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo api.Cont
 
 // InstallPackage устанавливает указанный пакет с помощью pacman -S.
 func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo api.ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo sudo pacman -S --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -S --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := RunCommand(cmdStr)
 	if err != nil {
 		return fmt.Errorf("не удалось установить пакет %s: %v, stderr: %s", packageName, err, stderr)
@@ -154,11 +154,7 @@ func (p *ArchProvider) parseOutput(output string, installedPackages []string) ([
 			i++
 			continue
 		}
-		// Пропускаем записи AUR.
-		if strings.HasPrefix(line, "aur/") {
-			i++
-			continue
-		}
+
 		// Пробуем найти совпадение по регулярному выражению.
 		matches := re.FindStringSubmatch(line)
 		if matches == nil {
@@ -166,11 +162,11 @@ func (p *ArchProvider) parseOutput(output string, installedPackages []string) ([
 			continue
 		}
 
-		repo := matches[1]
-		if repo != "core" && repo != "extra" {
-			i++
-			continue
-		}
+		//repo := matches[1]
+		//if repo != "core" && repo != "extra" {
+		//	i++
+		//	continue
+		//}
 		pkgName := matches[2]
 		version := matches[3]
 		installed := strings.Contains(line, "[installed") || strings.Contains(line, "(установлено:")

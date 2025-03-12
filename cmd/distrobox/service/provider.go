@@ -34,11 +34,11 @@ type PackageQueryResult struct {
 
 // PackageQueryBuilder задаёт параметры запроса.
 type PackageQueryBuilder struct {
-	ForceUpdate bool                   // обновление перед тем как выполнить запрос
-	Limit       int64                  // если Limit <= 0, то ограничение не применяется
-	Offset      int64                  // если Offset < 0, то считается 0
+	ForceUpdate bool                   // Обновление перед тем как выполнить запрос
+	Limit       int64                  // Если Limit <= 0, то ограничение не применяется
+	Offset      int64                  // Если Offset < 0, то считается 0
 	Filters     map[string]interface{} // фильтры вида "field": value; используется условие "="
-	SortField   string                 // поле сортировки (например, "packageName")
+	SortField   string                 // Поле сортировки (например, "packageName")
 	SortOrder   string                 // "ASC" или "DESC"
 }
 
@@ -64,6 +64,8 @@ func getProvider(osName string) (PackageProvider, error) {
 		return NewUbuntuProvider(), nil
 	} else if strings.Contains(lowerName, "arch") {
 		return NewArchProvider(), nil
+	} else if strings.Contains(lowerName, "alt") {
+		return NewAltProvider(), nil
 	} else {
 		return nil, errors.New("Данный контейнер не поддерживается: " + osName)
 	}
