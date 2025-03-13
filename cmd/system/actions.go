@@ -193,22 +193,27 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	var packageNames []string
 	var packagesInfo []apt.Package
 	for _, pkg := range packages {
+		originalPkg := pkg
 		var packageInfo apt.Package
-		cleanedPkg := pkg
-		if len(pkg) > 0 {
-			lastChar := pkg[len(pkg)-1]
-			if lastChar == '+' || lastChar == '-' {
-				cleanedPkg = pkg[:len(pkg)-1]
-				isMultiInstall = true
+
+		packageInfo, err = apt.GetPackageByName(ctx, pkg)
+		if err != nil {
+			if len(pkg) > 0 {
+				lastChar := pkg[len(pkg)-1]
+				if lastChar == '+' || lastChar == '-' {
+					cleanedPkg := pkg[:len(pkg)-1]
+					packageInfo, err = apt.GetPackageByName(ctx, cleanedPkg)
+					if err == nil {
+						isMultiInstall = true
+					}
+				}
 			}
 		}
-
-		packageInfo, err = apt.GetPackageByName(ctx, cleanedPkg)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
 		packagesInfo = append(packagesInfo, packageInfo)
-		packageNames = append(packageNames, pkg)
+		packageNames = append(packageNames, originalPkg)
 	}
 
 	allPackageNames := strings.Join(packageNames, " ")
@@ -230,10 +235,15 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	if len(customErrorList) > 0 && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
 		messageNothingDo := "Операция не выполнит никаких изменений. Причины: \n"
 		var alreadyInstalledPackages []string
+		var alreadyRemovedPackages []string
 
 		for _, customError := range customErrorList {
 			if customError.Entry.Code == apt.ErrPackageIsAlreadyNewest && apply && lib.Env.IsAtomic {
 				alreadyInstalledPackages = append(alreadyInstalledPackages, customError.Params[0])
+			}
+
+			if customError.Entry.Code == apt.ErrPackageNotInstalled && apply && lib.Env.IsAtomic {
+				alreadyRemovedPackages = append(alreadyRemovedPackages, customError.Params[0])
 			}
 
 			messageNothingDo += customError.Error() + "\n"
@@ -246,6 +256,17 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			if err != nil {
 				return newErrorResponse(err.Error()), nil
 			}
+
+			for _, removedPkg := range alreadyRemovedPackages {
+				if !config.IsRemoved(removedPkg) {
+					diffPackageFound = true
+					err = config.AddRemovePackage(removedPkg)
+					if err != nil {
+						return newErrorResponse(err.Error()), nil
+					}
+				}
+			}
+
 			for _, installedPkg := range alreadyInstalledPackages {
 				if !config.IsInstalled(installedPkg) {
 					diffPackageFound = true
@@ -671,12 +692,12 @@ func (a *Actions) checkRoot() error {
 		return fmt.Errorf("для выполнения необходимы права администратора, используйте sudo или su")
 	}
 
-	//if lib.Env.IsAtomic {
-	//	err := a.serviceHostImage.EnableOverlay()
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+	if lib.Env.IsAtomic {
+		err := a.serviceHostImage.EnableOverlay()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -693,34 +714,35 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 	}
 
 	for _, pkg := range packages {
-		if isInstall {
-			// Если в строке названия пакета есть + или -
-			if len(pkg) > 0 {
-				switch pkg[len(pkg)-1] {
-				case '+':
-					pkg = pkg[:len(pkg)-1]
-					err = config.AddInstallPackage(pkg)
-				case '-':
-					pkg = pkg[:len(pkg)-1]
-					err = config.AddRemovePackage(pkg)
-				default:
-					err = config.AddInstallPackage(pkg)
-				}
-				if err != nil {
-					return err
-				}
-			} else {
-				// Если строка пакета не отражает установку или удаление и метод isInstall
-				err = config.AddInstallPackage(pkg)
-				if err != nil {
-					return err
+		if len(pkg) == 0 {
+			continue
+		}
+
+		originalPkg := pkg
+		canonicalPkg := pkg
+
+		if _, errFull := apt.GetPackageByName(ctx, canonicalPkg); errFull != nil {
+			for len(canonicalPkg) > 0 && (canonicalPkg[len(canonicalPkg)-1] == '+' || canonicalPkg[len(canonicalPkg)-1] == '-') {
+				canonicalPkg = canonicalPkg[:len(canonicalPkg)-1]
+				if _, errTmp := apt.GetPackageByName(ctx, canonicalPkg); errTmp == nil {
+					break
 				}
 			}
+		}
+
+		if originalPkg[len(originalPkg)-1] == '+' {
+			err = config.AddInstallPackage(canonicalPkg)
+		} else if originalPkg[len(originalPkg)-1] == '-' {
+			err = config.AddRemovePackage(canonicalPkg)
 		} else {
-			err = config.AddRemovePackage(pkg)
-			if err != nil {
-				return err
+			if isInstall {
+				err = config.AddInstallPackage(canonicalPkg)
+			} else {
+				err = config.AddRemovePackage(canonicalPkg)
 			}
+		}
+		if err != nil {
+			return err
 		}
 	}
 
