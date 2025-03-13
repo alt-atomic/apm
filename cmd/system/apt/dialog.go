@@ -18,9 +18,10 @@ type DialogAction int
 const (
 	ActionInstall DialogAction = iota
 	ActionRemove
+	ActionMultiInstall
 )
 
-var choices = []string{"Установить", "Отмена"}
+var choices []string
 
 type model struct {
 	pkg        []Package
@@ -39,6 +40,8 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 	}
 
 	switch action {
+	case ActionMultiInstall:
+		choices = []string{"Изменить", "Отмена"}
 	case ActionInstall:
 		choices = []string{"Установить", "Отмена"}
 	case ActionRemove:
@@ -65,7 +68,7 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 		if m.canceled || m.choice == "" {
 			return false, fmt.Errorf("диалог был отменён")
 		}
-		return m.choice == "Установить" || m.choice == "Удалить", nil
+		return m.choice == "Установить" || m.choice == "Удалить" || m.choice == "Изменить", nil
 	}
 
 	return false, fmt.Errorf("диалог был отменён")

@@ -7,8 +7,12 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
+
+// syncYamlMutex защищает операции работы с файлом.
+var syncYamlMutex sync.Mutex
 
 // Config описывает структуру конфигурационного файла.
 type Config struct {
@@ -105,6 +109,9 @@ func (c *Config) CheckCommands() error {
 
 // Save записывает обратно в файл.
 func (c *Config) Save() error {
+	syncYamlMutex.Lock()
+	defer syncYamlMutex.Unlock()
+
 	data, err := yaml.Marshal(c)
 	if err != nil {
 		return err

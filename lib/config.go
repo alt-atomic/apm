@@ -23,10 +23,10 @@ var DevMode bool
 
 func InitConfig() {
 	var configPath string
-	if _, err := os.Stat("/etc/apm/config.yml"); err == nil {
-		configPath = "/etc/apm/config.yml"
-	} else if _, err := os.Stat("config.yml"); err == nil {
+	if _, err := os.Stat("config.yml"); err == nil {
 		configPath = "config.yml"
+	} else if _, err := os.Stat("/etc/apm/config.yml"); err == nil {
+		configPath = "/etc/apm/config.yml"
 	} else {
 		panic("Конфигурационный файл не найден ни в /etc/apm/config.yml, ни в локальной директории")
 	}

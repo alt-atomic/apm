@@ -68,7 +68,7 @@ func (a *Actions) Install(ctx context.Context, packageName string) error {
 	lines := strings.Split(outputStr, "\n")
 	aptError := ErrorLinesAnalise(lines)
 	if aptError != nil {
-		return fmt.Errorf(aptError.GetText())
+		return fmt.Errorf(aptError.Error())
 	}
 	if err != nil {
 		lib.Log.Errorf("ошибка установки: %s", outputStr)
@@ -93,7 +93,7 @@ func (a *Actions) Remove(ctx context.Context, packageName string) error {
 	lines := strings.Split(outputStr, "\n")
 	aptError := ErrorLinesAnalise(lines)
 	if aptError != nil {
-		return fmt.Errorf(aptError.GetText())
+		return fmt.Errorf(aptError.Error())
 	}
 	if err != nil {
 		lib.Log.Errorf("ошибка установки: %s", outputStr)
@@ -116,7 +116,7 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 	lines := strings.Split(outputStr, "\n")
 	aptError := ErrorLinesAnalise(lines)
 	if aptError != nil {
-		return PackageChanges{}, "", fmt.Errorf(aptError.GetText())
+		return PackageChanges{}, "", aptError
 	}
 
 	if err != nil {
@@ -284,7 +284,7 @@ func aptUpdate(ctx context.Context) error {
 	lines := strings.Split(outputStr, "\n")
 	aptError := ErrorLinesAnalise(lines)
 	if aptError != nil {
-		return fmt.Errorf(aptError.GetText())
+		return fmt.Errorf(aptError.Error())
 	}
 	if err != nil {
 		return fmt.Errorf("ошибка обновления пакетов: %v, output: %s", err, string(output))

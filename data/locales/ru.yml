@@ -17,7 +17,7 @@ ru_RU:
     name: "Название"
     size: "Размер"
     filename: "Имя файла"
-    installed: "Установлено"
+    installed: "Установлен"
     exporting: "Экспортировано"
     installedSize: "Займёт на диске"
     lastChangelog: "Последнее изменение"

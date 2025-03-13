@@ -179,20 +179,21 @@ func CheckError(requestError string) *MatchedError {
 	return nil
 }
 
-// GetText возвращает переведённое сообщение об ошибке с подстановкой найденных параметров.
-func (error *MatchedError) GetText() string {
+// Error возвращает переведённое сообщение об ошибке с подстановкой найденных параметров.
+func (e *MatchedError) Error() string {
 	translations := map[int]string{
-		ErrBrokenPackages:   "Сломанные пакеты",
-		ErrPermissionDenied: "У вас нет прав для выполнения этой операции",
-		ErrNotEnoughSpace:   "У вас недостаточно свободно места в %s",
+		ErrBrokenPackages:      "Сломанные пакеты",
+		ErrPermissionDenied:    "У вас нет прав для выполнения этой операции",
+		ErrNotEnoughSpace:      "У вас недостаточно свободно места в %s",
+		ErrPackageNotInstalled: "Пакет %s не установлен, и не может быть удалён",
+		// можно добавить и другие переводы по необходимости
 	}
-
-	template, ok := translations[error.Entry.Code]
+	template, ok := translations[e.Entry.Code]
 	if !ok {
-		template = error.Entry.Pattern
+		template = e.Entry.Pattern
 	}
-	if error.Entry.Params > 0 && len(error.Params) >= error.Entry.Params {
-		return fmt.Sprintf(template, toInterfaceSlice(error.Params[:error.Entry.Params])...)
+	if e.Entry.Params > 0 && len(e.Params) >= e.Entry.Params {
+		return fmt.Sprintf(template, toInterfaceSlice(e.Params[:e.Entry.Params])...)
 	}
 	return template
 }

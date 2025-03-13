@@ -7,6 +7,7 @@ import (
 	"apm/cmd/system/service"
 	"apm/lib"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"syscall"
@@ -205,34 +206,84 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		}, nil
 	}
 
-	var names []string
+	config, errConfig := service.ParseConfig()
+	if errConfig != nil {
+		return a.newErrorResponse(errConfig.Error()), err
+	}
+
+	isMultiInstall := false
+	var packageNames []string
 	var packagesInfo []apt.Package
 	for _, pkg := range packages {
-		packageInfo, err := apt.GetPackageByName(ctx, pkg)
+		var packageInfo apt.Package
+		cleanedPkg := pkg
+		// Проверяем, что строка не пустая и последний символ равен '+' или '-'
+		if len(pkg) > 0 {
+			lastChar := pkg[len(pkg)-1]
+			if lastChar == '+' || lastChar == '-' {
+				cleanedPkg = pkg[:len(pkg)-1]
+				isMultiInstall = true
+			}
+		}
+
+		packageInfo, err = apt.GetPackageByName(ctx, cleanedPkg)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
 		packagesInfo = append(packagesInfo, packageInfo)
-		names = append(names, packageInfo.Name)
-	}
-	allPackageNames := strings.Join(names, " ")
-	packageParse, output, err := a.serviceAptActions.Check(ctx, allPackageNames, "install")
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		packageNames = append(packageNames, pkg)
 	}
 
-	if strings.Contains(output, "is already the newest version") && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
+	allPackageNames := strings.Join(packageNames, " ")
+	packageParse, output, err := a.serviceAptActions.Check(ctx, allPackageNames, "install")
+	if err != nil {
+		customErrorMsg := err.Error()
+		var mErr *apt.MatchedError
+		if errors.As(err, &mErr) {
+			// если apt говорит, что пакет не установлен, но он присутствует в конфигурации образа, делаем всякое
+			if mErr.Entry.Code == apt.ErrPackageNotInstalled && apply && lib.Env.IsAtomic {
+				installedPkgMap := make(map[string]struct{})
+				for _, pkg := range config.Packages.Install {
+					installedPkgMap[pkg] = struct{}{}
+				}
+
+				// Проверяем, содержится ли хотя бы один из err.Params в конфигурации
+				diffPackageFound := false
+				for _, pkg := range mErr.Params {
+					if _, ok := installedPkgMap[pkg]; ok {
+						diffPackageFound = true
+						break
+					}
+				}
+
+				if diffPackageFound {
+					// Добавляем пакеты, которые были указаны в ошибке
+					for _, pkg := range mErr.Params {
+						if err = config.AddRemovePackage(pkg); err != nil {
+							return a.newErrorResponse(err.Error()), err
+						}
+					}
+
+					err = a.applyChange(ctx, packages, true)
+					if err != nil {
+						return a.newErrorResponse(err.Error()), err
+					}
+
+					customErrorMsg += ". Но пакет не найден в разделе удаления для конфигурации атомарного образа, поэтому образ был обновлён"
+				}
+			}
+		}
+
+		return a.newErrorResponse(customErrorMsg), err
+	}
+
+	if strings.Contains(output, "is already the newest version") && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
 		messageAlreadyExist := fmt.Sprintf("%s %s %s самой последней версии",
-			helper.DeclOfNum(len(packagesInfo), []string{"пакет", "пакета", "пакетов"}),
+			helper.DeclOfNum(len(packagesInfo), []string{"пакет", "пакеты", "пакеты"}),
 			allPackageNames,
 			helper.DeclOfNum(len(packagesInfo), []string{"установлен", "установлены", "установлены"}))
 
 		if apply && lib.Env.IsAtomic {
-			config, errConfig := service.ParseConfig()
-			if errConfig != nil {
-				return a.newErrorResponse(errConfig.Error()), err
-			}
-
 			// обнаруживаем пакеты, которые были ранее установлены, но не зафиксированы в образе
 			// добавляем такие пакеты в конфиг и запускаем сборку
 			notFoundPackage := false
@@ -257,8 +308,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 				if err != nil {
 					return a.newErrorResponse(err.Error()), err
 				}
-
-				messageAlreadyExist += ". Но пакет не был найден в образе, поэтому образ был изменён"
+				messageAlreadyExist += ". Но пакет не найден в разделе установки для конфигурации атомарного образа, поэтому образ был обновлён"
 			}
 		}
 
@@ -271,8 +321,12 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	reply.StopSpinner()
+	dialogAction := apt.ActionInstall
+	if isMultiInstall {
+		dialogAction = apt.ActionMultiInstall
+	}
 
-	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, apt.ActionInstall)
+	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, dialogAction)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -306,7 +360,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		helper.DeclOfNum(packageParse.UpgradedCount, []string{"обновлён", "обновлено", "обновилось"}))
 
 	if apply {
-		err = a.applyChange(ctx, packages, true)
+		err = a.applyChange(ctx, packageNames, true)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
@@ -690,9 +744,27 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 
 	for _, pkg := range packages {
 		if isInstall {
-			err = config.AddInstallPackage(pkg)
-			if err != nil {
-				return err
+			// Если в строке названия пакета есть + или -
+			if len(pkg) > 0 {
+				switch pkg[len(pkg)-1] {
+				case '+':
+					pkg = pkg[:len(pkg)-1]
+					err = config.AddInstallPackage(pkg)
+				case '-':
+					pkg = pkg[:len(pkg)-1]
+					err = config.AddRemovePackage(pkg)
+				default:
+					err = config.AddInstallPackage(pkg)
+				}
+				if err != nil {
+					return err
+				}
+			} else {
+				// Если строка пакета не отражает установку или удаление и метод isInstall
+				err = config.AddInstallPackage(pkg)
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			err = config.AddRemovePackage(pkg)

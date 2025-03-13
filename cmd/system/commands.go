@@ -35,7 +35,7 @@ func CommandList() *cli.Command {
 		Commands: []*cli.Command{
 			{
 				Name:      "install",
-				Usage:     "Список пакетов на установку",
+				Usage:     "Список пакетов на установку. Поддерживается формат package- package+",
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
