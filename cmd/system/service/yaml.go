@@ -168,6 +168,24 @@ func (c *Config) AddCommand(cmd string) error {
 	return c.Save()
 }
 
+// IsInstalled проверят наличие
+func (c *Config) IsInstalled(pkg string) bool {
+	if contains(c.Packages.Install, pkg) {
+		return true
+	}
+
+	return false
+}
+
+// IsRemoved проверяет удаление
+func (c *Config) IsRemoved(pkg string) bool {
+	if contains(c.Packages.Remove, pkg) {
+		return true
+	}
+
+	return false
+}
+
 // AddInstallPackage добавляет пакет в список для установки и сохраняет изменения в файл.
 func (c *Config) AddInstallPackage(pkg string) error {
 	if contains(c.Packages.Install, pkg) {

@@ -64,6 +64,7 @@ const (
 	ErrVirtualNoProvidersShort
 	ErrVirtualMultipleProvidersShort
 	ErrRpmDatabaseLock
+	ErrPackageIsAlreadyNewest
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -93,7 +94,7 @@ var errorPatterns = []ErrorEntry{
 	{ErrMissingBuilddepPackage, "Must specify at least one package to check builddeps for", 0},
 	{ErrSourcePackageNotFound, "Unable to find a source package for %s", 1},
 	{ErrBuilddepInfoFailed, "Unable to get build-dependency information for %s", 1},
-	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s.\\n\"\n\t\t\t\t\"You might want to run `apt-get --fix-broken install' to correct these.", 1},
+	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s.", 1},
 	{ErrVirtualNoProviders, "Package %s is a virtual package with no good providers", 1},
 	{ErrVirtualMultipleProviders, "Package %s is a virtual package with multiple good providers", 1},
 	{ErrNoPackagesFound, "No packages found", 0},
@@ -125,12 +126,13 @@ var errorPatterns = []ErrorEntry{
 	{ErrFailedDependency, "Failed to satisfy %s dependency for %s: %s", 3},
 	{ErrGiveOnePattern, "You must give exactly one pattern", 0},
 	{ErrNoHelpForThat, "No help for that", 0},
+	{ErrPackageIsAlreadyNewest, "%s is already the newest version.", 1},
 	{ErrSourcesListReadFailed, "The list of sources could not be read.", 0},
 	{ErrChangesToBeMade, "There are changes to be made", 0},
 	{ErrFailedToFetchArchives, "Failed to fetch some archives.", 0},
 	{ErrFailedToFetch, "Failed to fetch %s  %s", 2},
 	{ErrFailedToFetchSomeIndex, "Some index files failed to download. They have been ignored, or old ones used instead.", 0},
-	{ErrUpgradeDisabled, "'apt-get upgrade' is disabled because it can leave system in a broken state.\\n\"\n                             \"It is advised to use 'apt-get dist-upgrade' instead.\\n\"\n                             \"If you still want to use 'apt-get upgrade' despite of this warning,\\n\"\n                             \"use '--enable-upgrade' option or enable 'APT::Get::EnableUpgrade' configuration setting\"", 0},
+	{ErrUpgradeDisabled, "'apt-get upgrade' is disabled because it can leave system in a broken state.", 0},
 	{ErrUnmetDependencies, "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or specify a solution).", 0},
 	{ErrMissingFetchSourcePackage, "Must specify at least one package to fetch source for", 0},
 	{ErrChildProcessFailed, "Child process failed", 0},
@@ -140,6 +142,23 @@ var errorPatterns = []ErrorEntry{
 	{ErrVirtualMultipleProvidersShort, "Package %s is a virtual package with multiple ", 1},
 }
 
+// ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.
+func ErrorLinesAnalyseAll(lines []string) []*MatchedError {
+	var errorsFound []*MatchedError
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		cleanLine := strings.ReplaceAll(trimmed, "E: ", "")
+		if matchedErr := CheckError(cleanLine); matchedErr != nil {
+			errorsFound = append(errorsFound, matchedErr)
+		}
+	}
+	return errorsFound
+}
+
+// ErrorLinesAnalise возвращает любую ошибку
 func ErrorLinesAnalise(lines []string) *MatchedError {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -182,10 +201,11 @@ func CheckError(requestError string) *MatchedError {
 // Error возвращает переведённое сообщение об ошибке с подстановкой найденных параметров.
 func (e *MatchedError) Error() string {
 	translations := map[int]string{
-		ErrBrokenPackages:      "Сломанные пакеты",
-		ErrPermissionDenied:    "У вас нет прав для выполнения этой операции",
-		ErrNotEnoughSpace:      "У вас недостаточно свободно места в %s",
-		ErrPackageNotInstalled: "Пакет %s не установлен, и не может быть удалён",
+		ErrBrokenPackages:         "Сломанные пакеты",
+		ErrPermissionDenied:       "У вас нет прав для выполнения этой операции",
+		ErrNotEnoughSpace:         "У вас недостаточно свободно места в %s",
+		ErrPackageIsAlreadyNewest: "Последняя версия %s уже установлена",
+		ErrPackageNotInstalled:    "Пакет %s не установлен, и не может быть удалён",
 		// можно добавить и другие переводы по необходимости
 	}
 	template, ok := translations[e.Entry.Code]

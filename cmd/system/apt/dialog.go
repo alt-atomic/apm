@@ -164,8 +164,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 var (
-	deleteStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#a81c1f"))
-	installStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#2bb389"))
+	deleteStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#a81c1f"))
+	installStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#2bb389"))
+	shortcutStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Faint(true)
 )
 
 func (m model) View() string {
@@ -175,8 +176,6 @@ func (m model) View() string {
 		Light: "#171717",
 		Dark:  "#c4c8c6",
 	})
-	// Стиль для подсказок по клавишам (невзрачный серый)
-	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Faint(true)
 
 	contentView := m.vp.View()
 
@@ -258,12 +257,13 @@ func (m model) buildContent() string {
 			sb.WriteString(titleStyle.Render("\n"))
 			sb.WriteString(titleStyle.Render(fmt.Sprintf("\nПакет %d:", i+1)))
 		}
-		installedText := deleteStyle.Render("нет")
+		installedText := shortcutStyle.Render("нет")
 		if pkg.Installed {
 			installedText = installStyle.Render("да")
 		}
 
 		sb.WriteString("\n" + formatLine("Название", pkg.Name, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine("Действие", m.statusPackage(pkg.Name), keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Категория", pkg.Section, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Мейнтейнер", pkg.Maintainer, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine("Установлен", installedText, keyWidth, keyStyle, valueStyle))
@@ -309,6 +309,31 @@ func (m model) buildContent() string {
 	sb.WriteString("\n" + formatLine("Будет удалено", packageRemovedCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine("Не затронуты", packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
 	return sb.String()
+}
+
+func (m model) statusPackage(pkg string) string {
+	if contains(m.pckChange.ExtraInstalled, pkg) || contains(m.pckChange.NewInstalledPackages, pkg) {
+		return installStyle.Render("будет установлен")
+	}
+
+	if contains(m.pckChange.UpgradedPackages, pkg) {
+		return installStyle.Render("будет обновлён")
+	}
+
+	if contains(m.pckChange.RemovedPackages, pkg) {
+		return deleteStyle.Render("будет удалён")
+	}
+
+	return shortcutStyle.Render("нет")
+}
+
+func contains(slice []string, pkg string) bool {
+	for _, v := range slice {
+		if v == pkg {
+			return true
+		}
+	}
+	return false
 }
 
 func formatDependencies(depends []string) string {

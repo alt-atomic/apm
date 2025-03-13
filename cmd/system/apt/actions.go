@@ -68,7 +68,7 @@ func (a *Actions) Install(ctx context.Context, packageName string) error {
 	lines := strings.Split(outputStr, "\n")
 	aptError := ErrorLinesAnalise(lines)
 	if aptError != nil {
-		return fmt.Errorf(aptError.Error())
+		return aptError
 	}
 	if err != nil {
 		lib.Log.Errorf("ошибка установки: %s", outputStr)
@@ -93,7 +93,7 @@ func (a *Actions) Remove(ctx context.Context, packageName string) error {
 	lines := strings.Split(outputStr, "\n")
 	aptError := ErrorLinesAnalise(lines)
 	if aptError != nil {
-		return fmt.Errorf(aptError.Error())
+		return aptError
 	}
 	if err != nil {
 		lib.Log.Errorf("ошибка установки: %s", outputStr)
@@ -103,7 +103,7 @@ func (a *Actions) Remove(ctx context.Context, packageName string) error {
 	return nil
 }
 
-func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, string, error) {
+func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, string, []error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -114,19 +114,30 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
-	aptError := ErrorLinesAnalise(lines)
-	if aptError != nil {
-		return PackageChanges{}, "", aptError
+	aptErrors := ErrorLinesAnalyseAll(lines)
+
+	var packageParse PackageChanges
+	if len(aptErrors) > 0 {
+		var errorsSlice []error
+		for _, e := range aptErrors {
+			errorsSlice = append(errorsSlice, e)
+		}
+
+		packageParse, err = parseAptOutput(outputStr)
+		if err != nil {
+			return PackageChanges{}, "", []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
+		}
+		return packageParse, "", errorsSlice
 	}
 
 	if err != nil {
 		lib.Log.Errorf("ошибка проверки пакетов: %s", outputStr)
-		return PackageChanges{}, "", fmt.Errorf("ошибка проверки пакетов: %v", err)
+		return PackageChanges{}, "", []error{fmt.Errorf("ошибка проверки пакетов: %v", err)}
 	}
 
-	packageParse, err := parseAptOutput(outputStr)
+	packageParse, err = parseAptOutput(outputStr)
 	if err != nil {
-		return PackageChanges{}, "", fmt.Errorf("ошибка проверки пакета: %v", err)
+		return PackageChanges{}, "", []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
 	}
 
 	return packageParse, outputStr, nil
@@ -403,7 +414,6 @@ func cleanDependency(dep string) string {
 
 func parseAptOutput(output string) (PackageChanges, error) {
 	pc := &PackageChanges{}
-	// Разбиваем вывод на строки
 	lines := strings.Split(output, "\n")
 
 	var currentSection string
