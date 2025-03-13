@@ -18,10 +18,14 @@ import (
 // syncAptMutex защищает операции apt-get от дублированного вызова
 var syncAptMutex sync.Mutex
 
-type Actions struct{}
+type Actions struct {
+	serviceAptDatabase *PackageDBService
+}
 
 func NewActions() *Actions {
-	return &Actions{}
+	return &Actions{
+		serviceAptDatabase: NewPackageDBService(),
+	}
 }
 
 // PackageChanges Структура, для хранения результатов apt-get -s
@@ -46,6 +50,7 @@ type Package struct {
 	Version          string   `json:"version"`
 	VersionInstalled string   `json:"versionInstalled"`
 	Depends          []string `json:"depends"`
+	Provides         []string `json:"provides"`
 	Size             int      `json:"size"`
 	Filename         string   `json:"filename"`
 	Description      string   `json:"description"`
@@ -235,6 +240,18 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 					}
 				}
 				pkg.Depends = cleanedDeps
+			case "Provides":
+				provList := strings.Split(value, ",")
+				seen := make(map[string]bool)
+				var cleanedProviders []string
+				for _, prov := range provList {
+					cleanProv := cleanDependency(prov)
+					if cleanProv != "" && !seen[cleanProv] {
+						seen[cleanProv] = true
+						cleanedProviders = append(cleanedProviders, cleanProv)
+					}
+				}
+				pkg.Provides = cleanedProviders
 			case "Size":
 				sizeValue, err := strconv.Atoi(value)
 				if err != nil {
@@ -284,57 +301,16 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		return nil, fmt.Errorf("ошибка обновления информации об установленных пакетах: %w", err)
 	}
 
-	err = SavePackagesToDB(ctx, packages)
+	err = a.serviceAptDatabase.SavePackagesToDB(ctx, packages)
 	if err != nil {
 		return nil, err
-	}
-
-	return packages, nil
-}
-
-func aptUpdate(ctx context.Context) error {
-	syncAptMutex.Lock()
-	defer syncAptMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-
-	command := fmt.Sprintf("%s apt-get update", lib.Env.CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
-
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-	lines := strings.Split(outputStr, "\n")
-	aptError := ErrorLinesAnalise(lines)
-	if aptError != nil {
-		return fmt.Errorf(aptError.Error())
-	}
-	if err != nil {
-		return fmt.Errorf("ошибка обновления пакетов: %v, output: %s", err, string(output))
-	}
-
-	return nil
-}
-
-// updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
-func updateInstalledInfo(packages []Package) ([]Package, error) {
-	installed, err := GetInstalledPackages()
-	if err != nil {
-		return nil, err
-	}
-
-	for i, pkg := range packages {
-		if version, found := installed[pkg.Name]; found {
-			packages[i].Installed = true
-			packages[i].VersionInstalled = version
-		}
 	}
 
 	return packages, nil
 }
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
-func GetInstalledPackages() (map[string]string, error) {
+func (a *Actions) GetInstalledPackages() (map[string]string, error) {
 	command := fmt.Sprintf("%s rpm -qia", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
@@ -391,6 +367,47 @@ func GetInstalledPackages() (map[string]string, error) {
 	}
 
 	return installed, nil
+}
+
+func aptUpdate(ctx context.Context) error {
+	syncAptMutex.Lock()
+	defer syncAptMutex.Unlock()
+	reply.CreateEventNotification(ctx, reply.StateBefore)
+	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+
+	command := fmt.Sprintf("%s apt-get update", lib.Env.CommandPrefix)
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = []string{"LC_ALL=C"}
+
+	output, err := cmd.CombinedOutput()
+	outputStr := string(output)
+	lines := strings.Split(outputStr, "\n")
+	aptError := ErrorLinesAnalise(lines)
+	if aptError != nil {
+		return fmt.Errorf(aptError.Error())
+	}
+	if err != nil {
+		return fmt.Errorf("ошибка обновления пакетов: %v, output: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
+func updateInstalledInfo(packages []Package) ([]Package, error) {
+	installed, err := NewActions().GetInstalledPackages()
+	if err != nil {
+		return nil, err
+	}
+
+	for i, pkg := range packages {
+		if version, found := installed[pkg.Name]; found {
+			packages[i].Installed = true
+			packages[i].VersionInstalled = version
+		}
+	}
+
+	return packages, nil
 }
 
 func extractLastMessage(changelog string) string {

@@ -15,15 +15,17 @@ import (
 
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
-	serviceHostImage  *service.HostImageService
-	serviceAptActions *apt.Actions
+	serviceHostImage   *service.HostImageService
+	serviceAptActions  *apt.Actions
+	serviceAptDatabase *apt.PackageDBService
 }
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
 	return &Actions{
-		serviceHostImage:  service.NewHostImageService(),
-		serviceAptActions: apt.NewActions(),
+		serviceHostImage:   service.NewHostImageService(),
+		serviceAptActions:  apt.NewActions(),
+		serviceAptDatabase: apt.NewPackageDBService(),
 	}
 }
 
@@ -91,7 +93,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	var names []string
 	var packagesInfo []apt.Package
 	for _, pkg := range packages {
-		packageInfo, err := apt.GetPackageByName(ctx, pkg)
+		packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, pkg)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
@@ -237,13 +239,13 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		originalPkg := pkg
 		var packageInfo apt.Package
 
-		packageInfo, err = apt.GetPackageByName(ctx, pkg)
+		packageInfo, err = a.serviceAptDatabase.GetPackageByName(ctx, pkg)
 		if err != nil {
 			if len(pkg) > 0 {
 				lastChar := pkg[len(pkg)-1]
 				if lastChar == '+' || lastChar == '-' {
 					cleanedPkg := pkg[:len(pkg)-1]
-					packageInfo, err = apt.GetPackageByName(ctx, cleanedPkg)
+					packageInfo, err = a.serviceAptDatabase.GetPackageByName(ctx, cleanedPkg)
 					if err == nil {
 						isMultiInstall = true
 					}
@@ -251,12 +253,40 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			}
 		}
 		if err != nil {
-			return a.newErrorResponse(err.Error()), err
+			filters := map[string]interface{}{
+				"provides": originalPkg,
+			}
+
+			alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
+			if errFind != nil {
+				return a.newErrorResponse(err.Error()), err
+			}
+
+			if len(alternativePackages) == 0 {
+				errorFindPackage := fmt.Sprintf("не удалось получить информацию о пакете %s", originalPkg)
+				return a.newErrorResponse(errorFindPackage), fmt.Errorf(errorFindPackage)
+			}
+
+			var altNames []string
+			for _, altPkg := range alternativePackages {
+				altNames = append(altNames, altPkg.Name)
+			}
+
+			message := err.Error() + ". Может быть, Вы искали: "
+
+			return reply.APIResponse{
+				Data: map[string]interface{}{
+					"message":  message,
+					"packages": altNames,
+				},
+				Error: true,
+			}, nil
 		}
 		packagesInfo = append(packagesInfo, packageInfo)
 		packageNames = append(packageNames, originalPkg)
 	}
 
+	fmt.Println(5)
 	allPackageNames := strings.Join(packageNames, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
 	criticalError := apt.FindCriticalError(aptErrors)
@@ -427,6 +457,7 @@ type PackageResponse struct {
 	Version          string   `json:"version"`
 	VersionInstalled string   `json:"versionInstalled"`
 	Depends          []string `json:"depends"`
+	Providers        []string `json:"providers"`
 	Size             string   `json:"size"`
 	Filename         string   `json:"filename"`
 	Description      string   `json:"description"`
@@ -446,7 +477,7 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	packageInfo, err := apt.GetPackageByName(ctx, packageName)
+	packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -502,12 +533,12 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 	if strings.TrimSpace(params.FilterField) != "" && strings.TrimSpace(params.FilterValue) != "" {
 		filters[params.FilterField] = params.FilterValue
 	}
-	totalCount, err := apt.CountHostImagePackages(ctx, filters)
+	totalCount, err := a.serviceAptDatabase.CountHostImagePackages(ctx, filters)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	packages, err := apt.QueryHostImagePackages(ctx, filters, params.Sort, params.Order, params.Limit, params.Offset)
+	packages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, params.Sort, params.Order, params.Limit, params.Offset)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -526,6 +557,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 			Version:          packageInfo.Version,
 			VersionInstalled: packageInfo.VersionInstalled,
 			Depends:          packageInfo.Depends,
+			Providers:        packageInfo.Provides,
 			Size:             helper.AutoSize(packageInfo.Size),
 			Filename:         packageInfo.Filename,
 			Description:      packageInfo.Description,
@@ -563,7 +595,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
-	packages, err := apt.SearchPackagesByName(ctx, packageName, installed)
+	packages, err := a.serviceAptDatabase.SearchPackagesByName(ctx, packageName, installed)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -582,6 +614,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 			Version:          packageInfo.Version,
 			VersionInstalled: packageInfo.VersionInstalled,
 			Depends:          packageInfo.Depends,
+			Providers:        packageInfo.Provides,
 			Size:             helper.AutoSize(packageInfo.Size),
 			Filename:         packageInfo.Filename,
 			Description:      packageInfo.Description,
@@ -762,10 +795,10 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		originalPkg := pkg
 		canonicalPkg := pkg
 
-		if _, errFull := apt.GetPackageByName(ctx, canonicalPkg); errFull != nil {
+		if _, errFull := a.serviceAptDatabase.GetPackageByName(ctx, canonicalPkg); errFull != nil {
 			for len(canonicalPkg) > 0 && (canonicalPkg[len(canonicalPkg)-1] == '+' || canonicalPkg[len(canonicalPkg)-1] == '-') {
 				canonicalPkg = canonicalPkg[:len(canonicalPkg)-1]
-				if _, errTmp := apt.GetPackageByName(ctx, canonicalPkg); errTmp == nil {
+				if _, errTmp := a.serviceAptDatabase.GetPackageByName(ctx, canonicalPkg); errTmp == nil {
 					break
 				}
 			}
@@ -792,10 +825,10 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	//err = a.serviceHostImage.BuildAndSwitch(ctx, true, config, false)
-	//if err != nil {
-	//	return err
-	//}
+	err = a.serviceHostImage.BuildAndSwitch(ctx, true, config, false)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -811,7 +844,7 @@ func (a *Actions) newErrorResponse(message string) reply.APIResponse {
 // validateDB проверяет, существует ли база данных
 func (a *Actions) validateDB(ctx context.Context) error {
 	// Если база не содержит данные - запускаем процесс обновления
-	if err := apt.PackageDatabaseExist(ctx); err != nil {
+	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
 		err = a.checkRoot()
 		if err != nil {
 			return err
@@ -830,12 +863,12 @@ func (a *Actions) validateDB(ctx context.Context) error {
 func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-	installedPackages, err := apt.GetInstalledPackages()
+	installedPackages, err := a.serviceAptActions.GetInstalledPackages()
 	if err != nil {
 		return err
 	}
 
-	err = apt.SyncPackageInstallationInfo(ctx, installedPackages)
+	err = a.serviceAptDatabase.SyncPackageInstallationInfo(ctx, installedPackages)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ ru_RU:
     isConsole: "Консольное приложение"
     packageInfo: "Информация о пакете"
     depends: "Зависимости"
+    providers: "Провайдеры"
     description: "Описание"
     name: "Название"
     size: "Размер"

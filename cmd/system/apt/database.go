@@ -6,22 +6,31 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 )
+
+// PackageDBService — сервис для операций с базой данных пакетов.
+type PackageDBService struct {
+	tableName string
+}
+
+// NewPackageDBService — конструктор сервиса, где задаётся имя таблицы.
+func NewPackageDBService() *PackageDBService {
+	return &PackageDBService{
+		tableName: "host_image_packages",
+	}
+}
 
 // syncDBMutex защищает операции синхронизации базы пакетов.
 var syncDBMutex sync.Mutex
 
 // SavePackagesToDB сохраняет список пакетов
-func SavePackagesToDB(ctx context.Context, packages []Package) error {
+func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Package) error {
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-
-	tableName := "host_image_packages"
 
 	// Создаем таблицу, если её нет.
 	createQuery := fmt.Sprintf(`
@@ -33,18 +42,19 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 		version TEXT,
 		versionInstalled TEXT,
 		depends TEXT,
+		provides TEXT,
 		size INTEGER,
 		filename TEXT,
 		description TEXT,
 		changelog TEXT,
 		installed INTEGER
-	)`, tableName)
+	)`, s.tableName)
 	if _, err := lib.DB.Exec(createQuery); err != nil {
 		return fmt.Errorf("ошибка создания таблицы: %w", err)
 	}
 
 	// Очищаем таблицу.
-	deleteQuery := fmt.Sprintf("DELETE FROM %s", tableName)
+	deleteQuery := fmt.Sprintf("DELETE FROM %s", s.tableName)
 	if _, err := lib.DB.Exec(deleteQuery); err != nil {
 		return fmt.Errorf("ошибка очистки таблицы: %w", err)
 	}
@@ -67,9 +77,9 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 		var placeholders []string
 		var args []interface{}
 		for _, pkg := range batch {
-			placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-			// Преобразуем срез зависимостей в одну строку, разделённую запятыми.
+			placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 			dependsStr := strings.Join(pkg.Depends, ",")
+			providersStr := strings.Join(pkg.Provides, ",")
 			var installed int
 			if pkg.Installed {
 				installed = 1
@@ -84,6 +94,7 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 				pkg.Version,
 				pkg.VersionInstalled,
 				dependsStr,
+				providersStr,
 				pkg.Size,
 				pkg.Filename,
 				pkg.Description,
@@ -92,8 +103,8 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 			)
 		}
 
-		query := fmt.Sprintf("INSERT INTO %s (name, section, installed_size, maintainer, version, versionInstalled, depends, size, filename, description, changelog, installed) VALUES %s",
-			tableName, strings.Join(placeholders, ","))
+		query := fmt.Sprintf("INSERT INTO %s (name, section, installed_size, maintainer, version, versionInstalled, depends, provides, size, filename, description, changelog, installed) VALUES %s",
+			s.tableName, strings.Join(placeholders, ","))
 		if _, err := tx.Exec(query, args...); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("ошибка вставки пакетов: %w", err)
@@ -107,14 +118,15 @@ func SavePackagesToDB(ctx context.Context, packages []Package) error {
 }
 
 // GetPackageByName возвращает запись пакета
-func GetPackageByName(ctx context.Context, packageName string) (Package, error) {
-	query := `
-		SELECT name, section, installed_size, maintainer, version, versionInstalled, depends, size, filename, description, changelog, installed 
-		FROM host_image_packages 
-		WHERE name = ?`
+func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName string) (Package, error) {
+	query := fmt.Sprintf(`
+		SELECT name, section, installed_size, maintainer, version, versionInstalled, depends, provides, size, filename, description, changelog, installed 
+		FROM %s 
+		WHERE name = ?`, s.tableName)
 
 	var pkg Package
 	var dependsStr string
+	var providersStr string
 	var installed int
 
 	err := lib.DB.QueryRowContext(ctx, query, packageName).Scan(
@@ -125,6 +137,7 @@ func GetPackageByName(ctx context.Context, packageName string) (Package, error) 
 		&pkg.Version,
 		&pkg.VersionInstalled,
 		&dependsStr,
+		&providersStr,
 		&pkg.Size,
 		&pkg.Filename,
 		&pkg.Description,
@@ -142,13 +155,19 @@ func GetPackageByName(ctx context.Context, packageName string) (Package, error) 
 		pkg.Depends = []string{}
 	}
 
+	if providersStr != "" {
+		pkg.Provides = strings.Split(providersStr, ",")
+	} else {
+		pkg.Provides = []string{}
+	}
+
 	pkg.Installed = installed != 0
 
 	return pkg, nil
 }
 
 // SyncPackageInstallationInfo синхронизирует базу пакетов с результатом выполнения apt.GetInstalledPackages().
-func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[string]string) error {
+func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, installedPackages map[string]string) error {
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
 
@@ -168,7 +187,7 @@ func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[stri
             version TEXT
         );
     `
-	if _, err := tx.ExecContext(ctx, createTempTableQuery); err != nil {
+	if _, err = tx.ExecContext(ctx, createTempTableQuery); err != nil {
 		return fmt.Errorf("ошибка создания временной таблицы: %w", err)
 	}
 
@@ -181,30 +200,29 @@ func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[stri
 
 	if len(placeholders) > 0 {
 		insertQuery := fmt.Sprintf("INSERT INTO tmp_installed (name, version) VALUES %s", strings.Join(placeholders, ", "))
-		if _, err := tx.ExecContext(ctx, insertQuery, args...); err != nil {
+		if _, err = tx.ExecContext(ctx, insertQuery, args...); err != nil {
 			return fmt.Errorf("ошибка пакетной вставки во временную таблицу: %w", err)
 		}
 	}
 
-	// 3. Обновляем таблицу host_image_packages на основе временной таблицы
-	updateQuery := `
-        UPDATE host_image_packages
+	updateQuery := fmt.Sprintf(`
+        UPDATE %s
         SET 
             installed = CASE 
-                WHEN EXISTS (SELECT 1 FROM tmp_installed t WHERE t.name = host_image_packages.name) THEN 1 
+                WHEN EXISTS (SELECT 1 FROM tmp_installed t WHERE t.name = %s.name) THEN 1 
                 ELSE 0 
             END,
             versionInstalled = COALESCE(
-                (SELECT t.version FROM tmp_installed t WHERE t.name = host_image_packages.name), 
+                (SELECT t.version FROM tmp_installed t WHERE t.name = %s.name), 
                 ''
             )
-    `
-	if _, err := tx.ExecContext(ctx, updateQuery); err != nil {
+    `, s.tableName, s.tableName, s.tableName)
+	if _, err = tx.ExecContext(ctx, updateQuery); err != nil {
 		return fmt.Errorf("ошибка обновления пакетов: %w", err)
 	}
 
 	// 4. Фиксируем транзакцию
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("ошибка коммита транзакции: %w", err)
 	}
 	return nil
@@ -212,10 +230,7 @@ func SyncPackageInstallationInfo(ctx context.Context, installedPackages map[stri
 
 // SearchPackagesByName ищет пакеты в таблице по части названия.
 // Параметр `installed` определяет, нужно ли показывать только установленные пакеты.
-func SearchPackagesByName(ctx context.Context, namePart string, installed bool) ([]Package, error) {
-	tableName := "host_image_packages"
-
-	// Базовый запрос
+func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart string, installed bool) ([]Package, error) {
 	baseQuery := fmt.Sprintf(`
 		SELECT 
 			name, 
@@ -224,7 +239,8 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 			maintainer, 
 			version, 
 			versionInstalled, 
-			depends, 
+			depends,
+		    provides,
 			size, 
 			filename, 
 			description, 
@@ -232,7 +248,7 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 			installed
 		FROM %s
 		WHERE name LIKE ?
-	`, tableName)
+	`, s.tableName)
 
 	// Если нужно искать только среди установленных
 	if installed {
@@ -253,9 +269,10 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 	for rows.Next() {
 		var pkg Package
 		var dependsStr string
+		var providersStr string
 		var installedInt int
 
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&pkg.Name,
 			&pkg.Section,
 			&pkg.InstalledSize,
@@ -263,6 +280,7 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 			&pkg.Version,
 			&pkg.VersionInstalled,
 			&dependsStr,
+			&providersStr,
 			&pkg.Size,
 			&pkg.Filename,
 			&pkg.Description,
@@ -270,6 +288,12 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 			&installedInt,
 		); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
+		}
+
+		if providersStr != "" {
+			pkg.Provides = strings.Split(providersStr, ",")
+		} else {
+			pkg.Provides = []string{}
 		}
 
 		if dependsStr != "" {
@@ -282,7 +306,7 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 		result = append(result, pkg)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("ошибка при обработке строк: %w", err)
 	}
 
@@ -298,14 +322,12 @@ func SearchPackagesByName(ctx context.Context, namePart string, installed bool) 
 //	sortOrder - "ASC" или "DESC" (по умолчанию ASC, если задано неверно).
 //	limit     - максимальное количество возвращаемых строк (если <= 0, не применяется).
 //	offset    - смещение, с которого начинаем выборку (если <= 0, не применяется).
-func QueryHostImagePackages(
+func (s *PackageDBService) QueryHostImagePackages(
 	ctx context.Context,
 	filters map[string]interface{},
 	sortField, sortOrder string,
 	limit, offset int64,
 ) ([]Package, error) {
-
-	tableName := "host_image_packages"
 
 	query := fmt.Sprintf(`
         SELECT 
@@ -316,13 +338,14 @@ func QueryHostImagePackages(
             version,
             versionInstalled,
             depends,
+            provides,
             size,
             filename,
             description,
             changelog,
             installed
         FROM %s
-    `, tableName)
+    `, s.tableName)
 
 	var args []interface{}
 
@@ -341,6 +364,14 @@ func QueryHostImagePackages(
 					args = append(args, 1)
 				} else {
 					args = append(args, 0)
+				}
+			} else if field == "provides" || field == "depends" {
+				if strVal, ok := value.(string); ok {
+					conditions = append(conditions, fmt.Sprintf("',' || %s || ',' LIKE ?", field))
+					args = append(args, fmt.Sprintf("%%,%s,%%", strVal))
+				} else {
+					conditions = append(conditions, fmt.Sprintf("',' || %s || ',' LIKE ?", field))
+					args = append(args, fmt.Sprintf("%%,%v,%%", value))
 				}
 			} else {
 				if strVal, ok := value.(string); ok {
@@ -390,9 +421,10 @@ func QueryHostImagePackages(
 	for rows.Next() {
 		var pkg Package
 		var dependsStr string
+		var providersStr string
 		var installedInt int
 
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&pkg.Name,
 			&pkg.Section,
 			&pkg.InstalledSize,
@@ -400,6 +432,7 @@ func QueryHostImagePackages(
 			&pkg.Version,
 			&pkg.VersionInstalled,
 			&dependsStr,
+			&providersStr,
 			&pkg.Size,
 			&pkg.Filename,
 			&pkg.Description,
@@ -407,6 +440,12 @@ func QueryHostImagePackages(
 			&installedInt,
 		); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
+		}
+
+		if providersStr != "" {
+			pkg.Provides = strings.Split(providersStr, ",")
+		} else {
+			pkg.Provides = []string{}
 		}
 
 		if dependsStr != "" {
@@ -419,7 +458,7 @@ func QueryHostImagePackages(
 		result = append(result, pkg)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("ошибка при обработке строк: %w", err)
 	}
 
@@ -428,52 +467,44 @@ func QueryHostImagePackages(
 
 // CountHostImagePackages возвращает количество записей из таблицы host_image_packages
 // с учётом переданных фильтров (строки => LIKE '%...%', для остальных типов "=").
-func CountHostImagePackages(ctx context.Context, filters map[string]interface{}) (int64, error) {
-	tableName := "host_image_packages"
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters map[string]interface{}) (int64, error) {
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", s.tableName)
 
 	var args []interface{}
 	if len(filters) > 0 {
 		var conditions []string
 		for field, value := range filters {
+			// Если фильтруем по полю "installed", делаем особую логику
 			if field == "installed" {
-				switch val := value.(type) {
-				case string:
-					lower := strings.ToLower(val)
-					if lower == "true" {
-						conditions = append(conditions, "installed = ?")
-						args = append(args, 1)
-					} else if lower == "false" {
-						conditions = append(conditions, "installed = ?")
-						args = append(args, 0)
-					} else {
-						if iv, err := strconv.Atoi(val); err == nil {
-							conditions = append(conditions, "installed = ?")
-							args = append(args, iv)
-						}
-					}
-				case bool:
-					if val {
-						conditions = append(conditions, "installed = 1")
-					} else {
-						conditions = append(conditions, "installed = 0")
-					}
-				default:
-					if intVal, ok := val.(int); ok {
-						conditions = append(conditions, "installed = ?")
-						args = append(args, intVal)
-					}
+				boolVal, ok := helper.ParseBool(value)
+				if !ok {
+					continue
+				}
+				conditions = append(conditions, fmt.Sprintf("%s = ?", field))
+				if boolVal {
+					args = append(args, 1)
+				} else {
+					args = append(args, 0)
+				}
+			} else if field == "provides" || field == "depends" {
+				if strVal, ok := value.(string); ok {
+					conditions = append(conditions, fmt.Sprintf("',' || %s || ',' LIKE ?", field))
+					args = append(args, fmt.Sprintf("%%,%s,%%", strVal))
+				} else {
+					conditions = append(conditions, fmt.Sprintf("',' || %s || ',' LIKE ?", field))
+					args = append(args, fmt.Sprintf("%%,%v,%%", value))
 				}
 			} else {
 				if strVal, ok := value.(string); ok {
 					conditions = append(conditions, fmt.Sprintf("%s LIKE ?", field))
-					args = append(args, "%"+strVal+"%")
+					args = append(args, fmt.Sprintf("%%%s%%", strVal))
 				} else {
 					conditions = append(conditions, fmt.Sprintf("%s = ?", field))
 					args = append(args, value)
 				}
 			}
 		}
+
 		if len(conditions) > 0 {
 			whereClause := strings.Join(conditions, " AND ")
 			query += " WHERE " + whereClause
@@ -489,9 +520,8 @@ func CountHostImagePackages(ctx context.Context, filters map[string]interface{})
 }
 
 // PackageDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.
-func PackageDatabaseExist(ctx context.Context) error {
-	tableName := "host_image_packages"
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+func (s *PackageDBService) PackageDatabaseExist(ctx context.Context) error {
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", s.tableName)
 	var count int
 	err := lib.DB.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
