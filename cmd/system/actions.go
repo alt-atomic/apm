@@ -252,6 +252,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 				}
 			}
 		}
+
 		if err != nil {
 			filters := map[string]interface{}{
 				"provides": originalPkg,
@@ -286,7 +287,6 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		packageNames = append(packageNames, originalPkg)
 	}
 
-	fmt.Println(5)
 	allPackageNames := strings.Join(packageNames, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
 	criticalError := apt.FindCriticalError(aptErrors)
@@ -490,6 +490,7 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 		Version:          packageInfo.Version,
 		VersionInstalled: packageInfo.VersionInstalled,
 		Depends:          packageInfo.Depends,
+		Providers:        packageInfo.Provides,
 		Size:             helper.AutoSize(packageInfo.Size),
 		Filename:         packageInfo.Filename,
 		Description:      packageInfo.Description,
