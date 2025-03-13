@@ -35,18 +35,10 @@ type ImageStatus struct {
 
 func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
-	packageParse, _, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
-	if len(aptErrors) > 0 {
-		return a.newErrorResponse(aptErrors[0].Error()), aptErrors[0]
-	}
-
-	if packageParse.RemovedCount == 0 {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": "Кандидатов на удаление не найдено",
-			},
-			Error: true,
-		}, nil
+	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
+	criticalError := apt.FindCriticalError(aptErrors)
+	if criticalError != nil {
+		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
 	return reply.APIResponse{
@@ -60,21 +52,10 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.API
 
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
-	packageParse, output, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
-	if len(aptErrors) > 0 {
-		return a.newErrorResponse(aptErrors[0].Error()), aptErrors[0]
-	}
-
-	if strings.Contains(output, "is already the newest version") && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": fmt.Sprintf("%s %s %s самой последней версии",
-					helper.DeclOfNum(len(packages), []string{"пакет", "пакета", "пакетов"}),
-					allPackageNames,
-					helper.DeclOfNum(len(packages), []string{"установлен", "установлены", "установлены"})),
-			},
-			Error: true,
-		}, nil
+	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
+	criticalError := apt.FindCriticalError(aptErrors)
+	if criticalError != nil {
+		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
 	return reply.APIResponse{
@@ -120,9 +101,10 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	allPackageNames := strings.Join(names, " ")
-	packageParse, _, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
-	if len(aptErrors) > 0 {
-		return a.newErrorResponse(aptErrors[0].Error()), aptErrors[0]
+	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
+	criticalError := apt.FindCriticalError(aptErrors)
+	if criticalError != nil {
+		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
 	if packageParse.RemovedCount == 0 {
@@ -150,9 +132,10 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	reply.CreateSpinner()
-	err = a.serviceAptActions.Remove(ctx, allPackageNames)
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+	errList := a.serviceAptActions.Remove(ctx, allPackageNames)
+	criticalError = apt.FindCriticalError(errList)
+	if criticalError != nil {
+		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
 	removePackageNames := strings.Join(packageParse.RemovedPackages, ",")
@@ -229,34 +212,22 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	allPackageNames := strings.Join(packageNames, " ")
-	packageParse, _, aprErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
-
-	// Проверка, что все ошибки в срезе являются моими и не являются критическими
-	isCriticalError := false
-	for _, err = range aprErrors {
-		var matchedErr *apt.MatchedError
-		if !errors.As(err, &matchedErr) {
-			isCriticalError = true
-			break
-		}
+	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
+	criticalError := apt.FindCriticalError(aptErrors)
+	if criticalError != nil {
+		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
 	// Достанем все кастомные ошибки apt
 	var customErrorList []*apt.MatchedError
-	for _, err = range aprErrors {
+	for _, err = range aptErrors {
 		var matchedErr *apt.MatchedError
 		if errors.As(err, &matchedErr) {
 			customErrorList = append(customErrorList, matchedErr)
 		}
 	}
 
-	// Есть критическая ошибка - покажем её, она всегда первая
-	if isCriticalError && len(aprErrors) > 0 {
-		return a.newErrorResponse(aprErrors[0].Error()), aprErrors[0]
-	}
-
-	// если ошибка не критическая и не будет выполнено никаких действий
-	if !isCriticalError && len(customErrorList) > 0 && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
+	if len(customErrorList) > 0 && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
 		messageNothingDo := "Операция не выполнит никаких изменений. Причины: \n"
 		var alreadyInstalledPackages []string
 
@@ -320,12 +291,10 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 	reply.CreateSpinner()
 
-	err = a.serviceAptActions.Install(ctx, allPackageNames)
-	var matchedErr *apt.MatchedError
-	if !errors.As(err, &matchedErr) {
-		if err != nil {
-			return a.newErrorResponse(err.Error()), err
-		}
+	errList := a.serviceAptActions.Install(ctx, allPackageNames)
+	criticalError = apt.FindCriticalError(errList)
+	if criticalError != nil {
+		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
 	err = a.updateAllPackagesDB(ctx)
@@ -702,12 +671,12 @@ func (a *Actions) checkRoot() error {
 		return fmt.Errorf("для выполнения необходимы права администратора, используйте sudo или su")
 	}
 
-	if lib.Env.IsAtomic {
-		err := a.serviceHostImage.EnableOverlay()
-		if err != nil {
-			return err
-		}
-	}
+	//if lib.Env.IsAtomic {
+	//	err := a.serviceHostImage.EnableOverlay()
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
 	return nil
 }

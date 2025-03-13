@@ -53,7 +53,7 @@ type Package struct {
 	Installed        bool     `json:"installed"`
 }
 
-func (a *Actions) Install(ctx context.Context, packageName string) error {
+func (a *Actions) Install(ctx context.Context, packageName string) []error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore)
@@ -66,19 +66,25 @@ func (a *Actions) Install(ctx context.Context, packageName string) error {
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
-	aptError := ErrorLinesAnalise(lines)
-	if aptError != nil {
-		return aptError
+	aptErrors := ErrorLinesAnalyseAll(lines)
+
+	if len(aptErrors) > 0 {
+		var errorsSlice []error
+		for _, e := range aptErrors {
+			errorsSlice = append(errorsSlice, e)
+		}
+		return errorsSlice
 	}
+
 	if err != nil {
 		lib.Log.Errorf("ошибка установки: %s", outputStr)
-		return fmt.Errorf("ошибка установки: %v", err)
+		return []error{fmt.Errorf("ошибка установки: %v", err)}
 	}
 
 	return nil
 }
 
-func (a *Actions) Remove(ctx context.Context, packageName string) error {
+func (a *Actions) Remove(ctx context.Context, packageName string) []error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore)
@@ -91,19 +97,25 @@ func (a *Actions) Remove(ctx context.Context, packageName string) error {
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
-	aptError := ErrorLinesAnalise(lines)
-	if aptError != nil {
-		return aptError
+	aptErrors := ErrorLinesAnalyseAll(lines)
+
+	if len(aptErrors) > 0 {
+		var errorsSlice []error
+		for _, e := range aptErrors {
+			errorsSlice = append(errorsSlice, e)
+		}
+		return errorsSlice
 	}
+
 	if err != nil {
-		lib.Log.Errorf("ошибка установки: %s", outputStr)
-		return fmt.Errorf("ошибка удаления пакетов: %v", err)
+		lib.Log.Errorf("ошибка удаления: %s", outputStr)
+		return []error{fmt.Errorf("ошибка удаления: %v", err)}
 	}
 
 	return nil
 }
 
-func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, string, []error) {
+func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, []error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -125,22 +137,22 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 
 		packageParse, err = parseAptOutput(outputStr)
 		if err != nil {
-			return PackageChanges{}, "", []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
+			return PackageChanges{}, []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
 		}
-		return packageParse, "", errorsSlice
+		return packageParse, errorsSlice
 	}
 
 	if err != nil {
 		lib.Log.Errorf("ошибка проверки пакетов: %s", outputStr)
-		return PackageChanges{}, "", []error{fmt.Errorf("ошибка проверки пакетов: %v", err)}
+		return PackageChanges{}, []error{fmt.Errorf("ошибка проверки пакетов: %v", err)}
 	}
 
 	packageParse, err = parseAptOutput(outputStr)
 	if err != nil {
-		return PackageChanges{}, "", []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
+		return PackageChanges{}, []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
 	}
 
-	return packageParse, outputStr, nil
+	return packageParse, nil
 }
 
 func (a *Actions) Update(ctx context.Context) ([]Package, error) {

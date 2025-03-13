@@ -1,6 +1,7 @@
 package apt
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -216,6 +217,32 @@ func (e *MatchedError) Error() string {
 		return fmt.Sprintf(template, toInterfaceSlice(e.Params[:e.Entry.Params])...)
 	}
 	return template
+}
+
+func (e *MatchedError) IsCritical() bool {
+	switch e.Entry.Code {
+	case ErrPackageNotInstalled:
+		return false
+	case ErrPackageIsAlreadyNewest:
+		return false
+	default:
+		return true
+	}
+}
+
+func FindCriticalError(errorList []error) error {
+	for _, err := range errorList {
+		var matchedErr *MatchedError
+		if err != nil && !errors.As(err, &matchedErr) {
+			return err
+		}
+
+		if err != nil && matchedErr.IsCritical() {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func patternToRegex(pattern string) string {
