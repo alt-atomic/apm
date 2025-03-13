@@ -107,13 +107,54 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
+	// Достанем все кастомные ошибки apt
+	var customErrorList []*apt.MatchedError
+	for _, err = range aptErrors {
+		var matchedErr *apt.MatchedError
+		if errors.As(err, &matchedErr) {
+			customErrorList = append(customErrorList, matchedErr)
+		}
+	}
+
 	if packageParse.RemovedCount == 0 {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": "Кандидатов на удаление не найдено",
-			},
-			Error: true,
-		}, nil
+		messageNothingDo := "Кандидатов на удаление не найдено"
+		var alreadyRemovedPackages []string
+
+		for _, customError := range customErrorList {
+			if customError.Entry.Code == apt.ErrPackageNotInstalled && apply && lib.Env.IsAtomic {
+				alreadyRemovedPackages = append(alreadyRemovedPackages, customError.Params[0])
+			}
+		}
+
+		if apply && lib.Env.IsAtomic {
+			diffPackageFound := false
+			var config service.Config
+			config, err = service.ParseConfig()
+			if err != nil {
+				return newErrorResponse(err.Error()), nil
+			}
+
+			for _, removedPkg := range alreadyRemovedPackages {
+				if !config.IsRemoved(removedPkg) {
+					diffPackageFound = true
+					err = config.AddRemovePackage(removedPkg)
+					if err != nil {
+						return newErrorResponse(err.Error()), nil
+					}
+				}
+			}
+
+			if diffPackageFound {
+				err = a.applyChange(ctx, packages, false)
+				if err != nil {
+					return a.newErrorResponse(err.Error()), err
+				}
+
+				messageNothingDo += ".\nНайдено отличие списка пакетов в локальной конфигурации, образ был обновлён"
+			}
+		}
+
+		return a.newErrorResponse(messageNothingDo), fmt.Errorf(messageNothingDo)
 	}
 
 	reply.StopSpinner()

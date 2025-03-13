@@ -248,7 +248,7 @@ func (m model) buildContent() string {
 	})
 
 	var sb strings.Builder
-	const keyWidth = 18
+	const keyWidth = 21
 
 	infoPackage := fmt.Sprintf("\nИнформация о %s:\n", helper.DeclOfNum(len(m.pkg), []string{"пакете", "пакетах", "пакетах"}))
 	sb.WriteString(titleStyle.Render(infoPackage))
@@ -257,9 +257,9 @@ func (m model) buildContent() string {
 			sb.WriteString(titleStyle.Render("\n"))
 			sb.WriteString(titleStyle.Render(fmt.Sprintf("\nПакет %d:", i+1)))
 		}
-		installedText := shortcutStyle.Render("нет")
+		installedText := shortcutStyle.Render("Нет")
 		if pkg.Installed {
-			installedText = installStyle.Render("да")
+			installedText = installStyle.Render("Да")
 		}
 
 		sb.WriteString("\n" + formatLine("Название", pkg.Name, keyWidth, keyStyle, valueStyle))
@@ -270,7 +270,7 @@ func (m model) buildContent() string {
 
 		if pkg.Installed {
 			// Выводим "Версия в облаке" обычным стилем
-			sb.WriteString("\n" + formatLine("Версия в облаке", pkg.Version, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine("Версия в репозитории", pkg.Version, keyWidth, keyStyle, valueStyle))
 			// Сравниваем версию в системе и облаке
 			var systemVersionColored string
 			if pkg.VersionInstalled == pkg.Version {
@@ -281,7 +281,7 @@ func (m model) buildContent() string {
 			// Выводим "Версия в системе", уже с раскрашенным текстом
 			sb.WriteString("\n" + formatLine("Версия в системе", systemVersionColored, keyWidth, keyStyle, valueStyle))
 		} else {
-			sb.WriteString("\n" + formatLine("Версия в облаке", pkg.Version, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine("Версия в репозитории", pkg.Version, keyWidth, keyStyle, valueStyle))
 		}
 		sb.WriteString("\n" + formatLine("Размер", helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
 
@@ -313,18 +313,18 @@ func (m model) buildContent() string {
 
 func (m model) statusPackage(pkg string) string {
 	if contains(m.pckChange.ExtraInstalled, pkg) || contains(m.pckChange.NewInstalledPackages, pkg) {
-		return installStyle.Render("будет установлен")
+		return installStyle.Render("Будет установлен")
 	}
 
 	if contains(m.pckChange.UpgradedPackages, pkg) {
-		return installStyle.Render("будет обновлён")
+		return installStyle.Render("Будет обновлён")
 	}
 
 	if contains(m.pckChange.RemovedPackages, pkg) {
-		return deleteStyle.Render("будет удалён")
+		return deleteStyle.Render("Будет удалён")
 	}
 
-	return shortcutStyle.Render("нет")
+	return shortcutStyle.Render("Нет")
 }
 
 func contains(slice []string, pkg string) bool {
@@ -345,7 +345,7 @@ func formatDependencies(depends []string) string {
 		filtered = append(filtered, dep)
 	}
 	if len(filtered) == 0 {
-		return "нет"
+		return "Нет"
 	}
 	if len(filtered) > 500 {
 		filtered = append(filtered[:500], "и другие")
