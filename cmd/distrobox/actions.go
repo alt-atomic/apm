@@ -98,7 +98,7 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Информация о пакете",
+			"message":     "Найден пакет",
 			"packageInfo": packageInfo,
 		},
 		Error: false,

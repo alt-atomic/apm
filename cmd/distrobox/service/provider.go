@@ -23,7 +23,7 @@ func NewPackageService(serviceDistroDatabase *DistroDBService) *PackageService {
 
 // PackageInfo описывает информацию о пакете.
 type PackageInfo struct {
-	PackageName string `json:"packageName"`
+	PackageName string `json:"name"`
 	Version     string `json:"version"`
 	Description string `json:"description"`
 	Installed   bool   `json:"installed"`

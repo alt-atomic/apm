@@ -96,10 +96,9 @@ func CommandList() *cli.Command {
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
-						Name:    "full",
-						Usage:   "Полный вывод информации",
-						Aliases: []string{"f"},
-						Value:   false,
+						Name:  "full",
+						Usage: "Полный вывод информации",
+						Value: false,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -123,10 +122,9 @@ func CommandList() *cli.Command {
 						Value:   false,
 					},
 					&cli.BoolFlag{
-						Name:    "full",
-						Usage:   "Полный вывод информации",
-						Aliases: []string{"f"},
-						Value:   false,
+						Name:  "full",
+						Usage: "Полный вывод информации",
+						Value: false,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -177,10 +175,9 @@ func CommandList() *cli.Command {
 						Value: false,
 					},
 					&cli.BoolFlag{
-						Name:    "full",
-						Usage:   "Полный вывод информации",
-						Aliases: []string{"f"},
-						Value:   false,
+						Name:  "full",
+						Usage: "Полный вывод информации",
+						Value: false,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
