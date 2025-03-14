@@ -150,8 +150,8 @@ func (h *HostImageService) EnableOverlay() error {
 
 // BuildImage сборка образа
 func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (string, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.BuildImage"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.BuildImage"))
 	command := fmt.Sprintf("%s podman build --squash -t os /var", lib.Env.CommandPrefix)
 	if pullImage {
 		command = fmt.Sprintf("%s podman build --pull=always --squash -t os /var", lib.Env.CommandPrefix)
@@ -178,8 +178,8 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 // SwitchImage переключение образа
 func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SwitchImage"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SwitchImage"))
 
 	command := fmt.Sprintf("%s bootc switch --transport containers-storage %s", lib.Env.CommandPrefix, podmanImageID)
 	cmd := exec.Command("sh", "-c", command)
@@ -192,8 +192,8 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
 func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.CheckAndUpdateBaseImage"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.CheckAndUpdateBaseImage"))
 	image, err := h.GetHostImage()
 	if err != nil {
 		return fmt.Errorf("ошибка получения информации: %v", err)
@@ -221,8 +221,8 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 }
 
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.bootcUpgrade"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.bootcUpgrade"))
 
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s bootc upgrade", lib.Env.CommandPrefix))
 	if output, err := cmd.CombinedOutput(); err != nil {

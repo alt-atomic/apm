@@ -32,8 +32,8 @@ var syncDBMutex sync.Mutex
 func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Package) error {
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SavePackagesToDB"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SavePackagesToDB"))
 
 	// Создаем таблицу, если её нет.
 	createQuery := fmt.Sprintf(`

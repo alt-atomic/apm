@@ -61,8 +61,8 @@ type Package struct {
 func (a *Actions) Install(ctx context.Context, packageName string) []error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Install"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Install"))
 
 	command := fmt.Sprintf("%s apt-get -y install %s", lib.Env.CommandPrefix, packageName)
 	cmd := exec.Command("sh", "-c", command)
@@ -92,8 +92,8 @@ func (a *Actions) Install(ctx context.Context, packageName string) []error {
 func (a *Actions) Remove(ctx context.Context, packageName string) []error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Remove"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Remove"))
 
 	command := fmt.Sprintf("%s apt-get -y remove %s", lib.Env.CommandPrefix, packageName)
 	cmd := exec.Command("sh", "-c", command)
@@ -121,8 +121,8 @@ func (a *Actions) Remove(ctx context.Context, packageName string) []error {
 }
 
 func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, []error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
 	command := fmt.Sprintf("%s apt-get -s %s %s", lib.Env.CommandPrefix, aptCommand, packageName)
 	cmd := exec.Command("sh", "-c", command)
@@ -161,8 +161,8 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 }
 
 func (a *Actions) Update(ctx context.Context) ([]Package, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Update"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Update"))
 
 	err := aptUpdate(ctx)
 	if err != nil {
@@ -386,8 +386,8 @@ func (a *Actions) GetInstalledPackages() (map[string]string, error) {
 func aptUpdate(ctx context.Context) error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.AptUpdate"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.AptUpdate"))
 
 	command := fmt.Sprintf("%s apt-get update", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)

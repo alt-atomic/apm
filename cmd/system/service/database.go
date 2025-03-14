@@ -36,8 +36,8 @@ type ImageHistory struct {
 // SaveImageToDB сохраняет историю образов в БД.
 // Перед сохранением объект Config сериализуется в JSON-строку.
 func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SaveImageToDB"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SaveImageToDB"))
 
 	tableName := "host_image_history"
 

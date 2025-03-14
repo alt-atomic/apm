@@ -152,8 +152,8 @@ func parseSize(sizeStr string) (float64, error) {
 
 // pruneOldImages удаляет старые образы Podman.
 func pruneOldImages(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.pruneOldImages"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.pruneOldImages"))
 
 	command := fmt.Sprintf("%s podman image prune -f", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)

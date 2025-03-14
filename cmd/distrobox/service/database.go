@@ -25,8 +25,8 @@ func NewDistroDBService(db *sql.DB) *DistroDBService {
 // SavePackagesToDB сохраняет список пакетов в таблицу с именем контейнера.
 // Таблица создаётся, если не существует, затем очищается, и в неё вставляются новые записи пакетами по 1000.
 func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName string, packages []PackageInfo) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore)
-	defer reply.CreateEventNotification(ctx, reply.StateAfter)
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.SavePackagesToDB"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.SavePackagesToDB"))
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 
 	// Создаем таблицу, если её нет.

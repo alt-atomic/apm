@@ -98,7 +98,7 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 	}
 
 	if ed.View == "" {
-		ed.View = getTaskViewName(ed.Name)
+		ed.View = getTaskText(ed.Name)
 	}
 
 	SendFuncNameDBUS(ctx, ed)
@@ -146,62 +146,60 @@ func SendNotificationResponse(message string) {
 	}
 }
 
-func getTaskViewName(task string) string {
+func getTaskText(task string) string {
 	switch task {
-	case "service.pruneOldImages":
-		return "Очистка старых образов"
-	case "service.SaveImageToDB":
-		return "Сохранение истории образа в базу данных"
-	case "apt.(*Actions).Install":
-		return "Установка"
-	case "system.(*Actions).updateAllPackagesDB":
-		return "Обновление состояния пакетов"
-	case "apt.(*Actions).Remove":
-		return "Удаление"
-	case "apt.(*Actions).Check":
-		return "Анализ пакетов"
-	case "apt.(*Actions).Update":
-		return "Общий процесс обновления"
-	case "apt.SavePackagesToDB":
+	case "distro.SavePackagesToDB":
 		return "Сохранение пакетов в базу"
-	case "apt.aptUpdate":
-		return "Загрузка списка пакетов из репозитория ALT"
-	case "service.(*HostImageService).CheckAndUpdateBaseImage":
-		return "Проверка обновления"
-	case "service.(*HostImageService).bootcUpgrade":
-		return "Загрузка обновления базового образа"
-	case "service.(*HostImageService).SwitchImage":
-		return "Переключение на локальный образ"
-	case "service.(*HostImageService).BuildImage":
-		return "Сборка локального образа"
-	case "service.SavePackagesToDB":
-		return "Сохранение пакетов в базу"
-	case "api.GetContainerList":
+	case "distro.GetContainerList":
 		return "Запрос списка контейнеров"
-	case "api.ExportingApp":
+	case "distro.ExportingApp":
 		return "Экспорт пакета"
-	case "api.GetContainerOsInfo":
+	case "distro.GetContainerOsInfo":
 		return "Запрос информации о контейнере"
-	case "api.CreateContainer":
+	case "distro.CreateContainer":
 		return "Создание контейнера"
-	case "api.RemoveContainer":
+	case "distro.RemoveContainer":
 		return "Удаление контейнера"
-	case "service.InstallPackage":
+	case "distro.InstallPackage":
 		return "Установка пакета"
-	case "service.RemovePackage":
+	case "distro.RemovePackage":
 		return "Удаление пакета"
-	case "service.GetPackages":
+	case "distro.GetPackages":
 		return "Получение списка пакетов"
-	case "service.GetPackageOwner":
+	case "distro.GetPackageOwner":
 		return "Определение владельца файла"
-	case "service.GetPathByPackageName":
+	case "distro.GetPathByPackageName":
 		return "Поиск путей пакета"
-	case "service.GetInfoPackage":
+	case "distro.GetInfoPackage":
 		return "Получение информации о пакете"
-	case "service.UpdatePackages":
+	case "distro.UpdatePackages":
 		return "Обновление пакетов"
-	case "service.GetPackagesQuery":
+	case "distro.GetPackagesQuery":
 		return "Фильтрация пакетов"
+	case "system.Install":
+		return "Установка пакета"
+	case "system.Remove":
+		return "Удаление"
+	case "system.Check":
+		return "Анализ пакетов"
+	case "system.Update":
+		return "Общий процесс обновления"
+	case "system.AptUpdate":
+		return "Загрузка списка пакетов из репозитория ALT"
+	case "system.SavePackagesToDB":
+		return "Сохранение пакетов в базу"
+	case "system.SaveImageToDB":
+		return "Сохранение истории образа в базу данных"
+	case "system.BuildImage":
+		return "Сборка локального образа"
+	case "system.SwitchImage":
+		return "Переключение на локальный образ"
+	case "system.CheckAndUpdateBaseImage":
+		return "Проверка обновления"
+	case "system.bootcUpgrade":
+		return "Загрузка обновления базового образа"
+	case "system.pruneOldImages":
+		return "Очистка старых образов"
 	default:
 		// Если имя задачи неизвестно, возвращаем его без изменений
 		return task
