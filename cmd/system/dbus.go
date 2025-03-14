@@ -67,7 +67,7 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 		return "", dbus.MakeFailedError(fmt.Errorf("не удалось разобрать JSON: %w", err))
 	}
 
-	resp, err := w.actions.List(ctx, params)
+	resp, err := w.actions.List(ctx, params, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -81,7 +81,7 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 // Info – обёртка над Actions.Info.
 func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Info(ctx, packageName)
+	resp, err := w.actions.Info(ctx, packageName, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -123,7 +123,7 @@ func (w *DBusWrapper) CheckRemove(packages []string, transaction string) (string
 // Search – обёртка над Actions.Search.
 func (w *DBusWrapper) Search(packageName string, transaction string, installed bool) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	resp, err := w.actions.Search(ctx, packageName, installed)
+	resp, err := w.actions.Search(ctx, packageName, installed, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

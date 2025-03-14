@@ -94,8 +94,16 @@ func CommandList() *cli.Command {
 				Name:      "info",
 				Usage:     "Информация о пакете",
 				ArgsUsage: "package",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "full",
+						Usage:   "Полный вывод информации",
+						Aliases: []string{"f"},
+						Value:   false,
+					},
+				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Info(ctx, cmd.Args().First())
+					resp, err := NewActions().Info(ctx, cmd.Args().First(), cmd.Bool("full"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -114,9 +122,15 @@ func CommandList() *cli.Command {
 						Aliases: []string{"i"},
 						Value:   false,
 					},
+					&cli.BoolFlag{
+						Name:    "full",
+						Usage:   "Полный вывод информации",
+						Aliases: []string{"f"},
+						Value:   false,
+					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Search(ctx, cmd.Args().First(), cmd.Bool("installed"))
+					resp, err := NewActions().Search(ctx, cmd.Args().First(), cmd.Bool("installed"), cmd.Bool("full"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -162,6 +176,12 @@ func CommandList() *cli.Command {
 						Usage: "Принудительно обновить все пакеты перед запросом",
 						Value: false,
 					},
+					&cli.BoolFlag{
+						Name:    "full",
+						Usage:   "Полный вывод информации",
+						Aliases: []string{"f"},
+						Value:   false,
+					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					params := ListParams{
@@ -174,7 +194,7 @@ func CommandList() *cli.Command {
 						ForceUpdate: cmd.Bool("force-update"),
 					}
 
-					resp, err := NewActions().List(ctx, params)
+					resp, err := NewActions().List(ctx, params, cmd.Bool("full"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

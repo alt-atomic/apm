@@ -34,6 +34,10 @@ var (
 		Dark:  "#c4c8c6", // для тёмной темы
 	}
 
+	accentStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#a2734c"))
+
 	// Стиль для узлов дерева.
 	itemStyle = lipgloss.NewStyle().
 			Foreground(adaptiveItemColor)
@@ -48,6 +52,15 @@ func translateKey(k string) string {
 // IsTTY пользователь запустил приложение в интерактивной консоли
 func IsTTY() bool {
 	return terminal.IsTerminal(int(os.Stdout.Fd()))
+}
+
+func formatField(key string, value interface{}) string {
+	valStr := fmt.Sprintf("%v", value)
+	if key == "name" {
+		return fmt.Sprintf("%s", accentStyle.Render(valStr))
+	}
+
+	return fmt.Sprintf("%s", valStr)
 }
 
 // buildTreeFromMap рекурсивно строит дерево (tree.Tree) из map[string]interface{}.
@@ -137,7 +150,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 			if vv == "" {
 				t.Child(fmt.Sprintf("%s: нет", translateKey(k)))
 			} else {
-				t.Child(fmt.Sprintf("%s: %s", translateKey(k), vv))
+				t.Child(fmt.Sprintf("%s: %s", translateKey(k), formatField(k, vv)))
 			}
 
 		//----------------------------------------------------------------------

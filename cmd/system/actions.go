@@ -284,7 +284,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 			alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
 			if errFind != nil {
-				return a.newErrorResponse(err.Error()), err
+				return a.newErrorResponse(errFind.Error()), errFind
 			}
 
 			if len(alternativePackages) == 0 {
@@ -489,23 +489,8 @@ func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
 	}, nil
 }
 
-type PackageResponse struct {
-	Name             string   `json:"name"`
-	Section          string   `json:"section"`
-	InstalledSize    string   `json:"installedSize"`
-	Maintainer       string   `json:"maintainer"`
-	Version          string   `json:"version"`
-	VersionInstalled string   `json:"versionInstalled"`
-	Depends          []string `json:"depends"`
-	Providers        []string `json:"providers"`
-	Size             string   `json:"size"`
-	Filename         string   `json:"filename"`
-	Description      string   `json:"description"`
-	Installed        bool     `json:"installed"`
-}
-
 // Info возвращает информацию о системном пакете.
-func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIResponse, error) {
+func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (reply.APIResponse, error) {
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := "необходимо указать название пакета, например info package"
@@ -519,28 +504,40 @@ func (a *Actions) Info(ctx context.Context, packageName string) (reply.APIRespon
 
 	packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
-	}
+		filters := map[string]interface{}{
+			"provides": packageName,
+		}
 
-	resp := PackageResponse{
-		Name:             packageInfo.Name,
-		Section:          packageInfo.Section,
-		InstalledSize:    helper.AutoSize(packageInfo.InstalledSize),
-		Maintainer:       packageInfo.Maintainer,
-		Version:          packageInfo.Version,
-		VersionInstalled: packageInfo.VersionInstalled,
-		Depends:          packageInfo.Depends,
-		Providers:        packageInfo.Provides,
-		Size:             helper.AutoSize(packageInfo.Size),
-		Filename:         packageInfo.Filename,
-		Description:      packageInfo.Description,
-		Installed:        packageInfo.Installed,
+		alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
+		if errFind != nil {
+			return a.newErrorResponse(err.Error()), errFind
+		}
+
+		if len(alternativePackages) == 0 {
+			errorFindPackage := fmt.Sprintf("не удалось получить информацию о пакете %s", packageName)
+			return a.newErrorResponse(errorFindPackage), fmt.Errorf(errorFindPackage)
+		}
+
+		var altNames []string
+		for _, altPkg := range alternativePackages {
+			altNames = append(altNames, altPkg.Name)
+		}
+
+		message := err.Error() + ". Может быть, Вы искали: "
+
+		return reply.APIResponse{
+			Data: map[string]interface{}{
+				"message":  message,
+				"packages": altNames,
+			},
+			Error: true,
+		}, nil
 	}
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     "Найден пакет",
-			"packageInfo": resp,
+			"packageInfo": a.FormatPackageOutput(packageInfo, isFullFormat),
 		},
 		Error: false,
 	}, nil
@@ -557,7 +554,7 @@ type ListParams struct {
 	ForceUpdate bool   `json:"forceUpdate"`
 }
 
-func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIResponse, error) {
+func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool) (reply.APIResponse, error) {
 	if params.ForceUpdate {
 		_, err := a.serviceAptActions.Update(ctx)
 		if err != nil {
@@ -588,35 +585,17 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 		return a.newErrorResponse("ничего не найдено"), fmt.Errorf("ничего не найдено")
 	}
 
-	var respPackages []PackageResponse
-	for _, packageInfo := range packages {
-		respPackages = append(respPackages, PackageResponse{
-			Name:             packageInfo.Name,
-			Section:          packageInfo.Section,
-			InstalledSize:    helper.AutoSize(packageInfo.InstalledSize),
-			Maintainer:       packageInfo.Maintainer,
-			Version:          packageInfo.Version,
-			VersionInstalled: packageInfo.VersionInstalled,
-			Depends:          packageInfo.Depends,
-			Providers:        packageInfo.Provides,
-			Size:             helper.AutoSize(packageInfo.Size),
-			Filename:         packageInfo.Filename,
-			Description:      packageInfo.Description,
-			Installed:        packageInfo.Installed,
-		})
-	}
-
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(respPackages), []string{"Найдена", "Найдено", "Найдены"}),
-		len(respPackages),
-		helper.DeclOfNum(len(respPackages), []string{"запись", "записи", "записей"}),
+		helper.DeclOfNum(len(packages), []string{"Найдена", "Найдено", "Найдены"}),
+		len(packages),
+		helper.DeclOfNum(len(packages), []string{"запись", "записи", "записей"}),
 	)
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
-			"packages":   respPackages,
+			"packages":   a.FormatPackageOutput(packages, isFullFormat),
 			"totalCount": int(totalCount),
 		},
 		Error: false,
@@ -624,7 +603,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 }
 
 // Search осуществляет поиск системного пакета по названию.
-func (a *Actions) Search(ctx context.Context, packageName string, installed bool) (reply.APIResponse, error) {
+func (a *Actions) Search(ctx context.Context, packageName string, installed bool, isFullFormat bool) (reply.APIResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -645,35 +624,17 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 		return a.newErrorResponse("Ничего не найдено"), fmt.Errorf("ничего не найдено")
 	}
 
-	var respPackages []PackageResponse
-	for _, packageInfo := range packages {
-		respPackages = append(respPackages, PackageResponse{
-			Name:             packageInfo.Name,
-			Section:          packageInfo.Section,
-			InstalledSize:    helper.AutoSize(packageInfo.InstalledSize),
-			Maintainer:       packageInfo.Maintainer,
-			Version:          packageInfo.Version,
-			VersionInstalled: packageInfo.VersionInstalled,
-			Depends:          packageInfo.Depends,
-			Providers:        packageInfo.Provides,
-			Size:             helper.AutoSize(packageInfo.Size),
-			Filename:         packageInfo.Filename,
-			Description:      packageInfo.Description,
-			Installed:        packageInfo.Installed,
-		})
-	}
-
 	msg := fmt.Sprintf(
 		"%s %d %s",
-		helper.DeclOfNum(len(respPackages), []string{"Найдена", "Найдено", "Найдены"}),
-		len(respPackages),
-		helper.DeclOfNum(len(respPackages), []string{"запись", "записи", "записей"}),
+		helper.DeclOfNum(len(packages), []string{"Найдена", "Найдено", "Найдены"}),
+		len(packages),
+		helper.DeclOfNum(len(packages), []string{"запись", "записи", "записей"}),
 	)
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":  msg,
-			"packages": respPackages,
+			"packages": a.FormatPackageOutput(packages, isFullFormat),
 		},
 		Error: false,
 	}, nil
@@ -941,4 +902,47 @@ func (a *Actions) getImageStatus(ctx context.Context) (ImageStatus, error) {
 		Image:  hostImage,
 		Config: *a.serviceHostConfig.Config,
 	}, nil
+}
+
+// ShortPackageResponse Определяем структуру для короткого представления пакета
+type ShortPackageResponse struct {
+	Name        string `json:"name"`
+	Installed   bool   `json:"installed"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
+}
+
+// FormatPackageOutput принимает данные (один пакет или срез пакетов) и флаг full.
+// Если full == true, то возвращается полный вывод, иначе – сокращённый.
+func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
+	switch v := data.(type) {
+	// Если передан один пакет
+	case apt.Package:
+		if full {
+			return v
+		}
+		return ShortPackageResponse{
+			Name:        v.Name,
+			Version:     v.Version,
+			Installed:   v.Installed,
+			Description: v.Description,
+		}
+	// Если передан срез пакетов
+	case []apt.Package:
+		if full {
+			return v
+		}
+		shortList := make([]ShortPackageResponse, 0, len(v))
+		for _, pkg := range v {
+			shortList = append(shortList, ShortPackageResponse{
+				Name:        pkg.Name,
+				Version:     pkg.Version,
+				Installed:   pkg.Installed,
+				Description: pkg.Description,
+			})
+		}
+		return shortList
+	default:
+		return nil
+	}
 }
