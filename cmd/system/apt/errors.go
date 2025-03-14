@@ -230,6 +230,19 @@ func (e *MatchedError) IsCritical() bool {
 	}
 }
 
+func (e *MatchedError) NeedUpdate() bool {
+	switch e.Entry.Code {
+	case ErrFailedToFetchArchives:
+		return true
+	case ErrFailedToFetch:
+		return true
+	case ErrFailedToFetchSomeIndex:
+		return true
+	default:
+		return false
+	}
+}
+
 func FindCriticalError(errorList []error) error {
 	for _, err := range errorList {
 		var matchedErr *MatchedError
@@ -238,7 +251,7 @@ func FindCriticalError(errorList []error) error {
 		}
 
 		if err != nil && matchedErr.IsCritical() {
-			return err
+			return matchedErr
 		}
 	}
 

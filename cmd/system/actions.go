@@ -187,6 +187,21 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	errList := a.serviceAptActions.Remove(ctx, allPackageNames)
 	criticalError = apt.FindCriticalError(errList)
 	if criticalError != nil {
+		var matchedErr *apt.MatchedError
+		if errors.As(criticalError, &matchedErr) && matchedErr.NeedUpdate() {
+			_, err = a.serviceAptActions.Update(ctx)
+			if err != nil {
+				return newErrorResponse(err.Error()), err
+			}
+
+			return reply.APIResponse{
+				Data: map[string]interface{}{
+					"message": "Возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду",
+				},
+				Error: true,
+			}, nil
+		}
+
 		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
@@ -394,6 +409,21 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	errList := a.serviceAptActions.Install(ctx, allPackageNames)
 	criticalError = apt.FindCriticalError(errList)
 	if criticalError != nil {
+		var matchedErr *apt.MatchedError
+		if errors.As(criticalError, &matchedErr) && matchedErr.NeedUpdate() {
+			_, err = a.serviceAptActions.Update(ctx)
+			if err != nil {
+				return newErrorResponse(err.Error()), err
+			}
+
+			return reply.APIResponse{
+				Data: map[string]interface{}{
+					"message": "Возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду",
+				},
+				Error: true,
+			}, nil
+		}
+
 		return a.newErrorResponse(criticalError.Error()), criticalError
 	}
 
@@ -834,10 +864,10 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, false)
-	if err != nil {
-		return err
-	}
+	//err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, false)
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }

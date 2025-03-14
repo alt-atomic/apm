@@ -85,11 +85,11 @@ func main() {
 					distroActions := distrobox.NewActions()
 					distroObj := distrobox.NewDBusWrapper(distroActions)
 
-					if err := lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
+					if err = lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
 						return err
 					}
 
-					if err := lib.DBUSConn.Export(
+					if err = lib.DBUSConn.Export(
 						introspect.Introspectable(helper.UserIntrospectXML),
 						"/com/application/APM",
 						"org.freedesktop.DBus.Introspectable",
@@ -117,11 +117,11 @@ func main() {
 					sysActions := system.NewActions()
 					sysObj := system.NewDBusWrapper(sysActions)
 
-					if err := lib.DBUSConn.Export(sysObj, "/com/application/APM", "com.application.system"); err != nil {
+					if err = lib.DBUSConn.Export(sysObj, "/com/application/APM", "com.application.system"); err != nil {
 						return err
 					}
 
-					if err := lib.DBUSConn.Export(
+					if err = lib.DBUSConn.Export(
 						introspect.Introspectable(helper.SystemIntrospectXML),
 						"/com/application/APM",
 						"org.freedesktop.DBus.Introspectable",
