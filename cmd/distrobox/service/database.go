@@ -5,13 +5,26 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 )
 
+// DistroDBService — сервис для операций с базой данных хоста.
+type DistroDBService struct {
+	dbConn *sql.DB
+}
+
+// NewDistroDBService — конструктор сервиса
+func NewDistroDBService(db *sql.DB) *DistroDBService {
+	return &DistroDBService{
+		dbConn: db,
+	}
+}
+
 // SavePackagesToDB сохраняет список пакетов в таблицу с именем контейнера.
 // Таблица создаётся, если не существует, затем очищается, и в неё вставляются новые записи пакетами по 1000.
-func SavePackagesToDB(ctx context.Context, containerName string, packages []PackageInfo) error {
+func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName string, packages []PackageInfo) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	tableName := fmt.Sprintf("\"%s\"", containerName)
@@ -25,18 +38,18 @@ func SavePackagesToDB(ctx context.Context, containerName string, packages []Pack
 		exporting INTEGER,
 		manager TEXT
 	)`, tableName)
-	if _, err := lib.DB.Exec(createQuery); err != nil {
+	if _, err := s.dbConn.Exec(createQuery); err != nil {
 		return err
 	}
 
 	// Очищаем таблицу.
 	deleteQuery := fmt.Sprintf("DELETE FROM %s", tableName)
-	if _, err := lib.DB.Exec(deleteQuery); err != nil {
+	if _, err := s.dbConn.Exec(deleteQuery); err != nil {
 		return err
 	}
 
 	// Начинаем транзакцию.
-	tx, err := lib.DB.Begin()
+	tx, err := s.dbConn.Begin()
 	if err != nil {
 		return err
 	}
@@ -65,7 +78,7 @@ func SavePackagesToDB(ctx context.Context, containerName string, packages []Pack
 		}
 		query := fmt.Sprintf("INSERT INTO %s (packageName, version, description, installed, exporting, manager) VALUES %s",
 			tableName, strings.Join(placeholders, ","))
-		if _, err := tx.Exec(query, args...); err != nil {
+		if _, err = tx.Exec(query, args...); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -75,11 +88,11 @@ func SavePackagesToDB(ctx context.Context, containerName string, packages []Pack
 }
 
 // ContainerDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.
-func ContainerDatabaseExist(ctx context.Context, containerName string) error {
+func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerName string) error {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
 	var count int
-	err := lib.DB.QueryRow(query).Scan(&count)
+	err := s.dbConn.QueryRow(query).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -88,7 +101,7 @@ func ContainerDatabaseExist(ctx context.Context, containerName string) error {
 }
 
 // CountTotalPackages выполняет запрос COUNT(*) для таблицы с пакетами, применяя фильтры.
-func CountTotalPackages(containerName string, filters map[string]interface{}) (int, error) {
+func (s *DistroDBService) CountTotalPackages(containerName string, filters map[string]interface{}) (int, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
 	var args []interface{}
@@ -125,7 +138,7 @@ func CountTotalPackages(containerName string, filters map[string]interface{}) (i
 		}
 	}
 	var total int
-	err := lib.DB.QueryRow(query, args...).Scan(&total)
+	err := s.dbConn.QueryRow(query, args...).Scan(&total)
 	if err != nil {
 		return 0, err
 	}
@@ -133,11 +146,7 @@ func CountTotalPackages(containerName string, filters map[string]interface{}) (i
 }
 
 // QueryPackages возвращает пакеты из таблицы контейнера с возможностью фильтрации, сортировки, limit и offset.
-// filters - словарь, где ключ — имя поля, значение - искомое значение (будет использовано условие "=").
-// sortField - имя поля для сортировки (если пустое, сортировка не применяется).
-// sortOrder - "ASC" или "DESC" (по умолчанию ASC, если задано неверно, то ASC).
-// limit и offset - ограничения выборки. Если limit <= 0, то ограничение не применяется.
-func QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit, offset int64) ([]PackageInfo, error) {
+func (s *DistroDBService) QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit, offset int64) ([]PackageInfo, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 
 	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s", tableName)
@@ -195,11 +204,16 @@ func QueryPackages(containerName string, filters map[string]interface{}, sortFie
 		}
 	}
 
-	rows, err := lib.DB.Query(query, args...)
+	rows, err := s.dbConn.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err = rows.Close()
+		if err != nil {
+			lib.Log.Error(err)
+		}
+	}(rows)
 
 	var packages []PackageInfo
 	for rows.Next() {
@@ -221,13 +235,13 @@ func QueryPackages(containerName string, filters map[string]interface{}, sortFie
 
 // FindPackagesByName ищет пакеты в таблице контейнера по неточному совпадению имени.
 // Используется оператор LIKE для поиска, возвращается срез найденных записей.
-func FindPackagesByName(containerName string, partialName string) ([]PackageInfo, error) {
+func (s *DistroDBService) FindPackagesByName(containerName string, partialName string) ([]PackageInfo, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	// Формируем запрос с условием LIKE
 	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s WHERE packageName LIKE ?", tableName)
 	searchPattern := "%" + partialName + "%"
 
-	rows, err := lib.DB.Query(query, searchPattern)
+	rows, err := s.dbConn.Query(query, searchPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +266,7 @@ func FindPackagesByName(containerName string, partialName string) ([]PackageInfo
 }
 
 // UpdatePackageField обновляет значение одного поля (installed или exporting) для пакета с указанным packageName в таблице контейнера.
-func UpdatePackageField(ctx context.Context, containerName, packageName, fieldName string, value bool) {
+func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName, packageName, fieldName string, value bool) {
 	// Разрешенные поля для обновления.
 	allowedFields := map[string]bool{
 		"installed": true,
@@ -274,20 +288,20 @@ func UpdatePackageField(ctx context.Context, containerName, packageName, fieldNa
 		intVal = 0
 	}
 
-	_, err := lib.DB.Exec(updateQuery, intVal, packageName)
+	_, err := s.dbConn.Exec(updateQuery, intVal, packageName)
 	if err != nil {
 		lib.Log.Error(err.Error())
 	}
 }
 
 // GetPackageInfoByName возвращает запись пакета с указанным packageName из таблицы контейнера.
-func GetPackageInfoByName(containerName, packageName string) (PackageInfo, error) {
+func (s *DistroDBService) GetPackageInfoByName(containerName, packageName string) (PackageInfo, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s WHERE packageName = ?", tableName)
 
 	var pkg PackageInfo
 	var installed, exporting int
-	err := lib.DB.QueryRow(query, packageName).Scan(&pkg.PackageName, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager)
+	err := s.dbConn.QueryRow(query, packageName).Scan(&pkg.PackageName, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager)
 	if err != nil {
 		return PackageInfo{}, err
 	}
@@ -299,10 +313,10 @@ func GetPackageInfoByName(containerName, packageName string) (PackageInfo, error
 }
 
 // DeleteContainerTable удаляет таблицу для указанного контейнера.
-func DeleteContainerTable(ctx context.Context, containerName string) error {
+func (s *DistroDBService) DeleteContainerTable(ctx context.Context, containerName string) error {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)
-	if _, err := lib.DB.Exec(query); err != nil {
+	if _, err := s.dbConn.Exec(query); err != nil {
 		return fmt.Errorf("ошибка удаления таблицы %s: %v", containerName, err)
 	}
 

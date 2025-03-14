@@ -3,7 +3,6 @@ package distrobox
 import (
 	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
-	"apm/cmd/distrobox/api"
 	"apm/cmd/distrobox/service"
 	"apm/lib"
 	"context"
@@ -11,10 +10,20 @@ import (
 	"strings"
 )
 
-type Actions struct{}
+type Actions struct {
+	servicePackage        *service.PackageService
+	serviceDistroDatabase *service.DistroDBService
+	serviceDistroAPI      *service.DistroAPIService
+}
 
 func NewActions() *Actions {
-	return &Actions{}
+	distroDBSvc := service.NewDistroDBService(lib.DB)
+
+	return &Actions{
+		servicePackage:        service.NewPackageService(distroDBSvc),
+		serviceDistroDatabase: distroDBSvc,
+		serviceDistroAPI:      service.NewDistroAPIService(),
+	}
 }
 
 // Update обновляет и синхронизирует список пакетов в контейнере.
@@ -23,11 +32,11 @@ func (a *Actions) Update(ctx context.Context, container string) (reply.APIRespon
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	osInfo, err := api.GetContainerOsInfo(ctx, cont)
+	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	packages, err := service.UpdatePackages(ctx, osInfo)
+	packages, err := a.servicePackage.UpdatePackages(ctx, osInfo)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -53,11 +62,11 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 		errMsg := "необходимо указать название пакета, например info package"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
-	osInfo, err := api.GetContainerOsInfo(ctx, cont)
+	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	packageInfo, err := service.GetInfoPackage(ctx, osInfo, packageName)
+	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -82,11 +91,11 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 		errMsg := "необходимо указать название пакета, например search package"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
-	osInfo, err := api.GetContainerOsInfo(ctx, cont)
+	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	queryResult, err := service.GetPackageByName(ctx, osInfo, packageName)
+	queryResult, err := a.servicePackage.GetPackageByName(ctx, osInfo, packageName)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -136,11 +145,11 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 	if strings.TrimSpace(params.FilterField) != "" && strings.TrimSpace(params.FilterValue) != "" {
 		builder.Filters[params.FilterField] = params.FilterValue
 	}
-	osInfo, err := api.GetContainerOsInfo(ctx, cont)
+	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	queryResult, err := service.GetPackagesQuery(ctx, osInfo, builder)
+	queryResult, err := a.servicePackage.GetPackagesQuery(ctx, osInfo, builder)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -173,30 +182,30 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		errMsg := "необходимо указать название пакета, например install package"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
-	osInfo, err := api.GetContainerOsInfo(ctx, cont)
+	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
-	packageInfo, err := service.GetInfoPackage(ctx, osInfo, packageName)
+	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
 	if !packageInfo.Package.Installed {
-		err = service.InstallPackage(ctx, osInfo, packageName)
+		err = a.servicePackage.InstallPackage(ctx, osInfo, packageName)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
 		packageInfo.Package.Installed = true
-		service.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", true)
-		packageInfo, _ = service.GetInfoPackage(ctx, osInfo, packageName)
+		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", true)
+		packageInfo, _ = a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	}
 	if export && !packageInfo.Package.Exporting {
-		errExport := api.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
+		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
 		if errExport != nil {
 			return a.newErrorResponse(errExport.Error()), errExport
 		}
 		packageInfo.Package.Exporting = true
-		service.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", true)
+		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", true)
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
@@ -222,32 +231,32 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
-	osInfo, err := api.GetContainerOsInfo(ctx, cont)
+	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	packageInfo, err := service.GetInfoPackage(ctx, osInfo, packageName)
+	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
 
 	if packageInfo.Package.Exporting {
-		errExport := api.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
+		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
 		if errExport != nil {
 			return a.newErrorResponse(errExport.Error()), errExport
 		}
 		packageInfo.Package.Exporting = false
-		service.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", false)
+		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", false)
 	}
 
 	if !onlyExport && packageInfo.Package.Installed {
-		err = service.RemovePackage(ctx, osInfo, packageName)
+		err = a.servicePackage.RemovePackage(ctx, osInfo, packageName)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
 		packageInfo.Package.Installed = false
-		service.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", false)
+		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", false)
 	}
 
 	resp := reply.APIResponse{
@@ -263,7 +272,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 // ContainerList возвращает список контейнеров.
 func (a *Actions) ContainerList(ctx context.Context) (reply.APIResponse, error) {
-	containers, err := api.GetContainerList(ctx, true)
+	containers, err := a.serviceDistroAPI.GetContainerList(ctx, true)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
 	}
@@ -292,7 +301,7 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
-	result, err := api.CreateContainer(ctx, image, name, additionalPackages, initHooks)
+	result, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
 		return a.newErrorResponse(fmt.Sprintf("Ошибка создания контейнера: %v", err)), err
 	}
@@ -316,7 +325,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
-	result, err := api.RemoveContainer(ctx, name)
+	result, err := a.serviceDistroAPI.RemoveContainer(ctx, name)
 	if err != nil {
 		return a.newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)), err
 	}
@@ -329,7 +338,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 		Error: false,
 	}
 
-	err = service.DeleteContainerTable(ctx, name)
+	err = a.serviceDistroDatabase.DeleteContainerTable(ctx, name)
 	if err != nil {
 		return a.newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)), err
 	}
@@ -355,12 +364,12 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (stri
 	}
 
 	// Если база не содержит данные, обновляем пакеты.
-	if err := service.ContainerDatabaseExist(ctx, container); err != nil {
-		osInfo, err := api.GetContainerOsInfo(ctx, container)
-		if err != nil {
-			return "", err
+	if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err != nil {
+		osInfo, errInfo := a.serviceDistroAPI.GetContainerOsInfo(ctx, container)
+		if errInfo != nil {
+			return "", errInfo
 		}
-		if _, err = service.UpdatePackages(ctx, osInfo); err != nil {
+		if _, err = a.servicePackage.UpdatePackages(ctx, osInfo); err != nil {
 			return "", err
 		}
 	}

@@ -1,4 +1,4 @@
-package api
+package service
 
 import (
 	"apm/cmd/common/reply"
@@ -12,6 +12,14 @@ import (
 	"sync"
 )
 
+// DistroAPIService реализует методы для работы с пакетами в Arch
+type DistroAPIService struct{}
+
+// NewDistroAPIService возвращает новый экземпляр DistroAPIService.
+func NewDistroAPIService() *DistroAPIService {
+	return &DistroAPIService{}
+}
+
 type ContainerInfo struct {
 	OS            string `json:"os"`
 	ContainerName string `json:"containerName"`
@@ -20,7 +28,7 @@ type ContainerInfo struct {
 
 // GetContainerList получает список контейнеров, а если требуется полная информация (getFullInfo),
 // то параллельно для каждого контейнера вызывается fetchOsInfo.
-func GetContainerList(ctx context.Context, getFullInfo bool) ([]ContainerInfo, error) {
+func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo bool) ([]ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
@@ -65,7 +73,7 @@ func GetContainerList(ctx context.Context, getFullInfo bool) ([]ContainerInfo, e
 			wg.Add(1)
 			go func(n string) {
 				defer wg.Done()
-				info, err := fetchOsInfo(n)
+				info, err := d.fetchOsInfo(n)
 				if err != nil {
 					lib.Log.Error(err)
 					info = ContainerInfo{ContainerName: n, OS: "", Active: false}
@@ -92,7 +100,7 @@ func GetContainerList(ctx context.Context, getFullInfo bool) ([]ContainerInfo, e
 // ExportingApp экспортирует пакет в хост-систему.
 // Если isConsole == false, формируется команда экспорта GUI приложения;
 // если isConsole == true, формируются команды для каждого пути из pathList.
-func ExportingApp(ctx context.Context, containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
+func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.
@@ -147,7 +155,7 @@ func ExportingApp(ctx context.Context, containerInfo ContainerInfo, packageName 
 
 // fetchOsInfo выполняет команду для получения информации об ОС контейнера
 // и возвращает объект ContainerInfo.
-func fetchOsInfo(containerName string) (ContainerInfo, error) {
+func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- cat /etc/os-release", lib.Env.CommandPrefix, containerName)
 	cmd := exec.Command("sh", "-c", command)
 
@@ -200,12 +208,12 @@ func fetchOsInfo(containerName string) (ContainerInfo, error) {
 // GetContainerOsInfo запрос информации о контейнере.
 // Зачем мы запрашиваем список контейнеров внутри? Потому что distrobox будет создавать контейнер автоматически
 // если не указать правильно название.
-func GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
+func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 
 	// Получаем список контейнеров
-	containers, err := GetContainerList(ctx, false)
+	containers, err := d.GetContainerList(ctx, false)
 	if err != nil {
 		return ContainerInfo{}, fmt.Errorf("не удалось получить список контейнеров: %v", err)
 	}
@@ -222,14 +230,14 @@ func GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInf
 		return ContainerInfo{}, fmt.Errorf("контейнер %s не найден", containerName)
 	}
 
-	return fetchOsInfo(containerName)
+	return d.fetchOsInfo(containerName)
 }
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
-func CreateContainer(ctx context.Context, image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
+func (d *DistroAPIService) CreateContainer(ctx context.Context, image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
-	containers, errContainerList := GetContainerList(ctx, false)
+	containers, errContainerList := d.GetContainerList(ctx, false)
 	if errContainerList != nil {
 		lib.Log.Error(errContainerList.Error())
 
@@ -269,11 +277,11 @@ func CreateContainer(ctx context.Context, image, containerName string, addPkg st
 		return ContainerInfo{}, fmt.Errorf("не удалось создать контейнер %s: %v", containerName, err)
 	}
 
-	return GetContainerOsInfo(ctx, containerName)
+	return d.GetContainerOsInfo(ctx, containerName)
 }
 
 // RemoveContainer удаление контейнера
-func RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, error) {
+func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter)
 	command := fmt.Sprintf("%s distrobox rm %s", lib.Env.CommandPrefix, containerName)
@@ -283,12 +291,12 @@ func RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, 
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	osInfo, err := GetContainerOsInfo(ctx, containerName)
+	osInfo, err := d.GetContainerOsInfo(ctx, containerName)
 	if err != nil {
 		return osInfo, err
 	}
 
-	if err := cmd.Run(); err != nil {
+	if err = cmd.Run(); err != nil {
 		return ContainerInfo{}, fmt.Errorf("не удалось удалить контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
 	}
 
