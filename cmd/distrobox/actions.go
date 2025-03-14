@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"syscall"
 )
 
 type Actions struct {
@@ -16,18 +17,38 @@ type Actions struct {
 	serviceDistroAPI      *service.DistroAPIService
 }
 
+// NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
+func NewActionsWithDeps(
+	servicePackage *service.PackageService,
+	serviceDistroDatabase *service.DistroDBService,
+	serviceDistroAPI *service.DistroAPIService,
+) *Actions {
+	return &Actions{
+		servicePackage:        servicePackage,
+		serviceDistroDatabase: serviceDistroDatabase,
+		serviceDistroAPI:      serviceDistroAPI,
+	}
+}
+
 func NewActions() *Actions {
-	distroDBSvc := service.NewDistroDBService(lib.DB)
+	distroDBSvc := service.NewDistroDBService(lib.GetDB())
+	distroPackageSvc := service.NewPackageService(distroDBSvc)
+	distroAPISvc := service.NewDistroAPIService()
 
 	return &Actions{
-		servicePackage:        service.NewPackageService(distroDBSvc),
+		servicePackage:        distroPackageSvc,
 		serviceDistroDatabase: distroDBSvc,
-		serviceDistroAPI:      service.NewDistroAPIService(),
+		serviceDistroAPI:      distroAPISvc,
 	}
 }
 
 // Update обновляет и синхронизирует список пакетов в контейнере.
 func (a *Actions) Update(ctx context.Context, container string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -53,6 +74,11 @@ func (a *Actions) Update(ctx context.Context, container string) (reply.APIRespon
 
 // Info возвращает информацию о пакете.
 func (a *Actions) Info(ctx context.Context, container string, packageName string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -82,6 +108,11 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 
 // Search выполняет поиск пакета по названию.
 func (a *Actions) Search(ctx context.Context, container string, packageName string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -130,6 +161,11 @@ type ListParams struct {
 
 // List возвращает список пакетов согласно заданным параметрам.
 func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	cont, err := a.validateContainer(ctx, params.Container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -173,6 +209,11 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 
 // Install устанавливает указанный пакет и опционально экспортирует его.
 func (a *Actions) Install(ctx context.Context, container string, packageName string, export bool) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -220,6 +261,11 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 
 // Remove удаляет указанный пакет. Если onlyExport равен true, удаляется только экспорт.
 func (a *Actions) Remove(ctx context.Context, container string, packageName string, onlyExport bool) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	cont, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -272,6 +318,11 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 // ContainerList возвращает список контейнеров.
 func (a *Actions) ContainerList(ctx context.Context) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	containers, err := a.serviceDistroAPI.GetContainerList(ctx, true)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -289,6 +340,11 @@ func (a *Actions) ContainerList(ctx context.Context) (reply.APIResponse, error) 
 
 // ContainerAdd создаёт новый контейнер.
 func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, additionalPackages, initHooks string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	image = strings.TrimSpace(image)
 	name = strings.TrimSpace(name)
 	if image == "" {
@@ -319,6 +375,11 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 
 // ContainerRemove удаляет контейнер по имени.
 func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
 	name = strings.TrimSpace(name)
 	if name == "" {
 		errMsg := "необходимо указать название контейнера (--name)"
@@ -375,4 +436,13 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (stri
 	}
 
 	return container, nil
+}
+
+// checkRoot проверяет, запущен ли apm от имени root
+func (a *Actions) checkRoot() error {
+	if syscall.Geteuid() == 0 {
+		return fmt.Errorf("запрошенную команду нельзя выполнить от имени root, пожалуйста не используйте sudo/su")
+	}
+
+	return nil
 }

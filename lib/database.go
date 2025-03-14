@@ -3,26 +3,41 @@ package lib
 import (
 	"database/sql"
 	"os"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var DB *sql.DB
+var (
+	dbInstance *sql.DB
+	once       sync.Once
+)
 
+// InitDatabase инициализирует базу данных один раз
 func InitDatabase() {
-	dbFile := Env.PathDBFile
+	once.Do(func() {
+		dbFile := Env.PathDBFile
 
-	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
-		Log.Warning("Файл базы данных не найден. Он будет создан автоматически.")
-	}
+		if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+			Log.Warning("Файл базы данных не найден. Он будет создан автоматически.")
+		}
 
-	var err error
-	DB, err = sql.Open("sqlite3", dbFile)
-	if err != nil {
-		Log.Fatal("Ошибка при открытии базы данных: %v", err)
-	}
+		var err error
+		dbInstance, err = sql.Open("sqlite3", dbFile)
+		if err != nil {
+			Log.Fatal("Ошибка при открытии базы данных: %v", err)
+		}
 
-	if err = DB.Ping(); err != nil {
-		Log.Fatal("Ошибка при подключении к базе данных: %v", err)
+		if err = dbInstance.Ping(); err != nil {
+			Log.Fatal("Ошибка при подключении к базе данных: %v", err)
+		}
+	})
+}
+
+// GetDB возвращает экземпляр базы данных
+func GetDB() *sql.DB {
+	if dbInstance == nil {
+		InitDatabase()
 	}
+	return dbInstance
 }

@@ -22,16 +22,35 @@ type Actions struct {
 	serviceHostConfig   *service.HostConfigService
 }
 
+// NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
+func NewActionsWithDeps(
+	aptDB *apt.PackageDBService,
+	aptActions *apt.Actions,
+	hostImage *service.HostImageService,
+	hostDB *service.HostDBService,
+	hostConfig *service.HostConfigService,
+) *Actions {
+	return &Actions{
+		serviceHostImage:    hostImage,
+		serviceAptActions:   aptActions,
+		serviceAptDatabase:  aptDB,
+		serviceHostDatabase: hostDB,
+		serviceHostConfig:   hostConfig,
+	}
+}
+
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
-	hostDBSvc := service.NewHostDBService(lib.DB)
+	hostPackageDBSvc := apt.NewPackageDBService(lib.GetDB())
+	hostDBSvc := service.NewHostDBService(lib.GetDB())
 	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
 	hostImageSvc := service.NewHostImageService(hostConfigSvc)
+	hostAptSvc := apt.NewActions(hostPackageDBSvc)
 
 	return &Actions{
 		serviceHostImage:    hostImageSvc,
-		serviceAptActions:   apt.NewActions(),
-		serviceAptDatabase:  apt.NewPackageDBService(lib.DB),
+		serviceAptActions:   hostAptSvc,
+		serviceAptDatabase:  hostPackageDBSvc,
 		serviceHostDatabase: hostDBSvc,
 		serviceHostConfig:   hostConfigSvc,
 	}

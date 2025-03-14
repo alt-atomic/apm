@@ -1,6 +1,7 @@
 package service
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bytes"
@@ -33,16 +34,12 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetContainerList"))
 
 	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	if err := cmd.Run(); err != nil {
-		return nil, errors.New("Не удалось получить список контейнеров: " + err.Error())
+	stdout, stderr, err := helper.RunCommand(command)
+	if err != nil {
+		return nil, errors.New("Не удалось получить список контейнеров: " + stderr)
 	}
 
-	output := strings.TrimSpace(out.String())
+	output := strings.TrimSpace(stdout)
 	if output == "" {
 		return []ContainerInfo{}, nil
 	}

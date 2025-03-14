@@ -22,9 +22,9 @@ type Actions struct {
 	serviceAptDatabase *PackageDBService
 }
 
-func NewActions() *Actions {
+func NewActions(serviceAptDatabase *PackageDBService) *Actions {
 	return &Actions{
-		serviceAptDatabase: NewPackageDBService(lib.DB),
+		serviceAptDatabase: serviceAptDatabase,
 	}
 }
 
@@ -296,7 +296,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	}
 
 	// Обновляем информацию о том, установлены ли пакеты локально
-	packages, err = updateInstalledInfo(packages)
+	packages, err = a.updateInstalledInfo(packages)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка обновления информации об установленных пакетах: %w", err)
 	}
@@ -321,6 +321,23 @@ func (a *Actions) CleanPackageName(pkg string, packageNames []string) string {
 	}
 
 	return pkg
+}
+
+// updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
+func (a *Actions) updateInstalledInfo(packages []Package) ([]Package, error) {
+	installed, err := a.GetInstalledPackages()
+	if err != nil {
+		return nil, err
+	}
+
+	for i, pkg := range packages {
+		if version, found := installed[pkg.Name]; found {
+			packages[i].Installed = true
+			packages[i].VersionInstalled = version
+		}
+	}
+
+	return packages, nil
 }
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
@@ -405,23 +422,6 @@ func aptUpdate(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
-func updateInstalledInfo(packages []Package) ([]Package, error) {
-	installed, err := NewActions().GetInstalledPackages()
-	if err != nil {
-		return nil, err
-	}
-
-	for i, pkg := range packages {
-		if version, found := installed[pkg.Name]; found {
-			packages[i].Installed = true
-			packages[i].VersionInstalled = version
-		}
-	}
-
-	return packages, nil
 }
 
 func extractLastMessage(changelog string) string {
