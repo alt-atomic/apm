@@ -15,17 +15,25 @@ import (
 
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
-	serviceHostImage   *service.HostImageService
-	serviceAptActions  *apt.Actions
-	serviceAptDatabase *apt.PackageDBService
+	serviceHostImage    *service.HostImageService
+	serviceAptActions   *apt.Actions
+	serviceAptDatabase  *apt.PackageDBService
+	serviceHostDatabase *service.HostDBService
+	serviceHostConfig   *service.HostConfigService
 }
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
+	hostDBSvc := service.NewHostDBService(lib.DB)
+	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
+	hostImageSvc := service.NewHostImageService(hostConfigSvc)
+
 	return &Actions{
-		serviceHostImage:   service.NewHostImageService(),
-		serviceAptActions:  apt.NewActions(),
-		serviceAptDatabase: apt.NewPackageDBService(),
+		serviceHostImage:    hostImageSvc,
+		serviceAptActions:   apt.NewActions(),
+		serviceAptDatabase:  apt.NewPackageDBService(lib.DB),
+		serviceHostDatabase: hostDBSvc,
+		serviceHostConfig:   hostConfigSvc,
 	}
 }
 
@@ -35,6 +43,7 @@ type ImageStatus struct {
 	Config service.Config    `json:"config"`
 }
 
+// CheckRemove проверяем пакеты перед удалением
 func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
@@ -52,6 +61,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.API
 	}, nil
 }
 
+// CheckInstall проверяем пакеты перед установкой
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
@@ -130,16 +140,15 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 
 		if apply && lib.Env.IsAtomic {
 			diffPackageFound := false
-			var config service.Config
-			config, err = service.ParseConfig()
+			err = a.serviceHostConfig.LoadConfig()
 			if err != nil {
 				return newErrorResponse(err.Error()), nil
 			}
 
 			for _, removedPkg := range alreadyRemovedPackages {
-				if !config.IsRemoved(removedPkg) {
+				if !a.serviceHostConfig.IsRemoved(removedPkg) {
 					diffPackageFound = true
-					err = config.AddRemovePackage(removedPkg)
+					err = a.serviceHostConfig.AddRemovePackage(removedPkg)
 					if err != nil {
 						return newErrorResponse(err.Error()), nil
 					}
@@ -322,16 +331,15 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 		if apply && lib.Env.IsAtomic {
 			diffPackageFound := false
-			var config service.Config
-			config, err = service.ParseConfig()
+			err = a.serviceHostConfig.LoadConfig()
 			if err != nil {
 				return newErrorResponse(err.Error()), nil
 			}
 
 			for _, removedPkg := range alreadyRemovedPackages {
-				if !config.IsRemoved(removedPkg) {
+				if !a.serviceHostConfig.IsRemoved(removedPkg) {
 					diffPackageFound = true
-					err = config.AddRemovePackage(removedPkg)
+					err = a.serviceHostConfig.AddRemovePackage(removedPkg)
 					if err != nil {
 						return newErrorResponse(err.Error()), nil
 					}
@@ -339,9 +347,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			}
 
 			for _, installedPkg := range alreadyInstalledPackages {
-				if !config.IsInstalled(installedPkg) {
+				if !a.serviceHostConfig.IsInstalled(installedPkg) {
 					diffPackageFound = true
-					err = config.AddInstallPackage(installedPkg)
+					err = a.serviceHostConfig.AddInstallPackage(installedPkg)
 					if err != nil {
 						return newErrorResponse(err.Error()), nil
 					}
@@ -667,12 +675,12 @@ func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), err
 	}
 
-	config, err := service.ParseConfig()
+	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	err = a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, config)
+	err = a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.Config)
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
@@ -698,12 +706,12 @@ func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), err
 	}
 
-	config, err := service.ParseConfig()
+	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
 
-	err = config.GenerateDockerfile()
+	err = a.serviceHostConfig.GenerateDockerfile()
 	if err != nil {
 		return newErrorResponse(err.Error()), nil
 	}
@@ -713,7 +721,7 @@ func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 		return newErrorResponse(err.Error()), err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, true, config, true)
+	err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, true)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -734,12 +742,12 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 		return newErrorResponse(err.Error()), err
 	}
 
-	history, err := service.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
+	history, err := a.serviceHostDatabase.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
 
-	totalCount, err := service.CountImageHistoriesFiltered(ctx, imageName)
+	totalCount, err := a.serviceHostDatabase.CountImageHistoriesFiltered(ctx, imageName)
 	if err != nil {
 		return newErrorResponse(err.Error()), err
 	}
@@ -783,7 +791,7 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return fmt.Errorf("опция доступна только для атомарной системы")
 	}
 
-	config, err := service.ParseConfig()
+	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return err
 	}
@@ -806,14 +814,14 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		}
 
 		if originalPkg[len(originalPkg)-1] == '+' {
-			err = config.AddInstallPackage(canonicalPkg)
+			err = a.serviceHostConfig.AddInstallPackage(canonicalPkg)
 		} else if originalPkg[len(originalPkg)-1] == '-' {
-			err = config.AddRemovePackage(canonicalPkg)
+			err = a.serviceHostConfig.AddRemovePackage(canonicalPkg)
 		} else {
 			if isInstall {
-				err = config.AddInstallPackage(canonicalPkg)
+				err = a.serviceHostConfig.AddInstallPackage(canonicalPkg)
 			} else {
-				err = config.AddRemovePackage(canonicalPkg)
+				err = a.serviceHostConfig.AddRemovePackage(canonicalPkg)
 			}
 		}
 		if err != nil {
@@ -821,12 +829,12 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		}
 	}
 
-	err = config.GenerateDockerfile()
+	err = a.serviceHostConfig.GenerateDockerfile()
 	if err != nil {
 		return err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, true, config, false)
+	err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, false)
 	if err != nil {
 		return err
 	}
@@ -883,7 +891,7 @@ func (a *Actions) getImageStatus(ctx context.Context) (ImageStatus, error) {
 		return ImageStatus{}, err
 	}
 
-	config, err := service.ParseConfig()
+	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return ImageStatus{}, err
 	}
@@ -892,13 +900,13 @@ func (a *Actions) getImageStatus(ctx context.Context) (ImageStatus, error) {
 		return ImageStatus{
 			Status: "Изменённый образ. Файл конфигурации: " + lib.Env.PathImageFile,
 			Image:  hostImage,
-			Config: config,
+			Config: *a.serviceHostConfig.Config,
 		}, nil
 	}
 
 	return ImageStatus{
 		Status: "Облачный образ без изменений",
 		Image:  hostImage,
-		Config: config,
+		Config: *a.serviceHostConfig.Config,
 	}, nil
 }

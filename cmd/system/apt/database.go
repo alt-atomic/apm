@@ -5,6 +5,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"sync"
@@ -13,12 +14,14 @@ import (
 // PackageDBService — сервис для операций с базой данных пакетов.
 type PackageDBService struct {
 	tableName string
+	dbConn    *sql.DB
 }
 
 // NewPackageDBService — конструктор сервиса, где задаётся имя таблицы.
-func NewPackageDBService() *PackageDBService {
+func NewPackageDBService(db *sql.DB) *PackageDBService {
 	return &PackageDBService{
 		tableName: "host_image_packages",
+		dbConn:    db,
 	}
 }
 
@@ -49,18 +52,18 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 		changelog TEXT,
 		installed INTEGER
 	)`, s.tableName)
-	if _, err := lib.DB.Exec(createQuery); err != nil {
+	if _, err := s.dbConn.Exec(createQuery); err != nil {
 		return fmt.Errorf("ошибка создания таблицы: %w", err)
 	}
 
 	// Очищаем таблицу.
 	deleteQuery := fmt.Sprintf("DELETE FROM %s", s.tableName)
-	if _, err := lib.DB.Exec(deleteQuery); err != nil {
+	if _, err := s.dbConn.Exec(deleteQuery); err != nil {
 		return fmt.Errorf("ошибка очистки таблицы: %w", err)
 	}
 
 	// Начинаем транзакцию.
-	tx, err := lib.DB.Begin()
+	tx, err := s.dbConn.Begin()
 	if err != nil {
 		return fmt.Errorf("ошибка начала транзакции: %w", err)
 	}
@@ -105,8 +108,11 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 
 		query := fmt.Sprintf("INSERT INTO %s (name, section, installed_size, maintainer, version, versionInstalled, depends, provides, size, filename, description, changelog, installed) VALUES %s",
 			s.tableName, strings.Join(placeholders, ","))
-		if _, err := tx.Exec(query, args...); err != nil {
-			tx.Rollback()
+		if _, err = tx.Exec(query, args...); err != nil {
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				return errRollback
+			}
 			return fmt.Errorf("ошибка вставки пакетов: %w", err)
 		}
 	}
@@ -129,7 +135,7 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 	var providersStr string
 	var installed int
 
-	err := lib.DB.QueryRowContext(ctx, query, packageName).Scan(
+	err := s.dbConn.QueryRowContext(ctx, query, packageName).Scan(
 		&pkg.Name,
 		&pkg.Section,
 		&pkg.InstalledSize,
@@ -171,7 +177,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
 
-	tx, err := lib.DB.BeginTx(ctx, nil)
+	tx, err := s.dbConn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("ошибка начала транзакции: %w", err)
 	}
@@ -258,11 +264,16 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 	// Подготавливаем шаблон для поиска, например "%имя%"
 	searchPattern := "%" + namePart + "%"
 
-	rows, err := lib.DB.QueryContext(ctx, baseQuery, searchPattern)
+	rows, err := s.dbConn.QueryContext(ctx, baseQuery, searchPattern)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err = rows.Close()
+		if err != nil {
+			lib.Log.Error(err)
+		}
+	}(rows)
 
 	var result []Package
 
@@ -314,14 +325,7 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 }
 
 // QueryHostImagePackages возвращает пакеты из таблицы host_image_packages
-// с возможностью фильтрации, сортировки и ограничений.
-//
-//	filters   - словарь, где ключ — имя поля, значение - искомое значение
-//	            (строки => LIKE '%...%', для остальных типов => "=").
-//	sortField - имя поля для сортировки (если пустое, сортировка не применяется).
-//	sortOrder - "ASC" или "DESC" (по умолчанию ASC, если задано неверно).
-//	limit     - максимальное количество возвращаемых строк (если <= 0, не применяется).
-//	offset    - смещение, с которого начинаем выборку (если <= 0, не применяется).
+// с возможностью фильтрации и сортировкой
 func (s *PackageDBService) QueryHostImagePackages(
 	ctx context.Context,
 	filters map[string]interface{},
@@ -410,11 +414,16 @@ func (s *PackageDBService) QueryHostImagePackages(
 	}
 
 	// Выполняем запрос
-	rows, err := lib.DB.QueryContext(ctx, query, args...)
+	rows, err := s.dbConn.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err = rows.Close()
+		if err != nil {
+			lib.Log.Error(err)
+		}
+	}(rows)
 
 	var result []Package
 
@@ -512,7 +521,7 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 	}
 
 	var totalCount int64
-	if err := lib.DB.QueryRowContext(ctx, query, args...).Scan(&totalCount); err != nil {
+	if err := s.dbConn.QueryRowContext(ctx, query, args...).Scan(&totalCount); err != nil {
 		return 0, fmt.Errorf("ошибка при подсчёте количества пакетов: %w", err)
 	}
 
@@ -523,7 +532,7 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 func (s *PackageDBService) PackageDatabaseExist(ctx context.Context) error {
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", s.tableName)
 	var count int
-	err := lib.DB.QueryRowContext(ctx, query).Scan(&count)
+	err := s.dbConn.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
 		return err
 	}

@@ -44,15 +44,17 @@ type Image struct {
 
 // HostImageService — единый сервис для операций с образом (build, switch и т.д.).
 type HostImageService struct {
-	commandPrefix string
-	containerPath string
+	commandPrefix     string
+	containerPath     string
+	serviceHostConfig *HostConfigService
 }
 
 // NewHostImageService — конструктор сервиса
-func NewHostImageService() *HostImageService {
+func NewHostImageService(hostConfigService *HostConfigService) *HostImageService {
 	return &HostImageService{
-		commandPrefix: lib.Env.CommandPrefix,
-		containerPath: ContainerFile,
+		commandPrefix:     lib.Env.CommandPrefix,
+		containerPath:     ContainerFile,
+		serviceHostConfig: hostConfigService,
 	}
 }
 
@@ -232,7 +234,7 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ. checkSame - включена ли проверка на изменение конфигурации
 func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, config Config, checkSame bool) error {
-	statusSame, err := config.ConfigIsChange(ctx)
+	statusSame, err := h.serviceHostConfig.ConfigIsChanged(ctx)
 	if !statusSame && checkSame {
 		return fmt.Errorf("образ не изменился, сборка приостановлена")
 	}
@@ -247,7 +249,7 @@ func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, c
 		return err
 	}
 
-	err = config.SaveToDB(ctx)
+	err = h.serviceHostConfig.SaveConfigToDB(ctx)
 	if err != nil {
 		return err
 	}

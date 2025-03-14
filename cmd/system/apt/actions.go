@@ -24,7 +24,7 @@ type Actions struct {
 
 func NewActions() *Actions {
 	return &Actions{
-		serviceAptDatabase: NewPackageDBService(),
+		serviceAptDatabase: NewPackageDBService(lib.DB),
 	}
 }
 
