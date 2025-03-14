@@ -352,9 +352,10 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			}
 
 			for _, removedPkg := range alreadyRemovedPackages {
-				if !a.serviceHostConfig.IsRemoved(removedPkg) {
+				cleanName := a.serviceAptActions.CleanPackageName(removedPkg, packageNames)
+				if !a.serviceHostConfig.IsRemoved(cleanName) {
 					diffPackageFound = true
-					err = a.serviceHostConfig.AddRemovePackage(removedPkg)
+					err = a.serviceHostConfig.AddRemovePackage(cleanName)
 					if err != nil {
 						return newErrorResponse(err.Error()), nil
 					}
@@ -362,9 +363,10 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			}
 
 			for _, installedPkg := range alreadyInstalledPackages {
-				if !a.serviceHostConfig.IsInstalled(installedPkg) {
+				cleanName := a.serviceAptActions.CleanPackageName(installedPkg, packageNames)
+				if !a.serviceHostConfig.IsInstalled(cleanName) {
 					diffPackageFound = true
-					err = a.serviceHostConfig.AddInstallPackage(installedPkg)
+					err = a.serviceHostConfig.AddInstallPackage(cleanName)
 					if err != nil {
 						return newErrorResponse(err.Error()), nil
 					}

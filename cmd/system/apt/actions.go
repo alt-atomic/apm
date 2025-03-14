@@ -309,6 +309,20 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	return packages, nil
 }
 
+// CleanPackageName очищаем странный суффикс в ответе apt
+func (a *Actions) CleanPackageName(pkg string, packageNames []string) string {
+	if strings.HasSuffix(pkg, ".32bit") {
+		basePkg := strings.TrimSuffix(pkg, ".32bit")
+		for _, validPkg := range packageNames {
+			if validPkg == basePkg {
+				return basePkg
+			}
+		}
+	}
+
+	return pkg
+}
+
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
 func (a *Actions) GetInstalledPackages() (map[string]string, error) {
 	command := fmt.Sprintf("%s rpm -qia", lib.Env.CommandPrefix)
