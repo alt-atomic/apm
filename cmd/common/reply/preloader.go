@@ -121,6 +121,10 @@ func StopSpinner() {
 //	UpdateTask("TASK", "install", "Установка пакетов", "BEFORE", "")
 //	UpdateTask("TASK", "install", "Установка пакетов", "AFTER", "")
 func UpdateTask(eventType string, taskName string, viewName string, state string, progressValue float64) {
+	if lib.Env.Format != "text" && IsTTY() {
+		return
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 
