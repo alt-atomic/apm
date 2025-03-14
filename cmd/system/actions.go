@@ -866,10 +866,10 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	//err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, false)
-	//if err != nil {
-	//	return err
-	//}
+	err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, false)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
