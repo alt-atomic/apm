@@ -67,7 +67,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 		line := strings.TrimSpace(scanner.Text())
 
 		if line == "" {
-			if pkg.PackageName != "" {
+			if pkg.Name != "" {
 				packages = append(packages, pkg)
 				pkg = PackageInfo{}
 				currentKey = ""
@@ -82,7 +82,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 
 			switch key {
 			case "Package":
-				pkg.PackageName = value
+				pkg.Name = value
 			case "Version":
 				versionValue, errVersion := helper.GetVersionFromAptCache(value)
 				if errVersion != nil {
@@ -101,7 +101,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 		}
 	}
 
-	if pkg.PackageName != "" {
+	if pkg.Name != "" {
 		packages = append(packages, pkg)
 	}
 
@@ -117,7 +117,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 	}
 
 	for i := range packages {
-		if installedMap[packages[i].PackageName] {
+		if installedMap[packages[i].Name] {
 			packages[i].Installed = true
 		}
 		packages[i].Manager = "apt-get"

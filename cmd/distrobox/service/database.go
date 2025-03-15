@@ -31,7 +31,7 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 
 	// Создаем таблицу, если её нет.
 	createQuery := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		packageName TEXT,
+		name TEXT,
 		version TEXT,
 		description TEXT,
 		installed INTEGER,
@@ -74,9 +74,9 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 			if pkg.Exporting {
 				exporting = 1
 			}
-			args = append(args, pkg.PackageName, pkg.Version, pkg.Description, installed, exporting, pkg.Manager)
+			args = append(args, pkg.Name, pkg.Version, pkg.Description, installed, exporting, pkg.Manager)
 		}
-		query := fmt.Sprintf("INSERT INTO %s (packageName, version, description, installed, exporting, manager) VALUES %s",
+		query := fmt.Sprintf("INSERT INTO %s (name, version, description, installed, exporting, manager) VALUES %s",
 			tableName, strings.Join(placeholders, ","))
 		if _, err = tx.Exec(query, args...); err != nil {
 			tx.Rollback()
@@ -149,7 +149,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters map[s
 func (s *DistroDBService) QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit, offset int64) ([]PackageInfo, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 
-	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s", tableName)
+	query := fmt.Sprintf("SELECT name, version, description, installed, exporting, manager FROM %s", tableName)
 	var args []interface{}
 
 	if len(filters) > 0 {
@@ -219,7 +219,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 	for rows.Next() {
 		var pkg PackageInfo
 		var installed, exporting int
-		if err := rows.Scan(&pkg.PackageName, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager); err != nil {
+		if err := rows.Scan(&pkg.Name, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager); err != nil {
 			return nil, err
 		}
 		pkg.Installed = installed != 0
@@ -238,7 +238,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 func (s *DistroDBService) FindPackagesByName(containerName string, partialName string) ([]PackageInfo, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
 	// Формируем запрос с условием LIKE
-	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s WHERE packageName LIKE ?", tableName)
+	query := fmt.Sprintf("SELECT name, version, description, installed, exporting, manager FROM %s WHERE name LIKE ?", tableName)
 	searchPattern := "%" + partialName + "%"
 
 	rows, err := s.dbConn.Query(query, searchPattern)
@@ -251,7 +251,7 @@ func (s *DistroDBService) FindPackagesByName(containerName string, partialName s
 	for rows.Next() {
 		var pkg PackageInfo
 		var installed, exporting int
-		if err := rows.Scan(&pkg.PackageName, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager); err != nil {
+		if err := rows.Scan(&pkg.Name, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager); err != nil {
 			return nil, err
 		}
 		pkg.Installed = installed != 0
@@ -265,8 +265,8 @@ func (s *DistroDBService) FindPackagesByName(containerName string, partialName s
 	return packages, nil
 }
 
-// UpdatePackageField обновляет значение одного поля (installed или exporting) для пакета с указанным packageName в таблице контейнера.
-func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName, packageName, fieldName string, value bool) {
+// UpdatePackageField обновляет значение одного поля (installed или exporting) для пакета с указанным name в таблице контейнера.
+func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName, name, fieldName string, value bool) {
 	// Разрешенные поля для обновления.
 	allowedFields := map[string]bool{
 		"installed": true,
@@ -278,8 +278,8 @@ func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName,
 
 	// Экранируем имя таблицы.
 	tableName := fmt.Sprintf("\"%s\"", containerName)
-	// Формируем запрос. Например: UPDATE "containerName" SET installed = ? WHERE packageName = ?
-	updateQuery := fmt.Sprintf("UPDATE %s SET %s = ? WHERE packageName = ?", tableName, fieldName)
+	// Формируем запрос. Например: UPDATE "containerName" SET installed = ? WHERE name = ?
+	updateQuery := fmt.Sprintf("UPDATE %s SET %s = ? WHERE name = ?", tableName, fieldName)
 
 	var intVal int
 	if value {
@@ -288,20 +288,20 @@ func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName,
 		intVal = 0
 	}
 
-	_, err := s.dbConn.Exec(updateQuery, intVal, packageName)
+	_, err := s.dbConn.Exec(updateQuery, intVal, name)
 	if err != nil {
 		lib.Log.Error(err.Error())
 	}
 }
 
-// GetPackageInfoByName возвращает запись пакета с указанным packageName из таблицы контейнера.
-func (s *DistroDBService) GetPackageInfoByName(containerName, packageName string) (PackageInfo, error) {
+// GetPackageInfoByName возвращает запись пакета с указанным name из таблицы контейнера.
+func (s *DistroDBService) GetPackageInfoByName(containerName, name string) (PackageInfo, error) {
 	tableName := fmt.Sprintf("\"%s\"", containerName)
-	query := fmt.Sprintf("SELECT packageName, version, description, installed, exporting, manager FROM %s WHERE packageName = ?", tableName)
+	query := fmt.Sprintf("SELECT name, version, description, installed, exporting, manager FROM %s WHERE name = ?", tableName)
 
 	var pkg PackageInfo
 	var installed, exporting int
-	err := s.dbConn.QueryRow(query, packageName).Scan(&pkg.PackageName, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager)
+	err := s.dbConn.QueryRow(query, name).Scan(&pkg.Name, &pkg.Version, &pkg.Description, &installed, &exporting, &pkg.Manager)
 	if err != nil {
 		return PackageInfo{}, err
 	}

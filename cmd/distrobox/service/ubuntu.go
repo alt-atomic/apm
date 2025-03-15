@@ -135,7 +135,7 @@ func (p *UbuntuProvider) parseAptOutput(output string, installedPackages []strin
 				packages = append(packages, *currentPkg)
 			}
 			currentPkg = &PackageInfo{
-				PackageName: match[1],
+				Name:        match[1],
 				Version:     match[3],
 				Description: strings.TrimSpace(match[5]),
 				Installed:   isInstalled,

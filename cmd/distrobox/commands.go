@@ -107,7 +107,7 @@ func CommandList() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: "Поле для сортировки, например: packageName, version",
+						Usage: "Поле для сортировки, например: name, version",
 					},
 					&cli.StringFlag{
 						Name:  "order",
@@ -126,7 +126,7 @@ func CommandList() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:    "filter-field",
-						Usage:   "Название поля для фильтрации, например: packageName, version, manager",
+						Usage:   "Название поля для фильтрации, например: name, version, manager",
 						Aliases: []string{"ff"},
 					},
 					&cli.StringFlag{

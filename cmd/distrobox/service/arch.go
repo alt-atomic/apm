@@ -183,7 +183,7 @@ func (p *ArchProvider) parseOutput(output string, installedPackages []string) ([
 		}
 
 		results = append(results, PackageInfo{
-			PackageName: pkgName,
+			Name:        pkgName,
 			Version:     version,
 			Description: description,
 			Installed:   installed,
