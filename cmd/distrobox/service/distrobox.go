@@ -262,6 +262,8 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages '%s'",
 			lib.Env.CommandPrefix, image, containerName, addPkg)
 	}
+
+	lib.Log.Debug(command)
 	cmd := exec.Command("sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer

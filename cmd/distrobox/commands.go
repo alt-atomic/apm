@@ -40,8 +40,8 @@ func CommandList() *cli.Command {
 					&cli.StringFlag{
 						Name:     "container",
 						Usage:    "Название контейнера",
-						Required: true,
 						Aliases:  []string{"c"},
+						Required: true,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -80,10 +80,9 @@ func CommandList() *cli.Command {
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "container",
-						Usage:    "Название контейнера. Необходимо указать",
-						Aliases:  []string{"c"},
-						Required: true,
+						Name:    "container",
+						Usage:   "Название контейнера. Необязательный флаг",
+						Aliases: []string{"c"},
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -100,10 +99,9 @@ func CommandList() *cli.Command {
 				Usage: "Построение запроса для получения списка пакетов",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "container",
-						Usage:    "Название контейнера. Необходимо указать",
-						Aliases:  []string{"c"},
-						Required: true,
+						Name:    "container",
+						Usage:   "Название контейнера. Необязательный флаг",
+						Aliases: []string{"c"},
 					},
 					&cli.StringFlag{
 						Name:  "sort",

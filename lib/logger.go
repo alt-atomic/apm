@@ -16,7 +16,7 @@ func InitLogger() {
 	pathLogFile := Env.PathLogFile
 
 	file, err := os.OpenFile(pathLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil || DevMode {
+	if err != nil {
 		Log.SetOutput(os.Stdout)
 	} else {
 		Log.SetOutput(file)

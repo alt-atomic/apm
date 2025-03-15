@@ -113,19 +113,31 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 		return newErrorResponse(err.Error()), err
 	}
 
-	cont, err := a.validateContainer(ctx, container)
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+	if len(container) > 0 {
+		container, err = a.validateContainer(ctx, container)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
+	} else {
+		err = a.validateDatabase(ctx)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
 	}
+
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := "необходимо указать название пакета, например search package"
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
-	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+	var osInfo service.ContainerInfo
+	if len(container) > 0 {
+		osInfo, err = a.serviceDistroAPI.GetContainerOsInfo(ctx, container)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
 	}
+
 	queryResult, err := a.servicePackage.GetPackageByName(ctx, osInfo, packageName)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -165,10 +177,20 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 		return newErrorResponse(err.Error()), err
 	}
 
-	cont, err := a.validateContainer(ctx, params.Container)
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+	container := params.Container
+
+	if len(container) > 0 {
+		container, err = a.validateContainer(ctx, container)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
+	} else {
+		err = a.validateDatabase(ctx)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
 	}
+
 	builder := service.PackageQueryBuilder{
 		ForceUpdate: params.ForceUpdate,
 		Limit:       params.Limit,
@@ -198,10 +220,14 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 
 	builder.Filters = filters
 
-	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
-	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+	var osInfo service.ContainerInfo
+	if len(container) > 0 {
+		osInfo, err = a.serviceDistroAPI.GetContainerOsInfo(ctx, container)
+		if err != nil {
+			return a.newErrorResponse(err.Error()), err
+		}
 	}
+
 	queryResult, err := a.servicePackage.GetPackagesQuery(ctx, osInfo, builder)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err
@@ -416,7 +442,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 		Error: false,
 	}
 
-	err = a.serviceDistroDatabase.DeleteContainerTable(ctx, name)
+	err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, name)
 	if err != nil {
 		return a.newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)), err
 	}
@@ -495,6 +521,15 @@ func (a *Actions) newErrorResponse(message string) reply.APIResponse {
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
 	}
+}
+
+// validateDatabase проверяет, что таблица содержит какие-то записи
+func (a *Actions) validateDatabase(ctx context.Context) error {
+	if err := a.serviceDistroDatabase.DatabaseExist(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // validateContainer проверяет, что имя контейнера не пустое и обновляет пакеты, если нужно.

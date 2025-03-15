@@ -36,16 +36,20 @@ func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerI
 		return nil, fmt.Errorf("не удалось выполнить поиск пакетов (pacman -Ss): %v, stderr: %s", err, stderrSs)
 	}
 
-	installedPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
+	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
 		lib.Log.Error("Ошибка получения установленных пакетов: ", err)
-		installedPackages = []string{}
+		exportingPackages = []string{}
 	}
 
-	packagesOfficial, err := p.parseOutput(stdoutSs, installedPackages)
+	packagesOfficial, err := p.parseOutput(stdoutSs, exportingPackages)
 	if err != nil {
 		lib.Log.Errorf("Ошибка парсинга официальных пакетов: %v", err)
 		return nil, err
+	}
+
+	for i := range packagesOfficial {
+		packagesOfficial[i].Container = containerInfo.ContainerName
 	}
 
 	return packagesOfficial, nil
@@ -144,7 +148,7 @@ func (p *ArchProvider) GetPathByPackageName(ctx context.Context, containerInfo C
 }
 
 // parseOutput парсит вывод команды
-func (p *ArchProvider) parseOutput(output string, installedPackages []string) ([]PackageInfo, error) {
+func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([]PackageInfo, error) {
 	// Регулярное выражение для парсинга строки:
 	// Пример: "core/vim 8.2.3456-1 [installed] Vi IMproved, a highly configurable, improved version of the vi text editor"
 	re := regexp.MustCompile(`^([a-z]+)\/([\w\.-]+)\s+([^\s]+)`)
@@ -187,7 +191,7 @@ func (p *ArchProvider) parseOutput(output string, installedPackages []string) ([
 			Version:     version,
 			Description: description,
 			Installed:   installed,
-			Exporting:   contains(installedPackages, pkgName),
+			Exporting:   contains(exportingPackages, pkgName),
 			Manager:     "pacman",
 		})
 		i++

@@ -26,6 +26,7 @@ type PackageInfo struct {
 	Name        string `json:"name"`
 	Version     string `json:"version"`
 	Description string `json:"description"`
+	Container   string `json:"container"`
 	Installed   bool   `json:"installed"`
 	Exporting   bool   `json:"exporting"`
 	Manager     string `json:"manager"`

@@ -37,15 +37,16 @@ func (p *UbuntuProvider) GetPackages(ctx context.Context, containerInfo Containe
 		return nil, fmt.Errorf("не удалось выполнить apt search: %v, stderr: %s", err, stderr)
 	}
 
-	installedPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
+	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
 		lib.Log.Error("Ошибка получения установленных пакетов: ", err)
-		installedPackages = []string{}
+		exportingPackages = []string{}
 	}
 
-	packages := p.parseAptOutput(stdout, installedPackages)
+	packages := p.parseAptOutput(stdout, exportingPackages)
 	for i := range packages {
 		packages[i].Manager = "apt"
+		packages[i].Container = containerInfo.ContainerName
 	}
 	return packages, nil
 }
@@ -109,7 +110,7 @@ func (p *UbuntuProvider) RemovePackage(ctx context.Context, containerInfo Contai
 }
 
 // parseAptOutput парсит вывод команды apt search . и возвращает срез PackageInfo.
-func (p *UbuntuProvider) parseAptOutput(output string, installedPackages []string) []PackageInfo {
+func (p *UbuntuProvider) parseAptOutput(output string, exportingPackages []string) []PackageInfo {
 	lines := strings.Split(output, "\n")
 	var packages []PackageInfo
 	var currentPkg *PackageInfo
@@ -139,7 +140,7 @@ func (p *UbuntuProvider) parseAptOutput(output string, installedPackages []strin
 				Version:     match[3],
 				Description: strings.TrimSpace(match[5]),
 				Installed:   isInstalled,
-				Exporting:   contains(installedPackages, match[1]),
+				Exporting:   contains(exportingPackages, match[1]),
 			}
 		} else {
 			if currentPkg != nil {

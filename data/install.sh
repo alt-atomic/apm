@@ -60,6 +60,12 @@ if [ ! -d "$LOCALES_SRC" ]; then
   exit 1
 fi
 
+# Удаление файла базы данных, если он существует
+if [ -f "/var/apm/apm.db" ]; then
+  echo "Удаление файла базы данных /var/apm/apm.db..."
+  rm -f /var/apm/apm.db || { echo "Не удалось удалить файл /var/apm/apm.db"; exit 1; }
+fi
+
 echo "Копирование папки локалей из $LOCALES_SRC в /var/apm/locales..."
 rm -rf /var/apm/locales
 cp -r "$LOCALES_SRC" /var/apm/locales || { echo "Не удалось скопировать папку локалей!"; exit 1; }

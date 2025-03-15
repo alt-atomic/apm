@@ -393,7 +393,7 @@ func (a *Actions) GetInstalledPackages() (map[string]string, error) {
 		installed[currentName] = currentVersion
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		return nil, fmt.Errorf("ошибка сканирования вывода rpm: %w", err)
 	}
 

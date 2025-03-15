@@ -37,21 +37,33 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 	if err != nil {
 		return nil, fmt.Errorf("ошибка открытия stdout pipe: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		return nil, fmt.Errorf("ошибка запуска команды: %w", err)
 	}
 
-	// Получаем список установленных пакетов.
-	installedPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
+	// Получаем список экспортированных пакетов.
+	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
 		lib.Log.Error("Ошибка получения установленных пакетов: ", err)
+		exportingPackages = []string{}
+	}
+
+	// Получаем карту установленных пакетов
+	installedPackages, err := p.getInstalledPackages(containerInfo)
+	if err != nil {
 		installedPackages = []string{}
 	}
 
-	// Формируем карту для быстрого поиска установленных пакетов.
+	// Преобразуем срез в карту для быстрого поиска
 	installedMap := make(map[string]bool)
-	for _, name := range installedPackages {
-		installedMap[name] = true
+	for _, pkg := range installedPackages {
+		installedMap[pkg] = true
+	}
+
+	// Формируем карту для быстрого поиска установленных пакетов.
+	exportingMap := make(map[string]bool)
+	for _, name := range exportingPackages {
+		exportingMap[name] = true
 	}
 
 	const maxCapacity = 1024 * 1024 * 350 // 350MB
@@ -120,7 +132,11 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 		if installedMap[packages[i].Name] {
 			packages[i].Installed = true
 		}
+		if exportingMap[packages[i].Name] {
+			packages[i].Exporting = true
+		}
 		packages[i].Manager = "apt-get"
+		packages[i].Container = containerInfo.ContainerName
 	}
 
 	return packages, nil
@@ -175,4 +191,33 @@ func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo Contain
 		return "", err
 	}
 	return strings.TrimSpace(stdout), nil
+}
+
+// getInstalledPackages возвращает карту установленных пакетов
+func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]string, error) {
+	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qia", lib.Env.CommandPrefix, containerInfo.ContainerName)
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = []string{"LC_ALL=C"}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения команды rpm -qia: %w", err)
+	}
+
+	var packages []string
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "Name") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				name := strings.TrimSpace(parts[1])
+				packages = append(packages, name)
+			}
+		}
+	}
+	if err = scanner.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка сканирования вывода rpm: %w", err)
+	}
+	return packages, nil
 }
