@@ -31,7 +31,7 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.SavePackagesToDB"))
 
 	if len(containerName) == 0 {
-		return fmt.Errorf("поле container не может быть пустым при сохранеии пакетов")
+		return fmt.Errorf("поле container не может быть пустым при сохранении пакетов в базу данных")
 	}
 
 	// Создаем таблицу, если её нет. Таблица содержит поле container.
