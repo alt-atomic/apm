@@ -23,7 +23,7 @@ func NewDistroAPIService() *DistroAPIService {
 
 type ContainerInfo struct {
 	OS            string `json:"os"`
-	ContainerName string `json:"containerName"`
+	ContainerName string `json:"name"`
 	Active        bool   `json:"active"`
 }
 
