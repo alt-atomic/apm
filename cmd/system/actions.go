@@ -111,12 +111,9 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	if len(packages) == 0 {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": "Необходимо указать хотя бы один пакет, например remove package",
-			},
-			Error: true,
-		}, nil
+		errPackageNotFound := fmt.Errorf("необходимо указать хотя бы один пакет, например remove package")
+
+		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
 	}
 
 	var names []string
@@ -194,12 +191,9 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	if !dialogStatus {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": "Отмена диалога удаления",
-			},
-			Error: false,
-		}, nil
+		errDialog := fmt.Errorf("отмена диалога удаления")
+
+		return a.newErrorResponse(errDialog.Error()), errDialog
 	}
 
 	reply.CreateSpinner()
@@ -213,12 +207,9 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 				return newErrorResponse(err.Error()), err
 			}
 
-			return reply.APIResponse{
-				Data: map[string]interface{}{
-					"message": "Возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду",
-				},
-				Error: true,
-			}, nil
+			errAptRepo := fmt.Errorf("возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду")
+
+			return a.newErrorResponse(errAptRepo.Error()), errAptRepo
 		}
 
 		return a.newErrorResponse(criticalError.Error()), criticalError
@@ -267,12 +258,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	if len(packages) == 0 {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": "Необходимо указать хотя бы один пакет, например install package",
-			},
-			Error: true,
-		}, nil
+		errPackageNotFound := fmt.Errorf("необходимо указать хотя бы один пакет, например remove package")
+
+		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
 	}
 
 	isMultiInstall := false
@@ -318,13 +306,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 			message := err.Error() + ". Может быть, Вы искали: "
 
-			return reply.APIResponse{
-				Data: map[string]interface{}{
-					"message":  message,
-					"packages": altNames,
-				},
-				Error: true,
-			}, nil
+			errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
+
+			return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
 		}
 		packagesInfo = append(packagesInfo, packageInfo)
 		packageNames = append(packageNames, originalPkg)
@@ -417,12 +401,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	if !dialogStatus {
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": "Отмена диалога установки",
-			},
-			Error: false,
-		}, nil
+		errDialog := fmt.Errorf("отмена диалога удаления")
+
+		return a.newErrorResponse(errDialog.Error()), errDialog
 	}
 
 	reply.CreateSpinner()
@@ -437,12 +418,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 				return newErrorResponse(err.Error()), err
 			}
 
-			return reply.APIResponse{
-				Data: map[string]interface{}{
-					"message": "Возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду",
-				},
-				Error: true,
-			}, nil
+			errAptRepo := fmt.Errorf("возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду")
+
+			return a.newErrorResponse(errAptRepo.Error()), errAptRepo
 		}
 
 		return a.newErrorResponse(criticalError.Error()), criticalError
@@ -544,13 +522,9 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 
 		message := err.Error() + ". Может быть, Вы искали: "
 
-		return reply.APIResponse{
-			Data: map[string]interface{}{
-				"message":  message,
-				"packages": altNames,
-			},
-			Error: true,
-		}, nil
+		errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
+
+		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
 	}
 
 	return reply.APIResponse{
