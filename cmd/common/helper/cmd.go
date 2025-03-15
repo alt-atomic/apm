@@ -8,7 +8,7 @@ import (
 
 // RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
 func RunCommand(command string) (string, string, error) {
-	lib.Log.Debug(command)
+	lib.Log.Debug("run command: ", command)
 	cmd := exec.Command("sh", "-c", command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
