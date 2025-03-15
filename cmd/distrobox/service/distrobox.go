@@ -109,12 +109,12 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 	var commands []string
 
 	if !isConsole {
-		// Команда экспорта GUI-приложения
-		appCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export --app %s %s",
-			lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, suffix)
-		commands = append(commands, appCommand)
+		for _, path := range pathList {
+			appCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export --app %s %s",
+				lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
+			commands = append(commands, appCommand)
+		}
 	} else {
-		// Формируем команду для каждого пути консольного приложения
 		for _, path := range pathList {
 			pathCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export -b %s %s",
 				lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
