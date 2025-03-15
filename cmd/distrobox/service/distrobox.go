@@ -234,43 +234,50 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 func (d *DistroAPIService) CreateContainer(ctx context.Context, image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.CreateContainer"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.CreateContainer"))
+
 	containers, errContainerList := d.GetContainerList(ctx, false)
 	if errContainerList != nil {
 		lib.Log.Error(errContainerList.Error())
-
 		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, errContainerList
 	}
 
-	var found *ContainerInfo
+	// Проверка на существование контейнера
 	for _, c := range containers {
 		if c.ContainerName == containerName {
-			found = &c
-			break
+			return ContainerInfo{ContainerName: containerName, OS: "", Active: false},
+				fmt.Errorf("контейнер уже существует: %s", containerName)
 		}
 	}
 
-	if found != nil {
-		return ContainerInfo{ContainerName: containerName, OS: "", Active: false},
-			fmt.Errorf("контейнер уже сушествует: %s", containerName)
+	// Формирование базовой части команды
+	cmdParts := []string{
+		lib.Env.CommandPrefix,
+		"distrobox",
+		"create",
+		"-i", image,
+		"-n", containerName,
+		"--yes",
 	}
 
-	var command string
-	if len(hook) > 0 {
-		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages '%s' --init-hooks '%s'",
-			lib.Env.CommandPrefix, image, containerName, addPkg, hook)
-	} else {
-		command = fmt.Sprintf("%s distrobox create -i %s -n %s --yes --additional-packages '%s'",
-			lib.Env.CommandPrefix, image, containerName, addPkg)
+	// Добавляем параметр --additional-packages, если переменная addPkg не пустая
+	if addPkg != "" {
+		cmdParts = append(cmdParts, "--additional-packages", fmt.Sprintf("'%s'", addPkg))
 	}
+
+	// Добавляем параметр --init-hooks, если переменная hook не пустая
+	if hook != "" {
+		cmdParts = append(cmdParts, "--init-hooks", fmt.Sprintf("'%s'", hook))
+	}
+
+	command := strings.Join(cmdParts, " ")
 
 	lib.Log.Debug(command)
 	cmd := exec.Command("sh", "-c", command)
-
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// Выполняем команду создания контейнера
+	// Выполнение команды создания контейнера
 	if err := cmd.Run(); err != nil {
 		lib.Log.Errorf("не удалось создать контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
 		return ContainerInfo{}, fmt.Errorf("не удалось создать контейнер %s: %v", containerName, err)
