@@ -17,6 +17,12 @@ const UserIntrospectXML = `
       <arg direction="out" type="s" name="result"/>
     </method>
 
+    <method name="GetFilterFields">
+      <arg direction="in" type="s" name="container"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
     <method name="Info">
       <arg direction="in" type="s" name="container"/>
       <arg direction="in" type="s" name="packageName"/>

@@ -17,6 +17,22 @@ func NewDBusWrapper(a *Actions) *DBusWrapper {
 	return &DBusWrapper{actions: a}
 }
 
+// GetFilterFields обёртка над actions.GetFilterFields
+func (w *DBusWrapper) GetFilterFields(container string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.GetFilterFields(ctx, container)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+
+	return string(data), nil
+}
+
 // Update обёртка над actions.Update
 func (w *DBusWrapper) Update(container string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)

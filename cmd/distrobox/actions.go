@@ -424,6 +424,69 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 	return resp, nil
 }
 
+// GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
+func (a *Actions) GetFilterFields(ctx context.Context, container string) (reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return newErrorResponse(err.Error()), err
+	}
+
+	cont, err := a.validateContainer(ctx, container)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+	osInfo, err := a.serviceDistroAPI.GetContainerOsInfo(ctx, cont)
+	if err != nil {
+		return a.newErrorResponse(err.Error()), err
+	}
+
+	fieldList := []string{"name", "version", "description", "installed", "exporting", "manager"}
+	type FiltersField struct {
+		Name   string   `json:"name"`
+		Text   string   `json:"text"`
+		Type   string   `json:"type"`
+		Choice []string `json:"choice"`
+	}
+
+	var fields []FiltersField
+	var manager []string
+	lowerOsName := strings.ToLower(osInfo.OS)
+	switch {
+	case strings.Contains(lowerOsName, "arch"):
+		manager = append(manager, "pacman")
+	case strings.Contains(lowerOsName, "alt"):
+		manager = append(manager, "apt-get")
+	case strings.Contains(lowerOsName, "ubuntu"):
+		manager = append(manager, "apt")
+	}
+
+	for _, field := range fieldList {
+		fieldType := "STRING"
+		if field == "installed" || field == "exporting" {
+			fieldType = "BOOL"
+		}
+
+		var choice []string
+		if field == "manager" {
+			choice = manager
+		}
+
+		fields = append(fields, FiltersField{
+			Name:   field,
+			Text:   lib.T("response."+field, field),
+			Type:   fieldType,
+			Choice: choice,
+		})
+	}
+
+	resp := reply.APIResponse{
+		Data:  fields,
+		Error: false,
+	}
+
+	return resp, nil
+}
+
 // newErrorResponse создаёт ответ с ошибкой.
 func (a *Actions) newErrorResponse(message string) reply.APIResponse {
 	lib.Log.Error(message)
