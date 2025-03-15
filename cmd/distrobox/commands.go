@@ -124,15 +124,9 @@ func CommandList() *cli.Command {
 						Usage: "Смещение выборки",
 						Value: 0,
 					},
-					&cli.StringFlag{
-						Name:    "filter-field",
-						Usage:   "Название поля для фильтрации, например: name, version, manager",
-						Aliases: []string{"ff"},
-					},
-					&cli.StringFlag{
-						Name:    "filter-value",
-						Usage:   "Значение для фильтрации по указанному полю",
-						Aliases: []string{"fv"},
+					&cli.StringSliceFlag{
+						Name:  "filter",
+						Usage: "Фильтр в формате key=value. Флаг можно указывать несколько раз, например: --filter name=zip --filter installed=true",
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
@@ -147,8 +141,7 @@ func CommandList() *cli.Command {
 						Order:       cmd.String("order"),
 						Offset:      cmd.Int("offset"),
 						Limit:       cmd.Int("limit"),
-						FilterField: cmd.String("filter-field"),
-						FilterValue: cmd.String("filter-value"),
+						Filters:     cmd.StringSlice("filter"),
 						ForceUpdate: cmd.Bool("force-update"),
 					}
 

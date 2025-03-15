@@ -538,13 +538,12 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Sort        string `json:"sort"`
-	Order       string `json:"order"`
-	Limit       int64  `json:"limit"`
-	Offset      int64  `json:"offset"`
-	FilterField string `json:"filterField"`
-	FilterValue string `json:"filterValue"`
-	ForceUpdate bool   `json:"forceUpdate"`
+	Sort        string   `json:"sort"`
+	Order       string   `json:"order"`
+	Limit       int64    `json:"limit"`
+	Offset      int64    `json:"offset"`
+	Filters     []string `json:"filters"`
+	ForceUpdate bool     `json:"forceUpdate"`
 }
 
 func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool) (reply.APIResponse, error) {
@@ -559,11 +558,24 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	// 4. Формируем фильтры (map[string]interface{}) из входных параметров
+	// Формируем фильтры (map[string]interface{})
 	filters := make(map[string]interface{})
-	if strings.TrimSpace(params.FilterField) != "" && strings.TrimSpace(params.FilterValue) != "" {
-		filters[params.FilterField] = params.FilterValue
+	for _, filter := range params.Filters {
+		filter = strings.TrimSpace(filter)
+		if filter == "" {
+			continue
+		}
+		parts := strings.SplitN(filter, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		if key != "" && value != "" {
+			filters[key] = value
+		}
 	}
+
 	totalCount, err := a.serviceAptDatabase.CountHostImagePackages(ctx, filters)
 	if err != nil {
 		return a.newErrorResponse(err.Error()), err

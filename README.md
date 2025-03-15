@@ -207,14 +207,14 @@ USAGE:
    apm system list [command [command options]]
 
 OPTIONS:
-   --sort value                      Поле для сортировки, например: name, installed
-   --order value                     Порядок сортировки: ASC или DESC (default: "ASC")
-   --limit value                     Лимит выборки (default: 10)
-   --offset value                    Смещение выборки (default: 0)
-   --filter-field value, --ff value  Название поля для фильтрации, например: name, version, manager, section
-   --filter-value value, --fv value  Значение для фильтрации по указанному полю
-   --force-update                    Принудительно обновить все пакеты перед запросом (default: false)
-   --help, -h                        show help
+   --sort value                       Поле для сортировки, например: name, installed
+   --order value                      Порядок сортировки: ASC или DESC (default: "ASC")
+   --limit value                      Лимит выборки (default: 10)
+   --offset value                     Смещение выборки (default: 0)
+   --filter value [ --filter value ]  Фильтр в формате key=value. Флаг можно указывать несколько раз, например: --filter name=zip --filter installed=true
+   --force-update                     Принудительно обновить все пакеты перед запросом (default: false)
+   --full                             Полный вывод информации (default: false)
+   --help, -h                         show help
 
 GLOBAL OPTIONS:
    --format value, -f value       Формат вывода: json, text (default: "text")
@@ -248,7 +248,7 @@ apm system list --sort="size" --order="DESC" -limit 1
 
 Или найти все пакеты установленные в системе и ограничить вывод одним пакетом:
 ```
-apm system list -ff="installed" -fv="true" -limit 1
+apm system list --filter installed=true -limit 1
 
 ⚛
 ├── Найдена 1 запись
@@ -320,15 +320,14 @@ USAGE:
    apm distrobox list [command [command options]]
 
 OPTIONS:
-   --container value, -c value       Название контейнера. Необходимо указать
-   --sort value                      Поле для сортировки, например: packageName, version
-   --order value                     Порядок сортировки: ASC или DESC (default: "ASC")
-   --limit value                     Лимит выборки (default: 10)
-   --offset value                    Смещение выборки (default: 0)
-   --filter-field value, --ff value  Название поля для фильтрации, например: packageName, version, manager
-   --filter-value value, --fv value  Значение для фильтрации по указанному полю
-   --force-update                    Принудительно обновить все пакеты перед запросом (default: false)
-   --help, -h                        show help
+   --container value, -c value        Название контейнера. Необходимо указать
+   --sort value                       Поле для сортировки, например: name, version
+   --order value                      Порядок сортировки: ASC или DESC (default: "ASC")
+   --limit value                      Лимит выборки (default: 10)
+   --offset value                     Смещение выборки (default: 0)
+   --filter value [ --filter value ]  Фильтр в формате key=value. Флаг можно указывать несколько раз, например: --filter name=zip --filter installed=true
+   --force-update                     Принудительно обновить все пакеты перед запросом (default: false)
+   --help, -h                         show help
 
 GLOBAL OPTIONS:
    --format value, -f value       Формат вывода: json, text (default: "text")
@@ -481,7 +480,7 @@ sudo apm s image apply
 Все изменения образа фиксируются, для просмотра истории последних двух записей вызовите:
 
 ```
-sudo ./apm s image history -limit 2
+sudo apm s image history -limit 2
 
 ⚛
 ├── Найдено 2 записи
