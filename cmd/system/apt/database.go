@@ -41,7 +41,7 @@ var allowedSortFields = []string{
 	"size",
 	"filename",
 	"description",
-	"lastChangelog",
+	"changelog",
 	"installed",
 }
 
@@ -58,7 +58,7 @@ var allowedFilterFields = []string{
 	"size",
 	"filename",
 	"description",
-	"lastChangelog",
+	"changelog",
 	"installed",
 }
 
