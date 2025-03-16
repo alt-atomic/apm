@@ -199,6 +199,9 @@ func (p *PackageService) GetPackagesQuery(ctx context.Context, containerInfo Con
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPackagesQuery"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPackagesQuery"))
 	if builder.ForceUpdate {
+		if len(containerInfo.ContainerName) == 0 {
+			return PackageQueryResult{}, fmt.Errorf("для операции принудительного обновления необходимо указать контейнер")
+		}
 		_, err := p.UpdatePackages(ctx, containerInfo)
 		if err != nil {
 			lib.Log.Error(err)
