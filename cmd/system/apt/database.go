@@ -28,6 +28,40 @@ func NewPackageDBService(db *sql.DB) *PackageDBService {
 // syncDBMutex защищает операции синхронизации базы пакетов.
 var syncDBMutex sync.Mutex
 
+// Списки разрешённых полей для сортировки
+var allowedSortFields = []string{
+	"name",
+	"section",
+	"installedSize",
+	"maintainer",
+	"version",
+	"versionInstalled",
+	"depends",
+	"provides",
+	"size",
+	"filename",
+	"description",
+	"lastChangelog",
+	"installed",
+}
+
+// Списки разрешённых полей для фильтрации.
+var allowedFilterFields = []string{
+	"name",
+	"section",
+	"installedSize",
+	"maintainer",
+	"version",
+	"versionInstalled",
+	"depends",
+	"provides",
+	"size",
+	"filename",
+	"description",
+	"lastChangelog",
+	"installed",
+}
+
 // SavePackagesToDB сохраняет список пакетов
 func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Package) error {
 	syncDBMutex.Lock()
@@ -357,6 +391,10 @@ func (s *PackageDBService) QueryHostImagePackages(
 	if len(filters) > 0 {
 		var conditions []string
 		for field, value := range filters {
+			// Проверяем, разрешено ли фильтровать по этому полю.
+			if !s.isAllowedField(field, allowedFilterFields) {
+				return nil, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+			}
 			// Если фильтруем по полю "installed", делаем особую логику
 			if field == "installed" {
 				boolVal, ok := helper.ParseBool(value)
@@ -396,6 +434,9 @@ func (s *PackageDBService) QueryHostImagePackages(
 
 	// Добавляем сортировку, если указаны поле и порядок
 	if sortField != "" {
+		if !s.isAllowedField(sortField, allowedSortFields) {
+			return nil, fmt.Errorf("недопустимое поле сортировки: %s. Доступные поля: %s", sortField, strings.Join(allowedSortFields, ", "))
+		}
 		upperOrder := strings.ToUpper(sortOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
 			upperOrder = "ASC"
@@ -483,6 +524,10 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 	if len(filters) > 0 {
 		var conditions []string
 		for field, value := range filters {
+			// Проверяем, разрешено ли фильтровать по этому полю.
+			if !s.isAllowedField(field, allowedFilterFields) {
+				return 0, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+			}
 			// Если фильтруем по полю "installed", делаем особую логику
 			if field == "installed" {
 				boolVal, ok := helper.ParseBool(value)
@@ -538,4 +583,14 @@ func (s *PackageDBService) PackageDatabaseExist(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// Проверка, входит ли поле в список разрешённых.
+func (s *PackageDBService) isAllowedField(field string, allowed []string) bool {
+	for _, f := range allowed {
+		if f == field {
+			return true
+		}
+	}
+	return false
 }

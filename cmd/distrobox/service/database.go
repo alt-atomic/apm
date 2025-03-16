@@ -24,6 +24,28 @@ func NewDistroDBService(db *sql.DB) *DistroDBService {
 	}
 }
 
+// Списки разрешённых полей для сортировки
+var allowedSortFields = []string{
+	"name",
+	"version",
+	"description",
+	"container",
+	"installed",
+	"exporting",
+	"manager",
+}
+
+// Списки разрешённых полей для фильтрации.
+var allowedFilterFields = []string{
+	"name",
+	"version",
+	"description",
+	"container",
+	"installed",
+	"exporting",
+	"manager",
+}
+
 // SavePackagesToDB сохраняет список пакетов в таблицу с именем контейнера.
 // Таблица создаётся, если не существует, затем очищается, и в неё вставляются новые записи пакетами по 1000.
 func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName string, packages []PackageInfo) error {
@@ -142,6 +164,10 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters map[s
 
 	// Формируем дополнительные условия по фильтрам.
 	for field, value := range filters {
+		// Проверяем, разрешено ли фильтровать по этому полю.
+		if !s.isAllowedField(field, allowedFilterFields) {
+			return 0, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+		}
 		// Если поле installed или exporting – пытаемся трактовать как bool.
 		if field == "installed" || field == "exporting" {
 			boolVal, ok := helper.ParseBool(value)
@@ -193,6 +219,10 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 
 	// Формируем условия по дополнительным фильтрам.
 	for field, value := range filters {
+		// Проверяем, разрешено ли фильтровать по этому полю.
+		if !s.isAllowedField(field, allowedFilterFields) {
+			return nil, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+		}
 		if field == "installed" || field == "exporting" {
 			boolVal, ok := helper.ParseBool(value)
 			if !ok {
@@ -221,7 +251,11 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 	}
 
 	// Добавляем сортировку, если задана.
+	// Проверка поля сортировки.
 	if sortField != "" {
+		if !s.isAllowedField(sortField, allowedSortFields) {
+			return nil, fmt.Errorf("недопустимое поле сортировки: %s. Доступные поля: %s", sortField, strings.Join(allowedSortFields, ", "))
+		}
 		upperOrder := strings.ToUpper(sortOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
 			upperOrder = "ASC"
@@ -367,4 +401,14 @@ func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, conta
 	}
 
 	return nil
+}
+
+// Проверка, входит ли поле в список разрешённых.
+func (s *DistroDBService) isAllowedField(field string, allowed []string) bool {
+	for _, f := range allowed {
+		if f == field {
+			return true
+		}
+	}
+	return false
 }
