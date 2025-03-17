@@ -142,6 +142,8 @@ func (s *Service) getPackages(container string) ([]PackageIcon, error) {
 			defer wg.Done()
 			rawIcon, errFind := systemSwCatService.getIconFromPackage(pkgSwIcon, cachedBase, stockBase)
 			if errFind != nil {
+				lib.Log.Debugf("Ошибка. %s",
+					errFind.Error())
 				<-sem
 				return
 			}
