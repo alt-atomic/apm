@@ -79,13 +79,13 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 	}
 
 	// Подсчитываем общий размер всех иконок.
-	//var totalSize int
-	//for _, icon := range AllPackageIcons {
-	//	totalSize += len(icon.Icon)
-	//}
-	//
-	//lib.Log.Debugf("Общее количество иконок: %d, общий размер AllPackageIcons: %d байт\n",
-	//	len(AllPackageIcons), totalSize)
+	var totalSize int
+	for _, icon := range AllPackageIcons {
+		totalSize += len(icon.Icon)
+	}
+
+	lib.Log.Debugf("Общее количество иконок: %d, общий размер AllPackageIcons: %d байт\n",
+		len(AllPackageIcons), totalSize)
 	// Поиск и вывод дубликатов имен.
 	//duplicates := findDuplicateNames(AllPackageIcons)
 	//if len(duplicates) > 0 {
