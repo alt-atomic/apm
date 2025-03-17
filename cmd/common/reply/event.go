@@ -176,10 +176,8 @@ func getTaskText(task string) string {
 		return "Обновление пакетов"
 	case "distro.GetPackagesQuery":
 		return "Фильтрация пакетов"
-	case "system.Install":
-		return "Установка пакета"
-	case "system.Remove":
-		return "Удаление"
+	case "system.Working":
+		return "Работа над пакетами"
 	case "system.Check":
 		return "Анализ пакетов"
 	case "system.Update":
@@ -200,6 +198,8 @@ func getTaskText(task string) string {
 		return "Загрузка обновления базового образа"
 	case "system.pruneOldImages":
 		return "Очистка старых образов"
+	case "system.updateAllPackagesDB":
+		return "Синхронизация базы данных"
 	default:
 		// Если имя задачи неизвестно, возвращаем его без изменений
 		return task

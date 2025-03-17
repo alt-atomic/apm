@@ -16,6 +16,10 @@ import (
 	"syscall"
 )
 
+var (
+	ctx, globalCancel = context.WithCancel(context.Background())
+)
+
 func main() {
 	defer cleanup()
 	lib.Log.Debugln("Starting apm")
@@ -27,7 +31,6 @@ func main() {
 
 	lib.Env.Language = helper.GetSystemLocale()
 
-	ctx := context.Background()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
@@ -173,6 +176,8 @@ func main() {
 
 func cleanup() {
 	lib.Log.Debugln("Завершаем работу приложения. Освобождаем ресурсы...")
+
+	defer globalCancel()
 	if dbKV := lib.CheckDBKv(); dbKV != nil {
 		if err := dbKV.Close(); err != nil {
 			lib.Log.Error("Ошибка при закрытии базы данных KV: ", err)

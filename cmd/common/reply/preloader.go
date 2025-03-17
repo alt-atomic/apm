@@ -63,12 +63,12 @@ func CreateSpinner() {
 	p = tea.NewProgram(
 		newModel(),
 		tea.WithOutput(os.Stdout),
-		tea.WithoutSignalHandler(),
 		tea.WithInput(nil),
 	)
 
 	go func() {
-		if err := p.Start(); err != nil {
+		_, err := p.Run()
+		if err != nil {
 			lib.Log.Error(err.Error())
 		}
 		close(doneChan)

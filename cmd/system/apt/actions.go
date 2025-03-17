@@ -5,9 +5,11 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/creack/pty"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -58,32 +60,21 @@ type Package struct {
 	Installed        bool     `json:"installed"`
 }
 
+const (
+	typeInstall = iota
+	typeRemove
+)
+
 func (a *Actions) Install(ctx context.Context, packageName string) []error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Install"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Install"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
 	command := fmt.Sprintf("%s apt-get -y install %s", lib.Env.CommandPrefix, packageName)
-	cmd := exec.Command("sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
-
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-	lines := strings.Split(outputStr, "\n")
-	aptErrors := ErrorLinesAnalyseAll(lines)
-
-	if len(aptErrors) > 0 {
-		var errorsSlice []error
-		for _, e := range aptErrors {
-			errorsSlice = append(errorsSlice, e)
-		}
-		return errorsSlice
-	}
-
+	err := a.commandWithProgress(ctx, command, typeInstall)
 	if err != nil {
-		lib.Log.Errorf("ошибка установки: %s", outputStr)
-		return []error{fmt.Errorf("ошибка установки: %v", err)}
+		return err
 	}
 
 	return nil
@@ -92,29 +83,142 @@ func (a *Actions) Install(ctx context.Context, packageName string) []error {
 func (a *Actions) Remove(ctx context.Context, packageName string) []error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Remove"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Remove"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
 	command := fmt.Sprintf("%s apt-get -y remove %s", lib.Env.CommandPrefix, packageName)
-	cmd := exec.Command("sh", "-c", command)
+	err := a.commandWithProgress(ctx, command, typeRemove)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CommandWithProgress запускает команду с прогрессом
+func (a *Actions) commandWithProgress(ctx context.Context, command string, typeProcess int) []error {
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
 
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-	lines := strings.Split(outputStr, "\n")
-	aptErrors := ErrorLinesAnalyseAll(lines)
+	// Запускаем команду через pty для захвата вывода в реальном времени.
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		return []error{err}
+	}
+	defer ptmx.Close()
 
+	scanner := bufio.NewScanner(ptmx)
+	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if i := bytes.IndexAny(data, "\r\n"); i >= 0 {
+			return i + 1, data[:i], nil
+		}
+		if atEOF && len(data) > 0 {
+			return len(data), data, nil
+		}
+		return 0, nil, nil
+	})
+
+	// Регулярное выражение для распознавания прогресса скачивания.
+	// Пример строки: "2% [10 speed-dreams-data 39368080/2037MB 1%]"
+	downloadRegex := regexp.MustCompile(`(?P<global>\d+)%\s*\[(?P<order>\d+)\s+(?P<pkg>[\w\-\+]+)\s+(?P<data>[0-9]+\/[0-9]+[KMG]?B)\s+(?P<local>\d+)%\]`)
+	// Регулярное выражение для распознавания прогресса установки.
+	// Пример строки: "1: erlang-otp-1:26.2.5.3-alt2  ########## [ 25%]"
+	installRegex := regexp.MustCompile(`^(?P<step>\d+):\s+(?P<pkg>[\w\-\:\+]+).*?\[\s*(?P<percent>\d+)%\]`)
+
+	downloadEvents := make(map[string]bool)
+	installEvents := make(map[string]bool)
+
+	textStatus := "Установка"
+	if typeProcess == typeRemove {
+		textStatus = "Удаление"
+	}
+
+	var outputLines []string
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for scanner.Scan() {
+			line := scanner.Text()
+			outputLines = append(outputLines, line)
+
+			if downloadRegex.MatchString(line) {
+				match := downloadRegex.FindStringSubmatch(line)
+				pkgName := match[downloadRegex.SubexpIndex("pkg")]
+				// Формируем уникальное имя события для скачивания
+				eventName := fmt.Sprintf("system.downloadProgress-%s", pkgName)
+				downloadEvents[eventName] = true
+
+				percentStr := match[downloadRegex.SubexpIndex("local")]
+				if percent, err := strconv.Atoi(percentStr); err == nil {
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName(eventName),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf("Скачивание: %s", pkgName)),
+					)
+				}
+			} else if installRegex.MatchString(line) {
+				match := installRegex.FindStringSubmatch(line)
+				pkgName := match[installRegex.SubexpIndex("pkg")]
+				// Формируем уникальное имя события для установки
+				eventName := fmt.Sprintf("system.installProgress-%s", pkgName)
+				installEvents[eventName] = true
+
+				percentStr := match[installRegex.SubexpIndex("percent")]
+				if percent, err := strconv.Atoi(percentStr); err == nil {
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName(eventName),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf("%s: %s", textStatus, pkgName)),
+					)
+				}
+			}
+
+			// При получении строки "Done." завершаем все события.
+			if strings.Contains(line, "Done.") {
+				for eventName := range downloadEvents {
+					reply.CreateEventNotification(ctx, reply.StateAfter,
+						reply.WithEventName(eventName),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(100),
+					)
+				}
+				for eventName := range installEvents {
+					reply.CreateEventNotification(ctx, reply.StateAfter,
+						reply.WithEventName(eventName),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(100),
+					)
+				}
+			}
+		}
+	}()
+
+	// Ожидаем завершения выполнения команды.
+	if err = cmd.Wait(); err != nil {
+		wg.Wait()
+		aptErrors := ErrorLinesAnalyseAll(outputLines)
+		if len(aptErrors) > 0 {
+			var errorsSlice []error
+			for _, e := range aptErrors {
+				errorsSlice = append(errorsSlice, e)
+			}
+			return errorsSlice
+		}
+		return []error{fmt.Errorf("ошибка установки: %v", err)}
+	}
+
+	wg.Wait()
+
+	aptErrors := ErrorLinesAnalyseAll(outputLines)
 	if len(aptErrors) > 0 {
 		var errorsSlice []error
 		for _, e := range aptErrors {
 			errorsSlice = append(errorsSlice, e)
 		}
 		return errorsSlice
-	}
-
-	if err != nil {
-		lib.Log.Errorf("ошибка удаления: %s", outputStr)
-		return []error{fmt.Errorf("ошибка удаления: %v", err)}
 	}
 
 	return nil
@@ -125,7 +229,7 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
 	command := fmt.Sprintf("%s apt-get -s %s %s", lib.Env.CommandPrefix, aptCommand, packageName)
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
 
 	output, err := cmd.CombinedOutput()
@@ -170,7 +274,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	}
 
 	command := fmt.Sprintf("%s apt-cache dumpavail", lib.Env.CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -296,7 +400,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	}
 
 	// Обновляем информацию о том, установлены ли пакеты локально
-	packages, err = a.updateInstalledInfo(packages)
+	packages, err = a.updateInstalledInfo(ctx, packages)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка обновления информации об установленных пакетах: %w", err)
 	}
@@ -324,8 +428,8 @@ func (a *Actions) CleanPackageName(pkg string, packageNames []string) string {
 }
 
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
-func (a *Actions) updateInstalledInfo(packages []Package) ([]Package, error) {
-	installed, err := a.GetInstalledPackages()
+func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) ([]Package, error) {
+	installed, err := a.GetInstalledPackages(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -341,9 +445,9 @@ func (a *Actions) updateInstalledInfo(packages []Package) ([]Package, error) {
 }
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
-func (a *Actions) GetInstalledPackages() (map[string]string, error) {
+func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, error) {
 	command := fmt.Sprintf("%s rpm -qia", lib.Env.CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
 
 	output, err := cmd.CombinedOutput()
