@@ -1,0 +1,173 @@
+[response.package]
+other = "Пакет"
+
+[response.count]
+other = "Количество"
+
+[response.isConsole]
+other = "Консольное приложение"
+
+[response.packageInfo]
+other = "Информация о пакете"
+
+[response.install]
+other = "Установить"
+
+[response.store]
+other = "Тип хранилища"
+
+[response.timestamp]
+other = "Дата"
+
+[response.imageDigest]
+other = "Хэш образа"
+
+[response.os]
+other = "Дистрибутив"
+
+[response.container]
+other = "Контейнер"
+
+[response.name]
+other = "Название"
+
+[response.extraInstalled]
+other = "Дополнительно установлено"
+
+[response.upgradedCount]
+other = "Количество обновленных"
+
+[response.bootedImage]
+other = "Загруженный образ"
+
+[response.removedPackages]
+other = "Удаленные пакеты"
+
+[response.providers]
+other = "Провайдеры"
+
+[response.version]
+other = "Версия"
+
+[response.history]
+other = "История"
+
+[response.depends]
+other = "Зависимости"
+
+[response.installedSize]
+other = "Займёт на диске"
+
+[response.removedCount]
+other = "Количество удаленных"
+
+[response.upgradedPackages]
+other = "Обновленные пакеты"
+
+[response.packageName]
+other = "Название пакета"
+
+[response.image]
+other = "Образ"
+
+[response.commands]
+other = "Команды"
+
+[response.maintainer]
+other = "Мэйнтейнер"
+
+[response.versionInstalled]
+other = "Установленная версия"
+
+[response.remove]
+other = "Удалить"
+
+[response.containers]
+other = "Контейнеры"
+
+[response.paths]
+other = "Пути"
+
+[response.description]
+other = "Описание"
+
+[response.date]
+other = "Дата"
+
+[response.newInstalledCount]
+other = "Количество новых установок"
+
+[response.active]
+other = "Активен"
+
+[response.info]
+other = "Информация"
+
+[response.totalCount]
+other = "Всего записей"
+
+[response.installed]
+other = "Установлен"
+
+[response.manager]
+other = "Пакетный менеджер"
+
+[response.lastChangelog]
+other = "Последнее изменение"
+
+[response.section]
+other = "Раздел"
+
+[response.spec]
+other = "Спецификация"
+
+[response.booted]
+other = "Загруженный"
+
+[response.staged]
+other = "В очереди"
+
+[response.size]
+other = "Размер"
+
+[response.newInstalledPackages]
+other = "Новые установленные пакеты"
+
+[response.notUpgradedCount]
+other = "Количество не обновленных"
+
+[response.containerName]
+other = "Название контейнера"
+
+[response.config]
+other = "Конфигурация"
+
+[response.exporting]
+other = "Экспортировано"
+
+[response.status]
+other = "Статус"
+
+[response.imageDate]
+other = "Дата образа"
+
+[response.packages]
+other = "Пакеты"
+
+[response.filename]
+other = "Имя файла"
+
+[response.containerInfo]
+other = "Информация о контейнере"
+
+[response.imageName]
+other = "Наименование образа"
+
+[response.transport]
+other = "Транспорт"
+
+[response.pinned]
+other = "Закреплён"
+
+[response.list]
+other = "Список"
