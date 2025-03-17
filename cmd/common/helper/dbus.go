@@ -19,6 +19,7 @@ const UserIntrospectXML = `
 
     <method name="GetIconByPackage">
       <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="container"/>
       <arg direction="out" type="ay" name="result"/>
     </method>
 

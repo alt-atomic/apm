@@ -17,6 +17,7 @@ import (
 )
 
 func main() {
+	defer cleanup()
 	lib.Log.Debugln("Starting apm")
 
 	lib.InitConfig()
@@ -53,6 +54,7 @@ func main() {
 			})
 		}
 
+		cleanup()
 		os.Exit(0)
 	}()
 
@@ -84,7 +86,7 @@ func main() {
 					}
 
 					distroActions := distrobox.NewActions()
-					serviceIcon := icon.NewIconService()
+					serviceIcon := icon.NewIconService(lib.GetDBKv())
 					distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon)
 
 					if err = lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
@@ -166,5 +168,20 @@ func main() {
 			},
 			Error: true,
 		})
+	}
+}
+
+func cleanup() {
+	lib.Log.Debugln("Завершаем работу приложения. Освобождаем ресурсы...")
+	if dbKV := lib.CheckDBKv(); dbKV != nil {
+		if err := dbKV.Close(); err != nil {
+			lib.Log.Error("Ошибка при закрытии базы данных KV: ", err)
+		}
+	}
+
+	if dbSQL := lib.CheckDB(); dbSQL != nil {
+		if err := dbSQL.Close(); err != nil {
+			lib.Log.Error("Ошибка при закрытии базы данных SQL: ", err)
+		}
 	}
 }

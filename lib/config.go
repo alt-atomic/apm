@@ -11,7 +11,8 @@ type Environment struct {
 	Environment   string `yaml:"environment"`
 	PathLocales   string `yaml:"pathLocales"`
 	PathLogFile   string `yaml:"pathLogFile"`
-	PathDBFile    string `yaml:"pathDBFile"`
+	PathDBSQL     string `yaml:"pathDBSQL"`
+	PathDBKV      string `yaml:"pathDBKV"`
 	PathImageFile string `yaml:"pathImageFile"`
 	IsAtomic      bool   // Внутреннее свойство
 	Language      string // Внутреннее свойство
@@ -36,16 +37,20 @@ func InitConfig() {
 		panic(err)
 	}
 
-	// Если environment не равен "prod", то DevMode будет true, иначе false
 	DevMode = Env.Environment != "prod"
 
 	// Проверяем и создаём путь для лог-файла
-	if err := EnsurePath(Env.PathLogFile); err != nil {
+	if err = EnsurePath(Env.PathLogFile); err != nil {
 		panic(err)
 	}
 
-	// Проверяем и создаём путь для db-файла
-	if err := EnsurePath(Env.PathDBFile); err != nil {
+	// Проверяем и создаём путь для db-файла sql
+	if err = EnsurePath(Env.PathDBSQL); err != nil {
+		panic(err)
+	}
+
+	// Проверяем и создаём путь для db-директории key-value
+	if err = EnsureDir(Env.PathDBKV); err != nil {
 		panic(err)
 	}
 
@@ -56,6 +61,7 @@ func InitConfig() {
 	}
 }
 
+// EnsurePath проверяет, существует ли файл и создает его при необходимости.
 func EnsurePath(path string) error {
 	dir := filepath.Dir(path)
 
@@ -64,7 +70,8 @@ func EnsurePath(path string) error {
 	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		file, err := os.Create(path)
+		var file *os.File
+		file, err = os.Create(path)
 		if err != nil {
 			return err
 		}
@@ -75,4 +82,9 @@ func EnsurePath(path string) error {
 	}
 
 	return nil
+}
+
+// EnsureDir проверяет, существует ли директория по указанному пути, и создает её при необходимости.
+func EnsureDir(path string) error {
+	return os.MkdirAll(path, 0755)
 }

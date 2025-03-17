@@ -20,8 +20,8 @@ func NewDBusWrapper(a *Actions, i *icon.Service) *DBusWrapper {
 }
 
 // GetIconByPackage обёртка над actions.GetFilterFields
-func (w *DBusWrapper) GetIconByPackage(packageName string) ([]byte, *dbus.Error) {
-	bytes, err := w.iconService.GetIcon(packageName)
+func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]byte, *dbus.Error) {
+	bytes, err := w.iconService.GetIcon(packageName, container)
 	if err != nil {
 		return nil, dbus.MakeFailedError(err)
 	}
