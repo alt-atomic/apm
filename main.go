@@ -2,6 +2,7 @@ package main
 
 import (
 	"apm/cmd/common/helper"
+	"apm/cmd/common/icon"
 	"apm/cmd/common/reply"
 	"apm/cmd/distrobox"
 	"apm/cmd/system"
@@ -83,7 +84,8 @@ func main() {
 					}
 
 					distroActions := distrobox.NewActions()
-					distroObj := distrobox.NewDBusWrapper(distroActions)
+					serviceIcon := icon.NewIconService()
+					distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon)
 
 					if err = lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
 						return err
@@ -98,6 +100,14 @@ func main() {
 					}
 
 					lib.Env.Format = "dbus"
+
+					go func() {
+						err = serviceIcon.ReloadIcons(ctx)
+						if err != nil {
+							lib.Log.Error(err.Error())
+						}
+					}()
+
 					select {}
 				},
 			},
@@ -130,6 +140,7 @@ func main() {
 					}
 
 					lib.Env.Format = "dbus"
+
 					select {}
 				},
 			},

@@ -1,6 +1,7 @@
 package distrobox
 
 import (
+	"apm/cmd/common/icon"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,12 +10,23 @@ import (
 
 // DBusWrapper – обёртка для системных действий, предназначенная для экспорта через DBus.
 type DBusWrapper struct {
-	actions *Actions
+	actions     *Actions
+	iconService *icon.Service
 }
 
 // NewDBusWrapper создаёт новую обёртку над actions
-func NewDBusWrapper(a *Actions) *DBusWrapper {
-	return &DBusWrapper{actions: a}
+func NewDBusWrapper(a *Actions, i *icon.Service) *DBusWrapper {
+	return &DBusWrapper{actions: a, iconService: i}
+}
+
+// GetIconByPackage обёртка над actions.GetFilterFields
+func (w *DBusWrapper) GetIconByPackage(packageName string) ([]byte, *dbus.Error) {
+	bytes, err := w.iconService.GetIcon(packageName)
+	if err != nil {
+		return nil, dbus.MakeFailedError(err)
+	}
+
+	return bytes, nil
 }
 
 // GetFilterFields обёртка над actions.GetFilterFields
