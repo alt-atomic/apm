@@ -58,6 +58,7 @@ type Package struct {
 	Description      string   `json:"description"`
 	Changelog        string   `json:"lastChangelog"`
 	Installed        bool     `json:"installed"`
+	IsAlr            bool     `json:"isAlr"`
 }
 
 const (

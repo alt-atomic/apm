@@ -14,6 +14,7 @@ type Environment struct {
 	PathDBSQL     string `yaml:"pathDBSQL"`
 	PathDBKV      string `yaml:"pathDBKV"`
 	PathImageFile string `yaml:"pathImageFile"`
+	isAlrExist    bool   // Внутреннее свойство
 	IsAtomic      bool   // Внутреннее свойство
 	Language      string // Внутреннее свойство
 	Format        string // Внутреннее свойство
@@ -58,6 +59,12 @@ func InitConfig() {
 		Env.IsAtomic = false
 	} else {
 		Env.IsAtomic = true
+	}
+
+	if _, errAtomic := os.Stat("/usr/bin/alr"); os.IsNotExist(errAtomic) {
+		Env.isAlrExist = false
+	} else {
+		Env.isAlrExist = true
 	}
 }
 

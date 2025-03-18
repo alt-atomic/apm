@@ -43,6 +43,7 @@ var allowedSortFields = []string{
 	"description",
 	"changelog",
 	"installed",
+	"is_alr", // добавлено новое поле
 }
 
 // Списки разрешённых полей для фильтрации.
@@ -60,6 +61,7 @@ var allowedFilterFields = []string{
 	"description",
 	"changelog",
 	"installed",
+	"is_alr", // добавлено новое поле
 }
 
 // SavePackagesToDB сохраняет список пакетов
@@ -70,22 +72,23 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SavePackagesToDB"))
 
 	// Создаем таблицу, если её нет.
-	createQuery := fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS %s (
-		name TEXT,
-		section TEXT,
-		installed_size INTEGER,
-		maintainer TEXT,
-		version TEXT,
-		versionInstalled TEXT,
-		depends TEXT,
-		provides TEXT,
-		size INTEGER,
-		filename TEXT,
-		description TEXT,
-		changelog TEXT,
-		installed INTEGER
-	)`, s.tableName)
+	createQuery := fmt.Sprintf(
+		`CREATE TABLE IF NOT EXISTS %s (
+			name TEXT,
+			section TEXT,
+			installed_size INTEGER,
+			maintainer TEXT,
+			version TEXT,
+			versionInstalled TEXT,
+			depends TEXT,
+			provides TEXT,
+			size INTEGER,
+			filename TEXT,
+			description TEXT,
+			changelog TEXT,
+			installed INTEGER,
+			is_alr INTEGER
+		)`, s.tableName)
 	if _, err := s.dbConn.Exec(createQuery); err != nil {
 		return fmt.Errorf("ошибка создания таблицы: %w", err)
 	}
@@ -114,7 +117,7 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 		var placeholders []string
 		var args []interface{}
 		for _, pkg := range batch {
-			placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+			placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 			dependsStr := strings.Join(pkg.Depends, ",")
 			providersStr := strings.Join(pkg.Provides, ",")
 			var installed int
@@ -122,6 +125,12 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 				installed = 1
 			} else {
 				installed = 0
+			}
+			var isAlr int
+			if pkg.IsAlr {
+				isAlr = 1
+			} else {
+				isAlr = 0
 			}
 			args = append(args,
 				pkg.Name,
@@ -137,10 +146,11 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 				pkg.Description,
 				pkg.Changelog,
 				installed,
+				isAlr,
 			)
 		}
 
-		query := fmt.Sprintf("INSERT INTO %s (name, section, installed_size, maintainer, version, versionInstalled, depends, provides, size, filename, description, changelog, installed) VALUES %s",
+		query := fmt.Sprintf("INSERT INTO %s (name, section, installed_size, maintainer, version, versionInstalled, depends, provides, size, filename, description, changelog, installed, is_alr) VALUES %s",
 			s.tableName, strings.Join(placeholders, ","))
 		if _, err = tx.Exec(query, args...); err != nil {
 			errRollback := tx.Rollback()
@@ -159,8 +169,8 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 
 // GetPackageByName возвращает запись пакета
 func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName string) (Package, error) {
-	query := fmt.Sprintf(`
-		SELECT name, section, installed_size, maintainer, version, versionInstalled, depends, provides, size, filename, description, changelog, installed 
+	query := fmt.Sprintf(
+		`SELECT name, section, installed_size, maintainer, version, versionInstalled, depends, provides, size, filename, description, changelog, installed, is_alr 
 		FROM %s 
 		WHERE name = ?`, s.tableName)
 
@@ -168,6 +178,7 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 	var dependsStr string
 	var providersStr string
 	var installed int
+	var isAlr int
 
 	err := s.dbConn.QueryRowContext(ctx, query, packageName).Scan(
 		&pkg.Name,
@@ -183,6 +194,7 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 		&pkg.Description,
 		&pkg.Changelog,
 		&installed,
+		&isAlr,
 	)
 	if err != nil {
 		return Package{}, fmt.Errorf("не удалось получить информацию о пакете %s", packageName)
@@ -202,6 +214,7 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 	}
 
 	pkg.Installed = installed != 0
+	pkg.IsAlr = isAlr != 0
 
 	return pkg, nil
 }
@@ -225,8 +238,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
         CREATE TEMPORARY TABLE tmp_installed (
             name TEXT PRIMARY KEY,
             version TEXT
-        );
-    `
+        );`
 	if _, err = tx.ExecContext(ctx, createTempTableQuery); err != nil {
 		return fmt.Errorf("ошибка создания временной таблицы: %w", err)
 	}
@@ -245,23 +257,22 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 		}
 	}
 
-	updateQuery := fmt.Sprintf(`
-        UPDATE %s
-        SET 
-            installed = CASE 
-                WHEN EXISTS (SELECT 1 FROM tmp_installed t WHERE t.name = %s.name) THEN 1 
-                ELSE 0 
-            END,
-            versionInstalled = COALESCE(
-                (SELECT t.version FROM tmp_installed t WHERE t.name = %s.name), 
-                ''
-            )
-    `, s.tableName, s.tableName, s.tableName)
+	updateQuery := fmt.Sprintf(
+		`UPDATE %s
+		SET 
+			installed = CASE 
+				WHEN EXISTS (SELECT 1 FROM tmp_installed t WHERE t.name = %s.name) THEN 1 
+				ELSE 0 
+			END,
+			versionInstalled = COALESCE(
+				(SELECT t.version FROM tmp_installed t WHERE t.name = %s.name), 
+				''
+			)`, s.tableName, s.tableName, s.tableName)
 	if _, err = tx.ExecContext(ctx, updateQuery); err != nil {
 		return fmt.Errorf("ошибка обновления пакетов: %w", err)
 	}
 
-	// 4. Фиксируем транзакцию
+	// Фиксируем транзакцию
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("ошибка коммита транзакции: %w", err)
 	}
@@ -269,10 +280,10 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 }
 
 // SearchPackagesByName ищет пакеты в таблице по части названия.
-// Параметр `installed` определяет, нужно ли показывать только установленные пакеты.
+// Параметр installed определяет, нужно ли показывать только установленные пакеты.
 func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart string, installed bool) ([]Package, error) {
-	baseQuery := fmt.Sprintf(`
-		SELECT 
+	baseQuery := fmt.Sprintf(
+		`SELECT 
 			name, 
 			section, 
 			installed_size, 
@@ -280,15 +291,15 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 			version, 
 			versionInstalled, 
 			depends,
-		    provides,
+			provides,
 			size, 
 			filename, 
 			description, 
 			changelog, 
-			installed
+			installed,
+			is_alr
 		FROM %s
-		WHERE name LIKE ?
-	`, s.tableName)
+		WHERE name LIKE ?`, s.tableName)
 
 	// Если нужно искать только среди установленных
 	if installed {
@@ -316,6 +327,7 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 		var dependsStr string
 		var providersStr string
 		var installedInt int
+		var isAlrInt int
 
 		if err = rows.Scan(
 			&pkg.Name,
@@ -331,6 +343,7 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 			&pkg.Description,
 			&pkg.Changelog,
 			&installedInt,
+			&isAlrInt,
 		); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
 		}
@@ -348,6 +361,7 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 		}
 
 		pkg.Installed = installedInt != 0
+		pkg.IsAlr = isAlrInt != 0
 		result = append(result, pkg)
 	}
 
@@ -367,23 +381,23 @@ func (s *PackageDBService) QueryHostImagePackages(
 	limit, offset int64,
 ) ([]Package, error) {
 
-	query := fmt.Sprintf(`
-        SELECT 
-            name,
-            section,
-            installed_size,
-            maintainer,
-            version,
-            versionInstalled,
-            depends,
-            provides,
-            size,
-            filename,
-            description,
-            changelog,
-            installed
-        FROM %s
-    `, s.tableName)
+	query := fmt.Sprintf(
+		`SELECT 
+			name,
+			section,
+			installed_size,
+			maintainer,
+			version,
+			versionInstalled,
+			depends,
+			provides,
+			size,
+			filename,
+			description,
+			changelog,
+			installed,
+			is_alr
+		FROM %s`, s.tableName)
 
 	var args []interface{}
 
@@ -473,6 +487,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 		var dependsStr string
 		var providersStr string
 		var installedInt int
+		var isAlrInt int
 
 		if err = rows.Scan(
 			&pkg.Name,
@@ -488,6 +503,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 			&pkg.Description,
 			&pkg.Changelog,
 			&installedInt,
+			&isAlrInt,
 		); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
 		}
@@ -505,6 +521,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 		}
 
 		pkg.Installed = installedInt != 0
+		pkg.IsAlr = isAlrInt != 0
 		result = append(result, pkg)
 	}
 
