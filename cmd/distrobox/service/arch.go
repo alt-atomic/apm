@@ -25,13 +25,13 @@ func NewArchProvider(servicePackage *PackageService) *ArchProvider {
 func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	// Обновляем базу пакетов и базу владельцев файлов.
 	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Sy ", lib.Env.CommandPrefix, containerInfo.ContainerName)
-	if _, stderr, err := helper.RunCommand(updateCmd); err != nil {
+	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
 		return nil, fmt.Errorf("не удалось обновить базу пакетов: %v, stderr: %s", err, stderr)
 	}
 
 	// Получаем пакеты из официальных репозиториев
 	commandSs := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Ss", lib.Env.CommandPrefix, containerInfo.ContainerName)
-	stdoutSs, stderrSs, err := helper.RunCommand(commandSs)
+	stdoutSs, stderrSs, err := helper.RunCommand(ctx, commandSs)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось выполнить поиск пакетов (pacman -Ss): %v, stderr: %s", err, stderrSs)
 	}
@@ -58,7 +58,7 @@ func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerI
 // RemovePackage удаляет указанный пакет с помощью pacman -R.
 func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Rs --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(cmdStr)
+	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return fmt.Errorf("не удалось удалить пакет %s: %v, stderr: %s", packageName, err, stderr)
 	}
@@ -68,7 +68,7 @@ func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo Containe
 // InstallPackage устанавливает указанный пакет с помощью pacman -S.
 func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -S --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(cmdStr)
+	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return fmt.Errorf("не удалось установить пакет %s: %v, stderr: %s", packageName, err, stderr)
 	}
@@ -81,7 +81,7 @@ func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo Contain
 func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, fileName string) (string, error) {
 	// Попытка через pacman -Qo.
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Qo %s", lib.Env.CommandPrefix, containerInfo.ContainerName, fileName)
-	stdout, _, err := helper.RunCommand(cmdStr)
+	stdout, _, err := helper.RunCommand(ctx, cmdStr)
 	if err == nil {
 		ownerInfo := strings.TrimSpace(stdout)
 		const marker = " is owned by "
@@ -98,7 +98,7 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 
 	// Если не найдено, пробуем через pacman -F.
 	cmdStr = fmt.Sprintf("%s distrobox enter %s -- pacman -F %s", lib.Env.CommandPrefix, containerInfo.ContainerName, fileName)
-	stdout, stderr, err := helper.RunCommand(cmdStr)
+	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return "", fmt.Errorf("не удалось найти пакет для файла '%s': %v, stderr: %s", fileName, err, stderr)
 	}
@@ -129,7 +129,7 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 // используя команду pacman -Ql и фильтрацию по filePath.
 func (p *ArchProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
-	stdout, stderr, err := helper.RunCommand(cmdStr)
+	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка выполнения команды: %v, stderr: %s", err, stderr)
 	}

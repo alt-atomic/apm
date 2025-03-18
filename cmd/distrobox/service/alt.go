@@ -26,7 +26,7 @@ func NewAltProvider(servicePackage *PackageService) *AltProvider {
 // GetPackages обновляет базу пакетов, выполняет поиск и отмечает установленные пакеты.
 func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", lib.Env.CommandPrefix, containerInfo.ContainerName)
-	if _, stderr, err := helper.RunCommand(updateCmd); err != nil {
+	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
 		return nil, fmt.Errorf("не удалось обновить базу пакетов: %v, stderr: %s", err, stderr)
 	}
 
@@ -145,7 +145,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 // RemovePackage удаляет указанный пакет с помощью pacman -R.
 func (p *AltProvider) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(cmdStr)
+	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return fmt.Errorf("не удалось удалить пакет %s: %v, stderr: %s", packageName, err, stderr)
 	}
@@ -155,7 +155,7 @@ func (p *AltProvider) RemovePackage(ctx context.Context, containerInfo Container
 // InstallPackage устанавливает указанный пакет с помощью pacman -S.
 func (p *AltProvider) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(cmdStr)
+	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return fmt.Errorf("не удалось установить пакет %s: %v, stderr: %s", packageName, err, stderr)
 	}
@@ -165,7 +165,7 @@ func (p *AltProvider) InstallPackage(ctx context.Context, containerInfo Containe
 // GetPathByPackageName возвращает список путей для файла пакета, найденных через rpm -ql.
 func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
-	stdout, stderr, err := helper.RunCommand(command)
+	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		lib.Log.Debugf("Ошибка выполнения команды: %s %s", stderr, err.Error())
 		return []string{}, err
@@ -185,7 +185,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 // GetPackageOwner определяет пакет-владельца файла через rpm -qf.
 func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qf --queryformat '%%{NAME}' %s", lib.Env.CommandPrefix, containerInfo.ContainerName, filePath)
-	stdout, stderr, err := helper.RunCommand(command)
+	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		lib.Log.Debugf("Ошибка выполнения команды: %s %s", stderr, err.Error())
 		return "", err

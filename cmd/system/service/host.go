@@ -182,7 +182,7 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SwitchImage"))
 
 	command := fmt.Sprintf("%s bootc switch --transport containers-storage %s", lib.Env.CommandPrefix, podmanImageID)
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("ошибка переключения на новый образ: %s", string(output))
 	}
@@ -213,7 +213,7 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 		return nil
 	}
 
-	if _, err := os.Stat(h.containerPath); err != nil {
+	if _, err = os.Stat(h.containerPath); err != nil {
 		return fmt.Errorf("ошибка, файл %s не найден", h.containerPath)
 	}
 
@@ -224,7 +224,7 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.bootcUpgrade"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.bootcUpgrade"))
 
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s bootc upgrade", lib.Env.CommandPrefix))
+	cmd := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s bootc upgrade", lib.Env.CommandPrefix))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("bootc upgrade failed: %s", string(output))
 	}

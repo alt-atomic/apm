@@ -56,7 +56,7 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 	defer runtime.GC()
 
 	// Обработка системных пакетов
-	systemPackages, err := s.getPackages("")
+	systemPackages, err := s.getPackages(ctx, "")
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 	// Обработка иконок для каждого контейнера
 	for _, distroContainer := range containerList {
 		if distroContainer.OS == "Arch" {
-			distroPackages, err := s.getPackages(distroContainer.ContainerName)
+			distroPackages, err := s.getPackages(ctx, distroContainer.ContainerName)
 			if err != nil {
 				lib.Log.Error(err)
 				continue
@@ -97,11 +97,11 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 }
 
 // getPackages получает иконки из SWCatalog для указанного контейнера.
-func (s *Service) getPackages(container string) ([]PackageIcon, error) {
+func (s *Service) getPackages(ctx context.Context, container string) ([]PackageIcon, error) {
 	var packageIcons []PackageIcon
 	systemSwCatService := NewSwCatIconService("/usr/share/swcatalog/xml", container)
 
-	packageSwCatIcons, err := systemSwCatService.LoadSWCatalogs()
+	packageSwCatIcons, err := systemSwCatService.LoadSWCatalogs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (s *Service) getPackages(container string) ([]PackageIcon, error) {
 	var cachedBase, stockBase string
 	var cleanup func()
 	if container != "" {
-		cachedBase, stockBase, cleanup, err = systemSwCatService.prepareTempIconDirs("/usr/share/swcatalog/icons", "")
+		cachedBase, stockBase, cleanup, err = systemSwCatService.prepareTempIconDirs(ctx, "/usr/share/swcatalog/icons", "")
 		if err != nil {
 			return nil, fmt.Errorf("ошибка подготовки временных каталогов: %v", err)
 		}

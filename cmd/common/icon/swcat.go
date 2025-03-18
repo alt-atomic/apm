@@ -3,6 +3,7 @@ package icon
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -57,14 +58,14 @@ type PackageIconsSwCat struct {
 }
 
 // copyDirFromContainer копирует каталог src из контейнера в dst на хосте.
-func (s *SwCatIconService) copyDirFromContainer(src, dst string) error {
+func (s *SwCatIconService) copyDirFromContainer(ctx context.Context, src, dst string) error {
 	// Создаем целевую директорию на хосте.
 	if err := os.MkdirAll(dst, 0755); err != nil {
 		return err
 	}
 	// Команда копирования из контейнера.
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- cp -r %s/. %s", lib.Env.CommandPrefix, s.containerName, src, dst)
-	_, stderr, err := helper.RunCommand(cmdStr)
+	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return fmt.Errorf("ошибка копирования из контейнера: %v, stderr: %s", err, stderr)
 	}
@@ -72,7 +73,7 @@ func (s *SwCatIconService) copyDirFromContainer(src, dst string) error {
 }
 
 // prepareTempIconDirs копирует исходные каталоги с иконками из контейнера во временную директорию на хосте.
-func (s *SwCatIconService) prepareTempIconDirs(cachedSource, stockSource string) (tempCached, tempStock string, cleanup func(), err error) {
+func (s *SwCatIconService) prepareTempIconDirs(ctx context.Context, cachedSource, stockSource string) (tempCached, tempStock string, cleanup func(), err error) {
 	// Если контейнер не указан, возвращаем переданные пути.
 	if s.containerName == "" {
 		return cachedSource, stockSource, func() {}, nil
@@ -98,11 +99,11 @@ func (s *SwCatIconService) prepareTempIconDirs(cachedSource, stockSource string)
 	}
 
 	// Копируем каталоги из контейнера во временные.
-	if err = s.copyDirFromContainer(cachedSource, tempCached); err != nil {
+	if err = s.copyDirFromContainer(ctx, cachedSource, tempCached); err != nil {
 		return "", "", nil, err
 	}
 	if len(stockSource) > 0 {
-		if err = s.copyDirFromContainer(stockSource, tempStock); err != nil {
+		if err = s.copyDirFromContainer(ctx, stockSource, tempStock); err != nil {
 			return "", "", nil, err
 		}
 	}
@@ -231,7 +232,7 @@ func (s *SwCatIconService) getIconFromPackage(pkg PackageIconsSwCat, cachedIcons
 
 // LoadSWCatalogs загружает все XML-файлы из директории, объединяет данные по пакетам (без дублей),
 // распаковывает файлы с расширением .gz, выводит результат в консоль и возвращает срез PackageIconsSwCat.
-func (s *SwCatIconService) LoadSWCatalogs() ([]PackageIconsSwCat, error) {
+func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSwCat, error) {
 	var allComponents []Component
 	var fileNames []string
 
@@ -249,7 +250,7 @@ func (s *SwCatIconService) LoadSWCatalogs() ([]PackageIconsSwCat, error) {
 	} else {
 		// Для контейнера используем команду find для файлов 1-го уровня.
 		cmdStr := fmt.Sprintf("%s distrobox enter %s -- find %s -maxdepth 1 -type f", lib.Env.CommandPrefix, s.containerName, s.path)
-		stdout, stderr, err := helper.RunCommand(cmdStr)
+		stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения файлов в %s: %v, stderr: %s", s.path, err, stderr)
 		}
@@ -276,7 +277,7 @@ func (s *SwCatIconService) LoadSWCatalogs() ([]PackageIconsSwCat, error) {
 			}
 		} else {
 			cmdStr := fmt.Sprintf("%s distrobox enter %s -- cat %s", lib.Env.CommandPrefix, s.containerName, fullPath)
-			stdout, stderr, err := helper.RunCommand(cmdStr)
+			stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 			if err != nil {
 				return nil, fmt.Errorf("ошибка выполнения команды для файла %s: %v, stderr: %s", fullPath, err, stderr)
 			}

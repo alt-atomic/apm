@@ -20,7 +20,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) error {
 	allBlobs := make(map[string]bool)
 
 	parts := strings.Fields(cmdLine)
-	cmd := exec.Command(parts[0], parts[1:]...)
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		return err

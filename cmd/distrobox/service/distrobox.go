@@ -34,7 +34,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetContainerList"))
 
 	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
-	stdout, stderr, err := helper.RunCommand(command)
+	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		return nil, errors.New("Не удалось получить список контейнеров: " + stderr)
 	}

@@ -26,13 +26,13 @@ func NewUbuntuProvider(servicePackage *PackageService) *UbuntuProvider {
 func (p *UbuntuProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	// Обновляем базу пакетов.
 	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", lib.Env.CommandPrefix, containerInfo.ContainerName)
-	_, stderr, err := helper.RunCommand(updateCmd)
+	_, stderr, err := helper.RunCommand(ctx, updateCmd)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось обновить базу пакетов: %v, stderr: %s", err, stderr)
 	}
 
 	searchCmd := fmt.Sprintf("%s distrobox enter %s -- apt search .", lib.Env.CommandPrefix, containerInfo.ContainerName)
-	stdout, stderr, err := helper.RunCommand(searchCmd)
+	stdout, stderr, err := helper.RunCommand(ctx, searchCmd)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось выполнить apt search: %v, stderr: %s", err, stderr)
 	}
@@ -54,7 +54,7 @@ func (p *UbuntuProvider) GetPackages(ctx context.Context, containerInfo Containe
 // GetPathByPackageName возвращает список путей для файла пакета, найденных через dpkg -L.
 func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- dpkg -L %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
-	stdout, stderr, err := helper.RunCommand(command)
+	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		lib.Log.Debugf("Ошибка выполнения команды: %s %s", stderr, err.Error())
 		return []string{}, err
@@ -74,7 +74,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 // GetPackageOwner определяет пакет-владельца файла через dpkg -S.
 func (p *UbuntuProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
 	command := fmt.Sprintf("%s distrobox enter %s -- dpkg -S %s", lib.Env.CommandPrefix, containerInfo.ContainerName, filePath)
-	stdout, _, err := helper.RunCommand(command)
+	stdout, _, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		return "", err
 	}
@@ -90,7 +90,7 @@ func (p *UbuntuProvider) GetPackageOwner(ctx context.Context, containerInfo Cont
 // InstallPackage устанавливает указанный пакет внутри контейнера через apt-get install.
 func (p *UbuntuProvider) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	command := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(command)
+	_, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		return fmt.Errorf("не удалось установить пакет %s: %v, stderr: %s", packageName, err, stderr)
 	}
@@ -101,7 +101,7 @@ func (p *UbuntuProvider) InstallPackage(ctx context.Context, containerInfo Conta
 // RemovePackage удаляет указанный пакет внутри контейнера через apt-get remove.
 func (p *UbuntuProvider) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	command := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(command)
+	_, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		return fmt.Errorf("не удалось удалить пакет %s: %v, stderr: %s", packageName, err, stderr)
 	}

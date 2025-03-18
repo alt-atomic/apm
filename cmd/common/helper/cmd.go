@@ -3,13 +3,14 @@ package helper
 import (
 	"apm/lib"
 	"bytes"
+	"context"
 	"os/exec"
 )
 
 // RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
-func RunCommand(command string) (string, string, error) {
+func RunCommand(ctx context.Context, command string) (string, string, error) {
 	lib.Log.Debug("run command: ", command)
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
