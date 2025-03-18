@@ -157,9 +157,9 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 		command = fmt.Sprintf("%s podman build --pull=always --squash -t os /var", lib.Env.CommandPrefix)
 	}
 
-	err := PullAndProgress(ctx, command)
+	stdout, err := PullAndProgress(ctx, command)
 	if err != nil {
-		return "", fmt.Errorf("ошибка сборки образа: %v", err)
+		return "", fmt.Errorf("ошибка сборки образа: %s статус: %d", stdout, err)
 	}
 
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s podman images -q os", lib.Env.CommandPrefix))

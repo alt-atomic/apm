@@ -291,7 +291,7 @@ func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName st
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.RemoveContainer"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.RemoveContainer"))
 	command := fmt.Sprintf("%s distrobox rm %s", lib.Env.CommandPrefix, containerName)
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

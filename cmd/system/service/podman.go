@@ -14,46 +14,57 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-func PullAndProgress(ctx context.Context, cmdLine string) error {
+func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 	allBlobs := make(map[string]bool)
 
 	parts := strings.Fields(cmdLine)
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() { _ = ptmx.Close() }()
 
-	// Установим размер терминала
+	// Устанавливаем размер терминала
 	err = pty.Setsize(ptmx, &pty.Winsize{
 		Rows: 40,
 		Cols: 120,
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	// Переменные окружения
 	env := os.Environ()
 	env = append(env, "TERM=xterm-256color")
 	cmd.Env = env
 
+	var outputBuffer bytes.Buffer
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		scanner := bufio.NewScanner(ptmx)
+		defer wg.Done()
+		// Используем TeeReader для одновременного сканирования и записи в буфер
+		scanner := bufio.NewScanner(io.TeeReader(ptmx, &outputBuffer))
 		for scanner.Scan() {
 			line := scanner.Text()
 			parseProgressLine(ctx, line, allBlobs)
 		}
 		if scanErr := scanner.Err(); scanErr != nil && scanErr != io.EOF {
-			//lib.Log.Error("Ошибка сканирования вывода: %v\n", scanErr)
+			// Можно добавить логирование ошибки
 		}
 	}()
 
-	if err = cmd.Wait(); err != nil {
-		return err
+	// Ждем завершения команды
+	err = cmd.Wait()
+	wg.Wait()
+
+	if err != nil {
+		// Возвращаем вывод вместе с ошибкой для более подробной диагностики
+		return outputBuffer.String(), fmt.Errorf("команда завершилась с ошибкой: %v, вывод: %s", err, outputBuffer.String())
 	}
 
 	for blobKey := range allBlobs {
@@ -64,7 +75,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) error {
 		)
 	}
 
-	return nil
+	return outputBuffer.String(), nil
 }
 
 // printProgress вызывается, когда мы успешно распознали
