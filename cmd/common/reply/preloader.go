@@ -22,11 +22,12 @@ var (
 
 // TaskUpdateMsg TASK" или "PROGRESS"
 type TaskUpdateMsg struct {
-	eventType     string
-	taskName      string
-	viewName      string
-	state         string
-	progressValue float64
+	eventType        string
+	taskName         string
+	viewName         string
+	state            string
+	progressValue    float64
+	progressDoneText string
 }
 
 type task struct {
@@ -35,8 +36,9 @@ type task struct {
 	viewName  string
 	state     string
 
-	progressModel *progress.Model
-	percent       float64
+	progressModel    *progress.Model
+	progressDoneText string
+	percent          float64
 }
 
 type model struct {
@@ -120,7 +122,7 @@ func StopSpinner() {
 //	// Обычная задача
 //	UpdateTask("TASK", "install", "Установка пакетов", "BEFORE", "")
 //	UpdateTask("TASK", "install", "Установка пакетов", "AFTER", "")
-func UpdateTask(eventType string, taskName string, viewName string, state string, progressValue float64) {
+func UpdateTask(eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
 	if lib.Env.Format != "text" && IsTTY() {
 		return
 	}
@@ -130,11 +132,12 @@ func UpdateTask(eventType string, taskName string, viewName string, state string
 
 	if p != nil {
 		p.Send(TaskUpdateMsg{
-			eventType:     eventType,
-			taskName:      taskName,
-			viewName:      viewName,
-			state:         state,
-			progressValue: progressValue,
+			eventType:        eventType,
+			taskName:         taskName,
+			viewName:         viewName,
+			state:            state,
+			progressValue:    progressValue,
+			progressDoneText: progressDone,
 		})
 	}
 }
@@ -224,6 +227,7 @@ func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
 
 			// Если это ПРОГРЕСС
 			if msg.eventType == "PROGRESS" {
+				m.tasks[i].progressDoneText = msg.progressDoneText
 				// Инициализируем progressModel, если впервые
 				if m.tasks[i].progressModel == nil {
 					pm := progress.New(progress.WithDefaultGradient())
@@ -302,7 +306,11 @@ func (m model) View() string {
 		// Прогресс-бар
 		case "PROGRESS":
 			if t.state == "AFTER" {
-				s += fmt.Sprintf("\n[✓] Прогресс завершён")
+				text := fmt.Sprintf("\n[✓] Прогресс завершён")
+				if len(t.progressDoneText) > 0 {
+					text = fmt.Sprintf("\n[✓] Прогресс: %s завершён", t.progressDoneText)
+				}
+				s += text
 			} else {
 				if t.progressModel != nil {
 					bar := t.progressModel.View()

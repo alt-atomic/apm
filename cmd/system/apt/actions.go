@@ -63,6 +63,7 @@ type Package struct {
 const (
 	typeInstall = iota
 	typeRemove
+	typeChanged
 )
 
 func (a *Actions) Install(ctx context.Context, packageName string) []error {
@@ -71,8 +72,13 @@ func (a *Actions) Install(ctx context.Context, packageName string) []error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
+	typeProcess := typeInstall
+	if hasChangePackage(packageName) {
+		typeProcess = typeChanged
+	}
+
 	command := fmt.Sprintf("%s apt-get -y install %s", lib.Env.CommandPrefix, packageName)
-	err := a.commandWithProgress(ctx, command, typeInstall)
+	err := a.commandWithProgress(ctx, command, typeProcess)
 	if err != nil {
 		return err
 	}
@@ -125,12 +131,15 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 	// Пример строки: "1: erlang-otp-1:26.2.5.3-alt2  ########## [ 25%]"
 	installRegex := regexp.MustCompile(`^(?P<step>\d+):\s+(?P<pkg>[\w\-\:\+]+).*?\[\s*(?P<percent>\d+)%\]`)
 
-	downloadEvents := make(map[string]bool)
-	installEvents := make(map[string]bool)
+	// Мапы: ключ – уникальное имя события, значение – чистое имя пакета.
+	downloadEvents := make(map[string]string)
+	installEvents := make(map[string]string)
 
 	textStatus := "Установка"
 	if typeProcess == typeRemove {
 		textStatus = "Удаление"
+	} else if typeProcess == typeChanged {
+		textStatus = "Изменение"
 	}
 
 	var outputLines []string
@@ -145,9 +154,9 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 			if downloadRegex.MatchString(line) {
 				match := downloadRegex.FindStringSubmatch(line)
 				pkgName := match[downloadRegex.SubexpIndex("pkg")]
-				// Формируем уникальное имя события для скачивания
+				// Уникальное имя события
 				eventName := fmt.Sprintf("system.downloadProgress-%s", pkgName)
-				downloadEvents[eventName] = true
+				downloadEvents[eventName] = pkgName
 
 				percentStr := match[downloadRegex.SubexpIndex("local")]
 				if percent, err := strconv.Atoi(percentStr); err == nil {
@@ -155,15 +164,14 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 						reply.WithEventName(eventName),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf("Скачивание: %s", pkgName)),
+						reply.WithEventView(fmt.Sprintf("%s: %s", textStatus, pkgName)),
 					)
 				}
 			} else if installRegex.MatchString(line) {
 				match := installRegex.FindStringSubmatch(line)
 				pkgName := match[installRegex.SubexpIndex("pkg")]
-				// Формируем уникальное имя события для установки
 				eventName := fmt.Sprintf("system.installProgress-%s", pkgName)
-				installEvents[eventName] = true
+				installEvents[eventName] = pkgName
 
 				percentStr := match[installRegex.SubexpIndex("percent")]
 				if percent, err := strconv.Atoi(percentStr); err == nil {
@@ -178,17 +186,19 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 
 			// При получении строки "Done." завершаем все события.
 			if strings.Contains(line, "Done.") {
-				for eventName := range downloadEvents {
+				for event, pkg := range downloadEvents {
 					reply.CreateEventNotification(ctx, reply.StateAfter,
-						reply.WithEventName(eventName),
+						reply.WithEventName(event),
 						reply.WithProgress(true),
+						reply.WithProgressDoneText(pkg),
 						reply.WithProgressPercent(100),
 					)
 				}
-				for eventName := range installEvents {
+				for event, pkg := range installEvents {
 					reply.CreateEventNotification(ctx, reply.StateAfter,
-						reply.WithEventName(eventName),
+						reply.WithEventName(event),
 						reply.WithProgress(true),
+						reply.WithProgressDoneText(pkg),
 						reply.WithProgressPercent(100),
 					)
 				}
@@ -630,4 +640,14 @@ func parseAptOutput(output string) (PackageChanges, error) {
 	}
 
 	return *pc, nil
+}
+
+func hasChangePackage(packageName string) bool {
+	words := strings.Fields(packageName)
+	for _, word := range words {
+		if strings.HasSuffix(word, "-") {
+			return true
+		}
+	}
+	return false
 }

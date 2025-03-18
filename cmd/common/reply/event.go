@@ -17,6 +17,7 @@ type EventData struct {
 	State           string  `json:"state"`
 	Type            string  `json:"type"`
 	ProgressPercent float64 `json:"progress"`
+	ProgressDone    string  `json:"progressDone"`
 	Transaction     string  `json:"transaction,omitempty"`
 }
 
@@ -60,6 +61,13 @@ func WithProgress(isProgress bool) NotificationOption {
 func WithProgressPercent(percent float64) NotificationOption {
 	return func(ed *EventData) {
 		ed.ProgressPercent = percent
+	}
+}
+
+// WithProgressDoneText задаёт текст в конце прогресса.
+func WithProgressDoneText(text string) NotificationOption {
+	return func(ed *EventData) {
+		ed.ProgressDone = text
 	}
 }
 
@@ -122,7 +130,7 @@ func SendFuncNameDBUS(ctx context.Context, eventData EventData) {
 		eventType = "TASK"
 	}
 
-	UpdateTask(eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent)
+	UpdateTask(eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
 	SendNotificationResponse(string(b))
 }
 
