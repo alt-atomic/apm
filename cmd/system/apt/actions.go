@@ -164,13 +164,13 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 						reply.WithEventName(eventName),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf("%s: %s", textStatus, pkgName)),
+						reply.WithEventView(fmt.Sprintf("Скачивание: %s", pkgName)),
 					)
 				}
 			} else if installRegex.MatchString(line) {
 				match := installRegex.FindStringSubmatch(line)
 				pkgName := match[installRegex.SubexpIndex("pkg")]
-				eventName := fmt.Sprintf("system.installProgress-%s", pkgName)
+				eventName := fmt.Sprintf("system.installProgress")
 				installEvents[eventName] = pkgName
 
 				percentStr := match[installRegex.SubexpIndex("percent")]
