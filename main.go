@@ -23,13 +23,12 @@ var (
 func main() {
 	defer cleanup()
 	lib.Log.Debugln("Starting apm")
+	lib.Env.Language = helper.GetSystemLocale()
 
 	lib.InitConfig()
 	lib.InitLogger()
 	lib.InitDatabase()
 	lib.InitLocales()
-
-	lib.Env.Language = helper.GetSystemLocale()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)

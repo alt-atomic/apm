@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"golang.org/x/text/language"
 	"os"
 	"path/filepath"
 )
@@ -20,7 +19,7 @@ func InitLocales() {
 	}
 
 	// Создание bundle с базовым языком
-	Bundle = i18n.NewBundle(language.Russian)
+	Bundle = i18n.NewBundle(Env.Language)
 	Bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
 
 	// Чтение списка файлов из каталога с переводами
@@ -54,7 +53,7 @@ func T(messageID string, defaultValue string, templateData ...map[string]interfa
 		data = make(map[string]interface{})
 	}
 
-	localize := i18n.NewLocalizer(Bundle, Env.Language)
+	localize := i18n.NewLocalizer(Bundle)
 
 	config := &i18n.LocalizeConfig{
 		DefaultMessage: &i18n.Message{

@@ -2,21 +2,22 @@ package lib
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
+	"golang.org/x/text/language"
 	"os"
 	"path/filepath"
 )
 
 type Environment struct {
-	CommandPrefix string `yaml:"commandPrefix"`
-	Environment   string `yaml:"environment"`
-	PathLocales   string `yaml:"pathLocales"`
-	PathLogFile   string `yaml:"pathLogFile"`
-	PathDBSQL     string `yaml:"pathDBSQL"`
-	PathDBKV      string `yaml:"pathDBKV"`
-	PathImageFile string `yaml:"pathImageFile"`
-	IsAtomic      bool   // Внутреннее свойство
-	Language      string // Внутреннее свойство
-	Format        string // Внутреннее свойство
+	CommandPrefix string       `yaml:"commandPrefix"`
+	Environment   string       `yaml:"environment"`
+	PathLocales   string       `yaml:"pathLocales"`
+	PathLogFile   string       `yaml:"pathLogFile"`
+	PathDBSQL     string       `yaml:"pathDBSQL"`
+	PathDBKV      string       `yaml:"pathDBKV"`
+	PathImageFile string       `yaml:"pathImageFile"`
+	IsAtomic      bool         // Внутреннее свойство
+	Language      language.Tag // Внутреннее свойство
+	Format        string       // Внутреннее свойство
 }
 
 var Env Environment
