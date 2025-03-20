@@ -37,6 +37,16 @@ type Environment struct {
 var Env Environment
 var DevMode bool
 
+// Глобальные переменные для возможности переопределения значений при сборке
+
+var BuildCommandPrefix string
+var BuildEnvironment string
+var BuildPathLocales string
+var BuildPathLogFile string
+var BuildPathDBSQL string
+var BuildPathDBKV string
+var BuildPathImageFile string
+
 func InitConfig() {
 	var configPath string
 	if _, err := os.Stat("config.yml"); err == nil {
@@ -53,6 +63,29 @@ func InitConfig() {
 	}
 
 	DevMode = Env.Environment != "prod"
+
+	// Переопределяем значения из ldflags, если они заданы
+	if BuildCommandPrefix != "" {
+		Env.CommandPrefix = BuildCommandPrefix
+	}
+	if BuildEnvironment != "" {
+		Env.Environment = BuildEnvironment
+	}
+	if BuildPathLocales != "" {
+		Env.PathLocales = BuildPathLocales
+	}
+	if BuildPathLogFile != "" {
+		Env.PathLogFile = BuildPathLogFile
+	}
+	if BuildPathDBSQL != "" {
+		Env.PathDBSQL = BuildPathDBSQL
+	}
+	if BuildPathDBKV != "" {
+		Env.PathDBKV = BuildPathDBKV
+	}
+	if BuildPathImageFile != "" {
+		Env.PathImageFile = BuildPathImageFile
+	}
 
 	// Проверяем и создаём путь для лог-файла
 	if err = EnsurePath(Env.PathLogFile); err != nil {
