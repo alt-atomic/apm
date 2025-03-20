@@ -59,9 +59,9 @@ var (
 			Foreground(adaptiveItemColor)
 )
 
-// translateKey – вспомогательная функция для перевода
+// translateKey – вспомогательная функция для перевода, превращает ключ в англ текст
 func translateKey(k string) string {
-	return lib.T(k)
+	return lib.T(TranslateKey(k))
 }
 
 // IsTTY пользователь запустил приложение в интерактивной консоли
