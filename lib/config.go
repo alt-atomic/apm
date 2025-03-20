@@ -49,17 +49,19 @@ var BuildPathImageFile string
 
 func InitConfig() {
 	var configPath string
+	// Ищем конфигурационный файл в текущей директории
 	if _, err := os.Stat("config.yml"); err == nil {
 		configPath = "config.yml"
-	} else if _, err := os.Stat("/etc/apm/config.yml"); err == nil {
+	} else if _, err = os.Stat("/etc/apm/config.yml"); err == nil {
 		configPath = "/etc/apm/config.yml"
-	} else {
-		panic("Конфигурационный файл не найден ни в /etc/apm/config.yml, ни в локальной директории")
 	}
 
-	err := cleanenv.ReadConfig(configPath, &Env)
-	if err != nil {
-		panic(err)
+	// Если найден конфигурационный файл, читаем его
+	if configPath != "" {
+		err := cleanenv.ReadConfig(configPath, &Env)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	DevMode = Env.Environment != "prod"
@@ -88,17 +90,17 @@ func InitConfig() {
 	}
 
 	// Проверяем и создаём путь для лог-файла
-	if err = EnsurePath(Env.PathLogFile); err != nil {
+	if err := EnsurePath(Env.PathLogFile); err != nil {
 		panic(err)
 	}
 
 	// Проверяем и создаём путь для db-файла sql
-	if err = EnsurePath(Env.PathDBSQL); err != nil {
+	if err := EnsurePath(Env.PathDBSQL); err != nil {
 		panic(err)
 	}
 
 	// Проверяем и создаём путь для db-директории key-value
-	if err = EnsureDir(Env.PathDBKV); err != nil {
+	if err := EnsureDir(Env.PathDBKV); err != nil {
 		panic(err)
 	}
 
