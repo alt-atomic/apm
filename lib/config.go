@@ -49,22 +49,6 @@ var BuildPathImageFile string
 
 func InitConfig() {
 	var configPath string
-	// Ищем конфигурационный файл в текущей директории
-	if _, err := os.Stat("config.yml"); err == nil {
-		configPath = "config.yml"
-	} else if _, err = os.Stat("/etc/apm/config.yml"); err == nil {
-		configPath = "/etc/apm/config.yml"
-	}
-
-	// Если найден конфигурационный файл, читаем его
-	if configPath != "" {
-		err := cleanenv.ReadConfig(configPath, &Env)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	DevMode = Env.Environment != "prod"
 
 	// Переопределяем значения из ldflags, если они заданы
 	if BuildCommandPrefix != "" {
@@ -87,6 +71,23 @@ func InitConfig() {
 	}
 	if BuildPathImageFile != "" {
 		Env.PathImageFile = BuildPathImageFile
+	}
+
+	// Ищем конфигурационный файл в текущей директории
+	if _, err := os.Stat("config.yml"); err == nil {
+		configPath = "config.yml"
+	} else if _, err = os.Stat("/etc/apm/config.yml"); err == nil {
+		configPath = "/etc/apm/config.yml"
+	}
+
+	DevMode = Env.Environment != "prod"
+
+	// Если найден конфигурационный файл, читаем его
+	if configPath != "" {
+		err := cleanenv.ReadConfig(configPath, &Env)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// Проверяем и создаём путь для лог-файла
