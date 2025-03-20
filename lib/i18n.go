@@ -35,16 +35,11 @@ func InitLocales() {
 
 	defaultLang := GetSystemLocale().String()
 	gotext.Configure(Env.PathLocales, defaultLang, "apm")
-	gotext.NewLocale(Env.PathLocales, defaultLang)
 }
 
 // T возвращает переведенную строку для заданного messageID.
 func T(messageID string) string {
-	translation := gotext.Get(messageID)
-	if translation == messageID {
-		return messageID
-	}
-	return translation
+	return gotext.Get(messageID)
 }
 
 // GetSystemLocale возвращает базовый язык системы в виде language.Tag.
