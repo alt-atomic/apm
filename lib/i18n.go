@@ -1,86 +1,77 @@
+// Atomic Package Manager
+// Copyright (C) 2025 Дмитрий Удалов dmitry@udalov.online
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 package lib
 
 import (
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
 	"os"
-	"path/filepath"
+	"strings"
+
+	"github.com/leonelquinteros/gotext"
 )
 
-var Bundle *i18n.Bundle
-
-// InitLocales инициализация переводов
+// InitLocales инициализирует локаль с доменом "apm".
 func InitLocales() {
 	if _, err := os.Stat(Env.PathLocales); os.IsNotExist(err) {
-		textError := fmt.Sprintf("Папка переводов не найдена по пути: %s.", Env.PathLocales)
+		textError := fmt.Sprintf("Translations folder not found at path: %s", Env.PathLocales)
 		Log.Error(textError)
 		panic(err)
 	}
 
-	// Создание bundle с базовым языком
-	Bundle = i18n.NewBundle(Env.Language)
-	Bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
-
-	// Чтение списка файлов из каталога с переводами
-	entries, err := os.ReadDir(Env.PathLocales)
-	if err != nil {
-		Log.Error(fmt.Sprintf("Ошибка чтения директории переводов: %v", err))
-		panic(err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			filePath := filepath.Join(Env.PathLocales, entry.Name())
-			if _, err = Bundle.LoadMessageFile(filePath); err != nil {
-				Log.Warn(fmt.Sprintf("Не удалось загрузить файл переводов %s: %v", filePath, err))
-			} else {
-				Log.Info(fmt.Sprintf("Файл переводов загружен: %s", filePath))
-			}
-		}
-	}
+	defaultLang := GetSystemLocale().String()
+	gotext.Configure(Env.PathLocales, defaultLang, "apm")
+	gotext.NewLocale(Env.PathLocales, defaultLang)
 }
 
-// T возвращает переведённую строку по идентификатору сообщения с возможностью передачи данных для шаблона.
-// Если шаблонные данные не переданы, используется значение по умолчанию.
-// пример: lib.T("response.package", "package", map[string]interface{}{"Count": 5})
-// пример: lib.T("response.package", "package")
-func T(messageID string, defaultValue string, templateData ...map[string]interface{}) string {
-	var data map[string]interface{}
-	if len(templateData) > 0 {
-		data = templateData[0]
-	} else {
-		data = make(map[string]interface{})
+// T возвращает переведенную строку для заданного messageID.
+func T(messageID string) string {
+	translation := gotext.Get(messageID)
+	if translation == messageID {
+		return messageID
 	}
-
-	localize := i18n.NewLocalizer(Bundle)
-
-	config := &i18n.LocalizeConfig{
-		DefaultMessage: &i18n.Message{
-			ID:    messageID,
-			Other: defaultValue,
-		},
-		TemplateData: data,
-	}
-
-	if c, ok := data["Count"]; ok {
-		var countValue = 1
-		switch v := c.(type) {
-		case int:
-			countValue = v
-		case float64:
-			countValue = int(v)
-		default:
-			countValue = 1
-		}
-		config.PluralCount = countValue
-	}
-
-	translation, err := localize.Localize(config)
-	if err != nil {
-		Log.Error(err)
-		return defaultValue
-	}
-
 	return translation
+}
+
+// GetSystemLocale возвращает базовый язык системы в виде language.Tag.
+func GetSystemLocale() language.Tag {
+	var localeStr string
+	if v := os.Getenv("LC_ALL"); v != "" {
+		localeStr = stripAfterDot(v)
+	} else if v := os.Getenv("LC_MESSAGES"); v != "" {
+		localeStr = stripAfterDot(v)
+	} else {
+		localeStr = stripAfterDot(os.Getenv("LANG"))
+	}
+
+	// Приводим строку к формату BCP 47 (заменяем "_" на "-").
+	localeStr = strings.Replace(localeStr, "_", "-", 1)
+	tag, err := language.Parse(localeStr)
+	if err != nil {
+		return language.English
+	}
+
+	base, _ := tag.Base()
+	return language.Make(base.String())
+}
+
+func stripAfterDot(localeStr string) string {
+	if idx := strings.Index(localeStr, "."); idx != -1 {
+		return localeStr[:idx]
+	}
+	return localeStr
 }

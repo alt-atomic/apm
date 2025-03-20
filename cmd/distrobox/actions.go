@@ -466,7 +466,7 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (reply.
 
 		fields = append(fields, FiltersField{
 			Name:   field,
-			Text:   lib.T("response."+field, field),
+			Text:   lib.T(field),
 			Type:   fieldType,
 			Choice: choice,
 		})

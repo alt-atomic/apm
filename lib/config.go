@@ -1,23 +1,37 @@
+// Atomic Package Manager
+// Copyright (C) 2025 Дмитрий Удалов dmitry@udalov.online
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 package lib
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
-	"golang.org/x/text/language"
 	"os"
 	"path/filepath"
 )
 
 type Environment struct {
-	CommandPrefix string       `yaml:"commandPrefix"`
-	Environment   string       `yaml:"environment"`
-	PathLocales   string       `yaml:"pathLocales"`
-	PathLogFile   string       `yaml:"pathLogFile"`
-	PathDBSQL     string       `yaml:"pathDBSQL"`
-	PathDBKV      string       `yaml:"pathDBKV"`
-	PathImageFile string       `yaml:"pathImageFile"`
-	IsAtomic      bool         // Внутреннее свойство
-	Language      language.Tag // Внутреннее свойство
-	Format        string       // Внутреннее свойство
+	CommandPrefix string `yaml:"commandPrefix"`
+	Environment   string `yaml:"environment"`
+	PathLocales   string `yaml:"pathLocales"`
+	PathLogFile   string `yaml:"pathLogFile"`
+	PathDBSQL     string `yaml:"pathDBSQL"`
+	PathDBKV      string `yaml:"pathDBKV"`
+	PathImageFile string `yaml:"pathImageFile"`
+	IsAtomic      bool   // Внутреннее свойство
+	Format        string // Внутреннее свойство
 }
 
 var Env Environment

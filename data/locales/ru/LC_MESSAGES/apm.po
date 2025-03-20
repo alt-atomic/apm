@@ -1,0 +1,178 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "package"
+msgstr "Пакет"
+
+msgid "count"
+msgstr "Количество"
+
+msgid "isConsole"
+msgstr "Консольное приложение"
+
+msgid "packageInfo"
+msgstr "Информация о пакете"
+
+msgid "install"
+msgstr "Установить"
+
+msgid "store"
+msgstr "Тип хранилища"
+
+msgid "timestamp"
+msgstr "Дата"
+
+msgid "imageDigest"
+msgstr "Хэш образа"
+
+msgid "os"
+msgstr "Дистрибутив"
+
+msgid "container"
+msgstr "Контейнер"
+
+msgid "name"
+msgstr "Название"
+
+msgid "extraInstalled"
+msgstr "Дополнительно установлено"
+
+msgid "upgradedCount"
+msgstr "Количество обновленных"
+
+msgid "bootedImage"
+msgstr "Загруженный образ"
+
+msgid "removedPackages"
+msgstr "Удаленные пакеты"
+
+msgid "providers"
+msgstr "Провайдеры"
+
+msgid "version"
+msgstr "Версия"
+
+msgid "history"
+msgstr "История"
+
+msgid "depends"
+msgstr "Зависимости"
+
+msgid "installedSize"
+msgstr "Займёт на диске"
+
+msgid "removedCount"
+msgstr "Количество удаленных"
+
+msgid "upgradedPackages"
+msgstr "Обновленные пакеты"
+
+msgid "packageName"
+msgstr "Название пакета"
+
+msgid "image"
+msgstr "Образ"
+
+msgid "commands"
+msgstr "Команды"
+
+msgid "maintainer"
+msgstr "Мэйнтейнер"
+
+msgid "versionInstalled"
+msgstr "Установленная версия"
+
+msgid "remove"
+msgstr "Удалить"
+
+msgid "containers"
+msgstr "Контейнеры"
+
+msgid "paths"
+msgstr "Пути"
+
+msgid "description"
+msgstr "Описание"
+
+msgid "date"
+msgstr "Дата"
+
+msgid "newInstalledCount"
+msgstr "Количество новых установок"
+
+msgid "active"
+msgstr "Активен"
+
+msgid "info"
+msgstr "Информация"
+
+msgid "totalCount"
+msgstr "Всего записей"
+
+msgid "installed"
+msgstr "Установлен"
+
+msgid "manager"
+msgstr "Пакетный менеджер"
+
+msgid "lastChangelog"
+msgstr "Последнее изменение"
+
+msgid "section"
+msgstr "Раздел"
+
+msgid "spec"
+msgstr "Спецификация"
+
+msgid "booted"
+msgstr "Загруженный"
+
+msgid "staged"
+msgstr "В очереди"
+
+msgid "size"
+msgstr "Размер"
+
+msgid "newInstalledPackages"
+msgstr "Новые установленные пакеты"
+
+msgid "notUpgradedCount"
+msgstr "Количество не обновленных"
+
+msgid "containerName"
+msgstr "Название контейнера"
+
+msgid "config"
+msgstr "Конфигурация"
+
+msgid "exporting"
+msgstr "Экспортировано"
+
+msgid "status"
+msgstr "Статус"
+
+msgid "imageDate"
+msgstr "Дата образа"
+
+msgid "packages"
+msgstr "Пакеты"
+
+msgid "filename"
+msgstr "Имя файла"
+
+msgid "containerInfo"
+msgstr "Информация о контейнере"
+
+msgid "imageName"
+msgstr "Наименование образа"
+
+msgid "transport"
+msgstr "Транспорт"
+
+msgid "pinned"
+msgstr "Закреплён"
+
+msgid "list"
+msgstr "Список"

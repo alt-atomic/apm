@@ -3,7 +3,6 @@ module apm
 go 1.23.5
 
 require (
-	github.com/BurntSushi/toml v1.4.0
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/akrylysov/pogreb v0.10.2
 	github.com/charmbracelet/bubbles v0.20.0
@@ -12,8 +11,8 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/leonelquinteros/gotext v1.7.1
 	github.com/mattn/go-sqlite3 v1.14.24
-	github.com/nicksnyder/go-i18n/v2 v2.5.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v3 v3.0.0-beta1
@@ -23,6 +22,7 @@ require (
 )
 
 require (
+	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
