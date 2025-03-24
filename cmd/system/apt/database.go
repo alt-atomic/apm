@@ -103,19 +103,19 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 		installed INTEGER
 	)`, s.tableName)
 	if _, err := s.dbConn.Exec(createQuery); err != nil {
-		return fmt.Errorf("ошибка создания таблицы: %w", err)
+		return fmt.Errorf(lib.T_("Error creating table: %w"), err)
 	}
 
 	// Очищаем таблицу.
 	deleteQuery := fmt.Sprintf("DELETE FROM %s", s.tableName)
 	if _, err := s.dbConn.Exec(deleteQuery); err != nil {
-		return fmt.Errorf("ошибка очистки таблицы: %w", err)
+		return fmt.Errorf(lib.T_("Table cleanup error: %w"), err)
 	}
 
 	// Начинаем транзакцию.
 	tx, err := s.dbConn.Begin()
 	if err != nil {
-		return fmt.Errorf("ошибка начала транзакции: %w", err)
+		return fmt.Errorf(lib.T_("Transaction start error: %w"), err)
 	}
 
 	batchSize := 1000
@@ -163,12 +163,12 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 			if errRollback != nil {
 				return errRollback
 			}
-			return fmt.Errorf("ошибка вставки пакетов: %w", err)
+			return fmt.Errorf(lib.T_("Batch insert error: %w"), err)
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("ошибка коммита транзакции: %w", err)
+		return fmt.Errorf(lib.T_("Transaction commit error: %w"), err)
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 		&installed,
 	)
 	if err != nil {
-		return Package{}, fmt.Errorf("не удалось получить информацию о пакете %s", packageName)
+		return Package{}, fmt.Errorf(lib.T_("Transaction commit error: %w"), packageName)
 	}
 
 	// Преобразуем строку зависимостей в срез.
@@ -229,7 +229,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 
 	tx, err := s.dbConn.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("ошибка начала транзакции: %w", err)
+		return fmt.Errorf(lib.T_("Transaction start error: %w"), err)
 	}
 	defer func() {
 		if err != nil {
@@ -244,7 +244,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
         );
     `
 	if _, err = tx.ExecContext(ctx, createTempTableQuery); err != nil {
-		return fmt.Errorf("ошибка создания временной таблицы: %w", err)
+		return fmt.Errorf(lib.T_("Temporary table creation error: %w"), err)
 	}
 
 	var placeholders []string
@@ -257,7 +257,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 	if len(placeholders) > 0 {
 		insertQuery := fmt.Sprintf("INSERT INTO tmp_installed (name, version) VALUES %s", strings.Join(placeholders, ", "))
 		if _, err = tx.ExecContext(ctx, insertQuery, args...); err != nil {
-			return fmt.Errorf("ошибка пакетной вставки во временную таблицу: %w", err)
+			return fmt.Errorf(lib.T_("Batch insert into temporary table error: %w"), err)
 		}
 	}
 
@@ -274,12 +274,12 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
             )
     `, s.tableName, s.tableName, s.tableName)
 	if _, err = tx.ExecContext(ctx, updateQuery); err != nil {
-		return fmt.Errorf("ошибка обновления пакетов: %w", err)
+		return fmt.Errorf(lib.T_("Batch update error: %w"), err)
 	}
 
 	// 4. Фиксируем транзакцию
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("ошибка коммита транзакции: %w", err)
+		return fmt.Errorf(lib.T_("Transaction commit error: %w"), err)
 	}
 	return nil
 }
@@ -316,7 +316,7 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 
 	rows, err := s.dbConn.QueryContext(ctx, baseQuery, searchPattern)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
+		return nil, fmt.Errorf(lib.T_("Query execution error: %w"), err)
 	}
 	defer func(rows *sql.Rows) {
 		err = rows.Close()
@@ -348,7 +348,7 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 			&pkg.Changelog,
 			&installedInt,
 		); err != nil {
-			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
+			return nil, fmt.Errorf(lib.T_("Batch data read error: %w"), err)
 		}
 
 		if providersStr != "" {
@@ -368,7 +368,7 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка при обработке строк: %w", err)
+		return nil, fmt.Errorf(lib.T_("Row processing error: %w"), err)
 	}
 
 	return result, nil
@@ -409,7 +409,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 		for field, value := range filters {
 			// Проверяем, разрешено ли фильтровать по этому полю.
 			if !s.isAllowedField(field, allowedFilterFields) {
-				return nil, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+				return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s"), field, strings.Join(allowedFilterFields, ", "))
 			}
 			// Если фильтруем по полю "installed", делаем особую логику
 			if field == "installed" {
@@ -451,7 +451,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 	// Добавляем сортировку, если указаны поле и порядок
 	if sortField != "" {
 		if !s.isAllowedField(sortField, allowedSortFields) {
-			return nil, fmt.Errorf("недопустимое поле сортировки: %s. Доступные поля: %s", sortField, strings.Join(allowedSortFields, ", "))
+			return nil, fmt.Errorf(lib.T_("Invalid sort field: %s. Available fields: %s"), sortField, strings.Join(allowedSortFields, ", "))
 		}
 		upperOrder := strings.ToUpper(sortOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
@@ -473,7 +473,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 	// Выполняем запрос
 	rows, err := s.dbConn.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
+		return nil, fmt.Errorf(lib.T_("Query execution error: %w"), err)
 	}
 	defer func(rows *sql.Rows) {
 		err = rows.Close()
@@ -505,7 +505,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 			&pkg.Changelog,
 			&installedInt,
 		); err != nil {
-			return nil, fmt.Errorf("ошибка чтения данных о пакете: %w", err)
+			return nil, fmt.Errorf(lib.T_("Package data read error: %w"), err)
 		}
 
 		if providersStr != "" {
@@ -525,7 +525,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка при обработке строк: %w", err)
+		return nil, fmt.Errorf(lib.T_("Row processing error: %w"), err)
 	}
 
 	return result, nil
@@ -542,7 +542,7 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 		for field, value := range filters {
 			// Проверяем, разрешено ли фильтровать по этому полю.
 			if !s.isAllowedField(field, allowedFilterFields) {
-				return 0, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+				return 0, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s"), field, strings.Join(allowedFilterFields, ", "))
 			}
 			// Если фильтруем по полю "installed", делаем особую логику
 			if field == "installed" {
@@ -583,7 +583,7 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 
 	var totalCount int64
 	if err := s.dbConn.QueryRowContext(ctx, query, args...).Scan(&totalCount); err != nil {
-		return 0, fmt.Errorf("ошибка при подсчёте количества пакетов: %w", err)
+		return 0, fmt.Errorf(lib.T_("Package count error: %w"), err)
 	}
 
 	return totalCount, nil

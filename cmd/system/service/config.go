@@ -17,13 +17,15 @@
 package service
 
 import (
+	"apm/lib"
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Config описывает структуру конфигурационного файла.
@@ -74,7 +76,7 @@ func (s *HostConfigService) LoadConfig() error {
 	}
 
 	if cfg.Image == "" {
-		return fmt.Errorf("необходимо указать image в конфигурационном файле")
+		return fmt.Errorf(lib.T_("Image must be specified in the configuration file"))
 	}
 	s.Config = &cfg
 
@@ -84,7 +86,7 @@ func (s *HostConfigService) LoadConfig() error {
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
 func (s *HostConfigService) SaveConfig() error {
 	if s.Config == nil {
-		return fmt.Errorf("конфигурация не загружена")
+		return fmt.Errorf(lib.T_("Configuration not loaded"))
 	}
 
 	syncYamlMutex.Lock()
@@ -172,7 +174,7 @@ func (s *HostConfigService) GenerateDockerfile() error {
 
 func (s *HostConfigService) CheckCommands() error {
 	if len(s.Config.Packages.Install) == 0 && len(s.Config.Packages.Remove) == 0 && len(s.Config.Commands) == 0 {
-		return fmt.Errorf("конфигурационный файл локального образа не содержит изменений")
+		return fmt.Errorf(lib.T_("Local image configuration file has no changes"))
 	}
 	return nil
 }

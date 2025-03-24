@@ -25,11 +25,12 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
-	"github.com/godbus/dbus/v5/introspect"
-	"github.com/urfave/cli/v3"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/godbus/dbus/v5/introspect"
+	"github.com/urfave/cli/v3"
 )
 
 var (
@@ -38,12 +39,12 @@ var (
 
 func main() {
 	defer cleanup()
-	lib.Log.Debugln("Starting apm")
+	lib.Log.Debugln("Starting apm…")
 
 	lib.InitConfig()
+	lib.InitLocales()
 	lib.InitLogger()
 	lib.InitDatabase()
-	lib.InitLocales()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -52,7 +53,7 @@ func main() {
 		sig := <-sigs
 		switch sig {
 		case syscall.SIGINT, syscall.SIGTERM:
-			infoText := fmt.Sprintf("Получен корректный сигнал %s. Завершаем работу приложения", sig)
+			infoText := fmt.Sprintf(lib.T_("Recieved correct signal %s. Stopping application…"), sig)
 			lib.Log.Info(infoText)
 			_ = reply.CliResponse(ctx, reply.APIResponse{
 				Data: map[string]interface{}{
@@ -61,7 +62,7 @@ func main() {
 				Error: false,
 			})
 		default:
-			infoText := fmt.Sprintf("Получен неожиданный сигнал %s. Завершаем работу приложения с ошибкой", sig)
+			infoText := fmt.Sprintf(lib.T_("Unexpected signal %s received. Terminating the application with an error."), sig)
 			lib.Log.Error(infoText)
 			_ = reply.CliResponse(ctx, reply.APIResponse{
 				Data: map[string]interface{}{
@@ -82,20 +83,20 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
-				Usage:   "Формат вывода: json, text",
+				Usage:   lib.T_("Output format: json, text"),
 				Aliases: []string{"f"},
 				Value:   "text",
 			},
 			&cli.StringFlag{
 				Name:    "transaction",
-				Usage:   "Внутреннее свойство, добавляет транзакцию к выводу",
+				Usage:   lib.T_("Internal property, adds the transaction to the output"),
 				Aliases: []string{"t"},
 			},
 		},
 		Commands: []*cli.Command{
 			{
 				Name:  "dbus-user",
-				Usage: "Запуск DBUS-сервиса com.application.APM",
+				Usage: lib.T_("Start DBUS service com.application.APM"),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					err := lib.InitDBus(false)
 					if err != nil {
@@ -132,7 +133,7 @@ func main() {
 			},
 			{
 				Name:  "dbus-system",
-				Usage: "Запуск DBUS-сервиса com.application.APM",
+				Usage: lib.T_("Start the DBUS service com.application.APM"),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					err := lib.InitDBus(true)
 					if err != nil {
@@ -140,7 +141,7 @@ func main() {
 					}
 
 					if syscall.Geteuid() != 0 {
-						return fmt.Errorf("для запуска необходимы права администратора")
+						return fmt.Errorf(lib.T_("Administrator privileges are required to start"))
 					}
 
 					sysActions := system.NewActions()
@@ -168,8 +169,8 @@ func main() {
 			{
 				Name:      "help",
 				Aliases:   []string{"h"},
-				Usage:     "Показать список команд или справку по каждой команде",
-				ArgsUsage: "[command]",
+				Usage:     lib.T_("Show the list of commands or help for each command"),
+				ArgsUsage: lib.T_("[command]"),
 				HideHelp:  true,
 			},
 		},
@@ -189,18 +190,18 @@ func main() {
 }
 
 func cleanup() {
-	lib.Log.Debugln("Завершаем работу приложения. Освобождаем ресурсы...")
+	lib.Log.Debugln(lib.T_("Terminating the application. Releasing resources…"))
 
 	defer globalCancel()
 	if dbKV := lib.CheckDBKv(); dbKV != nil {
 		if err := dbKV.Close(); err != nil {
-			lib.Log.Error("Ошибка при закрытии базы данных KV: ", err)
+			lib.Log.Error(lib.T_("Error closing KV database: "), err)
 		}
 	}
 
 	if dbSQL := lib.CheckDB(); dbSQL != nil {
 		if err := dbSQL.Close(); err != nil {
-			lib.Log.Error("Ошибка при закрытии базы данных SQL: ", err)
+			lib.Log.Error(lib.T_("Error closing SQL database: "), err)
 		}
 	}
 }

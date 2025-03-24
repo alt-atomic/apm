@@ -18,9 +18,10 @@ package lib
 
 import (
 	"fmt"
-	"golang.org/x/text/language"
 	"os"
 	"strings"
+
+	"golang.org/x/text/language"
 
 	"github.com/leonelquinteros/gotext"
 )
@@ -28,18 +29,28 @@ import (
 // InitLocales инициализирует локаль с доменом "apm".
 func InitLocales() {
 	if _, err := os.Stat(Env.PathLocales); os.IsNotExist(err) {
-		textError := fmt.Sprintf("Translations folder not found at path: %s", Env.PathLocales)
+		textError := fmt.Sprintf(T_("Translations folder not found at path: %s"), Env.PathLocales)
 		Log.Error(textError)
-		panic(err)
 	}
 
-	defaultLang := GetSystemLocale().String()
-	gotext.Configure(Env.PathLocales, defaultLang, "apm")
+	gotext.Configure(Env.PathLocales, GetSystemLocale().String(), "apm")
 }
 
 // T возвращает переведенную строку для заданного messageID.
-func T(messageID string) string {
+func T_(messageID string) string {
 	return gotext.Get(messageID)
+}
+
+func TN_(messageID string, pluralMessageID string, count int) string {
+	return gotext.GetN(messageID, pluralMessageID, count)
+}
+
+func TC_(messageID string, context string) string {
+	return gotext.GetC(messageID, context)
+}
+
+func TD_(domain string, messageID string) string {
+	return gotext.GetD(domain, messageID)
 }
 
 // GetSystemLocale возвращает базовый язык системы в виде language.Tag.

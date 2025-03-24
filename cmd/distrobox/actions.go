@@ -1,7 +1,6 @@
 package distrobox
 
 import (
-	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/cmd/distrobox/service"
 	"apm/lib"
@@ -60,7 +59,7 @@ func (a *Actions) Update(ctx context.Context, container string) (reply.APIRespon
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":   "Список пакетов успешно обновлён",
+			"message":   lib.T_("Package list successfully updated"),
 			"container": osInfo,
 			"count":     len(packages),
 		},
@@ -82,7 +81,7 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := "необходимо указать название пакета, например info package"
+		errMsg := lib.T_("You must specify the package name, e.g., info package")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
@@ -91,7 +90,7 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Найден пакет",
+			"message":     lib.T_("Package found"),
 			"packageInfo": packageInfo,
 		},
 		Error: false,
@@ -122,7 +121,7 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := "необходимо указать название пакета, например search package"
+		errMsg := lib.T_("You must specify the package name, e.g., search package")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -131,10 +130,8 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 		return a.newErrorResponse(err.Error()), err
 	}
 	msg := fmt.Sprintf(
-		"%s %d %s",
-		helper.DeclOfNum(len(queryResult.Packages), []string{"Найдена", "Найдено", "Найдены"}),
+		lib.TN_("%d record found", "%d records found", len(queryResult.Packages)),
 		len(queryResult.Packages),
-		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
 	)
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
@@ -212,11 +209,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (reply.APIRespons
 		return a.newErrorResponse(err.Error()), err
 	}
 	msg := fmt.Sprintf(
-		"%s %d %s",
-		helper.DeclOfNum(len(queryResult.Packages), []string{"Найдена", "Найдено", "Найдены"}),
-		len(queryResult.Packages),
-		helper.DeclOfNum(len(queryResult.Packages), []string{"запись", "записи", "записей"}),
-	)
+		lib.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages))
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
@@ -242,7 +235,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := "необходимо указать название пакета, например install package"
+		errMsg := lib.T_("You must specify the package name, e.g., install package")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -269,7 +262,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     fmt.Sprintf("Пакет %s установлен", packageName),
+			"message":     fmt.Sprintf(lib.T_("Package %s installed"), packageName),
 			"packageInfo": packageInfo,
 		},
 		Error: false,
@@ -292,7 +285,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := "необходимо указать название пакета, например remove package"
+		errMsg := lib.T_("You must specify the package name, e.g., remove package")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -321,7 +314,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     fmt.Sprintf("Пакет %s удалён", packageName),
+			"message":     fmt.Sprintf(lib.T_("Package %s removed"), packageName),
 			"packageInfo": packageInfo,
 		},
 		Error: false,
@@ -362,23 +355,23 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 	image = strings.TrimSpace(image)
 	name = strings.TrimSpace(name)
 	if image == "" {
-		errMsg := "необходимо указать ссылку на образ (--image)"
+		errMsg := lib.T_("You must specify the image link (--image)")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
 	if name == "" {
-		errMsg := "необходимо указать название контейнера (--name)"
+		errMsg := lib.T_("You must specify the container name (--name)")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
 	result, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
-		return a.newErrorResponse(fmt.Sprintf("Ошибка создания контейнера: %v", err)), err
+		return a.newErrorResponse(fmt.Sprintf(lib.T_("Error creating container: %v"), err)), err
 	}
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":       fmt.Sprintf("Контейнер %s успешно создан", name),
+			"message":       fmt.Sprintf(lib.T_("Container %s successfully created"), name),
 			"containerInfo": result,
 		},
 		Error: false,
@@ -396,18 +389,18 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		errMsg := "необходимо указать название контейнера (--name)"
+		errMsg := lib.T_("You must specify the container name (--name)")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
 	result, err := a.serviceDistroAPI.RemoveContainer(ctx, name)
 	if err != nil {
-		return a.newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)), err
+		return a.newErrorResponse(fmt.Sprintf(lib.T_("Error deleting container: %v"), err)), err
 	}
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":       fmt.Sprintf("Контейнер %s успешно удалён", name),
+			"message":       fmt.Sprintf(lib.T_("Container %s successfully deleted"), name),
 			"containerInfo": result,
 		},
 		Error: false,
@@ -415,7 +408,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (reply.APIRe
 
 	err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, name)
 	if err != nil {
-		return a.newErrorResponse(fmt.Sprintf("Ошибка удаления контейнера: %v", err)), err
+		return a.newErrorResponse(fmt.Sprintf(lib.T_("Error deleting container: %v"), err)), err
 	}
 
 	return resp, nil
@@ -466,7 +459,7 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (reply.
 
 		fields = append(fields, FiltersField{
 			Name:   field,
-			Text:   lib.T(field),
+			Text:   lib.T_(field),
 			Type:   fieldType,
 			Choice: choice,
 		})
@@ -503,7 +496,7 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 func (a *Actions) validateContainer(ctx context.Context, container string) (service.ContainerInfo, error) {
 	container = strings.TrimSpace(container)
 	if container == "" {
-		return service.ContainerInfo{}, fmt.Errorf("необходимо указать название контейнера")
+		return service.ContainerInfo{}, fmt.Errorf(lib.T_("You must specify the container name"))
 	}
 
 	// Если контейнер не найден через API, проверяем наличие записей в базе данных
@@ -512,7 +505,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 		if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err == nil {
 			// Если записи существуют, пробуем удалить их
 			if err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, container); err != nil {
-				return service.ContainerInfo{}, fmt.Errorf("не удалось удалить записи контейнера: %w", err)
+				return service.ContainerInfo{}, fmt.Errorf(lib.T_("Failed to delete container records: %w"), err)
 			}
 		}
 
@@ -536,7 +529,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 // checkRoot проверяет, запущен ли apm от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() == 0 {
-		return fmt.Errorf("запрошенную команду нельзя выполнить от имени root, пожалуйста не используйте sudo/su")
+		return fmt.Errorf(lib.T_("The requested command cannot be executed as root, please do not use sudo/su"))
 	}
 
 	return nil

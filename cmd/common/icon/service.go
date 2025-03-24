@@ -24,10 +24,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/akrylysov/pogreb"
 	"io"
 	"runtime"
 	"sync"
+
+	"github.com/akrylysov/pogreb"
 )
 
 // Service — сервис иконок
@@ -57,7 +58,7 @@ type PackageIcon struct {
 func (s *Service) GetIcon(pkgName, container string) ([]byte, error) {
 	data, err := s.getIconFromDB(pkgName, container)
 	if err != nil {
-		return nil, fmt.Errorf("иконка для пакета %s (контейнер: %s) не найдена: %v", pkgName, container, err)
+		return nil, fmt.Errorf(lib.T_("Icon for package %s (container: %s) not found: %v"), pkgName, container, err)
 	}
 	return data, nil
 }
@@ -79,7 +80,7 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 	for _, pkgIcon := range systemPackages {
 		if exists, _ := s.packageIconExists(pkgIcon.Name, pkgIcon.Container); !exists {
 			if err := s.saveIconToDB(pkgIcon.Name, pkgIcon.Container, pkgIcon.Icon); err != nil {
-				lib.Log.Error(fmt.Sprintf("Ошибка сохранения иконки %s: %v", pkgIcon.Name, err))
+				lib.Log.Error(fmt.Sprintf(lib.T_("Error saving icon %s: %v"), pkgIcon.Name, err))
 			}
 		}
 	}
@@ -95,7 +96,7 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 			for _, pkgIcon := range distroPackages {
 				if exists, _ := s.packageIconExists(pkgIcon.Name, pkgIcon.Container); !exists {
 					if err = s.saveIconToDB(pkgIcon.Name, pkgIcon.Container, pkgIcon.Icon); err != nil {
-						lib.Log.Error(fmt.Sprintf("Ошибка сохранения иконки %s: %v", pkgIcon.Name, err))
+						lib.Log.Error(fmt.Sprintf(lib.T_("Error saving icon %s: %v"), pkgIcon.Name, err))
 					}
 				}
 			}
@@ -105,9 +106,9 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 	// Вывод статистики из БД
 	count, totalSize, err := s.computeDBIconsStats()
 	if err != nil {
-		lib.Log.Error("Ошибка вычисления статистики иконок: ", err)
+		lib.Log.Error(lib.T_("Error calculating icon statistics: "), err)
 	} else {
-		lib.Log.Infof("Общее количество иконок в БД: %d, общий размер: %d байт", count, totalSize)
+		lib.Log.Infof(lib.T_("Total number of icons in the database: %d, total size: %d bytes"), count, totalSize)
 	}
 	return nil
 }
@@ -127,7 +128,7 @@ func (s *Service) getPackages(ctx context.Context, container string) ([]PackageI
 	if container != "" {
 		cachedBase, stockBase, cleanup, err = systemSwCatService.prepareTempIconDirs(ctx, "/usr/share/swcatalog/icons", "")
 		if err != nil {
-			return nil, fmt.Errorf("ошибка подготовки временных каталогов: %v", err)
+			return nil, fmt.Errorf(lib.T_("Error preparing temporary directories: %v"), err)
 		}
 		defer cleanup()
 	} else {
@@ -145,7 +146,7 @@ func (s *Service) getPackages(ctx context.Context, container string) ([]PackageI
 		// Если иконка уже сохранена в БД, пропускаем её
 		exists, err := s.packageIconExists(pkgSwIcon.PkgName, container)
 		if err != nil {
-			lib.Log.Error("Ошибка проверки существования иконки в БД: ", err)
+			lib.Log.Error(lib.T_("Error checking the existence of the icon in the database: "), err)
 			continue
 		}
 		if exists {
@@ -158,13 +159,13 @@ func (s *Service) getPackages(ctx context.Context, container string) ([]PackageI
 			defer wg.Done()
 			rawIcon, errFind := systemSwCatService.getIconFromPackage(pkgSwIcon, cachedBase, stockBase)
 			if errFind != nil {
-				lib.Log.Debugf("Ошибка получения иконки: %s", errFind.Error())
+				lib.Log.Debugf(lib.T_("Error retrieving icon: %s"), errFind.Error())
 				<-sem
 				return
 			}
 			compressedIcon, err := compressIcon(rawIcon)
 			if err != nil {
-				lib.Log.Error("Ошибка сжатия иконки: ", err)
+				lib.Log.Error(lib.T_("Error compressing the icon: "), err)
 				<-sem
 				return
 			}
@@ -189,7 +190,7 @@ func (s *Service) saveIconToDB(pkgName, container string, iconData []byte) error
 	key := []byte(fmt.Sprintf("icon:%s:%s", container, pkgName))
 	// iconData уже сжат, поэтому записываем его напрямую.
 	if err := s.dbConnKv.Put(key, iconData); err != nil {
-		return fmt.Errorf("ошибка записи иконки %s в БД: %v", pkgName, err)
+		return fmt.Errorf(lib.T_("Error writing icon %s to the database: %v"), pkgName, err)
 	}
 	return nil
 }
@@ -205,11 +206,11 @@ func (s *Service) getIconFromDB(pkgName, container string) ([]byte, error) {
 		compressedIcon, err = s.dbConnKv.Get(fallbackKey)
 	}
 	if err != nil || len(compressedIcon) == 0 {
-		return nil, fmt.Errorf("иконка %s не найдена", pkgName)
+		return nil, fmt.Errorf(lib.T_("Icon %s not found"), pkgName)
 	}
 	decompressed, err := decompressIcon(compressedIcon)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка распаковки иконки %s: %v", pkgName, err)
+		return nil, fmt.Errorf(lib.T_("Error unpacking icon %s: %v"), pkgName, err)
 	}
 	return decompressed, nil
 }

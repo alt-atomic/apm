@@ -17,9 +17,10 @@
 package lib
 
 import (
-	"github.com/ilyakaznacheev/cleanenv"
 	"os"
 	"path/filepath"
+
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Environment struct {
@@ -84,10 +85,7 @@ func InitConfig() {
 
 	// Если найден конфигурационный файл, читаем его
 	if configPath != "" {
-		err := cleanenv.ReadConfig(configPath, &Env)
-		if err != nil {
-			panic(err)
-		}
+		cleanenv.ReadConfig(configPath, &Env)
 	}
 
 	// Проверяем и создаём путь для лог-файла

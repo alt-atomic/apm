@@ -52,7 +52,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		return nil, errors.New("Не удалось получить список контейнеров: " + stderr)
+		return nil, errors.New(lib.T_("Failed to retrieve the list of containers: ") + stderr)
 	}
 
 	output := strings.TrimSpace(stdout)
@@ -152,7 +152,7 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 			cmd.Stderr = &stderr
 
 			if err := cmd.Run(); err != nil {
-				errChan <- fmt.Errorf("ошибка выполнения команды %q: %v", command, err)
+				errChan <- fmt.Errorf(lib.T_("Error executing command %q: %v"), command, err)
 			}
 		}(cmdStr)
 	}
@@ -177,7 +177,7 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		lib.Log.Errorf("Ошибка получения информации об ОС контейнера %s: %v, stderr: %s", containerName, err, stderr.String())
+		lib.Log.Errorf(lib.T_("Error getting OS information for container %s: %v, stderr: %s"), containerName, err, stderr.String())
 		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, err
 	}
 
@@ -228,7 +228,7 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 	// Получаем список контейнеров
 	containers, err := d.GetContainerList(ctx, false)
 	if err != nil {
-		return ContainerInfo{}, fmt.Errorf("не удалось получить список контейнеров: %v", err)
+		return ContainerInfo{}, fmt.Errorf(lib.T_("Failed to get the list of containers: %v"), err)
 	}
 
 	var found bool
@@ -240,7 +240,7 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 	}
 
 	if !found {
-		return ContainerInfo{}, fmt.Errorf("контейнер %s не найден", containerName)
+		return ContainerInfo{}, fmt.Errorf(lib.T_("Container %s not found"), containerName)
 	}
 
 	return d.fetchOsInfo(containerName)
@@ -261,7 +261,7 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 	for _, c := range containers {
 		if c.ContainerName == containerName {
 			return ContainerInfo{ContainerName: containerName, OS: "", Active: false},
-				fmt.Errorf("контейнер уже существует: %s", containerName)
+				fmt.Errorf(lib.T_("Container already exists: %s"), containerName)
 		}
 	}
 
@@ -295,8 +295,8 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 
 	// Выполнение команды создания контейнера
 	if err := cmd.Run(); err != nil {
-		lib.Log.Errorf("не удалось создать контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
-		return ContainerInfo{}, fmt.Errorf("не удалось создать контейнер %s: %v", containerName, err)
+		lib.Log.Errorf(lib.T_("Failed to create container %s: %v, stderr: %s"), containerName, err, stderr.String())
+		return ContainerInfo{}, fmt.Errorf(lib.T_("Failed to create container %s: %v"), containerName, err)
 	}
 
 	return d.GetContainerOsInfo(ctx, containerName)
@@ -319,7 +319,7 @@ func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName st
 	}
 
 	if err = cmd.Run(); err != nil {
-		return ContainerInfo{}, fmt.Errorf("не удалось удалить контейнер %s: %v, stderr: %s", containerName, err, stderr.String())
+		return ContainerInfo{}, fmt.Errorf(lib.T_("Failed to delete container %s: %v, stderr: %s"), containerName, err, stderr.String())
 	}
 
 	return osInfo, nil

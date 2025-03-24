@@ -18,9 +18,11 @@ package distrobox
 
 import (
 	"apm/cmd/common/icon"
+	"apm/lib"
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/godbus/dbus/v5"
 )
 
@@ -108,7 +110,7 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	var params ListParams
 	if err := json.Unmarshal([]byte(paramsJSON), &params); err != nil {
-		return "", dbus.MakeFailedError(fmt.Errorf("не удалось разобрать JSON: %w", err))
+		return "", dbus.MakeFailedError(fmt.Errorf(lib.T_("Failed to parse JSON: %w"), err))
 	}
 
 	resp, err := w.actions.List(ctx, params)

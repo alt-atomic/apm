@@ -44,18 +44,18 @@ func (p *UbuntuProvider) GetPackages(ctx context.Context, containerInfo Containe
 	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	_, stderr, err := helper.RunCommand(ctx, updateCmd)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось обновить базу пакетов: %v, stderr: %s", err, stderr)
+		return nil, fmt.Errorf(lib.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
 	searchCmd := fmt.Sprintf("%s distrobox enter %s -- apt search .", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	stdout, stderr, err := helper.RunCommand(ctx, searchCmd)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось выполнить apt search: %v, stderr: %s", err, stderr)
+		return nil, fmt.Errorf(lib.T_("Failed to execute apt search: %v, stderr: %s"), err, stderr)
 	}
 
 	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
-		lib.Log.Error("Ошибка получения установленных пакетов: ", err)
+		lib.Log.Error(lib.T_("Failed to retrieve installed packages: "), err)
 		exportingPackages = []string{}
 	}
 
@@ -72,7 +72,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 	command := fmt.Sprintf("%s distrobox enter %s -- dpkg -L %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		lib.Log.Debugf("Ошибка выполнения команды: %s %s", stderr, err.Error())
+		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
 		return []string{}, err
 	}
 
@@ -108,7 +108,7 @@ func (p *UbuntuProvider) InstallPackage(ctx context.Context, containerInfo Conta
 	command := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		return fmt.Errorf("не удалось установить пакет %s: %v, stderr: %s", packageName, err, stderr)
+		return fmt.Errorf(lib.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 
 	return nil
@@ -119,7 +119,7 @@ func (p *UbuntuProvider) RemovePackage(ctx context.Context, containerInfo Contai
 	command := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		return fmt.Errorf("не удалось удалить пакет %s: %v, stderr: %s", packageName, err, stderr)
+		return fmt.Errorf(lib.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 
 	return nil

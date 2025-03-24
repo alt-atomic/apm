@@ -18,6 +18,7 @@ package service
 
 import (
 	"apm/cmd/common/reply"
+	"apm/lib"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -64,40 +65,40 @@ func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHis
 	)`, h.historyTableName)
 
 	if _, err := h.dbConn.Exec(createQuery); err != nil {
-		return fmt.Errorf("ошибка создания таблицы: %v", err)
+		return fmt.Errorf(lib.T_("Error creating table: %v"), err)
 	}
 
 	// Сериализуем конфиг в JSON-строку.
 	configJSON, err := json.Marshal(imageHistory.Config)
 	if err != nil {
-		return fmt.Errorf("ошибка сериализации конфига: %v", err)
+		return fmt.Errorf(lib.T_("Error serializing config: %v"), err)
 	}
 
 	tx, err := h.dbConn.Begin()
 	if err != nil {
-		return fmt.Errorf("ошибка начала транзакции: %v", err)
+		return fmt.Errorf(lib.T_("Error starting transaction: %v"), err)
 	}
 
 	stmt, err := tx.Prepare(fmt.Sprintf(`INSERT INTO %s (imagename, config, imagedate) VALUES (?, ?, ?)`, tableName))
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("ошибка подготовки запроса: %v", err)
+		return fmt.Errorf(lib.T_("Error preparing the query: %v"), err)
 	}
 	defer stmt.Close()
 
 	parsedDate, err := time.Parse(time.RFC3339, imageHistory.ImageDate)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("ошибка парсинга даты %s: %v", imageHistory.ImageDate, err)
+		return fmt.Errorf(lib.T_("Error parsing date %s: %v"), imageHistory.ImageDate, err)
 	}
 
 	if _, err = stmt.Exec(imageHistory.ImageName, string(configJSON), parsedDate); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("ошибка вставки данных: %v", err)
+		return fmt.Errorf(lib.T_("Error inserting data: %v"), err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("ошибка при коммите транзакции: %v", err)
+		return fmt.Errorf(lib.T_("Transaction commit error: %v"), err)
 	}
 
 	return nil
@@ -122,9 +123,9 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 	rows, err := h.dbConn.QueryContext(ctx, query, args...)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
-			return nil, fmt.Errorf("история не найдена")
+			return nil, fmt.Errorf(lib.T_("History not found"))
 		}
-		return nil, fmt.Errorf("ошибка выполнения запроса: %v", err)
+		return nil, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}
 	defer rows.Close()
 
@@ -136,12 +137,12 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 		var imageDate time.Time
 
 		if err = rows.Scan(&imageName, &configJSON, &imageDate); err != nil {
-			return nil, fmt.Errorf("ошибка чтения данных: %v", err)
+			return nil, fmt.Errorf(lib.T_("Data reading error: %v"), err)
 		}
 
 		var cfg Config
 		if err = json.Unmarshal([]byte(configJSON), &cfg); err != nil {
-			return nil, fmt.Errorf("ошибка преобразования конфига: %v", err)
+			return nil, fmt.Errorf(lib.T_("Config conversion error: %v"), err)
 		}
 
 		history := ImageHistory{
@@ -153,7 +154,7 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка при обработке строк: %v", err)
+		return nil, fmt.Errorf(lib.T_("String processing error: %v"), err)
 	}
 
 	return histories, nil
@@ -174,9 +175,9 @@ func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNa
 	err := h.dbConn.QueryRowContext(ctx, query, args...).Scan(&count)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
-			return 0, fmt.Errorf("история не найдена")
+			return 0, fmt.Errorf(lib.T_("History not found"))
 		}
-		return 0, fmt.Errorf("ошибка выполнения запроса: %v", err)
+		return 0, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}
 
 	return count, nil
@@ -193,12 +194,12 @@ func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config
 		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
 			return false, nil
 		}
-		return false, fmt.Errorf("ошибка выполнения запроса: %v", err)
+		return false, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}
 
 	var latestConfig Config
 	if err = json.Unmarshal([]byte(configJSON), &latestConfig); err != nil {
-		return false, fmt.Errorf("ошибка преобразования конфига из истории: %v", err)
+		return false, fmt.Errorf(lib.T_("History config conversion error: %v"), err)
 	}
 
 	if reflect.DeepEqual(newConfig, latestConfig) {

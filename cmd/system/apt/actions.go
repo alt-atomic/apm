@@ -25,12 +25,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/creack/pty"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/creack/pty"
 )
 
 // syncAptMutex защищает операции apt-get от дублированного вызова
@@ -151,11 +152,11 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 	downloadEvents := make(map[string]string)
 	installEvents := make(map[string]string)
 
-	textStatus := "Установка"
+	textStatus := lib.T_("Installation")
 	if typeProcess == typeRemove {
-		textStatus = "Удаление"
+		textStatus = lib.T_("Removal")
 	} else if typeProcess == typeChanged {
-		textStatus = "Изменение"
+		textStatus = lib.T_("Change")
 	}
 
 	var outputLines []string
@@ -180,7 +181,7 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 						reply.WithEventName(eventName),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf("Скачивание: %s", pkgName)),
+						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkgName)),
 					)
 				}
 			} else if installRegex.MatchString(line) {
@@ -233,7 +234,7 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 			}
 			return errorsSlice
 		}
-		return []error{fmt.Errorf("ошибка установки: %v", err)}
+		return []error{fmt.Errorf(lib.T_("Installation error: %v"), err)}
 	}
 
 	wg.Wait()
@@ -272,19 +273,19 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 
 		packageParse, err = parseAptOutput(outputStr)
 		if err != nil {
-			return PackageChanges{}, []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
+			return PackageChanges{}, []error{fmt.Errorf(lib.T_("Package verification error: %v"), err)}
 		}
 		return packageParse, errorsSlice
 	}
 
 	if err != nil {
-		lib.Log.Errorf("ошибка проверки пакетов: %s", outputStr)
-		return PackageChanges{}, []error{fmt.Errorf("ошибка проверки пакетов: %v", err)}
+		lib.Log.Errorf(lib.T_("Package verification error: %s"), outputStr)
+		return PackageChanges{}, []error{fmt.Errorf(lib.T_("Package verification error: %v"), err)}
 	}
 
 	packageParse, err = parseAptOutput(outputStr)
 	if err != nil {
-		return PackageChanges{}, []error{fmt.Errorf("ошибка проверки пакета: %v", err)}
+		return PackageChanges{}, []error{fmt.Errorf(lib.T_("Package verification error: %v"), err)}
 	}
 
 	return packageParse, nil
@@ -304,10 +305,10 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("ошибка открытия stdout pipe: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error opening stdout pipe: %w"), err)
 	}
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("ошибка запуска команды: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error executing command: %w"), err)
 	}
 
 	const maxCapacity = 1024 * 1024 * 350 // 350MB
@@ -414,12 +415,12 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 
 	if err = scanner.Err(); err != nil {
 		if errors.Is(err, bufio.ErrTooLong) {
-			return nil, fmt.Errorf("слишком большая строка: (over %dMB) - ", maxCapacity/(1024*1024))
+			return nil, fmt.Errorf(lib.T_("String too large: (over %dMB) - "), maxCapacity/(1024*1024))
 		}
-		return nil, fmt.Errorf("ошибка сканера: %w", err)
+		return nil, fmt.Errorf(lib.T_("Scanner error: %w"), err)
 	}
 	if err = cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("ошибка выполнения команды: %w", err)
+		return nil, fmt.Errorf(lib.T_("Command execution error: %w"), err)
 	}
 	for i := range packages {
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
@@ -428,7 +429,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	// Обновляем информацию о том, установлены ли пакеты локально
 	packages, err = a.updateInstalledInfo(ctx, packages)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка обновления информации об установленных пакетах: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error updating information about installed packages: %w"), err)
 	}
 
 	err = a.serviceAptDatabase.SavePackagesToDB(ctx, packages)
@@ -478,7 +479,7 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения команды rpm -qia: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error executing the rpm -qia command: %w"), err)
 	}
 
 	installed := make(map[string]string)
@@ -524,7 +525,7 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 	}
 
 	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка сканирования вывода rpm: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error scanning rpm output: %w"), err)
 	}
 
 	return installed, nil
@@ -548,7 +549,7 @@ func aptUpdate(ctx context.Context) error {
 		return fmt.Errorf(aptError.Error())
 	}
 	if err != nil {
-		return fmt.Errorf("ошибка обновления пакетов: %v, output: %s", err, string(output))
+		return fmt.Errorf(lib.T_("Error updating packages: %v, output: %s"), err, string(output))
 	}
 
 	return nil

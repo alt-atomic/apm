@@ -21,9 +21,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/godbus/dbus/v5"
 	"runtime"
 	"strings"
+
+	"github.com/godbus/dbus/v5"
 )
 
 // EventData содержит данные события.
@@ -106,13 +107,13 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 	if ed.Name == "" {
 		pc, _, _, ok := runtime.Caller(1)
 		if !ok {
-			errText := "не удалось получить информацию о вызове"
+			errText := lib.T_("Failed to retrieve call information")
 			lib.Log.Error(errors.New(errText))
 			return
 		}
 		fn := runtime.FuncForPC(pc)
 		if fn == nil {
-			errText := "FuncForPC вернул nil"
+			errText := lib.T_("FuncForPC returned nil")
 			lib.Log.Error(errors.New(errText))
 			return
 		}
@@ -157,7 +158,7 @@ func SendNotificationResponse(message string) {
 	}
 
 	if lib.DBUSConn == nil {
-		lib.Log.Error("Соединение DBus не инициализировано")
+		lib.Log.Error(lib.T_("DBus connection is not initialized"))
 		return
 	}
 
@@ -166,66 +167,66 @@ func SendNotificationResponse(message string) {
 
 	err := lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {
-		lib.Log.Error("Ошибка отправки уведомления: %v", err)
+		lib.Log.Error(lib.T_("Error sending notification: %v"), err)
 	}
 }
 
 func getTaskText(task string) string {
 	switch task {
 	case "distro.SavePackagesToDB":
-		return "Сохранение пакетов в базу"
+		return lib.T_("Saving packages to the database")
 	case "distro.GetContainerList":
-		return "Запрос списка контейнеров"
+		return lib.T_("Requesting list of containers")
 	case "distro.ExportingApp":
-		return "Экспорт пакета"
+		return lib.T_("Exporting package")
 	case "distro.GetContainerOsInfo":
-		return "Запрос информации о контейнере"
+		return lib.T_("Requesting container information")
 	case "distro.CreateContainer":
-		return "Создание контейнера"
+		return lib.T_("Creating container")
 	case "distro.RemoveContainer":
-		return "Удаление контейнера"
+		return lib.T_("Deleting container")
 	case "distro.InstallPackage":
-		return "Установка пакета"
+		return lib.T_("Installing package")
 	case "distro.RemovePackage":
-		return "Удаление пакета"
+		return lib.T_("Removing package")
 	case "distro.GetPackages":
-		return "Получение списка пакетов"
+		return lib.T_("Retrieving list of packages")
 	case "distro.GetPackageOwner":
-		return "Определение владельца файла"
+		return lib.T_("Determining file owner")
 	case "distro.GetPathByPackageName":
-		return "Поиск путей пакета"
+		return lib.T_("Searching package paths")
 	case "distro.GetInfoPackage":
-		return "Получение информации о пакете"
+		return lib.T_("Retrieving package information")
 	case "distro.UpdatePackages":
-		return "Обновление пакетов"
+		return lib.T_("Updating packages")
 	case "distro.GetPackagesQuery":
-		return "Фильтрация пакетов"
+		return lib.T_("Filtering packages")
 	case "system.Working":
-		return "Работа над пакетами"
+		return lib.T_("Working with packages")
 	case "system.Check":
-		return "Анализ пакетов"
+		return lib.T_("Analyzing packages")
 	case "system.Update":
-		return "Общий процесс обновления"
+		return lib.T_("General update process")
 	case "system.AptUpdate":
-		return "Загрузка списка пакетов из репозитория ALT"
+		return lib.T_("Loading package list from ALT repository")
 	case "system.SavePackagesToDB":
-		return "Сохранение пакетов в базу"
+		return lib.T_("Saving packages to the database")
 	case "system.SaveImageToDB":
-		return "Сохранение истории образа в базу данных"
+		return lib.T_("Saving image history to the database")
 	case "system.BuildImage":
-		return "Сборка локального образа"
+		return lib.T_("Building local image")
 	case "system.SwitchImage":
-		return "Переключение на локальный образ"
+		return lib.T_("Switching to local image")
 	case "system.CheckAndUpdateBaseImage":
-		return "Проверка обновления"
+		return lib.T_("Checking for updates")
 	case "system.bootcUpgrade":
-		return "Загрузка обновления базового образа"
+		return lib.T_("Downloading base image update")
 	case "system.pruneOldImages":
-		return "Очистка старых образов"
+		return lib.T_("Cleaning up old images")
 	case "system.updateAllPackagesDB":
-		return "Синхронизация базы данных"
+		return lib.T_("Synchronizing database")
 	default:
-		// Если имя задачи неизвестно, возвращаем его без изменений
+		// If the task name is unknown, we return it unchanged.
 		return task
 	}
 }

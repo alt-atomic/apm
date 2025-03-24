@@ -81,11 +81,11 @@ func (h *HostImageService) GetHostImage() (HostImage, error) {
 	cmd := exec.Command("sh", "-c", command)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return host, fmt.Errorf("не удалось выполнить команду bootc: %v", string(output))
+		return host, fmt.Errorf(lib.T_("Failed to execute bootc command: %v"), string(output))
 	}
 
 	if err = json.Unmarshal(output, &host); err != nil {
-		return host, fmt.Errorf("не удалось распарсить JSON: %v", err)
+		return host, fmt.Errorf(lib.T_("Failed to parse JSON: %v"), err)
 	}
 
 	return host, nil
@@ -105,7 +105,7 @@ func (h *HostImageService) GetImageFromDocker() (string, error) {
 
 	file, err := os.Open(h.containerPath)
 	if err != nil {
-		return "", fmt.Errorf("не удалось открыть файл %s: %w", h.containerPath, err)
+		return "", fmt.Errorf(lib.T_("Failed to open file %s: %w"), h.containerPath, err)
 	}
 	defer file.Close()
 
@@ -121,17 +121,17 @@ func (h *HostImageService) GetImageFromDocker() (string, error) {
 	}
 
 	if err = scanner.Err(); err != nil {
-		return "", fmt.Errorf("ошибка чтения файла %s: %w", h.containerPath, err)
+		return "", fmt.Errorf(lib.T_("Error reading file %s: %w"), h.containerPath, err)
 	}
 
-	return "", fmt.Errorf("не удалось определить образ дистрибутива, укажите его вручную в файле: %s", lib.Env.PathImageFile)
+	return "", fmt.Errorf(lib.T_("Failed to determine the distribution image, please specify it manually in the file: %s"), lib.Env.PathImageFile)
 }
 
 // EnableOverlay проверяет и активирует наложение файловой системы.
 func (h *HostImageService) EnableOverlay() error {
 	file, err := os.Open("/proc/mounts")
 	if err != nil {
-		return fmt.Errorf("ошибка доступа к /proc/mounts: %v", err)
+		return fmt.Errorf(lib.T_("Access error to /proc/mounts: %v"), err)
 	}
 	defer file.Close()
 
@@ -157,7 +157,7 @@ func (h *HostImageService) EnableOverlay() error {
 		command := fmt.Sprintf("%s bootc usr-overlay", lib.Env.CommandPrefix)
 		cmd := exec.Command("sh", "-c", command)
 		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("ошибка активации usr-overlay: %s", string(output))
+			return fmt.Errorf(lib.T_("Error activating usr-overlay: %s"), string(output))
 		}
 	}
 
@@ -175,18 +175,18 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 	stdout, err := PullAndProgress(ctx, command)
 	if err != nil {
-		return "", fmt.Errorf("ошибка сборки образа: %s статус: %d", stdout, err)
+		return "", fmt.Errorf(lib.T_("Error building image: %s status: %d"), stdout, err)
 	}
 
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s podman images -q os", lib.Env.CommandPrefix))
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("ошибка podman образ: %v", err)
+		return "", fmt.Errorf(lib.T_("Error podman image: %v"), err)
 	}
 
 	podmanImageID := strings.TrimSpace(string(output))
 	if podmanImageID == "" {
-		return "", fmt.Errorf("нет валидных образов с тегом tag 'os'. Сначало соберите образ")
+		return "", fmt.Errorf(lib.T_("No valid images with tag 'os'. Please build the image first."))
 	}
 
 	return podmanImageID, nil
@@ -200,7 +200,7 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 	command := fmt.Sprintf("%s bootc switch --transport containers-storage %s", lib.Env.CommandPrefix, podmanImageID)
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("ошибка переключения на новый образ: %s", string(output))
+		return fmt.Errorf(lib.T_("Error switching to the new image: %s"), string(output))
 	}
 
 	return nil
@@ -212,7 +212,7 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.CheckAndUpdateBaseImage"))
 	image, err := h.GetHostImage()
 	if err != nil {
-		return fmt.Errorf("ошибка получения информации: %v", err)
+		return fmt.Errorf(lib.T_("Error retrieving information: %v"), err)
 	}
 
 	if image.Status.Booted.Image.Image.Transport != "containers-storage" {
@@ -230,7 +230,7 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 	}
 
 	if _, err = os.Stat(h.containerPath); err != nil {
-		return fmt.Errorf("ошибка, файл %s не найден", h.containerPath)
+		return fmt.Errorf(lib.T_("Error, file %s not found"), h.containerPath)
 	}
 
 	return h.BuildAndSwitch(ctx, pullImage, config, false)
@@ -242,7 +242,7 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s bootc upgrade", lib.Env.CommandPrefix))
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("bootc upgrade failed: %s", string(output))
+		return fmt.Errorf(lib.T_("bootc upgrade failed: %s"), string(output))
 	}
 
 	return nil
@@ -252,7 +252,7 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, config Config, checkSame bool) error {
 	statusSame, err := h.serviceHostConfig.ConfigIsChanged(ctx)
 	if !statusSame && checkSame {
-		return fmt.Errorf("образ не изменился, сборка приостановлена")
+		return fmt.Errorf(lib.T_("The image has not changed, build paused"))
 	}
 
 	idImage, err := h.BuildImage(ctx, pullImage)

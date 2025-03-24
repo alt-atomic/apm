@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+
 	"github.com/godbus/dbus/v5"
 )
 
@@ -42,7 +43,7 @@ func InitDBus(isSystem bool) error {
 	}
 
 	if reply != dbus.RequestNameReplyPrimaryOwner {
-		return fmt.Errorf("интерфейс com.application.APM уже занят")
+		return fmt.Errorf(T_("Interface com.application.APM is already in use"))
 	}
 
 	return nil

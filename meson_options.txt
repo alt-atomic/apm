@@ -1,0 +1,10 @@
+option(
+  'profile',
+  type: 'combo',
+  choices: [
+    'dev',
+    'prod',
+  ],
+  value: 'dev',
+  description: 'Working profile'
+)

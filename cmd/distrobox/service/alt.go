@@ -43,7 +43,7 @@ func NewAltProvider(servicePackage *PackageService) *AltProvider {
 func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
-		return nil, fmt.Errorf("не удалось обновить базу пакетов: %v, stderr: %s", err, stderr)
+		return nil, fmt.Errorf(lib.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
 	command := fmt.Sprintf("%s apt-cache dumpavail", lib.Env.CommandPrefix)
@@ -51,16 +51,16 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("ошибка открытия stdout pipe: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error opening stdout pipe: %w"), err)
 	}
 	if err = cmd.Start(); err != nil {
-		return nil, fmt.Errorf("ошибка запуска команды: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error executing command: %w"), err)
 	}
 
 	// Получаем список экспортированных пакетов.
 	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
-		lib.Log.Error("Ошибка получения установленных пакетов: ", err)
+		lib.Log.Error(lib.T_("Error retrieving installed packages: "), err)
 		exportingPackages = []string{}
 	}
 
@@ -135,13 +135,13 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 
 	if err = scanner.Err(); err != nil {
 		if errors.Is(err, bufio.ErrTooLong) {
-			return nil, fmt.Errorf("слишком большая строка: (over %dMB) - ", maxCapacity/(1024*1024))
+			return nil, fmt.Errorf(lib.T_("String too large: (over %dMB) - "), maxCapacity/(1024*1024))
 		}
-		return nil, fmt.Errorf("ошибка сканера: %w", err)
+		return nil, fmt.Errorf(lib.T_("Scanner error: %w"), err)
 	}
 
 	if err = cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("ошибка выполнения команды: %w", err)
+		return nil, fmt.Errorf(lib.T_("Command execution error: %w"), err)
 	}
 
 	for i := range packages {
@@ -163,7 +163,7 @@ func (p *AltProvider) RemovePackage(ctx context.Context, containerInfo Container
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf("не удалось удалить пакет %s: %v, stderr: %s", packageName, err, stderr)
+		return fmt.Errorf(lib.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
@@ -173,7 +173,7 @@ func (p *AltProvider) InstallPackage(ctx context.Context, containerInfo Containe
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf("не удалось установить пакет %s: %v, stderr: %s", packageName, err, stderr)
+		return fmt.Errorf(lib.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
@@ -183,7 +183,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		lib.Log.Debugf("Ошибка выполнения команды: %s %s", stderr, err.Error())
+		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
 		return []string{}, err
 	}
 
@@ -203,7 +203,7 @@ func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo Contain
 	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qf --queryformat '%%{NAME}' %s", lib.Env.CommandPrefix, containerInfo.ContainerName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		lib.Log.Debugf("Ошибка выполнения команды: %s %s", stderr, err.Error())
+		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
 		return "", err
 	}
 	return strings.TrimSpace(stdout), nil
@@ -217,7 +217,7 @@ func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]strin
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения команды rpm -qia: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error executing command rpm -qia: %w"), err)
 	}
 
 	var packages []string
@@ -233,7 +233,7 @@ func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]strin
 		}
 	}
 	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка сканирования вывода rpm: %w", err)
+		return nil, fmt.Errorf(lib.T_("Error scanning rpm output: %w"), err)
 	}
 	return packages, nil
 }

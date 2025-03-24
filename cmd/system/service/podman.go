@@ -23,7 +23,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/creack/pty"
 	"io"
 	"os"
 	"os/exec"
@@ -31,6 +30,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/creack/pty"
 )
 
 func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
@@ -80,7 +81,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 
 	if err != nil {
 		// Возвращаем вывод вместе с ошибкой для более подробной диагностики
-		return outputBuffer.String(), fmt.Errorf("команда завершилась с ошибкой: %v, вывод: %s", err, outputBuffer.String())
+		return outputBuffer.String(), fmt.Errorf(lib.T_("Command failed with error: %v, output: %s"), err, outputBuffer.String())
 	}
 
 	for blobKey := range allBlobs {
@@ -151,7 +152,7 @@ func parseSize(sizeStr string) (float64, error) {
 	re := regexp.MustCompile(`^([0-9.]+)([KMG]?i?B)$`)
 	matches := re.FindStringSubmatch(sizeStr)
 	if len(matches) != 3 {
-		return 0, fmt.Errorf("не могу разобрать размер: %s", sizeStr)
+		return 0, fmt.Errorf(lib.T_("Cannot parse size: %s"), sizeStr)
 	}
 
 	valueStr := matches[1]
@@ -171,7 +172,7 @@ func parseSize(sizeStr string) (float64, error) {
 	case "GiB":
 		value *= 1024 * 1024 * 1024
 	default:
-		return 0, fmt.Errorf("неизвестный суффикс: %s", unit)
+		return 0, fmt.Errorf(lib.T_("Unknown suffix: %s"), unit)
 	}
 
 	return value, nil
@@ -185,14 +186,14 @@ func pruneOldImages(ctx context.Context) error {
 	command := fmt.Sprintf("%s podman image prune -f", lib.Env.CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("ошибка удаления старых изображений: %v, output: %s", err, string(output))
+		return fmt.Errorf(lib.T_("Error deleting old images: %v, output: %s"), err, string(output))
 	}
 
 	command = fmt.Sprintf("%s podman images --noheading", lib.Env.CommandPrefix)
 	cmd = exec.Command("sh", "-c", command)
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("ошибка получения образа podman: %v", err)
+		return fmt.Errorf(lib.T_("Error retrieving podman image: %v"), err)
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(output))
@@ -207,7 +208,7 @@ func pruneOldImages(ctx context.Context) error {
 			command = fmt.Sprintf("%s podman rmi -f %s", lib.Env.CommandPrefix, imageID)
 			cmd = exec.Command("sh", "-c", command)
 			if out, err := cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("ошибка удаления образа %s: %v, output: %s\n", imageID, err, string(out))
+				return fmt.Errorf(lib.T_("Error deleting image %s: %v, output: %s\n"), imageID, err, string(out))
 			}
 		}
 	}

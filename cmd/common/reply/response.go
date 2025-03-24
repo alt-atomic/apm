@@ -21,13 +21,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/tree"
-	"golang.org/x/crypto/ssh/terminal"
 	"os"
 	"reflect"
 	"sort"
 	"unicode"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/tree"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // APIResponse описывает итоговую структуру ответа.
@@ -58,11 +59,6 @@ var (
 	itemStyle = lipgloss.NewStyle().
 			Foreground(adaptiveItemColor)
 )
-
-// translateKey – вспомогательная функция для перевода, превращает ключ в англ текст
-func translateKey(k string) string {
-	return lib.T(TranslateKey(k))
-}
 
 // IsTTY пользователь запустил приложение в интерактивной консоли
 func IsTTY() bool {
@@ -110,7 +106,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 						subTree := buildTreeFromMap("message", mm)
 						t.Child(subTree)
 					} else {
-						t.Child(fmt.Sprintf("message: %T (неизвестный тип)", vv))
+						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
 					}
 				}
 			case reflect.Slice:
@@ -129,11 +125,11 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 						}
 						t.Child(listNode)
 					} else {
-						t.Child(fmt.Sprintf("message: %T (срез неизвестного типа)", vv))
+						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(lib.T_("%T (slice of unknown type)"), vv)))
 					}
 				}
 			default:
-				t.Child(fmt.Sprintf("message: %T (неизвестный тип)", vv))
+				t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
 			}
 		}
 	}
@@ -156,16 +152,16 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: значение == nil
 		case nil:
-			t.Child(fmt.Sprintf("%s: нет", translateKey(k)))
+			t.Child(fmt.Sprintf(lib.T_("%s: no"), TranslateKey(k)))
 			//t.Child(fmt.Sprintf("%s: []", translateKey(k)))
 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: строка
 		case string:
 			if vv == "" {
-				t.Child(fmt.Sprintf("%s: нет", translateKey(k)))
+				t.Child(fmt.Sprintf(lib.T_("%s: no"), TranslateKey(k)))
 			} else {
-				t.Child(fmt.Sprintf("%s: %s", translateKey(k), formatField(k, vv)))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), formatField(k, vv)))
 			}
 
 		//----------------------------------------------------------------------
@@ -173,31 +169,31 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		case bool:
 			var boolStr string
 			if vv {
-				boolStr = "да"
+				boolStr = lib.T_("Yes")
 			} else {
-				boolStr = "нет"
+				boolStr = lib.T_("No")
 			}
-			t.Child(fmt.Sprintf("%s: %s", translateKey(k), boolStr))
+			t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), boolStr))
 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: числа (int, float64)
 		case int, float64:
-			t.Child(fmt.Sprintf("%s: %v", translateKey(k), vv))
+			t.Child(fmt.Sprintf("%s: %v", TranslateKey(k), vv))
 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: вложенная map
 		case map[string]interface{}:
-			subTree := buildTreeFromMap(translateKey(k), vv)
+			subTree := buildTreeFromMap(TranslateKey(k), vv)
 			t.Child(subTree)
 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: срез (slice) из interface{}
 		case []interface{}:
 			if len(vv) == 0 {
-				t.Child(fmt.Sprintf("%s: []", translateKey(k))) // пустой срез
+				t.Child(fmt.Sprintf("%s: []", TranslateKey(k))) // пустой срез
 				continue
 			}
-			listNode := tree.New().Root(translateKey(k))
+			listNode := tree.New().Root(TranslateKey(k))
 			for i, elem := range vv {
 				if mm, ok := elem.(map[string]interface{}); ok {
 					subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm)
@@ -221,12 +217,12 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 				if err == nil {
 					var mm map[string]interface{}
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := buildTreeFromMap(translateKey(k), mm)
+						subTree := buildTreeFromMap(TranslateKey(k), mm)
 						t.Child(subTree)
 						continue
 					}
 				}
-				t.Child(fmt.Sprintf("%s: %T (неизвестный тип)", translateKey(k), vv))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
 
 			//------------------------------------------------------------------
 			// СЛУЧАЙ: срез (slice) непонятного типа
@@ -235,7 +231,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 				if err == nil {
 					var arr []interface{}
 					if err2 := json.Unmarshal(b, &arr); err2 == nil {
-						listNode := tree.New().Root(translateKey(k))
+						listNode := tree.New().Root(TranslateKey(k))
 						for i, elem := range arr {
 							if mm, ok := elem.(map[string]interface{}); ok {
 								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm)
@@ -248,11 +244,11 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 						continue
 					}
 				}
-				t.Child(fmt.Sprintf("%s: %T (срез неизвестного типа)", translateKey(k), vv))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (slice of unknown type)"), vv)))
 
 			//------------------------------------------------------------------
 			default:
-				t.Child(fmt.Sprintf("%s: %T (неизвестный тип)", translateKey(k), vv))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
 			}
 		}
 	}

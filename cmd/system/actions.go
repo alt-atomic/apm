@@ -17,7 +17,6 @@
 package system
 
 import (
-	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/cmd/system/apt"
 	"apm/cmd/system/service"
@@ -89,7 +88,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.API
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": "Информация о проверке",
+			"message": lib.T_("Verification information"),
 			"info":    packageParse,
 		},
 		Error: false,
@@ -107,7 +106,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (reply.AP
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": "Информация о проверке",
+			"message": lib.T_("Inspection information"),
 			"info":    packageParse,
 		},
 		Error: false,
@@ -127,7 +126,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := fmt.Errorf("необходимо указать хотя бы один пакет, например remove package")
+		errPackageNotFound := fmt.Errorf(lib.T_("At least one package must be specified, for example, remove package"))
 
 		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
 	}
@@ -161,7 +160,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	if packageParse.RemovedCount == 0 {
-		messageNothingDo := "Кандидатов на удаление не найдено"
+		messageNothingDo := lib.T_("No candidates for removal found")
 		var alreadyRemovedPackages []string
 
 		for _, customError := range customErrorList {
@@ -193,7 +192,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 					return a.newErrorResponse(err.Error()), err
 				}
 
-				messageNothingDo += ".\nНайдено отличие списка пакетов в локальной конфигурации, образ был обновлён"
+				messageNothingDo += lib.T_(".\nA difference in the package list was found in the local configuration, the image has been updated")
 			}
 		}
 
@@ -207,7 +206,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf("отмена диалога удаления")
+		errDialog := fmt.Errorf(lib.T_("deletion dialog canceled"))
 
 		return a.newErrorResponse(errDialog.Error()), errDialog
 	}
@@ -223,7 +222,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 				return newErrorResponse(err.Error()), err
 			}
 
-			errAptRepo := fmt.Errorf("возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду")
+			errAptRepo := fmt.Errorf(lib.T_("A communication error with the repository occurred. The package list has been updated, please try running the command again"))
 
 			return a.newErrorResponse(errAptRepo.Error()), errAptRepo
 		}
@@ -237,19 +236,17 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	messageAnswer := fmt.Sprintf("%s успешно %s",
-		removePackageNames,
-		helper.DeclOfNum(packageParse.RemovedCount, []string{"удалён", "удалены", "удалены"}))
+	messageAnswer := fmt.Sprintf(lib.TN_("%s removed successfully", "%s removed successfully", packageParse.RemovedCount), removePackageNames)
 	if apply {
 		err = a.applyChange(ctx, packages, false)
 		if err != nil {
 			return a.newErrorResponse(err.Error()), err
 		}
-		messageAnswer += ". Образ системы был изменён"
+		messageAnswer += lib.T_(". The system image has been modified")
 	}
 
 	if !apply && lib.Env.IsAtomic {
-		messageAnswer += ". Образ системы не был изменён! Для применения изменений необходим запуск с флагом -a"
+		messageAnswer += lib.T_(". The system image has not been modified! To apply changes, run with the -a flag")
 	}
 
 	return reply.APIResponse{
@@ -274,7 +271,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := fmt.Errorf("необходимо указать хотя бы один пакет, например remove package")
+		errPackageNotFound := fmt.Errorf(lib.T_("You must specify at least one package, for example, remove package"))
 
 		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
 	}
@@ -311,7 +308,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			}
 
 			if len(alternativePackages) == 0 {
-				errorFindPackage := fmt.Sprintf("не удалось получить информацию о пакете %s", originalPkg)
+				errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), originalPkg)
 				return a.newErrorResponse(errorFindPackage), fmt.Errorf(errorFindPackage)
 			}
 
@@ -320,7 +317,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 				altNames = append(altNames, altPkg.Name)
 			}
 
-			message := err.Error() + ". Может быть, Вы искали: "
+			message := err.Error() + lib.T_(". Maybe you were looking for: ")
 
 			errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
 
@@ -347,7 +344,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	if len(customErrorList) > 0 && packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
-		messageNothingDo := "Операция не выполнит никаких изменений. Причины: \n"
+		messageNothingDo := lib.T_("The operation will not make any changes. Reasons: \n")
 		var alreadyInstalledPackages []string
 		var alreadyRemovedPackages []string
 
@@ -398,7 +395,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 					return a.newErrorResponse(err.Error()), err
 				}
 
-				messageNothingDo += "Найдено отличие списка пакетов в локальной конфигурации, образ был обновлён"
+				messageNothingDo += lib.T_("Found a discrepancy in the package list in the local configuration, the image has been updated")
 			}
 		}
 
@@ -417,7 +414,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf("отмена диалога удаления")
+		errDialog := fmt.Errorf(lib.T_("Cancel delition dialog"))
 
 		return a.newErrorResponse(errDialog.Error()), errDialog
 	}
@@ -434,7 +431,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 				return newErrorResponse(err.Error()), err
 			}
 
-			errAptRepo := fmt.Errorf("возникла ошибка связи с репозиторием. Был актуализирован список пакетов, попробуйте повторно вызвать команду")
+			errAptRepo := fmt.Errorf(lib.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
 
 			return a.newErrorResponse(errAptRepo.Error()), errAptRepo
 		}
@@ -447,12 +444,11 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		return a.newErrorResponse(err.Error()), err
 	}
 
-	messageAnswer := fmt.Sprintf("%d %s успешно %s и %d %s",
-		packageParse.NewInstalledCount,
-		helper.DeclOfNum(packageParse.NewInstalledCount, []string{"пакет", "пакета", "пакетов"}),
-		helper.DeclOfNum(packageParse.NewInstalledCount, []string{"установлен", "установлено", "установлены"}),
-		packageParse.UpgradedCount,
-		helper.DeclOfNum(packageParse.UpgradedCount, []string{"обновлён", "обновлено", "обновилось"}))
+	messageAnswer := fmt.Sprintf(
+		"%s %s",
+		lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount),
+		lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount),
+	)
 
 	if apply {
 		err = a.applyChange(ctx, packageNames, true)
@@ -460,11 +456,11 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			return a.newErrorResponse(err.Error()), err
 		}
 
-		messageAnswer += ". Образ системы был изменён"
+		messageAnswer += lib.T_(". The system image has been changed.")
 	}
 
 	if !apply && lib.Env.IsAtomic {
-		messageAnswer += ". Образ системы не был изменён! Для применения изменений необходим запуск с флагом -a"
+		messageAnswer += lib.T_(". The system image has not been changed! To apply changes, you need to run with the -a flag.")
 	}
 
 	return reply.APIResponse{
@@ -495,7 +491,7 @@ func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": "Список пакетов успешно обновлён",
+			"message": lib.T_("Package list updated successfully"),
 			"count":   len(packages),
 		},
 		Error: false,
@@ -506,7 +502,7 @@ func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
 func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (reply.APIResponse, error) {
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := "необходимо указать название пакета, например info package"
+		errMsg := lib.T_("Package name must be specified, for example info package")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -527,7 +523,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 		}
 
 		if len(alternativePackages) == 0 {
-			errorFindPackage := fmt.Sprintf("не удалось получить информацию о пакете %s", packageName)
+			errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), packageName)
 			return a.newErrorResponse(errorFindPackage), fmt.Errorf(errorFindPackage)
 		}
 
@@ -536,7 +532,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 			altNames = append(altNames, altPkg.Name)
 		}
 
-		message := err.Error() + ". Может быть, Вы искали: "
+		message := err.Error() + lib.T_(". Maybe you were looking for: ")
 
 		errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
 
@@ -545,7 +541,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Найден пакет",
+			"message":     lib.T_("Package found"),
 			"packageInfo": a.FormatPackageOutput(packageInfo, isFullFormat),
 		},
 		Error: false,
@@ -603,15 +599,10 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	}
 
 	if len(packages) == 0 {
-		return a.newErrorResponse("ничего не найдено"), fmt.Errorf("ничего не найдено")
+		return a.newErrorResponse(lib.T_("Nothing found")), fmt.Errorf(lib.T_("Nothing found"))
 	}
 
-	msg := fmt.Sprintf(
-		"%s %d %s",
-		helper.DeclOfNum(len(packages), []string{"Найдена", "Найдено", "Найдены"}),
-		len(packages),
-		helper.DeclOfNum(len(packages), []string{"запись", "записи", "записей"}),
-	)
+	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -632,7 +623,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := "необходимо указать название пакета, например search package"
+		errMsg := lib.T_("You need to specify the package name, e.g., search package")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -642,15 +633,10 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 	}
 
 	if len(packages) == 0 {
-		return a.newErrorResponse("Ничего не найдено"), fmt.Errorf("ничего не найдено")
+		return a.newErrorResponse(lib.T_("Nothing found")), fmt.Errorf(lib.T_("Nothing found"))
 	}
 
-	msg := fmt.Sprintf(
-		"%s %d %s",
-		helper.DeclOfNum(len(packages), []string{"Найдена", "Найдено", "Найдены"}),
-		len(packages),
-		helper.DeclOfNum(len(packages), []string{"запись", "записи", "записей"}),
-	)
+	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -675,7 +661,7 @@ func (a *Actions) ImageStatus(ctx context.Context) (reply.APIResponse, error) {
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Статус образа",
+			"message":     lib.T_("Image status"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
@@ -706,7 +692,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Команда успешно выполнена",
+			"message":     lib.T_("Command executed successfully"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
@@ -742,7 +728,7 @@ func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     "Изменения успешно применены. Необходима перезагрузка",
+			"message":     lib.T_("Changes applied successfully. A reboot is required"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
@@ -766,12 +752,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 		return newErrorResponse(err.Error()), err
 	}
 
-	msg := fmt.Sprintf(
-		"%s %d %s",
-		helper.DeclOfNum(len(history), []string{"Найдена", "Найдено", "Найдены"}),
-		len(history),
-		helper.DeclOfNum(len(history), []string{"запись", "записи", "записей"}),
-	)
+	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(history)), len(history))
 
 	return reply.APIResponse{
 		Data: map[string]interface{}{
@@ -786,7 +767,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 // checkRoot проверяет, запущен ли установщик от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() != 0 {
-		return fmt.Errorf("для выполнения необходимы права администратора, используйте sudo или su")
+		return fmt.Errorf(lib.T_("Administrator privileges are required to perform this action. Use sudo or su"))
 	}
 
 	if lib.Env.IsAtomic {
@@ -802,7 +783,7 @@ func (a *Actions) checkRoot() error {
 // applyChange применяет изменения к образу системы
 func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall bool) error {
 	if !lib.Env.IsAtomic {
-		return fmt.Errorf("опция доступна только для атомарной системы")
+		return fmt.Errorf(lib.T_("This option is only available for an atomic system"))
 	}
 
 	err := a.serviceHostConfig.LoadConfig()
@@ -913,14 +894,14 @@ func (a *Actions) getImageStatus(ctx context.Context) (ImageStatus, error) {
 
 	if hostImage.Status.Booted.Image.Image.Transport == "containers-storage" {
 		return ImageStatus{
-			Status: "Изменённый образ. Файл конфигурации: " + lib.Env.PathImageFile,
+			Status: lib.T_("Modified image. Configuration file: ") + lib.Env.PathImageFile,
 			Image:  hostImage,
 			Config: *a.serviceHostConfig.Config,
 		}, nil
 	}
 
 	return ImageStatus{
-		Status: "Облачный образ без изменений",
+		Status: lib.T_("Cloud image without changes"),
 		Image:  hostImage,
 		Config: *a.serviceHostConfig.Config,
 	}, nil

@@ -57,11 +57,11 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 
 	switch action {
 	case ActionMultiInstall:
-		choices = []string{"Изменить", "Отмена"}
+		choices = []string{lib.T_("Edit"), lib.T_("Abort")}
 	case ActionInstall:
-		choices = []string{"Установить", "Отмена"}
+		choices = []string{lib.T_("Install"), lib.T_("Abort")}
 	case ActionRemove:
-		choices = []string{"Удалить", "Отмена"}
+		choices = []string{lib.T_("Remove"), lib.T_("Abort")}
 	}
 
 	m := model{
@@ -76,18 +76,18 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 		tea.WithoutSignalHandler())
 	finalModel, err := p.Run()
 	if err != nil {
-		lib.Log.Errorf("error start tea: %v", err)
+		lib.Log.Errorf(lib.T_("Error starting TEA: %v"), err)
 		return false, err
 	}
 
 	if m, ok := finalModel.(model); ok {
 		if m.canceled || m.choice == "" {
-			return false, fmt.Errorf("диалог был отменён")
+			return false, fmt.Errorf(lib.T_("Operation canceled"))
 		}
-		return m.choice == "Установить" || m.choice == "Удалить" || m.choice == "Изменить", nil
+		return m.choice == lib.T_("Install") || m.choice == lib.T_("Remove") || m.choice == lib.T_("Edit"), nil
 	}
 
-	return false, fmt.Errorf("диалог был отменён")
+	return false, fmt.Errorf(lib.T_("Operation canceled"))
 }
 
 func (m model) Init() tea.Cmd {
@@ -202,11 +202,11 @@ func (m model) View() string {
 	}
 
 	// Формируем строку с подсказками по клавишам
-	keyboardShortcuts := shortcutStyle.Render("Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - начало/конец, Enter - выбрать, Esc/q - отмена")
+	keyboardShortcuts := shortcutStyle.Render(lib.T_("Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/bottom, Enter - choose, Esc/q - cancel"))
 
 	// Формируем футер с выбором действия
 	var footer strings.Builder
-	footer.WriteString(titleStyle.Render("\nВыберите действие:\n"))
+	footer.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", lib.T_("Select an action:"))))
 	for i, choice := range choices {
 		prefix := "  "
 		if i == m.cursor {
@@ -266,27 +266,28 @@ func (m model) buildContent() string {
 	var sb strings.Builder
 	const keyWidth = 21
 
-	infoPackage := fmt.Sprintf("\nИнформация о %s:\n", helper.DeclOfNum(len(m.pkg), []string{"пакете", "пакетах", "пакетах"}))
+	infoPackage := fmt.Sprintf("\n%s\n", lib.TN_("Package information:", "Packages information:", len(m.pkg)))
+
 	sb.WriteString(titleStyle.Render(infoPackage))
 	for i, pkg := range m.pkg {
 		if len(m.pkg) > 1 {
 			sb.WriteString(titleStyle.Render("\n"))
-			sb.WriteString(titleStyle.Render(fmt.Sprintf("\nПакет %d:", i+1)))
+			sb.WriteString(titleStyle.Render(fmt.Sprintf(lib.T_("\nPackage %d:"), i+1)))
 		}
-		installedText := shortcutStyle.Render("Нет")
+		installedText := shortcutStyle.Render(lib.T_("No"))
 		if pkg.Installed {
-			installedText = installStyle.Render("Да")
+			installedText = installStyle.Render(lib.T_("Yes"))
 		}
 
-		sb.WriteString("\n" + formatLine("Название", pkg.Name, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine("Действие", m.statusPackage(pkg.Name), keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine("Категория", pkg.Section, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine("Мейнтейнер", pkg.Maintainer, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine("Установлен", installedText, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Action"), m.statusPackage(pkg.Name), keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Category"), pkg.Section, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Mainteiner"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Installed"), installedText, keyWidth, keyStyle, valueStyle))
 
 		if pkg.Installed {
 			// Выводим "Версия в облаке" обычным стилем
-			sb.WriteString("\n" + formatLine("Версия в репозитории", pkg.Version, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
 			// Сравниваем версию в системе и облаке
 			var systemVersionColored string
 			if pkg.VersionInstalled == pkg.Version {
@@ -295,52 +296,53 @@ func (m model) buildContent() string {
 				systemVersionColored = deleteStyle.Render(pkg.VersionInstalled)
 			}
 			// Выводим "Версия в системе", уже с раскрашенным текстом
-			sb.WriteString("\n" + formatLine("Версия в системе", systemVersionColored, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("System version"), systemVersionColored, keyWidth, keyStyle, valueStyle))
 		} else {
-			sb.WriteString("\n" + formatLine("Версия в репозитории", pkg.Version, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
 		}
-		sb.WriteString("\n" + formatLine("Размер", helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Size"), helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
 
 		dependsStr := formatDependencies(pkg.Depends)
-		sb.WriteString("\n" + formatLine("Зависимости", dependsStr, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
 	}
 
-	sb.WriteString(titleStyle.Render("\n\nИзменения затронут:"))
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s", lib.T_("Affected changes:"))))
 	extraStr := formatDependencies(m.pckChange.ExtraInstalled)
 	upgradeStr := formatDependencies(m.pckChange.UpgradedPackages)
 	installStr := formatDependencies(m.pckChange.NewInstalledPackages)
 	removeStr := formatDependencies(m.pckChange.RemovedPackages)
-	sb.WriteString("\n" + formatLine("Экстра пакеты", extraStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будут обновлены", upgradeStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будут установлены", installStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будут удалены", removeStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(lib.T_("Extra packages"), extraStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(lib.T_("Will be updated"), upgradeStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(lib.T_("Will be installed"), installStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(lib.T_("Will be removed"), removeStr, keyWidth, keyStyle, valueStyle))
 
-	packageUpgradedCount := fmt.Sprintf("%d %s", m.pckChange.UpgradedCount, helper.DeclOfNum(m.pckChange.UpgradedCount, []string{"пакет", "пакета", "пакетов"}))
-	packageNewInstalledCount := fmt.Sprintf("%d %s", m.pckChange.NewInstalledCount, helper.DeclOfNum(m.pckChange.NewInstalledCount, []string{"пакет", "пакета", "пакетов"}))
-	packageRemovedCount := fmt.Sprintf("%d %s", m.pckChange.RemovedCount, helper.DeclOfNum(m.pckChange.RemovedCount, []string{"пакет", "пакета", "пакетов"}))
-	packageNotUpgradedCount := fmt.Sprintf("%d %s", m.pckChange.NotUpgradedCount, helper.DeclOfNum(m.pckChange.NotUpgradedCount, []string{"пакет", "пакета", "пакетов"}))
-	sb.WriteString(titleStyle.Render("\n\nИтого:"))
-	sb.WriteString("\n" + formatLine("Будет обновлено", packageUpgradedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будет установлено", packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Будет удалено", packageRemovedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine("Не затронуты", packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
+	packageUpgradedCount := fmt.Sprintf(lib.TN_("%d package", "%d packages", m.pckChange.UpgradedCount), m.pckChange.UpgradedCount)
+	packageNewInstalledCount := fmt.Sprintf(lib.TN_("%d package", "%d packages", m.pckChange.NewInstalledCount), m.pckChange.NewInstalledCount)
+	packageRemovedCount := fmt.Sprintf(lib.TN_("%d package", "%d packages", m.pckChange.RemovedCount), m.pckChange.RemovedCount)
+	packageNotUpgradedCount := fmt.Sprintf(lib.TN_("%d package", "%d packages", m.pckChange.NotUpgradedCount), m.pckChange.NotUpgradedCount)
+
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n", lib.T_("Total:"))))
+	sb.WriteString("\n" + formatLine(lib.T_("Will be updated"), packageUpgradedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(lib.T_("Will be installed"), packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(lib.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(lib.T_("Not affected"), packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
 	return sb.String()
 }
 
 func (m model) statusPackage(pkg string) string {
 	if contains(m.pckChange.ExtraInstalled, pkg) || contains(m.pckChange.NewInstalledPackages, pkg) {
-		return installStyle.Render("Будет установлен")
+		return installStyle.Render(lib.T_("Will be installed"))
 	}
 
 	if contains(m.pckChange.UpgradedPackages, pkg) {
-		return installStyle.Render("Будет обновлён")
+		return installStyle.Render(lib.T_("Will be updated"))
 	}
 
 	if contains(m.pckChange.RemovedPackages, pkg) {
-		return deleteStyle.Render("Будет удалён")
+		return deleteStyle.Render(lib.T_("Will be removed"))
 	}
 
-	return shortcutStyle.Render("Нет")
+	return shortcutStyle.Render(lib.T_("No"))
 }
 
 func contains(slice []string, pkg string) bool {
@@ -361,10 +363,10 @@ func formatDependencies(depends []string) string {
 		filtered = append(filtered, dep)
 	}
 	if len(filtered) == 0 {
-		return "Нет"
+		return lib.T_("No")
 	}
 	if len(filtered) > 500 {
-		filtered = append(filtered[:500], "и другие")
+		filtered = append(filtered[:500], lib.T_("and others"))
 	}
 	maxLen := 0
 	for _, dep := range filtered {

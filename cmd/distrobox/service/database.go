@@ -23,6 +23,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -69,7 +70,7 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.SavePackagesToDB"))
 
 	if len(containerName) == 0 {
-		return fmt.Errorf("поле container не может быть пустым при сохранении пакетов в базу данных")
+		return fmt.Errorf(lib.T_("The 'container' field cannot be empty when saving packages to the database"))
 	}
 
 	// Создаем таблицу, если её нет. Таблица содержит поле container.
@@ -139,13 +140,13 @@ func (s *DistroDBService) DatabaseExist(ctx context.Context) error {
 	err := s.dbConn.QueryRow(query).Scan(&count)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such table") {
-			return fmt.Errorf("в базе данных отсутствуют записи, необходимо создать или обновить любой контейнер")
+			return fmt.Errorf(lib.T_("The database does not have any records, it is necessary to create or update any container"))
 		}
 		return err
 	}
 
 	if count == 0 {
-		return fmt.Errorf("в базе данных отсутствуют записи, необходимо создать или обновить любой контейнер")
+		return fmt.Errorf(lib.T_("The database contains no records, you need to create or update any container."))
 	}
 
 	return nil
@@ -160,7 +161,7 @@ func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerN
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf("нет записей для контейнера %s", containerName)
+		return fmt.Errorf(lib.T_("No records found for container %s."), containerName)
 	}
 	return nil
 }
@@ -182,7 +183,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters map[s
 	for field, value := range filters {
 		// Проверяем, разрешено ли фильтровать по этому полю.
 		if !s.isAllowedField(field, allowedFilterFields) {
-			return 0, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+			return 0, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s."), field, strings.Join(allowedFilterFields, ", "))
 		}
 		// Если поле installed или exporting – пытаемся трактовать как bool.
 		if field == "installed" || field == "exporting" {
@@ -237,7 +238,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 	for field, value := range filters {
 		// Проверяем, разрешено ли фильтровать по этому полю.
 		if !s.isAllowedField(field, allowedFilterFields) {
-			return nil, fmt.Errorf("недопустимое поле фильтрации: %s. Доступные поля: %s", field, strings.Join(allowedFilterFields, ", "))
+			return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s."), field, strings.Join(allowedFilterFields, ", "))
 		}
 		if field == "installed" || field == "exporting" {
 			boolVal, ok := helper.ParseBool(value)
@@ -270,7 +271,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 	// Проверка поля сортировки.
 	if sortField != "" {
 		if !s.isAllowedField(sortField, allowedSortFields) {
-			return nil, fmt.Errorf("недопустимое поле сортировки: %s. Доступные поля: %s", sortField, strings.Join(allowedSortFields, ", "))
+			return nil, fmt.Errorf(lib.T_("Invalid sort field: %s. Available fields: %s."), sortField, strings.Join(allowedSortFields, ", "))
 		}
 		upperOrder := strings.ToUpper(sortOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
@@ -372,7 +373,7 @@ func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName,
 		"exporting": true,
 	}
 	if !allowedFields[fieldName] {
-		lib.Log.Errorf("поле %s нельзя обновлять", fieldName)
+		lib.Log.Errorf(lib.T_("The field %s cannot be updated."), fieldName)
 		return
 	}
 
@@ -413,7 +414,7 @@ func (s *DistroDBService) GetPackageInfoByName(containerName, name string) (Pack
 func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, containerName string) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE container = ?", s.packagesTableName)
 	if _, err := s.dbConn.Exec(query, containerName); err != nil {
-		return fmt.Errorf("ошибка удаления записей контейнера %s: %v", containerName, err)
+		return fmt.Errorf(lib.T_("Error deleting container records %s: %v"), containerName, err)
 	}
 
 	return nil
@@ -421,10 +422,5 @@ func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, conta
 
 // Проверка, входит ли поле в список разрешённых.
 func (s *DistroDBService) isAllowedField(field string, allowed []string) bool {
-	for _, f := range allowed {
-		if f == field {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowed, field)
 }

@@ -1,125 +1,129 @@
 package reply
 
+import (
+	"apm/lib"
+)
+
 // TranslateKey принимает ключ и возвращает английский текст.
 func TranslateKey(key string) string {
 	switch key {
 	case "package":
-		return "Package"
+		return lib.T_("Package")
 	case "count":
-		return "Count"
+		return lib.T_("Count")
 	case "isConsole":
-		return "Console Application"
+		return lib.T_("Console Application")
 	case "packageInfo":
-		return "Package Information"
+		return lib.T_("Package Information")
 	case "install":
-		return "Install"
+		return lib.T_("Install")
 	case "store":
-		return "Storage Type"
+		return lib.T_("Storage Type")
 	case "timestamp":
-		return "Date"
+		return lib.T_("Date")
 	case "imageDigest":
-		return "Image Digest"
+		return lib.T_("Image Digest")
 	case "os":
-		return "Distribution"
+		return lib.T_("Distribution")
 	case "container":
-		return "Container"
+		return lib.T_("Container")
 	case "name":
-		return "Name"
+		return lib.T_("Name")
 	case "extraInstalled":
-		return "Extra Installed"
+		return lib.T_("Extra Installed")
 	case "upgradedCount":
-		return "Upgraded Count"
+		return lib.T_("Upgraded Count")
 	case "bootedImage":
-		return "Booted Image"
+		return lib.T_("Booted Image")
 	case "removedPackages":
-		return "Removed Packages"
+		return lib.T_("Removed Packages")
 	case "providers":
-		return "Providers"
+		return lib.T_("Providers")
 	case "version":
-		return "Version"
+		return lib.T_("Version")
 	case "history":
-		return "History"
+		return lib.T_("History")
 	case "depends":
-		return "Dependencies"
+		return lib.T_("Dependencies")
 	case "installedSize":
-		return "Installed Size"
+		return lib.T_("Installed Size")
 	case "removedCount":
-		return "Removed Count"
+		return lib.T_("Removed Count")
 	case "upgradedPackages":
-		return "Upgraded Packages"
+		return lib.T_("Upgraded Packages")
 	case "packageName":
-		return "Package Name"
+		return lib.T_("Package Name")
 	case "image":
-		return "Image"
+		return lib.T_("Image")
 	case "commands":
-		return "Commands"
+		return lib.T_("Commands")
 	case "maintainer":
-		return "Maintainer"
+		return lib.T_("Maintainer")
 	case "versionInstalled":
-		return "Installed Version"
+		return lib.T_("Installed Version")
 	case "remove":
-		return "Remove"
+		return lib.T_("Remove")
 	case "containers":
-		return "Containers"
+		return lib.T_("Containers")
 	case "paths":
-		return "Paths"
+		return lib.T_("Paths")
 	case "description":
-		return "Description"
+		return lib.T_("Description")
 	case "date":
-		return "Date"
+		return lib.T_("Date")
 	case "newInstalledCount":
-		return "Newly Installed Count"
+		return lib.T_("Newly Installed Count")
 	case "active":
-		return "Active"
+		return lib.T_("Active")
 	case "info":
-		return "Information"
+		return lib.T_("Information")
 	case "totalCount":
-		return "Total Count"
+		return lib.T_("Total Count")
 	case "installed":
-		return "Installed"
+		return lib.T_("Installed")
 	case "manager":
-		return "Package Manager"
+		return lib.T_("Package Manager")
 	case "lastChangelog":
-		return "Last Changelog"
+		return lib.T_("Last Changelog")
 	case "section":
-		return "Section"
+		return lib.T_("Section")
 	case "spec":
-		return "Specification"
+		return lib.T_("Specification")
 	case "booted":
-		return "Booted"
+		return lib.T_("Booted")
 	case "staged":
-		return "Staged"
+		return lib.T_("Staged")
 	case "size":
-		return "Size"
+		return lib.T_("Size")
 	case "newInstalledPackages":
-		return "Newly Installed Packages"
+		return lib.T_("Newly Installed Packages")
 	case "notUpgradedCount":
-		return "Not Upgraded Count"
+		return lib.T_("Not Upgraded Count")
 	case "containerName":
-		return "Container Name"
+		return lib.T_("Container Name")
 	case "config":
-		return "Configuration"
+		return lib.T_("Configuration")
 	case "exporting":
-		return "Exporting"
+		return lib.T_("Exporting")
 	case "status":
-		return "Status"
+		return lib.T_("Status")
 	case "imageDate":
-		return "Image Date"
+		return lib.T_("Image Date")
 	case "packages":
-		return "Packages"
+		return lib.T_("Packages")
 	case "filename":
-		return "Filename"
+		return lib.T_("Filename")
 	case "containerInfo":
-		return "Container Information"
+		return lib.T_("Container Information")
 	case "imageName":
-		return "Image Name"
+		return lib.T_("Image Name")
 	case "transport":
-		return "Transport"
+		return lib.T_("Transport")
 	case "pinned":
-		return "Pinned"
+		return lib.T_("Pinned")
 	case "list":
-		return "List"
+		return lib.T_("List")
 	default:
-		return key
+		return lib.T_(key)
 	}
 }

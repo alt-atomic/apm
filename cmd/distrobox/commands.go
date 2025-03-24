@@ -20,6 +20,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
+
 	"github.com/urfave/cli/v3"
 )
 
@@ -47,15 +48,15 @@ func CommandList() *cli.Command {
 	return &cli.Command{
 		Name:    "distrobox",
 		Aliases: []string{"d"},
-		Usage:   "Управление пакетами и контейнерами distrobox",
+		Usage:   lib.T_("Managing packages and containers in distrobox"),
 		Commands: []*cli.Command{
 			{
 				Name:  "update",
-				Usage: "Обновить и синхронизировать списки установленных пакетов с хостом",
+				Usage: lib.T_("Update and synchronize the list of installed packages with the host"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера",
+						Usage:    lib.T_("Container name"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
@@ -71,12 +72,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "info",
-				Usage:     "Информация о пакете",
+				Usage:     lib.T_("Package information"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера. Необходимо указать",
+						Usage:    lib.T_("Container name. Must be specified"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
@@ -92,12 +93,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "search",
-				Usage:     "Быстрый поиск пакетов по названию",
+				Usage:     lib.T_("Quick package search by name"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "container",
-						Usage:   "Название контейнера. Необязательный флаг",
+						Usage:   lib.T_("Container name. Optional flag"),
 						Aliases: []string{"c"},
 					},
 				},
@@ -112,39 +113,39 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "list",
-				Usage: "Построение запроса для получения списка пакетов",
+				Usage: lib.T_("Building query to retrieve package list"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "container",
-						Usage:   "Название контейнера. Необязательный флаг",
+						Usage:   lib.T_("Container name. Optional flag"),
 						Aliases: []string{"c"},
 					},
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: "Поле для сортировки, например: name, version",
+						Usage: lib.T_("Field for sorting, e.g.: name, version"),
 					},
 					&cli.StringFlag{
 						Name:  "order",
-						Usage: "Порядок сортировки: ASC или DESC",
+						Usage: lib.T_("Sorting order: ASC or DESC"),
 						Value: "ASC",
 					},
 					&cli.IntFlag{
 						Name:  "limit",
-						Usage: "Лимит выборки",
+						Usage: lib.T_("Selection limit"),
 						Value: 10,
 					},
 					&cli.IntFlag{
 						Name:  "offset",
-						Usage: "Смещение выборки",
+						Usage: lib.T_("Selection offset"),
 						Value: 0,
 					},
 					&cli.StringSliceFlag{
 						Name:  "filter",
-						Usage: "Фильтр в формате key=value. Флаг можно указывать несколько раз, например: --filter name=zip --filter installed=true",
+						Usage: lib.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
-						Usage: "Принудительно обновить все пакеты перед запросом",
+						Usage: lib.T_("Force update all packages before the request"),
 						Value: false,
 					},
 				},
@@ -169,18 +170,18 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "install",
-				Usage:     "Установить пакет",
+				Usage:     lib.T_("Install package"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера. Необходимо указать",
+						Usage:    lib.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
 					&cli.BoolFlag{
 						Name:  "export",
-						Usage: "Экспортировать пакет",
+						Usage: lib.T_("Export package"),
 						Value: true,
 					},
 				},
@@ -195,19 +196,19 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "remove",
-				Usage:     "Удалить пакет",
+				Usage:     lib.T_("Remove package"),
 				ArgsUsage: "package",
 				Aliases:   []string{"rm"},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    "Название контейнера. Необходимо указать",
+						Usage:    lib.T_("Container name. Must be specified"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
 					&cli.BoolFlag{
 						Name:  "only-export",
-						Usage: "Удалить только экспорт, оставить пакет в контейнере",
+						Usage: lib.T_("Remove only the export, leave the package in the container"),
 						Value: false,
 					},
 				},
@@ -222,12 +223,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:    "container",
-				Usage:   "Модуль для работы с контейнерами",
+				Usage:   lib.T_("Module for working with containers"),
 				Aliases: []string{"c"},
 				Commands: []*cli.Command{
 					{
 						Name:  "list",
-						Usage: "Список контейнеров",
+						Usage: lib.T_("List of containers"),
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							resp, err := NewActions().ContainerList(ctx)
 							if err != nil {
@@ -239,11 +240,11 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "create",
-						Usage: "Добавить контейнер",
+						Usage: lib.T_("Add container"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "image",
-								Usage:    "Контейнер. Необходимо указать, варианты: alt, ubuntu, arch",
+								Usage:    lib.T_("Container. Must be specified, options: alt, ubuntu, arch"),
 								Required: true,
 							},
 						},
@@ -259,7 +260,7 @@ func CommandList() *cli.Command {
 							}
 							if !valid {
 								return reply.CliResponse(ctx,
-									newErrorResponse("значение для image должно быть одно из: alt, ubuntu, arch"))
+									newErrorResponse(lib.T_("The value for image must be one of: alt, ubuntu, arch")))
 							}
 
 							var imageLink string
@@ -282,26 +283,26 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "create-manual",
-						Usage: "Ручное добавление контейнера",
+						Usage: lib.T_("Manual container addition"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "image",
-								Usage:    "Ссылка на образ. Необходимо указать",
+								Usage:    lib.T_("Image link. Required"),
 								Required: true,
 							},
 							&cli.StringFlag{
 								Name:     "name",
-								Usage:    "Название контейнера. Необходимо указать",
+								Usage:    lib.T_("Container name. Required"),
 								Required: true,
 							},
 							&cli.StringFlag{
 								Name:  "additional-packages",
-								Usage: "Список пакетов для установки",
+								Usage: lib.T_("List of packages to install"),
 								Value: "zsh",
 							},
 							&cli.StringFlag{
 								Name:  "init-hooks",
-								Usage: "Вызов хука для выполнения команд",
+								Usage: lib.T_("Calling hook to execute commands"),
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
@@ -320,12 +321,12 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:    "remove",
-						Usage:   "Удалить контейнер",
+						Usage:   lib.T_("Remove container"),
 						Aliases: []string{"rm"},
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "name",
-								Usage:    "Название контейнера. Необходимо указать",
+								Usage:    lib.T_("Container name. Required"),
 								Required: true,
 							},
 						},

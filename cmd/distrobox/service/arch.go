@@ -42,25 +42,25 @@ func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerI
 	// Обновляем базу пакетов и базу владельцев файлов.
 	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Sy ", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
-		return nil, fmt.Errorf("не удалось обновить базу пакетов: %v, stderr: %s", err, stderr)
+		return nil, fmt.Errorf(lib.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
 	// Получаем пакеты из официальных репозиториев
 	commandSs := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Ss", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	stdoutSs, stderrSs, err := helper.RunCommand(ctx, commandSs)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось выполнить поиск пакетов (pacman -Ss): %v, stderr: %s", err, stderrSs)
+		return nil, fmt.Errorf(lib.T_("Failed to search packages (pacman -Ss): %v, stderr: %s"), err, stderrSs)
 	}
 
 	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
-		lib.Log.Error("Ошибка получения установленных пакетов: ", err)
+		lib.Log.Error(lib.T_("Error retrieving installed packages: "), err)
 		exportingPackages = []string{}
 	}
 
 	packagesOfficial, err := p.parseOutput(stdoutSs, exportingPackages)
 	if err != nil {
-		lib.Log.Errorf("Ошибка парсинга официальных пакетов: %v", err)
+		lib.Log.Errorf(lib.T_("Error parsing official packages: %v"), err)
 		return nil, err
 	}
 
@@ -76,7 +76,7 @@ func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo Containe
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Rs --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf("не удалось удалить пакет %s: %v, stderr: %s", packageName, err, stderr)
+		return fmt.Errorf(lib.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
@@ -86,7 +86,7 @@ func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo Contain
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -S --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf("не удалось установить пакет %s: %v, stderr: %s", packageName, err, stderr)
+		return fmt.Errorf(lib.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
@@ -109,14 +109,14 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 				return fields[0], nil
 			}
 		}
-		return "", fmt.Errorf("не удалось распознать владельца для файла '%s'", fileName)
+		return "", fmt.Errorf(lib.T_("Failed to recognize the owner for file '%s'"), fileName)
 	}
 
 	// Если не найдено, пробуем через pacman -F.
 	cmdStr = fmt.Sprintf("%s distrobox enter %s -- pacman -F %s", lib.Env.CommandPrefix, containerInfo.ContainerName, fileName)
 	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return "", fmt.Errorf("не удалось найти пакет для файла '%s': %v, stderr: %s", fileName, err, stderr)
+		return "", fmt.Errorf(lib.T_("Failed to find a package for file '%s': %v, stderr: %s"), fileName, err, stderr)
 	}
 	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
@@ -138,7 +138,7 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 			return pkgName, nil
 		}
 	}
-	return "", fmt.Errorf("не удалось определить пакет для файла '%s'", fileName)
+	return "", fmt.Errorf(lib.T_("Failed to determine the package for file '%s'"), fileName)
 }
 
 // GetPathByPackageName возвращает список путей для файла, принадлежащего указанному пакету,
@@ -147,7 +147,7 @@ func (p *ArchProvider) GetPathByPackageName(ctx context.Context, containerInfo C
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения команды: %v, stderr: %s", err, stderr)
+		return nil, fmt.Errorf(lib.T_("Command execution error: %v, stderr: %s"), err, stderr)
 	}
 	lines := strings.Split(stdout, "\n")
 	var paths []string

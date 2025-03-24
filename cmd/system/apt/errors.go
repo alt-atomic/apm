@@ -17,6 +17,7 @@
 package apt
 
 import (
+	"apm/lib"
 	"errors"
 	"fmt"
 	"regexp"
@@ -92,71 +93,72 @@ type MatchedError struct {
 
 // ErrorEntry описывает шаблон ошибки.
 type ErrorEntry struct {
-	Code    int
-	Pattern string
-	Params  int
+	Code              int
+	Pattern           string
+	TranslatedPattern string
+	Params            int
 }
 
 var errorPatterns = []ErrorEntry{
-	{ErrBrokenPackages, "Broken packages", 0},
-	{ErrPermissionDenied, "You have no permissions for that", 0},
-	{ErrInternalBrokenPackages, "Internal Error, InstallPackages was called with broken packages!", 0},
-	{ErrRemoveDisabled, "Packages need to be removed but Remove is disabled.", 0},
-	{ErrLockDownloadDir, "Unable to lock the download directory", 0},
-	{ErrYWithoutForceYes, "There are problems and -y was used without --force-yes", 0},
-	{ErrNotEnoughSpace, "You don't have enough free space in %s", 1},
-	{ErrPackageFileOutOfSync, "Package file %s is out of sync", 1},
-	{ErrTrivialOnly, "Trivial Only specified but this is not a trivial operation", 0},
-	{ErrOperationCancelled, "Operation cancelled", 0},
-	{ErrMissingBuilddepPackage, "Must specify at least one package to check builddeps for", 0},
-	{ErrSourcePackageNotFound, "Unable to find a source package for %s", 1},
-	{ErrBuilddepInfoFailed, "Unable to get build-dependency information for %s", 1},
-	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s.", 1},
-	{ErrVirtualNoProviders, "Package %s is a virtual package with no good providers", 1},
-	{ErrVirtualMultipleProviders, "Package %s is a virtual package with multiple good providers", 1},
-	{ErrNoPackagesFound, "No packages found", 0},
-	{ErrPackageNotInstalled, "Package %s is not installed, so not removed", 1},
-	{ErrReleaseNotFound, "Release %s'%s' for '%s' was not found", 3},
-	{ErrVersionNotFound, "Version %s'%s' for '%s' was not found", 3},
-	{ErrSourcesListReadFailed, "Sources list %s could not be read", 1},
-	{ErrSourcesListMissing, "Sources list %s doesn't exist", 1},
-	{ErrExcessiveArguments, "Excessive arguments", 0},
-	{ErrResolverBroken, "Internal Error, problem resolver broke stuff", 0},
-	{ErrOrderingFailed, "Internal Error, Ordering didn't finish", 0},
-	{ErrDownloadFailed, "Some files failed to download", 0},
-	{ErrFetchArchivesFailed, "Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?", 0},
-	{ErrFixMissingUnsupported, "--fix-missing and media swapping is not currently supported", 0},
-	{ErrCorrectMissingFailed, "Unable to correct missing packages", 0},
-	{ErrAbortingInstall, "Aborting Install", 0},
-	{ErrRpmDatabaseLock, "Could not open RPM database", 0},
-	{ErrParseNameFailed, "Couldn't parse name '%s'", 1},
-	{ErrWriteStdoutFailed, "Write to stdout failed", 0},
-	{ErrMaxArgumentsExceeded, "Exceeded maximum number of command arguments", 0},
-	{ErrDependencyUnsatisfied, "Package %s dependency for %s cannot be satisfied because the package %s cannot be found", 3},
-	{ErrRegexCompilationError, "Regex compilation error - %s", 1},
-	{ErrNoInstallationCandidate, "Package %s has no installation candidate", 1},
-	{ErrInternalAllUpgrade, "Internal Error, AllUpgrade broke stuff", 0},
-	{ErrRequestedAutoremoveFailed, "Requested autoremove failed.", 0},
-	{ErrPackageNotFound, "Couldn't find package %s", 1},
-	{ErrDependencyUnsatisfied2, "%s dependency for %s cannot be satisfied", 2},
-	{ErrFailedDependencyTooNew, "Failed to satisfy %s dependency for %s: Installed package %s is too new", 3},
-	{ErrFailedDependency, "Failed to satisfy %s dependency for %s: %s", 3},
-	{ErrGiveOnePattern, "You must give exactly one pattern", 0},
-	{ErrNoHelpForThat, "No help for that", 0},
-	{ErrPackageIsAlreadyNewest, "%s is already the newest version.", 1},
-	{ErrSourcesListReadFailed, "The list of sources could not be read.", 0},
-	{ErrChangesToBeMade, "There are changes to be made", 0},
-	{ErrFailedToFetchArchives, "Failed to fetch some archives.", 0},
-	{ErrFailedToFetch, "Failed to fetch %s  %s", 2},
-	{ErrFailedToFetchSomeIndex, "Some index files failed to download. They have been ignored, or old ones used instead.", 0},
-	{ErrUpgradeDisabled, "'apt-get upgrade' is disabled because it can leave system in a broken state.", 0},
-	{ErrUnmetDependencies, "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or specify a solution).", 0},
-	{ErrMissingFetchSourcePackage, "Must specify at least one package to fetch source for", 0},
-	{ErrChildProcessFailed, "Child process failed", 0},
-	{ErrMissingChangelogPackage, "Must specify at least one package to get changelog for", 0},
-	{ErrProcessBuildDependencies, "Failed to process build dependencies", 0},
-	{ErrVirtualNoProvidersShort, "Package %s is a virtual package with no ", 1},
-	{ErrVirtualMultipleProvidersShort, "Package %s is a virtual package with multiple ", 1},
+	{ErrBrokenPackages, "Broken packages", lib.T_("Broken packages"), 0},
+	{ErrPermissionDenied, "You have no permissions for that", lib.T_("You have no permissions for that"), 0},
+	{ErrInternalBrokenPackages, "Internal Error, InstallPackages was called with broken packages!", lib.T_("Internal Error, InstallPackages was called with broken packages!"), 0},
+	{ErrRemoveDisabled, "Packages need to be removed but Remove is disabled.", lib.T_("Packages need to be removed but Remove is disabled."), 0},
+	{ErrLockDownloadDir, "Unable to lock the download directory", lib.T_("Unable to lock the download directory"), 0},
+	{ErrYWithoutForceYes, "There are problems and -y was used without --force-yes", lib.T_("There are problems and -y was used without --force-yes"), 0},
+	{ErrNotEnoughSpace, "You don't have enough free space in %s", lib.T_("You don't have enough free space in %s"), 1},
+	{ErrPackageFileOutOfSync, "Package file %s is out of sync", lib.T_("Package file %s is out of sync"), 1},
+	{ErrTrivialOnly, "Trivial Only specified but this is not a trivial operation", lib.T_("Trivial Only specified but this is not a trivial operation"), 0},
+	{ErrOperationCancelled, "Operation cancelled", lib.T_("Operation cancelled"), 0},
+	{ErrMissingBuilddepPackage, "Must specify at least one package to check builddeps for", lib.T_("Must specify at least one package to check builddeps for"), 0},
+	{ErrSourcePackageNotFound, "Unable to find a source package for %s", lib.T_("Unable to find a source package for %s"), 1},
+	{ErrBuilddepInfoFailed, "Unable to get build-dependency information for %s", lib.T_("Unable to get build-dependency information for %s"), 1},
+	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s.", lib.T_("Some broken packages were found while trying to process build-dependencies for %s."), 1},
+	{ErrVirtualNoProviders, "Package %s is a virtual package with no good providers", lib.T_("Package %s is a virtual package with no good providers"), 1},
+	{ErrVirtualMultipleProviders, "Package %s is a virtual package with multiple good providers", lib.T_("Package %s is a virtual package with multiple good providers"), 1},
+	{ErrNoPackagesFound, "No packages found", lib.T_("No packages found"), 0},
+	{ErrPackageNotInstalled, "Package %s is not installed, so not removed", lib.T_("Package %s is not installed, so not removed"), 1},
+	{ErrReleaseNotFound, "Release %s'%s' for '%s' was not found", lib.T_("Release %s'%s' for '%s' was not found"), 3},
+	{ErrVersionNotFound, "Version %s'%s' for '%s' was not found", lib.T_("Version %s'%s' for '%s' was not found"), 3},
+	{ErrSourcesListReadFailed, "Sources list %s could not be read", lib.T_("Sources list %s could not be read"), 1},
+	{ErrSourcesListMissing, "Sources list %s doesn't exist", lib.T_("Sources list %s doesn't exist"), 1},
+	{ErrExcessiveArguments, "Excessive arguments", lib.T_("Excessive arguments"), 0},
+	{ErrResolverBroken, "Internal Error, problem resolver broke stuff", lib.T_("Internal Error, problem resolver broke stuff"), 0},
+	{ErrOrderingFailed, "Internal Error, Ordering didn't finish", lib.T_("Internal Error, Ordering didn't finish"), 0},
+	{ErrDownloadFailed, "Some files failed to download", lib.T_("Some files failed to download"), 0},
+	{ErrFetchArchivesFailed, "Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?", lib.T_("Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"), 0},
+	{ErrFixMissingUnsupported, "--fix-missing and media swapping is not currently supported", lib.T_("--fix-missing and media swapping is not currently supported"), 0},
+	{ErrCorrectMissingFailed, "Unable to correct missing packages", lib.T_("Unable to correct missing packages"), 0},
+	{ErrAbortingInstall, "Aborting Install", lib.T_("Aborting Install"), 0},
+	{ErrRpmDatabaseLock, "Could not open RPM database", lib.T_("Could not open RPM database"), 0},
+	{ErrParseNameFailed, "Couldn't parse name '%s'", lib.T_("Couldn't parse name '%s'"), 1},
+	{ErrWriteStdoutFailed, "Write to stdout failed", lib.T_("Write to stdout failed"), 0},
+	{ErrMaxArgumentsExceeded, "Exceeded maximum number of command arguments", lib.T_("Exceeded maximum number of command arguments"), 0},
+	{ErrDependencyUnsatisfied, "Package %s dependency for %s cannot be satisfied because the package %s cannot be found", lib.T_("Package %s dependency for %s cannot be satisfied because the package %s cannot be found"), 3},
+	{ErrRegexCompilationError, "Regex compilation error - %s", lib.T_("Regex compilation error - %s"), 1},
+	{ErrNoInstallationCandidate, "Package %s has no installation candidate", lib.T_("Package %s has no installation candidate"), 1},
+	{ErrInternalAllUpgrade, "Internal Error, AllUpgrade broke stuff", lib.T_("Internal Error, AllUpgrade broke stuff"), 0},
+	{ErrRequestedAutoremoveFailed, "Requested autoremove failed.", lib.T_("Requested autoremove failed."), 0},
+	{ErrPackageNotFound, "Couldn't find package %s", lib.T_("Couldn't find package %s"), 1},
+	{ErrDependencyUnsatisfied2, "%s dependency for %s cannot be satisfied", lib.T_("%s dependency for %s cannot be satisfied"), 2},
+	{ErrFailedDependencyTooNew, "Failed to satisfy %s dependency for %s: Installed package %s is too new", lib.T_("Failed to satisfy %s dependency for %s: Installed package %s is too new"), 3},
+	{ErrFailedDependency, "Failed to satisfy %s dependency for %s: %s", lib.T_("Failed to satisfy %s dependency for %s: %s"), 3},
+	{ErrGiveOnePattern, "You must give exactly one pattern", lib.T_("You must give exactly one pattern"), 0},
+	{ErrNoHelpForThat, "No help for that", lib.T_("No help for that"), 0},
+	{ErrPackageIsAlreadyNewest, "%s is already the newest version.", lib.T_("%s is already the newest version."), 1},
+	{ErrSourcesListReadFailed, "The list of sources could not be read.", lib.T_("The list of sources could not be read."), 0},
+	{ErrChangesToBeMade, "There are changes to be made", lib.T_("There are changes to be made"), 0},
+	{ErrFailedToFetchArchives, "Failed to fetch some archives.", lib.T_("Failed to fetch some archives."), 0},
+	{ErrFailedToFetch, "Failed to fetch %s  %s", lib.T_("Failed to fetch %s  %s"), 2},
+	{ErrFailedToFetchSomeIndex, "Some index files failed to download. They have been ignored, or old ones used instead.", lib.T_("Some index files failed to download. They have been ignored, or old ones used instead."), 0},
+	{ErrUpgradeDisabled, "'apt-get upgrade' is disabled because it can leave system in a broken state.", lib.T_("'apt-get upgrade' is disabled because it can leave system in a broken state."), 0},
+	{ErrUnmetDependencies, "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or specify a solution).", lib.T_("Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or specify a solution)."), 0},
+	{ErrMissingFetchSourcePackage, "Must specify at least one package to fetch source for", lib.T_("Must specify at least one package to fetch source for"), 0},
+	{ErrChildProcessFailed, "Child process failed", lib.T_("Child process failed"), 0},
+	{ErrMissingChangelogPackage, "Must specify at least one package to get changelog for", lib.T_("Must specify at least one package to get changelog for"), 0},
+	{ErrProcessBuildDependencies, "Failed to process build dependencies", lib.T_("Failed to process build dependencies"), 0},
+	{ErrVirtualNoProvidersShort, "Package %s is a virtual package with no ", lib.T_("Package %s is a virtual package with no "), 1},
+	{ErrVirtualMultipleProvidersShort, "Package %s is a virtual package with multiple ", lib.T_("Package %s is a virtual package with multiple "), 1},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.
@@ -217,18 +219,7 @@ func CheckError(requestError string) *MatchedError {
 
 // Error возвращает переведённое сообщение об ошибке с подстановкой найденных параметров.
 func (e *MatchedError) Error() string {
-	translations := map[int]string{
-		ErrBrokenPackages:         "Сломанные пакеты",
-		ErrPermissionDenied:       "У вас нет прав для выполнения этой операции",
-		ErrNotEnoughSpace:         "У вас недостаточно свободно места в %s",
-		ErrPackageIsAlreadyNewest: "Последняя версия %s уже установлена",
-		ErrPackageNotInstalled:    "Пакет %s не установлен, и не может быть удалён",
-		// можно добавить и другие переводы по необходимости
-	}
-	template, ok := translations[e.Entry.Code]
-	if !ok {
-		template = e.Entry.Pattern
-	}
+	var template = e.Entry.TranslatedPattern
 	if e.Entry.Params > 0 && len(e.Params) >= e.Entry.Params {
 		return fmt.Sprintf(template, toInterfaceSlice(e.Params[:e.Entry.Params])...)
 	}

@@ -35,17 +35,17 @@ func InitDatabase() {
 		dbFile := Env.PathDBSQL
 
 		if _, err := os.Stat(dbFile); os.IsNotExist(err) {
-			Log.Warning("Файл базы данных не найден. Он будет создан автоматически.")
+			Log.Warning(T_("Database file not found. It will be created automatically."))
 		}
 
 		var err error
 		dbInstance, err = sql.Open("sqlite3", dbFile)
 		if err != nil {
-			Log.Fatal("Ошибка при открытии базы данных: %v", err)
+			Log.Fatal(T_("Error opening database: %v"), err)
 		}
 
 		if err = dbInstance.Ping(); err != nil {
-			Log.Fatal("Ошибка при подключении к базе данных: %v", err)
+			Log.Fatal(T_("Error connecting to database: %v"), err)
 		}
 	})
 }

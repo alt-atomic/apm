@@ -20,6 +20,7 @@ import (
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
+
 	"github.com/urfave/cli/v3"
 )
 
@@ -47,16 +48,16 @@ func CommandList() *cli.Command {
 	return &cli.Command{
 		Name:    "system",
 		Aliases: []string{"s"},
-		Usage:   "Управление системными пакетами",
+		Usage:   lib.T_("System package management"),
 		Commands: []*cli.Command{
 			{
 				Name:      "install",
-				Usage:     "Список пакетов на установку. Поддерживается формат package- package+",
+				Usage:     lib.T_("Package list for installation. The format package- package+ is supported."),
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "apply",
-						Usage:   "Применить к образу",
+						Usage:   lib.T_("Apply to image"),
 						Aliases: []string{"a"},
 						Value:   false,
 						Hidden:  !lib.Env.IsAtomic,
@@ -73,13 +74,13 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "remove",
-				Usage:     "Список пакетов на удаление",
+				Usage:     lib.T_("List of packages to remove"),
 				Aliases:   []string{"rm"},
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "apply",
-						Usage:   "Применить к образу",
+						Usage:   lib.T_("Apply to the image"),
 						Aliases: []string{"a"},
 						Value:   false,
 						Hidden:  !lib.Env.IsAtomic,
@@ -96,7 +97,7 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "update",
-				Usage: "Обновление пакетной базы",
+				Usage: lib.T_("Updating package database"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					resp, err := NewActions().Update(ctx)
 					if err != nil {
@@ -108,12 +109,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "info",
-				Usage:     "Информация о пакете",
+				Usage:     lib.T_("Package information"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: "Полный вывод информации",
+						Usage: lib.T_("Full output of information"),
 						Value: false,
 					},
 				},
@@ -128,18 +129,18 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "search",
-				Usage:     "Быстрый поиск пакетов по названию",
+				Usage:     lib.T_("Quick package search by name"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "installed",
-						Usage:   "Только установленные",
+						Usage:   lib.T_("Only installed"),
 						Aliases: []string{"i"},
 						Value:   false,
 					},
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: "Полный вывод информации",
+						Usage: lib.T_("Full information output"),
 						Value: false,
 					},
 				},
@@ -158,35 +159,35 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: "Поле для сортировки, например: name, installed",
+						Usage: lib.T_("Building query to fetch package list"),
 					},
 					&cli.StringFlag{
 						Name:  "order",
-						Usage: "Порядок сортировки: ASC или DESC",
+						Usage: lib.T_("Sorting order: ASC or DESC"),
 						Value: "ASC",
 					},
 					&cli.IntFlag{
 						Name:  "limit",
-						Usage: "Лимит выборки",
+						Usage: lib.T_("Limit of the result"),
 						Value: 10,
 					},
 					&cli.IntFlag{
 						Name:  "offset",
-						Usage: "Смещение выборки",
+						Usage: lib.T_("Offset of the result"),
 						Value: 0,
 					},
 					&cli.StringSliceFlag{
 						Name:  "filter",
-						Usage: "Фильтр в формате key=value. Флаг можно указывать несколько раз, например: --filter name=zip --filter installed=true",
+						Usage: lib.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
-						Usage: "Принудительно обновить все пакеты перед запросом",
+						Usage: lib.T_("Force update all packages before query"),
 						Value: false,
 					},
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: "Полный вывод информации",
+						Usage: lib.T_("Full information output"),
 						Value: false,
 					},
 				},
@@ -210,13 +211,13 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:    "image",
-				Usage:   "Модуль для работы с образом",
+				Usage:   lib.T_("Module for working with the image"),
 				Aliases: []string{"i"},
 				Hidden:  !lib.Env.IsAtomic,
 				Commands: []*cli.Command{
 					{
 						Name:  "apply",
-						Usage: "Применить изменения к хосту",
+						Usage: lib.T_("Apply changes to the host"),
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							resp, err := NewActions().ImageApply(ctx)
 							if err != nil {
@@ -228,7 +229,7 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "status",
-						Usage: "Статус образа",
+						Usage: lib.T_("Image status"),
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							resp, err := NewActions().ImageStatus(ctx)
 							if err != nil {
@@ -240,7 +241,7 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "update",
-						Usage: "Обновление образа",
+						Usage: lib.T_("Image update"),
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 							resp, err := NewActions().ImageUpdate(ctx)
 							if err != nil {
@@ -252,20 +253,20 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "history",
-						Usage: "История изменений образа",
+						Usage: lib.T_("Image change history"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "image",
-								Usage: "Фильтрация по названию образа",
+								Usage: lib.T_("Filter by image name"),
 							},
 							&cli.IntFlag{
 								Name:  "limit",
-								Usage: "Лимит выборки",
+								Usage: lib.T_("Limit of the selection"),
 								Value: 10,
 							},
 							&cli.IntFlag{
 								Name:  "offset",
-								Usage: "Смещение выборки",
+								Usage: lib.T_("Offset of the selection"),
 								Value: 0,
 							},
 						},

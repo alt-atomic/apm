@@ -83,7 +83,7 @@ func (s *SwCatIconService) copyDirFromContainer(ctx context.Context, src, dst st
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- cp -r %s/. %s", lib.Env.CommandPrefix, s.containerName, src, dst)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf("ошибка копирования из контейнера: %v, stderr: %s", err, stderr)
+		return fmt.Errorf(lib.T_("Error copying from container: %v, stderr: %s"), err, stderr)
 	}
 	return nil
 }
@@ -173,7 +173,7 @@ func (s *SwCatIconService) searchFileInDirs(baseDir, resolution, fileName string
 			return fullPath, nil
 		}
 	}
-	return "", fmt.Errorf("файл %s не найден в %s", fileName, baseDir)
+	return "", fmt.Errorf(lib.T_("File %s not found in %s"), fileName, baseDir)
 }
 
 // getIconFromPackage пытается получить содержимое иконки для заданного пакета.
@@ -243,7 +243,7 @@ func (s *SwCatIconService) getIconFromPackage(pkg PackageIconsSwCat, cachedIcons
 		}
 	}
 
-	return nil, fmt.Errorf("иконка не найдена для пакета %s", pkg.PkgName)
+	return nil, fmt.Errorf(lib.T_("Icon not found for package %s"), pkg.PkgName)
 }
 
 // LoadSWCatalogs загружает все XML-файлы из директории, объединяет данные по пакетам (без дублей),
@@ -256,7 +256,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 	if s.containerName == "" {
 		entries, err := os.ReadDir(s.path)
 		if err != nil {
-			return nil, fmt.Errorf("не удалось прочитать директорию %s: %w", s.path, err)
+			return nil, fmt.Errorf(lib.T_("Failed to read directory %s: %w"), s.path, err)
 		}
 		for _, entry := range entries {
 			if !entry.IsDir() {
@@ -268,7 +268,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 		cmdStr := fmt.Sprintf("%s distrobox enter %s -- find %s -maxdepth 1 -type f", lib.Env.CommandPrefix, s.containerName, s.path)
 		stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка получения файлов в %s: %v, stderr: %s", s.path, err, stderr)
+			return nil, fmt.Errorf(lib.T_("Error retrieving files in %s: %v, stderr: %s"), s.path, err, stderr)
 		}
 		lines := strings.Split(strings.TrimSpace(stdout), "\n")
 		for _, line := range lines {
@@ -289,26 +289,26 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 		if s.containerName == "" {
 			data, err = os.ReadFile(fullPath)
 			if err != nil {
-				return nil, fmt.Errorf("не удалось прочитать файл %s: %w", fullPath, err)
+				return nil, fmt.Errorf(lib.T_("Failed to read file %s: %w"), fullPath, err)
 			}
 		} else {
 			cmdStr := fmt.Sprintf("%s distrobox enter %s -- cat %s", lib.Env.CommandPrefix, s.containerName, fullPath)
 			stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 			if err != nil {
-				return nil, fmt.Errorf("ошибка выполнения команды для файла %s: %v, stderr: %s", fullPath, err, stderr)
+				return nil, fmt.Errorf(lib.T_("Error executing command for file %s: %v, stderr: %s"), fullPath, err, stderr)
 			}
 			data = []byte(stdout)
 		}
 		if strings.HasSuffix(fileName, ".gz") {
 			data, err = s.decompressGzip(data)
 			if err != nil {
-				return nil, fmt.Errorf("не удалось распаковать файл %s: %w", fullPath, err)
+				return nil, fmt.Errorf(lib.T_("Failed to unpack file %s: %w"), fullPath, err)
 			}
 		}
 		var catalog SWCatalog
 		err = xml.Unmarshal(data, &catalog)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка парсинга XML файла %s: %w", fullPath, err)
+			return nil, fmt.Errorf(lib.T_("Error parsing XML file %s: %w"), fullPath, err)
 		}
 		allComponents = append(allComponents, catalog.Components...)
 	}
