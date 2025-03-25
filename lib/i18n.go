@@ -30,13 +30,13 @@ import (
 func InitLocales() {
 	if _, err := os.Stat(Env.PathLocales); os.IsNotExist(err) {
 		textError := fmt.Sprintf(T_("Translations folder not found at path: %s"), Env.PathLocales)
-		Log.Error(textError)
+		Log.Warning(textError)
 	}
 
 	gotext.Configure(Env.PathLocales, GetSystemLocale().String(), "apm")
 }
 
-// T возвращает переведенную строку для заданного messageID.
+// T_ T возвращает переведенную строку для заданного messageID.
 func T_(messageID string) string {
 	return gotext.Get(messageID)
 }

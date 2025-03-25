@@ -42,8 +42,8 @@ func main() {
 	lib.Log.Debugln("Starting apm…")
 
 	lib.InitConfig()
-	lib.InitLocales()
 	lib.InitLogger()
+	lib.InitLocales()
 	lib.InitDatabase()
 
 	sigs := make(chan os.Signal, 1)
@@ -95,8 +95,8 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:  "dbus-user",
-				Usage: lib.T_("Start DBUS service com.application.APM"),
+				Name:  "dbus-session",
+				Usage: lib.T_("Start session D-Bus service com.application.APM"),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					err := lib.InitDBus(false)
 					if err != nil {
@@ -133,7 +133,7 @@ func main() {
 			},
 			{
 				Name:  "dbus-system",
-				Usage: lib.T_("Start the DBUS service com.application.APM"),
+				Usage: lib.T_("Start system D-Bus service com.application.APM"),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					err := lib.InitDBus(true)
 					if err != nil {
