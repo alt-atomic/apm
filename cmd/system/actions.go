@@ -210,7 +210,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf(lib.T_("deletion dialog cancelled"))
+		errDialog := fmt.Errorf(lib.T_("Cancel dialog"))
 
 		return nil, errDialog
 	}
@@ -420,7 +420,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf(lib.T_("Cancel deletion dialog"))
+		errDialog := fmt.Errorf(lib.T_("Cancel dialog"))
 
 		return nil, errDialog
 	}
