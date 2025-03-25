@@ -69,7 +69,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(ctx, resp)
+					return reply.CliResponse(ctx, *resp)
 				}),
 			},
 			{
@@ -92,7 +92,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(ctx, resp)
+					return reply.CliResponse(ctx, *resp)
 				}),
 			},
 			{
@@ -104,7 +104,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(ctx, resp)
+					return reply.CliResponse(ctx, *resp)
 				}),
 			},
 			{
@@ -124,7 +124,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(ctx, resp)
+					return reply.CliResponse(ctx, *resp)
 				}),
 			},
 			{
@@ -150,7 +150,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(ctx, resp)
+					return reply.CliResponse(ctx, *resp)
 				}),
 			},
 			{
@@ -206,7 +206,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
-					return reply.CliResponse(ctx, resp)
+					return reply.CliResponse(ctx, *resp)
 				}),
 			},
 			{
@@ -224,7 +224,7 @@ func CommandList() *cli.Command {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(ctx, resp)
+							return reply.CliResponse(ctx, *resp)
 						}),
 					},
 					{
@@ -236,7 +236,7 @@ func CommandList() *cli.Command {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(ctx, resp)
+							return reply.CliResponse(ctx, *resp)
 						}),
 					},
 					{
@@ -248,7 +248,7 @@ func CommandList() *cli.Command {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(ctx, resp)
+							return reply.CliResponse(ctx, *resp)
 						}),
 					},
 					{
@@ -276,7 +276,7 @@ func CommandList() *cli.Command {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
 
-							return reply.CliResponse(ctx, resp)
+							return reply.CliResponse(ctx, *resp)
 						}),
 					},
 				},
