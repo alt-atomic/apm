@@ -206,7 +206,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf(lib.T_("deletion dialog canceled"))
+		errDialog := fmt.Errorf(lib.T_("deletion dialog cancelled"))
 
 		return a.newErrorResponse(errDialog.Error()), errDialog
 	}
@@ -414,7 +414,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf(lib.T_("Cancel delition dialog"))
+		errDialog := fmt.Errorf(lib.T_("Cancel deletion dialog"))
 
 		return a.newErrorResponse(errDialog.Error()), errDialog
 	}
@@ -623,7 +623,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := lib.T_("You need to specify the package name, e.g., search package")
+		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "search")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -767,7 +767,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int6
 // checkRoot проверяет, запущен ли установщик от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() != 0 {
-		return fmt.Errorf(lib.T_("Administrator privileges are required to perform this action. Use sudo or su"))
+		return fmt.Errorf(lib.T_("Elevated rights are required to perform this action. Please use sudo or su"))
 	}
 
 	if lib.Env.IsAtomic {

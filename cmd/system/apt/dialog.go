@@ -82,12 +82,12 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 
 	if m, ok := finalModel.(model); ok {
 		if m.canceled || m.choice == "" {
-			return false, fmt.Errorf(lib.T_("Operation canceled"))
+			return false, fmt.Errorf(lib.T_("Operation cancelled"))
 		}
 		return m.choice == lib.T_("Install") || m.choice == lib.T_("Remove") || m.choice == lib.T_("Edit"), nil
 	}
 
-	return false, fmt.Errorf(lib.T_("Operation canceled"))
+	return false, fmt.Errorf(lib.T_("Operation cancelled"))
 }
 
 func (m model) Init() tea.Cmd {
@@ -282,7 +282,7 @@ func (m model) buildContent() string {
 		sb.WriteString("\n" + formatLine(lib.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine(lib.T_("Action"), m.statusPackage(pkg.Name), keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine(lib.T_("Category"), pkg.Section, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(lib.T_("Mainteiner"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Maintainer"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine(lib.T_("Installed"), installedText, keyWidth, keyStyle, valueStyle))
 
 		if pkg.Installed {

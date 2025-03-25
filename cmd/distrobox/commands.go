@@ -122,7 +122,7 @@ func CommandList() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: lib.T_("Field for sorting, e.g.: name, version"),
+						Usage: lib.T_("Field for sorting, for example: name, version"),
 					},
 					&cli.StringFlag{
 						Name:  "order",

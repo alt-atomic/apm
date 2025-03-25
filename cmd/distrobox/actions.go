@@ -81,7 +81,7 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := lib.T_("You must specify the package name, e.g., info package")
+		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "info")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
@@ -121,7 +121,7 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := lib.T_("You must specify the package name, e.g., search package")
+		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "search")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -235,7 +235,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := lib.T_("You must specify the package name, e.g., install package")
+		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "install")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -285,7 +285,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := lib.T_("You must specify the package name, e.g., remove package")
+		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "remove")
 		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -529,7 +529,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 // checkRoot проверяет, запущен ли apm от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() == 0 {
-		return fmt.Errorf(lib.T_("The requested command cannot be executed as root, please do not use sudo/su"))
+		return fmt.Errorf(lib.T_("Elevated rights are required to perform this action. Please use sudo or su"))
 	}
 
 	return nil

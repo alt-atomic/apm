@@ -17,6 +17,7 @@
 package lib
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 
@@ -85,22 +86,25 @@ func InitConfig() {
 
 	// Если найден конфигурационный файл, читаем его
 	if configPath != "" {
-		cleanenv.ReadConfig(configPath, &Env)
+		err := cleanenv.ReadConfig(configPath, &Env)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Проверяем и создаём путь для лог-файла
 	if err := EnsurePath(Env.PathLogFile); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Проверяем и создаём путь для db-файла sql
 	if err := EnsurePath(Env.PathDBSQL); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Проверяем и создаём путь для db-директории key-value
 	if err := EnsureDir(Env.PathDBKV); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	if _, errAtomic := os.Stat("/usr/bin/bootc"); os.IsNotExist(errAtomic) {
