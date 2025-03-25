@@ -185,7 +185,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 					diffPackageFound = true
 					err = a.serviceHostConfig.AddRemovePackage(removedPkg)
 					if err != nil {
-						return nil, nil
+						return nil, err
 					}
 				}
 			}
@@ -390,7 +390,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 					diffPackageFound = true
 					err = a.serviceHostConfig.AddInstallPackage(cleanName)
 					if err != nil {
-						return nil, nil
+						return nil, err
 					}
 				}
 			}
@@ -695,12 +695,12 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 
 	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	err = a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.Config)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	imageStatus, err := a.getImageStatus(ctx)
@@ -728,12 +728,12 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 
 	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	err = a.serviceHostConfig.GenerateDockerfile()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	imageStatus, err := a.getImageStatus(ctx)
