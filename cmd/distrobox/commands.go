@@ -56,7 +56,7 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    lib.T_("Container name"),
+						Usage:    lib.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
@@ -77,7 +77,7 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    lib.T_("Container name. Must be specified"),
+						Usage:    lib.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
@@ -202,7 +202,7 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    lib.T_("Container name. Must be specified"),
+						Usage:    lib.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
