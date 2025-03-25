@@ -65,7 +65,7 @@ func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHis
 	)`, h.historyTableName)
 
 	if _, err := h.dbConn.Exec(createQuery); err != nil {
-		return fmt.Errorf(lib.T_("Error creating table: %v"), err)
+		return fmt.Errorf(lib.T_("Error creating table: %w"), err)
 	}
 
 	// Сериализуем конфиг в JSON-строку.
