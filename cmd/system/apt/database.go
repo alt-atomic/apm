@@ -201,7 +201,7 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 		&installed,
 	)
 	if err != nil {
-		return Package{}, fmt.Errorf(lib.T_("Transaction commit error: %w"), packageName)
+		return Package{}, fmt.Errorf(lib.T_("failed to get information about package %s"), packageName)
 	}
 
 	// Преобразуем строку зависимостей в срез.
