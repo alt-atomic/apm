@@ -78,57 +78,61 @@ type ImageStatus struct {
 }
 
 // CheckRemove проверяем пакеты перед удалением
-func (a *Actions) CheckRemove(ctx context.Context, packages []string) (reply.APIResponse, error) {
+func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
 	criticalError := apt.FindCriticalError(aptErrors)
 	if criticalError != nil {
-		return a.newErrorResponse(criticalError.Error()), criticalError
+		return nil, criticalError
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": lib.T_("Verification information"),
 			"info":    packageParse,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // CheckInstall проверяем пакеты перед установкой
-func (a *Actions) CheckInstall(ctx context.Context, packages []string) (reply.APIResponse, error) {
+func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
 	criticalError := apt.FindCriticalError(aptErrors)
 	if criticalError != nil {
-		return a.newErrorResponse(criticalError.Error()), criticalError
+		return nil, criticalError
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": lib.T_("Inspection information"),
 			"info":    packageParse,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	err = a.validateDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	if len(packages) == 0 {
 		errPackageNotFound := fmt.Errorf(lib.T_("At least one package must be specified, for example, remove package"))
 
-		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
+		return nil, errPackageNotFound
 	}
 
 	var names []string
@@ -136,7 +140,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	for _, pkg := range packages {
 		packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, pkg)
 		if err != nil {
-			return a.newErrorResponse(err.Error()), err
+			return nil, err
 		}
 
 		packagesInfo = append(packagesInfo, packageInfo)
@@ -147,7 +151,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
 	criticalError := apt.FindCriticalError(aptErrors)
 	if criticalError != nil {
-		return a.newErrorResponse(criticalError.Error()), criticalError
+		return nil, criticalError
 	}
 
 	// Достанем все кастомные ошибки apt
@@ -173,7 +177,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 			diffPackageFound := false
 			err = a.serviceHostConfig.LoadConfig()
 			if err != nil {
-				return newErrorResponse(err.Error()), nil
+				return nil, err
 			}
 
 			for _, removedPkg := range alreadyRemovedPackages {
@@ -181,7 +185,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 					diffPackageFound = true
 					err = a.serviceHostConfig.AddRemovePackage(removedPkg)
 					if err != nil {
-						return newErrorResponse(err.Error()), nil
+						return nil, nil
 					}
 				}
 			}
@@ -189,26 +193,26 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 			if diffPackageFound {
 				err = a.applyChange(ctx, packages, false)
 				if err != nil {
-					return a.newErrorResponse(err.Error()), err
+					return nil, err
 				}
 
 				messageNothingDo += lib.T_(".\nA difference in the package list was found in the local configuration, the image has been updated")
 			}
 		}
 
-		return a.newErrorResponse(messageNothingDo), fmt.Errorf(messageNothingDo)
+		return nil, fmt.Errorf(messageNothingDo)
 	}
 
 	reply.StopSpinner()
 	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, apt.ActionRemove)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	if !dialogStatus {
 		errDialog := fmt.Errorf(lib.T_("deletion dialog cancelled"))
 
-		return a.newErrorResponse(errDialog.Error()), errDialog
+		return nil, errDialog
 	}
 
 	reply.CreateSpinner()
@@ -219,28 +223,28 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 		if errors.As(criticalError, &matchedErr) && matchedErr.NeedUpdate() {
 			_, err = a.serviceAptActions.Update(ctx)
 			if err != nil {
-				return newErrorResponse(err.Error()), err
+				return nil, err
 			}
 
 			errAptRepo := fmt.Errorf(lib.T_("A communication error with the repository occurred. The package list has been updated, please try running the command again"))
 
-			return a.newErrorResponse(errAptRepo.Error()), errAptRepo
+			return nil, errAptRepo
 		}
 
-		return a.newErrorResponse(criticalError.Error()), criticalError
+		return nil, criticalError
 	}
 
 	removePackageNames := strings.Join(packageParse.RemovedPackages, ",")
 	err = a.updateAllPackagesDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	messageAnswer := fmt.Sprintf(lib.TN_("%s removed successfully", "%s removed successfully", packageParse.RemovedCount), removePackageNames)
 	if apply {
 		err = a.applyChange(ctx, packages, false)
 		if err != nil {
-			return a.newErrorResponse(err.Error()), err
+			return nil, err
 		}
 		messageAnswer += lib.T_(". The system image has been modified")
 	}
@@ -249,31 +253,33 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (re
 		messageAnswer += lib.T_(". The system image has not been modified! To apply changes, run with the -a flag")
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": messageAnswer,
 			"info":    packageParse,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	err = a.validateDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	if len(packages) == 0 {
 		errPackageNotFound := fmt.Errorf(lib.T_("You must specify at least one package, for example, remove package"))
 
-		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
+		return nil, errPackageNotFound
 	}
 
 	isMultiInstall := false
@@ -304,12 +310,12 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 			alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
 			if errFind != nil {
-				return a.newErrorResponse(errFind.Error()), errFind
+				return nil, errFind
 			}
 
 			if len(alternativePackages) == 0 {
 				errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), originalPkg)
-				return a.newErrorResponse(errorFindPackage), fmt.Errorf(errorFindPackage)
+				return nil, fmt.Errorf(errorFindPackage)
 			}
 
 			var altNames []string
@@ -321,7 +327,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 			errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
 
-			return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
+			return nil, errPackageNotFound
 		}
 		packagesInfo = append(packagesInfo, packageInfo)
 		packageNames = append(packageNames, originalPkg)
@@ -331,7 +337,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
 	criticalError := apt.FindCriticalError(aptErrors)
 	if criticalError != nil {
-		return a.newErrorResponse(criticalError.Error()), criticalError
+		return nil, criticalError
 	}
 
 	// Достанем все кастомные ошибки apt
@@ -364,7 +370,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			diffPackageFound := false
 			err = a.serviceHostConfig.LoadConfig()
 			if err != nil {
-				return newErrorResponse(err.Error()), nil
+				return nil, err
 			}
 
 			for _, removedPkg := range alreadyRemovedPackages {
@@ -373,7 +379,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 					diffPackageFound = true
 					err = a.serviceHostConfig.AddRemovePackage(cleanName)
 					if err != nil {
-						return newErrorResponse(err.Error()), nil
+						return nil, err
 					}
 				}
 			}
@@ -384,7 +390,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 					diffPackageFound = true
 					err = a.serviceHostConfig.AddInstallPackage(cleanName)
 					if err != nil {
-						return newErrorResponse(err.Error()), nil
+						return nil, nil
 					}
 				}
 			}
@@ -392,14 +398,14 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 			if diffPackageFound {
 				err = a.applyChange(ctx, packages, true)
 				if err != nil {
-					return a.newErrorResponse(err.Error()), err
+					return nil, err
 				}
 
 				messageNothingDo += lib.T_("Found a discrepancy in the package list in the local configuration, the image has been updated")
 			}
 		}
 
-		return a.newErrorResponse(messageNothingDo), fmt.Errorf(messageNothingDo)
+		return nil, fmt.Errorf(messageNothingDo)
 	}
 
 	reply.StopSpinner()
@@ -410,13 +416,13 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 
 	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, dialogAction)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	if !dialogStatus {
 		errDialog := fmt.Errorf(lib.T_("Cancel deletion dialog"))
 
-		return a.newErrorResponse(errDialog.Error()), errDialog
+		return nil, errDialog
 	}
 
 	reply.CreateSpinner()
@@ -428,20 +434,20 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		if errors.As(criticalError, &matchedErr) && matchedErr.NeedUpdate() {
 			_, err = a.serviceAptActions.Update(ctx)
 			if err != nil {
-				return newErrorResponse(err.Error()), err
+				return nil, err
 			}
 
 			errAptRepo := fmt.Errorf(lib.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
 
-			return a.newErrorResponse(errAptRepo.Error()), errAptRepo
+			return nil, errAptRepo
 		}
 
-		return a.newErrorResponse(criticalError.Error()), criticalError
+		return nil, criticalError
 	}
 
 	err = a.updateAllPackagesDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	messageAnswer := fmt.Sprintf(
@@ -453,7 +459,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 	if apply {
 		err = a.applyChange(ctx, packageNames, true)
 		if err != nil {
-			return a.newErrorResponse(err.Error()), err
+			return nil, err
 		}
 
 		messageAnswer += lib.T_(". The system image has been changed.")
@@ -463,52 +469,56 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (r
 		messageAnswer += lib.T_(". The system image has not been changed! To apply changes, you need to run with the -a flag.")
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": messageAnswer,
 			"info":    packageParse,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // Update обновляет информацию или базу данных пакетов.
-func (a *Actions) Update(ctx context.Context) (reply.APIResponse, error) {
+func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	err = a.validateDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	packages, err := a.serviceAptActions.Update(ctx)
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": lib.T_("Package list updated successfully"),
 			"count":   len(packages),
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // Info возвращает информацию о системном пакете.
-func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (reply.APIResponse, error) {
+func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (*reply.APIResponse, error) {
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := lib.T_("Package name must be specified, for example info package")
-		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
+		return nil, fmt.Errorf(errMsg)
 	}
 
 	err := a.validateDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
@@ -519,12 +529,12 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 
 		alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
 		if errFind != nil {
-			return a.newErrorResponse(err.Error()), errFind
+			return nil, errFind
 		}
 
 		if len(alternativePackages) == 0 {
 			errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), packageName)
-			return a.newErrorResponse(errorFindPackage), fmt.Errorf(errorFindPackage)
+			return nil, fmt.Errorf(errorFindPackage)
 		}
 
 		var altNames []string
@@ -536,16 +546,18 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 
 		errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
 
-		return a.newErrorResponse(errPackageNotFound.Error()), errPackageNotFound
+		return nil, errPackageNotFound
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     lib.T_("Package found"),
 			"packageInfo": a.FormatPackageOutput(packageInfo, isFullFormat),
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // ListParams задаёт параметры для запроса списка пакетов.
@@ -558,16 +570,16 @@ type ListParams struct {
 	ForceUpdate bool     `json:"forceUpdate"`
 }
 
-func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool) (reply.APIResponse, error) {
+func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool) (*reply.APIResponse, error) {
 	if params.ForceUpdate {
 		_, err := a.serviceAptActions.Update(ctx)
 		if err != nil {
-			return a.newErrorResponse(err.Error()), err
+			return nil, err
 		}
 	}
 	err := a.validateDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	// Формируем фильтры (map[string]interface{})
@@ -590,178 +602,190 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 
 	totalCount, err := a.serviceAptDatabase.CountHostImagePackages(ctx, filters)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	packages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, params.Sort, params.Order, params.Limit, params.Offset)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	if len(packages) == 0 {
-		return a.newErrorResponse(lib.T_("Nothing found")), fmt.Errorf(lib.T_("Nothing found"))
+		return nil, fmt.Errorf(lib.T_("Nothing found"))
 	}
 
 	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
 			"packages":   a.FormatPackageOutput(packages, isFullFormat),
 			"totalCount": int(totalCount),
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // Search осуществляет поиск системного пакета по названию.
-func (a *Actions) Search(ctx context.Context, packageName string, installed bool, isFullFormat bool) (reply.APIResponse, error) {
+func (a *Actions) Search(ctx context.Context, packageName string, installed bool, isFullFormat bool) (*reply.APIResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "search")
-		return a.newErrorResponse(errMsg), fmt.Errorf(errMsg)
+		return nil, fmt.Errorf(errMsg)
 	}
 
 	packages, err := a.serviceAptDatabase.SearchPackagesByName(ctx, packageName, installed)
 	if err != nil {
-		return a.newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	if len(packages) == 0 {
-		return a.newErrorResponse(lib.T_("Nothing found")), fmt.Errorf(lib.T_("Nothing found"))
+		return nil, fmt.Errorf(lib.T_("Nothing found"))
 	}
 
 	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":  msg,
 			"packages": a.FormatPackageOutput(packages, isFullFormat),
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // ImageStatus возвращает статус актуального образа
-func (a *Actions) ImageStatus(ctx context.Context) (reply.APIResponse, error) {
+func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     lib.T_("Image status"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // ImageUpdate обновляет образ.
-func (a *Actions) ImageUpdate(ctx context.Context) (reply.APIResponse, error) {
+func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
-		return newErrorResponse(err.Error()), nil
+		return nil, nil
 	}
 
 	err = a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.Config)
 	if err != nil {
-		return newErrorResponse(err.Error()), nil
+		return nil, nil
 	}
 
 	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     lib.T_("Command executed successfully"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // ImageApply применить изменения к хосту
-func (a *Actions) ImageApply(ctx context.Context) (reply.APIResponse, error) {
+func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
-		return newErrorResponse(err.Error()), nil
+		return nil, nil
 	}
 
 	err = a.serviceHostConfig.GenerateDockerfile()
 	if err != nil {
-		return newErrorResponse(err.Error()), nil
+		return nil, nil
 	}
 
 	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, true)
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     lib.T_("Changes applied successfully. A reboot is required"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // ImageHistory история изменений образа
-func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int64, offset int64) (reply.APIResponse, error) {
+func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int64, offset int64) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	history, err := a.serviceHostDatabase.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	totalCount, err := a.serviceHostDatabase.CountImageHistoriesFiltered(ctx, imageName)
 	if err != nil {
-		return newErrorResponse(err.Error()), err
+		return nil, err
 	}
 
 	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(history)), len(history))
 
-	return reply.APIResponse{
+	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
 			"history":    history,
 			"totalCount": totalCount,
 		},
 		Error: false,
-	}, nil
+	}
+
+	return &resp, nil
 }
 
 // checkRoot проверяет, запущен ли установщик от имени root
@@ -835,14 +859,6 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 	}
 
 	return nil
-}
-
-// newErrorResponse создаёт ответ с ошибкой.
-func (a *Actions) newErrorResponse(message string) reply.APIResponse {
-	return reply.APIResponse{
-		Data:  map[string]interface{}{"message": message},
-		Error: true,
-	}
 }
 
 // validateDB проверяет, существует ли база данных
