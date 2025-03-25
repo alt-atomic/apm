@@ -80,7 +80,7 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "apply",
-						Usage:   lib.T_("Apply to the image"),
+						Usage:   lib.T_("Apply to image"),
 						Aliases: []string{"a"},
 						Value:   false,
 						Hidden:  !lib.Env.IsAtomic,
