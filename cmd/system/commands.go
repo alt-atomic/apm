@@ -253,7 +253,7 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "history",
-						Usage: lib.T_("Image change history"),
+						Usage: lib.T_("Image changes history"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "image",
