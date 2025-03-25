@@ -203,6 +203,8 @@ func getTaskText(task string) string {
 		return lib.T_("Filtering packages")
 	case "system.Working":
 		return lib.T_("Working with packages")
+	case "system.Upgrade":
+		return lib.T_("System update")
 	case "system.Check":
 		return lib.T_("Analyzing packages")
 	case "system.Update":

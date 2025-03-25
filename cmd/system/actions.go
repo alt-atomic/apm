@@ -234,7 +234,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 		return nil, criticalError
 	}
 
-	removePackageNames := strings.Join(packageParse.RemovedPackages, ",")
+	removePackageNames := strings.Join(packageParse.RemovedPackages, ", ")
 	err = a.updateAllPackagesDB(ctx)
 	if err != nil {
 		return nil, err
@@ -451,8 +451,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	messageAnswer := fmt.Sprintf(
-		"%s %s",
+		"%s %s %s",
 		fmt.Sprintf(lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+		lib.T_("and"),
 		fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
 	)
 
@@ -501,6 +502,77 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 		Data: map[string]interface{}{
 			"message": lib.T_("Package list updated successfully"),
 			"count":   len(packages),
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
+// Upgrade общее обновление системы
+func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = a.serviceAptActions.Update(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	packageParse, aptErrors := a.serviceAptActions.Check(ctx, "", "dist-upgrade")
+	criticalError := apt.FindCriticalError(aptErrors)
+	if criticalError != nil {
+		return nil, criticalError
+	}
+
+	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
+		return &reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": lib.T_("The operation will not make any changes"),
+			},
+			Error: false,
+		}, nil
+	}
+
+	reply.StopSpinner()
+
+	dialogStatus, err := apt.NewDialog([]apt.Package{}, packageParse, apt.ActionUpgrade)
+	if err != nil {
+		return nil, err
+	}
+
+	if !dialogStatus {
+		errDialog := fmt.Errorf(lib.T_("Cancel dialog"))
+
+		return nil, errDialog
+	}
+
+	reply.CreateSpinner()
+
+	errUpgrade := a.serviceAptActions.Upgrade(ctx)
+	criticalError = apt.FindCriticalError(errUpgrade)
+	if criticalError != nil {
+		return nil, criticalError
+	}
+
+	messageAnswer := fmt.Sprintf(
+		"%s %s %s",
+		fmt.Sprintf(lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+		lib.T_("and"),
+		fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
+	)
+
+	resp := reply.APIResponse{
+		Data: map[string]interface{}{
+			"message": lib.T_("The system has been upgrade successfully"),
+			"result":  messageAnswer,
 		},
 		Error: false,
 	}

@@ -35,6 +35,7 @@ const (
 	ActionInstall DialogAction = iota
 	ActionRemove
 	ActionMultiInstall
+	ActionUpgrade
 )
 
 var choices []string
@@ -62,6 +63,8 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 		choices = []string{lib.T_("Install"), lib.T_("Abort")}
 	case ActionRemove:
 		choices = []string{lib.T_("Remove"), lib.T_("Abort")}
+	case ActionUpgrade:
+		choices = []string{lib.T_("Upgrade"), lib.T_("Abort")}
 	}
 
 	m := model{
@@ -84,7 +87,8 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 		if m.canceled || m.choice == "" {
 			return false, fmt.Errorf(lib.T_("Operation cancelled"))
 		}
-		return m.choice == lib.T_("Install") || m.choice == lib.T_("Remove") || m.choice == lib.T_("Edit"), nil
+
+		return m.choice == lib.T_("Install") || m.choice == lib.T_("Remove") || m.choice == lib.T_("Edit") || m.choice == lib.T_("Upgrade"), nil
 	}
 
 	return false, fmt.Errorf(lib.T_("Operation cancelled"))
@@ -264,11 +268,13 @@ func (m model) buildContent() string {
 	})
 
 	var sb strings.Builder
-	const keyWidth = 21
+	const keyWidth = 22
 
-	infoPackage := fmt.Sprintf("\n%s\n", lib.TN_("Package information:", "Packages information:", len(m.pkg)))
+	if m.choiceType != ActionUpgrade {
+		infoPackage := fmt.Sprintf("\n%s\n", lib.TN_("Package information:", "Packages information:", len(m.pkg)))
+		sb.WriteString(titleStyle.Render(infoPackage))
+	}
 
-	sb.WriteString(titleStyle.Render(infoPackage))
 	for i, pkg := range m.pkg {
 		if len(m.pkg) > 1 {
 			sb.WriteString(titleStyle.Render("\n"))
@@ -306,7 +312,7 @@ func (m model) buildContent() string {
 		sb.WriteString("\n" + formatLine(lib.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
 	}
 
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s", lib.T_("Affected changes:"))))
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", lib.T_("Affected changes:"))))
 	extraStr := formatDependencies(m.pckChange.ExtraInstalled)
 	upgradeStr := formatDependencies(m.pckChange.UpgradedPackages)
 	installStr := formatDependencies(m.pckChange.NewInstalledPackages)
@@ -321,7 +327,7 @@ func (m model) buildContent() string {
 	packageRemovedCount := fmt.Sprintf(lib.TN_("%d package", "%d packages", m.pckChange.RemovedCount), m.pckChange.RemovedCount)
 	packageNotUpgradedCount := fmt.Sprintf(lib.TN_("%d package", "%d packages", m.pckChange.NotUpgradedCount), m.pckChange.NotUpgradedCount)
 
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n", lib.T_("Total:"))))
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", lib.T_("Total:"))))
 	sb.WriteString("\n" + formatLine(lib.T_("Will be updated"), packageUpgradedCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(lib.T_("Will be installed"), packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(lib.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
@@ -382,7 +388,12 @@ func formatDependencies(depends []string) string {
 			sb.WriteString("\n")
 		}
 	}
-	return sb.String()
+
+	// Убираем последний перевод строки
+	resultStr := sb.String()
+	resultStr = strings.TrimSuffix(resultStr, "\n")
+
+	return resultStr
 }
 
 func formatLine(key, value string, keyWidth int, keyStyle, valueStyle lipgloss.Style) string {

@@ -75,7 +75,6 @@ func CommandList() *cli.Command {
 			{
 				Name:      "remove",
 				Usage:     lib.T_("List of packages to remove"),
-				Aliases:   []string{"rm"},
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -100,6 +99,19 @@ func CommandList() *cli.Command {
 				Usage: lib.T_("Updating package database"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
 					resp, err := NewActions().Update(ctx)
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+
+					return reply.CliResponse(ctx, *resp)
+				}),
+			},
+			{
+				Name:   "upgrade",
+				Usage:  lib.T_("General system upgrade"),
+				Hidden: lib.Env.IsAtomic,
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+					resp, err := NewActions().Upgrade(ctx)
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

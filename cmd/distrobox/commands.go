@@ -198,7 +198,6 @@ func CommandList() *cli.Command {
 				Name:      "remove",
 				Usage:     lib.T_("Remove package"),
 				ArgsUsage: "package",
-				Aliases:   []string{"rm"},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",

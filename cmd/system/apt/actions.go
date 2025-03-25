@@ -251,6 +251,22 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 	return nil
 }
 
+func (a *Actions) Upgrade(ctx context.Context) []error {
+	syncAptMutex.Lock()
+	defer syncAptMutex.Unlock()
+
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Upgrade"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Upgrade"))
+
+	command := fmt.Sprintf("%s apt-get -y dist-upgrade", lib.Env.CommandPrefix)
+	err := a.commandWithProgress(ctx, command, typeRemove)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, []error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))

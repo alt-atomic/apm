@@ -947,9 +947,9 @@ msgstr ""
 #, c-format
 msgid "%s removed successfully"
 msgid_plural "%s removed successfully"
-msgstr[0] "%s успешно удаленоы"
-msgstr[1] "%s успешно удалено"
-msgstr[2] "%s успешно удалено"
+msgstr[0] "%s успешно удалён"
+msgstr[1] "%s успешно удалены"
+msgstr[2] "%s успешно удалены"
 
 #: cmd/system/actions.go:249
 msgid ". The system image has been modified"
@@ -1000,9 +1000,9 @@ msgstr ""
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
-msgstr[0] "%d пакет удалён успешно"
-msgstr[1] "%d пакета удалёно успешно"
-msgstr[2] "%d пакетов удалёно успешно"
+msgstr[0] "%d пакет успешно установлен"
+msgstr[1] "%d пакета успешно установлено"
+msgstr[2] "%d пакетов успешно установлено"
 
 #: cmd/system/actions.go:456
 #, c-format
@@ -1066,7 +1066,7 @@ msgstr "Установка"
 
 #: cmd/system/apt/actions.go:157
 msgid "Removal"
-msgstr "Удаляемое"
+msgstr "Удаление"
 
 #: cmd/system/apt/actions.go:159
 msgid "Change"
@@ -1567,7 +1567,7 @@ msgstr "Управление системными пакетами"
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
-"Список пакетов для установки. Формат package- и package+ поддерживаются"
+"Список пакетов для установки. Формат package- и package+ поддерживается"
 
 #: cmd/system/commands.go:60 cmd/system/commands.go:83
 msgid "Apply to image"
