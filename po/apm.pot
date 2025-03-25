@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-25 17:37+0300\n"
+"POT-Creation-Date: 2025-03-25 23:11+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -500,7 +500,7 @@ msgid "Package list successfully updated"
 msgstr ""
 
 #: cmd/distrobox/actions.go:84 cmd/distrobox/actions.go:124
-#: cmd/distrobox/actions.go:238 cmd/distrobox/actions.go:288
+#: cmd/distrobox/actions.go:238 cmd/distrobox/actions.go:289
 #: cmd/system/actions.go:640
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
@@ -519,47 +519,47 @@ msgid_plural "%d records found"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/distrobox/actions.go:265
+#: cmd/distrobox/actions.go:266
 #, c-format
 msgid "Package %s installed"
 msgstr ""
 
-#: cmd/distrobox/actions.go:317
+#: cmd/distrobox/actions.go:318
 #, c-format
 msgid "Package %s removed"
 msgstr ""
 
-#: cmd/distrobox/actions.go:358
+#: cmd/distrobox/actions.go:359
 msgid "You must specify the image link (--image)"
 msgstr ""
 
-#: cmd/distrobox/actions.go:363 cmd/distrobox/actions.go:392
+#: cmd/distrobox/actions.go:364 cmd/distrobox/actions.go:393
 msgid "You must specify the container name (--name)"
 msgstr ""
 
-#: cmd/distrobox/actions.go:374
+#: cmd/distrobox/actions.go:375
 #, c-format
 msgid "Container %s successfully created"
 msgstr ""
 
-#: cmd/distrobox/actions.go:403
+#: cmd/distrobox/actions.go:404
 #, c-format
 msgid "Container %s successfully deleted"
 msgstr ""
 
-#: cmd/distrobox/actions.go:411
+#: cmd/distrobox/actions.go:412
 msgid "Error deleting container: %v"
 msgstr ""
 
-#: cmd/distrobox/actions.go:489
+#: cmd/distrobox/actions.go:490
 msgid "You must specify the container name"
 msgstr ""
 
-#: cmd/distrobox/actions.go:498
+#: cmd/distrobox/actions.go:499
 msgid "Failed to delete container records: %w"
 msgstr ""
 
-cmd/distrobox/actions.go:522 cmd/system/actions.go:794
+#: cmd/distrobox/actions.go:523 cmd/system/actions.go:794
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -914,8 +914,8 @@ msgid ""
 "image has been updated"
 msgstr ""
 
-cmd/system/actions.go:213
-msgid "deletion dialog cancelled"
+#: cmd/system/actions.go:213 cmd/system/actions.go:423
+msgid "Cancel dialog"
 msgstr ""
 
 #: cmd/system/actions.go:229
@@ -962,10 +962,6 @@ msgstr ""
 msgid ""
 "Found a discrepancy in the package list in the local configuration, the "
 "image has been updated"
-msgstr ""
-
-#: cmd/system/actions.go:423
-msgid "Cancel deletion dialog"
 msgstr ""
 
 #: cmd/system/actions.go:440

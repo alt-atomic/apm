@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-25 17:37+0300\n"
+"POT-Creation-Date: 2025-03-25 23:11+0600\n"
 "PO-Revision-Date: 2025-03-25 17:42+0300\n"
 "Last-Translator: David Sultaniiazov <x1z53@alt-gnome.ru>\n"
 "Language-Team: Russian\n"
@@ -502,19 +502,19 @@ msgid "Package list successfully updated"
 msgstr "Список пакетов успешно обновлён"
 
 #: cmd/distrobox/actions.go:84 cmd/distrobox/actions.go:124
-#: cmd/distrobox/actions.go:238 cmd/distrobox/actions.go:288
-#: cmd/system/actions.go:626
+#: cmd/distrobox/actions.go:238 cmd/distrobox/actions.go:289
+#: cmd/system/actions.go:640
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr "Необходимо указать имя пакета, к примеру `%s package`"
 
-#: cmd/distrobox/actions.go:93 cmd/system/actions.go:544
+#: cmd/distrobox/actions.go:93 cmd/system/actions.go:554
 msgid "Package found"
 msgstr "Пакет найден"
 
 #: cmd/distrobox/actions.go:133 cmd/distrobox/actions.go:212
-#: cmd/system/actions.go:605 cmd/system/actions.go:639
-#: cmd/system/actions.go:755
+#: cmd/system/actions.go:617 cmd/system/actions.go:653
+#: cmd/system/actions.go:777
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -522,51 +522,47 @@ msgstr[0] "%d запись найдена"
 msgstr[1] "%d записи найдено"
 msgstr[2] "%d записей найдено"
 
-#: cmd/distrobox/actions.go:265
+#: cmd/distrobox/actions.go:266
 #, c-format
 msgid "Package %s installed"
 msgstr "Пакет %s установлен"
 
-#: cmd/distrobox/actions.go:317
+#: cmd/distrobox/actions.go:318
 #, c-format
 msgid "Package %s removed"
 msgstr "Пакет %s удалён"
 
-#: cmd/distrobox/actions.go:358
+#: cmd/distrobox/actions.go:359
 msgid "You must specify the image link (--image)"
 msgstr "Необходимо указать ссылку на образ (--image)"
 
-#: cmd/distrobox/actions.go:363 cmd/distrobox/actions.go:392
+#: cmd/distrobox/actions.go:364 cmd/distrobox/actions.go:393
 msgid "You must specify the container name (--name)"
 msgstr "Необходимо указать имя контейнера (--name)"
 
-#: cmd/distrobox/actions.go:369
-msgid "Error creating container: %v"
-msgstr "Ошибка создания контейнера: %v"
-
-#: cmd/distrobox/actions.go:374
+#: cmd/distrobox/actions.go:375
 #, c-format
 msgid "Container %s successfully created"
 msgstr "Контейнер %s успешно создан"
 
-#: cmd/distrobox/actions.go:398 cmd/distrobox/actions.go:411
-msgid "Error deleting container: %v"
-msgstr "Ошибка удаления контейнера: %s"
-
-#: cmd/distrobox/actions.go:403
+#: cmd/distrobox/actions.go:404
 #, c-format
 msgid "Container %s successfully deleted"
 msgstr "Контейнер %s успешно удалён"
 
-#: cmd/distrobox/actions.go:499
+#: cmd/distrobox/actions.go:412
+msgid "Error deleting container: %v"
+msgstr "Ошибка удаления контейнера: %s"
+
+#: cmd/distrobox/actions.go:490
 msgid "You must specify the container name"
 msgstr "Необходимо указать имя контейнера"
 
-#: cmd/distrobox/actions.go:508
+#: cmd/distrobox/actions.go:499
 msgid "Failed to delete container records: %w"
 msgstr "Не удалось удалить записи контейнера: %w"
 
-#: cmd/distrobox/actions.go:532 cmd/system/actions.go:770
+#: cmd/distrobox/actions.go:523 cmd/system/actions.go:794
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -912,19 +908,19 @@ msgstr "Не удалось извлечь установленные пакет
 msgid "Verification information"
 msgstr "Информация о верификации"
 
-#: cmd/system/actions.go:109
+#: cmd/system/actions.go:111
 msgid "Inspection information"
 msgstr "Информация об инспекции"
 
-#: cmd/system/actions.go:129
+#: cmd/system/actions.go:133
 msgid "At least one package must be specified, for example, remove package"
 msgstr "Должен быть указан хотя бы один пакет, к примеру, remove package"
 
-#: cmd/system/actions.go:163
+#: cmd/system/actions.go:167
 msgid "No candidates for removal found"
 msgstr "Кандидатов на удаление не найдено"
 
-#: cmd/system/actions.go:195
+#: cmd/system/actions.go:199
 msgid ""
 ".\n"
 "A difference in the package list was found in the local configuration, the "
@@ -934,11 +930,12 @@ msgstr ""
 "Была найдена разница в списке пакетов локальной конфигурации, образ будет "
 "обновлён"
 
-#: cmd/system/actions.go:209
-msgid "deletion dialog cancelled"
-msgstr "диалог удаления отменён"
+#: cmd/system/actions.go:213 cmd/system/actions.go:423
+#, fuzzy
+msgid "Cancel dialog"
+msgstr "Отмена диалога удаления"
 
-#: cmd/system/actions.go:225
+#: cmd/system/actions.go:229
 msgid ""
 "A communication error with the repository occurred. The package list has "
 "been updated, please try running the command again"
@@ -946,7 +943,7 @@ msgstr ""
 "Произошла ошибка связи с репозиторием. Список пакетов обновлён, пожалуйста, "
 "попробуйте запустить команду ещё раз"
 
-#: cmd/system/actions.go:239
+#: cmd/system/actions.go:243
 #, c-format
 msgid "%s removed successfully"
 msgid_plural "%s removed successfully"
@@ -954,11 +951,11 @@ msgstr[0] "%s успешно удаленоы"
 msgstr[1] "%s успешно удалено"
 msgstr[2] "%s успешно удалено"
 
-#: cmd/system/actions.go:245
+#: cmd/system/actions.go:249
 msgid ". The system image has been modified"
 msgstr ". Образ системы был модифицирован"
 
-#: cmd/system/actions.go:249
+#: cmd/system/actions.go:253
 msgid ""
 ". The system image has not been modified! To apply changes, run with the -a "
 "flag"
@@ -966,24 +963,24 @@ msgstr ""
 ". Образ системы не был модифицирован! Чтобы применить изменения, запустите с "
 "флагом -a"
 
-#: cmd/system/actions.go:274
+#: cmd/system/actions.go:280
 msgid "You must specify at least one package, for example, remove package"
 msgstr "Необходимо указать хотя бы один пакет, к примеру, remove package"
 
-#: cmd/system/actions.go:311 cmd/system/actions.go:526
+#: cmd/system/actions.go:317 cmd/system/actions.go:536
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr "Не удалось извлечь информацию о пакете %s"
 
-#: cmd/system/actions.go:320 cmd/system/actions.go:535
+#: cmd/system/actions.go:326 cmd/system/actions.go:545
 msgid ". Maybe you were looking for: "
 msgstr ". Возможно, имелось в виду:"
 
-#: cmd/system/actions.go:347
+#: cmd/system/actions.go:353
 msgid "The operation will not make any changes. Reasons: \n"
 msgstr "Операция не будет нести изменений. Причины:\n"
 
-#: cmd/system/actions.go:398
+#: cmd/system/actions.go:404
 msgid ""
 "Found a discrepancy in the package list in the local configuration, the "
 "image has been updated"
@@ -991,11 +988,7 @@ msgstr ""
 "Обнаружено несоответствие в списке пакетов локальной конфигурации, образ был "
 "обновлён"
 
-#: cmd/system/actions.go:417
-msgid "Cancel deletion dialog"
-msgstr "Отмена диалога удаления"
-
-#: cmd/system/actions.go:434
+#: cmd/system/actions.go:440
 msgid ""
 "A repository connection error occurred. The package list has been updated, "
 "please try running the command again"
@@ -1003,7 +996,7 @@ msgstr ""
 "Произошла ошибка при подключении к репозиторию. Список пакетов обновлён, "
 "пожалуйста, попробуйте запустить команду ещё раз"
 
-#: cmd/system/actions.go:449
+#: cmd/system/actions.go:455
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
@@ -1011,7 +1004,7 @@ msgstr[0] "%d пакет удалён успешно"
 msgstr[1] "%d пакета удалёно успешно"
 msgstr[2] "%d пакетов удалёно успешно"
 
-#: cmd/system/actions.go:450
+#: cmd/system/actions.go:456
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
@@ -1019,11 +1012,11 @@ msgstr[0] "%d обновлён"
 msgstr[1] "%d обновлено"
 msgstr[2] "%d обновлено"
 
-#: cmd/system/actions.go:459
+#: cmd/system/actions.go:465
 msgid ". The system image has been changed."
 msgstr ". Образ системы был изменён."
 
-#: cmd/system/actions.go:463
+#: cmd/system/actions.go:469
 msgid ""
 ". The system image has not been changed! To apply changes, you need to run "
 "with the -a flag."
@@ -1031,39 +1024,39 @@ msgstr ""
 ". Образ системы не был изменён! Для применения изменения выполните с флагом -"
 "a."
 
-#: cmd/system/actions.go:494
+#: cmd/system/actions.go:502
 msgid "Package list updated successfully"
 msgstr "Список пакетов успешно обновлён"
 
-#: cmd/system/actions.go:505
+#: cmd/system/actions.go:515
 msgid "Package name must be specified, for example info package"
 msgstr "Необходимо указать имя пакета, к примеру, info package"
 
-#: cmd/system/actions.go:602 cmd/system/actions.go:636
+#: cmd/system/actions.go:614 cmd/system/actions.go:650
 msgid "Nothing found"
 msgstr "Ничего не найдено"
 
-#: cmd/system/actions.go:664 cmd/system/commands.go:232
+#: cmd/system/actions.go:680 cmd/system/commands.go:232
 msgid "Image status"
 msgstr "Статус образа"
 
-#: cmd/system/actions.go:695
+#: cmd/system/actions.go:713
 msgid "Command executed successfully"
 msgstr "Команда успешно исполнена"
 
-#: cmd/system/actions.go:731
+#: cmd/system/actions.go:751
 msgid "Changes applied successfully. A reboot is required"
 msgstr "Изменения были успешно применены. Необходима перезагрука"
 
-#: cmd/system/actions.go:786
+#: cmd/system/actions.go:810
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: cmd/system/actions.go:897
+#: cmd/system/actions.go:913
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл:"
 
-#: cmd/system/actions.go:904
+#: cmd/system/actions.go:920
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
@@ -1126,10 +1119,14 @@ msgstr "Ошибка начала транзакции: %w"
 msgid "Batch insert error: %w"
 msgstr "Ошибка пакетной вставки: %w"
 
-#: cmd/system/apt/database.go:171 cmd/system/apt/database.go:204
-#: cmd/system/apt/database.go:282
+#: cmd/system/apt/database.go:171 cmd/system/apt/database.go:282
 msgid "Transaction commit error: %w"
 msgstr "Ошибка транзакции фиксации"
+
+#: cmd/system/apt/database.go:204
+#, fuzzy, c-format
+msgid "failed to get information about package %s"
+msgstr "Не удалось извлечь информацию о пакете %s"
 
 #: cmd/system/apt/database.go:247
 msgid "Temporary table creation error: %w"
@@ -1840,11 +1837,13 @@ msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выходным данным"
 
 #: main.go:99
-msgid "Start DBUS service com.application.APM"
+#, fuzzy
+msgid "Start session D-Bus service com.application.APM"
 msgstr "Запуск D-bus-сервиса com.application.APM"
 
 #: main.go:136
-msgid "Start the DBUS service com.application.APM"
+#, fuzzy
+msgid "Start system D-Bus service com.application.APM"
 msgstr "Запуск D-bus-сервиса com.application.APM"
 
 #: main.go:144
@@ -1870,6 +1869,15 @@ msgstr "Ошибка закрытия базы данных KV: "
 #: main.go:204
 msgid "Error closing SQL database: "
 msgstr "Ошибка закрытия базы данных SQL: "
+
+#~ msgid "Error creating container: %v"
+#~ msgstr "Ошибка создания контейнера: %v"
+
+#~ msgid "deletion dialog cancelled"
+#~ msgstr "диалог удаления отменён"
+
+#~ msgid "Start DBUS service com.application.APM"
+#~ msgstr "Запуск D-bus-сервиса com.application.APM"
 
 #~ msgid "You must specify the package name, e.g., info package"
 #~ msgstr "Необходимо указать имя пакета, к примеру, info package"
