@@ -260,6 +260,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		packageInfo.Package.Exporting = true
 		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", true)
 	}
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":     fmt.Sprintf(lib.T_("Package %s installed"), packageName),

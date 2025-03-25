@@ -452,8 +452,8 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 	messageAnswer := fmt.Sprintf(
 		"%s %s",
-		lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount),
-		lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount),
+		fmt.Sprintf(lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+		fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
 	)
 
 	if apply {
