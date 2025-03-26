@@ -672,7 +672,7 @@ msgstr ""
 
 #: cmd/distrobox/commands.go:148
 msgid "Force update all packages before the request"
-msgstr "Принудительное обновление всех пакетов до запроса"
+msgstr "Принудительное обновление всех пакетов перед запросом"
 
 #: cmd/distrobox/commands.go:173
 msgid "Install package"
