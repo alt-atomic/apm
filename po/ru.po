@@ -1295,12 +1295,12 @@ msgstr "Категория"
 #. Выводим "Версия в облаке" обычным стилем
 #: cmd/system/apt/dialog.go:296 cmd/system/apt/dialog.go:307
 msgid "Repository version"
-msgstr "Версия репозитория"
+msgstr "Версия в репозитории"
 
 #. Выводим "Версия в системе", уже с раскрашенным текстом
 #: cmd/system/apt/dialog.go:305
 msgid "System version"
-msgstr "Версия системы"
+msgstr "Версия в системе"
 
 #: cmd/system/apt/dialog.go:315
 msgid "Affected changes:"
@@ -1650,7 +1650,7 @@ msgstr "Обновление базы данных пакетов"
 
 #: cmd/system/commands.go:111
 msgid "General system upgrade"
-msgstr "Процесс общего обновления"
+msgstr "Общее обновление системы"
 
 #: cmd/system/commands.go:129
 msgid "Full output of information"
@@ -1775,7 +1775,7 @@ msgid ""
 "Failed to determine the distribution image, please specify it manually in "
 "the file: %s"
 msgstr ""
-"Не удалось определить образ дистрибутав, пожалуйста, укажите его вручную в "
+"Не удалось определить образ дистрибутива, пожалуйста, укажите его вручную в "
 "файле: %s"
 
 #: cmd/system/service/host.go:134
@@ -1885,11 +1885,11 @@ msgstr "Получен неожиданный сигнал %s. Завершен�
 
 #: main.go:71
 msgid "Output format: json, text"
-msgstr "Формат вывода: json, текст"
+msgstr "Формат вывода: json, text"
 
 #: main.go:77
 msgid "Internal property, adds the transaction to the output"
-msgstr "Внутреннее свойство, добавляющее транзакцию к выходным данным"
+msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
 #: main.go:84
 msgid "Start session D-Bus service com.application.APM"

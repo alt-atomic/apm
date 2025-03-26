@@ -268,7 +268,7 @@ func (m model) buildContent() string {
 	})
 
 	var sb strings.Builder
-	const keyWidth = 22
+	const keyWidth = 21
 
 	if m.choiceType != ActionUpgrade {
 		infoPackage := fmt.Sprintf("\n%s\n", lib.TN_("Package information:", "Packages information:", len(m.pkg)))
