@@ -37,6 +37,8 @@ func TranslateKey(key string) string {
 		return lib.T_("Booted Image")
 	case "removedPackages":
 		return lib.T_("Removed Packages")
+	case "provides":
+		return lib.T_("Provides")
 	case "providers":
 		return lib.T_("Providers")
 	case "version":

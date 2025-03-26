@@ -131,12 +131,12 @@ func CommandList() *cli.Command {
 					},
 					&cli.IntFlag{
 						Name:  "limit",
-						Usage: lib.T_("Selection limit"),
+						Usage: lib.T_("Maximum number of records to return"),
 						Value: 10,
 					},
 					&cli.IntFlag{
 						Name:  "offset",
-						Usage: lib.T_("Selection offset"),
+						Usage: lib.T_("Starting position (offset) for the result set"),
 						Value: 0,
 					},
 					&cli.StringSliceFlag{

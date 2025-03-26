@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-26 17:41+0600\n"
+"POT-Creation-Date: 2025-03-26 18:53+0600\n"
 "PO-Revision-Date: 2025-03-25 17:42+0300\n"
 "Last-Translator: David Sultaniiazov <x1z53@alt-gnome.ru>\n"
 "Language-Team: Russian\n"
@@ -246,7 +246,7 @@ msgstr "Процесс завершён"
 #: cmd/common/reply/preloader.go:328
 #, c-format
 msgid "Progress: %s completed"
-msgstr "Процесс: %s завершено"
+msgstr "Процесс: %s завершён"
 
 #: cmd/common/reply/response.go:109 cmd/common/reply/response.go:132
 #: cmd/common/reply/response.go:225 cmd/common/reply/response.go:251
@@ -296,7 +296,7 @@ msgstr "Установить"
 msgid "Storage Type"
 msgstr "Тип хранилища"
 
-#: cmd/common/reply/translate.go:23 cmd/common/reply/translate.go:73
+#: cmd/common/reply/translate.go:23 cmd/common/reply/translate.go:75
 msgid "Date"
 msgstr "Дата"
 
@@ -306,7 +306,7 @@ msgstr "Обзор образа"
 
 #: cmd/common/reply/translate.go:27
 msgid "Distribution"
-msgstr "Распределение"
+msgstr "Дистрибутив"
 
 #: cmd/common/reply/translate.go:29
 msgid "Container"
@@ -322,7 +322,7 @@ msgstr "Дополнительно установлено"
 
 #: cmd/common/reply/translate.go:35
 msgid "Upgraded Count"
-msgstr "Количество обновлённого"
+msgstr "Количество обновлённых"
 
 #: cmd/common/reply/translate.go:37
 msgid "Booted Image"
@@ -333,171 +333,175 @@ msgid "Removed Packages"
 msgstr "Удалённые пакеты"
 
 #: cmd/common/reply/translate.go:41
+msgid "Provides"
+msgstr "Обеспечивает"
+
+#: cmd/common/reply/translate.go:43
 msgid "Providers"
 msgstr "Поставщики"
 
-#: cmd/common/reply/translate.go:43
+#: cmd/common/reply/translate.go:45
 msgid "Version"
 msgstr "Версия"
 
-#: cmd/common/reply/translate.go:45
+#: cmd/common/reply/translate.go:47
 msgid "History"
 msgstr "История"
 
-#: cmd/common/reply/translate.go:47 cmd/system/apt/dialog.go:312
+#: cmd/common/reply/translate.go:49 cmd/system/apt/dialog.go:312
 msgid "Dependencies"
 msgstr "Зависимости"
 
-#: cmd/common/reply/translate.go:49
+#: cmd/common/reply/translate.go:51
 msgid "Installed Size"
 msgstr "Размер при установке"
 
-#: cmd/common/reply/translate.go:51
+#: cmd/common/reply/translate.go:53
 msgid "Removed Count"
 msgstr "Количество удалённых"
 
-#: cmd/common/reply/translate.go:53
+#: cmd/common/reply/translate.go:55
 msgid "Upgraded Packages"
 msgstr "Обновлённые пакеты"
 
-#: cmd/common/reply/translate.go:55
+#: cmd/common/reply/translate.go:57
 msgid "Package Name"
 msgstr "Имя пакета"
 
-#: cmd/common/reply/translate.go:57
+#: cmd/common/reply/translate.go:59
 msgid "Image"
 msgstr "Образ"
 
-#: cmd/common/reply/translate.go:59
+#: cmd/common/reply/translate.go:61
 msgid "Commands"
 msgstr "Команды"
 
-#: cmd/common/reply/translate.go:61 cmd/system/apt/dialog.go:291
+#: cmd/common/reply/translate.go:63 cmd/system/apt/dialog.go:291
 msgid "Maintainer"
 msgstr "Сопровождающий"
 
-#: cmd/common/reply/translate.go:63
+#: cmd/common/reply/translate.go:65
 msgid "Installed Version"
 msgstr "Установленная версия"
 
-#: cmd/common/reply/translate.go:65 cmd/system/apt/dialog.go:65
+#: cmd/common/reply/translate.go:67 cmd/system/apt/dialog.go:65
 #: cmd/system/apt/dialog.go:91
 msgid "Remove"
 msgstr "Удалить"
 
-#: cmd/common/reply/translate.go:67
+#: cmd/common/reply/translate.go:69
 msgid "Containers"
 msgstr "Контейнеры"
 
-#: cmd/common/reply/translate.go:69
+#: cmd/common/reply/translate.go:71
 msgid "Paths"
 msgstr "Пути"
 
-#: cmd/common/reply/translate.go:71
+#: cmd/common/reply/translate.go:73
 msgid "Description"
 msgstr "Описание"
 
-#: cmd/common/reply/translate.go:75
+#: cmd/common/reply/translate.go:77
 msgid "Newly Installed Count"
 msgstr "Количество свежеустановленных"
 
-#: cmd/common/reply/translate.go:77
+#: cmd/common/reply/translate.go:79
 msgid "Active"
 msgstr "Активно"
 
-#: cmd/common/reply/translate.go:79
+#: cmd/common/reply/translate.go:81
 msgid "Information"
 msgstr "Информация"
 
-#: cmd/common/reply/translate.go:81
+#: cmd/common/reply/translate.go:83
 msgid "Total Count"
 msgstr "Общее количество"
 
-#: cmd/common/reply/translate.go:83 cmd/system/apt/dialog.go:292
+#: cmd/common/reply/translate.go:85 cmd/system/apt/dialog.go:292
 msgid "Installed"
 msgstr "Установлено"
 
-#: cmd/common/reply/translate.go:85
+#: cmd/common/reply/translate.go:87
 msgid "Package Manager"
 msgstr "Пакетный менеджер"
 
-#: cmd/common/reply/translate.go:87
+#: cmd/common/reply/translate.go:89
 msgid "Last Changelog"
 msgstr "Последние изменения"
 
-#: cmd/common/reply/translate.go:89
+#: cmd/common/reply/translate.go:91
 msgid "Section"
 msgstr "Секция"
 
-#: cmd/common/reply/translate.go:91
+#: cmd/common/reply/translate.go:93
 msgid "Specification"
 msgstr "Спецификация"
 
-#: cmd/common/reply/translate.go:93
+#: cmd/common/reply/translate.go:95
 msgid "Booted"
 msgstr "Загружено"
 
-#: cmd/common/reply/translate.go:95
+#: cmd/common/reply/translate.go:97
 msgid "Staged"
 msgstr "Зафиксированно"
 
-#: cmd/common/reply/translate.go:97 cmd/system/apt/dialog.go:309
+#: cmd/common/reply/translate.go:99 cmd/system/apt/dialog.go:309
 msgid "Size"
 msgstr "Размер"
 
-#: cmd/common/reply/translate.go:99
+#: cmd/common/reply/translate.go:101
 msgid "Newly Installed Packages"
 msgstr "Свежеустановленные пакеты"
 
-#: cmd/common/reply/translate.go:101
+#: cmd/common/reply/translate.go:103
 msgid "Not Upgraded Count"
 msgstr "Количество не обновлённых"
 
-#: cmd/common/reply/translate.go:103
+#: cmd/common/reply/translate.go:105
 msgid "Container Name"
 msgstr "Имя контейнера"
 
-#: cmd/common/reply/translate.go:105
+#: cmd/common/reply/translate.go:107
 msgid "Configuration"
 msgstr "Конфигурация"
 
-#: cmd/common/reply/translate.go:107
-msgid "Exporting"
-msgstr "Извлечение"
-
 #: cmd/common/reply/translate.go:109
+msgid "Exporting"
+msgstr "Экспортировано"
+
+#: cmd/common/reply/translate.go:111
 msgid "Status"
 msgstr "Статус"
 
-#: cmd/common/reply/translate.go:111
+#: cmd/common/reply/translate.go:113
 msgid "Image Date"
 msgstr "Дата образа"
 
-#: cmd/common/reply/translate.go:113
+#: cmd/common/reply/translate.go:115
 msgid "Packages"
 msgstr "Пакеты"
 
-#: cmd/common/reply/translate.go:115
+#: cmd/common/reply/translate.go:117
 msgid "Filename"
 msgstr "Имя файла"
 
-#: cmd/common/reply/translate.go:117
+#: cmd/common/reply/translate.go:119
 msgid "Container Information"
 msgstr "Информация о контейнере"
 
-#: cmd/common/reply/translate.go:119
+#: cmd/common/reply/translate.go:121
 msgid "Image Name"
 msgstr "Имя образа"
 
-#: cmd/common/reply/translate.go:121
-msgid "Transport"
-msgstr "Переместить"
-
 #: cmd/common/reply/translate.go:123
+msgid "Transport"
+msgstr "Транспорт"
+
+#: cmd/common/reply/translate.go:125
 msgid "Pinned"
 msgstr "Закреплено"
 
-#: cmd/common/reply/translate.go:125
+#: cmd/common/reply/translate.go:127
 msgid "List"
 msgstr "Список"
 
@@ -514,7 +518,7 @@ msgstr "Необходимо указать имя пакета, к пример
 
 #: cmd/distrobox/actions.go:93 cmd/system/actions.go:626
 msgid "Package found"
-msgstr "Пакет найден"
+msgstr "Найден пакет"
 
 #: cmd/distrobox/actions.go:133 cmd/distrobox/actions.go:212
 #: cmd/system/actions.go:689 cmd/system/actions.go:725
@@ -611,13 +615,15 @@ msgstr "Поле для сортировки, к примеру: name, version"
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
-#: cmd/distrobox/commands.go:134
-msgid "Selection limit"
-msgstr "Ограничение выбора"
+#: cmd/distrobox/commands.go:134 cmd/system/commands.go:183
+#: cmd/system/commands.go:276
+msgid "Maximum number of records to return"
+msgstr "Максимальное количество возвращаемых записей"
 
-#: cmd/distrobox/commands.go:139
-msgid "Selection offset"
-msgstr "Отступ выбора"
+#: cmd/distrobox/commands.go:139 cmd/system/commands.go:188
+#: cmd/system/commands.go:281
+msgid "Starting position (offset) for the result set"
+msgstr "Начальная позиция (смещение) для результата выборки"
 
 #: cmd/distrobox/commands.go:144 cmd/system/commands.go:193
 msgid ""
@@ -1617,14 +1623,6 @@ msgstr "Полный вывод информации"
 msgid "Building query to fetch package list"
 msgstr "Сборка запроса для извлечения списка пакетов"
 
-#: cmd/system/commands.go:183
-msgid "Limit of the result"
-msgstr "Ограничение результата"
-
-#: cmd/system/commands.go:188
-msgid "Offset of the result"
-msgstr "Смещение результата"
-
 #: cmd/system/commands.go:197
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
@@ -1648,14 +1646,6 @@ msgstr "История изменения образа"
 #: cmd/system/commands.go:272
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
-
-#: cmd/system/commands.go:276
-msgid "Limit of the selection"
-msgstr "Ограничение секции"
-
-#: cmd/system/commands.go:281
-msgid "Offset of the selection"
-msgstr "Смещение секции"
 
 #: cmd/system/service/config.go:79
 msgid "Image must be specified in the configuration file"
