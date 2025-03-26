@@ -45,6 +45,7 @@ func main() {
 	lib.InitLogger()
 	lib.InitLocales()
 	lib.InitDatabase()
+	helper.SetupHelpTemplates()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -76,10 +77,10 @@ func main() {
 		os.Exit(0)
 	}()
 
+	// Основная команда приложения
 	rootCommand := &cli.Command{
 		Name:  "apm",
 		Usage: "Atomic Package Manager",
-		//EnableShellCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -95,74 +96,14 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:  "dbus-session",
-				Usage: lib.T_("Start session D-Bus service com.application.APM"),
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					err := lib.InitDBus(false)
-					if err != nil {
-						return err
-					}
-
-					distroActions := distrobox.NewActions()
-					serviceIcon := icon.NewIconService(lib.GetDBKv())
-					distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon)
-
-					if err = lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
-						return err
-					}
-
-					if err = lib.DBUSConn.Export(
-						introspect.Introspectable(helper.UserIntrospectXML),
-						"/com/application/APM",
-						"org.freedesktop.DBus.Introspectable",
-					); err != nil {
-						return err
-					}
-
-					lib.Env.Format = "dbus"
-
-					go func() {
-						err = serviceIcon.ReloadIcons(ctx)
-						if err != nil {
-							lib.Log.Error(err.Error())
-						}
-					}()
-
-					select {}
-				},
+				Name:   "dbus-session",
+				Usage:  lib.T_("Start session D-Bus service com.application.APM"),
+				Action: sessionDbus,
 			},
 			{
-				Name:  "dbus-system",
-				Usage: lib.T_("Start system D-Bus service com.application.APM"),
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					err := lib.InitDBus(true)
-					if err != nil {
-						return err
-					}
-
-					if syscall.Geteuid() != 0 {
-						return fmt.Errorf(lib.T_("Administrator privileges are required to start"))
-					}
-
-					sysActions := system.NewActions()
-					sysObj := system.NewDBusWrapper(sysActions)
-
-					if err = lib.DBUSConn.Export(sysObj, "/com/application/APM", "com.application.system"); err != nil {
-						return err
-					}
-
-					if err = lib.DBUSConn.Export(
-						introspect.Introspectable(helper.SystemIntrospectXML),
-						"/com/application/APM",
-						"org.freedesktop.DBus.Introspectable",
-					); err != nil {
-						return err
-					}
-
-					lib.Env.Format = "dbus"
-
-					select {}
-				},
+				Name:   "dbus-system",
+				Usage:  lib.T_("Start system D-Bus service com.application.APM"),
+				Action: systemDbus,
 			},
 			system.CommandList(),
 			distrobox.CommandList(),
@@ -179,7 +120,6 @@ func main() {
 	rootCommand.Suggest = true
 	if err := rootCommand.Run(ctx, os.Args); err != nil {
 		lib.Log.Error(err.Error())
-
 		_ = reply.CliResponse(ctx, reply.APIResponse{
 			Data: map[string]interface{}{
 				"message": err.Error(),
@@ -187,6 +127,75 @@ func main() {
 			Error: true,
 		})
 	}
+}
+
+func sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	err := lib.InitDBus(false)
+	if err != nil {
+		return err
+	}
+
+	distroActions := distrobox.NewActions()
+	serviceIcon := icon.NewIconService(lib.GetDBKv())
+	distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon)
+
+	// Экспортируем в D-Bus
+	if err = lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
+		return err
+	}
+
+	if err = lib.DBUSConn.Export(
+		introspect.Introspectable(helper.UserIntrospectXML),
+		"/com/application/APM",
+		"org.freedesktop.DBus.Introspectable",
+	); err != nil {
+		return err
+	}
+
+	lib.Env.Format = "dbus"
+
+	// Параллельно обновляем иконки
+	go func() {
+		err = serviceIcon.ReloadIcons(ctx)
+		if err != nil {
+			lib.Log.Error(err.Error())
+		}
+	}()
+
+	// Блокируем до сигнала
+	select {}
+}
+
+func systemDbus(ctx context.Context, cmd *cli.Command) error {
+	err := lib.InitDBus(true)
+	if err != nil {
+		return err
+	}
+
+	if syscall.Geteuid() != 0 {
+		return fmt.Errorf(lib.T_("Administrator privileges are required to start"))
+	}
+
+	sysActions := system.NewActions()
+	sysObj := system.NewDBusWrapper(sysActions)
+
+	// Экспортируем в D-Bus
+	if err = lib.DBUSConn.Export(sysObj, "/com/application/APM", "com.application.system"); err != nil {
+		return err
+	}
+
+	if err = lib.DBUSConn.Export(
+		introspect.Introspectable(helper.SystemIntrospectXML),
+		"/com/application/APM",
+		"org.freedesktop.DBus.Introspectable",
+	); err != nil {
+		return err
+	}
+
+	lib.Env.Format = "dbus"
+
+	// Блокируем до сигнала
+	select {}
 }
 
 func cleanup() {

@@ -1,4 +1,5 @@
 cmd/common/helper/text.go
+cmd/common/helper/translate.go
 cmd/common/icon/service.go
 cmd/common/icon/swcat.go
 cmd/common/reply/event.go

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-26 20:45+0600\n"
+"POT-Creation-Date: 2025-03-26 22:11+0600\n"
 "PO-Revision-Date: 2025-03-25 17:42+0300\n"
 "Last-Translator: David Sultaniiazov <x1z53@alt-gnome.ru>\n"
 "Language-Team: Russian\n"
@@ -28,6 +28,43 @@ msgstr "версия не найдена"
 #, c-format
 msgid "%.2f MB"
 msgstr "%.2f МБ"
+
+#: cmd/common/helper/translate.go:34 cmd/common/helper/translate.go:62
+#: cmd/common/helper/translate.go:90
+msgid "Module:"
+msgstr "Модуль:"
+
+#: cmd/common/helper/translate.go:35 cmd/common/helper/translate.go:63
+#: cmd/common/helper/translate.go:91
+msgid "Usage:"
+msgstr "Применение:"
+
+#: cmd/common/helper/translate.go:36
+msgid "Version:"
+msgstr "Версия:"
+
+#: cmd/common/helper/translate.go:37 cmd/common/helper/translate.go:65
+#: cmd/common/helper/translate.go:93
+msgid "Description:"
+msgstr "Описание:"
+
+#: cmd/common/helper/translate.go:38 cmd/common/helper/translate.go:94
+msgid "Commands:"
+msgstr "Команды:"
+
+#: cmd/common/helper/translate.go:39 cmd/common/helper/translate.go:40
+#: cmd/common/helper/translate.go:66 cmd/common/helper/translate.go:67
+#: cmd/common/helper/translate.go:95 cmd/common/helper/translate.go:96
+msgid "Options:"
+msgstr "Параметры:"
+
+#: cmd/common/helper/translate.go:64 cmd/common/helper/translate.go:92
+msgid "Category:"
+msgstr "Категория:"
+
+#: cmd/common/helper/translate.go:68
+msgid "Global options:"
+msgstr "Глобальные параметры:"
 
 #: cmd/common/icon/service.go:61
 msgid "Icon for package %s (container: %s) not found: %v"
@@ -1835,53 +1872,54 @@ msgstr "Интерфейс com.application.APM уже используется"
 msgid "Translations folder not found at path: %s"
 msgstr "Папка перевода не найдена по пути: %s"
 
-#: main.go:56
+#: main.go:40
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:65
+#: main.go:49
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:86
+#: main.go:71
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, текст"
 
-#: main.go:92
+#: main.go:77
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выходным данным"
 
-#: main.go:99
+#: main.go:84
 msgid "Start session D-Bus service com.application.APM"
 msgstr "Запустить сессионный сервис D-Bus com.application.APM"
 
-#: main.go:136
+#: main.go:89
 msgid "Start system D-Bus service com.application.APM"
 msgstr "Запустить системный сервис D-Bus com.application.APM"
 
-#: main.go:144
-msgid "Administrator privileges are required to start"
-msgstr "Требуются привилегии администратора для запуска"
-
-#: main.go:172
+#: main.go:97
 msgid "Show the list of commands or help for each command"
 msgstr "Показать список команд или справку по каждой команде"
 
-#: main.go:173
+#: main.go:98
 msgid "[command]"
 msgstr "[команда]"
 
-#: main.go:193
+#: main.go:160
+msgid "Administrator privileges are required to start"
+msgstr "Требуются привилегии администратора для запуска"
+
+#: main.go:186
 msgid "Terminating the application. Releasing resources…"
 msgstr "Завершение работы приложения. Высвобождение ресурсов…"
 
-#: main.go:198
+#: main.go:191
 msgid "Error closing KV database: "
 msgstr "Ошибка закрытия базы данных KV: "
 
-#: main.go:204
+#: main.go:197
 msgid "Error closing SQL database: "
 msgstr "Ошибка закрытия базы данных SQL: "
+
