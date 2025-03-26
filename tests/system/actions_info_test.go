@@ -37,7 +37,7 @@ func TestInfo_Success_sqlmock(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	packageDBSvc := apt.NewPackageDBService(db)
+	packageDBSvc, _ := apt.NewPackageDBService(db)
 
 	expectedQuery := "SELECT COUNT(*) FROM host_image_packages"
 	mock.ExpectQuery(regexp.QuoteMeta(expectedQuery)).
