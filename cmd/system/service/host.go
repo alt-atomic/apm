@@ -242,7 +242,7 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s bootc upgrade", lib.Env.CommandPrefix))
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(lib.T_("bootc upgrade failed: %s"), string(output))
+		return fmt.Errorf(lib.T_("Bootc upgrade failed: %s"), string(output))
 	}
 
 	return nil

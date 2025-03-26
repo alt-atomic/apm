@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-26 04:33+0600\n"
+"POT-Creation-Date: 2025-03-26 17:41+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -895,11 +895,7 @@ msgstr ""
 msgid "Failed to retrieve installed packages: "
 msgstr ""
 
-#: cmd/system/actions.go:91
-msgid "Verification information"
-msgstr ""
-
-#: cmd/system/actions.go:111
+#: cmd/system/actions.go:91 cmd/system/actions.go:111
 msgid "Inspection information"
 msgstr ""
 
@@ -1734,7 +1730,7 @@ msgstr ""
 
 #: cmd/system/service/host.go:245
 #, c-format
-msgid "bootc upgrade failed: %s"
+msgid "Bootc upgrade failed: %s"
 msgstr ""
 
 #: cmd/system/service/host.go:255
