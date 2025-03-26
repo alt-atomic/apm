@@ -170,9 +170,9 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		case bool:
 			var boolStr string
 			if vv {
-				boolStr = lib.T_("Yes")
+				boolStr = lib.T_("yes")
 			} else {
-				boolStr = lib.T_("No")
+				boolStr = lib.T_("no")
 			}
 			t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), boolStr))
 
