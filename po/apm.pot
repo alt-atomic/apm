@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-26 18:53+0600\n"
+"POT-Creation-Date: 2025-03-26 20:45+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -246,25 +246,25 @@ msgstr ""
 msgid "Progress: %s completed"
 msgstr ""
 
-#: cmd/common/reply/response.go:109 cmd/common/reply/response.go:132
-#: cmd/common/reply/response.go:225 cmd/common/reply/response.go:251
+#: cmd/common/reply/response.go:110 cmd/common/reply/response.go:133
+#: cmd/common/reply/response.go:240 cmd/common/reply/response.go:266
 msgid "%T (unknown type)"
 msgstr ""
 
-#: cmd/common/reply/response.go:128 cmd/common/reply/response.go:247
+#: cmd/common/reply/response.go:129 cmd/common/reply/response.go:262
 msgid "%T (slice of unknown type)"
 msgstr ""
 
-#: cmd/common/reply/response.go:155 cmd/common/reply/response.go:162
+#: cmd/common/reply/response.go:156 cmd/common/reply/response.go:163
 #, c-format
 msgid "%s: no"
 msgstr ""
 
-#: cmd/common/reply/response.go:172 cmd/system/apt/dialog.go:285
+#: cmd/common/reply/response.go:173 cmd/system/apt/dialog.go:285
 msgid "Yes"
 msgstr ""
 
-#: cmd/common/reply/response.go:174 cmd/system/apt/dialog.go:283
+#: cmd/common/reply/response.go:175 cmd/system/apt/dialog.go:283
 #: cmd/system/apt/dialog.go:351 cmd/system/apt/dialog.go:372
 msgid "No"
 msgstr ""
@@ -567,9 +567,10 @@ msgstr ""
 msgid "Failed to delete container records: %w"
 msgstr ""
 
-#: cmd/distrobox/actions.go:523 cmd/system/actions.go:866
+#: cmd/distrobox/actions.go:523
 msgid ""
-"Elevated rights are required to perform this action. Please use sudo or su"
+"Elevated rights are not allowed to perform this action. Please do not use "
+"sudo or su"
 msgstr ""
 
 #: cmd/distrobox/commands.go:51
@@ -643,7 +644,7 @@ msgid "Remove package"
 msgstr ""
 
 #: cmd/distrobox/commands.go:210
-msgid "Remove only the export, leave the package in the container"
+msgid "Remove only from host, leave package in container"
 msgstr ""
 
 #: cmd/distrobox/commands.go:225
@@ -1035,6 +1036,11 @@ msgstr ""
 
 #: cmd/system/actions.go:823
 msgid "Changes applied successfully. A reboot is required"
+msgstr ""
+
+#: cmd/system/actions.go:866
+msgid ""
+"Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 
 #: cmd/system/actions.go:882

@@ -206,13 +206,13 @@ func CommandList() *cli.Command {
 						Required: true,
 					},
 					&cli.BoolFlag{
-						Name:  "only-export",
-						Usage: lib.T_("Remove only the export, leave the package in the container"),
+						Name:  "only-host",
+						Usage: lib.T_("Remove only from host, leave package in container"),
 						Value: false,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Remove(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("only-export"))
+					resp, err := NewActions().Remove(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("only-host"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

@@ -520,7 +520,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 // checkRoot проверяет, запущен ли apm от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() == 0 {
-		return fmt.Errorf(lib.T_("Elevated rights are required to perform this action. Please use sudo or su"))
+		return fmt.Errorf(lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su"))
 	}
 
 	return nil

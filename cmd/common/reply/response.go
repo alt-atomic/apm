@@ -17,6 +17,7 @@
 package reply
 
 import (
+	"apm/cmd/common/helper"
 	"apm/lib"
 	"context"
 	"encoding/json"
@@ -178,7 +179,21 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: числа (int, float64)
 		case int, float64:
-			t.Child(fmt.Sprintf("%s: %v", TranslateKey(k), vv))
+			if k == "size" || k == "installedSize" {
+				sizeVal := 0
+				switch valueTyped := vv.(type) {
+				case int:
+					sizeVal = valueTyped
+				case float64:
+					sizeVal = int(valueTyped)
+				}
+
+				sizeHuman := helper.AutoSize(sizeVal)
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), sizeHuman))
+			} else {
+				// Стандартный путь для всех остальных чисел
+				t.Child(fmt.Sprintf("%s: %v", TranslateKey(k), vv))
+			}
 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: вложенная map
