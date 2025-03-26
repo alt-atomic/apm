@@ -56,8 +56,12 @@ func NewActionsWithDeps(
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
-	hostPackageDBSvc := apt.NewPackageDBService(lib.GetDB())
-	hostDBSvc := service.NewHostDBService(lib.GetDB())
+	hostPackageDBSvc, err := apt.NewPackageDBService(lib.GetDB())
+	hostDBSvc, err := service.NewHostDBService(lib.GetDB())
+	if err != nil {
+		lib.Log.Fatal(err)
+	}
+
 	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
 	hostImageSvc := service.NewHostImageService(hostConfigSvc)
 	hostAptSvc := apt.NewActions(hostPackageDBSvc)
@@ -935,7 +939,6 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 
 // validateDB проверяет, существует ли база данных
 func (a *Actions) validateDB(ctx context.Context) error {
-	// Если база не содержит данные - запускаем процесс обновления
 	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
 		err = a.checkRoot()
 		if err != nil {

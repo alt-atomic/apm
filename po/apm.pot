@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-27 00:17+0600\n"
+"POT-Creation-Date: 2025-03-27 04:51+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -539,71 +539,71 @@ msgstr ""
 msgid "List"
 msgstr ""
 
-#: cmd/distrobox/actions.go:62
+#: cmd/distrobox/actions.go:82
 msgid "Package list successfully updated"
 msgstr ""
 
-#: cmd/distrobox/actions.go:84 cmd/distrobox/actions.go:124
-#: cmd/distrobox/actions.go:238 cmd/distrobox/actions.go:289
-#: cmd/system/actions.go:712
+#: cmd/distrobox/actions.go:104 cmd/distrobox/actions.go:144
+#: cmd/distrobox/actions.go:258 cmd/distrobox/actions.go:309
+#: cmd/system/actions.go:716
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr ""
 
-#: cmd/distrobox/actions.go:93 cmd/system/actions.go:626
+#: cmd/distrobox/actions.go:113 cmd/system/actions.go:630
 msgid "Package found"
 msgstr ""
 
-#: cmd/distrobox/actions.go:133 cmd/distrobox/actions.go:212
-#: cmd/system/actions.go:689 cmd/system/actions.go:725
-#: cmd/system/actions.go:849
+#: cmd/distrobox/actions.go:153 cmd/distrobox/actions.go:232
+#: cmd/system/actions.go:693 cmd/system/actions.go:729
+#: cmd/system/actions.go:853
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/distrobox/actions.go:266
+#: cmd/distrobox/actions.go:286
 #, c-format
 msgid "Package %s installed"
 msgstr ""
 
-#: cmd/distrobox/actions.go:318
+#: cmd/distrobox/actions.go:338
 #, c-format
 msgid "Package %s removed"
 msgstr ""
 
-#: cmd/distrobox/actions.go:359
+#: cmd/distrobox/actions.go:379
 msgid "You must specify the image link (--image)"
 msgstr ""
 
-#: cmd/distrobox/actions.go:364 cmd/distrobox/actions.go:393
+#: cmd/distrobox/actions.go:384 cmd/distrobox/actions.go:413
 msgid "You must specify the container name (--name)"
 msgstr ""
 
-#: cmd/distrobox/actions.go:375
+#: cmd/distrobox/actions.go:395
 #, c-format
 msgid "Container %s successfully created"
 msgstr ""
 
-#: cmd/distrobox/actions.go:404
+#: cmd/distrobox/actions.go:424
 #, c-format
 msgid "Container %s successfully deleted"
 msgstr ""
 
-#: cmd/distrobox/actions.go:412
+#: cmd/distrobox/actions.go:432
 msgid "Error deleting container: %v"
 msgstr ""
 
-#: cmd/distrobox/actions.go:490
+#: cmd/distrobox/actions.go:510
 msgid "You must specify the container name"
 msgstr ""
 
-#: cmd/distrobox/actions.go:499
+#: cmd/distrobox/actions.go:518
 msgid "Failed to delete container records: %w"
 msgstr ""
 
-#: cmd/distrobox/actions.go:523
+#: cmd/distrobox/actions.go:542
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -807,44 +807,44 @@ msgstr ""
 msgid "Command execution error: %v, stderr: %s"
 msgstr ""
 
-#: cmd/distrobox/service/database.go:73
+#: cmd/distrobox/service/database.go:118
 msgid ""
 "The 'container' field cannot be empty when saving packages to the database"
 msgstr ""
 
-#: cmd/distrobox/service/database.go:143
+#: cmd/distrobox/service/database.go:154
 msgid ""
 "The database does not have any records, it is necessary to create or update "
 "any container"
 msgstr ""
 
-#: cmd/distrobox/service/database.go:149
+#: cmd/distrobox/service/database.go:160
 msgid ""
-"The database contains no records, you need to create or update any container."
+"The database contains no records, you need to create or update any container"
 msgstr ""
 
-#: cmd/distrobox/service/database.go:164
+#: cmd/distrobox/service/database.go:176
 #, c-format
-msgid "No records found for container %s."
+msgid "No records found for container %s"
 msgstr ""
 
-#: cmd/distrobox/service/database.go:186 cmd/distrobox/service/database.go:241
-#, c-format
-msgid "Invalid filter field: %s. Available fields: %s."
-msgstr ""
-
-#: cmd/distrobox/service/database.go:274
+#: cmd/distrobox/service/database.go:216
 #, c-format
 msgid "Invalid sort field: %s. Available fields: %s."
 msgstr ""
 
-#: cmd/distrobox/service/database.go:376
+#: cmd/distrobox/service/database.go:275
 #, c-format
 msgid "The field %s cannot be updated."
 msgstr ""
 
-#: cmd/distrobox/service/database.go:417
+#: cmd/distrobox/service/database.go:307
 msgid "Error deleting container records %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/database.go:316
+#, c-format
+msgid "Invalid filter field: %s. Available fields: %s."
 msgstr ""
 
 #: cmd/distrobox/service/distrobox.go:55
@@ -938,156 +938,156 @@ msgstr ""
 msgid "Failed to retrieve installed packages: "
 msgstr ""
 
-#: cmd/system/actions.go:91 cmd/system/actions.go:111
+#: cmd/system/actions.go:95 cmd/system/actions.go:115
 msgid "Inspection information"
 msgstr ""
 
-#: cmd/system/actions.go:133
+#: cmd/system/actions.go:137
 msgid "At least one package must be specified, for example, remove package"
 msgstr ""
 
-#: cmd/system/actions.go:167
+#: cmd/system/actions.go:171
 msgid "No candidates for removal found"
 msgstr ""
 
-#: cmd/system/actions.go:199
+#: cmd/system/actions.go:203
 msgid ""
 ".\n"
 "A difference in the package list was found in the local configuration, the "
 "image has been updated"
 msgstr ""
 
-#: cmd/system/actions.go:213 cmd/system/actions.go:423
-#: cmd/system/actions.go:552
+#: cmd/system/actions.go:217 cmd/system/actions.go:427
+#: cmd/system/actions.go:556
 msgid "Cancel dialog"
 msgstr ""
 
-#: cmd/system/actions.go:229
+#: cmd/system/actions.go:233
 msgid ""
 "A communication error with the repository occurred. The package list has "
 "been updated, please try running the command again"
 msgstr ""
 
-#: cmd/system/actions.go:243
+#: cmd/system/actions.go:247
 #, c-format
 msgid "%s removed successfully"
 msgid_plural "%s removed successfully"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/system/actions.go:249
+#: cmd/system/actions.go:253
 msgid ". The system image has been modified"
 msgstr ""
 
-#: cmd/system/actions.go:253
+#: cmd/system/actions.go:257
 msgid ""
 ". The system image has not been modified! To apply changes, run with the -a "
 "flag"
 msgstr ""
 
-#: cmd/system/actions.go:280
+#: cmd/system/actions.go:284
 msgid "You must specify at least one package, for example, remove package"
 msgstr ""
 
-#: cmd/system/actions.go:317 cmd/system/actions.go:608
+#: cmd/system/actions.go:321 cmd/system/actions.go:612
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr ""
 
-#: cmd/system/actions.go:326 cmd/system/actions.go:617
+#: cmd/system/actions.go:330 cmd/system/actions.go:621
 msgid ". Maybe you were looking for: "
 msgstr ""
 
-#: cmd/system/actions.go:353
+#: cmd/system/actions.go:357
 msgid "The operation will not make any changes. Reasons: \n"
 msgstr ""
 
-#: cmd/system/actions.go:404
+#: cmd/system/actions.go:408
 msgid ""
 "Found a discrepancy in the package list in the local configuration, the "
 "image has been updated"
 msgstr ""
 
-#: cmd/system/actions.go:440
+#: cmd/system/actions.go:444
 msgid ""
 "A repository connection error occurred. The package list has been updated, "
 "please try running the command again"
 msgstr ""
 
-#: cmd/system/actions.go:455 cmd/system/actions.go:567
+#: cmd/system/actions.go:459 cmd/system/actions.go:571
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/system/actions.go:456 cmd/system/actions.go:568
+#: cmd/system/actions.go:460 cmd/system/actions.go:572
 msgid "and"
 msgstr ""
 
-#: cmd/system/actions.go:457 cmd/system/actions.go:569
+#: cmd/system/actions.go:461 cmd/system/actions.go:573
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/system/actions.go:466
+#: cmd/system/actions.go:470
 msgid ". The system image has been changed."
 msgstr ""
 
-#: cmd/system/actions.go:470
+#: cmd/system/actions.go:474
 msgid ""
 ". The system image has not been changed! To apply changes, you need to run "
 "with the -a flag."
 msgstr ""
 
-#: cmd/system/actions.go:503
+#: cmd/system/actions.go:507
 msgid "Package list updated successfully"
 msgstr ""
 
-#: cmd/system/actions.go:538
+#: cmd/system/actions.go:542
 msgid "The operation will not make any changes"
 msgstr ""
 
-#: cmd/system/actions.go:574
+#: cmd/system/actions.go:578
 msgid "The system has been upgrade successfully"
 msgstr ""
 
-#: cmd/system/actions.go:587
+#: cmd/system/actions.go:591
 msgid "Package name must be specified, for example info package"
 msgstr ""
 
-#: cmd/system/actions.go:686 cmd/system/actions.go:722
+#: cmd/system/actions.go:690 cmd/system/actions.go:726
 msgid "Nothing found"
 msgstr ""
 
-#: cmd/system/actions.go:752 cmd/system/commands.go:244
+#: cmd/system/actions.go:756 cmd/system/commands.go:244
 msgid "Image status"
 msgstr ""
 
-#: cmd/system/actions.go:785
+#: cmd/system/actions.go:789
 msgid "Command executed successfully"
 msgstr ""
 
-#: cmd/system/actions.go:823
+#: cmd/system/actions.go:827
 msgid "Changes applied successfully. A reboot is required"
 msgstr ""
 
-#: cmd/system/actions.go:866
+#: cmd/system/actions.go:870
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 
-#: cmd/system/actions.go:882
+#: cmd/system/actions.go:886
 msgid "This option is only available for an atomic system"
 msgstr ""
 
-#: cmd/system/actions.go:985
+#: cmd/system/actions.go:988
 msgid "Modified image. Configuration file: "
 msgstr ""
 
-#: cmd/system/actions.go:992
+#: cmd/system/actions.go:995
 msgid "Cloud image without changes"
 msgstr ""
 
@@ -1134,71 +1134,52 @@ msgstr ""
 msgid "Error updating packages: %v, output: %s"
 msgstr ""
 
-#: cmd/system/apt/database.go:106 cmd/system/service/database.go:68
-msgid "Error creating table: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:112
+#: cmd/system/apt/database.go:155
 msgid "Table cleanup error: %w"
 msgstr ""
 
-#: cmd/system/apt/database.go:118 cmd/system/apt/database.go:232
-msgid "Transaction start error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:166
+#: cmd/system/apt/database.go:174
 msgid "Batch insert error: %w"
 msgstr ""
 
-#: cmd/system/apt/database.go:171 cmd/system/apt/database.go:282
-msgid "Transaction commit error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:204
+#: cmd/system/apt/database.go:190
 #, c-format
 msgid "failed to get information about package %s"
 msgstr ""
 
-#: cmd/system/apt/database.go:247
+#: cmd/system/apt/database.go:203
 msgid "Temporary table creation error: %w"
 msgstr ""
 
-#: cmd/system/apt/database.go:260
+#: cmd/system/apt/database.go:215
 msgid "Batch insert into temporary table error: %w"
 msgstr ""
 
-#: cmd/system/apt/database.go:277
+#: cmd/system/apt/database.go:234
 msgid "Batch update error: %w"
 msgstr ""
 
-#: cmd/system/apt/database.go:319 cmd/system/apt/database.go:476
+#: cmd/system/apt/database.go:253 cmd/system/apt/database.go:301
 msgid "Query execution error: %w"
 msgstr ""
 
-#: cmd/system/apt/database.go:351
-msgid "Batch data read error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:371 cmd/system/apt/database.go:528
-msgid "Row processing error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:412 cmd/system/apt/database.go:545
-#, c-format
-msgid "Invalid filter field: %s. Available fields: %s"
-msgstr ""
-
-#: cmd/system/apt/database.go:454
+#: cmd/system/apt/database.go:283
 #, c-format
 msgid "Invalid sort field: %s. Available fields: %s"
 msgstr ""
 
-#: cmd/system/apt/database.go:508
-msgid "Package data read error: %w"
+#: cmd/system/apt/database.go:325
+msgid "Package count error: %w"
 msgstr ""
 
-#: cmd/system/apt/database.go:586
-msgid "Package count error: %w"
+#: cmd/system/apt/database.go:336
+#, c-format
+msgid "Invalid filter field: %s. Available fields: %s"
+msgstr ""
+
+#: cmd/system/apt/database.go:379
+#, c-format
+msgid "Table %s exists but contains no records"
 msgstr ""
 
 #: cmd/system/apt/dialog.go:61 cmd/system/apt/dialog.go:91
@@ -1661,52 +1642,32 @@ msgstr ""
 msgid "Local image configuration file has no changes"
 msgstr ""
 
-#: cmd/system/service/database.go:74
-msgid "Error serializing config: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:79
-msgid "Error starting transaction: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:85
-msgid "Error preparing the query: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:92
-msgid "Error parsing date %s: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:97
-msgid "Error inserting data: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:101
-msgid "Transaction commit error: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:126 cmd/system/service/database.go:178
-msgid "History not found"
-msgstr ""
-
-#: cmd/system/service/database.go:128 cmd/system/service/database.go:180
-#: cmd/system/service/database.go:197
-msgid "Query execution error: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:140
-msgid "Data reading error: %v"
-msgstr ""
-
-#: cmd/system/service/database.go:145
+#: cmd/system/service/database.go:91
 msgid "Config conversion error: %v"
 msgstr ""
 
-#: cmd/system/service/database.go:157
-msgid "String processing error: %v"
+#: cmd/system/service/database.go:105
+msgid "Error parsing date %s: %v"
 msgstr ""
 
-#: cmd/system/service/database.go:202
+#: cmd/system/service/database.go:110
+msgid "Error serializing config: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:133
+msgid "Error inserting data: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:156 cmd/system/service/database.go:184
+msgid "History not found"
+msgstr ""
+
+#: cmd/system/service/database.go:158 cmd/system/service/database.go:186
+#: cmd/system/service/database.go:206
+msgid "Query execution error: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:211
 msgid "History config conversion error: %v"
 msgstr ""
 

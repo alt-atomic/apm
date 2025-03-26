@@ -46,7 +46,11 @@ func NewActionsWithDeps(
 }
 
 func NewActions() *Actions {
-	distroDBSvc := service.NewDistroDBService(lib.GetDB())
+	distroDBSvc, err := service.NewDistroDBService(lib.GetDB())
+	if err != nil {
+		lib.Log.Fatal(err)
+	}
+
 	distroPackageSvc := service.NewPackageService(distroDBSvc)
 	distroAPISvc := service.NewDistroAPIService()
 
@@ -499,7 +503,7 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 	return nil
 }
 
-// validateContainer проверяет, что имя контейнера не пустое и обновляет пакеты, если нужно.
+// validateContainer проверяет, что имя контейнера не пустой и обновляет пакеты, если нужно.
 func (a *Actions) validateContainer(ctx context.Context, container string) (service.ContainerInfo, error) {
 	container = strings.TrimSpace(container)
 	if container == "" {
@@ -510,7 +514,6 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 	osInfo, errInfo := a.serviceDistroAPI.GetContainerOsInfo(ctx, container)
 	if errInfo != nil {
 		if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err == nil {
-			// Если записи существуют, пробуем удалить их
 			if err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, container); err != nil {
 				return service.ContainerInfo{}, fmt.Errorf(lib.T_("Failed to delete container records: %w"), err)
 			}

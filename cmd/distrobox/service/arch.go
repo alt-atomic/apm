@@ -170,6 +170,9 @@ func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([
 	re := regexp.MustCompile(`^([a-z]+)\/([\w\.-]+)\s+([^\s]+)`)
 	lines := strings.Split(output, "\n")
 	var results []PackageInfo
+
+	seen := make(map[string]bool)
+
 	i := 0
 	for i < len(lines) {
 		line := strings.TrimSpace(lines[i])
@@ -202,6 +205,13 @@ func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([
 			description = "-"
 		}
 
+		// Если пакет с таким именем уже добавлен, пропускаем его
+		if seen[pkgName] {
+			i++
+			continue
+		}
+		seen[pkgName] = true
+
 		results = append(results, PackageInfo{
 			Name:        pkgName,
 			Version:     version,
@@ -212,5 +222,6 @@ func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([
 		})
 		i++
 	}
+
 	return results, nil
 }

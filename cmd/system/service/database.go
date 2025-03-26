@@ -23,188 +23,193 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"gorm.io/gorm/logger"
+	"log"
+	"os"
 	"reflect"
 	"strings"
 	"time"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-// HostDBService — сервис для операций с базой данных хоста.
-type HostDBService struct {
-	historyTableName string
-	dbConn           *sql.DB
-}
-
-// NewHostDBService — конструктор сервиса
-func NewHostDBService(db *sql.DB) *HostDBService {
-	return &HostDBService{
-		historyTableName: "host_image_history",
-		dbConn:           db,
-	}
-}
-
-// ImageHistory описывает сведения об образе.
-// Здесь поле Config хранится в виде ссылки на структуру Config.
 type ImageHistory struct {
 	ImageName string  `json:"image"`
 	Config    *Config `json:"config"`
 	ImageDate string  `json:"date"`
 }
 
-// SaveImageToDB сохраняет историю образов в БД.
-// Перед сохранением объект Config сериализуется в JSON-строку.
+type DBHistory struct {
+	ImageName  string    `gorm:"column:imagename;primaryKey"`
+	ImageDate  time.Time `gorm:"column:imagedate;primaryKey"`
+	ConfigJSON string    `gorm:"column:config"`
+}
+
+type HostDBService struct {
+	db *gorm.DB
+}
+
+// NewHostDBService — конструктор сервиса
+func NewHostDBService(db *sql.DB) (*HostDBService, error) {
+	gormLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			LogLevel: logger.Silent,
+		},
+	)
+
+	gormDB, err := gorm.Open(sqlite.Dialector{
+		Conn:       db,
+		DriverName: "sqlite3",
+	}, &gorm.Config{
+		Logger: gormLogger,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("ошибка подключения к SQLite через GORM: %w", err)
+	}
+
+	// автоматическая миграция
+	if err = gormDB.AutoMigrate(&DBHistory{}); err != nil {
+		return nil, fmt.Errorf("ошибка миграции структуры таблицы: %w", err)
+	}
+
+	return &HostDBService{
+		db: gormDB,
+	}, nil
+}
+
+// TableName - задаём нужное имя таблицы
+func (DBHistory) TableName() string {
+	return "host_image_history"
+}
+
+// fromDBModel — превращает DBHistory (структура БД) в бизнес-структуру ImageHistory
+func (dbh DBHistory) fromDBModel() (ImageHistory, error) {
+	var cfg Config
+	if err := json.Unmarshal([]byte(dbh.ConfigJSON), &cfg); err != nil {
+		return ImageHistory{}, fmt.Errorf(lib.T_("Config conversion error: %v"), err)
+	}
+
+	return ImageHistory{
+		ImageName: dbh.ImageName,
+		Config:    &cfg,
+		ImageDate: dbh.ImageDate.Format(time.RFC3339),
+	}, nil
+}
+
+// toDBModel — превращает бизнес-структуру ImageHistory в DBHistory (для сохранения в БД)
+func (ih ImageHistory) toDBModel() (DBHistory, error) {
+	parsedDate, err := time.Parse(time.RFC3339, ih.ImageDate)
+	if err != nil {
+		return DBHistory{}, fmt.Errorf(lib.T_("Error parsing date %s: %v"), ih.ImageDate, err)
+	}
+
+	cfgBytes, err := json.Marshal(ih.Config)
+	if err != nil {
+		return DBHistory{}, fmt.Errorf(lib.T_("Error serializing config: %v"), err)
+	}
+
+	return DBHistory{
+		ImageName:  ih.ImageName,
+		ConfigJSON: string(cfgBytes),
+		ImageDate:  parsedDate,
+	}, nil
+}
+
+// SaveImageToDB сохраняет историю образов в БД (через GORM).
 func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SaveImageToDB"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SaveImageToDB"))
 
-	tableName := "host_image_history"
-
-	createQuery := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		imagename TEXT,
-		config TEXT,
-		imagedate TIMESTAMP
-	)`, h.historyTableName)
-
-	if _, err := h.dbConn.Exec(createQuery); err != nil {
-		return fmt.Errorf(lib.T_("Error creating table: %w"), err)
-	}
-
-	// Сериализуем конфиг в JSON-строку.
-	configJSON, err := json.Marshal(imageHistory.Config)
+	// Преобразуем в модель БД
+	dbHist, err := imageHistory.toDBModel()
 	if err != nil {
-		return fmt.Errorf(lib.T_("Error serializing config: %v"), err)
+		return err
 	}
 
-	tx, err := h.dbConn.Begin()
-	if err != nil {
-		return fmt.Errorf(lib.T_("Error starting transaction: %v"), err)
-	}
+	err = h.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if errCreate := tx.Create(&dbHist).Error; errCreate != nil {
+			return fmt.Errorf(lib.T_("Error inserting data: %v"), errCreate)
+		}
+		return nil
+	})
 
-	stmt, err := tx.Prepare(fmt.Sprintf(`INSERT INTO %s (imagename, config, imagedate) VALUES (?, ?, ?)`, tableName))
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf(lib.T_("Error preparing the query: %v"), err)
-	}
-	defer stmt.Close()
-
-	parsedDate, err := time.Parse(time.RFC3339, imageHistory.ImageDate)
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf(lib.T_("Error parsing date %s: %v"), imageHistory.ImageDate, err)
-	}
-
-	if _, err = stmt.Exec(imageHistory.ImageName, string(configJSON), parsedDate); err != nil {
-		tx.Rollback()
-		return fmt.Errorf(lib.T_("Error inserting data: %v"), err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf(lib.T_("Transaction commit error: %v"), err)
-	}
-
-	return nil
+	return err
 }
 
-// GetImageHistoriesFiltered возвращает все записи из таблицы host_image_history,
-// сортируя их по дате (новые записи первыми), фильтруя по названию образа,
-// а также применяя limit и offset для пагинации.
-func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit int64, offset int64) ([]ImageHistory, error) {
-	query := fmt.Sprintf("SELECT imagename, config, imagedate FROM %s", h.historyTableName)
-	var args []interface{}
+// GetImageHistoriesFiltered возвращает все записи по имени
+func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int64) ([]ImageHistory, error) {
+	query := h.db.WithContext(ctx).Model(&DBHistory{})
 
 	if imageNameFilter != "" {
-		query += " WHERE imagename LIKE ?"
-		args = append(args, "%"+imageNameFilter+"%")
+		query = query.Where("imagename LIKE ?", "%"+imageNameFilter+"%")
 	}
 
-	query += " ORDER BY imagedate DESC"
-	query += " LIMIT ? OFFSET ?"
-	args = append(args, limit, offset)
+	query = query.Order("imagedate DESC").
+		Limit(int(limit)).
+		Offset(int(offset))
 
-	rows, err := h.dbConn.QueryContext(ctx, query, args...)
-	if err != nil {
-		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
+	var dbHistories []DBHistory
+	if err := query.Find(&dbHistories).Error; err != nil {
+		if strings.Contains(err.Error(), "no such table") {
 			return nil, fmt.Errorf(lib.T_("History not found"))
 		}
 		return nil, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}
-	defer rows.Close()
 
 	var histories []ImageHistory
-
-	for rows.Next() {
-		var imageName string
-		var configJSON string
-		var imageDate time.Time
-
-		if err = rows.Scan(&imageName, &configJSON, &imageDate); err != nil {
-			return nil, fmt.Errorf(lib.T_("Data reading error: %v"), err)
+	for _, dbh := range dbHistories {
+		ih, err := dbh.fromDBModel()
+		if err != nil {
+			return nil, err
 		}
-
-		var cfg Config
-		if err = json.Unmarshal([]byte(configJSON), &cfg); err != nil {
-			return nil, fmt.Errorf(lib.T_("Config conversion error: %v"), err)
-		}
-
-		history := ImageHistory{
-			ImageName: imageName,
-			Config:    &cfg,
-			ImageDate: imageDate.Format(time.RFC3339),
-		}
-		histories = append(histories, history)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf(lib.T_("String processing error: %v"), err)
+		histories = append(histories, ih)
 	}
 
 	return histories, nil
 }
 
-// CountImageHistoriesFiltered возвращает количество записей
-// фильтруя по названию образа.
+// CountImageHistoriesFiltered — возвращает количество записей с фильтром по имени образа.
 func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (int, error) {
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", h.historyTableName)
-	var args []interface{}
+	query := h.db.WithContext(ctx).Model(&DBHistory{})
 
 	if imageNameFilter != "" {
-		query += " WHERE imagename LIKE ?"
-		args = append(args, "%"+imageNameFilter+"%")
+		query = query.Where("imagename LIKE ?", "%"+imageNameFilter+"%")
 	}
 
-	var count int
-	err := h.dbConn.QueryRowContext(ctx, query, args...).Scan(&count)
-	if err != nil {
-		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		if strings.Contains(err.Error(), "no such table") {
 			return 0, fmt.Errorf(lib.T_("History not found"))
 		}
 		return 0, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}
 
-	return count, nil
+	return int(count), nil
 }
 
-// IsLatestConfigSame принимает конфигурацию newConfig, получает из БД самый последний сохранённый конфиг
-// и сравнивает их. Если они совпадают, возвращает true, иначе false.
+// IsLatestConfigSame сравнивает newConfig с последним сохранённым в БД.
 func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config) (bool, error) {
-	query := fmt.Sprintf("SELECT config FROM %s ORDER BY imagedate DESC LIMIT 1", h.historyTableName)
-
-	var configJSON string
-	err := h.dbConn.QueryRowContext(ctx, query).Scan(&configJSON)
+	var dbHist DBHistory
+	err := h.db.WithContext(ctx).Model(&DBHistory{}).
+		Order("imagedate DESC").
+		Limit(1).
+		Take(&dbHist).Error
 	if err != nil {
-		if strings.Contains(err.Error(), "no such table") || strings.Contains(err.Error(), "doesn't exist") {
+		if strings.Contains(err.Error(), "no such table") {
+			return false, nil
+		}
+		if strings.Contains(err.Error(), "record not found") {
 			return false, nil
 		}
 		return false, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}
 
 	var latestConfig Config
-	if err = json.Unmarshal([]byte(configJSON), &latestConfig); err != nil {
+	if err = json.Unmarshal([]byte(dbHist.ConfigJSON), &latestConfig); err != nil {
 		return false, fmt.Errorf(lib.T_("History config conversion error: %v"), err)
 	}
 
-	if reflect.DeepEqual(newConfig, latestConfig) {
-		return true, nil
-	}
-
-	return false, nil
+	return reflect.DeepEqual(newConfig, latestConfig), nil
 }
