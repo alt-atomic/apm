@@ -88,7 +88,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.AP
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": lib.T_("Verification information"),
+			"message": lib.T_("Inspection information"),
 			"info":    packageParse,
 		},
 		Error: false,
