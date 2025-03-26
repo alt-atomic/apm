@@ -1,6 +1,6 @@
 commandPrefix: ""
 pathImageFile: "/etc/apm/image.yml"
-pathLocales: "/var/apm/locales"
+pathLocales: "/usr/share/locale"
 pathLogFile: "/var/apm/apm.log"
 pathDBSQL: "/var/apm/apm.db"
 pathDBKV: "/var/apm/pogreb"

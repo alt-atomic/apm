@@ -53,10 +53,10 @@ fi
 echo "Копирование конфигурационного файла в /etc/apm/config.yml..."
 cp "$CONFIG_SRC" /etc/apm/config.yml || { echo "Не удалось скопировать конфигурационный файл!"; exit 1; }
 
-# Копирование переводов (локалей)
-LOCALES_SRC="$REPO_DIR/data/locales"
-if [ ! -d "$LOCALES_SRC" ]; then
-  echo "Папка с переводами $LOCALES_SRC не найдена!"
+
+PO_FILE="$REPO_DIR/po/ru.po"
+if [ ! -f "$PO_FILE" ]; then
+  echo "Файл локализации $PO_FILE не найден!"
   exit 1
 fi
 
@@ -66,9 +66,8 @@ if [ -f "/var/apm/apm.db" ]; then
   rm -f /var/apm/apm.db || { echo "Не удалось удалить файл /var/apm/apm.db"; exit 1; }
 fi
 
-echo "Копирование папки локалей из $LOCALES_SRC в /var/apm/locales..."
-rm -rf /var/apm/locales
-cp -r "$LOCALES_SRC" /var/apm/locales || { echo "Не удалось скопировать папку локалей!"; exit 1; }
+echo "Копирование файла локализации ru.po в /usr/share/locales..."
+cp "$PO_FILE" /usr/share/locale/ru/LC_MESSAGES/apm.po || { echo "Не удалось скопировать файл ru.po!"; exit 1; }
 
 # Копирование бинарного файла в /usr/bin/apm
 echo "Копирование бинарного файла в /usr/bin/apm..."
