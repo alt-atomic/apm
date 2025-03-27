@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package apt
+package _package
 
 import (
 	"apm/cmd/common/helper"
@@ -39,11 +39,13 @@ var syncAptMutex sync.Mutex
 
 type Actions struct {
 	serviceAptDatabase *PackageDBService
+	serviceALr         *AlrService
 }
 
-func NewActions(serviceAptDatabase *PackageDBService) *Actions {
+func NewActions(serviceAptDatabase *PackageDBService, serviceAlr *AlrService) *Actions {
 	return &Actions{
 		serviceAptDatabase: serviceAptDatabase,
+		serviceALr:         serviceAlr,
 	}
 }
 
@@ -75,6 +77,7 @@ type Package struct {
 	Description      string   `json:"description"`
 	Changelog        string   `json:"lastChangelog"`
 	Installed        bool     `json:"installed"`
+	IsAlr            bool     `json:"isAlr"`
 }
 
 const (
@@ -440,6 +443,13 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	}
 	for i := range packages {
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
+	}
+
+	if lib.Env.ExistAlr {
+		packages, err = a.serviceALr.UpdateWithAlrPackages(ctx, packages)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Обновляем информацию о том, установлены ли пакеты локально

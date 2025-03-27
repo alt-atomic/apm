@@ -18,7 +18,7 @@ package system
 
 import (
 	"apm/cmd/common/reply"
-	"apm/cmd/system/apt"
+	"apm/cmd/system/package"
 	"apm/cmd/system/service"
 	"apm/lib"
 	"context"
@@ -31,16 +31,17 @@ import (
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	serviceHostImage    *service.HostImageService
-	serviceAptActions   *apt.Actions
-	serviceAptDatabase  *apt.PackageDBService
+	serviceAptActions   *_package.Actions
+	serviceAptDatabase  *_package.PackageDBService
 	serviceHostDatabase *service.HostDBService
 	serviceHostConfig   *service.HostConfigService
+	serviceAlr          *_package.AlrService
 }
 
 // NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
 func NewActionsWithDeps(
-	aptDB *apt.PackageDBService,
-	aptActions *apt.Actions,
+	aptDB *_package.PackageDBService,
+	aptActions *_package.Actions,
 	hostImage *service.HostImageService,
 	hostDB *service.HostDBService,
 	hostConfig *service.HostConfigService,
@@ -56,7 +57,7 @@ func NewActionsWithDeps(
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
-	hostPackageDBSvc, err := apt.NewPackageDBService(lib.GetDB())
+	hostPackageDBSvc, err := _package.NewPackageDBService(lib.GetDB())
 	hostDBSvc, err := service.NewHostDBService(lib.GetDB())
 	if err != nil {
 		lib.Log.Fatal(err)
@@ -64,7 +65,8 @@ func NewActions() *Actions {
 
 	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
 	hostImageSvc := service.NewHostImageService(hostConfigSvc)
-	hostAptSvc := apt.NewActions(hostPackageDBSvc)
+	hostALRSvc := _package.NewALRService()
+	hostAptSvc := _package.NewActions(hostPackageDBSvc, hostALRSvc)
 
 	return &Actions{
 		serviceHostImage:    hostImageSvc,
@@ -72,6 +74,7 @@ func NewActions() *Actions {
 		serviceAptDatabase:  hostPackageDBSvc,
 		serviceHostDatabase: hostDBSvc,
 		serviceHostConfig:   hostConfigSvc,
+		serviceAlr:          hostALRSvc,
 	}
 }
 
@@ -85,7 +88,7 @@ type ImageStatus struct {
 func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
-	criticalError := apt.FindCriticalError(aptErrors)
+	criticalError := _package.FindCriticalError(aptErrors)
 	if criticalError != nil {
 		return nil, criticalError
 	}
@@ -105,7 +108,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.AP
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
-	criticalError := apt.FindCriticalError(aptErrors)
+	criticalError := _package.FindCriticalError(aptErrors)
 	if criticalError != nil {
 		return nil, criticalError
 	}
@@ -140,7 +143,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 	}
 
 	var names []string
-	var packagesInfo []apt.Package
+	var packagesInfo []_package.Package
 	for _, pkg := range packages {
 		packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, pkg)
 		if err != nil {
@@ -153,15 +156,15 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 
 	allPackageNames := strings.Join(names, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
-	criticalError := apt.FindCriticalError(aptErrors)
+	criticalError := _package.FindCriticalError(aptErrors)
 	if criticalError != nil {
 		return nil, criticalError
 	}
 
 	// Достанем все кастомные ошибки apt
-	var customErrorList []*apt.MatchedError
+	var customErrorList []*_package.MatchedError
 	for _, err = range aptErrors {
-		var matchedErr *apt.MatchedError
+		var matchedErr *_package.MatchedError
 		if errors.As(err, &matchedErr) {
 			customErrorList = append(customErrorList, matchedErr)
 		}
@@ -172,7 +175,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 		var alreadyRemovedPackages []string
 
 		for _, customError := range customErrorList {
-			if customError.Entry.Code == apt.ErrPackageNotInstalled && apply && lib.Env.IsAtomic {
+			if customError.Entry.Code == _package.ErrPackageNotInstalled && apply && lib.Env.IsAtomic {
 				alreadyRemovedPackages = append(alreadyRemovedPackages, customError.Params[0])
 			}
 		}
@@ -208,7 +211,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 	}
 
 	reply.StopSpinner()
-	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, apt.ActionRemove)
+	dialogStatus, err := _package.NewDialog(packagesInfo, packageParse, _package.ActionRemove)
 	if err != nil {
 		return nil, err
 	}
@@ -221,9 +224,9 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 
 	reply.CreateSpinner()
 	errList := a.serviceAptActions.Remove(ctx, allPackageNames)
-	criticalError = apt.FindCriticalError(errList)
+	criticalError = _package.FindCriticalError(errList)
 	if criticalError != nil {
-		var matchedErr *apt.MatchedError
+		var matchedErr *_package.MatchedError
 		if errors.As(criticalError, &matchedErr) && matchedErr.NeedUpdate() {
 			_, err = a.serviceAptActions.Update(ctx)
 			if err != nil {
@@ -288,10 +291,10 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 	isMultiInstall := false
 	var packageNames []string
-	var packagesInfo []apt.Package
+	var packagesInfo []_package.Package
 	for _, pkg := range packages {
 		originalPkg := pkg
-		var packageInfo apt.Package
+		var packageInfo _package.Package
 
 		packageInfo, err = a.serviceAptDatabase.GetPackageByName(ctx, pkg)
 		if err != nil {
@@ -333,21 +336,54 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 			return nil, errPackageNotFound
 		}
+
 		packagesInfo = append(packagesInfo, packageInfo)
-		packageNames = append(packageNames, originalPkg)
+
+		// Обработка ALR-пакетов
+		if packageInfo.IsAlr {
+			action := "install"
+			if len(originalPkg) > 0 {
+				lastChar := originalPkg[len(originalPkg)-1]
+				if lastChar == '-' {
+					action = "remove"
+				} else if lastChar == '+' {
+					action = "install"
+				}
+			}
+
+			if action == "install" {
+				pkgForPreInstall := originalPkg
+				if len(originalPkg) > 0 {
+					lastChar := originalPkg[len(originalPkg)-1]
+					if lastChar == '+' || lastChar == '-' {
+						pkgForPreInstall = originalPkg[:len(originalPkg)-1]
+					}
+				}
+
+				rpmPath, err := a.serviceAlr.PreInstall(ctx, pkgForPreInstall)
+				if err != nil {
+					return nil, err
+				}
+				packageNames = append(packageNames, rpmPath)
+			} else {
+				packageNames = append(packageNames, originalPkg)
+			}
+		} else {
+			packageNames = append(packageNames, originalPkg)
+		}
 	}
 
 	allPackageNames := strings.Join(packageNames, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "install")
-	criticalError := apt.FindCriticalError(aptErrors)
+	criticalError := _package.FindCriticalError(aptErrors)
 	if criticalError != nil {
 		return nil, criticalError
 	}
 
 	// Достанем все кастомные ошибки apt
-	var customErrorList []*apt.MatchedError
+	var customErrorList []*_package.MatchedError
 	for _, err = range aptErrors {
-		var matchedErr *apt.MatchedError
+		var matchedErr *_package.MatchedError
 		if errors.As(err, &matchedErr) {
 			customErrorList = append(customErrorList, matchedErr)
 		}
@@ -359,11 +395,11 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		var alreadyRemovedPackages []string
 
 		for _, customError := range customErrorList {
-			if customError.Entry.Code == apt.ErrPackageIsAlreadyNewest && apply && lib.Env.IsAtomic {
+			if customError.Entry.Code == _package.ErrPackageIsAlreadyNewest && apply && lib.Env.IsAtomic {
 				alreadyInstalledPackages = append(alreadyInstalledPackages, customError.Params[0])
 			}
 
-			if customError.Entry.Code == apt.ErrPackageNotInstalled && apply && lib.Env.IsAtomic {
+			if customError.Entry.Code == _package.ErrPackageNotInstalled && apply && lib.Env.IsAtomic {
 				alreadyRemovedPackages = append(alreadyRemovedPackages, customError.Params[0])
 			}
 
@@ -413,12 +449,12 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	reply.StopSpinner()
-	dialogAction := apt.ActionInstall
+	dialogAction := _package.ActionInstall
 	if isMultiInstall {
-		dialogAction = apt.ActionMultiInstall
+		dialogAction = _package.ActionMultiInstall
 	}
 
-	dialogStatus, err := apt.NewDialog(packagesInfo, packageParse, dialogAction)
+	dialogStatus, err := _package.NewDialog(packagesInfo, packageParse, dialogAction)
 	if err != nil {
 		return nil, err
 	}
@@ -432,9 +468,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	reply.CreateSpinner()
 
 	errList := a.serviceAptActions.Install(ctx, allPackageNames)
-	criticalError = apt.FindCriticalError(errList)
+	criticalError = _package.FindCriticalError(errList)
 	if criticalError != nil {
-		var matchedErr *apt.MatchedError
+		var matchedErr *_package.MatchedError
 		if errors.As(criticalError, &matchedErr) && matchedErr.NeedUpdate() {
 			_, err = a.serviceAptActions.Update(ctx)
 			if err != nil {
@@ -531,7 +567,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, "", "dist-upgrade")
-	criticalError := apt.FindCriticalError(aptErrors)
+	criticalError := _package.FindCriticalError(aptErrors)
 	if criticalError != nil {
 		return nil, criticalError
 	}
@@ -547,7 +583,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 
 	reply.StopSpinner()
 
-	dialogStatus, err := apt.NewDialog([]apt.Package{}, packageParse, apt.ActionUpgrade)
+	dialogStatus, err := _package.NewDialog([]_package.Package{}, packageParse, _package.ActionUpgrade)
 	if err != nil {
 		return nil, err
 	}
@@ -561,7 +597,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 	reply.CreateSpinner()
 
 	errUpgrade := a.serviceAptActions.Upgrade(ctx)
-	criticalError = apt.FindCriticalError(errUpgrade)
+	criticalError = _package.FindCriticalError(errUpgrade)
 	if criticalError != nil {
 		return nil, criticalError
 	}
@@ -1011,7 +1047,7 @@ type ShortPackageResponse struct {
 func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 	switch v := data.(type) {
 	// Если передан один пакет
-	case apt.Package:
+	case _package.Package:
 		if full {
 			return v
 		}
@@ -1022,7 +1058,7 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 			Description: v.Description,
 		}
 	// Если передан срез пакетов
-	case []apt.Package:
+	case []_package.Package:
 		if full {
 			return v
 		}

@@ -25,7 +25,7 @@ import (
 	"regexp"
 	"testing"
 
-	"apm/cmd/system/apt"
+	"apm/cmd/system/package"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -37,14 +37,14 @@ func TestInfo_Success_sqlmock(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	packageDBSvc, _ := apt.NewPackageDBService(db)
+	packageDBSvc, _ := _package.NewPackageDBService(db)
 
 	expectedQuery := "SELECT COUNT(*) FROM host_image_packages"
 	mock.ExpectQuery(regexp.QuoteMeta(expectedQuery)).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 	// Создаем фиктивный пакет
-	fakePkg := apt.Package{
+	fakePkg := _package.Package{
 		Name:             "vim",
 		Section:          "editors",
 		InstalledSize:    1024,
@@ -87,7 +87,7 @@ func TestInfo_Success_sqlmock(t *testing.T) {
 
 	actions := system.NewActionsWithDeps(
 		packageDBSvc,
-		apt.NewActions(packageDBSvc),
+		_package.NewActions(packageDBSvc),
 		&service.HostImageService{},  // фиктивный объект
 		&service.HostDBService{},     // фиктивный объект
 		&service.HostConfigService{}, // фиктивный объект
@@ -102,7 +102,7 @@ func TestInfo_Success_sqlmock(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "Найден пакет", data["message"])
 
-	pkgInfo, ok := data["packageInfo"].(apt.Package)
+	pkgInfo, ok := data["packageInfo"].(_package.Package)
 	assert.True(t, ok)
 	assert.Equal(t, fakePkg.Name, pkgInfo.Name)
 	assert.Equal(t, fakePkg.Version, pkgInfo.Version)

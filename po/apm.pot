@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-27 04:51+0600\n"
+"POT-Creation-Date: 2025-03-28 04:18+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: cmd/common/helper/text.go:45
+#: cmd/common/helper/text.go:53
 msgid "version not found"
 msgstr ""
 
-#: cmd/common/helper/text.go:53
+#: cmd/common/helper/text.go:61
 #, c-format
 msgid "%.2f MB"
 msgstr ""
@@ -165,7 +165,7 @@ msgstr ""
 msgid "Error sending notification: %v"
 msgstr ""
 
-#: cmd/common/reply/event.go:177 cmd/common/reply/event.go:215
+#: cmd/common/reply/event.go:177 cmd/common/reply/event.go:217
 msgid "Saving packages to the database"
 msgstr ""
 
@@ -238,34 +238,38 @@ msgid "General update process"
 msgstr ""
 
 #: cmd/common/reply/event.go:213
+msgid "Loading package list from ALR repository"
+msgstr ""
+
+#: cmd/common/reply/event.go:215
 msgid "Loading package list from ALT repository"
 msgstr ""
 
-#: cmd/common/reply/event.go:217
+#: cmd/common/reply/event.go:219
 msgid "Saving image history to the database"
 msgstr ""
 
-#: cmd/common/reply/event.go:219
+#: cmd/common/reply/event.go:221
 msgid "Building local image"
 msgstr ""
 
-#: cmd/common/reply/event.go:221
+#: cmd/common/reply/event.go:223
 msgid "Switching to local image"
 msgstr ""
 
-#: cmd/common/reply/event.go:223
+#: cmd/common/reply/event.go:225
 msgid "Checking for updates"
 msgstr ""
 
-#: cmd/common/reply/event.go:225
+#: cmd/common/reply/event.go:227
 msgid "Downloading base image update"
 msgstr ""
 
-#: cmd/common/reply/event.go:227
+#: cmd/common/reply/event.go:229
 msgid "Cleaning up old images"
 msgstr ""
 
-#: cmd/common/reply/event.go:229
+#: cmd/common/reply/event.go:231
 msgid "Synchronizing database"
 msgstr ""
 
@@ -310,232 +314,236 @@ msgid "Package"
 msgstr ""
 
 #: cmd/common/reply/translate.go:13
-msgid "Count"
+msgid "Package from ALR"
 msgstr ""
 
 #: cmd/common/reply/translate.go:15
-msgid "Console Application"
+msgid "Count"
 msgstr ""
 
 #: cmd/common/reply/translate.go:17
+msgid "Console Application"
+msgstr ""
+
+#: cmd/common/reply/translate.go:19
 msgid "Package Information"
 msgstr ""
 
-#: cmd/common/reply/translate.go:19 cmd/system/apt/dialog.go:63
-#: cmd/system/apt/dialog.go:91
+#: cmd/common/reply/translate.go:21 cmd/system/package/dialog.go:63
+#: cmd/system/package/dialog.go:91
 msgid "Install"
 msgstr ""
 
-#: cmd/common/reply/translate.go:21
+#: cmd/common/reply/translate.go:23
 msgid "Storage Type"
 msgstr ""
 
-#: cmd/common/reply/translate.go:23 cmd/common/reply/translate.go:75
+#: cmd/common/reply/translate.go:25 cmd/common/reply/translate.go:77
 msgid "Date"
 msgstr ""
 
-#: cmd/common/reply/translate.go:25
+#: cmd/common/reply/translate.go:27
 msgid "Image Digest"
 msgstr ""
 
-#: cmd/common/reply/translate.go:27
+#: cmd/common/reply/translate.go:29
 msgid "Distribution"
 msgstr ""
 
-#: cmd/common/reply/translate.go:29
+#: cmd/common/reply/translate.go:31
 msgid "Container"
 msgstr ""
 
-#: cmd/common/reply/translate.go:31 cmd/system/apt/dialog.go:288
+#: cmd/common/reply/translate.go:33 cmd/system/package/dialog.go:288
 msgid "Name"
 msgstr ""
 
-#: cmd/common/reply/translate.go:33
+#: cmd/common/reply/translate.go:35
 msgid "Extra Installed"
 msgstr ""
 
-#: cmd/common/reply/translate.go:35
+#: cmd/common/reply/translate.go:37
 msgid "Upgraded Count"
 msgstr ""
 
-#: cmd/common/reply/translate.go:37
+#: cmd/common/reply/translate.go:39
 msgid "Booted Image"
 msgstr ""
 
-#: cmd/common/reply/translate.go:39
+#: cmd/common/reply/translate.go:41
 msgid "Removed Packages"
 msgstr ""
 
-#: cmd/common/reply/translate.go:41
+#: cmd/common/reply/translate.go:43
 msgid "Provides"
 msgstr ""
 
-#: cmd/common/reply/translate.go:43
+#: cmd/common/reply/translate.go:45
 msgid "Providers"
 msgstr ""
 
-#: cmd/common/reply/translate.go:45
+#: cmd/common/reply/translate.go:47
 msgid "Version"
 msgstr ""
 
-#: cmd/common/reply/translate.go:47
+#: cmd/common/reply/translate.go:49
 msgid "History"
 msgstr ""
 
-#: cmd/common/reply/translate.go:49 cmd/system/apt/dialog.go:312
+#: cmd/common/reply/translate.go:51 cmd/system/package/dialog.go:312
 msgid "Dependencies"
 msgstr ""
 
-#: cmd/common/reply/translate.go:51
+#: cmd/common/reply/translate.go:53
 msgid "Installed Size"
 msgstr ""
 
-#: cmd/common/reply/translate.go:53
+#: cmd/common/reply/translate.go:55
 msgid "Removed Count"
 msgstr ""
 
-#: cmd/common/reply/translate.go:55
+#: cmd/common/reply/translate.go:57
 msgid "Upgraded Packages"
 msgstr ""
 
-#: cmd/common/reply/translate.go:57
+#: cmd/common/reply/translate.go:59
 msgid "Package Name"
 msgstr ""
 
-#: cmd/common/reply/translate.go:59
+#: cmd/common/reply/translate.go:61
 msgid "Image"
 msgstr ""
 
-#: cmd/common/reply/translate.go:61
+#: cmd/common/reply/translate.go:63
 msgid "Commands"
 msgstr ""
 
-#: cmd/common/reply/translate.go:63 cmd/system/apt/dialog.go:291
+#: cmd/common/reply/translate.go:65 cmd/system/package/dialog.go:291
 msgid "Maintainer"
 msgstr ""
 
-#: cmd/common/reply/translate.go:65
+#: cmd/common/reply/translate.go:67
 msgid "Installed Version"
 msgstr ""
 
-#: cmd/common/reply/translate.go:67 cmd/system/apt/dialog.go:65
-#: cmd/system/apt/dialog.go:91
+#: cmd/common/reply/translate.go:69 cmd/system/package/dialog.go:65
+#: cmd/system/package/dialog.go:91
 msgid "Remove"
 msgstr ""
 
-#: cmd/common/reply/translate.go:69
+#: cmd/common/reply/translate.go:71
 msgid "Containers"
 msgstr ""
 
-#: cmd/common/reply/translate.go:71
+#: cmd/common/reply/translate.go:73
 msgid "Paths"
 msgstr ""
 
-#: cmd/common/reply/translate.go:73
+#: cmd/common/reply/translate.go:75
 msgid "Description"
 msgstr ""
 
-#: cmd/common/reply/translate.go:77
+#: cmd/common/reply/translate.go:79
 msgid "Newly Installed Count"
 msgstr ""
 
-#: cmd/common/reply/translate.go:79
+#: cmd/common/reply/translate.go:81
 msgid "Active"
 msgstr ""
 
-#: cmd/common/reply/translate.go:81
+#: cmd/common/reply/translate.go:83
 msgid "Information"
 msgstr ""
 
-#: cmd/common/reply/translate.go:83
+#: cmd/common/reply/translate.go:85
 msgid "Total Count"
 msgstr ""
 
-#: cmd/common/reply/translate.go:85 cmd/system/apt/dialog.go:292
+#: cmd/common/reply/translate.go:87 cmd/system/package/dialog.go:292
 msgid "Installed"
 msgstr ""
 
-#: cmd/common/reply/translate.go:87
+#: cmd/common/reply/translate.go:89
 msgid "Package Manager"
 msgstr ""
 
-#: cmd/common/reply/translate.go:89
+#: cmd/common/reply/translate.go:91
 msgid "Last Changelog"
 msgstr ""
 
-#: cmd/common/reply/translate.go:91
+#: cmd/common/reply/translate.go:93
 msgid "Section"
 msgstr ""
 
-#: cmd/common/reply/translate.go:93
+#: cmd/common/reply/translate.go:95
 msgid "Specification"
 msgstr ""
 
-#: cmd/common/reply/translate.go:95
+#: cmd/common/reply/translate.go:97
 msgid "Booted"
 msgstr ""
 
-#: cmd/common/reply/translate.go:97
+#: cmd/common/reply/translate.go:99
 msgid "Staged"
 msgstr ""
 
-#: cmd/common/reply/translate.go:99 cmd/system/apt/dialog.go:309
+#: cmd/common/reply/translate.go:101 cmd/system/package/dialog.go:309
 msgid "Size"
 msgstr ""
 
-#: cmd/common/reply/translate.go:101
+#: cmd/common/reply/translate.go:103
 msgid "Newly Installed Packages"
 msgstr ""
 
-#: cmd/common/reply/translate.go:103
+#: cmd/common/reply/translate.go:105
 msgid "Not Upgraded Count"
 msgstr ""
 
-#: cmd/common/reply/translate.go:105
+#: cmd/common/reply/translate.go:107
 msgid "Container Name"
 msgstr ""
 
-#: cmd/common/reply/translate.go:107
+#: cmd/common/reply/translate.go:109
 msgid "Configuration"
 msgstr ""
 
-#: cmd/common/reply/translate.go:109
+#: cmd/common/reply/translate.go:111
 msgid "Exporting"
 msgstr ""
 
-#: cmd/common/reply/translate.go:111
+#: cmd/common/reply/translate.go:113
 msgid "Status"
 msgstr ""
 
-#: cmd/common/reply/translate.go:113
+#: cmd/common/reply/translate.go:115
 msgid "Image Date"
 msgstr ""
 
-#: cmd/common/reply/translate.go:115
+#: cmd/common/reply/translate.go:117
 msgid "Packages"
 msgstr ""
 
-#: cmd/common/reply/translate.go:117
+#: cmd/common/reply/translate.go:119
 msgid "Filename"
 msgstr ""
 
-#: cmd/common/reply/translate.go:119
+#: cmd/common/reply/translate.go:121
 msgid "Container Information"
 msgstr ""
 
-#: cmd/common/reply/translate.go:121
+#: cmd/common/reply/translate.go:123
 msgid "Image Name"
 msgstr ""
 
-#: cmd/common/reply/translate.go:123
+#: cmd/common/reply/translate.go:125
 msgid "Transport"
 msgstr ""
 
-#: cmd/common/reply/translate.go:125
+#: cmd/common/reply/translate.go:127
 msgid "Pinned"
 msgstr ""
 
-#: cmd/common/reply/translate.go:127
+#: cmd/common/reply/translate.go:129
 msgid "List"
 msgstr ""
 
@@ -545,18 +553,18 @@ msgstr ""
 
 #: cmd/distrobox/actions.go:104 cmd/distrobox/actions.go:144
 #: cmd/distrobox/actions.go:258 cmd/distrobox/actions.go:309
-#: cmd/system/actions.go:716
+#: cmd/system/actions.go:752
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr ""
 
-#: cmd/distrobox/actions.go:113 cmd/system/actions.go:630
+#: cmd/distrobox/actions.go:113 cmd/system/actions.go:666
 msgid "Package found"
 msgstr ""
 
 #: cmd/distrobox/actions.go:153 cmd/distrobox/actions.go:232
-#: cmd/system/actions.go:693 cmd/system/actions.go:729
-#: cmd/system/actions.go:853
+#: cmd/system/actions.go:729 cmd/system/actions.go:765
+#: cmd/system/actions.go:889
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -732,11 +740,11 @@ msgstr ""
 msgid "Failed to update package database: %v, stderr: %s"
 msgstr ""
 
-#: cmd/distrobox/service/alt.go:54 cmd/system/apt/actions.go:324
+#: cmd/distrobox/service/alt.go:54 cmd/system/package/actions.go:327
 msgid "Error opening stdout pipe: %w"
 msgstr ""
 
-#: cmd/distrobox/service/alt.go:57 cmd/system/apt/actions.go:327
+#: cmd/distrobox/service/alt.go:57 cmd/system/package/actions.go:330
 msgid "Error executing command: %w"
 msgstr ""
 
@@ -744,16 +752,16 @@ msgstr ""
 msgid "Error retrieving installed packages: "
 msgstr ""
 
-#: cmd/distrobox/service/alt.go:138 cmd/system/apt/actions.go:434
+#: cmd/distrobox/service/alt.go:138 cmd/system/package/actions.go:437
 #, c-format
 msgid "String too large: (over %dMB) - "
 msgstr ""
 
-#: cmd/distrobox/service/alt.go:140 cmd/system/apt/actions.go:436
+#: cmd/distrobox/service/alt.go:140 cmd/system/package/actions.go:439
 msgid "Scanner error: %w"
 msgstr ""
 
-#: cmd/distrobox/service/alt.go:144 cmd/system/apt/actions.go:439
+#: cmd/distrobox/service/alt.go:144 cmd/system/package/actions.go:442
 msgid "Command execution error: %w"
 msgstr ""
 
@@ -777,7 +785,7 @@ msgstr ""
 msgid "Error executing command rpm -qia: %w"
 msgstr ""
 
-#: cmd/distrobox/service/alt.go:236 cmd/system/apt/actions.go:544
+#: cmd/distrobox/service/alt.go:236 cmd/system/package/actions.go:554
 msgid "Error scanning rpm output: %w"
 msgstr ""
 
@@ -938,631 +946,157 @@ msgstr ""
 msgid "Failed to retrieve installed packages: "
 msgstr ""
 
-#: cmd/system/actions.go:95 cmd/system/actions.go:115
+#: cmd/system/actions.go:98 cmd/system/actions.go:118
 msgid "Inspection information"
 msgstr ""
 
-#: cmd/system/actions.go:137
+#: cmd/system/actions.go:140
 msgid "At least one package must be specified, for example, remove package"
 msgstr ""
 
-#: cmd/system/actions.go:171
+#: cmd/system/actions.go:174
 msgid "No candidates for removal found"
 msgstr ""
 
-#: cmd/system/actions.go:203
+#: cmd/system/actions.go:206
 msgid ""
 ".\n"
 "A difference in the package list was found in the local configuration, the "
 "image has been updated"
 msgstr ""
 
-#: cmd/system/actions.go:217 cmd/system/actions.go:427
-#: cmd/system/actions.go:556
+#: cmd/system/actions.go:220 cmd/system/actions.go:463
+#: cmd/system/actions.go:592
 msgid "Cancel dialog"
 msgstr ""
 
-#: cmd/system/actions.go:233
+#: cmd/system/actions.go:236
 msgid ""
 "A communication error with the repository occurred. The package list has "
 "been updated, please try running the command again"
 msgstr ""
 
-#: cmd/system/actions.go:247
+#: cmd/system/actions.go:250
 #, c-format
 msgid "%s removed successfully"
 msgid_plural "%s removed successfully"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/system/actions.go:253
+#: cmd/system/actions.go:256
 msgid ". The system image has been modified"
 msgstr ""
 
-#: cmd/system/actions.go:257
+#: cmd/system/actions.go:260
 msgid ""
 ". The system image has not been modified! To apply changes, run with the -a "
 "flag"
 msgstr ""
 
-#: cmd/system/actions.go:284
+#: cmd/system/actions.go:287
 msgid "You must specify at least one package, for example, remove package"
 msgstr ""
 
-#: cmd/system/actions.go:321 cmd/system/actions.go:612
+#: cmd/system/actions.go:324 cmd/system/actions.go:648
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr ""
 
-#: cmd/system/actions.go:330 cmd/system/actions.go:621
+#: cmd/system/actions.go:333 cmd/system/actions.go:657
 msgid ". Maybe you were looking for: "
 msgstr ""
 
-#: cmd/system/actions.go:357
+#: cmd/system/actions.go:393
 msgid "The operation will not make any changes. Reasons: \n"
 msgstr ""
 
-#: cmd/system/actions.go:408
+#: cmd/system/actions.go:444
 msgid ""
 "Found a discrepancy in the package list in the local configuration, the "
 "image has been updated"
 msgstr ""
 
-#: cmd/system/actions.go:444
+#: cmd/system/actions.go:480
 msgid ""
 "A repository connection error occurred. The package list has been updated, "
 "please try running the command again"
 msgstr ""
 
-#: cmd/system/actions.go:459 cmd/system/actions.go:571
+#: cmd/system/actions.go:495 cmd/system/actions.go:607
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/system/actions.go:460 cmd/system/actions.go:572
+#: cmd/system/actions.go:496 cmd/system/actions.go:608
 msgid "and"
 msgstr ""
 
-#: cmd/system/actions.go:461 cmd/system/actions.go:573
+#: cmd/system/actions.go:497 cmd/system/actions.go:609
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
 msgstr[0] ""
 msgstr[1] ""
 
-#: cmd/system/actions.go:470
+#: cmd/system/actions.go:506
 msgid ". The system image has been changed."
 msgstr ""
 
-#: cmd/system/actions.go:474
+#: cmd/system/actions.go:510
 msgid ""
 ". The system image has not been changed! To apply changes, you need to run "
 "with the -a flag."
 msgstr ""
 
-#: cmd/system/actions.go:507
+#: cmd/system/actions.go:543
 msgid "Package list updated successfully"
 msgstr ""
 
-#: cmd/system/actions.go:542
+#: cmd/system/actions.go:578
 msgid "The operation will not make any changes"
 msgstr ""
 
-#: cmd/system/actions.go:578
+#: cmd/system/actions.go:614
 msgid "The system has been upgrade successfully"
 msgstr ""
 
-#: cmd/system/actions.go:591
+#: cmd/system/actions.go:627
 msgid "Package name must be specified, for example info package"
 msgstr ""
 
-#: cmd/system/actions.go:690 cmd/system/actions.go:726
+#: cmd/system/actions.go:726 cmd/system/actions.go:762
 msgid "Nothing found"
 msgstr ""
 
-#: cmd/system/actions.go:756 cmd/system/commands.go:244
+#: cmd/system/actions.go:792 cmd/system/commands.go:244
 msgid "Image status"
 msgstr ""
 
-#: cmd/system/actions.go:789
+#: cmd/system/actions.go:825
 msgid "Command executed successfully"
 msgstr ""
 
-#: cmd/system/actions.go:827
+#: cmd/system/actions.go:863
 msgid "Changes applied successfully. A reboot is required"
 msgstr ""
 
-#: cmd/system/actions.go:870
+#: cmd/system/actions.go:906
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 
-#: cmd/system/actions.go:886
+#: cmd/system/actions.go:922
 msgid "This option is only available for an atomic system"
 msgstr ""
 
-#: cmd/system/actions.go:988
+#: cmd/system/actions.go:1024
 msgid "Modified image. Configuration file: "
 msgstr ""
 
-#: cmd/system/actions.go:995
+#: cmd/system/actions.go:1031
 msgid "Cloud image without changes"
-msgstr ""
-
-#: cmd/system/apt/actions.go:155
-msgid "Installation"
-msgstr ""
-
-#: cmd/system/apt/actions.go:157
-msgid "Removal"
-msgstr ""
-
-#: cmd/system/apt/actions.go:159
-msgid "Change"
-msgstr ""
-
-#: cmd/system/apt/actions.go:184
-#, c-format
-msgid "Downloading: %s"
-msgstr ""
-
-#: cmd/system/apt/actions.go:237
-msgid "Installation error: %v"
-msgstr ""
-
-#: cmd/system/apt/actions.go:292 cmd/system/apt/actions.go:299
-#: cmd/system/apt/actions.go:304
-msgid "Package verification error: %v"
-msgstr ""
-
-#: cmd/system/apt/actions.go:298
-#, c-format
-msgid "Package verification error: %s"
-msgstr ""
-
-#: cmd/system/apt/actions.go:448
-msgid "Error updating information about installed packages: %w"
-msgstr ""
-
-#: cmd/system/apt/actions.go:498
-msgid "Error executing the rpm -qia command: %w"
-msgstr ""
-
-#: cmd/system/apt/actions.go:568
-msgid "Error updating packages: %v, output: %s"
-msgstr ""
-
-#: cmd/system/apt/database.go:155
-msgid "Table cleanup error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:174
-msgid "Batch insert error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:190
-#, c-format
-msgid "failed to get information about package %s"
-msgstr ""
-
-#: cmd/system/apt/database.go:203
-msgid "Temporary table creation error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:215
-msgid "Batch insert into temporary table error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:234
-msgid "Batch update error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:253 cmd/system/apt/database.go:301
-msgid "Query execution error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:283
-#, c-format
-msgid "Invalid sort field: %s. Available fields: %s"
-msgstr ""
-
-#: cmd/system/apt/database.go:325
-msgid "Package count error: %w"
-msgstr ""
-
-#: cmd/system/apt/database.go:336
-#, c-format
-msgid "Invalid filter field: %s. Available fields: %s"
-msgstr ""
-
-#: cmd/system/apt/database.go:379
-#, c-format
-msgid "Table %s exists but contains no records"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:61 cmd/system/apt/dialog.go:91
-msgid "Edit"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:61 cmd/system/apt/dialog.go:63
-#: cmd/system/apt/dialog.go:65 cmd/system/apt/dialog.go:67
-msgid "Abort"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:67 cmd/system/apt/dialog.go:91
-msgid "Upgrade"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:82
-msgid "Error starting TEA: %v"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:88 cmd/system/apt/dialog.go:94
-#: cmd/system/apt/errors.go:131
-msgid "Operation cancelled"
-msgstr ""
-
-#. Формируем строку с подсказками по клавишам
-#: cmd/system/apt/dialog.go:209
-msgid ""
-"Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/"
-"bottom, Enter - choose, Esc/q - cancel"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:213
-msgid "Select an action:"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:274
-msgid "Package information:"
-msgid_plural "Packages information:"
-msgstr[0] ""
-msgstr[1] ""
-
-#: cmd/system/apt/dialog.go:281
-#, c-format
-msgid ""
-"\n"
-"Package %d:"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:283 cmd/system/apt/dialog.go:351
-#: cmd/system/apt/dialog.go:372
-msgid "No"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:285
-msgid "Yes"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:289
-msgid "Action"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:290
-msgid "Category"
-msgstr ""
-
-#. Выводим "Версия в облаке" обычным стилем
-#: cmd/system/apt/dialog.go:296 cmd/system/apt/dialog.go:307
-msgid "Repository version"
-msgstr ""
-
-#. Выводим "Версия в системе", уже с раскрашенным текстом
-#: cmd/system/apt/dialog.go:305
-msgid "System version"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:315
-msgid "Affected changes:"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:320
-msgid "Extra packages"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:321 cmd/system/apt/dialog.go:331
-#: cmd/system/apt/dialog.go:344
-msgid "Will be updated"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:322 cmd/system/apt/dialog.go:332
-#: cmd/system/apt/dialog.go:340
-msgid "Will be installed"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:323 cmd/system/apt/dialog.go:333
-#: cmd/system/apt/dialog.go:348
-msgid "Will be removed"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:325 cmd/system/apt/dialog.go:326
-#: cmd/system/apt/dialog.go:327 cmd/system/apt/dialog.go:328
-#, c-format
-msgid "%d package"
-msgid_plural "%d packages"
-msgstr[0] ""
-msgstr[1] ""
-
-#: cmd/system/apt/dialog.go:330
-msgid "Total:"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:334
-msgid "Not affected"
-msgstr ""
-
-#: cmd/system/apt/dialog.go:375
-msgid "and others"
-msgstr ""
-
-#: cmd/system/apt/errors.go:104
-msgid "Broken packages"
-msgstr ""
-
-#: cmd/system/apt/errors.go:107
-msgid "You have no permissions for that"
-msgstr ""
-
-#: cmd/system/apt/errors.go:110
-msgid "Internal Error, InstallPackages was called with broken packages!"
-msgstr ""
-
-#: cmd/system/apt/errors.go:113
-msgid "Packages need to be removed but Remove is disabled."
-msgstr ""
-
-#: cmd/system/apt/errors.go:116
-msgid "Unable to lock the download directory"
-msgstr ""
-
-#: cmd/system/apt/errors.go:119
-msgid "There are problems and -y was used without --force-yes"
-msgstr ""
-
-#: cmd/system/apt/errors.go:122
-#, c-format
-msgid "You don't have enough free space in %s"
-msgstr ""
-
-#: cmd/system/apt/errors.go:125
-#, c-format
-msgid "Package file %s is out of sync"
-msgstr ""
-
-#: cmd/system/apt/errors.go:128
-msgid "Trivial Only specified but this is not a trivial operation"
-msgstr ""
-
-#: cmd/system/apt/errors.go:134
-msgid "Must specify at least one package to check builddeps for"
-msgstr ""
-
-#: cmd/system/apt/errors.go:137
-#, c-format
-msgid "Unable to find a source package for %s"
-msgstr ""
-
-#: cmd/system/apt/errors.go:140
-#, c-format
-msgid "Unable to get build-dependency information for %s"
-msgstr ""
-
-#: cmd/system/apt/errors.go:143
-#, c-format
-msgid ""
-"Some broken packages were found while trying to process build-dependencies "
-"for %s."
-msgstr ""
-
-#: cmd/system/apt/errors.go:146
-#, c-format
-msgid "Package %s is a virtual package with no good providers"
-msgstr ""
-
-#: cmd/system/apt/errors.go:149
-#, c-format
-msgid "Package %s is a virtual package with multiple good providers"
-msgstr ""
-
-#: cmd/system/apt/errors.go:152
-msgid "No packages found"
-msgstr ""
-
-#: cmd/system/apt/errors.go:155
-#, c-format
-msgid "Package %s is not installed, so not removed"
-msgstr ""
-
-#: cmd/system/apt/errors.go:158
-#, c-format
-msgid "Release %s'%s' for '%s' was not found"
-msgstr ""
-
-#: cmd/system/apt/errors.go:161
-#, c-format
-msgid "Version %s'%s' for '%s' was not found"
-msgstr ""
-
-#: cmd/system/apt/errors.go:164
-#, c-format
-msgid "Sources list %s could not be read"
-msgstr ""
-
-#: cmd/system/apt/errors.go:167
-#, c-format
-msgid "Sources list %s doesn't exist"
-msgstr ""
-
-#: cmd/system/apt/errors.go:170
-msgid "Excessive arguments"
-msgstr ""
-
-#: cmd/system/apt/errors.go:173
-msgid "Internal Error, problem resolver broke stuff"
-msgstr ""
-
-#: cmd/system/apt/errors.go:176
-msgid "Internal Error, Ordering didn't finish"
-msgstr ""
-
-#: cmd/system/apt/errors.go:179
-msgid "Some files failed to download"
-msgstr ""
-
-#: cmd/system/apt/errors.go:182
-msgid ""
-"Unable to fetch some archives, maybe run apt-get update or try with --fix-"
-"missing?"
-msgstr ""
-
-#: cmd/system/apt/errors.go:185
-msgid "--fix-missing and media swapping is not currently supported"
-msgstr ""
-
-#: cmd/system/apt/errors.go:188
-msgid "Unable to correct missing packages"
-msgstr ""
-
-#: cmd/system/apt/errors.go:191
-msgid "Aborting Install"
-msgstr ""
-
-#: cmd/system/apt/errors.go:194
-msgid "Could not open RPM database"
-msgstr ""
-
-#: cmd/system/apt/errors.go:197
-#, c-format
-msgid "Couldn't parse name '%s'"
-msgstr ""
-
-#: cmd/system/apt/errors.go:200
-msgid "Write to stdout failed"
-msgstr ""
-
-#: cmd/system/apt/errors.go:203
-msgid "Exceeded maximum number of command arguments"
-msgstr ""
-
-#: cmd/system/apt/errors.go:206
-#, c-format
-msgid ""
-"Package %s dependency for %s cannot be satisfied because the package %s "
-"cannot be found"
-msgstr ""
-
-#: cmd/system/apt/errors.go:209
-#, c-format
-msgid "Regex compilation error - %s"
-msgstr ""
-
-#: cmd/system/apt/errors.go:212
-#, c-format
-msgid "Package %s has no installation candidate"
-msgstr ""
-
-#: cmd/system/apt/errors.go:215
-msgid "Internal Error, AllUpgrade broke stuff"
-msgstr ""
-
-#: cmd/system/apt/errors.go:218
-msgid "Requested autoremove failed."
-msgstr ""
-
-#: cmd/system/apt/errors.go:221
-#, c-format
-msgid "Couldn't find package %s"
-msgstr ""
-
-#: cmd/system/apt/errors.go:224
-#, c-format
-msgid "%s dependency for %s cannot be satisfied"
-msgstr ""
-
-#: cmd/system/apt/errors.go:227
-#, c-format
-msgid "Failed to satisfy %s dependency for %s: Installed package %s is too new"
-msgstr ""
-
-#: cmd/system/apt/errors.go:230
-#, c-format
-msgid "Failed to satisfy %s dependency for %s: %s"
-msgstr ""
-
-#: cmd/system/apt/errors.go:233
-msgid "You must give exactly one pattern"
-msgstr ""
-
-#: cmd/system/apt/errors.go:235
-msgid "No help for that"
-msgstr ""
-
-#: cmd/system/apt/errors.go:237
-#, c-format
-msgid "%s is already the newest version."
-msgstr ""
-
-#: cmd/system/apt/errors.go:240
-msgid "The list of sources could not be read."
-msgstr ""
-
-#: cmd/system/apt/errors.go:243
-msgid "There are changes to be made"
-msgstr ""
-
-#: cmd/system/apt/errors.go:246
-msgid "Failed to fetch some archives."
-msgstr ""
-
-#: cmd/system/apt/errors.go:249
-#, c-format
-msgid "Failed to fetch %s  %s"
-msgstr ""
-
-#: cmd/system/apt/errors.go:252
-msgid ""
-"Some index files failed to download. They have been ignored, or old ones "
-"used instead."
-msgstr ""
-
-#: cmd/system/apt/errors.go:255
-msgid ""
-"'apt-get upgrade' is disabled because it can leave system in a broken state."
-msgstr ""
-
-#: cmd/system/apt/errors.go:258
-msgid ""
-"Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or "
-"specify a solution)."
-msgstr ""
-
-#: cmd/system/apt/errors.go:261
-msgid "Must specify at least one package to fetch source for"
-msgstr ""
-
-#: cmd/system/apt/errors.go:264
-msgid "Child process failed"
-msgstr ""
-
-#: cmd/system/apt/errors.go:267
-msgid "Must specify at least one package to get changelog for"
-msgstr ""
-
-#: cmd/system/apt/errors.go:270
-msgid "Failed to process build dependencies"
-msgstr ""
-
-#: cmd/system/apt/errors.go:273
-#, c-format
-msgid "Package %s is a virtual package with no "
-msgstr ""
-
-#: cmd/system/apt/errors.go:276
-#, c-format
-msgid "Package %s is a virtual package with multiple "
 msgstr ""
 
 #: cmd/system/commands.go:51
@@ -1628,6 +1162,500 @@ msgstr ""
 
 #: cmd/system/commands.go:272
 msgid "Filter by image name"
+msgstr ""
+
+#: cmd/system/package/actions.go:158
+msgid "Installation"
+msgstr ""
+
+#: cmd/system/package/actions.go:160
+msgid "Removal"
+msgstr ""
+
+#: cmd/system/package/actions.go:162
+msgid "Change"
+msgstr ""
+
+#: cmd/system/package/actions.go:187
+#, c-format
+msgid "Downloading: %s"
+msgstr ""
+
+#: cmd/system/package/actions.go:240
+msgid "Installation error: %v"
+msgstr ""
+
+#: cmd/system/package/actions.go:295 cmd/system/package/actions.go:302
+#: cmd/system/package/actions.go:307
+msgid "Package verification error: %v"
+msgstr ""
+
+#: cmd/system/package/actions.go:301
+#, c-format
+msgid "Package verification error: %s"
+msgstr ""
+
+#: cmd/system/package/actions.go:458
+msgid "Error updating information about installed packages: %w"
+msgstr ""
+
+#: cmd/system/package/actions.go:508
+msgid "Error executing the rpm -qia command: %w"
+msgstr ""
+
+#: cmd/system/package/actions.go:578
+msgid "Error updating packages: %v, output: %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:47 cmd/system/package/alr.go:53
+#, c-format
+msgid "Build ALR package %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:66 cmd/system/package/alr.go:90
+#: cmd/system/package/alr.go:98
+#, c-format
+msgid "Error alr command '%s': %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:72
+#, c-format
+msgid "Unable to extract RPM path from output: %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:115
+msgid "Error alr command '%s': %w"
+msgstr ""
+
+#: cmd/system/package/database.go:158
+msgid "Table cleanup error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:177
+msgid "Batch insert error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:193
+#, c-format
+msgid "failed to get information about package %s"
+msgstr ""
+
+#: cmd/system/package/database.go:206
+msgid "Temporary table creation error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:218
+msgid "Batch insert into temporary table error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:237
+msgid "Batch update error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:256 cmd/system/package/database.go:304
+msgid "Query execution error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:286
+#, c-format
+msgid "Invalid sort field: %s. Available fields: %s"
+msgstr ""
+
+#: cmd/system/package/database.go:328
+msgid "Package count error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:339
+#, c-format
+msgid "Invalid filter field: %s. Available fields: %s"
+msgstr ""
+
+#: cmd/system/package/database.go:382
+#, c-format
+msgid "Table %s exists but contains no records"
+msgstr ""
+
+#: cmd/system/package/dialog.go:61 cmd/system/package/dialog.go:91
+msgid "Edit"
+msgstr ""
+
+#: cmd/system/package/dialog.go:61 cmd/system/package/dialog.go:63
+#: cmd/system/package/dialog.go:65 cmd/system/package/dialog.go:67
+msgid "Abort"
+msgstr ""
+
+#: cmd/system/package/dialog.go:67 cmd/system/package/dialog.go:91
+msgid "Upgrade"
+msgstr ""
+
+#: cmd/system/package/dialog.go:82
+msgid "Error starting TEA: %v"
+msgstr ""
+
+#: cmd/system/package/dialog.go:88 cmd/system/package/dialog.go:94
+#: cmd/system/package/errors.go:131
+msgid "Operation cancelled"
+msgstr ""
+
+#. Формируем строку с подсказками по клавишам
+#: cmd/system/package/dialog.go:209
+msgid ""
+"Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/"
+"bottom, Enter - choose, Esc/q - cancel"
+msgstr ""
+
+#: cmd/system/package/dialog.go:213
+msgid "Select an action:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:274
+msgid "Package information:"
+msgid_plural "Packages information:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/system/package/dialog.go:281
+#, c-format
+msgid ""
+"\n"
+"Package %d:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:283 cmd/system/package/dialog.go:351
+#: cmd/system/package/dialog.go:372
+msgid "No"
+msgstr ""
+
+#: cmd/system/package/dialog.go:285
+msgid "Yes"
+msgstr ""
+
+#: cmd/system/package/dialog.go:289
+msgid "Action"
+msgstr ""
+
+#: cmd/system/package/dialog.go:290
+msgid "Category"
+msgstr ""
+
+#. Выводим "Версия в облаке" обычным стилем
+#: cmd/system/package/dialog.go:296 cmd/system/package/dialog.go:307
+msgid "Repository version"
+msgstr ""
+
+#. Выводим "Версия в системе", уже с раскрашенным текстом
+#: cmd/system/package/dialog.go:305
+msgid "System version"
+msgstr ""
+
+#: cmd/system/package/dialog.go:315
+msgid "Affected changes:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:320
+msgid "Extra packages"
+msgstr ""
+
+#: cmd/system/package/dialog.go:321 cmd/system/package/dialog.go:331
+#: cmd/system/package/dialog.go:344
+msgid "Will be updated"
+msgstr ""
+
+#: cmd/system/package/dialog.go:322 cmd/system/package/dialog.go:332
+#: cmd/system/package/dialog.go:340
+msgid "Will be installed"
+msgstr ""
+
+#: cmd/system/package/dialog.go:323 cmd/system/package/dialog.go:333
+#: cmd/system/package/dialog.go:348
+msgid "Will be removed"
+msgstr ""
+
+#: cmd/system/package/dialog.go:325 cmd/system/package/dialog.go:326
+#: cmd/system/package/dialog.go:327 cmd/system/package/dialog.go:328
+#, c-format
+msgid "%d package"
+msgid_plural "%d packages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/system/package/dialog.go:330
+msgid "Total:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:334
+msgid "Not affected"
+msgstr ""
+
+#: cmd/system/package/dialog.go:375
+msgid "and others"
+msgstr ""
+
+#: cmd/system/package/errors.go:104
+msgid "Broken packages"
+msgstr ""
+
+#: cmd/system/package/errors.go:107
+msgid "You have no permissions for that"
+msgstr ""
+
+#: cmd/system/package/errors.go:110
+msgid "Internal Error, InstallPackages was called with broken packages!"
+msgstr ""
+
+#: cmd/system/package/errors.go:113
+msgid "Packages need to be removed but Remove is disabled."
+msgstr ""
+
+#: cmd/system/package/errors.go:116
+msgid "Unable to lock the download directory"
+msgstr ""
+
+#: cmd/system/package/errors.go:119
+msgid "There are problems and -y was used without --force-yes"
+msgstr ""
+
+#: cmd/system/package/errors.go:122
+#, c-format
+msgid "You don't have enough free space in %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:125
+#, c-format
+msgid "Package file %s is out of sync"
+msgstr ""
+
+#: cmd/system/package/errors.go:128
+msgid "Trivial Only specified but this is not a trivial operation"
+msgstr ""
+
+#: cmd/system/package/errors.go:134
+msgid "Must specify at least one package to check builddeps for"
+msgstr ""
+
+#: cmd/system/package/errors.go:137
+#, c-format
+msgid "Unable to find a source package for %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:140
+#, c-format
+msgid "Unable to get build-dependency information for %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:143
+#, c-format
+msgid ""
+"Some broken packages were found while trying to process build-dependencies "
+"for %s."
+msgstr ""
+
+#: cmd/system/package/errors.go:146
+#, c-format
+msgid "Package %s is a virtual package with no good providers"
+msgstr ""
+
+#: cmd/system/package/errors.go:149
+#, c-format
+msgid "Package %s is a virtual package with multiple good providers"
+msgstr ""
+
+#: cmd/system/package/errors.go:152
+msgid "No packages found"
+msgstr ""
+
+#: cmd/system/package/errors.go:155
+#, c-format
+msgid "Package %s is not installed, so not removed"
+msgstr ""
+
+#: cmd/system/package/errors.go:158
+#, c-format
+msgid "Release %s'%s' for '%s' was not found"
+msgstr ""
+
+#: cmd/system/package/errors.go:161
+#, c-format
+msgid "Version %s'%s' for '%s' was not found"
+msgstr ""
+
+#: cmd/system/package/errors.go:164
+#, c-format
+msgid "Sources list %s could not be read"
+msgstr ""
+
+#: cmd/system/package/errors.go:167
+#, c-format
+msgid "Sources list %s doesn't exist"
+msgstr ""
+
+#: cmd/system/package/errors.go:170
+msgid "Excessive arguments"
+msgstr ""
+
+#: cmd/system/package/errors.go:173
+msgid "Internal Error, problem resolver broke stuff"
+msgstr ""
+
+#: cmd/system/package/errors.go:176
+msgid "Internal Error, Ordering didn't finish"
+msgstr ""
+
+#: cmd/system/package/errors.go:179
+msgid "Some files failed to download"
+msgstr ""
+
+#: cmd/system/package/errors.go:182
+msgid ""
+"Unable to fetch some archives, maybe run apt-get update or try with --fix-"
+"missing?"
+msgstr ""
+
+#: cmd/system/package/errors.go:185
+msgid "--fix-missing and media swapping is not currently supported"
+msgstr ""
+
+#: cmd/system/package/errors.go:188
+msgid "Unable to correct missing packages"
+msgstr ""
+
+#: cmd/system/package/errors.go:191
+msgid "Aborting Install"
+msgstr ""
+
+#: cmd/system/package/errors.go:194
+msgid "Could not open RPM database"
+msgstr ""
+
+#: cmd/system/package/errors.go:197
+#, c-format
+msgid "Couldn't parse name '%s'"
+msgstr ""
+
+#: cmd/system/package/errors.go:200
+msgid "Write to stdout failed"
+msgstr ""
+
+#: cmd/system/package/errors.go:203
+msgid "Exceeded maximum number of command arguments"
+msgstr ""
+
+#: cmd/system/package/errors.go:206
+#, c-format
+msgid ""
+"Package %s dependency for %s cannot be satisfied because the package %s "
+"cannot be found"
+msgstr ""
+
+#: cmd/system/package/errors.go:209
+#, c-format
+msgid "Regex compilation error - %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:212
+#, c-format
+msgid "Package %s has no installation candidate"
+msgstr ""
+
+#: cmd/system/package/errors.go:215
+msgid "Internal Error, AllUpgrade broke stuff"
+msgstr ""
+
+#: cmd/system/package/errors.go:218
+msgid "Requested autoremove failed."
+msgstr ""
+
+#: cmd/system/package/errors.go:221
+#, c-format
+msgid "Couldn't find package %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:224
+#, c-format
+msgid "%s dependency for %s cannot be satisfied"
+msgstr ""
+
+#: cmd/system/package/errors.go:227
+#, c-format
+msgid "Failed to satisfy %s dependency for %s: Installed package %s is too new"
+msgstr ""
+
+#: cmd/system/package/errors.go:230
+#, c-format
+msgid "Failed to satisfy %s dependency for %s: %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:233
+msgid "You must give exactly one pattern"
+msgstr ""
+
+#: cmd/system/package/errors.go:235
+msgid "No help for that"
+msgstr ""
+
+#: cmd/system/package/errors.go:237
+#, c-format
+msgid "%s is already the newest version."
+msgstr ""
+
+#: cmd/system/package/errors.go:240
+msgid "The list of sources could not be read."
+msgstr ""
+
+#: cmd/system/package/errors.go:243
+msgid "There are changes to be made"
+msgstr ""
+
+#: cmd/system/package/errors.go:246
+msgid "Failed to fetch some archives."
+msgstr ""
+
+#: cmd/system/package/errors.go:249
+#, c-format
+msgid "Failed to fetch %s  %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:252
+msgid ""
+"Some index files failed to download. They have been ignored, or old ones "
+"used instead."
+msgstr ""
+
+#: cmd/system/package/errors.go:255
+msgid ""
+"'apt-get upgrade' is disabled because it can leave system in a broken state."
+msgstr ""
+
+#: cmd/system/package/errors.go:258
+msgid ""
+"Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or "
+"specify a solution)."
+msgstr ""
+
+#: cmd/system/package/errors.go:261
+msgid "Must specify at least one package to fetch source for"
+msgstr ""
+
+#: cmd/system/package/errors.go:264
+msgid "Child process failed"
+msgstr ""
+
+#: cmd/system/package/errors.go:267
+msgid "Must specify at least one package to get changelog for"
+msgstr ""
+
+#: cmd/system/package/errors.go:270
+msgid "Failed to process build dependencies"
+msgstr ""
+
+#: cmd/system/package/errors.go:273
+#, c-format
+msgid "Package %s is a virtual package with no "
+msgstr ""
+
+#: cmd/system/package/errors.go:276
+#, c-format
+msgid "Package %s is a virtual package with multiple "
 msgstr ""
 
 #: cmd/system/service/config.go:79

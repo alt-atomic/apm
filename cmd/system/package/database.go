@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package apt
+package _package
 
 import (
 	"apm/cmd/common/helper"
@@ -86,6 +86,7 @@ type DBPackage struct {
 	Description      string `gorm:"column:description"`
 	Changelog        string `gorm:"column:changelog"`
 	Installed        bool   `gorm:"column:installed"`
+	IsAlr            bool   `gorm:"column:isAlr"`
 }
 
 // TableName — задаём имя таблицы
@@ -107,6 +108,7 @@ func (dbp DBPackage) fromDBModel() Package {
 		Description:      dbp.Description,
 		Changelog:        dbp.Changelog,
 		Installed:        dbp.Installed,
+		IsAlr:            dbp.IsAlr,
 	}
 	if strings.TrimSpace(dbp.Depends) != "" {
 		p.Depends = strings.Split(dbp.Depends, ",")
@@ -131,6 +133,7 @@ func (p Package) toDBModel() DBPackage {
 		Description:      p.Description,
 		Changelog:        p.Changelog,
 		Installed:        p.Installed,
+		IsAlr:            p.IsAlr,
 	}
 	if len(p.Depends) > 0 {
 		dbp.Depends = strings.Join(p.Depends, ",")
@@ -407,6 +410,7 @@ var allowedSortFields = []string{
 	"description",
 	"changelog",
 	"installed",
+	"isAlr",
 }
 
 // Списки разрешённых полей для фильтрации.
@@ -424,4 +428,5 @@ var allowedFilterFields = []string{
 	"description",
 	"changelog",
 	"installed",
+	"isAlr",
 }

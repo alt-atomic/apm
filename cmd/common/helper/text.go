@@ -24,6 +24,14 @@ import (
 	"strings"
 )
 
+// ClearALRPackageName очищаем названия alr пакетов от постфиксов
+func ClearALRPackageName(name string) string {
+	if idx := strings.Index(name, "+alr"); idx != -1 {
+		return name[:idx]
+	}
+	return name
+}
+
 // GetVersionFromAptCache преобразует полную версию пакетов из apt ALT в коротких вид
 func GetVersionFromAptCache(s string) (string, error) {
 	parts := strings.Split(s, ":")
