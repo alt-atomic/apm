@@ -125,7 +125,7 @@ func InitConfig() {
 func EnsurePath(path string) error {
 	dir := filepath.Dir(path)
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0777); err != nil {
 		return err
 	}
 
@@ -146,5 +146,5 @@ func EnsurePath(path string) error {
 
 // EnsureDir проверяет, существует ли директория по указанному пути, и создает её при необходимости.
 func EnsureDir(path string) error {
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0777)
 }
