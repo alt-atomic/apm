@@ -346,6 +346,12 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 				continue
 			}
 			query = query.Where("installed = ?", boolVal)
+		case "isAlr":
+			boolVal, ok := helper.ParseBool(value)
+			if !ok {
+				continue
+			}
+			query = query.Where("isAlr = ?", boolVal)
 		case "depends":
 			if strVal, ok := value.(string); ok {
 				query = query.Where("depends LIKE ?", "%"+strVal+"%")
