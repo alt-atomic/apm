@@ -17,6 +17,7 @@
 package service
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"bufio"
@@ -154,7 +155,7 @@ func (h *HostImageService) EnableOverlay() error {
 	}
 
 	// запускаем если находимся НЕ в контейнере
-	if runOverlay && len(os.Getenv("container")) == 0 {
+	if runOverlay && !helper.IsRunningInContainer() {
 		command := fmt.Sprintf("%s bootc usr-overlay", lib.Env.CommandPrefix)
 		cmd := exec.Command("sh", "-c", command)
 		if output, err := cmd.CombinedOutput(); err != nil {

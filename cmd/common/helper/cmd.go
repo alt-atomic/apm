@@ -20,6 +20,7 @@ import (
 	"apm/lib"
 	"bytes"
 	"context"
+	"os"
 	"os/exec"
 )
 
@@ -32,4 +33,20 @@ func RunCommand(ctx context.Context, command string) (string, string, error) {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	return stdout.String(), stderr.String(), err
+}
+
+// IsRunningInContainer проверка, запущен ли apm внутри контейнера
+func IsRunningInContainer() bool {
+	if _, err := os.Stat("/run/.containerenv"); err == nil {
+		return true
+	}
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+
+	if len(os.Getenv("container")) > 0 {
+		return true
+	}
+
+	return false
 }
