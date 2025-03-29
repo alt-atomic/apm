@@ -498,7 +498,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	)
 
 	if apply {
-		err = a.applyChange(ctx, packageNames, true)
+		err = a.applyChange(ctx, packages, true)
 		if err != nil {
 			return nil, err
 		}
