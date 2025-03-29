@@ -131,8 +131,7 @@ func (s *HostConfigService) GenerateDockerfile() error {
 		return err
 	}
 
-	// Формирование базовой apt-get команды.
-	aptCmd := "apt-get update"
+	var aptCmd string
 
 	// Формирование списка пакетов с суффиксами: + для установки и - для удаления.
 	var pkgs []string
@@ -146,7 +145,7 @@ func (s *HostConfigService) GenerateDockerfile() error {
 		pkgs = append(pkgs, pkg+"-")
 	}
 	if len(pkgs) > 0 {
-		aptCmd += " && apm s install " + strings.Join(pkgs, " ")
+		aptCmd = "apm s install " + strings.Join(pkgs, " ")
 	}
 
 	// Формирование Dockerfile.

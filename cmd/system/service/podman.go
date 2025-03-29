@@ -39,6 +39,11 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 
 	parts := strings.Fields(cmdLine)
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	env := os.Environ()
+	env = append(env, "TERM=xterm-256color")
+	env = append(env, "TMPDIR=/var/tmp")
+	cmd.Env = env
+
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		return "", err
@@ -53,10 +58,6 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	env := os.Environ()
-	env = append(env, "TERM=xterm-256color")
-	cmd.Env = env
 
 	var outputBuffer bytes.Buffer
 
