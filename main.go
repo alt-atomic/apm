@@ -38,7 +38,6 @@ var (
 )
 
 func main() {
-	defer cleanup()
 	lib.Log.Debugln("Starting apm…")
 
 	lib.InitConfig()
@@ -52,6 +51,7 @@ func main() {
 
 	go func() {
 		sig := <-sigs
+
 		switch sig {
 		case syscall.SIGINT, syscall.SIGTERM:
 			infoText := fmt.Sprintf(lib.T_("Recieved correct signal %s. Stopping application…"), sig)
@@ -74,7 +74,7 @@ func main() {
 		}
 
 		cleanup()
-		os.Exit(0)
+		os.Exit(1)
 	}()
 
 	// Основная команда приложения
@@ -119,17 +119,13 @@ func main() {
 
 	rootCommand.Suggest = true
 	if err := rootCommand.Run(ctx, os.Args); err != nil {
-		lib.Log.Error(err.Error())
-		_ = reply.CliResponse(ctx, reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": err.Error(),
-			},
-			Error: true,
-		})
+		cleanup()
+		os.Exit(1)
 	}
 }
 
 func sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	defer cleanup()
 	err := lib.InitDBus(false)
 	if err != nil {
 		return err
@@ -167,6 +163,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 }
 
 func systemDbus(ctx context.Context, cmd *cli.Command) error {
+	defer cleanup()
 	err := lib.InitDBus(true)
 	if err != nil {
 		return err

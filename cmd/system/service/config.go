@@ -146,7 +146,7 @@ func (s *HostConfigService) GenerateDockerfile() error {
 		pkgs = append(pkgs, pkg+"-")
 	}
 	if len(pkgs) > 0 {
-		aptCmd += " && apt-get -y install " + strings.Join(pkgs, " ")
+		aptCmd += " && apm s install " + strings.Join(pkgs, " ")
 	}
 
 	// Формирование Dockerfile.

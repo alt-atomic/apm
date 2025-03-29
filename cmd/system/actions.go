@@ -1008,7 +1008,7 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 	return nil
 }
 
-func (a *Actions) getImageStatus(ctx context.Context) (ImageStatus, error) {
+func (a *Actions) getImageStatus(_ context.Context) (ImageStatus, error) {
 	hostImage, err := a.serviceHostImage.GetHostImage()
 	if err != nil {
 		return ImageStatus{}, err

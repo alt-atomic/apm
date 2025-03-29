@@ -21,6 +21,7 @@ import (
 	"apm/lib"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -351,6 +352,11 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 			}
 			fmt.Println(message)
 		}
+	}
+
+	// возвращаем пустую ошибку, что бы вызвать статус exit code 1
+	if resp.Error {
+		return errors.New("")
 	}
 
 	return nil

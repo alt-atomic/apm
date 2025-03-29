@@ -153,7 +153,8 @@ func (h *HostImageService) EnableOverlay() error {
 		return scanner.Err()
 	}
 
-	if runOverlay {
+	// запускаем если находимся НЕ в контейнере
+	if runOverlay && len(os.Getenv("container")) == 0 {
 		command := fmt.Sprintf("%s bootc usr-overlay", lib.Env.CommandPrefix)
 		cmd := exec.Command("sh", "-c", command)
 		if output, err := cmd.CombinedOutput(); err != nil {
