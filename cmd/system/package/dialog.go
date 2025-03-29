@@ -52,7 +52,7 @@ type model struct {
 
 // NewDialog запускает диалог отображения информации о пакете с выбором действия.
 func NewDialog(packageInfo []Package, packageChange PackageChanges, action DialogAction) (bool, error) {
-	if lib.Env.Format != "text" && reply.IsTTY() {
+	if lib.Env.Format != "text" || !reply.IsTTY() {
 		return true, nil
 	}
 

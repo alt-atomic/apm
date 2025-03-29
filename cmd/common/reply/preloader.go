@@ -66,7 +66,7 @@ type model struct {
 
 // CreateSpinner Создание и запуск Bubble Tea
 func CreateSpinner() {
-	if lib.Env.Format != "text" && IsTTY() {
+	if lib.Env.Format != "text" || !IsTTY() {
 		return
 	}
 
@@ -96,7 +96,7 @@ func CreateSpinner() {
 
 // StopSpinner Остановка и очистка вывода
 func StopSpinner() {
-	if lib.Env.Format != "text" && IsTTY() {
+	if lib.Env.Format != "text" || !IsTTY() {
 		return
 	}
 
@@ -140,7 +140,7 @@ func StopSpinner() {
 //	UpdateTask("TASK", "install", "Установка пакетов", "BEFORE", "")
 //	UpdateTask("TASK", "install", "Установка пакетов", "AFTER", "")
 func UpdateTask(eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
-	if lib.Env.Format != "text" && IsTTY() {
+	if lib.Env.Format != "text" || !IsTTY() {
 		return
 	}
 
