@@ -107,11 +107,17 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:   "upgrade",
-				Usage:  lib.T_("General system upgrade"),
-				Hidden: lib.Env.IsAtomic,
+				Name:  "upgrade",
+				Usage: lib.T_("General system upgrade"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Upgrade(ctx)
+					var resp *reply.APIResponse
+					var err error
+					if lib.Env.IsAtomic {
+						resp, err = NewActions().ImageUpdate(ctx)
+					} else {
+						resp, err = NewActions().Upgrade(ctx)
+					}
+
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
