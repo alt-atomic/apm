@@ -222,7 +222,7 @@ func getTaskText(task string) string {
 	case "system.SwitchImage":
 		return lib.T_("Switching to local image")
 	case "system.CheckAndUpdateBaseImage":
-		return lib.T_("Checking for updates")
+		return lib.T_("General Image Update Process")
 	case "system.bootcUpgrade":
 		return lib.T_("Downloading base image update")
 	case "system.pruneOldImages":

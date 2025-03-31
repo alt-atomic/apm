@@ -282,12 +282,12 @@ msgstr "Выполнение задач"
 
 #: cmd/common/reply/preloader.go:326
 msgid "Progress completed"
-msgstr "Процесс завершён"
+msgstr "Прогресс завершён"
 
 #: cmd/common/reply/preloader.go:328
 #, c-format
 msgid "Progress: %s completed"
-msgstr "Процесс: %s завершён"
+msgstr "Прогресс: %s завершён"
 
 #: cmd/common/reply/response.go:110 cmd/common/reply/response.go:133
 #: cmd/common/reply/response.go:240 cmd/common/reply/response.go:266
@@ -1124,7 +1124,7 @@ msgstr "Эта опция доступна только на атомарной 
 
 #: cmd/system/actions.go:1024
 msgid "Modified image. Configuration file: "
-msgstr "Образ изменён. Конфигурационный файл:"
+msgstr "Образ изменён. Конфигурационный файл: "
 
 #: cmd/system/actions.go:1031
 msgid "Cloud image without changes"

@@ -853,7 +853,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, true)
+	err = a.serviceHostImage.BuildAndSwitch(ctx, false, true)
 	if err != nil {
 		return nil, err
 	}
@@ -965,7 +965,7 @@ func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall 
 		return err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, true, *a.serviceHostConfig.Config, false)
+	err = a.serviceHostImage.BuildAndSwitch(ctx, false, false)
 	if err != nil {
 		return err
 	}

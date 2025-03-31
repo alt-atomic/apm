@@ -60,7 +60,7 @@ func main() {
 				Data: map[string]interface{}{
 					"message": infoText,
 				},
-				Error: false,
+				Error: true,
 			})
 		default:
 			infoText := fmt.Sprintf(lib.T_("Unexpected signal %s received. Terminating the application with an error."), sig)

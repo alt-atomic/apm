@@ -228,6 +228,7 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 		if !strings.Contains(string(output), "No changes in:") {
 			return h.bootcUpgrade(ctx)
 		}
+
 		return nil
 	}
 
@@ -235,7 +236,51 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 		return fmt.Errorf(lib.T_("Error, file %s not found"), h.containerPath)
 	}
 
-	return h.BuildAndSwitch(ctx, pullImage, config, false)
+	var (
+		remoteDigest  string
+		localDigest   string
+		errCheckImage error
+	)
+
+	remoteDigest, errCheckImage = h.getRemoteImageInfo(ctx, config.Image, false)
+	localDigest, errCheckImage = h.getRemoteImageInfo(ctx, config.Image, true)
+
+	if errCheckImage != nil {
+		return errCheckImage
+	}
+
+	if remoteDigest == localDigest {
+		return nil
+	}
+
+	return h.BuildAndSwitch(ctx, pullImage, false)
+}
+
+type SkopeoInspectInfo struct {
+	Digest string   `json:"Digest"`
+	Layers []string `json:"Layers"`
+}
+
+// getRemoteImageDigest используя skopeo, смотрим Layers удалённого или локально образа для сравнения
+func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName string, checkLocal bool) (string, error) {
+	command := fmt.Sprintf("%s skopeo inspect docker://%s", lib.Env.CommandPrefix, imageName)
+	if checkLocal {
+		command = fmt.Sprintf("%s skopeo inspect containers-storage:%s", lib.Env.CommandPrefix, imageName)
+	}
+
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd.Env = []string{"LC_ALL=C"}
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf(lib.T_("skopeo inspect error: %v"), err)
+	}
+
+	var info SkopeoInspectInfo
+	if err = json.Unmarshal(out, &info); err != nil {
+		return "", fmt.Errorf(lib.T_("failed to parse skopeo inspect: %w"), err)
+	}
+
+	return strings.Join(info.Layers, ","), nil
 }
 
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
@@ -251,7 +296,7 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 }
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ. checkSame - включена ли проверка на изменение конфигурации
-func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, config Config, checkSame bool) error {
+func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool) error {
 	statusSame, err := h.serviceHostConfig.ConfigIsChanged(ctx)
 	if !statusSame && checkSame {
 		return fmt.Errorf(lib.T_("The image has not changed, build paused"))

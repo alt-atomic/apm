@@ -109,7 +109,9 @@ func printProgress(ctx context.Context, keyBlob string, progressPercent float64,
 }
 
 // parseProgressLine разбирает строки
-func parseProgressLine(ctx context.Context, line string, allBlobs map[string]bool) {
+func parseProgressLine(ctx context.Context, rawLine string, allBlobs map[string]bool) {
+	line := strings.TrimSpace(removeANSI(rawLine))
+
 	// Проверим, действительно ли строка начинается с "Copying blob "
 	if !strings.HasPrefix(line, "Copying blob ") {
 		return
@@ -215,4 +217,10 @@ func pruneOldImages(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+var ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
+
+func removeANSI(s string) string {
+	return ansiRegexp.ReplaceAllString(s, "")
 }
