@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-03-28 04:18+0600\n"
+"POT-Creation-Date: 2025-03-31 23:06+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -258,7 +258,7 @@ msgid "Switching to local image"
 msgstr ""
 
 #: cmd/common/reply/event.go:225
-msgid "Checking for updates"
+msgid "General Image Update Process"
 msgstr ""
 
 #: cmd/common/reply/event.go:227
@@ -287,25 +287,25 @@ msgstr ""
 msgid "Progress: %s completed"
 msgstr ""
 
-#: cmd/common/reply/response.go:110 cmd/common/reply/response.go:133
-#: cmd/common/reply/response.go:240 cmd/common/reply/response.go:266
+#: cmd/common/reply/response.go:111 cmd/common/reply/response.go:134
+#: cmd/common/reply/response.go:241 cmd/common/reply/response.go:267
 msgid "%T (unknown type)"
 msgstr ""
 
-#: cmd/common/reply/response.go:129 cmd/common/reply/response.go:262
+#: cmd/common/reply/response.go:130 cmd/common/reply/response.go:263
 msgid "%T (slice of unknown type)"
 msgstr ""
 
-#: cmd/common/reply/response.go:156 cmd/common/reply/response.go:163
+#: cmd/common/reply/response.go:157 cmd/common/reply/response.go:164
 #, c-format
 msgid "%s: no"
 msgstr ""
 
-#: cmd/common/reply/response.go:173
+#: cmd/common/reply/response.go:174
 msgid "yes"
 msgstr ""
 
-#: cmd/common/reply/response.go:175
+#: cmd/common/reply/response.go:176
 msgid "no"
 msgstr ""
 
@@ -631,11 +631,11 @@ msgstr ""
 msgid "Container name. Required"
 msgstr ""
 
-#: cmd/distrobox/commands.go:75 cmd/system/commands.go:124
+#: cmd/distrobox/commands.go:75 cmd/system/commands.go:130
 msgid "Package information"
 msgstr ""
 
-#: cmd/distrobox/commands.go:96 cmd/system/commands.go:144
+#: cmd/distrobox/commands.go:96 cmd/system/commands.go:150
 msgid "Quick package search by name"
 msgstr ""
 
@@ -651,21 +651,21 @@ msgstr ""
 msgid "Field for sorting, for example: name, version"
 msgstr ""
 
-#: cmd/distrobox/commands.go:129 cmd/system/commands.go:178
+#: cmd/distrobox/commands.go:129 cmd/system/commands.go:184
 msgid "Sorting order: ASC or DESC"
 msgstr ""
 
-#: cmd/distrobox/commands.go:134 cmd/system/commands.go:183
-#: cmd/system/commands.go:276
+#: cmd/distrobox/commands.go:134 cmd/system/commands.go:189
+#: cmd/system/commands.go:282
 msgid "Maximum number of records to return"
 msgstr ""
 
-#: cmd/distrobox/commands.go:139 cmd/system/commands.go:188
-#: cmd/system/commands.go:281
+#: cmd/distrobox/commands.go:139 cmd/system/commands.go:194
+#: cmd/system/commands.go:287
 msgid "Starting position (offset) for the result set"
 msgstr ""
 
-#: cmd/distrobox/commands.go:144 cmd/system/commands.go:193
+#: cmd/distrobox/commands.go:144 cmd/system/commands.go:199
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1070,7 +1070,7 @@ msgstr ""
 msgid "Nothing found"
 msgstr ""
 
-#: cmd/system/actions.go:792 cmd/system/commands.go:244
+#: cmd/system/actions.go:792 cmd/system/commands.go:250
 msgid "Image status"
 msgstr ""
 
@@ -1124,43 +1124,43 @@ msgstr ""
 msgid "General system upgrade"
 msgstr ""
 
-#: cmd/system/commands.go:129
+#: cmd/system/commands.go:135
 msgid "Full output of information"
 msgstr ""
 
-#: cmd/system/commands.go:149
+#: cmd/system/commands.go:155
 msgid "Only installed"
 msgstr ""
 
-#: cmd/system/commands.go:155 cmd/system/commands.go:202
+#: cmd/system/commands.go:161 cmd/system/commands.go:208
 msgid "Full information output"
 msgstr ""
 
-#: cmd/system/commands.go:174
+#: cmd/system/commands.go:180
 msgid "Building query to fetch package list"
 msgstr ""
 
-#: cmd/system/commands.go:197
+#: cmd/system/commands.go:203
 msgid "Force update all packages before query"
 msgstr ""
 
-#: cmd/system/commands.go:226
+#: cmd/system/commands.go:232
 msgid "Module for working with the image"
 msgstr ""
 
-#: cmd/system/commands.go:232
+#: cmd/system/commands.go:238
 msgid "Apply changes to the host"
 msgstr ""
 
-#: cmd/system/commands.go:256
+#: cmd/system/commands.go:262
 msgid "Image update"
 msgstr ""
 
-#: cmd/system/commands.go:268
+#: cmd/system/commands.go:274
 msgid "Image changes history"
 msgstr ""
 
-#: cmd/system/commands.go:272
+#: cmd/system/commands.go:278
 msgid "Filter by image name"
 msgstr ""
 
@@ -1270,7 +1270,7 @@ msgstr ""
 msgid "Invalid filter field: %s. Available fields: %s"
 msgstr ""
 
-#: cmd/system/package/database.go:382
+#: cmd/system/package/database.go:388
 #, c-format
 msgid "Table %s exists but contains no records"
 msgstr ""
@@ -1666,7 +1666,7 @@ msgstr ""
 msgid "Configuration not loaded"
 msgstr ""
 
-#: cmd/system/service/config.go:177
+#: cmd/system/service/config.go:176
 msgid "Local image configuration file has no changes"
 msgstr ""
 
@@ -1699,98 +1699,106 @@ msgstr ""
 msgid "History config conversion error: %v"
 msgstr ""
 
-#: cmd/system/service/host.go:84
+#: cmd/system/service/host.go:85
 msgid "Failed to execute bootc command: %v"
 msgstr ""
 
-#: cmd/system/service/host.go:88
+#: cmd/system/service/host.go:89
 msgid "Failed to parse JSON: %v"
 msgstr ""
 
-#: cmd/system/service/host.go:108
+#: cmd/system/service/host.go:109
 msgid "Failed to open file %s: %w"
 msgstr ""
 
-#: cmd/system/service/host.go:124
+#: cmd/system/service/host.go:125
 msgid "Error reading file %s: %w"
 msgstr ""
 
-#: cmd/system/service/host.go:127
+#: cmd/system/service/host.go:128
 #, c-format
 msgid ""
 "Failed to determine the distribution image, please specify it manually in "
 "the file: %s"
 msgstr ""
 
-#: cmd/system/service/host.go:134
+#: cmd/system/service/host.go:135
 msgid "Access error to /proc/mounts: %v"
 msgstr ""
 
-#: cmd/system/service/host.go:160
+#: cmd/system/service/host.go:162
 #, c-format
 msgid "Error activating usr-overlay: %s"
 msgstr ""
 
-#: cmd/system/service/host.go:178
+#: cmd/system/service/host.go:180
 #, c-format
 msgid "Error building image: %s status: %d"
 msgstr ""
 
-#: cmd/system/service/host.go:184
+#: cmd/system/service/host.go:186
 msgid "Error podman image: %v"
 msgstr ""
 
-#: cmd/system/service/host.go:189
+#: cmd/system/service/host.go:191
 msgid "No valid images with tag 'os'. Please build the image first."
 msgstr ""
 
-#: cmd/system/service/host.go:203
+#: cmd/system/service/host.go:205
 #, c-format
 msgid "Error switching to the new image: %s"
 msgstr ""
 
-#: cmd/system/service/host.go:215
+#: cmd/system/service/host.go:217
 msgid "Error retrieving information: %v"
 msgstr ""
 
-#: cmd/system/service/host.go:233
+#: cmd/system/service/host.go:236
 #, c-format
 msgid "Error, file %s not found"
 msgstr ""
 
-#: cmd/system/service/host.go:245
+#: cmd/system/service/host.go:275
+msgid "Skopeo inspect error: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:280
+msgid "Failed to parse skopeo inspect: %w"
+msgstr ""
+
+#: cmd/system/service/host.go:292
 #, c-format
 msgid "Bootc upgrade failed: %s"
 msgstr ""
 
-#: cmd/system/service/host.go:255
+#: cmd/system/service/host.go:302
 msgid "The image has not changed, build paused"
 msgstr ""
 
 #. Возвращаем вывод вместе с ошибкой для более подробной диагностики
-#: cmd/system/service/podman.go:84
+#: cmd/system/service/podman.go:85
 msgid "Command failed with error: %v, output: %s"
 msgstr ""
 
-#: cmd/system/service/podman.go:155
+#: cmd/system/service/podman.go:158
 #, c-format
 msgid "Cannot parse size: %s"
 msgstr ""
 
-#: cmd/system/service/podman.go:175
+#: cmd/system/service/podman.go:178
 #, c-format
 msgid "Unknown suffix: %s"
 msgstr ""
 
-#: cmd/system/service/podman.go:189
+#: cmd/system/service/podman.go:192
 msgid "Error deleting old images: %v, output: %s"
 msgstr ""
 
-#: cmd/system/service/podman.go:196
+#: cmd/system/service/podman.go:199
 msgid "Error retrieving podman image: %v"
 msgstr ""
 
-#: cmd/system/service/podman.go:211
+#: cmd/system/service/podman.go:214
 msgid "Error deleting image %s: %v, output: %s\n"
 msgstr ""
 
@@ -1850,18 +1858,18 @@ msgstr ""
 msgid "[command]"
 msgstr ""
 
-#: main.go:176
+#: main.go:173
 msgid "Administrator privileges are required to start"
 msgstr ""
 
-#: main.go:202
+#: main.go:199
 msgid "Terminating the application. Releasing resources…"
 msgstr ""
 
-#: main.go:207
+#: main.go:204
 msgid "Error closing KV database: "
 msgstr ""
 
-#: main.go:213
+#: main.go:210
 msgid "Error closing SQL database: "
 msgstr ""

@@ -272,12 +272,12 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 	cmd.Env = []string{"LC_ALL=C"}
 	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf(lib.T_("skopeo inspect error: %v"), err)
+		return "", fmt.Errorf(lib.T_("Skopeo inspect error: %v"), err)
 	}
 
 	var info SkopeoInspectInfo
 	if err = json.Unmarshal(out, &info); err != nil {
-		return "", fmt.Errorf(lib.T_("failed to parse skopeo inspect: %w"), err)
+		return "", fmt.Errorf(lib.T_("Failed to parse skopeo inspect: %w"), err)
 	}
 
 	return strings.Join(info.Layers, ","), nil
