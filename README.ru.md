@@ -51,7 +51,7 @@ GLOBAL OPTIONS:
 В этом режиме APM работает с контейнерами distrobox, для просмотра всех методов установите, например, D-SPY и найдите там сервис APM
 
 ```
-apm dbus-user
+apm dbus-session
 ```
 
 ## Системная сессия DBUS

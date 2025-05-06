@@ -1,7 +1,7 @@
 APM supports three operating modes:
 * DBUS service
 * Console application
-*  Support for atomic images (functionality and behavior model are determined automatically)
+Support for atomic images (functionality and behavior model are determined automatically)
 
 Two response formats:
 * formatted text (Default)
@@ -52,7 +52,7 @@ When running in a user session, the service is registered on the session bus, wh
 To view all methods, for example, install D-SPY and then find the APM service there
 
 ```
-apm dbus-user
+apm dbus-session
 ```
 
 ## System DBUS Session
