@@ -128,6 +128,13 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	defer cleanup()
 	err := lib.InitDBus(false)
 	if err != nil {
+		lib.Log.Errorf("InitDBus failed: %v", err)
+		_ = reply.CliResponse(ctx, reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": err.Error(),
+			},
+			Error: true,
+		})
 		return err
 	}
 
@@ -166,6 +173,13 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	defer cleanup()
 	err := lib.InitDBus(true)
 	if err != nil {
+		lib.Log.Errorf("InitDBus failed: %v", err)
+		_ = reply.CliResponse(ctx, reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": err.Error(),
+			},
+			Error: true,
+		})
 		return err
 	}
 
