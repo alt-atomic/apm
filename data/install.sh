@@ -60,6 +60,23 @@ if [ ! -f "$PO_FILE" ]; then
   exit 1
 fi
 
+# Копирование D‑Bus‑конфига
+DBUS_CONF_SRC="$REPO_DIR/data/dbus-config/apm.conf"
+DBUS_CONF_DST="/etc/dbus-1/system.d/apm.conf"
+
+if [ ! -f "$DBUS_CONF_SRC" ]; then
+  echo "Файл D‑Bus‑конфигурации $DBUS_CONF_SRC не найден!"
+  exit 1
+fi
+
+echo "Копирование D‑Bus‑конфигурации в $DBUS_CONF_DST..."
+install -o root -g root -m 644 "$DBUS_CONF_SRC" "$DBUS_CONF_DST" \
+  || { echo "Не удалось установить D‑Bus‑конфигурацию!"; exit 1; }
+
+# Перезапуск системного dbus‑daemon, чтобы он перечитал конфиг
+echo "Перезапуск systemd‑dbus.service..."
+systemctl try-reload-or-restart dbus.service
+
 # Удаление файла базы данных, если он существует
 if [ -f "/var/apm/apm.db" ]; then
   echo "Удаление файла базы данных /var/apm/apm.db..."
