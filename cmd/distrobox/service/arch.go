@@ -40,7 +40,7 @@ func NewArchProvider(servicePackage *PackageService) *ArchProvider {
 // GetPackages обновляет базу пакетов и выполняет поиск:
 func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	// Обновляем базу пакетов и базу владельцев файлов.
-	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Sy ", lib.Env.CommandPrefix, containerInfo.ContainerName)
+	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Suy ", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
 		return nil, fmt.Errorf(lib.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
