@@ -46,7 +46,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 		return nil, fmt.Errorf(lib.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
-	command := fmt.Sprintf("%s apt-cache dumpavail", lib.Env.CommandPrefix)
+	command := fmt.Sprintf("%s distrobox enter %s -- apt-cache dumpavail", lib.Env.CommandPrefix, containerInfo.ContainerName)
 	cmd := exec.Command("sh", "-c", command)
 
 	stdout, err := cmd.StdoutPipe()
