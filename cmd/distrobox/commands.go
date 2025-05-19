@@ -154,8 +154,8 @@ func CommandList() *cli.Command {
 						Container:   cmd.String("container"),
 						Sort:        cmd.String("sort"),
 						Order:       cmd.String("order"),
-						Offset:      cmd.Int("offset"),
-						Limit:       cmd.Int("limit"),
+						Offset:      cmd.Int64("offset"),
+						Limit:       cmd.Int64("limit"),
 						Filters:     cmd.StringSlice("filter"),
 						ForceUpdate: cmd.Bool("force-update"),
 					}

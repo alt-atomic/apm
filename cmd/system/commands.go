@@ -213,8 +213,8 @@ func CommandList() *cli.Command {
 					params := ListParams{
 						Sort:        cmd.String("sort"),
 						Order:       cmd.String("order"),
-						Offset:      cmd.Int("offset"),
-						Limit:       cmd.Int("limit"),
+						Offset:      cmd.Int64("offset"),
+						Limit:       cmd.Int64("limit"),
 						Filters:     cmd.StringSlice("filter"),
 						ForceUpdate: cmd.Bool("force-update"),
 					}
@@ -289,7 +289,7 @@ func CommandList() *cli.Command {
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
+							resp, err := NewActions().ImageHistory(ctx, cmd.String("image"), cmd.Int64("limit"), cmd.Int64("offset"))
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
