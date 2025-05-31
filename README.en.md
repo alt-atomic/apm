@@ -33,8 +33,8 @@ Usage:
    apm [command [command options]]
 
 Commands:
-   dbus-session  Start session D-Bus service com.application.APM
-   dbus-system   Start system D-Bus service com.application.APM
+   dbus-session  Start session D-Bus service org.altlinux.APM
+   dbus-system   Start system D-Bus service org.altlinux.APM
    system, s     System package management
    distrobox, d  Managing packages and containers in distrobox
    help, h       Show the list of commands or help for each command

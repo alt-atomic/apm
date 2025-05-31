@@ -37,13 +37,13 @@ func InitDBus(isSystem bool) error {
 		return err
 	}
 
-	reply, err := DBUSConn.RequestName("com.application.APM", dbus.NameFlagDoNotQueue)
+	reply, err := DBUSConn.RequestName("org.altlinux.APM", dbus.NameFlagDoNotQueue)
 	if err != nil {
 		return err
 	}
 
 	if reply != dbus.RequestNameReplyPrimaryOwner {
-		return fmt.Errorf(T_("Interface com.application.APM is already in use"))
+		return fmt.Errorf(T_("Interface org.altlinux.APM is already in use"))
 	}
 
 	return nil

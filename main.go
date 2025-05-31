@@ -97,12 +97,12 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:   "dbus-session",
-				Usage:  lib.T_("Start session D-Bus service com.application.APM"),
+				Usage:  lib.T_("Start session D-Bus service org.altlinux.APM"),
 				Action: sessionDbus,
 			},
 			{
 				Name:   "dbus-system",
-				Usage:  lib.T_("Start system D-Bus service com.application.APM"),
+				Usage:  lib.T_("Start system D-Bus service org.altlinux.APM"),
 				Action: systemDbus,
 			},
 			system.CommandList(),
@@ -153,13 +153,13 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon)
 
 	// Экспортируем в D-Bus
-	if err = lib.DBUSConn.Export(distroObj, "/com/application/APM", "com.application.distrobox"); err != nil {
+	if err = lib.DBUSConn.Export(distroObj, "/org/altlinux/APM", "org.altlinux.distrobox"); err != nil {
 		return err
 	}
 
 	if err = lib.DBUSConn.Export(
 		introspect.Introspectable(helper.UserIntrospectXML),
-		"/com/application/APM",
+		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
 		return err
@@ -212,13 +212,13 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	sysObj := system.NewDBusWrapper(sysActions)
 
 	// Экспортируем в D-Bus
-	if err = lib.DBUSConn.Export(sysObj, "/com/application/APM", "com.application.system"); err != nil {
+	if err = lib.DBUSConn.Export(sysObj, "/org/altlinux/APM", "org.altlinux.system"); err != nil {
 		return err
 	}
 
 	if err = lib.DBUSConn.Export(
 		introspect.Introspectable(helper.SystemIntrospectXML),
-		"/com/application/APM",
+		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
 		return err

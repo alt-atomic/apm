@@ -1815,7 +1815,7 @@ msgid "Error connecting to database: %v"
 msgstr ""
 
 #: lib/dbus.go:46
-msgid "Interface com.application.APM is already in use"
+msgid "Interface org.altlinux.APM is already in use"
 msgstr ""
 
 #: lib/i18n.go:32
@@ -1843,11 +1843,11 @@ msgid "Internal property, adds the transaction to the output"
 msgstr ""
 
 #: main.go:100
-msgid "Start session D-Bus service com.application.APM"
+msgid "Start session D-Bus service org.altlinux.APM"
 msgstr ""
 
 #: main.go:105
-msgid "Start system D-Bus service com.application.APM"
+msgid "Start system D-Bus service org.altlinux.APM"
 msgstr ""
 
 #: main.go:113

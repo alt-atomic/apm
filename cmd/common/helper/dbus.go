@@ -20,13 +20,13 @@ import "github.com/godbus/dbus/v5/introspect"
 
 const UserIntrospectXML = `
 <node>
-  <interface name="com.application.APM">
+  <interface name="org.altlinux.APM">
     <signal name="Notification">
       <arg type="s" name="message" direction="out"/>
     </signal>
   </interface>
 
-  <interface name="com.application.distrobox">
+  <interface name="org.altlinux.distrobox">
     <method name="Update">
       <arg direction="in" type="s" name="container"/>
       <arg direction="in" type="s" name="transaction"/>
@@ -105,13 +105,13 @@ const UserIntrospectXML = `
 
 const SystemIntrospectXML = `
 <node>
-  <interface name="com.application.APM">
+  <interface name="org.altlinux.APM">
     <signal name="Notification">
       <arg type="s" name="message" direction="out"/>
     </signal>
   </interface>
 
-  <interface name="com.application.system">
+  <interface name="org.altlinux.system">
 
     <method name="Install">
       <arg direction="in" type="as" name="packages"/>

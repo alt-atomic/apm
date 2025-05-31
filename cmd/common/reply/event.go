@@ -162,8 +162,8 @@ func SendNotificationResponse(message string) {
 		return
 	}
 
-	objPath := dbus.ObjectPath("/com/application/APM")
-	signalName := "com.application.APM.Notification"
+	objPath := dbus.ObjectPath("/org/altlinux/APM")
+	signalName := "org.altlinux.APM.Notification"
 
 	err := lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {

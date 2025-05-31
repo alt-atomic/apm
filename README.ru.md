@@ -33,8 +33,8 @@ USAGE:
    apm [global options] [command [command options]]
 
 COMMANDS:
-   dbus-session  Запуск сессии D-Bus service com.application.APM
-   dbus-system   Запуск системной сессии D-Bus service com.application.APM
+   dbus-session  Запуск сессии D-Bus service org.altlinux.APM
+   dbus-system   Запуск системной сессии D-Bus service org.altlinux.APM
    system, s     Управление системными пакетами
    distrobox, d  Управление пакетами и контейнерами distrobox
    help, h       Показать список команд или справку по каждой команде
