@@ -32,7 +32,7 @@ constants = [
   ['apm/lib.BuildEnvironment', PROFILE],
   ['apm/lib.BuildPathLocales', LOCALES_DIR],
   ['apm/lib.BuildPathLogFile', LOG_FILEPATH],
-  ['apm/lib.BuildPathDBSQL', DBSQL_FILEPATH],
+  ['apm/lib.BuildPathDBSQLSystem', DBSQL_FILEPATH],
   ['apm/lib.BuildPathDBKV', POGREB_FILEPATH],
   ['apm/lib.BuildPathImageFile', IMAGE_FILEPATH],
 ]
