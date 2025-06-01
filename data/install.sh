@@ -45,7 +45,7 @@ mkdir -p /var/apm
 chmod 777 /var/apm
 
 # Копирование конфигурационного файла
-CONFIG_SRC="$REPO_DIR/data/config.yml"
+CONFIG_SRC="$REPO_DIR/data/cat/apm/config.yml"
 if [ ! -f "$CONFIG_SRC" ]; then
   echo "Файл конфигурации $CONFIG_SRC не найден!"
   exit 1

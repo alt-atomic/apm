@@ -1,0 +1,10 @@
+[Unit]
+Description=APM Daemon
+Wants=network-online.target
+
+[Service]
+Type=dbus
+BusName=@SERVICE_ID@
+# Should be changed in future
+User=@USER@
+ExecStart=@BINDIR@/@NAME@ dbus-system

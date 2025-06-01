@@ -17,6 +17,8 @@ else
   go_bin = find_program(join_paths(go_root.stdout().strip(), 'bin', 'go'))
 endif
 
+SERVICE_ID = 'org.altlinux.APM'
+
 COMMAND_PREFIX = ''
 PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
@@ -41,6 +43,7 @@ foreach constant : constants
 endforeach
 
 subdir('po')
+subdir('data')
 
 custom_target(
   'go-build',
