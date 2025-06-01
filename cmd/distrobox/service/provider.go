@@ -57,8 +57,8 @@ type PackageQueryResult struct {
 // PackageQueryBuilder задаёт параметры запроса.
 type PackageQueryBuilder struct {
 	ForceUpdate bool                   // Обновление перед тем как выполнить запрос
-	Limit       int64                  // Если Limit <= 0, то ограничение не применяется
-	Offset      int64                  // Если Offset < 0, то считается 0
+	Limit       int                    // Если Limit <= 0, то ограничение не применяется
+	Offset      int                    // Если Offset < 0, то считается 0
 	Filters     map[string]interface{} // фильтры вида "field": value; используется условие "="
 	SortField   string                 // Поле сортировки (например, "packageName")
 	SortOrder   string                 // "ASC" или "DESC"

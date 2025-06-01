@@ -139,7 +139,7 @@ func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHis
 }
 
 // GetImageHistoriesFiltered возвращает все записи по имени
-func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int64) ([]ImageHistory, error) {
+func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int) ([]ImageHistory, error) {
 	query := h.db.WithContext(ctx).Model(&DBHistory{})
 
 	if imageNameFilter != "" {
@@ -147,8 +147,8 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 	}
 
 	query = query.Order("imagedate DESC").
-		Limit(int(limit)).
-		Offset(int(offset))
+		Limit(limit).
+		Offset(offset)
 
 	var dbHistories []DBHistory
 	if err := query.Find(&dbHistories).Error; err != nil {

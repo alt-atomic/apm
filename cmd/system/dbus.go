@@ -167,7 +167,7 @@ func (w *DBusWrapper) ImageApply(transaction string) (string, *dbus.Error) {
 }
 
 // ImageHistory – обёртка над Actions.ImageHistory.
-func (w *DBusWrapper) ImageHistory(transaction string, imageName string, limit int64, offset int64) (string, *dbus.Error) {
+func (w *DBusWrapper) ImageHistory(transaction string, imageName string, limit int, offset int) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.ImageHistory(ctx, imageName, limit, offset)
 	if err != nil {

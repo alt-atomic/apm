@@ -169,8 +169,8 @@ type ListParams struct {
 	Container   string   `json:"container"`
 	Sort        string   `json:"sort"`
 	Order       string   `json:"order"`
-	Limit       int64    `json:"limit"`
-	Offset      int64    `json:"offset"`
+	Limit       int      `json:"limit"`
+	Offset      int      `json:"offset"`
 	Filters     []string `json:"filters"`
 	ForceUpdate bool     `json:"forceUpdate"`
 }

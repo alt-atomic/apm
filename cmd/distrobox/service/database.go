@@ -198,7 +198,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters map[s
 }
 
 // QueryPackages возвращает записи с фильтрами, сортировкой, limit/offset.
-func (s *DistroDBService) QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit, offset int64) ([]PackageInfo, error) {
+func (s *DistroDBService) QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
 	db := s.db.Model(&DBDistroPackage{})
 
 	if containerName != "" {
@@ -223,9 +223,9 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 	}
 
 	if limit > 0 {
-		db = db.Limit(int(limit))
+		db = db.Limit(limit)
 		if offset > 0 {
-			db = db.Offset(int(offset))
+			db = db.Offset(offset)
 		}
 	}
 

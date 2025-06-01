@@ -676,8 +676,8 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 type ListParams struct {
 	Sort        string   `json:"sort"`
 	Order       string   `json:"order"`
-	Limit       int64    `json:"limit"`
-	Offset      int64    `json:"offset"`
+	Limit       int      `json:"limit"`
+	Offset      int      `json:"offset"`
 	Filters     []string `json:"filters"`
 	ForceUpdate bool     `json:"forceUpdate"`
 }
@@ -870,7 +870,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 }
 
 // ImageHistory история изменений образа
-func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int64, offset int64) (*reply.APIResponse, error) {
+func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int, offset int) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
 		return nil, err

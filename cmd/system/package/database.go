@@ -269,7 +269,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 	ctx context.Context,
 	filters map[string]interface{},
 	sortField, sortOrder string,
-	limit, offset int64,
+	limit, offset int,
 ) ([]Package, error) {
 
 	query := s.db.WithContext(ctx).Model(&DBPackage{})
@@ -293,9 +293,9 @@ func (s *PackageDBService) QueryHostImagePackages(
 	}
 
 	if limit > 0 {
-		query = query.Limit(int(limit))
+		query = query.Limit(limit)
 		if offset > 0 {
-			query = query.Offset(int(offset))
+			query = query.Offset(offset)
 		}
 	}
 
