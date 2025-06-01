@@ -15,6 +15,17 @@ For detailed help after installation, run:
 apm -help
 ```
 
+## Configuration file
+The config.conf file does not exist by default, but can be created using the /etc/apm/config.yml path. It can contain the following parameters in yml format:
+
+* commandPrefix - prefix for launching all commands
+* environment - runtime profile. `dev` or `prod`
+* pathLogFile - the path to the logs file
+* pathDBSQLSystem - the path to the system package database
+* pathDBSQLUser - path to the package database from distrobox
+* pathDBKV - path to the app icons database
+* pathImageFile - path to the image configuration file
+
 ## Installation
 APM has not yet been added to the ALT repository. To install the current version, run in the console:
 

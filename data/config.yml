@@ -1,8 +1,0 @@
-commandPrefix: ""
-pathImageFile: "/etc/apm/image.yml"
-pathLocales: "/usr/share/locale"
-pathLogFile: "/var/apm/apm.log"
-pathDBSQLUser: "${XDG_DATA_HOME:-$HOME/.local/share}/apm/apm.db"
-pathDBSQLSystem: "/var/apm/apm.db"
-pathDBKV: "/var/apm/pogreb"
-environment: "prod"

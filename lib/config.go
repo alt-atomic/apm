@@ -28,15 +28,16 @@ import (
 type Environment struct {
 	CommandPrefix   string `yaml:"commandPrefix"`
 	Environment     string `yaml:"environment"`
-	PathLocales     string `yaml:"pathLocales"`
 	PathLogFile     string `yaml:"pathLogFile"`
 	PathDBSQLSystem string `yaml:"pathDBSQLSystem"`
 	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
 	PathDBKV        string `yaml:"pathDBKV"`
 	PathImageFile   string `yaml:"pathImageFile"`
-	ExistAlr        bool   // Внутреннее свойство
-	IsAtomic        bool   // Внутреннее свойство
-	Format          string // Внутреннее свойство
+	// Internal variables
+	ExistAlr    bool
+	Format      string
+	IsAtomic    bool
+	PathLocales string
 }
 
 var Env Environment
@@ -44,14 +45,16 @@ var DevMode bool
 
 // Глобальные переменные для возможности переопределения значений при сборке
 
-var BuildCommandPrefix string
-var BuildEnvironment string
-var BuildPathLocales string
-var BuildPathLogFile string
-var BuildPathDBSQLUser string
-var BuildPathDBSQLSystem string
-var BuildPathDBKV string
-var BuildPathImageFile string
+var (
+	BuildCommandPrefix   string
+	BuildEnvironment     string
+	BuildPathLocales     string
+	BuildPathLogFile     string
+	BuildPathDBSQLUser   string
+	BuildPathDBSQLSystem string
+	BuildPathDBKV        string
+	BuildPathImageFile   string
+)
 
 func InitConfig() {
 	var configPath string
@@ -69,14 +72,16 @@ func InitConfig() {
 	if BuildPathLogFile != "" {
 		Env.PathLogFile = BuildPathLogFile
 	}
-	Env.PathDBSQLUser = "${XDG_DATA_HOME:-$HOME/.cache}/apm/apm.db"
 	if BuildPathDBSQLSystem != "" {
 		Env.PathDBSQLSystem = BuildPathDBSQLSystem
 	}
-	Env.PathDBKV = "${XDG_DATA_HOME:-$HOME/.cache}/apm/pogreb"
 	if BuildPathImageFile != "" {
 		Env.PathImageFile = BuildPathImageFile
 	}
+
+	// User's files
+	Env.PathDBSQLUser = "~/.cache/apm/apm.db"
+	Env.PathDBKV = "~/.cache/apm/pogreb"
 
 	// Ищем конфигурационный файл в текущей директории
 	if _, err := os.Stat("config.yml"); err == nil {
@@ -96,10 +101,10 @@ func InitConfig() {
 	}
 
 	// расширяем анализ строк, что бы парсить переменные в путях
-	Env.PathDBSQLUser = filepath.Clean(expandShellVars(Env.PathDBSQLUser))
-	Env.PathDBSQLSystem = filepath.Clean(expandShellVars(Env.PathDBSQLSystem))
-	Env.PathDBKV = filepath.Clean(expandShellVars(Env.PathDBKV))
-	Env.PathLogFile = filepath.Clean(expandShellVars(Env.PathLogFile))
+	Env.PathDBSQLUser = filepath.Clean(expandUser(Env.PathDBSQLUser))
+	Env.PathDBSQLSystem = filepath.Clean(expandUser(Env.PathDBSQLSystem))
+	Env.PathDBKV = filepath.Clean(expandUser(Env.PathDBKV))
+	Env.PathLogFile = filepath.Clean(expandUser(Env.PathLogFile))
 
 	// Проверяем и создаём путь для лог-файла
 	if err := EnsurePath(Env.PathLogFile); err != nil {
@@ -164,17 +169,13 @@ func EnsureDir(path string) error {
 	return os.MkdirAll(path, 0777)
 }
 
-func expandShellVars(s string) string {
-	return os.Expand(s, func(v string) string {
-		if strings.Contains(v, ":-") {
-			parts := strings.SplitN(v, ":-", 2)
-			name, def := parts[0], parts[1]
-
-			if val := os.Getenv(name); val != "" {
-				return val
-			}
-			return expandShellVars(def)
-		}
-		return os.Getenv(v)
-	})
+func expandUser(s string) string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		Log.Fatal(err.Error())
+	}
+	if strings.HasPrefix(s, "~/") {
+		return filepath.Join(homeDir, s[2:])
+	}
+	return s
 }
