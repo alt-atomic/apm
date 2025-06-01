@@ -57,8 +57,8 @@ func NewActionsWithDeps(
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
-	hostPackageDBSvc, err := _package.NewPackageDBService(lib.GetDB())
-	hostDBSvc, err := service.NewHostDBService(lib.GetDB())
+	hostPackageDBSvc, err := _package.NewPackageDBService(lib.GetDB(true))
+	hostDBSvc, err := service.NewHostDBService(lib.GetDB(true))
 	if err != nil {
 		lib.Log.Fatal(err)
 	}

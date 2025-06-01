@@ -17,24 +17,26 @@
 package lib
 
 import (
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"syscall"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Environment struct {
-	CommandPrefix string `yaml:"commandPrefix"`
-	Environment   string `yaml:"environment"`
-	PathLocales   string `yaml:"pathLocales"`
-	PathLogFile   string `yaml:"pathLogFile"`
-	PathDBSQL     string `yaml:"pathDBSQL"`
-	PathDBKV      string `yaml:"pathDBKV"`
-	PathImageFile string `yaml:"pathImageFile"`
-	ExistAlr      bool   // Внутреннее свойство
-	IsAtomic      bool   // Внутреннее свойство
-	Format        string // Внутреннее свойство
+	CommandPrefix   string `yaml:"commandPrefix"`
+	Environment     string `yaml:"environment"`
+	PathLocales     string `yaml:"pathLocales"`
+	PathLogFile     string `yaml:"pathLogFile"`
+	PathDBSQLSystem string `yaml:"pathDBSQLSystem"`
+	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
+	PathDBKV        string `yaml:"pathDBKV"`
+	PathImageFile   string `yaml:"pathImageFile"`
+	ExistAlr        bool   // Внутреннее свойство
+	IsAtomic        bool   // Внутреннее свойство
+	Format          string // Внутреннее свойство
 }
 
 var Env Environment
@@ -46,7 +48,8 @@ var BuildCommandPrefix string
 var BuildEnvironment string
 var BuildPathLocales string
 var BuildPathLogFile string
-var BuildPathDBSQL string
+var BuildPathDBSQLUser string
+var BuildPathDBSQLSystem string
 var BuildPathDBKV string
 var BuildPathImageFile string
 
@@ -66,8 +69,11 @@ func InitConfig() {
 	if BuildPathLogFile != "" {
 		Env.PathLogFile = BuildPathLogFile
 	}
-	if BuildPathDBSQL != "" {
-		Env.PathDBSQL = BuildPathDBSQL
+	if BuildPathDBSQLUser != "" {
+		Env.PathDBSQLUser = BuildPathDBSQLUser
+	}
+	if BuildPathDBSQLSystem != "" {
+		Env.PathDBSQLSystem = BuildPathDBSQLSystem
 	}
 	if BuildPathDBKV != "" {
 		Env.PathDBKV = BuildPathDBKV
@@ -89,23 +95,36 @@ func InitConfig() {
 	if configPath != "" {
 		err := cleanenv.ReadConfig(configPath, &Env)
 		if err != nil {
-			log.Fatal(err)
+			Log.Fatal(err)
 		}
 	}
 
+	// расширяем анализ строк, что бы парсить переменные в путях
+	Env.PathDBSQLUser = filepath.Clean(expandShellVars(Env.PathDBSQLUser))
+	Env.PathDBSQLSystem = filepath.Clean(expandShellVars(Env.PathDBSQLSystem))
+	Env.PathDBKV = filepath.Clean(expandShellVars(Env.PathDBKV))
+	Env.PathLogFile = filepath.Clean(expandShellVars(Env.PathLogFile))
+
 	// Проверяем и создаём путь для лог-файла
 	if err := EnsurePath(Env.PathLogFile); err != nil {
-		log.Fatal(err)
+		Log.Fatal(err)
 	}
 
-	// Проверяем и создаём путь для db-файла sql
-	if err := EnsurePath(Env.PathDBSQL); err != nil {
-		log.Fatal(err)
-	}
+	// Проверяем путь к базам данных, либо для юзера, либо системная директория
+	if syscall.Geteuid() != 0 {
+		// Проверяем и создаём путь для db-директории key-value
+		if err := EnsureDir(Env.PathDBKV); err != nil {
+			Log.Fatal(err)
+		}
 
-	// Проверяем и создаём путь для db-директории key-value
-	if err := EnsureDir(Env.PathDBKV); err != nil {
-		log.Fatal(err)
+		// Проверяем и создаём путь для db-директории SQL
+		if err := EnsurePath(Env.PathDBSQLUser); err != nil {
+			Log.Fatal(err)
+		}
+	} else {
+		if err := EnsurePath(Env.PathDBSQLSystem); err != nil {
+			Log.Fatal(err)
+		}
 	}
 
 	if _, errAtomic := os.Stat("/usr/bin/bootc"); os.IsNotExist(errAtomic) {
@@ -147,4 +166,19 @@ func EnsurePath(path string) error {
 // EnsureDir проверяет, существует ли директория по указанному пути, и создает её при необходимости.
 func EnsureDir(path string) error {
 	return os.MkdirAll(path, 0777)
+}
+
+func expandShellVars(s string) string {
+	return os.Expand(s, func(v string) string {
+		if strings.Contains(v, ":-") {
+			parts := strings.SplitN(v, ":-", 2)
+			name, def := parts[0], parts[1]
+
+			if val := os.Getenv(name); val != "" {
+				return val
+			}
+			return expandShellVars(def)
+		}
+		return os.Getenv(v)
+	})
 }

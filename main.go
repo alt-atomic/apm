@@ -43,7 +43,7 @@ func main() {
 	lib.InitConfig()
 	lib.InitLogger()
 	lib.InitLocales()
-	lib.InitDatabase()
+	//lib.InitDatabase()
 	helper.SetupHelpTemplates()
 
 	sigs := make(chan os.Signal, 1)

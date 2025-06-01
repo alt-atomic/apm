@@ -30,9 +30,12 @@ var (
 )
 
 // InitDatabase инициализирует базу данных один раз
-func InitDatabase() {
+func InitDatabase(isSystemBD bool) {
 	once.Do(func() {
-		dbFile := Env.PathDBSQL
+		dbFile := Env.PathDBSQLUser
+		if isSystemBD {
+			dbFile = Env.PathDBSQLSystem
+		}
 
 		if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 			Log.Warning(T_("Database file not found. It will be created automatically."))
@@ -55,9 +58,9 @@ func CheckDB() *sql.DB {
 }
 
 // GetDB возвращает экземпляр базы данных
-func GetDB() *sql.DB {
+func GetDB(isSystemBD bool) *sql.DB {
 	if dbInstance == nil {
-		InitDatabase()
+		InitDatabase(isSystemBD)
 	}
 	return dbInstance
 }
