@@ -69,15 +69,11 @@ func InitConfig() {
 	if BuildPathLogFile != "" {
 		Env.PathLogFile = BuildPathLogFile
 	}
-	if BuildPathDBSQLUser != "" {
-		Env.PathDBSQLUser = BuildPathDBSQLUser
-	}
+	Env.PathDBSQLUser = "${XDG_DATA_HOME:-$HOME/.cache}/apm/apm.db"
 	if BuildPathDBSQLSystem != "" {
 		Env.PathDBSQLSystem = BuildPathDBSQLSystem
 	}
-	if BuildPathDBKV != "" {
-		Env.PathDBKV = BuildPathDBKV
-	}
+	Env.PathDBKV = "${XDG_DATA_HOME:-$HOME/.cache}/apm/pogreb"
 	if BuildPathImageFile != "" {
 		Env.PathImageFile = BuildPathImageFile
 	}

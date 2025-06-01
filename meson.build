@@ -24,7 +24,6 @@ PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
 LOG_FILEPATH = get_option('localstatedir') / meson.project_name() / meson.project_name() + '.log'
 DBSQL_FILEPATH = get_option('localstatedir') / meson.project_name() / meson.project_name() + '.db'
-POGREB_FILEPATH = get_option('localstatedir') / meson.project_name() / 'pogreb'
 IMAGE_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'image.yml'
 
 constants = [
@@ -33,7 +32,6 @@ constants = [
   ['apm/lib.BuildPathLocales', LOCALES_DIR],
   ['apm/lib.BuildPathLogFile', LOG_FILEPATH],
   ['apm/lib.BuildPathDBSQLSystem', DBSQL_FILEPATH],
-  ['apm/lib.BuildPathDBKV', POGREB_FILEPATH],
   ['apm/lib.BuildPathImageFile', IMAGE_FILEPATH],
 ]
 
