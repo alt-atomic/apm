@@ -22,8 +22,8 @@ SERVICE_ID = 'org.altlinux.APM'
 COMMAND_PREFIX = ''
 PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
-LOG_FILEPATH = get_option('localstatedir') / meson.project_name() / meson.project_name() + '.log'
-DBSQL_FILEPATH = get_option('localstatedir') / meson.project_name() / meson.project_name() + '.db'
+LOG_FILEPATH = get_option('localstatedir') / 'lib' / meson.project_name() / meson.project_name() + '.log'
+DBSQL_FILEPATH = get_option('localstatedir') / 'lib' / meson.project_name() / meson.project_name() + '.db'
 IMAGE_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'image.yml'
 
 constants = [
