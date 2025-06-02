@@ -1,0 +1,12 @@
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <policy user="@USER@">
+    <allow own="@SERVICE_ID@"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.system"/>
+  </policy>
+
+  <policy context="default">
+    <allow send_destination="@SERVICE_ID@" send_interface="org.freedesktop.DBus.Introspectable"/>
+  </policy>
+</busconfig>

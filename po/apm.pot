@@ -1,0 +1,1875 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the apm package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: apm\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-03-31 23:06+0600\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: cmd/common/helper/text.go:53
+msgid "version not found"
+msgstr ""
+
+#: cmd/common/helper/text.go:61
+#, c-format
+msgid "%.2f MB"
+msgstr ""
+
+#: cmd/common/helper/translate.go:50 cmd/common/helper/translate.go:78
+#: cmd/common/helper/translate.go:106
+msgid "Module:"
+msgstr ""
+
+#: cmd/common/helper/translate.go:51 cmd/common/helper/translate.go:79
+#: cmd/common/helper/translate.go:107
+msgid "Usage:"
+msgstr ""
+
+#: cmd/common/helper/translate.go:52
+msgid "Version:"
+msgstr ""
+
+#: cmd/common/helper/translate.go:53 cmd/common/helper/translate.go:81
+#: cmd/common/helper/translate.go:109
+msgid "Description:"
+msgstr ""
+
+#: cmd/common/helper/translate.go:54 cmd/common/helper/translate.go:110
+msgid "Commands:"
+msgstr ""
+
+#: cmd/common/helper/translate.go:55 cmd/common/helper/translate.go:56
+#: cmd/common/helper/translate.go:82 cmd/common/helper/translate.go:83
+#: cmd/common/helper/translate.go:111 cmd/common/helper/translate.go:112
+msgid "Options:"
+msgstr ""
+
+#: cmd/common/helper/translate.go:80 cmd/common/helper/translate.go:108
+msgid "Category:"
+msgstr ""
+
+#: cmd/common/helper/translate.go:84
+msgid "Global options:"
+msgstr ""
+
+#: cmd/common/icon/service.go:61
+msgid "Icon for package %s (container: %s) not found: %v"
+msgstr ""
+
+#: cmd/common/icon/service.go:83 cmd/common/icon/service.go:99
+msgid "Error saving icon %s: %v"
+msgstr ""
+
+#: cmd/common/icon/service.go:109
+msgid "Error calculating icon statistics: "
+msgstr ""
+
+#: cmd/common/icon/service.go:111
+#, c-format
+msgid "Total number of icons in the database: %d, total size: %d bytes"
+msgstr ""
+
+#: cmd/common/icon/service.go:131
+msgid "Error preparing temporary directories: %v"
+msgstr ""
+
+#: cmd/common/icon/service.go:149
+msgid "Error checking the existence of the icon in the database: "
+msgstr ""
+
+#: cmd/common/icon/service.go:162
+#, c-format
+msgid "Error retrieving icon: %s"
+msgstr ""
+
+#: cmd/common/icon/service.go:168
+msgid "Error compressing the icon: "
+msgstr ""
+
+#: cmd/common/icon/service.go:193
+msgid "Error writing icon %s to the database: %v"
+msgstr ""
+
+#: cmd/common/icon/service.go:209
+#, c-format
+msgid "Icon %s not found"
+msgstr ""
+
+#: cmd/common/icon/service.go:213
+msgid "Error unpacking icon %s: %v"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:86
+msgid "Error copying from container: %v, stderr: %s"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:176
+#, c-format
+msgid "File %s not found in %s"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:246
+#, c-format
+msgid "Icon not found for package %s"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:259
+msgid "Failed to read directory %s: %w"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:271
+msgid "Error retrieving files in %s: %v, stderr: %s"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:292
+msgid "Failed to read file %s: %w"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:298
+msgid "Error executing command for file %s: %v, stderr: %s"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:305
+msgid "Failed to unpack file %s: %w"
+msgstr ""
+
+#: cmd/common/icon/swcat.go:311
+msgid "Error parsing XML file %s: %w"
+msgstr ""
+
+#: cmd/common/reply/event.go:110
+msgid "Failed to retrieve call information"
+msgstr ""
+
+#: cmd/common/reply/event.go:116
+msgid "FuncForPC returned nil"
+msgstr ""
+
+#: cmd/common/reply/event.go:161
+msgid "DBus connection is not initialized"
+msgstr ""
+
+#: cmd/common/reply/event.go:170
+msgid "Error sending notification: %v"
+msgstr ""
+
+#: cmd/common/reply/event.go:177 cmd/common/reply/event.go:217
+msgid "Saving packages to the database"
+msgstr ""
+
+#: cmd/common/reply/event.go:179
+msgid "Requesting list of containers"
+msgstr ""
+
+#: cmd/common/reply/event.go:181
+msgid "Exporting package"
+msgstr ""
+
+#: cmd/common/reply/event.go:183
+msgid "Requesting container information"
+msgstr ""
+
+#: cmd/common/reply/event.go:185
+msgid "Creating container"
+msgstr ""
+
+#: cmd/common/reply/event.go:187
+msgid "Deleting container"
+msgstr ""
+
+#: cmd/common/reply/event.go:189
+msgid "Installing package"
+msgstr ""
+
+#: cmd/common/reply/event.go:191
+msgid "Removing package"
+msgstr ""
+
+#: cmd/common/reply/event.go:193
+msgid "Retrieving list of packages"
+msgstr ""
+
+#: cmd/common/reply/event.go:195
+msgid "Determining file owner"
+msgstr ""
+
+#: cmd/common/reply/event.go:197
+msgid "Searching package paths"
+msgstr ""
+
+#: cmd/common/reply/event.go:199
+msgid "Retrieving package information"
+msgstr ""
+
+#: cmd/common/reply/event.go:201
+msgid "Updating packages"
+msgstr ""
+
+#: cmd/common/reply/event.go:203
+msgid "Filtering packages"
+msgstr ""
+
+#: cmd/common/reply/event.go:205
+msgid "Working with packages"
+msgstr ""
+
+#: cmd/common/reply/event.go:207
+msgid "System update"
+msgstr ""
+
+#: cmd/common/reply/event.go:209
+msgid "Analyzing packages"
+msgstr ""
+
+#: cmd/common/reply/event.go:211
+msgid "General update process"
+msgstr ""
+
+#: cmd/common/reply/event.go:213
+msgid "Loading package list from ALR repository"
+msgstr ""
+
+#: cmd/common/reply/event.go:215
+msgid "Loading package list from ALT repository"
+msgstr ""
+
+#: cmd/common/reply/event.go:219
+msgid "Saving image history to the database"
+msgstr ""
+
+#: cmd/common/reply/event.go:221
+msgid "Building local image"
+msgstr ""
+
+#: cmd/common/reply/event.go:223
+msgid "Switching to local image"
+msgstr ""
+
+#: cmd/common/reply/event.go:225
+msgid "General Image Update Process"
+msgstr ""
+
+#: cmd/common/reply/event.go:227
+msgid "Downloading base image update"
+msgstr ""
+
+#: cmd/common/reply/event.go:229
+msgid "Cleaning up old images"
+msgstr ""
+
+#: cmd/common/reply/event.go:231
+msgid "Synchronizing database"
+msgstr ""
+
+#. Общий спиннер + фраза
+#: cmd/common/reply/preloader.go:309
+msgid "Executing tasks"
+msgstr ""
+
+#: cmd/common/reply/preloader.go:326
+msgid "Progress completed"
+msgstr ""
+
+#: cmd/common/reply/preloader.go:328
+#, c-format
+msgid "Progress: %s completed"
+msgstr ""
+
+#: cmd/common/reply/response.go:111 cmd/common/reply/response.go:134
+#: cmd/common/reply/response.go:241 cmd/common/reply/response.go:267
+msgid "%T (unknown type)"
+msgstr ""
+
+#: cmd/common/reply/response.go:130 cmd/common/reply/response.go:263
+msgid "%T (slice of unknown type)"
+msgstr ""
+
+#: cmd/common/reply/response.go:157 cmd/common/reply/response.go:164
+#, c-format
+msgid "%s: no"
+msgstr ""
+
+#: cmd/common/reply/response.go:174
+msgid "yes"
+msgstr ""
+
+#: cmd/common/reply/response.go:176
+msgid "no"
+msgstr ""
+
+#: cmd/common/reply/translate.go:11
+msgid "Package"
+msgstr ""
+
+#: cmd/common/reply/translate.go:13
+msgid "Package from ALR"
+msgstr ""
+
+#: cmd/common/reply/translate.go:15
+msgid "Count"
+msgstr ""
+
+#: cmd/common/reply/translate.go:17
+msgid "Console Application"
+msgstr ""
+
+#: cmd/common/reply/translate.go:19
+msgid "Package Information"
+msgstr ""
+
+#: cmd/common/reply/translate.go:21 cmd/system/package/dialog.go:63
+#: cmd/system/package/dialog.go:91
+msgid "Install"
+msgstr ""
+
+#: cmd/common/reply/translate.go:23
+msgid "Storage Type"
+msgstr ""
+
+#: cmd/common/reply/translate.go:25 cmd/common/reply/translate.go:77
+msgid "Date"
+msgstr ""
+
+#: cmd/common/reply/translate.go:27
+msgid "Image Digest"
+msgstr ""
+
+#: cmd/common/reply/translate.go:29
+msgid "Distribution"
+msgstr ""
+
+#: cmd/common/reply/translate.go:31
+msgid "Container"
+msgstr ""
+
+#: cmd/common/reply/translate.go:33 cmd/system/package/dialog.go:288
+msgid "Name"
+msgstr ""
+
+#: cmd/common/reply/translate.go:35
+msgid "Extra Installed"
+msgstr ""
+
+#: cmd/common/reply/translate.go:37
+msgid "Upgraded Count"
+msgstr ""
+
+#: cmd/common/reply/translate.go:39
+msgid "Booted Image"
+msgstr ""
+
+#: cmd/common/reply/translate.go:41
+msgid "Removed Packages"
+msgstr ""
+
+#: cmd/common/reply/translate.go:43
+msgid "Provides"
+msgstr ""
+
+#: cmd/common/reply/translate.go:45
+msgid "Providers"
+msgstr ""
+
+#: cmd/common/reply/translate.go:47
+msgid "Version"
+msgstr ""
+
+#: cmd/common/reply/translate.go:49
+msgid "History"
+msgstr ""
+
+#: cmd/common/reply/translate.go:51 cmd/system/package/dialog.go:312
+msgid "Dependencies"
+msgstr ""
+
+#: cmd/common/reply/translate.go:53
+msgid "Installed Size"
+msgstr ""
+
+#: cmd/common/reply/translate.go:55
+msgid "Removed Count"
+msgstr ""
+
+#: cmd/common/reply/translate.go:57
+msgid "Upgraded Packages"
+msgstr ""
+
+#: cmd/common/reply/translate.go:59
+msgid "Package Name"
+msgstr ""
+
+#: cmd/common/reply/translate.go:61
+msgid "Image"
+msgstr ""
+
+#: cmd/common/reply/translate.go:63
+msgid "Commands"
+msgstr ""
+
+#: cmd/common/reply/translate.go:65 cmd/system/package/dialog.go:291
+msgid "Maintainer"
+msgstr ""
+
+#: cmd/common/reply/translate.go:67
+msgid "Installed Version"
+msgstr ""
+
+#: cmd/common/reply/translate.go:69 cmd/system/package/dialog.go:65
+#: cmd/system/package/dialog.go:91
+msgid "Remove"
+msgstr ""
+
+#: cmd/common/reply/translate.go:71
+msgid "Containers"
+msgstr ""
+
+#: cmd/common/reply/translate.go:73
+msgid "Paths"
+msgstr ""
+
+#: cmd/common/reply/translate.go:75
+msgid "Description"
+msgstr ""
+
+#: cmd/common/reply/translate.go:79
+msgid "Newly Installed Count"
+msgstr ""
+
+#: cmd/common/reply/translate.go:81
+msgid "Active"
+msgstr ""
+
+#: cmd/common/reply/translate.go:83
+msgid "Information"
+msgstr ""
+
+#: cmd/common/reply/translate.go:85
+msgid "Total Count"
+msgstr ""
+
+#: cmd/common/reply/translate.go:87 cmd/system/package/dialog.go:292
+msgid "Installed"
+msgstr ""
+
+#: cmd/common/reply/translate.go:89
+msgid "Package Manager"
+msgstr ""
+
+#: cmd/common/reply/translate.go:91
+msgid "Last Changelog"
+msgstr ""
+
+#: cmd/common/reply/translate.go:93
+msgid "Section"
+msgstr ""
+
+#: cmd/common/reply/translate.go:95
+msgid "Specification"
+msgstr ""
+
+#: cmd/common/reply/translate.go:97
+msgid "Booted"
+msgstr ""
+
+#: cmd/common/reply/translate.go:99
+msgid "Staged"
+msgstr ""
+
+#: cmd/common/reply/translate.go:101 cmd/system/package/dialog.go:309
+msgid "Size"
+msgstr ""
+
+#: cmd/common/reply/translate.go:103
+msgid "Newly Installed Packages"
+msgstr ""
+
+#: cmd/common/reply/translate.go:105
+msgid "Not Upgraded Count"
+msgstr ""
+
+#: cmd/common/reply/translate.go:107
+msgid "Container Name"
+msgstr ""
+
+#: cmd/common/reply/translate.go:109
+msgid "Configuration"
+msgstr ""
+
+#: cmd/common/reply/translate.go:111
+msgid "Exporting"
+msgstr ""
+
+#: cmd/common/reply/translate.go:113
+msgid "Status"
+msgstr ""
+
+#: cmd/common/reply/translate.go:115
+msgid "Image Date"
+msgstr ""
+
+#: cmd/common/reply/translate.go:117
+msgid "Packages"
+msgstr ""
+
+#: cmd/common/reply/translate.go:119
+msgid "Filename"
+msgstr ""
+
+#: cmd/common/reply/translate.go:121
+msgid "Container Information"
+msgstr ""
+
+#: cmd/common/reply/translate.go:123
+msgid "Image Name"
+msgstr ""
+
+#: cmd/common/reply/translate.go:125
+msgid "Transport"
+msgstr ""
+
+#: cmd/common/reply/translate.go:127
+msgid "Pinned"
+msgstr ""
+
+#: cmd/common/reply/translate.go:129
+msgid "List"
+msgstr ""
+
+#: cmd/distrobox/actions.go:82
+msgid "Package list successfully updated"
+msgstr ""
+
+#: cmd/distrobox/actions.go:104 cmd/distrobox/actions.go:144
+#: cmd/distrobox/actions.go:258 cmd/distrobox/actions.go:309
+#: cmd/system/actions.go:752
+#, c-format
+msgid "You must specify the package name, for example `%s package`"
+msgstr ""
+
+#: cmd/distrobox/actions.go:113 cmd/system/actions.go:666
+msgid "Package found"
+msgstr ""
+
+#: cmd/distrobox/actions.go:153 cmd/distrobox/actions.go:232
+#: cmd/system/actions.go:729 cmd/system/actions.go:765
+#: cmd/system/actions.go:889
+#, c-format
+msgid "%d record found"
+msgid_plural "%d records found"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/distrobox/actions.go:286
+#, c-format
+msgid "Package %s installed"
+msgstr ""
+
+#: cmd/distrobox/actions.go:338
+#, c-format
+msgid "Package %s removed"
+msgstr ""
+
+#: cmd/distrobox/actions.go:379
+msgid "You must specify the image link (--image)"
+msgstr ""
+
+#: cmd/distrobox/actions.go:384 cmd/distrobox/actions.go:413
+msgid "You must specify the container name (--name)"
+msgstr ""
+
+#: cmd/distrobox/actions.go:395
+#, c-format
+msgid "Container %s successfully created"
+msgstr ""
+
+#: cmd/distrobox/actions.go:424
+#, c-format
+msgid "Container %s successfully deleted"
+msgstr ""
+
+#: cmd/distrobox/actions.go:432
+msgid "Error deleting container: %v"
+msgstr ""
+
+#: cmd/distrobox/actions.go:510
+msgid "You must specify the container name"
+msgstr ""
+
+#: cmd/distrobox/actions.go:518
+msgid "Failed to delete container records: %w"
+msgstr ""
+
+#: cmd/distrobox/actions.go:542
+msgid ""
+"Elevated rights are not allowed to perform this action. Please do not use "
+"sudo or su"
+msgstr ""
+
+#: cmd/distrobox/commands.go:51
+msgid "Managing packages and containers in distrobox"
+msgstr ""
+
+#: cmd/distrobox/commands.go:55
+msgid "Update and synchronize the list of installed packages with the host"
+msgstr ""
+
+#: cmd/distrobox/commands.go:59 cmd/distrobox/commands.go:80
+#: cmd/distrobox/commands.go:178 cmd/distrobox/commands.go:204
+#: cmd/distrobox/commands.go:294 cmd/distrobox/commands.go:328
+msgid "Container name. Required"
+msgstr ""
+
+#: cmd/distrobox/commands.go:75 cmd/system/commands.go:130
+msgid "Package information"
+msgstr ""
+
+#: cmd/distrobox/commands.go:96 cmd/system/commands.go:150
+msgid "Quick package search by name"
+msgstr ""
+
+#: cmd/distrobox/commands.go:101 cmd/distrobox/commands.go:120
+msgid "Container name. Optional flag"
+msgstr ""
+
+#: cmd/distrobox/commands.go:116
+msgid "Building query to retrieve package list"
+msgstr ""
+
+#: cmd/distrobox/commands.go:125
+msgid "Field for sorting, for example: name, version"
+msgstr ""
+
+#: cmd/distrobox/commands.go:129 cmd/system/commands.go:184
+msgid "Sorting order: ASC or DESC"
+msgstr ""
+
+#: cmd/distrobox/commands.go:134 cmd/system/commands.go:189
+#: cmd/system/commands.go:282
+msgid "Maximum number of records to return"
+msgstr ""
+
+#: cmd/distrobox/commands.go:139 cmd/system/commands.go:194
+#: cmd/system/commands.go:287
+msgid "Starting position (offset) for the result set"
+msgstr ""
+
+#: cmd/distrobox/commands.go:144 cmd/system/commands.go:199
+msgid ""
+"Filter in the format key=value. The flag can be specified multiple times, "
+"for example: --filter name=zip --filter installed=true"
+msgstr ""
+
+#: cmd/distrobox/commands.go:148
+msgid "Force update all packages before the request"
+msgstr ""
+
+#: cmd/distrobox/commands.go:173
+msgid "Install package"
+msgstr ""
+
+#: cmd/distrobox/commands.go:184
+msgid "Export package"
+msgstr ""
+
+#: cmd/distrobox/commands.go:199
+msgid "Remove package"
+msgstr ""
+
+#: cmd/distrobox/commands.go:210
+msgid "Remove only from host, leave package in container"
+msgstr ""
+
+#: cmd/distrobox/commands.go:225
+msgid "Module for working with containers"
+msgstr ""
+
+#: cmd/distrobox/commands.go:230
+msgid "List of containers"
+msgstr ""
+
+#: cmd/distrobox/commands.go:242
+msgid "Add container"
+msgstr ""
+
+#: cmd/distrobox/commands.go:246
+msgid "Container. Must be specified, options: alt, ubuntu, arch"
+msgstr ""
+
+#: cmd/distrobox/commands.go:262
+msgid "The value for image must be one of: alt, ubuntu, arch"
+msgstr ""
+
+#: cmd/distrobox/commands.go:285
+msgid "Manual container addition"
+msgstr ""
+
+#: cmd/distrobox/commands.go:289
+msgid "Image link. Required"
+msgstr ""
+
+#: cmd/distrobox/commands.go:299
+msgid "List of packages to install"
+msgstr ""
+
+#: cmd/distrobox/commands.go:304
+msgid "Calling hook to execute commands"
+msgstr ""
+
+#: cmd/distrobox/commands.go:323
+msgid "Remove container"
+msgstr ""
+
+#: cmd/distrobox/dbus.go:113 cmd/system/dbus.go:85
+msgid "Failed to parse JSON: %w"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:46 cmd/distrobox/service/arch.go:45
+#: cmd/distrobox/service/ubuntu.go:47
+msgid "Failed to update package database: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:54 cmd/system/package/actions.go:327
+msgid "Error opening stdout pipe: %w"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:57 cmd/system/package/actions.go:330
+msgid "Error executing command: %w"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:63 cmd/distrobox/service/arch.go:57
+msgid "Error retrieving installed packages: "
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:138 cmd/system/package/actions.go:437
+#, c-format
+msgid "String too large: (over %dMB) - "
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:140 cmd/system/package/actions.go:439
+msgid "Scanner error: %w"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:144 cmd/system/package/actions.go:442
+msgid "Command execution error: %w"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:166 cmd/distrobox/service/arch.go:79
+#: cmd/distrobox/service/ubuntu.go:122
+msgid "Failed to remove package %s: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:176 cmd/distrobox/service/arch.go:89
+#: cmd/distrobox/service/ubuntu.go:111
+msgid "Failed to install package %s: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:186 cmd/distrobox/service/alt.go:206
+#: cmd/distrobox/service/ubuntu.go:75
+#, c-format
+msgid "Command execution error: %s %s"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:220
+msgid "Error executing command rpm -qia: %w"
+msgstr ""
+
+#: cmd/distrobox/service/alt.go:236 cmd/system/package/actions.go:554
+msgid "Error scanning rpm output: %w"
+msgstr ""
+
+#: cmd/distrobox/service/arch.go:52
+msgid "Failed to search packages (pacman -Ss): %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/arch.go:63
+msgid "Error parsing official packages: %v"
+msgstr ""
+
+#: cmd/distrobox/service/arch.go:112
+#, c-format
+msgid "Failed to recognize the owner for file '%s'"
+msgstr ""
+
+#: cmd/distrobox/service/arch.go:119
+msgid "Failed to find a package for file '%s': %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/arch.go:141
+#, c-format
+msgid "Failed to determine the package for file '%s'"
+msgstr ""
+
+#: cmd/distrobox/service/arch.go:150
+msgid "Command execution error: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/database.go:118
+msgid ""
+"The 'container' field cannot be empty when saving packages to the database"
+msgstr ""
+
+#: cmd/distrobox/service/database.go:154
+msgid ""
+"The database does not have any records, it is necessary to create or update "
+"any container"
+msgstr ""
+
+#: cmd/distrobox/service/database.go:160
+msgid ""
+"The database contains no records, you need to create or update any container"
+msgstr ""
+
+#: cmd/distrobox/service/database.go:176
+#, c-format
+msgid "No records found for container %s"
+msgstr ""
+
+#: cmd/distrobox/service/database.go:216
+#, c-format
+msgid "Invalid sort field: %s. Available fields: %s."
+msgstr ""
+
+#: cmd/distrobox/service/database.go:275
+#, c-format
+msgid "The field %s cannot be updated."
+msgstr ""
+
+#: cmd/distrobox/service/database.go:307
+msgid "Error deleting container records %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/database.go:316
+#, c-format
+msgid "Invalid filter field: %s. Available fields: %s."
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:55
+msgid "Failed to retrieve the list of containers: "
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:155
+msgid "Error executing command %q: %v"
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:180
+msgid "Error getting OS information for container %s: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:231
+msgid "Failed to get the list of containers: %v"
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:243
+#, c-format
+msgid "Container %s not found"
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:264
+#, c-format
+msgid "Container already exists: %s"
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:298
+msgid "Failed to create container %s: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:299
+msgid "Failed to create container %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/distrobox.go:322
+msgid "Failed to delete container %s: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:93
+msgid "This container is not supported: "
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:164
+#, c-format
+msgid "Failed to retrieve package information: %s"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:170
+msgid "Error retrieving desktop file path: %v"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:184
+msgid "Error retrieving console path: %v"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:219
+msgid "A container must be specified for the forced update operation"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:276
+msgid "Error retrieving desktop applications for container %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:279
+msgid "Error retrieving console applications for container %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:304 cmd/distrobox/service/provider.go:348
+msgid "Failed to retrieve home directory: %v"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:310 cmd/distrobox/service/provider.go:354
+msgid "Error reading directory %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:325 cmd/distrobox/service/provider.go:373
+msgid "Error retrieving owner for file %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/provider.go:366
+msgid "Error processing file %s: %v"
+msgstr ""
+
+#: cmd/distrobox/service/ubuntu.go:53
+msgid "Failed to execute apt search: %v, stderr: %s"
+msgstr ""
+
+#: cmd/distrobox/service/ubuntu.go:58
+msgid "Failed to retrieve installed packages: "
+msgstr ""
+
+#: cmd/system/actions.go:98 cmd/system/actions.go:118
+msgid "Inspection information"
+msgstr ""
+
+#: cmd/system/actions.go:140
+msgid "At least one package must be specified, for example, remove package"
+msgstr ""
+
+#: cmd/system/actions.go:174
+msgid "No candidates for removal found"
+msgstr ""
+
+#: cmd/system/actions.go:206
+msgid ""
+".\n"
+"A difference in the package list was found in the local configuration, the "
+"image has been updated"
+msgstr ""
+
+#: cmd/system/actions.go:220 cmd/system/actions.go:463
+#: cmd/system/actions.go:592
+msgid "Cancel dialog"
+msgstr ""
+
+#: cmd/system/actions.go:236
+msgid ""
+"A communication error with the repository occurred. The package list has "
+"been updated, please try running the command again"
+msgstr ""
+
+#: cmd/system/actions.go:250
+#, c-format
+msgid "%s removed successfully"
+msgid_plural "%s removed successfully"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/system/actions.go:256
+msgid ". The system image has been modified"
+msgstr ""
+
+#: cmd/system/actions.go:260
+msgid ""
+". The system image has not been modified! To apply changes, run with the -a "
+"flag"
+msgstr ""
+
+#: cmd/system/actions.go:287
+msgid "You must specify at least one package, for example, remove package"
+msgstr ""
+
+#: cmd/system/actions.go:324 cmd/system/actions.go:648
+#, c-format
+msgid "Failed to retrieve information about the package %s"
+msgstr ""
+
+#: cmd/system/actions.go:333 cmd/system/actions.go:657
+msgid ". Maybe you were looking for: "
+msgstr ""
+
+#: cmd/system/actions.go:393
+msgid "The operation will not make any changes. Reasons: \n"
+msgstr ""
+
+#: cmd/system/actions.go:444
+msgid ""
+"Found a discrepancy in the package list in the local configuration, the "
+"image has been updated"
+msgstr ""
+
+#: cmd/system/actions.go:480
+msgid ""
+"A repository connection error occurred. The package list has been updated, "
+"please try running the command again"
+msgstr ""
+
+#: cmd/system/actions.go:495 cmd/system/actions.go:607
+#, c-format
+msgid "%d package successfully installed"
+msgid_plural "%d packages successfully installed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/system/actions.go:496 cmd/system/actions.go:608
+msgid "and"
+msgstr ""
+
+#: cmd/system/actions.go:497 cmd/system/actions.go:609
+#, c-format
+msgid "%d updated"
+msgid_plural "%d updated"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/system/actions.go:506
+msgid ". The system image has been changed."
+msgstr ""
+
+#: cmd/system/actions.go:510
+msgid ""
+". The system image has not been changed! To apply changes, you need to run "
+"with the -a flag."
+msgstr ""
+
+#: cmd/system/actions.go:543
+msgid "Package list updated successfully"
+msgstr ""
+
+#: cmd/system/actions.go:578
+msgid "The operation will not make any changes"
+msgstr ""
+
+#: cmd/system/actions.go:614
+msgid "The system has been upgrade successfully"
+msgstr ""
+
+#: cmd/system/actions.go:627
+msgid "Package name must be specified, for example info package"
+msgstr ""
+
+#: cmd/system/actions.go:726 cmd/system/actions.go:762
+msgid "Nothing found"
+msgstr ""
+
+#: cmd/system/actions.go:792 cmd/system/commands.go:250
+msgid "Image status"
+msgstr ""
+
+#: cmd/system/actions.go:825
+msgid "Command executed successfully"
+msgstr ""
+
+#: cmd/system/actions.go:863
+msgid "Changes applied successfully. A reboot is required"
+msgstr ""
+
+#: cmd/system/actions.go:906
+msgid ""
+"Elevated rights are required to perform this action. Please use sudo or su"
+msgstr ""
+
+#: cmd/system/actions.go:922
+msgid "This option is only available for an atomic system"
+msgstr ""
+
+#: cmd/system/actions.go:1024
+msgid "Modified image. Configuration file: "
+msgstr ""
+
+#: cmd/system/actions.go:1031
+msgid "Cloud image without changes"
+msgstr ""
+
+#: cmd/system/commands.go:51
+msgid "System package management"
+msgstr ""
+
+#: cmd/system/commands.go:55
+msgid ""
+"Package list for installation. The format package- package+ is supported."
+msgstr ""
+
+#: cmd/system/commands.go:60 cmd/system/commands.go:82
+msgid "Apply to image"
+msgstr ""
+
+#: cmd/system/commands.go:77
+msgid "List of packages to remove"
+msgstr ""
+
+#: cmd/system/commands.go:99
+msgid "Updating package database"
+msgstr ""
+
+#: cmd/system/commands.go:111
+msgid "General system upgrade"
+msgstr ""
+
+#: cmd/system/commands.go:135
+msgid "Full output of information"
+msgstr ""
+
+#: cmd/system/commands.go:155
+msgid "Only installed"
+msgstr ""
+
+#: cmd/system/commands.go:161 cmd/system/commands.go:208
+msgid "Full information output"
+msgstr ""
+
+#: cmd/system/commands.go:180
+msgid "Building query to fetch package list"
+msgstr ""
+
+#: cmd/system/commands.go:203
+msgid "Force update all packages before query"
+msgstr ""
+
+#: cmd/system/commands.go:232
+msgid "Module for working with the image"
+msgstr ""
+
+#: cmd/system/commands.go:238
+msgid "Apply changes to the host"
+msgstr ""
+
+#: cmd/system/commands.go:262
+msgid "Image update"
+msgstr ""
+
+#: cmd/system/commands.go:274
+msgid "Image changes history"
+msgstr ""
+
+#: cmd/system/commands.go:278
+msgid "Filter by image name"
+msgstr ""
+
+#: cmd/system/package/actions.go:158
+msgid "Installation"
+msgstr ""
+
+#: cmd/system/package/actions.go:160
+msgid "Removal"
+msgstr ""
+
+#: cmd/system/package/actions.go:162
+msgid "Change"
+msgstr ""
+
+#: cmd/system/package/actions.go:187
+#, c-format
+msgid "Downloading: %s"
+msgstr ""
+
+#: cmd/system/package/actions.go:240
+msgid "Installation error: %v"
+msgstr ""
+
+#: cmd/system/package/actions.go:295 cmd/system/package/actions.go:302
+#: cmd/system/package/actions.go:307
+msgid "Package verification error: %v"
+msgstr ""
+
+#: cmd/system/package/actions.go:301
+#, c-format
+msgid "Package verification error: %s"
+msgstr ""
+
+#: cmd/system/package/actions.go:458
+msgid "Error updating information about installed packages: %w"
+msgstr ""
+
+#: cmd/system/package/actions.go:508
+msgid "Error executing the rpm -qia command: %w"
+msgstr ""
+
+#: cmd/system/package/actions.go:578
+msgid "Error updating packages: %v, output: %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:47 cmd/system/package/alr.go:53
+#, c-format
+msgid "Build ALR package %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:66 cmd/system/package/alr.go:90
+#: cmd/system/package/alr.go:98
+#, c-format
+msgid "Error alr command '%s': %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:72
+#, c-format
+msgid "Unable to extract RPM path from output: %s"
+msgstr ""
+
+#: cmd/system/package/alr.go:115
+msgid "Error alr command '%s': %w"
+msgstr ""
+
+#: cmd/system/package/database.go:158
+msgid "Table cleanup error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:177
+msgid "Batch insert error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:193
+#, c-format
+msgid "failed to get information about package %s"
+msgstr ""
+
+#: cmd/system/package/database.go:206
+msgid "Temporary table creation error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:218
+msgid "Batch insert into temporary table error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:237
+msgid "Batch update error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:256 cmd/system/package/database.go:304
+msgid "Query execution error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:286
+#, c-format
+msgid "Invalid sort field: %s. Available fields: %s"
+msgstr ""
+
+#: cmd/system/package/database.go:328
+msgid "Package count error: %w"
+msgstr ""
+
+#: cmd/system/package/database.go:339
+#, c-format
+msgid "Invalid filter field: %s. Available fields: %s"
+msgstr ""
+
+#: cmd/system/package/database.go:388
+#, c-format
+msgid "Table %s exists but contains no records"
+msgstr ""
+
+#: cmd/system/package/dialog.go:61 cmd/system/package/dialog.go:91
+msgid "Edit"
+msgstr ""
+
+#: cmd/system/package/dialog.go:61 cmd/system/package/dialog.go:63
+#: cmd/system/package/dialog.go:65 cmd/system/package/dialog.go:67
+msgid "Abort"
+msgstr ""
+
+#: cmd/system/package/dialog.go:67 cmd/system/package/dialog.go:91
+msgid "Upgrade"
+msgstr ""
+
+#: cmd/system/package/dialog.go:82
+msgid "Error starting TEA: %v"
+msgstr ""
+
+#: cmd/system/package/dialog.go:88 cmd/system/package/dialog.go:94
+#: cmd/system/package/errors.go:131
+msgid "Operation cancelled"
+msgstr ""
+
+#. Формируем строку с подсказками по клавишам
+#: cmd/system/package/dialog.go:209
+msgid ""
+"Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/"
+"bottom, Enter - choose, Esc/q - cancel"
+msgstr ""
+
+#: cmd/system/package/dialog.go:213
+msgid "Select an action:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:274
+msgid "Package information:"
+msgid_plural "Packages information:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/system/package/dialog.go:281
+#, c-format
+msgid ""
+"\n"
+"Package %d:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:283 cmd/system/package/dialog.go:351
+#: cmd/system/package/dialog.go:372
+msgid "No"
+msgstr ""
+
+#: cmd/system/package/dialog.go:285
+msgid "Yes"
+msgstr ""
+
+#: cmd/system/package/dialog.go:289
+msgid "Action"
+msgstr ""
+
+#: cmd/system/package/dialog.go:290
+msgid "Category"
+msgstr ""
+
+#. Выводим "Версия в облаке" обычным стилем
+#: cmd/system/package/dialog.go:296 cmd/system/package/dialog.go:307
+msgid "Repository version"
+msgstr ""
+
+#. Выводим "Версия в системе", уже с раскрашенным текстом
+#: cmd/system/package/dialog.go:305
+msgid "System version"
+msgstr ""
+
+#: cmd/system/package/dialog.go:315
+msgid "Affected changes:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:320
+msgid "Extra packages"
+msgstr ""
+
+#: cmd/system/package/dialog.go:321 cmd/system/package/dialog.go:331
+#: cmd/system/package/dialog.go:344
+msgid "Will be updated"
+msgstr ""
+
+#: cmd/system/package/dialog.go:322 cmd/system/package/dialog.go:332
+#: cmd/system/package/dialog.go:340
+msgid "Will be installed"
+msgstr ""
+
+#: cmd/system/package/dialog.go:323 cmd/system/package/dialog.go:333
+#: cmd/system/package/dialog.go:348
+msgid "Will be removed"
+msgstr ""
+
+#: cmd/system/package/dialog.go:325 cmd/system/package/dialog.go:326
+#: cmd/system/package/dialog.go:327 cmd/system/package/dialog.go:328
+#, c-format
+msgid "%d package"
+msgid_plural "%d packages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/system/package/dialog.go:330
+msgid "Total:"
+msgstr ""
+
+#: cmd/system/package/dialog.go:334
+msgid "Not affected"
+msgstr ""
+
+#: cmd/system/package/dialog.go:375
+msgid "and others"
+msgstr ""
+
+#: cmd/system/package/errors.go:104
+msgid "Broken packages"
+msgstr ""
+
+#: cmd/system/package/errors.go:107
+msgid "You have no permissions for that"
+msgstr ""
+
+#: cmd/system/package/errors.go:110
+msgid "Internal Error, InstallPackages was called with broken packages!"
+msgstr ""
+
+#: cmd/system/package/errors.go:113
+msgid "Packages need to be removed but Remove is disabled."
+msgstr ""
+
+#: cmd/system/package/errors.go:116
+msgid "Unable to lock the download directory"
+msgstr ""
+
+#: cmd/system/package/errors.go:119
+msgid "There are problems and -y was used without --force-yes"
+msgstr ""
+
+#: cmd/system/package/errors.go:122
+#, c-format
+msgid "You don't have enough free space in %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:125
+#, c-format
+msgid "Package file %s is out of sync"
+msgstr ""
+
+#: cmd/system/package/errors.go:128
+msgid "Trivial Only specified but this is not a trivial operation"
+msgstr ""
+
+#: cmd/system/package/errors.go:134
+msgid "Must specify at least one package to check builddeps for"
+msgstr ""
+
+#: cmd/system/package/errors.go:137
+#, c-format
+msgid "Unable to find a source package for %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:140
+#, c-format
+msgid "Unable to get build-dependency information for %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:143
+#, c-format
+msgid ""
+"Some broken packages were found while trying to process build-dependencies "
+"for %s."
+msgstr ""
+
+#: cmd/system/package/errors.go:146
+#, c-format
+msgid "Package %s is a virtual package with no good providers"
+msgstr ""
+
+#: cmd/system/package/errors.go:149
+#, c-format
+msgid "Package %s is a virtual package with multiple good providers"
+msgstr ""
+
+#: cmd/system/package/errors.go:152
+msgid "No packages found"
+msgstr ""
+
+#: cmd/system/package/errors.go:155
+#, c-format
+msgid "Package %s is not installed, so not removed"
+msgstr ""
+
+#: cmd/system/package/errors.go:158
+#, c-format
+msgid "Release %s'%s' for '%s' was not found"
+msgstr ""
+
+#: cmd/system/package/errors.go:161
+#, c-format
+msgid "Version %s'%s' for '%s' was not found"
+msgstr ""
+
+#: cmd/system/package/errors.go:164
+#, c-format
+msgid "Sources list %s could not be read"
+msgstr ""
+
+#: cmd/system/package/errors.go:167
+#, c-format
+msgid "Sources list %s doesn't exist"
+msgstr ""
+
+#: cmd/system/package/errors.go:170
+msgid "Excessive arguments"
+msgstr ""
+
+#: cmd/system/package/errors.go:173
+msgid "Internal Error, problem resolver broke stuff"
+msgstr ""
+
+#: cmd/system/package/errors.go:176
+msgid "Internal Error, Ordering didn't finish"
+msgstr ""
+
+#: cmd/system/package/errors.go:179
+msgid "Some files failed to download"
+msgstr ""
+
+#: cmd/system/package/errors.go:182
+msgid ""
+"Unable to fetch some archives, maybe run apt-get update or try with --fix-"
+"missing?"
+msgstr ""
+
+#: cmd/system/package/errors.go:185
+msgid "--fix-missing and media swapping is not currently supported"
+msgstr ""
+
+#: cmd/system/package/errors.go:188
+msgid "Unable to correct missing packages"
+msgstr ""
+
+#: cmd/system/package/errors.go:191
+msgid "Aborting Install"
+msgstr ""
+
+#: cmd/system/package/errors.go:194
+msgid "Could not open RPM database"
+msgstr ""
+
+#: cmd/system/package/errors.go:197
+#, c-format
+msgid "Couldn't parse name '%s'"
+msgstr ""
+
+#: cmd/system/package/errors.go:200
+msgid "Write to stdout failed"
+msgstr ""
+
+#: cmd/system/package/errors.go:203
+msgid "Exceeded maximum number of command arguments"
+msgstr ""
+
+#: cmd/system/package/errors.go:206
+#, c-format
+msgid ""
+"Package %s dependency for %s cannot be satisfied because the package %s "
+"cannot be found"
+msgstr ""
+
+#: cmd/system/package/errors.go:209
+#, c-format
+msgid "Regex compilation error - %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:212
+#, c-format
+msgid "Package %s has no installation candidate"
+msgstr ""
+
+#: cmd/system/package/errors.go:215
+msgid "Internal Error, AllUpgrade broke stuff"
+msgstr ""
+
+#: cmd/system/package/errors.go:218
+msgid "Requested autoremove failed."
+msgstr ""
+
+#: cmd/system/package/errors.go:221
+#, c-format
+msgid "Couldn't find package %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:224
+#, c-format
+msgid "%s dependency for %s cannot be satisfied"
+msgstr ""
+
+#: cmd/system/package/errors.go:227
+#, c-format
+msgid "Failed to satisfy %s dependency for %s: Installed package %s is too new"
+msgstr ""
+
+#: cmd/system/package/errors.go:230
+#, c-format
+msgid "Failed to satisfy %s dependency for %s: %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:233
+msgid "You must give exactly one pattern"
+msgstr ""
+
+#: cmd/system/package/errors.go:235
+msgid "No help for that"
+msgstr ""
+
+#: cmd/system/package/errors.go:237
+#, c-format
+msgid "%s is already the newest version."
+msgstr ""
+
+#: cmd/system/package/errors.go:240
+msgid "The list of sources could not be read."
+msgstr ""
+
+#: cmd/system/package/errors.go:243
+msgid "There are changes to be made"
+msgstr ""
+
+#: cmd/system/package/errors.go:246
+msgid "Failed to fetch some archives."
+msgstr ""
+
+#: cmd/system/package/errors.go:249
+#, c-format
+msgid "Failed to fetch %s  %s"
+msgstr ""
+
+#: cmd/system/package/errors.go:252
+msgid ""
+"Some index files failed to download. They have been ignored, or old ones "
+"used instead."
+msgstr ""
+
+#: cmd/system/package/errors.go:255
+msgid ""
+"'apt-get upgrade' is disabled because it can leave system in a broken state."
+msgstr ""
+
+#: cmd/system/package/errors.go:258
+msgid ""
+"Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or "
+"specify a solution)."
+msgstr ""
+
+#: cmd/system/package/errors.go:261
+msgid "Must specify at least one package to fetch source for"
+msgstr ""
+
+#: cmd/system/package/errors.go:264
+msgid "Child process failed"
+msgstr ""
+
+#: cmd/system/package/errors.go:267
+msgid "Must specify at least one package to get changelog for"
+msgstr ""
+
+#: cmd/system/package/errors.go:270
+msgid "Failed to process build dependencies"
+msgstr ""
+
+#: cmd/system/package/errors.go:273
+#, c-format
+msgid "Package %s is a virtual package with no "
+msgstr ""
+
+#: cmd/system/package/errors.go:276
+#, c-format
+msgid "Package %s is a virtual package with multiple "
+msgstr ""
+
+#: cmd/system/service/config.go:79
+msgid "Image must be specified in the configuration file"
+msgstr ""
+
+#: cmd/system/service/config.go:89
+msgid "Configuration not loaded"
+msgstr ""
+
+#: cmd/system/service/config.go:176
+msgid "Local image configuration file has no changes"
+msgstr ""
+
+#: cmd/system/service/database.go:91
+msgid "Config conversion error: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:105
+msgid "Error parsing date %s: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:110
+msgid "Error serializing config: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:133
+msgid "Error inserting data: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:156 cmd/system/service/database.go:184
+msgid "History not found"
+msgstr ""
+
+#: cmd/system/service/database.go:158 cmd/system/service/database.go:186
+#: cmd/system/service/database.go:206
+msgid "Query execution error: %v"
+msgstr ""
+
+#: cmd/system/service/database.go:211
+msgid "History config conversion error: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:85
+msgid "Failed to execute bootc command: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:89
+msgid "Failed to parse JSON: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:109
+msgid "Failed to open file %s: %w"
+msgstr ""
+
+#: cmd/system/service/host.go:125
+msgid "Error reading file %s: %w"
+msgstr ""
+
+#: cmd/system/service/host.go:128
+#, c-format
+msgid ""
+"Failed to determine the distribution image, please specify it manually in "
+"the file: %s"
+msgstr ""
+
+#: cmd/system/service/host.go:135
+msgid "Access error to /proc/mounts: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:162
+#, c-format
+msgid "Error activating usr-overlay: %s"
+msgstr ""
+
+#: cmd/system/service/host.go:180
+#, c-format
+msgid "Error building image: %s status: %d"
+msgstr ""
+
+#: cmd/system/service/host.go:186
+msgid "Error podman image: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:191
+msgid "No valid images with tag 'os'. Please build the image first."
+msgstr ""
+
+#: cmd/system/service/host.go:205
+#, c-format
+msgid "Error switching to the new image: %s"
+msgstr ""
+
+#: cmd/system/service/host.go:217
+msgid "Error retrieving information: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:236
+#, c-format
+msgid "Error, file %s not found"
+msgstr ""
+
+#: cmd/system/service/host.go:275
+msgid "Skopeo inspect error: %v"
+msgstr ""
+
+#: cmd/system/service/host.go:280
+msgid "Failed to parse skopeo inspect: %w"
+msgstr ""
+
+#: cmd/system/service/host.go:292
+#, c-format
+msgid "Bootc upgrade failed: %s"
+msgstr ""
+
+#: cmd/system/service/host.go:302
+msgid "The image has not changed, build paused"
+msgstr ""
+
+#. Возвращаем вывод вместе с ошибкой для более подробной диагностики
+#: cmd/system/service/podman.go:85
+msgid "Command failed with error: %v, output: %s"
+msgstr ""
+
+#: cmd/system/service/podman.go:158
+#, c-format
+msgid "Cannot parse size: %s"
+msgstr ""
+
+#: cmd/system/service/podman.go:178
+#, c-format
+msgid "Unknown suffix: %s"
+msgstr ""
+
+#: cmd/system/service/podman.go:192
+msgid "Error deleting old images: %v, output: %s"
+msgstr ""
+
+#: cmd/system/service/podman.go:199
+msgid "Error retrieving podman image: %v"
+msgstr ""
+
+#: cmd/system/service/podman.go:214
+msgid "Error deleting image %s: %v, output: %s\n"
+msgstr ""
+
+#: lib/database.go:38 lib/pogreb.go:35
+msgid "Database file not found. It will be created automatically."
+msgstr ""
+
+#: lib/database.go:44 lib/pogreb.go:41
+msgid "Error opening database: %v"
+msgstr ""
+
+#: lib/database.go:48
+msgid "Error connecting to database: %v"
+msgstr ""
+
+#: lib/dbus.go:46
+msgid "Interface org.altlinux.APM is already in use"
+msgstr ""
+
+#: lib/i18n.go:32
+#, c-format
+msgid "Translations folder not found at path: %s"
+msgstr ""
+
+#: main.go:57
+#, c-format
+msgid "Recieved correct signal %s. Stopping application…"
+msgstr ""
+
+#: main.go:66
+#, c-format
+msgid ""
+"Unexpected signal %s received. Terminating the application with an error."
+msgstr ""
+
+#: main.go:87
+msgid "Output format: json, text"
+msgstr ""
+
+#: main.go:93
+msgid "Internal property, adds the transaction to the output"
+msgstr ""
+
+#: main.go:100
+msgid "Start session D-Bus service org.altlinux.APM"
+msgstr ""
+
+#: main.go:105
+msgid "Start system D-Bus service org.altlinux.APM"
+msgstr ""
+
+#: main.go:113
+msgid "Show the list of commands or help for each command"
+msgstr ""
+
+#: main.go:114
+msgid "[command]"
+msgstr ""
+
+#: main.go:173
+msgid "Administrator privileges are required to start"
+msgstr ""
+
+#: main.go:199
+msgid "Terminating the application. Releasing resources…"
+msgstr ""
+
+#: main.go:204
+msgid "Error closing KV database: "
+msgstr ""
+
+#: main.go:210
+msgid "Error closing SQL database: "
+msgstr ""
