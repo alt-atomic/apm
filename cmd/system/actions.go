@@ -104,6 +104,25 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.AP
 	return &resp, nil
 }
 
+// CheckUpgrade проверяем пакеты перед обновлением системы
+func (a *Actions) CheckUpgrade(ctx context.Context) (*reply.APIResponse, error) {
+	packageParse, aptErrors := a.serviceAptActions.Check(ctx, "", "dist-upgrade")
+	criticalError := _package.FindCriticalError(aptErrors)
+	if criticalError != nil {
+		return nil, criticalError
+	}
+
+	resp := reply.APIResponse{
+		Data: map[string]interface{}{
+			"message": lib.T_("Inspection information"),
+			"info":    packageParse,
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
 // CheckInstall проверяем пакеты перед установкой
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")

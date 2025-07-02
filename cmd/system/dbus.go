@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
 	"encoding/json"
@@ -100,6 +101,40 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Info(ctx, packageName, true)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckUpgrade – обёртка над Actions.CheckUpgrade.
+func (w *DBusWrapper) CheckUpgrade(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.CheckUpgrade(ctx)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// Upgrade – обёртка над Actions.Upgrade или Actions.ImageUpdate.
+func (w *DBusWrapper) Upgrade(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	var resp *reply.APIResponse
+	var err error
+	if lib.Env.IsAtomic {
+		resp, err = w.actions.ImageUpdate(ctx)
+	} else {
+		resp, err = w.actions.Upgrade(ctx)
+	}
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

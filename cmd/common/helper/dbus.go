@@ -113,6 +113,16 @@ const SystemIntrospectXML = `
 
   <interface name="org.altlinux.system">
 
+    <method name="CheckUpgrade">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Upgrade">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
     <method name="Install">
       <arg direction="in" type="as" name="packages"/>
       <arg direction="in" type="b" name="applyAtomic"/>
