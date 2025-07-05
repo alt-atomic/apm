@@ -153,7 +153,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon)
 
 	// Экспортируем в D-Bus
-	if err = lib.DBUSConn.Export(distroObj, "/org/altlinux/APM", "org.altlinux.distrobox"); err != nil {
+	if err = lib.DBUSConn.Export(distroObj, "/org/altlinux/APM", "org.altlinux.APM.distrobox"); err != nil {
 		return err
 	}
 
@@ -212,7 +212,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	sysObj := system.NewDBusWrapper(sysActions)
 
 	// Экспортируем в D-Bus
-	if err = lib.DBUSConn.Export(sysObj, "/org/altlinux/APM", "org.altlinux.system"); err != nil {
+	if err = lib.DBUSConn.Export(sysObj, "/org/altlinux/APM", "org.altlinux.APM.system"); err != nil {
 		return err
 	}
 
