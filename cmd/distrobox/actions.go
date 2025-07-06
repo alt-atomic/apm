@@ -48,7 +48,7 @@ func NewActionsWithDeps(
 func NewActions() *Actions {
 	distroDBSvc, err := service.NewDistroDBService(lib.GetDB(false))
 	if err != nil {
-		lib.Log.Fatal(err)
+		lib.Log.Error(err)
 	}
 
 	distroPackageSvc := service.NewPackageService(distroDBSvc)

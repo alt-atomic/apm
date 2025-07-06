@@ -40,10 +40,18 @@ var (
 func main() {
 	lib.Log.Debugln("Starting apm…")
 
-	lib.InitConfig()
+	errInitial := lib.InitConfig()
+	if errInitial != nil {
+		_ = reply.CliResponse(ctx, reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": errInitial.Error(),
+			},
+			Error: true,
+		})
+	}
+
 	lib.InitLogger()
 	lib.InitLocales()
-	//lib.InitDatabase()
 	helper.SetupHelpTemplates()
 
 	sigs := make(chan os.Signal, 1)

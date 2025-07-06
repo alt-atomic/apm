@@ -56,8 +56,9 @@ var (
 	BuildPathImageFile   string
 )
 
-func InitConfig() {
+func InitConfig() error {
 	var configPath string
+	var err error
 
 	// Переопределяем значения из ldflags, если они заданы
 	if BuildCommandPrefix != "" {
@@ -84,7 +85,7 @@ func InitConfig() {
 	Env.PathDBKV = "~/.cache/apm/pogreb"
 
 	// Ищем конфигурационный файл в текущей директории
-	if _, err := os.Stat("config.yml"); err == nil {
+	if _, err = os.Stat("config.yml"); err == nil {
 		configPath = "config.yml"
 	} else if _, err = os.Stat("/etc/apm/config.yml"); err == nil {
 		configPath = "/etc/apm/config.yml"
@@ -94,10 +95,7 @@ func InitConfig() {
 
 	// Если найден конфигурационный файл, читаем его
 	if configPath != "" {
-		err := cleanenv.ReadConfig(configPath, &Env)
-		if err != nil {
-			Log.Fatal(err)
-		}
+		err = cleanenv.ReadConfig(configPath, &Env)
 	}
 
 	// расширяем анализ строк, что бы парсить переменные в путях
@@ -107,25 +105,21 @@ func InitConfig() {
 	Env.PathLogFile = filepath.Clean(expandUser(Env.PathLogFile))
 
 	// Проверяем и создаём путь для лог-файла
-	if err := EnsurePath(Env.PathLogFile); err != nil {
-		Log.Fatal(err)
-	}
+	err = EnsurePath(Env.PathLogFile)
 
 	// Проверяем путь к базам данных, либо для юзера, либо системная директория
 	if syscall.Geteuid() != 0 {
 		// Проверяем и создаём путь для db-директории key-value
-		if err := EnsureDir(Env.PathDBKV); err != nil {
-			Log.Fatal(err)
-		}
-
+		err = EnsureDir(Env.PathDBKV)
 		// Проверяем и создаём путь для db-директории SQL
-		if err := EnsurePath(Env.PathDBSQLUser); err != nil {
-			Log.Fatal(err)
-		}
+		err = EnsurePath(Env.PathDBSQLUser)
 	} else {
-		if err := EnsurePath(Env.PathDBSQLSystem); err != nil {
-			Log.Fatal(err)
-		}
+		err = EnsurePath(Env.PathDBSQLSystem)
+	}
+
+	if err != nil {
+		Log.Error(err)
+		return err
 	}
 
 	if _, errAtomic := os.Stat("/usr/bin/bootc"); os.IsNotExist(errAtomic) {
@@ -139,6 +133,8 @@ func InitConfig() {
 	} else {
 		Env.ExistAlr = true
 	}
+
+	return nil
 }
 
 // EnsurePath проверяет, существует ли файл и создает его при необходимости.
