@@ -16,10 +16,11 @@ apm -help
 ```
 
 ## Установка
-APM пока не добавлен в репозиторий ALT. Для установки текущей версии выполните в консоли:
+It is recommended to install the package from the repository, manual build:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/alt-atomic/apm/main/data/install.sh | sudo bash
+meson setup build --wipe --prefix /usr
+meson install -C build
 ```
 
 Общая справка:
