@@ -16,7 +16,7 @@ apm -help
 ```
 
 ## Установка
-It is recommended to install the package from the repository, manual build:
+Рекомендуется установить пакет из репозитория, ручная сборка:
 
 ```
 meson setup build --wipe --prefix /usr
