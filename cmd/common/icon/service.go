@@ -67,8 +67,11 @@ func (s *Service) GetIcon(pkgName, container string) ([]byte, error) {
 func (s *Service) ReloadIcons(ctx context.Context) error {
 	containerList, err := s.serviceDistroAPI.GetContainerList(ctx, true)
 	if err != nil {
-		return err
+		lib.Log.Error(err.Error())
+		containerList = nil
+		//return err
 	}
+
 	// Вызываем сборщик мусора после загрузки
 	defer runtime.GC()
 

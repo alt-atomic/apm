@@ -26,7 +26,7 @@ const UserIntrospectXML = `
     </signal>
   </interface>
 
-  <interface name="org.altlinux.distrobox">
+  <interface name="org.altlinux.APM.distrobox">
     <method name="Update">
       <arg direction="in" type="s" name="container"/>
       <arg direction="in" type="s" name="transaction"/>
@@ -111,7 +111,7 @@ const SystemIntrospectXML = `
     </signal>
   </interface>
 
-  <interface name="org.altlinux.system">
+  <interface name="org.altlinux.APM.system">
 
     <method name="CheckUpgrade">
       <arg direction="in" type="s" name="transaction"/>
