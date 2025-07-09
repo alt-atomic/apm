@@ -47,7 +47,7 @@ func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string
 	rpmPattern := filepath.Join(buildDir, fmt.Sprintf("%s*.rpm", packageName))
 	oldRpms, err := filepath.Glob(rpmPattern)
 	if err != nil {
-		return "", fmt.Errorf("ошибка при поиске старых RPM: %w", err)
+		return "", fmt.Errorf(lib.T_("Error searching for old RPMs %w"), err)
 	}
 
 	for _, f := range oldRpms {
