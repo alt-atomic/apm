@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
+	"path/filepath"
 	"strings"
 )
 
@@ -36,17 +36,31 @@ func NewALRService() *AlrService {
 	return &AlrService{}
 }
 
+var workDir = "/root"
+var buildDir = "/root/.cache"
+
 // PreInstall собираем пакет, но не устанавливаем в систему, возвращаем путь к rpm
 func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string, error) {
+	// Очищаем постфикс и удаляем старые rpm
 	packageName = helper.ClearALRPackageName(packageName)
 
+	rpmPattern := filepath.Join(buildDir, fmt.Sprintf("%s*.rpm", packageName))
+	oldRpms, err := filepath.Glob(rpmPattern)
+	if err != nil {
+		return "", fmt.Errorf("ошибка при поиске старых RPM: %w", err)
+	}
+
+	for _, f := range oldRpms {
+		_ = os.Remove(f)
+	}
+
+	// Уведомление о старте сборки
 	reply.CreateEventNotification(ctx, reply.StateBefore,
 		reply.WithEventName("alr-build-"+packageName),
 		reply.WithProgress(true),
-		reply.WithProgressPercent(float64(50)),
+		reply.WithProgressPercent(50),
 		reply.WithEventView(fmt.Sprintf(lib.T_("Build ALR package %s"), packageName)),
 	)
-
 	defer reply.CreateEventNotification(ctx, reply.StateAfter,
 		reply.WithEventName("alr-build-"+packageName),
 		reply.WithProgress(true),
@@ -54,25 +68,32 @@ func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string
 		reply.WithProgressPercent(100),
 	)
 
-	env := os.Environ()
-	env = append(env, "LC_ALL=C", "HOME=/root", "XDG_CACHE_HOME=/root/.cache")
+	env := append(os.Environ(),
+		"LC_ALL=C",
+		fmt.Sprintf("HOME=%s", workDir),
+		fmt.Sprintf("XDG_CACHE_HOME=%s", buildDir),
+	)
 
 	cmd := exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("%s alr -i='false' -P -s install %s", lib.Env.CommandPrefix, packageName))
+		fmt.Sprintf("%s alr -i='false' build --package %s", lib.Env.CommandPrefix, packageName))
 	cmd.Env = env
+	cmd.Dir = buildDir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf(lib.T_("Error alr command '%s': %s"), "alr install", string(output))
+		return "", fmt.Errorf(lib.T_("Error alr command '%s': %s"), "alr build", string(output))
 	}
 
-	re := regexp.MustCompile(`for '([^']+)'`)
-	matches := re.FindStringSubmatch(string(output))
-	if len(matches) < 2 {
-		return "", fmt.Errorf(lib.T_("Unable to extract RPM path from output: %s"), string(output))
+	newRpms, err := filepath.Glob(rpmPattern)
+	if err != nil {
+		return "", fmt.Errorf(lib.T_("Not found rpm file %s"), err.Error())
 	}
 
-	rpmPath := matches[1]
+	if len(newRpms) == 0 {
+		return "", fmt.Errorf(lib.T_("Unable to find built RPM for package %s in /root"), packageName)
+	}
+
+	rpmPath := newRpms[0]
 	return rpmPath, nil
 }
 

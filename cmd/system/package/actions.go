@@ -448,7 +448,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	if lib.Env.ExistAlr {
 		packages, err = a.serviceALr.UpdateWithAlrPackages(ctx, packages)
 		if err != nil {
-			return nil, err
+			lib.Log.Errorf(err.Error())
 		}
 	}
 
