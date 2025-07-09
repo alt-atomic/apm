@@ -58,7 +58,7 @@ func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string
 	reply.CreateEventNotification(ctx, reply.StateBefore,
 		reply.WithEventName("alr-build-"+packageName),
 		reply.WithProgress(true),
-		reply.WithProgressPercent(50),
+		reply.WithProgressPercent(float64(50)),
 		reply.WithEventView(fmt.Sprintf(lib.T_("Build ALR package %s"), packageName)),
 	)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter,
@@ -90,7 +90,7 @@ func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string
 	}
 
 	if len(newRpms) == 0 {
-		return "", fmt.Errorf(lib.T_("Unable to find built RPM for package %s in /root"), packageName)
+		return "", fmt.Errorf(lib.T_("Unable to find built RPM for package %s in %s"), packageName, buildDir)
 	}
 
 	rpmPath := newRpms[0]
