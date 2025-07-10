@@ -102,8 +102,11 @@ func (a *AlrService) UpdateWithAlrPackages(ctx context.Context, packages []Packa
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.UpdateALR"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.UpdateALR"))
 
-	env := os.Environ()
-	env = append(env, "LC_ALL=C", "HOME=/root", "XDG_CACHE_HOME=/root/.cache")
+	env := append(os.Environ(),
+		"LC_ALL=C",
+		fmt.Sprintf("HOME=%s", workDir),
+		fmt.Sprintf("XDG_CACHE_HOME=%s", buildDir),
+	)
 	update := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s alr fix && alr ref", lib.Env.CommandPrefix))
 	update.Env = env
 	outputUpdate, errUpdate := update.CombinedOutput()

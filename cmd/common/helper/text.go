@@ -32,6 +32,20 @@ func ClearALRPackageName(name string) string {
 	return name
 }
 
+// CleanPackageName удаляет служебные суффиксы (#EVR, :epoch, .32bit).
+func CleanPackageName(pkg string) string {
+	if idx := strings.Index(pkg, "#"); idx != -1 {
+		pkg = pkg[:idx]
+	}
+	if idx := strings.Index(pkg, ":"); idx != -1 {
+		pkg = pkg[idx+1:]
+	}
+	if strings.HasSuffix(pkg, ".32bit") {
+		pkg = strings.TrimSuffix(pkg, ".32bit")
+	}
+	return pkg
+}
+
 // GetVersionFromAptCache преобразует полную версию пакетов из apt ALT в коротких вид
 func GetVersionFromAptCache(s string) (string, error) {
 	parts := strings.Split(s, ":")

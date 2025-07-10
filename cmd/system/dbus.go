@@ -111,6 +111,34 @@ func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbu
 	return string(data), nil
 }
 
+// UpdateKernel – обёртка над Actions.UpdateKernel.
+func (w *DBusWrapper) UpdateKernel(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.UpdateKernel(ctx)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckUpdateKernel – обёртка над Actions.CheckUpdateKernel.
+func (w *DBusWrapper) CheckUpdateKernel(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.CheckUpdateKernel(ctx)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // CheckUpgrade – обёртка над Actions.CheckUpgrade.
 func (w *DBusWrapper) CheckUpgrade(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)

@@ -209,6 +209,8 @@ func getTaskText(task string) string {
 		return lib.T_("Analyzing packages")
 	case "system.Update":
 		return lib.T_("General update process")
+	case "system.UpdateKernel":
+		return lib.T_("General update kernel")
 	case "system.UpdateALR":
 		return lib.T_("Loading package list from ALR repository")
 	case "system.AptUpdate":

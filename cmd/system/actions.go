@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/cmd/system/package"
 	"apm/cmd/system/service"
@@ -88,6 +89,63 @@ type ImageStatus struct {
 func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	allPackageNames := strings.Join(packages, " ")
 	packageParse, aptErrors := a.serviceAptActions.Check(ctx, allPackageNames, "remove")
+	criticalError := _package.FindCriticalError(aptErrors)
+	if criticalError != nil {
+		return nil, criticalError
+	}
+
+	resp := reply.APIResponse{
+		Data: map[string]interface{}{
+			"message": lib.T_("Inspection information"),
+			"info":    packageParse,
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
+// UpdateKernel обновление ядра
+func (a *Actions) UpdateKernel(ctx context.Context) (*reply.APIResponse, error) {
+	if lib.Env.IsAtomic {
+		return nil, fmt.Errorf(lib.T_("This option is available only for a non-atomic system"))
+	}
+
+	_, err := a.serviceAptActions.Update(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	packageParse, checkErrs := a.serviceAptActions.CheckUpdateKernel(ctx)
+	criticalError := _package.FindCriticalError(checkErrs)
+	if criticalError != nil {
+		return nil, criticalError
+	}
+
+	runErrs := a.serviceAptActions.UpdateKernel(ctx)
+	if critical := _package.FindCriticalError(runErrs); critical != nil {
+		return nil, critical
+	}
+
+	resp := reply.APIResponse{
+		Data: map[string]interface{}{
+			"message":  lib.T_("Kernel upgrade finished"),
+			"info":     packageParse,
+			"warnings": append(checkErrs, runErrs...),
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
+// CheckUpdateKernel проверяем обновление ядра
+func (a *Actions) CheckUpdateKernel(ctx context.Context) (*reply.APIResponse, error) {
+	if lib.Env.IsAtomic {
+		return nil, fmt.Errorf(lib.T_("This option is available only for a non-atomic system"))
+	}
+
+	packageParse, aptErrors := a.serviceAptActions.CheckUpdateKernel(ctx)
 	criticalError := _package.FindCriticalError(aptErrors)
 	if criticalError != nil {
 		return nil, criticalError
@@ -642,6 +700,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 // Info возвращает информацию о системном пакете.
 func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (*reply.APIResponse, error) {
 	packageName = strings.TrimSpace(packageName)
+	packageName = helper.CleanPackageName(packageName)
 	if packageName == "" {
 		errMsg := lib.T_("Package name must be specified, for example info package")
 		return nil, fmt.Errorf(errMsg)

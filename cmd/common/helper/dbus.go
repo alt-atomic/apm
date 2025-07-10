@@ -118,6 +118,16 @@ const SystemIntrospectXML = `
       <arg direction="out" type="s" name="result"/>
     </method>
 
+    <method name="UpdateKernel">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="CheckUpdateKernel">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
     <method name="Upgrade">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
