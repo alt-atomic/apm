@@ -129,7 +129,7 @@ func (a *Actions) UpdateKernel(ctx context.Context) (*reply.APIResponse, error) 
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":  lib.T_("Kernel upgrade finished"),
+			"message":  lib.T_("Kernel update finished"),
 			"info":     packageParse,
 			"warnings": append(checkErrs, runErrs...),
 		},
