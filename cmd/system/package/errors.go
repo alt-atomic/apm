@@ -83,6 +83,7 @@ const (
 	ErrVirtualMultipleProvidersShort
 	ErrRpmDatabaseLock
 	ErrPackageIsAlreadyNewest
+	ErrConflictsViolated
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -260,6 +261,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrMissingFetchSourcePackage, "Must specify at least one package to fetch source for", func() string {
 		return lib.T_("Must specify at least one package to fetch source for")
 	}, 0},
+	{ErrConflictsViolated, "Fatal, conflicts violated %s", func() string {
+		return lib.T_("Fatal: conflicts violated %s")
+	}, 1},
 	{ErrChildProcessFailed, "Child process failed", func() string {
 		return lib.T_("Child process failed")
 	}, 0},

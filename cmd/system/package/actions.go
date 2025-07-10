@@ -277,7 +277,7 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 
 	command := fmt.Sprintf("%s apt-get -s %s %s", lib.Env.CommandPrefix, aptCommand, packageName)
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
 
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
