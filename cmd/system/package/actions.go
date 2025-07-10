@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -124,7 +125,7 @@ func (a *Actions) Remove(ctx context.Context, packageName string) []error {
 // CommandWithProgress запускает команду с прогрессом
 func (a *Actions) commandWithProgress(ctx context.Context, command string, typeProcess int) []error {
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
 
 	// Запускаем команду через pty для захвата вывода в реальном времени.
 	ptmx, err := pty.Start(cmd)
