@@ -3,10 +3,10 @@
 <busconfig>
   <policy user="@USER@">
     <allow own="@SERVICE_ID@"/>
-    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.system"/>
   </policy>
 
   <policy context="default">
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.system"/>
     <allow send_destination="@SERVICE_ID@" send_interface="org.freedesktop.DBus.Introspectable"/>
   </policy>
 </busconfig>

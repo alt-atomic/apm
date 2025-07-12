@@ -17,6 +17,7 @@
 package helper
 
 import (
+	"apm/lib"
 	"fmt"
 	"os"
 	"strconv"
@@ -65,6 +66,8 @@ func getStartTime(pid uint32) (uint64, error) {
 
 // PolkitCheck — универсальная проверка доступа.
 func PolkitCheck(conn *dbus.Conn, sender dbus.Sender, actionID string) error {
+	lib.Log.Infoln(actionID)
+	lib.Log.Infoln(sender)
 	pid, err := callerPID(conn, sender)
 	if err != nil {
 		return fmt.Errorf("cannot resolve sender pid: %w", err)
