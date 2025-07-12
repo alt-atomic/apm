@@ -5,6 +5,14 @@ conf.set('BINDIR', get_option('prefix') / get_option('bindir'))
 conf.set('NAME', meson.project_name())
 
 configure_file(
+  input: SERVICE_ID + '.policy.in',
+  output: SERVICE_ID + '.policy',
+  configuration: conf,
+  install: true,
+  install_dir: join_paths(get_option('datadir'), 'polkit-1', 'actions')
+)
+
+configure_file(
   input: SERVICE_ID + '.conf.in',
   output: SERVICE_ID + '.conf',
   configuration: conf,

@@ -66,51 +66,61 @@ func getStartTime(pid uint32) (uint64, error) {
 
 // PolkitCheck — универсальная проверка доступа.
 func PolkitCheck(conn *dbus.Conn, sender dbus.Sender, actionID string) error {
-	lib.Log.Infoln(actionID)
-	lib.Log.Infoln(sender)
-	pid, err := callerPID(conn, sender)
-	if err != nil {
-		return fmt.Errorf("cannot resolve sender pid: %w", err)
-	}
-
-	stime, err := getStartTime(pid)
-	if err != nil {
-		return fmt.Errorf("cannot read start-time: %w", err)
-	}
-
-	subject := map[string]map[string]dbus.Variant{
-		"unix-process": {
+	pid, _ := callerPID(conn, sender)
+	stime, _ := getStartTime(pid)
+	subject := struct {
+		Kind    string
+		Details map[string]dbus.Variant
+	}{
+		Kind: "unix-process",
+		Details: map[string]dbus.Variant{
 			"pid":        dbus.MakeVariant(pid),
 			"start-time": dbus.MakeVariant(stime),
 		},
 	}
 
-	const allowInteraction uint32 = 1 // показать диалог, если rule не найден
-
 	authority := conn.Object("org.freedesktop.PolicyKit1",
 		"/org/freedesktop/PolicyKit1/Authority")
 
-	var granted bool
-	var details map[string]dbus.Variant
-
-	call := authority.Call(
-		"org.freedesktop.PolicyKit1.Authority.CheckAuthorization",
-		0, subject, actionID,
-		map[string]dbus.Variant{},
-		allowInteraction,
-		"",
-	)
-
-	if call.Err != nil {
-		return fmt.Errorf("polkit dbus failure: %w", call.Err)
+	check := func(flags uint32) (granted bool, err error) {
+		var reply struct {
+			Granted   bool
+			Challenge bool
+			Details   map[string]string
+		}
+		c := authority.Call(
+			"org.freedesktop.PolicyKit1.Authority.CheckAuthorization",
+			0,
+			subject, actionID,
+			map[string]string{},
+			flags,
+			"",
+		)
+		if c.Err != nil {
+			return false, fmt.Errorf(lib.T_("polkit dbus failure: %w"), c.Err)
+		}
+		if err := c.Store(&reply); err != nil {
+			return false, fmt.Errorf(lib.T_("polkit unpack failure: %w"), err)
+		}
+		return reply.Granted, nil
 	}
 
-	if err = call.Store(&granted, &details); err != nil {
-		return fmt.Errorf("polkit unpack failure: %w", err)
+	granted, err := check(0)
+	if err != nil {
+		return err
+	}
+
+	if granted {
+		return nil
+	}
+
+	granted, err = check(1)
+	if err != nil {
+		return err
 	}
 
 	if !granted {
-		return fmt.Errorf("not authorized by polkit (action=%s)", actionID)
+		return fmt.Errorf(lib.T_("not authorized by polkit (action=%s)"), actionID)
 	}
 
 	return nil
