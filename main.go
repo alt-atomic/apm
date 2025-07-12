@@ -25,6 +25,7 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
+	"github.com/godbus/dbus/v5"
 	"os"
 	"os/signal"
 	"syscall"
@@ -217,7 +218,8 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	sysActions := system.NewActions()
-	sysObj := system.NewDBusWrapper(sysActions)
+	conn, _ := dbus.SystemBus()
+	sysObj := system.NewDBusWrapper(sysActions, conn)
 
 	// Экспортируем в D-Bus
 	if err = lib.DBUSConn.Export(sysObj, "/org/altlinux/APM", "org.altlinux.APM.system"); err != nil {

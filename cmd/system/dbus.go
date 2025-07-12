@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
 	"context"
@@ -28,12 +29,13 @@ import (
 
 // DBusWrapper – обёртка для системных действий, предназначенная для экспорта через DBus.
 type DBusWrapper struct {
+	conn    *dbus.Conn
 	actions *Actions
 }
 
 // NewDBusWrapper создаёт новую обёртку над actions
-func NewDBusWrapper(a *Actions) *DBusWrapper {
-	return &DBusWrapper{actions: a}
+func NewDBusWrapper(a *Actions, c *dbus.Conn) *DBusWrapper {
+	return &DBusWrapper{actions: a, conn: c}
 }
 
 // Install – обёртка над Actions.Install.
@@ -126,7 +128,10 @@ func (w *DBusWrapper) UpdateKernel(transaction string) (string, *dbus.Error) {
 }
 
 // CheckUpdateKernel – обёртка над Actions.CheckUpdateKernel.
-func (w *DBusWrapper) CheckUpdateKernel(transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, transaction string) (string, *dbus.Error) {
+	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.CheckUpdateKernel(ctx)
 	if err != nil {
