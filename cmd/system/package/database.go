@@ -202,6 +202,10 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 	defer syncDBMutex.Unlock()
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("DROP TABLE IF EXISTS tmp_installed").Error; err != nil {
+			return fmt.Errorf(lib.T_("Temporary table drop error: %w"), err)
+		}
+
 		if err := tx.Exec("CREATE TEMPORARY TABLE tmp_installed (name TEXT PRIMARY KEY, version TEXT)").Error; err != nil {
 			return fmt.Errorf(lib.T_("Temporary table creation error: %w"), err)
 		}
