@@ -48,6 +48,7 @@ func CommandList() *cli.Command {
 	return &cli.Command{
 		Name:    "distrobox",
 		Aliases: []string{"d"},
+		Hidden:  !lib.Env.ExistDistrobox,
 		Usage:   lib.T_("Managing packages and containers in distrobox"),
 		Commands: []*cli.Command{
 			{

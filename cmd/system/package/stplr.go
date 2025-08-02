@@ -30,17 +30,17 @@ import (
 	"strings"
 )
 
-type AlrService struct{}
+type StplrService struct{}
 
-func NewALRService() *AlrService {
-	return &AlrService{}
+func NewSTPLRService() *StplrService {
+	return &StplrService{}
 }
 
 var workDir = "/root"
 var buildDir = "/root/.cache"
 
 // PreInstall собираем пакет, но не устанавливаем в систему, возвращаем путь к rpm
-func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string, error) {
+func (a *StplrService) PreInstall(ctx context.Context, packageName string) (string, error) {
 	// Очищаем постфикс и удаляем старые rpm
 	packageName = helper.ClearALRPackageName(packageName)
 
@@ -56,15 +56,15 @@ func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string
 
 	// Уведомление о старте сборки
 	reply.CreateEventNotification(ctx, reply.StateBefore,
-		reply.WithEventName("alr-build-"+packageName),
+		reply.WithEventName("stplr-build-"+packageName),
 		reply.WithProgress(true),
 		reply.WithProgressPercent(float64(50)),
-		reply.WithEventView(fmt.Sprintf(lib.T_("Build ALR package %s"), packageName)),
+		reply.WithEventView(fmt.Sprintf(lib.T_("Build STPLR package %s"), packageName)),
 	)
 	defer reply.CreateEventNotification(ctx, reply.StateAfter,
-		reply.WithEventName("alr-build-"+packageName),
+		reply.WithEventName("stplr-build-"+packageName),
 		reply.WithProgress(true),
-		reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Build ALR package %s"), packageName)),
+		reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Build STPLR package %s"), packageName)),
 		reply.WithProgressPercent(100),
 	)
 
@@ -75,13 +75,13 @@ func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string
 	)
 
 	cmd := exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("%s alr -i='false' build --package %s", lib.Env.CommandPrefix, packageName))
+		fmt.Sprintf("%s stplr -i='false' build --package %s", lib.Env.CommandPrefix, packageName))
 	cmd.Env = env
 	cmd.Dir = buildDir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf(lib.T_("Error alr command '%s': %s"), "alr build", string(output))
+		return "", fmt.Errorf(lib.T_("Error stplr command '%s': %s"), "stplr build", string(output))
 	}
 
 	newRpms, err := filepath.Glob(rpmPattern)
@@ -97,29 +97,29 @@ func (a *AlrService) PreInstall(ctx context.Context, packageName string) (string
 	return rpmPath, nil
 }
 
-// UpdateWithAlrPackages получает список alr пакетов и добавляет их к срезу packages.
-func (a *AlrService) UpdateWithAlrPackages(ctx context.Context, packages []Package) ([]Package, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.UpdateALR"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.UpdateALR"))
+// UpdateWithStplrPackages получает список alr пакетов и добавляет их к срезу packages.
+func (a *StplrService) UpdateWithStplrPackages(ctx context.Context, packages []Package) ([]Package, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.UpdateSTPLR"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.UpdateSTPLR"))
 
 	env := append(os.Environ(),
 		"LC_ALL=C",
 		fmt.Sprintf("HOME=%s", workDir),
 		fmt.Sprintf("XDG_CACHE_HOME=%s", buildDir),
 	)
-	update := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s alr fix && alr ref", lib.Env.CommandPrefix))
+	update := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s stplr fix && stplr ref", lib.Env.CommandPrefix))
 	update.Env = env
 	outputUpdate, errUpdate := update.CombinedOutput()
 	if errUpdate != nil {
-		return packages, fmt.Errorf(lib.T_("Error alr command '%s': %s"), "alr fix && alr ref", string(outputUpdate))
+		return packages, fmt.Errorf(lib.T_("Error stplr command '%s': %s"), "stplr fix && stplr ref", string(outputUpdate))
 	}
 
-	command := fmt.Sprintf("%s alr list", lib.Env.CommandPrefix)
+	command := fmt.Sprintf("%s stplr list", lib.Env.CommandPrefix)
 	cmdList := exec.CommandContext(ctx, "sh", "-c", command)
 	cmdList.Env = env
 	outputList, err := cmdList.CombinedOutput()
 	if err != nil {
-		return packages, fmt.Errorf(lib.T_("Error alr command '%s': %s"), "alr list", string(outputList))
+		return packages, fmt.Errorf(lib.T_("Error stplr command '%s': %s"), "stplr list", string(outputList))
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(outputList))
@@ -136,7 +136,7 @@ func (a *AlrService) UpdateWithAlrPackages(ctx context.Context, packages []Packa
 	}
 
 	if err = scanner.Err(); err != nil {
-		return packages, fmt.Errorf(lib.T_("Error alr command '%s': %w"), "alr list", err)
+		return packages, fmt.Errorf(lib.T_("Error stplr command '%s': %w"), "stplr list", err)
 	}
 
 	for _, pkgIdentifier := range alrPackages {
@@ -151,7 +151,7 @@ func (a *AlrService) UpdateWithAlrPackages(ctx context.Context, packages []Packa
 		}
 		cleanedPkgIdentifier := parts[1]
 
-		cmdInfo := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s alr info %s", lib.Env.CommandPrefix, cleanedPkgIdentifier))
+		cmdInfo := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s stplr info %s", lib.Env.CommandPrefix, cleanedPkgIdentifier))
 		cmdInfo.Env = env
 		outputInfo, err := cmdInfo.CombinedOutput()
 		if err != nil {
@@ -160,7 +160,7 @@ func (a *AlrService) UpdateWithAlrPackages(ctx context.Context, packages []Packa
 		}
 
 		var pkg Package
-		pkg.IsAlr = true
+		pkg.TypePackage = int(PackageTypeStplr)
 
 		var currentKey string
 		scannerInfo := bufio.NewScanner(bytes.NewReader(outputInfo))
@@ -195,7 +195,7 @@ func (a *AlrService) UpdateWithAlrPackages(ctx context.Context, packages []Packa
 					pkg.Version = value
 				case "release":
 				case "epoch":
-				case "description":
+				case "summary":
 					pkg.Description = value
 				case "maintainer":
 					pkg.Maintainer = value
@@ -220,7 +220,7 @@ func (a *AlrService) UpdateWithAlrPackages(ctx context.Context, packages []Packa
 			continue
 		}
 
-		pkg.Name = cleanedPkgIdentifier + "+alr-aides"
+		pkg.Name = cleanedPkgIdentifier + "+stplr-aides"
 		packages = append(packages, pkg)
 	}
 

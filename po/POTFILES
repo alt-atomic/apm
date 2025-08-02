@@ -1,3 +1,4 @@
+cmd/common/helper/polkit.go
 cmd/common/helper/text.go
 cmd/common/helper/translate.go
 cmd/common/icon/service.go
@@ -19,10 +20,11 @@ cmd/system/actions.go
 cmd/system/commands.go
 cmd/system/dbus.go
 cmd/system/package/actions.go
-cmd/system/package/alr.go
 cmd/system/package/database.go
 cmd/system/package/dialog.go
 cmd/system/package/errors.go
+cmd/system/package/kernel.go
+cmd/system/package/stplr.go
 cmd/system/service/config.go
 cmd/system/service/database.go
 cmd/system/service/host.go

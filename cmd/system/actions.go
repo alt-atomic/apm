@@ -19,7 +19,7 @@ package system
 import (
 	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
-	"apm/cmd/system/package"
+	_package "apm/cmd/system/package"
 	"apm/cmd/system/service"
 	"apm/lib"
 	"context"
@@ -36,7 +36,7 @@ type Actions struct {
 	serviceAptDatabase  *_package.PackageDBService
 	serviceHostDatabase *service.HostDBService
 	serviceHostConfig   *service.HostConfigService
-	serviceAlr          *_package.AlrService
+	serviceStplr        *_package.StplrService
 }
 
 // NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
@@ -66,7 +66,7 @@ func NewActions() *Actions {
 
 	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
 	hostImageSvc := service.NewHostImageService(hostConfigSvc)
-	hostALRSvc := _package.NewALRService()
+	hostALRSvc := _package.NewSTPLRService()
 	hostAptSvc := _package.NewActions(hostPackageDBSvc, hostALRSvc)
 
 	return &Actions{
@@ -75,7 +75,7 @@ func NewActions() *Actions {
 		serviceAptDatabase:  hostPackageDBSvc,
 		serviceHostDatabase: hostDBSvc,
 		serviceHostConfig:   hostConfigSvc,
-		serviceAlr:          hostALRSvc,
+		serviceStplr:        hostALRSvc,
 	}
 }
 
@@ -415,8 +415,8 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 		packagesInfo = append(packagesInfo, packageInfo)
 
-		// Обработка ALR-пакетов
-		if packageInfo.IsAlr {
+		// Обработка STPLR-пакетов
+		if packageInfo.TypePackage == int(_package.PackageTypeStplr) {
 			action := "install"
 			if len(originalPkg) > 0 {
 				lastChar := originalPkg[len(originalPkg)-1]
@@ -436,7 +436,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 					}
 				}
 
-				rpmPath, err := a.serviceAlr.PreInstall(ctx, pkgForPreInstall)
+				rpmPath, err := a.serviceStplr.PreInstall(ctx, pkgForPreInstall)
 				if err != nil {
 					return nil, err
 				}

@@ -40,13 +40,13 @@ var syncAptMutex sync.Mutex
 
 type Actions struct {
 	serviceAptDatabase *PackageDBService
-	serviceALr         *AlrService
+	serviceStplr       *StplrService
 }
 
-func NewActions(serviceAptDatabase *PackageDBService, serviceAlr *AlrService) *Actions {
+func NewActions(serviceAptDatabase *PackageDBService, serviceStplr *StplrService) *Actions {
 	return &Actions{
 		serviceAptDatabase: serviceAptDatabase,
-		serviceALr:         serviceAlr,
+		serviceStplr:       serviceStplr,
 	}
 }
 
@@ -78,7 +78,7 @@ type Package struct {
 	Description      string   `json:"description"`
 	Changelog        string   `json:"lastChangelog"`
 	Installed        bool     `json:"installed"`
-	IsAlr            bool     `json:"isAlr"`
+	TypePackage      int      `json:"typePackage"`
 }
 
 const (
@@ -446,8 +446,8 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
 	}
 
-	if lib.Env.ExistAlr {
-		packages, err = a.serviceALr.UpdateWithAlrPackages(ctx, packages)
+	if lib.Env.ExistStplr {
+		packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
 		if err != nil {
 			lib.Log.Errorf(err.Error())
 		}

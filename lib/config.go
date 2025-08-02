@@ -34,10 +34,11 @@ type Environment struct {
 	PathDBKV        string `yaml:"pathDBKV"`
 	PathImageFile   string `yaml:"pathImageFile"`
 	// Internal variables
-	ExistAlr    bool
-	Format      string
-	IsAtomic    bool
-	PathLocales string
+	ExistStplr     bool
+	ExistDistrobox bool
+	Format         string
+	IsAtomic       bool
+	PathLocales    string
 }
 
 var Env Environment
@@ -128,10 +129,16 @@ func InitConfig() error {
 		Env.IsAtomic = true
 	}
 
-	if _, errAlr := os.Stat("/usr/bin/alr"); os.IsNotExist(errAlr) {
-		Env.ExistAlr = false
+	if _, errAlr := os.Stat("/usr/bin/stplr"); os.IsNotExist(errAlr) {
+		Env.ExistStplr = false
 	} else {
-		Env.ExistAlr = true
+		Env.ExistStplr = true
+	}
+
+	if _, errDistrobox := os.Stat("/usr/bin/distrobox"); os.IsNotExist(errDistrobox) {
+		Env.ExistDistrobox = false
+	} else {
+		Env.ExistDistrobox = true
 	}
 
 	return nil

@@ -16,11 +16,21 @@ apm -help
 ```
 
 ## Установка
-Рекомендуется установить пакет из репозитория, ручная сборка:
+Рекомендуется установить пакет из репозитория
+```
+apt-get install apm
+```
 
+ручная сборка:
 ```
 meson setup build --wipe --prefix /usr
 meson install -C build
+```
+
+## Переводы
+```
+sh ./po/update_pot.sh
+sh ./po/update_po.sh
 ```
 
 Общая справка:

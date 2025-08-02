@@ -25,7 +25,7 @@ import (
 	"regexp"
 	"testing"
 
-	"apm/cmd/system/package"
+	_package "apm/cmd/system/package"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -87,7 +87,7 @@ func TestInfo_Success_sqlmock(t *testing.T) {
 
 	actions := system.NewActionsWithDeps(
 		packageDBSvc,
-		_package.NewActions(packageDBSvc),
+		_package.NewActions(packageDBSvc, &_package.StplrService{}),
 		&service.HostImageService{},  // фиктивный объект
 		&service.HostDBService{},     // фиктивный объект
 		&service.HostConfigService{}, // фиктивный объект

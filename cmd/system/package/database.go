@@ -22,12 +22,14 @@ import (
 	"apm/lib"
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"strings"
 	"sync"
+
+	"gorm.io/gorm/logger"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -71,22 +73,42 @@ func NewPackageDBService(db *sql.DB) (*PackageDBService, error) {
 	}, nil
 }
 
+type PackageType uint8
+
+const (
+	PackageTypeSystem PackageType = iota
+	PackageTypeStplr
+)
+
+func (t PackageType) String() string {
+	switch t {
+	case PackageTypeSystem:
+		return "system"
+	case PackageTypeStplr:
+		return "stplr"
+	default:
+		return "unknown"
+	}
+}
+
+func (t PackageType) Value() (driver.Value, error) { return int64(t), nil }
+
 // DBPackage — модель для GORM, отражающая структуру таблицы в БД.
 type DBPackage struct {
-	Name             string `gorm:"column:name;primaryKey"`
-	Section          string `gorm:"column:section"`
-	InstalledSize    int    `gorm:"column:installed_size"`
-	Maintainer       string `gorm:"column:maintainer"`
-	Version          string `gorm:"column:version;primaryKey"`
-	VersionInstalled string `gorm:"column:versionInstalled"`
-	Depends          string `gorm:"column:depends"`
-	Provides         string `gorm:"column:provides"`
-	Size             int    `gorm:"column:size"`
-	Filename         string `gorm:"column:filename"`
-	Description      string `gorm:"column:description"`
-	Changelog        string `gorm:"column:changelog"`
-	Installed        bool   `gorm:"column:installed"`
-	IsAlr            bool   `gorm:"column:isAlr"`
+	Name             string      `gorm:"column:name;primaryKey"`
+	Section          string      `gorm:"column:section"`
+	InstalledSize    int         `gorm:"column:installed_size"`
+	Maintainer       string      `gorm:"column:maintainer"`
+	Version          string      `gorm:"column:version;primaryKey"`
+	VersionInstalled string      `gorm:"column:versionInstalled"`
+	Depends          string      `gorm:"column:depends"`
+	Provides         string      `gorm:"column:provides"`
+	Size             int         `gorm:"column:size"`
+	Filename         string      `gorm:"column:filename"`
+	Description      string      `gorm:"column:description"`
+	Changelog        string      `gorm:"column:changelog"`
+	Installed        bool        `gorm:"column:installed"`
+	TypePackage      PackageType `gorm:"column:typePackage"`
 }
 
 // TableName — задаём имя таблицы
@@ -108,7 +130,7 @@ func (dbp DBPackage) fromDBModel() Package {
 		Description:      dbp.Description,
 		Changelog:        dbp.Changelog,
 		Installed:        dbp.Installed,
-		IsAlr:            dbp.IsAlr,
+		TypePackage:      int(dbp.TypePackage),
 	}
 	if strings.TrimSpace(dbp.Depends) != "" {
 		p.Depends = strings.Split(dbp.Depends, ",")
@@ -133,7 +155,7 @@ func (p Package) toDBModel() DBPackage {
 		Description:      p.Description,
 		Changelog:        p.Changelog,
 		Installed:        p.Installed,
-		IsAlr:            p.IsAlr,
+		TypePackage:      PackageType(p.TypePackage),
 	}
 	if len(p.Depends) > 0 {
 		dbp.Depends = strings.Join(p.Depends, ",")
@@ -350,12 +372,8 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 				continue
 			}
 			query = query.Where("installed = ?", boolVal)
-		case "isAlr":
-			boolVal, ok := helper.ParseBool(value)
-			if !ok {
-				continue
-			}
-			query = query.Where("isAlr = ?", boolVal)
+		case "typePackage":
+			query = query.Where("typePackage = ?", value)
 		case "depends":
 			if strVal, ok := value.(string); ok {
 				query = query.Where("depends LIKE ?", "%"+strVal+"%")
@@ -420,7 +438,7 @@ var allowedSortFields = []string{
 	"description",
 	"changelog",
 	"installed",
-	"isAlr",
+	"typePackage",
 }
 
 // Списки разрешённых полей для фильтрации.
@@ -438,5 +456,5 @@ var allowedFilterFields = []string{
 	"description",
 	"changelog",
 	"installed",
-	"isAlr",
+	"typePackage",
 }

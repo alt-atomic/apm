@@ -9,8 +9,8 @@ func TranslateKey(key string) string {
 	switch key {
 	case "package":
 		return lib.T_("Package")
-	case "isAlr":
-		return lib.T_("Package from ALR")
+	case "typePackage":
+		return lib.T_("Type Package")
 	case "count":
 		return lib.T_("Count")
 	case "isConsole":
