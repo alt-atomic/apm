@@ -1,0 +1,9 @@
+object 3b9c7f965bbd7a8f51f981d93dd8cc24ee148bb2
+type commit
+tag v0.1.2
+tagger Gitea <gitea@fake.local> 1754347614 +0300
+
+0.1.2
+
+- Alr replaced with stplr
+- Added dbus+polkit integration

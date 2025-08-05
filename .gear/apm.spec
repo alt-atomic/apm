@@ -1,3 +1,6 @@
+# If you want to suggest changes, please send PR on
+# https://altlinux.space/alt-atomic/apm to altlinux branch
+
 %define _unpackaged_files_terminate_build 1
 
 %define tmpfiles_cache_dir %_localstatedir/%name
@@ -6,7 +9,7 @@
 %define service_id org.altlinux.APM
 
 Name: apm
-Version: 0.1.1
+Version: 0.1.2
 Release: alt1
 
 Summary: Atomic Package Manager 
@@ -22,8 +25,6 @@ Source1: vendor.tar
 Source11: %name.tmpfiles
 Patch: %name-%version-%release.patch
 
-Requires: distrobox
-
 BuildRequires(pre): rpm-macros-golang
 BuildRequires(pre): rpm-macros-systemd
 BuildRequires(pre): rpm-macros-meson
@@ -35,7 +36,7 @@ BuildRequires: pkgconfig(systemd)
 APM is a universal application for managing both system packages
 and packages from distrobox. It consolidates all functions into
 a single API, provides interaction via a DBUS service, and offers
-optional support for atomic images based on ALT Linux.
+optional support for atomic images based on ALT Linux and distrobox.
 
 %prep
 %setup -a1
@@ -64,6 +65,7 @@ mkdir -p %buildroot%tmpfiles_config_dir
 %_tmpfilesdir/%name.conf
 %_bindir/%name
 %_sysconfdir/dbus-1/system.d/%service_id.conf
+%_datadir/polkit-1/actions/%service_id.policy
 %_unitdir/%name.service
 %_datadir/dbus-1/services/%service_id.User.service
 %_datadir/dbus-1/system-services/%service_id.service
@@ -74,5 +76,11 @@ mkdir -p %buildroot%tmpfiles_config_dir
 %doc README.ru.md
 
 %changelog
+* Tue Aug 05 2025 Vladimir Vaskov <rirusha@altlinux.org> 0.1.2-alt1
+- New version: 0.1.2
+- Changed VCS and URL.
+- Corrected license.
+- Removed distrobox from Requires. It now optional.
+
 * Mon Jun 02 2025 Vladimir Vaskov <rirusha@altlinux.org> 0.1.1-alt1
 - Initial build.
