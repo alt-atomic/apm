@@ -312,8 +312,8 @@ func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, conta
 // applyFilters применяет фильтры
 func (s *DistroDBService) applyFilters(db *gorm.DB, filters map[string]interface{}) (*gorm.DB, error) {
 	for field, value := range filters {
-		if !s.isAllowedField(field, allowedFilterFields) {
-			return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s."), field, strings.Join(allowedFilterFields, ", "))
+		if !s.isAllowedField(field, AllowedFilterFields) {
+			return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s."), field, strings.Join(AllowedFilterFields, ", "))
 		}
 		switch field {
 		case "installed", "exporting":
@@ -347,7 +347,7 @@ var allowedSortFields = []string{
 	"manager",
 }
 
-var allowedFilterFields = []string{
+var AllowedFilterFields = []string{
 	"name",
 	"version",
 	"description",

@@ -817,6 +817,55 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	return &resp, nil
 }
 
+// GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
+func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, error) {
+	if err := a.validateDB(ctx); err != nil {
+		return nil, err
+	}
+
+	fieldList := _package.AllowedFilterFields
+
+	type FilterField struct {
+		Name string                          `json:"name"`
+		Text string                          `json:"text"`
+		Info map[_package.PackageType]string `json:"info"`
+		Type string                          `json:"type"`
+	}
+
+	var fields []FilterField
+
+	for _, field := range fieldList {
+		ff := FilterField{
+			Name: field,
+			Text: reply.TranslateKey(field),
+			Type: "STRING",
+		}
+
+		switch field {
+		case "size":
+			ff.Type = "INTEGER"
+		case "installedSize":
+			ff.Type = "INTEGER"
+		case "installed":
+			ff.Type = "BOOL"
+
+		case "typePackage":
+			ff.Type = "ENUM"
+			ff.Info = map[_package.PackageType]string{
+				_package.PackageTypeSystem: lib.T_("System package"),
+				_package.PackageTypeStplr:  lib.T_("Stplr package"),
+			}
+		}
+
+		fields = append(fields, ff)
+	}
+
+	return &reply.APIResponse{
+		Data:  fields,
+		Error: false,
+	}, nil
+}
+
 // Search осуществляет поиск системного пакета по названию.
 func (a *Actions) Search(ctx context.Context, packageName string, installed bool, isFullFormat bool) (*reply.APIResponse, error) {
 	err := a.validateDB(ctx)

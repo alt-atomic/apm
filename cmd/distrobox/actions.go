@@ -447,7 +447,7 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply
 		return nil, err
 	}
 
-	fieldList := []string{"name", "version", "description", "installed", "exporting", "manager"}
+	fieldList := service.AllowedFilterFields
 	type FiltersField struct {
 		Name   string   `json:"name"`
 		Text   string   `json:"text"`
@@ -480,7 +480,7 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply
 
 		fields = append(fields, FiltersField{
 			Name:   field,
-			Text:   lib.T_(field),
+			Text:   reply.TranslateKey(field),
 			Type:   fieldType,
 			Choice: choice,
 		})

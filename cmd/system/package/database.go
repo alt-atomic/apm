@@ -361,8 +361,8 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 // Если встречается недопустимое поле, возвращается ошибка.
 func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]interface{}) (*gorm.DB, error) {
 	for field, value := range filters {
-		if !isAllowedField(field, allowedFilterFields) {
-			return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s"), field, strings.Join(allowedFilterFields, ", "))
+		if !isAllowedField(field, AllowedFilterFields) {
+			return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s"), field, strings.Join(AllowedFilterFields, ", "))
 		}
 
 		switch field {
@@ -441,8 +441,8 @@ var allowedSortFields = []string{
 	"typePackage",
 }
 
-// Списки разрешённых полей для фильтрации.
-var allowedFilterFields = []string{
+// AllowedFilterFields Списки разрешённых полей для фильтрации.
+var AllowedFilterFields = []string{
 	"name",
 	"section",
 	"installedSize",

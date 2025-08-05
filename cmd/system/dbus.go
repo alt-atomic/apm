@@ -80,6 +80,22 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic 
 	return string(data), nil
 }
 
+// GetFilterFields обёртка над actions.GetFilterFields
+func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	resp, err := w.actions.GetFilterFields(ctx)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+
+	return string(data), nil
+}
+
 // Update – обёртка над Actions.Update.
 func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {

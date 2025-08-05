@@ -113,6 +113,11 @@ const SystemIntrospectXML = `
 
   <interface name="org.altlinux.APM.system">
 
+    <method name="GetFilterFields">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
     <method name="CheckUpgrade">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
