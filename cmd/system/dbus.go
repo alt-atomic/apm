@@ -38,13 +38,18 @@ func NewDBusWrapper(a *Actions, c *dbus.Conn) *DBusWrapper {
 	return &DBusWrapper{actions: a, conn: c}
 }
 
+// checkManagePermission проверяет права org.altlinux.APM.manage
+func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
+	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
+		return dbus.MakeFailedError(err)
+	}
+	return nil
+}
+
 // Install – обёртка над Actions.Install.
 func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
-	}
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Install(ctx, packages, applyAtomic)
@@ -60,8 +65,8 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic
 
 // Remove – обёртка над Actions.Remove.
 func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Remove(ctx, packages, applyAtomic)
@@ -77,8 +82,8 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic 
 
 // Update – обёртка над Actions.Update.
 func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Update(ctx)
@@ -93,12 +98,13 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *d
 }
 
 // List – обёртка над Actions.List.
-func (w *DBusWrapper) List(sender dbus.Sender, paramsJSON string, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
-	}
+func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
-	var params ListParams
+	params := ListParams{
+		Limit:       10,
+		Offset:      0,
+		ForceUpdate: false,
+	}
 	if err := json.Unmarshal([]byte(paramsJSON), &params); err != nil {
 		return "", dbus.MakeFailedError(fmt.Errorf(lib.T_("Failed to parse JSON: %w"), err))
 	}
@@ -115,10 +121,7 @@ func (w *DBusWrapper) List(sender dbus.Sender, paramsJSON string, transaction st
 }
 
 // Info – обёртка над Actions.Info.
-func (w *DBusWrapper) Info(sender dbus.Sender, packageName string, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
-	}
+func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Info(ctx, packageName, true)
 	if err != nil {
@@ -133,8 +136,8 @@ func (w *DBusWrapper) Info(sender dbus.Sender, packageName string, transaction s
 
 // UpdateKernel – обёртка над Actions.UpdateKernel.
 func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.UpdateKernel(ctx)
@@ -150,8 +153,8 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, transaction string) (stri
 
 // CheckUpdateKernel – обёртка над Actions.CheckUpdateKernel.
 func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.CheckUpdateKernel(ctx)
@@ -167,8 +170,8 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, transaction string) 
 
 // CheckUpgrade – обёртка над Actions.CheckUpgrade.
 func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.CheckUpgrade(ctx)
@@ -184,8 +187,8 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string) (stri
 
 // Upgrade – обёртка над Actions.Upgrade или Actions.ImageUpdate.
 func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	var resp *reply.APIResponse
@@ -207,8 +210,8 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string) (string, *
 
 // CheckInstall – обёртка над Actions.CheckInstall.
 func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.CheckInstall(ctx, packages)
@@ -224,8 +227,8 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 
 // CheckRemove – обёртка над Actions.CheckRemove.
 func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.CheckRemove(ctx, packages)
@@ -241,8 +244,8 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transac
 
 // Search – обёртка над Actions.Search.
 func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction string, installed bool) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.Search(ctx, packageName, installed, true)
@@ -258,8 +261,8 @@ func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction
 
 // ImageApply – обёртка над Actions.Apply.
 func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.ImageApply(ctx)
@@ -275,8 +278,8 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string) (string
 
 // ImageHistory – обёртка над Actions.ImageHistory.
 func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, imageName string, limit int, offset int) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.ImageHistory(ctx, imageName, limit, offset)
@@ -292,8 +295,8 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 
 // ImageUpdate – обёртка над Actions.ImageUpdate.
 func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.ImageUpdate(ctx)
@@ -309,8 +312,8 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string) (strin
 
 // ImageStatus – обёртка над Actions.ImageStatus.
 func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (string, *dbus.Error) {
-	if err := helper.PolkitCheck(w.conn, sender, "org.altlinux.APM.manage"); err != nil {
-		return "", dbus.MakeFailedError(err)
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
 	}
 	ctx := context.WithValue(context.Background(), "transaction", transaction)
 	resp, err := w.actions.ImageStatus(ctx)
