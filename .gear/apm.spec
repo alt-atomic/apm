@@ -10,7 +10,7 @@ Version: 0.1.1
 Release: alt1
 
 Summary: Atomic Package Manager 
-License: GPL-3.0-or-later AND GPL-3.0-only
+License: GPL-3.0-or-later
 Group: Other
 Url: https://github.com/alt-atomic/apm
 Vcs: https://github.com/alt-atomic/apm.git
