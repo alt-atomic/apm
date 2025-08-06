@@ -133,7 +133,7 @@ func main() {
 	}
 }
 
-func sessionDbus(ctx context.Context, cmd *cli.Command) error {
+func sessionDbus(ctx context.Context, _ *cli.Command) error {
 	if syscall.Geteuid() == 0 {
 		errPermission := lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
 		_ = reply.CliResponse(ctx, reply.APIResponse{
@@ -188,7 +188,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	select {}
 }
 
-func systemDbus(ctx context.Context, cmd *cli.Command) error {
+func systemDbus(ctx context.Context, _ *cli.Command) error {
 	if syscall.Geteuid() != 0 {
 		errPermission := lib.T_("Elevated rights are required to perform this action. Please use sudo or su")
 		_ = reply.CliResponse(ctx, reply.APIResponse{

@@ -242,7 +242,7 @@ func (p *PackageService) GetPackagesQuery(ctx context.Context, containerInfo Con
 }
 
 // GetPackageByName поиска пакета по неточному совпадению имени
-func (p *PackageService) GetPackageByName(ctx context.Context, containerInfo ContainerInfo, packageName string) (PackageQueryResult, error) {
+func (p *PackageService) GetPackageByName(_ context.Context, containerInfo ContainerInfo, packageName string) (PackageQueryResult, error) {
 	packages, err := p.serviceDistroDatabase.FindPackagesByName(containerInfo.ContainerName, packageName)
 	if err != nil {
 		return PackageQueryResult{}, err
