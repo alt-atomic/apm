@@ -172,7 +172,7 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "list",
-				Usage: "Построение запроса для получения списка пакетов",
+				Usage: lib.T_("Building a query to get a list of packages"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "sort",
