@@ -152,8 +152,10 @@ func (s *HostConfigService) GenerateDockerfile() error {
 	var dockerfileLines []string
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", s.Config.Image))
 	// Разбиваем apt-get команду по строкам.
-	aptLines := splitCommand("RUN ", aptCmd)
-	dockerfileLines = append(dockerfileLines, strings.Join(aptLines, "\n"))
+	if aptCmd != "" {
+		aptLines := splitCommand("RUN ", aptCmd)
+		dockerfileLines = append(dockerfileLines, strings.Join(aptLines, "\n"))
+	}
 
 	// Формирование RUN блока для пользовательских команд, если они заданы.
 	if len(s.Config.Commands) > 0 {
@@ -286,6 +288,10 @@ func uniqueStrings(input []string) []string {
 
 // splitCommand разбивает команду на строки длиной не более 80 символов с отступом.
 func splitCommand(prefix, cmd string) []string {
+	if strings.TrimSpace(cmd) == "" {
+		return nil
+	}
+
 	const maxLineLength = 80
 	words := strings.Fields(cmd)
 	var lines []string
