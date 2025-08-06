@@ -17,11 +17,11 @@
 package main
 
 import (
-	"apm/cmd/common/helper"
-	"apm/cmd/common/icon"
-	"apm/cmd/common/reply"
-	"apm/cmd/distrobox"
-	"apm/cmd/system"
+	"apm/internal/common/helper"
+	"apm/internal/common/icon"
+	"apm/internal/common/reply"
+	"apm/internal/distrobox"
+	"apm/internal/system"
 	"apm/lib"
 	"context"
 	"fmt"

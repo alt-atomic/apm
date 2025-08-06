@@ -18,14 +18,16 @@
 package system
 
 import (
-	"apm/cmd/system"
-	"apm/cmd/system/service"
+	"apm/internal/system"
+	"apm/internal/system/service"
+	"apm/lib"
 	"context"
+	"database/sql"
 	"fmt"
 	"regexp"
 	"testing"
 
-	_package "apm/cmd/system/package"
+	_package "apm/internal/system/package"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +37,11 @@ import (
 func TestInfo_Success_sqlmock(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func(db *sql.DB) {
+		if err = db.Close(); err != nil {
+			lib.Log.Errorf("Error closing db: %v", err)
+		}
+	}(db)
 
 	packageDBSvc, _ := _package.NewPackageDBService(db)
 
