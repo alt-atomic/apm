@@ -17,6 +17,7 @@
 package _package
 
 import (
+	"apm/cmd/common/appstream"
 	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
@@ -39,12 +40,14 @@ import (
 var syncAptMutex sync.Mutex
 
 type Actions struct {
+	appStream          *appstream.SwCatService
 	serviceAptDatabase *PackageDBService
 	serviceStplr       *StplrService
 }
 
 func NewActions(serviceAptDatabase *PackageDBService, serviceStplr *StplrService) *Actions {
 	return &Actions{
+		appStream:          appstream.NewSwCatService("/usr/share/swcatalog/xml"),
 		serviceAptDatabase: serviceAptDatabase,
 		serviceStplr:       serviceStplr,
 	}
@@ -65,20 +68,21 @@ type PackageChanges struct {
 
 // Package описывает структуру для хранения информации о пакете.
 type Package struct {
-	Name             string   `json:"name"`
-	Section          string   `json:"section"`
-	InstalledSize    int      `json:"installedSize"`
-	Maintainer       string   `json:"maintainer"`
-	Version          string   `json:"version"`
-	VersionInstalled string   `json:"versionInstalled"`
-	Depends          []string `json:"depends"`
-	Provides         []string `json:"provides"`
-	Size             int      `json:"size"`
-	Filename         string   `json:"filename"`
-	Description      string   `json:"description"`
-	Changelog        string   `json:"lastChangelog"`
-	Installed        bool     `json:"installed"`
-	TypePackage      int      `json:"typePackage"`
+	Name             string               `json:"name"`
+	Section          string               `json:"section"`
+	InstalledSize    int                  `json:"installedSize"`
+	Maintainer       string               `json:"maintainer"`
+	Version          string               `json:"version"`
+	VersionInstalled string               `json:"versionInstalled"`
+	Depends          []string             `json:"depends"`
+	Provides         []string             `json:"provides"`
+	Size             int                  `json:"size"`
+	Filename         string               `json:"filename"`
+	Description      string               `json:"description"`
+	AppStream        *appstream.Component `json:"appStream"`
+	Changelog        string               `json:"lastChangelog"`
+	Installed        bool                 `json:"installed"`
+	TypePackage      int                  `json:"typePackage"`
 }
 
 const (
@@ -327,7 +331,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	if err != nil {
 		return nil, fmt.Errorf(lib.T_("Error opening stdout pipe: %w"), err)
 	}
-	if err := cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		return nil, fmt.Errorf(lib.T_("Error executing command: %w"), err)
 	}
 
@@ -339,6 +343,17 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	var packages []Package
 	var pkg Package
 	var currentKey string
+
+	asComponents, errAS := a.appStream.Load(ctx)
+	if errAS != nil {
+		lib.Log.Warnf(lib.T_("AppStream load failed: %v"), errAS)
+	}
+
+	asMap := make(map[string]*appstream.Component, len(asComponents))
+	for i := range asComponents {
+		c := &asComponents[i]
+		asMap[c.PkgName] = c
+	}
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -439,10 +454,16 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		}
 		return nil, fmt.Errorf(lib.T_("Scanner error: %w"), err)
 	}
+
 	if err = cmd.Wait(); err != nil {
 		return nil, fmt.Errorf(lib.T_("Command execution error: %w"), err)
 	}
+
+	// добавляем AppStream и Changelog
 	for i := range packages {
+		if comp, ok := asMap[packages[i].Name]; ok {
+			packages[i].AppStream = comp
+		}
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
 	}
 

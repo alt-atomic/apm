@@ -846,7 +846,7 @@ func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, erro
 			ff.Type = "INTEGER"
 		case "installedSize":
 			ff.Type = "INTEGER"
-		case "installed":
+		case "installed", "isApp":
 			ff.Type = "BOOL"
 
 		case "typePackage":

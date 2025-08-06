@@ -17,6 +17,7 @@
 package _package
 
 import (
+	"apm/cmd/common/appstream"
 	"apm/cmd/common/helper"
 	"apm/cmd/common/reply"
 	"apm/lib"
@@ -95,20 +96,21 @@ func (t PackageType) Value() (driver.Value, error) { return int64(t), nil }
 
 // DBPackage — модель для GORM, отражающая структуру таблицы в БД.
 type DBPackage struct {
-	Name             string      `gorm:"column:name;primaryKey"`
-	Section          string      `gorm:"column:section"`
-	InstalledSize    int         `gorm:"column:installed_size"`
-	Maintainer       string      `gorm:"column:maintainer"`
-	Version          string      `gorm:"column:version;primaryKey"`
-	VersionInstalled string      `gorm:"column:versionInstalled"`
-	Depends          string      `gorm:"column:depends"`
-	Provides         string      `gorm:"column:provides"`
-	Size             int         `gorm:"column:size"`
-	Filename         string      `gorm:"column:filename"`
-	Description      string      `gorm:"column:description"`
-	Changelog        string      `gorm:"column:changelog"`
-	Installed        bool        `gorm:"column:installed"`
-	TypePackage      PackageType `gorm:"column:typePackage"`
+	Name             string               `gorm:"column:name;primaryKey"`
+	Section          string               `gorm:"column:section"`
+	InstalledSize    int                  `gorm:"column:installed_size"`
+	Maintainer       string               `gorm:"column:maintainer"`
+	Version          string               `gorm:"column:version;primaryKey"`
+	VersionInstalled string               `gorm:"column:versionInstalled"`
+	Depends          string               `gorm:"column:depends"`
+	Provides         string               `gorm:"column:provides"`
+	Size             int                  `gorm:"column:size"`
+	Filename         string               `gorm:"column:filename"`
+	Description      string               `gorm:"column:description"`
+	AppStream        *appstream.Component `gorm:"column:appStream;serializer:json;type:TEXT"`
+	Changelog        string               `gorm:"column:changelog"`
+	Installed        bool                 `gorm:"column:installed"`
+	TypePackage      PackageType          `gorm:"column:typePackage"`
 }
 
 // TableName — задаём имя таблицы
@@ -128,6 +130,7 @@ func (dbp DBPackage) fromDBModel() Package {
 		Size:             dbp.Size,
 		Filename:         dbp.Filename,
 		Description:      dbp.Description,
+		AppStream:        dbp.AppStream,
 		Changelog:        dbp.Changelog,
 		Installed:        dbp.Installed,
 		TypePackage:      int(dbp.TypePackage),
@@ -153,6 +156,7 @@ func (p Package) toDBModel() DBPackage {
 		Size:             p.Size,
 		Filename:         p.Filename,
 		Description:      p.Description,
+		AppStream:        p.AppStream,
 		Changelog:        p.Changelog,
 		Installed:        p.Installed,
 		TypePackage:      PackageType(p.TypePackage),
@@ -366,6 +370,16 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 		}
 
 		switch field {
+		case "isApp":
+			boolVal, ok := helper.ParseBool(value)
+			if !ok {
+				continue
+			}
+			if boolVal {
+				query = query.Where("appStream IS NOT NULL AND appStream <> ''")
+			} else {
+				query = query.Where("appStream IS NULL OR appStream = ''")
+			}
 		case "installed":
 			boolVal, ok := helper.ParseBool(value)
 			if !ok {
@@ -444,6 +458,7 @@ var allowedSortFields = []string{
 // AllowedFilterFields Списки разрешённых полей для фильтрации.
 var AllowedFilterFields = []string{
 	"name",
+	"isApp",
 	"section",
 	"installedSize",
 	"maintainer",

@@ -9,6 +9,8 @@ func TranslateKey(key string) string {
 	switch key {
 	case "package":
 		return lib.T_("Package")
+	case "isApp":
+		return lib.T_("This Application")
 	case "typePackage":
 		return lib.T_("Type Package")
 	case "count":
