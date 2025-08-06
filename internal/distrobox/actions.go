@@ -21,6 +21,7 @@ import (
 	"apm/internal/distrobox/service"
 	"apm/lib"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"syscall"
@@ -102,7 +103,7 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "info")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
@@ -142,7 +143,7 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "search")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	queryResult, err := a.servicePackage.GetPackageByName(ctx, osInfo, packageName)
@@ -256,7 +257,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "install")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
@@ -307,7 +308,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "remove")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
@@ -377,12 +378,12 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 	name = strings.TrimSpace(name)
 	if image == "" {
 		errMsg := lib.T_("You must specify the image link (--image)")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	if name == "" {
 		errMsg := lib.T_("You must specify the container name (--name)")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	result, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
@@ -411,7 +412,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIR
 	name = strings.TrimSpace(name)
 	if name == "" {
 		errMsg := lib.T_("You must specify the container name (--name)")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	result, err := a.serviceDistroAPI.RemoveContainer(ctx, name)
@@ -507,7 +508,7 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 func (a *Actions) validateContainer(ctx context.Context, container string) (service.ContainerInfo, error) {
 	container = strings.TrimSpace(container)
 	if container == "" {
-		return service.ContainerInfo{}, fmt.Errorf(lib.T_("You must specify the container name"))
+		return service.ContainerInfo{}, errors.New(lib.T_("You must specify the container name"))
 	}
 
 	// Если контейнер не найден через API, проверяем наличие записей в базе данных
@@ -539,7 +540,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 // checkRoot проверяет, запущен ли apm от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() == 0 {
-		return fmt.Errorf(lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su"))
+		return errors.New(lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su"))
 	}
 
 	return nil

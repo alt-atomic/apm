@@ -24,6 +24,11 @@ import (
 	"os/exec"
 )
 
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
+const TransactionKey contextKey = "transaction"
+
 // RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
 func RunCommand(ctx context.Context, command string) (string, string, error) {
 	lib.Log.Debug("run command: ", command)

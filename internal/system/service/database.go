@@ -22,13 +22,15 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"reflect"
 	"strings"
 	"time"
+
+	"gorm.io/gorm/logger"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -153,7 +155,7 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 	var dbHistories []DBHistory
 	if err := query.Find(&dbHistories).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
-			return nil, fmt.Errorf(lib.T_("History not found"))
+			return nil, errors.New(lib.T_("History not found"))
 		}
 		return nil, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}
@@ -181,7 +183,7 @@ func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNa
 	var count int64
 	if err := query.Count(&count).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
-			return 0, fmt.Errorf(lib.T_("History not found"))
+			return 0, errors.New(lib.T_("History not found"))
 		}
 		return 0, fmt.Errorf(lib.T_("Query execution error: %v"), err)
 	}

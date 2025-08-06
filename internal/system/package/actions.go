@@ -160,11 +160,14 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 	downloadEvents := make(map[string]string)
 	installEvents := make(map[string]string)
 
-	textStatus := lib.T_("Installation")
-	if typeProcess == typeRemove {
+	var textStatus string
+	switch typeProcess {
+	case typeRemove:
 		textStatus = lib.T_("Removal")
-	} else if typeProcess == typeChanged {
+	case typeChanged:
 		textStatus = lib.T_("Change")
+	default:
+		textStatus = lib.T_("Installation")
 	}
 
 	var outputLines []string
@@ -195,7 +198,7 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 			} else if installRegex.MatchString(line) {
 				match := installRegex.FindStringSubmatch(line)
 				pkgName := match[installRegex.SubexpIndex("pkg")]
-				eventName := fmt.Sprintf("system.installProgress")
+				eventName := "system.installProgress"
 				installEvents[eventName] = pkgName
 
 				percentStr := match[installRegex.SubexpIndex("percent")]
@@ -594,7 +597,7 @@ func aptUpdate(ctx context.Context) error {
 	lines := strings.Split(outputStr, "\n")
 	aptError := ErrorLinesAnalise(lines)
 	if aptError != nil {
-		return fmt.Errorf(aptError.Error())
+		return errors.New(aptError.Error())
 	}
 	if err != nil {
 		return fmt.Errorf(lib.T_("Error updating packages: %v, output: %s"), err, string(output))
@@ -638,6 +641,9 @@ func parseAptOutput(output string) (PackageChanges, error) {
 	pc := &PackageChanges{}
 	lines := strings.Split(output, "\n")
 
+	// Pre-compile regex for performance
+	statsRegex := regexp.MustCompile(`(\d+) upgraded, (\d+) newly installed, (\d+) removed and (\d+) not upgraded\.`)
+
 	var currentSection string
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -663,10 +669,8 @@ func parseAptOutput(output string) (PackageChanges, error) {
 		}
 
 		// Если строка содержит статистику, то обрабатываем отдельно
-		if matched, _ := regexp.MatchString(`\d+ upgraded, \d+ newly installed, \d+ removed and \d+ not upgraded\.`, line); matched {
-			// Пример строки: "3 upgraded, 2 newly installed, 0 removed and 249 not upgraded."
-			re := regexp.MustCompile(`(\d+) upgraded, (\d+) newly installed, (\d+) removed and (\d+) not upgraded\.`)
-			matches := re.FindStringSubmatch(line)
+		if statsRegex.MatchString(line) {
+			matches := statsRegex.FindStringSubmatch(line)
 			if len(matches) == 5 {
 				if count, err := strconv.Atoi(matches[1]); err == nil {
 					pc.UpgradedCount = count

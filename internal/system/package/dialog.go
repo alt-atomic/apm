@@ -20,6 +20,7 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -85,13 +86,13 @@ func NewDialog(packageInfo []Package, packageChange PackageChanges, action Dialo
 
 	if m, ok := finalModel.(model); ok {
 		if m.canceled || m.choice == "" {
-			return false, fmt.Errorf(lib.T_("Operation cancelled"))
+			return false, errors.New(lib.T_("Operation cancelled"))
 		}
 
 		return m.choice == lib.T_("Install") || m.choice == lib.T_("Remove") || m.choice == lib.T_("Edit") || m.choice == lib.T_("Upgrade"), nil
 	}
 
-	return false, fmt.Errorf(lib.T_("Operation cancelled"))
+	return false, errors.New(lib.T_("Operation cancelled"))
 }
 
 func (m model) Init() tea.Cmd {
@@ -137,11 +138,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Прокрутка viewport
 		case tea.KeyPgUp:
-			m.vp.LineUp(5)
+			m.vp.ScrollUp(5)
 			return m, nil
 
 		case tea.KeyPgDown:
-			m.vp.LineDown(5)
+			m.vp.ScrollDown(5)
 			return m, nil
 
 		// Перемещение в самый верх

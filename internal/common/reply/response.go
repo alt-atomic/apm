@@ -70,10 +70,10 @@ func IsTTY() bool {
 func formatField(key string, value interface{}) string {
 	valStr := fmt.Sprintf("%v", value)
 	if key == "name" {
-		return fmt.Sprintf("%s", accentStyle.Render(valStr))
+		return accentStyle.Render(valStr)
 	}
 
-	return fmt.Sprintf("%s", valStr)
+	return valStr
 }
 
 // buildTreeFromMap рекурсивно строит дерево (tree.Tree) из map[string]interface{}.
@@ -276,7 +276,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 func CliResponse(ctx context.Context, resp APIResponse) error {
 	StopSpinner()
 	format := lib.Env.Format
-	txVal := ctx.Value("transaction")
+	txVal := ctx.Value(helper.TransactionKey)
 	txStr, ok := txVal.(string)
 	if ok {
 		resp.Transaction = txStr

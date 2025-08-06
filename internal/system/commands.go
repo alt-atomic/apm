@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
 	"context"
@@ -36,7 +37,7 @@ func newErrorResponse(message string) reply.APIResponse {
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx context.Context, cmd *cli.Command) error {
 		lib.Env.Format = cmd.String("format")
-		ctx = context.WithValue(ctx, "transaction", cmd.String("transaction"))
+		ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
 		reply.CreateSpinner()
 		return action(ctx, cmd)

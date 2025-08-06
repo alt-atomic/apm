@@ -22,12 +22,14 @@ import (
 	"apm/lib"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"slices"
 	"strings"
+
+	"gorm.io/gorm/logger"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -115,7 +117,7 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.SavePackagesToDB"))
 
 	if len(containerName) == 0 {
-		return fmt.Errorf(lib.T_("The 'container' field cannot be empty when saving packages to the database"))
+		return errors.New(lib.T_("The 'container' field cannot be empty when saving packages to the database"))
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -151,13 +153,13 @@ func (s *DistroDBService) DatabaseExist(ctx context.Context) error {
 	var count int64
 	if err := s.db.WithContext(ctx).Model(&DBDistroPackage{}).Count(&count).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
-			return fmt.Errorf(lib.T_("The database does not have any records, it is necessary to create or update any container"))
+			return errors.New(lib.T_("The database does not have any records, it is necessary to create or update any container"))
 		}
 		return err
 	}
 
 	if count == 0 {
-		return fmt.Errorf(lib.T_("The database contains no records, you need to create or update any container"))
+		return errors.New(lib.T_("The database contains no records, you need to create or update any container"))
 	}
 	return nil
 }

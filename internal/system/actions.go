@@ -59,6 +59,9 @@ func NewActionsWithDeps(
 // NewActions создаёт новый экземпляр Actions.
 func NewActions() *Actions {
 	hostPackageDBSvc, err := _package.NewPackageDBService(lib.GetDB(true))
+	if err != nil {
+		lib.Log.Fatal(err)
+	}
 	hostDBSvc, err := service.NewHostDBService(lib.GetDB(true))
 	if err != nil {
 		lib.Log.Fatal(err)
@@ -108,7 +111,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.AP
 // UpdateKernel обновление ядра
 func (a *Actions) UpdateKernel(ctx context.Context) (*reply.APIResponse, error) {
 	if lib.Env.IsAtomic {
-		return nil, fmt.Errorf(lib.T_("This option is available only for a non-atomic system"))
+		return nil, errors.New(lib.T_("This option is available only for a non-atomic system"))
 	}
 
 	_, err := a.serviceAptActions.Update(ctx)
@@ -141,7 +144,7 @@ func (a *Actions) UpdateKernel(ctx context.Context) (*reply.APIResponse, error) 
 // CheckUpdateKernel проверяем обновление ядра
 func (a *Actions) CheckUpdateKernel(ctx context.Context) (*reply.APIResponse, error) {
 	if lib.Env.IsAtomic {
-		return nil, fmt.Errorf(lib.T_("This option is available only for a non-atomic system"))
+		return nil, errors.New(lib.T_("This option is available only for a non-atomic system"))
 	}
 
 	packageParse, aptErrors := a.serviceAptActions.CheckUpdateKernel(ctx)
@@ -213,7 +216,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := fmt.Errorf(lib.T_("At least one package must be specified, for example, remove package"))
+		errPackageNotFound := errors.New(lib.T_("At least one package must be specified, for example, remove package"))
 
 		return nil, errPackageNotFound
 	}
@@ -283,7 +286,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 			}
 		}
 
-		return nil, fmt.Errorf(messageNothingDo)
+		return nil, errors.New(messageNothingDo)
 	}
 
 	reply.StopSpinner()
@@ -293,7 +296,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf(lib.T_("Cancel dialog"))
+		errDialog := errors.New(lib.T_("Cancel dialog"))
 
 		return nil, errDialog
 	}
@@ -309,7 +312,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, apply bool) (*r
 				return nil, err
 			}
 
-			errAptRepo := fmt.Errorf(lib.T_("A communication error with the repository occurred. The package list has been updated, please try running the command again"))
+			errAptRepo := errors.New(lib.T_("A communication error with the repository occurred. The package list has been updated, please try running the command again"))
 
 			return nil, errAptRepo
 		}
@@ -360,7 +363,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := fmt.Errorf(lib.T_("You must specify at least one package, for example, remove package"))
+		errPackageNotFound := errors.New(lib.T_("You must specify at least one package, for example, remove package"))
 
 		return nil, errPackageNotFound
 	}
@@ -398,7 +401,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 			if len(alternativePackages) == 0 {
 				errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), originalPkg)
-				return nil, fmt.Errorf(errorFindPackage)
+				return nil, errors.New(errorFindPackage)
 			}
 
 			var altNames []string
@@ -521,7 +524,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 			}
 		}
 
-		return nil, fmt.Errorf(messageNothingDo)
+		return nil, errors.New(messageNothingDo)
 	}
 
 	reply.StopSpinner()
@@ -536,7 +539,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf(lib.T_("Cancel dialog"))
+		errDialog := errors.New(lib.T_("Cancel dialog"))
 
 		return nil, errDialog
 	}
@@ -553,7 +556,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 				return nil, err
 			}
 
-			errAptRepo := fmt.Errorf(lib.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
+			errAptRepo := errors.New(lib.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
 
 			return nil, errAptRepo
 		}
@@ -665,7 +668,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	if !dialogStatus {
-		errDialog := fmt.Errorf(lib.T_("Cancel dialog"))
+		errDialog := errors.New(lib.T_("Cancel dialog"))
 
 		return nil, errDialog
 	}
@@ -702,7 +705,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 	packageName = helper.CleanPackageName(packageName)
 	if packageName == "" {
 		errMsg := lib.T_("Package name must be specified, for example info package")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	err := a.validateDB(ctx)
@@ -723,7 +726,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 
 		if len(alternativePackages) == 0 {
 			errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), packageName)
-			return nil, fmt.Errorf(errorFindPackage)
+			return nil, errors.New(errorFindPackage)
 		}
 
 		var altNames []string
@@ -800,7 +803,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	}
 
 	if len(packages) == 0 {
-		return nil, fmt.Errorf(lib.T_("Nothing found"))
+		return nil, errors.New(lib.T_("Nothing found"))
 	}
 
 	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
@@ -876,7 +879,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "search")
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 
 	packages, err := a.serviceAptDatabase.SearchPackagesByName(ctx, packageName, installed)
@@ -885,7 +888,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 	}
 
 	if len(packages) == 0 {
-		return nil, fmt.Errorf(lib.T_("Nothing found"))
+		return nil, errors.New(lib.T_("Nothing found"))
 	}
 
 	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
@@ -1029,7 +1032,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 // checkRoot проверяет, запущен ли установщик от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() != 0 {
-		return fmt.Errorf(lib.T_("Elevated rights are required to perform this action. Please use sudo or su"))
+		return errors.New(lib.T_("Elevated rights are required to perform this action. Please use sudo or su"))
 	}
 
 	if lib.Env.IsAtomic {
@@ -1045,7 +1048,7 @@ func (a *Actions) checkRoot() error {
 // applyChange применяет изменения к образу системы
 func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall bool) error {
 	if !lib.Env.IsAtomic {
-		return fmt.Errorf(lib.T_("This option is only available for an atomic system"))
+		return errors.New(lib.T_("This option is only available for an atomic system"))
 	}
 
 	err := a.serviceHostConfig.LoadConfig()

@@ -23,6 +23,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -138,7 +139,7 @@ func (h *HostImageService) EnableOverlay() error {
 	defer func(file *os.File) {
 		err = file.Close()
 		if err != nil {
-			lib.Log.Debug("Failed to close /proc/mounts: %v", err)
+			lib.Log.Debugf(lib.T_("Failed to close /proc/mounts: %v"), err)
 		}
 	}(file)
 
@@ -194,7 +195,7 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 	podmanImageID := strings.TrimSpace(string(output))
 	if podmanImageID == "" {
-		return "", fmt.Errorf(lib.T_("No valid images with tag 'os'. Please build the image first."))
+		return "", errors.New(lib.T_("No valid images with tag 'os'. Please build the image first."))
 	}
 
 	return podmanImageID, nil
@@ -249,8 +250,10 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 	)
 
 	remoteDigest, errCheckImage = h.getRemoteImageInfo(ctx, config.Image, false)
+	if errCheckImage != nil {
+		return errCheckImage
+	}
 	localDigest, errCheckImage = h.getRemoteImageInfo(ctx, config.Image, true)
-
 	if errCheckImage != nil {
 		return errCheckImage
 	}
@@ -304,8 +307,11 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 // BuildAndSwitch перестраивает и переключает систему на новый образ. checkSame - включена ли проверка на изменение конфигурации
 func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool) error {
 	statusSame, err := h.serviceHostConfig.ConfigIsChanged(ctx)
+	if err != nil {
+		return err
+	}
 	if !statusSame && checkSame {
-		return fmt.Errorf(lib.T_("The image has not changed, build paused"))
+		return errors.New(lib.T_("The image has not changed, build paused"))
 	}
 
 	idImage, err := h.BuildImage(ctx, pullImage)

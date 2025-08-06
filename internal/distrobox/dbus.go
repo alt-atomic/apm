@@ -17,6 +17,7 @@
 package distrobox
 
 import (
+	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"apm/lib"
 	"context"
@@ -49,7 +50,7 @@ func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]
 
 // GetFilterFields обёртка над actions.GetFilterFields
 func (w *DBusWrapper) GetFilterFields(container string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx, container)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -65,7 +66,7 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 
 // Update обёртка над actions.Update
 func (w *DBusWrapper) Update(container string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Update(ctx, container)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -79,7 +80,7 @@ func (w *DBusWrapper) Update(container string, transaction string) (string, *dbu
 
 // Info обёртка над actions.Info
 func (w *DBusWrapper) Info(container string, packageName string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, container, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -93,7 +94,7 @@ func (w *DBusWrapper) Info(container string, packageName string, transaction str
 
 // Search обёртка над actions.Search
 func (w *DBusWrapper) Search(container string, packageName string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, container, packageName)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -107,7 +108,7 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 
 // List принимает JSON‑строку с параметрами ListParams, а возвращает JSON с reply.APIResponse.
 func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	var params ListParams
 	if err := json.Unmarshal([]byte(paramsJSON), &params); err != nil {
 		return "", dbus.MakeFailedError(fmt.Errorf(lib.T_("Failed to parse JSON: %w"), err))
@@ -126,7 +127,7 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 
 // Install обёртка над actions.Install
 func (w *DBusWrapper) Install(container string, packageName string, export bool, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -140,7 +141,7 @@ func (w *DBusWrapper) Install(container string, packageName string, export bool,
 
 // Remove обёртка над actions.Remove
 func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bool, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Remove(ctx, container, packageName, onlyExport)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -154,7 +155,7 @@ func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bo
 
 // ContainerList обёртка над actions.ContainerList
 func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerList(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -168,7 +169,7 @@ func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 
 // ContainerAdd обёртка над actions.ContainerAdd
 func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -182,7 +183,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 
 // ContainerRemove обёртка над actions.ContainerRemove
 func (w *DBusWrapper) ContainerRemove(name string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerRemove(ctx, name)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)

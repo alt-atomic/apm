@@ -51,7 +51,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, packages, applyAtomic)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -68,7 +68,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic 
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Remove(ctx, packages, applyAtomic)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -82,7 +82,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic 
 
 // GetFilterFields обёртка над actions.GetFilterFields
 func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -101,7 +101,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *d
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Update(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -115,7 +115,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *d
 
 // List – обёртка над Actions.List.
 func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	params := ListParams{
 		Limit:       10,
 		Offset:      0,
@@ -138,7 +138,7 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 
 // Info – обёртка над Actions.Info.
 func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, packageName, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -155,7 +155,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, transaction string) (stri
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.UpdateKernel(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -172,7 +172,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, transaction string) 
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckUpdateKernel(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -189,7 +189,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string) (stri
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckUpgrade(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -206,7 +206,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string) (string, *
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	var resp *reply.APIResponse
 	var err error
 	if lib.Env.IsAtomic {
@@ -229,7 +229,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckInstall(ctx, packages)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -246,7 +246,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transac
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckRemove(ctx, packages)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -263,7 +263,7 @@ func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, packageName, installed, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -280,7 +280,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string) (string
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageApply(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -297,7 +297,7 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageHistory(ctx, imageName, limit, offset)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -314,7 +314,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string) (strin
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageUpdate(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
@@ -331,7 +331,7 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
-	ctx := context.WithValue(context.Background(), "transaction", transaction)
+	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageStatus(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
