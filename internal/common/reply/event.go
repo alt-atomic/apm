@@ -17,6 +17,7 @@
 package reply
 
 import (
+	"apm/internal/common/helper"
 	"apm/lib"
 	"context"
 	"encoding/json"
@@ -131,7 +132,7 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 
 // SendFuncNameDBUS отправляет уведомление через DBUS.
 func SendFuncNameDBUS(ctx context.Context, eventData EventData) {
-	txVal := ctx.Value("transaction")
+	txVal := ctx.Value(helper.TransactionKey)
 	txStr, ok := txVal.(string)
 	if ok {
 		eventData.Transaction = txStr
