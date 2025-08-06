@@ -81,7 +81,7 @@ func (a *StplrService) PreInstall(ctx context.Context, packageName string) (stri
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf(lib.T_("Error stplr command '%s': %s"), "stplr build", string(output))
+		return "", fmt.Errorf(lib.T_("Error stplr command '%s': %s: %w"), "stplr build", strings.TrimSpace(string(output)), err)
 	}
 
 	newRpms, err := filepath.Glob(rpmPattern)
