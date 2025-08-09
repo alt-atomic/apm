@@ -2,7 +2,7 @@ package examples
 
 import (
 	"apm/internal/common/binding/apt"
-	"apm/internal/common/binding/apt/service"
+	"apm/internal/common/binding/apt/lib"
 	"fmt"
 	"log"
 )
@@ -31,11 +31,11 @@ func Test(searchPattern string) {
 		fmt.Printf("  Description: %s\n", pkg.Description)
 		fmt.Printf("  State: ")
 		switch pkg.State {
-		case service.PackageStateNotInstalled:
+		case lib.PackageStateNotInstalled:
 			fmt.Println("Not installed")
-		case service.PackageStateInstalled:
+		case lib.PackageStateInstalled:
 			fmt.Println("Installed")
-		case service.PackageStateConfigFiles:
+		case lib.PackageStateConfigFiles:
 			fmt.Println("Config files only")
 		default:
 			fmt.Printf("State %d\n", int(pkg.State))

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"apm/internal/common/binding/examples"
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
@@ -39,6 +40,8 @@ var (
 )
 
 func main() {
+	examples.Test("gnome-console")
+	os.Exit(0)
 	lib.Log.Debugln("Starting apm…")
 
 	errInitial := lib.InitConfig()

@@ -1,13 +1,13 @@
 package apt
 
 import (
-	"apm/internal/common/binding/apt/service"
+	"apm/internal/common/binding/apt/lib"
 	"fmt"
 	"sync"
 )
 
 type Actions struct {
-	system     *service.System
+	system     *lib.System
 	systemOnce sync.Once
 	systemErr  error
 }
@@ -16,9 +16,9 @@ func NewActions() *Actions {
 	return &Actions{}
 }
 
-func (a *Actions) getSystem() (*service.System, error) {
+func (a *Actions) getSystem() (*lib.System, error) {
 	a.systemOnce.Do(func() {
-		a.system, a.systemErr = service.NewSystem()
+		a.system, a.systemErr = lib.NewSystem()
 	})
 	return a.system, a.systemErr
 }
@@ -33,15 +33,15 @@ func (a *Actions) Close() {
 }
 
 // InstallPackages installs the given packages with optional progress handler (instance method)
-func (a *Actions) InstallPackages(packageNames []string, handler service.ProgressHandler) error {
+func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHandler) error {
 	system, err := a.getSystem()
 	if err != nil {
 		return err
 	}
 	if len(packageNames) == 0 {
-		return &service.AptError{Code: service.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
+		return &lib.AptError{Code: lib.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
 	}
-	cache, err := service.OpenCache(system, false)
+	cache, err := lib.OpenCache(system, false)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (a *Actions) InstallPackages(packageNames []string, handler service.Progres
 		}
 	}
 
-	pm, err := service.NewPackageManager(cache)
+	pm, err := lib.NewPackageManager(cache)
 	if err != nil {
 		return err
 	}
@@ -66,15 +66,15 @@ func (a *Actions) InstallPackages(packageNames []string, handler service.Progres
 }
 
 // RemovePackages removes packages (optionally purge) with optional progress handler (instance method)
-func (a *Actions) RemovePackages(packageNames []string, purge bool, handler service.ProgressHandler) error {
+func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.ProgressHandler) error {
 	system, err := a.getSystem()
 	if err != nil {
 		return err
 	}
 	if len(packageNames) == 0 {
-		return &service.AptError{Code: service.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
+		return &lib.AptError{Code: lib.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
 	}
-	cache, err := service.OpenCache(system, false)
+	cache, err := lib.OpenCache(system, false)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, handler serv
 		}
 	}
 
-	pm, err := service.NewPackageManager(cache)
+	pm, err := lib.NewPackageManager(cache)
 	if err != nil {
 		return err
 	}
@@ -99,12 +99,12 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, handler serv
 }
 
 // DistUpgrade performs full system upgrade (instance method)
-func (a *Actions) DistUpgrade(handler service.ProgressHandler) error {
+func (a *Actions) DistUpgrade(handler lib.ProgressHandler) error {
 	system, err := a.getSystem()
 	if err != nil {
 		return err
 	}
-	cache, err := service.OpenCache(system, false)
+	cache, err := lib.OpenCache(system, false)
 	if err != nil {
 		return err
 	}
@@ -116,12 +116,12 @@ func (a *Actions) DistUpgrade(handler service.ProgressHandler) error {
 }
 
 // Search opens RO cache and searches packages (instance method)
-func (a *Actions) Search(pattern string) ([]service.PackageInfo, error) {
+func (a *Actions) Search(pattern string) ([]lib.PackageInfo, error) {
 	system, err := a.getSystem()
 	if err != nil {
 		return nil, err
 	}
-	cache, err := service.OpenCache(system, true)
+	cache, err := lib.OpenCache(system, true)
 	if err != nil {
 		return nil, err
 	}
@@ -130,12 +130,12 @@ func (a *Actions) Search(pattern string) ([]service.PackageInfo, error) {
 }
 
 // GetInfo returns package info (instance method)
-func (a *Actions) GetInfo(packageName string) (*service.PackageInfo, error) {
+func (a *Actions) GetInfo(packageName string) (*lib.PackageInfo, error) {
 	system, err := a.getSystem()
 	if err != nil {
 		return nil, err
 	}
-	cache, err := service.OpenCache(system, true)
+	cache, err := lib.OpenCache(system, true)
 	if err != nil {
 		return nil, err
 	}
@@ -144,15 +144,15 @@ func (a *Actions) GetInfo(packageName string) (*service.PackageInfo, error) {
 }
 
 // SimulateInstall simulates install (instance method)
-func (a *Actions) SimulateInstall(packageNames []string) (*service.PackageChanges, error) {
+func (a *Actions) SimulateInstall(packageNames []string) (*lib.PackageChanges, error) {
 	system, err := a.getSystem()
 	if err != nil {
 		return nil, err
 	}
 	if len(packageNames) == 0 {
-		return nil, &service.AptError{Code: service.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
+		return nil, &lib.AptError{Code: lib.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
 	}
-	cache, err := service.OpenCache(system, false)
+	cache, err := lib.OpenCache(system, false)
 	if err != nil {
 		return nil, err
 	}
@@ -161,15 +161,15 @@ func (a *Actions) SimulateInstall(packageNames []string) (*service.PackageChange
 }
 
 // SimulateRemove simulates removal (instance method)
-func (a *Actions) SimulateRemove(packageNames []string) (*service.PackageChanges, error) {
+func (a *Actions) SimulateRemove(packageNames []string) (*lib.PackageChanges, error) {
 	system, err := a.getSystem()
 	if err != nil {
 		return nil, err
 	}
 	if len(packageNames) == 0 {
-		return nil, &service.AptError{Code: service.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
+		return nil, &lib.AptError{Code: lib.APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
 	}
-	cache, err := service.OpenCache(system, false)
+	cache, err := lib.OpenCache(system, false)
 	if err != nil {
 		return nil, err
 	}
@@ -178,12 +178,12 @@ func (a *Actions) SimulateRemove(packageNames []string) (*service.PackageChanges
 }
 
 // SimulateDistUpgrade simulates dist-upgrade (instance method)
-func (a *Actions) SimulateDistUpgrade() (*service.PackageChanges, error) {
+func (a *Actions) SimulateDistUpgrade() (*lib.PackageChanges, error) {
 	system, err := a.getSystem()
 	if err != nil {
 		return nil, err
 	}
-	cache, err := service.OpenCache(system, false)
+	cache, err := lib.OpenCache(system, false)
 	if err != nil {
 		return nil, err
 	}

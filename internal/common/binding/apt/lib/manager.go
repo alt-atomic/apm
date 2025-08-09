@@ -1,4 +1,4 @@
-package service
+package lib
 
 /*
 #include "apt_wrapper.h"
