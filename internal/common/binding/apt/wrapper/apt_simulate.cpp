@@ -2,15 +2,13 @@
 
 // Verbatim copies of simulation functions from apt_wrapper.cpp
 
-AptErrorCode apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes) {
+AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes) {
     if (!cache || !changes) {
-        set_error(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for simulation");
-        return APT_ERROR_INVALID_PARAMETERS;
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for simulation");
     }
 
     if (!cache->cache_file) {
-        set_error(APT_ERROR_CACHE_OPEN_FAILED, "Cache file not available");
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Cache file not available");
     }
 
     try {
@@ -19,7 +17,7 @@ AptErrorCode apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* chang
         pkgDistUpgrade(*cache->dep_cache);
 
         if (!check_apt_errors()) {
-            return APT_ERROR_DEPENDENCY_BROKEN;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
         }
 
         std::vector<std::string> upgraded;
@@ -89,23 +87,20 @@ AptErrorCode apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* chang
             }
         }
 
-        return APT_SUCCESS;
+        return make_result(APT_SUCCESS, nullptr);
 
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Dist-upgrade simulation failed: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Dist-upgrade simulation failed: ") + e.what()).c_str());
     }
 }
 
-AptErrorCode apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes) {
+AptResult apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes) {
     if (!cache || !package_names || count == 0 || !changes) {
-        set_error(AptErrorCode::APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for multi-package simulation");
-        return AptErrorCode::APT_ERROR_INVALID_PARAMETERS;
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for multi-package simulation");
     }
 
     if (!cache->cache_file) {
-        set_error(AptErrorCode::APT_ERROR_CACHE_OPEN_FAILED, "Cache file not available");
-        return AptErrorCode::APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Cache file not available");
     }
 
     try {
@@ -120,15 +115,14 @@ AptErrorCode apt_simulate_install(AptCache* cache, const char** package_names, s
 
             pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
             if (pkg.end()) {
-                set_error(AptErrorCode::APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package not found: ") + pkg_name);
-                return AptErrorCode::APT_ERROR_PACKAGE_NOT_FOUND;
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + pkg_name).c_str());
             }
 
             cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, true);
         }
 
         if (!check_apt_errors()) {
-            return AptErrorCode::APT_ERROR_DEPENDENCY_BROKEN;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
         }
 
         std::vector<std::string> extra_installed;
@@ -219,23 +213,20 @@ AptErrorCode apt_simulate_install(AptCache* cache, const char** package_names, s
             }
         }
 
-        return APT_SUCCESS;
+        return make_result(APT_SUCCESS, nullptr);
 
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Multi-package install simulation failed: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Multi-package install simulation failed: ") + e.what()).c_str());
     }
 }
 
-AptErrorCode apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes) {
+AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes) {
     if (!cache || !package_names || count == 0 || !changes) {
-        set_error(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for multi-package simulation");
-        return APT_ERROR_INVALID_PARAMETERS;
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for multi-package simulation");
     }
 
     if (!cache->cache_file) {
-        set_error(APT_ERROR_CACHE_OPEN_FAILED, "Cache file not available");
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Cache file not available");
     }
 
     try {
@@ -250,20 +241,18 @@ AptErrorCode apt_simulate_remove(AptCache* cache, const char** package_names, si
 
             pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
             if (pkg.end()) {
-                set_error(APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package not found: ") + pkg_name);
-                return APT_ERROR_PACKAGE_NOT_FOUND;
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + pkg_name).c_str());
             }
 
             if (pkg.CurrentVer().end()) {
-                set_error(APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package is not installed: ") + pkg_name);
-                return APT_ERROR_PACKAGE_NOT_FOUND;
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package is not installed: ") + pkg_name).c_str());
             }
 
             cache->dep_cache->MarkDelete(pkg, true); // true = purge
         }
 
         if (!check_apt_errors()) {
-            return APT_ERROR_DEPENDENCY_BROKEN;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
         }
 
         std::vector<std::string> extra_removed;
@@ -357,11 +346,10 @@ AptErrorCode apt_simulate_remove(AptCache* cache, const char** package_names, si
             }
         }
 
-        return APT_SUCCESS;
+        return make_result(APT_SUCCESS, nullptr);
 
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Multi-package remove simulation failed: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Multi-package remove simulation failed: ") + e.what()).c_str());
     }
 }
 
