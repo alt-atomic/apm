@@ -46,6 +46,76 @@ void emit_log(const std::string& msg) {
     }
 }
 
+// A streambuf that forwards output into emit_log in whole lines
+class EmitLogBuf : public std::streambuf {
+public:
+    EmitLogBuf() = default;
+
+protected:
+    int overflow(int ch) override {
+        if (ch == EOF) return 0;
+        if (ch == '\n') {
+            flush_line();
+        } else {
+            buffer_.push_back(static_cast<char>(ch));
+        }
+        return ch;
+    }
+
+    int sync() override {
+        flush_line();
+        return 0;
+    }
+
+private:
+    void flush_line() {
+        if (!buffer_.empty()) {
+            emit_log(buffer_);
+            buffer_.clear();
+        }
+    }
+
+    std::string buffer_;
+};
+
+static EmitLogBuf g_emit_buf;
+static std::ostream g_emit_stream(&g_emit_buf);
+
+std::ostream& apt_log_stream() {
+    return g_emit_stream;
+}
+
+static bool g_stdio_captured = false;
+static std::streambuf* g_prev_cout = nullptr;
+static std::streambuf* g_prev_cerr = nullptr;
+static std::streambuf* g_prev_clog = nullptr;
+
+extern "C" void apt_capture_stdio(int enable) {
+    if (enable) {
+        if (!g_stdio_captured) {
+            // Redirect only C++ iostreams to avoid OS-level fd hacks
+            g_prev_cout = std::cout.rdbuf();
+            g_prev_cerr = std::cerr.rdbuf();
+            g_prev_clog = std::clog.rdbuf();
+            std::cout.rdbuf(g_emit_stream.rdbuf());
+            std::cerr.rdbuf(g_emit_stream.rdbuf());
+            std::clog.rdbuf(g_emit_stream.rdbuf());
+            g_stdio_captured = true;
+        }
+    } else {
+        if (g_stdio_captured) {
+            // Restore C++ iostreams
+            std::cout.rdbuf(g_prev_cout);
+            std::cerr.rdbuf(g_prev_cerr);
+            std::clog.rdbuf(g_prev_clog);
+            g_prev_cout = nullptr;
+            g_prev_cerr = nullptr;
+            g_prev_clog = nullptr;
+            g_stdio_captured = false;
+        }
+    }
+}
+
 bool check_apt_errors() {
     if (_error->PendingError()) {
         std::string error_msg;

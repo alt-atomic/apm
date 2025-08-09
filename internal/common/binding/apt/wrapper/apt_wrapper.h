@@ -199,6 +199,9 @@ void apt_set_log_callback(AptLogCallback callback, void* user_data);
 void apt_use_go_progress_callback(void* user_data);
 void apt_enable_go_log_callback(void* user_data);
 
+// Enable/disable capturing of std::cout/std::cerr into the registered log callback
+void apt_capture_stdio(int enable);
+
 // Package information (cleaned up - removed unsafe iterator-based functions)
 AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPackageInfo* info);
 void apt_free_package_info(AptPackageInfo* info);

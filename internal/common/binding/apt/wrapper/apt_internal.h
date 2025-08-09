@@ -69,6 +69,10 @@ bool check_apt_errors();
 // Build structured result from explicit message or current APT error stack
 AptResult make_result(AptErrorCode code, const char* message = nullptr);
 
+// Stream used by APT components (e.g. CacheFile) to write informational messages.
+// Implemented to forward data into emit_log() so higher layers may capture them.
+std::ostream& apt_log_stream();
+
 class ProgressStatus : public pkgAcquireStatus {
 public:
     bool MediaChange(std::string, std::string) override { return false; }

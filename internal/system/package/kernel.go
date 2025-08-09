@@ -1,6 +1,7 @@
 package _package
 
 import (
+	"apm/internal/common/apt"
 	"apm/internal/common/reply"
 	"apm/lib"
 	"context"
@@ -36,7 +37,7 @@ func (a *Actions) CheckUpdateKernel(ctx context.Context) (PackageChanges, []erro
 	rawLines := strings.Split(string(out), "\n")
 
 	cleanLines := filterNoise(rawLines)
-	aptErrRaw := ErrorLinesAnalyseAll(cleanLines)
+	aptErrRaw := apt.ErrorLinesAnalyseAll(cleanLines)
 	pkgs, parseErr := parseAptOutput(strings.Join(cleanLines, "\n"))
 
 	if len(aptErrRaw) > 0 {

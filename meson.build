@@ -74,6 +74,18 @@ apt_wrapper_lib = static_library(
 subdir('po')
 subdir('data')
 
+lib_dir = join_paths(meson.current_source_dir(), 'internal/common/binding/apt/lib')
+lib_go_files = [
+  join_paths(lib_dir, 'cgo.go'),
+  join_paths(lib_dir, 'cache.go'),
+  join_paths(lib_dir, 'manager.go'),
+  join_paths(lib_dir, 'progress.go'),
+  join_paths(lib_dir, 'system.go'),
+  join_paths(lib_dir, 'types.go'),
+  join_paths(lib_dir, 'logging.go'),
+  join_paths(lib_dir, 'mutex.go'),
+]
+
 custom_target(
   'go-build',
   build_by_default: true,
@@ -83,10 +95,11 @@ custom_target(
   install: true,
   install_dir: get_option('bindir'),
   command: [
-    go_bin, 'build', '-v',
-    '-ldflags', ' '.join(ldflags),
-    '-o', '@OUTPUT@',
-    meson.current_source_dir()
+    '/usr/bin/bash', '-lc',
+    'set -e; ' +
+    'ts=$(date +%s); ' +
+    'for f in ' + ' '.join(lib_go_files) + ' ; do sed -i "s#// cgo-timestamp: .*#// cgo-timestamp: ${ts}#g" "$f"; done; ' +
+    'go build -v -ldflags ' + '\'' + ' '.join(ldflags) + '\'' + ' -o @OUTPUT@ ' + meson.current_source_dir()
   ],
   depends: [apt_wrapper_lib],
   env: [

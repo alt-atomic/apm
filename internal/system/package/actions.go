@@ -18,6 +18,7 @@ package _package
 
 import (
 	"apm/internal/common/appstream"
+	"apm/internal/common/apt"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
@@ -237,7 +238,7 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 	// Ожидаем завершения выполнения команды.
 	if err = cmd.Wait(); err != nil {
 		wg.Wait()
-		aptErrors := ErrorLinesAnalyseAll(outputLines)
+		aptErrors := apt.ErrorLinesAnalyseAll(outputLines)
 		if len(aptErrors) > 0 {
 			var errorsSlice []error
 			for _, e := range aptErrors {
@@ -250,7 +251,7 @@ func (a *Actions) commandWithProgress(ctx context.Context, command string, typeP
 
 	wg.Wait()
 
-	aptErrors := ErrorLinesAnalyseAll(outputLines)
+	aptErrors := apt.ErrorLinesAnalyseAll(outputLines)
 	if len(aptErrors) > 0 {
 		var errorsSlice []error
 		for _, e := range aptErrors {
@@ -289,7 +290,7 @@ func (a *Actions) Check(ctx context.Context, packageName string, aptCommand stri
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
-	aptErrors := ErrorLinesAnalyseAll(lines)
+	aptErrors := apt.ErrorLinesAnalyseAll(lines)
 
 	var packageParse PackageChanges
 	if len(aptErrors) > 0 {
@@ -595,7 +596,7 @@ func aptUpdate(ctx context.Context) error {
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 	lines := strings.Split(outputStr, "\n")
-	aptError := ErrorLinesAnalise(lines)
+	aptError := apt.ErrorLinesAnalise(lines)
 	if aptError != nil {
 		return errors.New(aptError.Error())
 	}
