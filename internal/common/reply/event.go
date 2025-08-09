@@ -233,9 +233,8 @@ func getTaskText(task string) string {
 	case "system.updateAllPackagesDB":
 		return lib.T_("Synchronizing database")
 	case "system.UpdateAppStream":
-		return lib.T_("Update AppStream information")
+		return lib.T_("Update information about applications")
 	default:
-		// If the task name is unknown, we return it unchanged.
 		return task
 	}
 }

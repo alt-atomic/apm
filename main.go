@@ -17,6 +17,7 @@
 package main
 
 import (
+	"apm/internal/common/binding/apt"
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
@@ -243,6 +244,7 @@ func systemDbus(ctx context.Context, _ *cli.Command) error {
 func cleanup() {
 	lib.Log.Debugln(lib.T_("Terminating the application. Releasing resources…"))
 
+	defer apt.Close() // закрываем экземпляр APT system
 	defer globalCancel()
 	if dbKV := lib.CheckDBKv(); dbKV != nil {
 		if err := dbKV.Close(); err != nil {

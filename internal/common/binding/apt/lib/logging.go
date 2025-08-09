@@ -1,7 +1,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754763594
+// cgo-timestamp: 1754769994
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -9,14 +9,14 @@ import "C"
 
 import (
 	"fmt"
-	cgo_runtime "runtime/cgo"
+	cgoruntime "runtime/cgo"
 	"unsafe"
 )
 
 type LogHandler func(message string)
 
 var (
-	logHandle    cgo_runtime.Handle
+	logHandle    cgoruntime.Handle
 	logHandleSet bool
 )
 
@@ -24,7 +24,7 @@ var (
 func goAptLogCallback(cmsg *C.char, user unsafe.Pointer) {
 	defer func() { _ = recover() }()
 	if user != nil {
-		h := cgo_runtime.Handle(uintptr(user))
+		h := cgoruntime.Handle(uintptr(user))
 		if cb, ok := h.Value().(LogHandler); ok && cb != nil {
 			cb(C.GoString(cmsg))
 			return
@@ -53,7 +53,7 @@ func SetLogHandler(handler LogHandler) {
 		C.apt_set_log_callback(nil, nil)
 		return
 	}
-	logHandle = cgo_runtime.NewHandle(handler)
+	logHandle = cgoruntime.NewHandle(handler)
 	logHandleSet = true
 	C.apt_enable_go_log_callback(unsafe.Pointer(uintptr(logHandle)))
 }

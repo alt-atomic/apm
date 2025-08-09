@@ -14,7 +14,6 @@ func Test(searchPattern string) {
 	if err != nil {
 		log.Fatalf("Failed to search packages: %v", err)
 	}
-	defer aptService.Close()
 
 	fmt.Printf("\nFound %d packages:\n", len(packages))
 	for _, pkg := range packages {
@@ -22,6 +21,8 @@ func Test(searchPattern string) {
 		if pkg.ShortDescription != "" {
 			fmt.Printf("  Description: %s\n", pkg.ShortDescription)
 		}
+		fmt.Printf("  Provides: %s\n", pkg.Provides)
+		fmt.Printf("  Depends: %s\n", pkg.Depends)
 		fmt.Printf("  Maintainer: %s\n", pkg.Maintainer)
 		fmt.Printf("  Section: %s\n", pkg.Section)
 		fmt.Printf("  Architecture: %s\n", pkg.Architecture)

@@ -19,6 +19,7 @@ package _package
 import (
 	"apm/internal/common/appstream"
 	"apm/internal/common/apt"
+	aptBinding "apm/internal/common/binding/apt"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
@@ -328,25 +329,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		return nil, err
 	}
 
-	command := fmt.Sprintf("%s apt-cache dumpavail", lib.Env.CommandPrefix)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error opening stdout pipe: %w"), err)
-	}
-	if err = cmd.Start(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Error executing command: %w"), err)
-	}
-
-	const maxCapacity = 1024 * 1024 * 350 // 350MB
-	buf := make([]byte, maxCapacity)
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(buf, maxCapacity)
-
 	var packages []Package
-	var pkg Package
-	var currentKey string
 
 	asComponents, errAS := a.appStream.Load(ctx)
 	if errAS != nil {
@@ -359,111 +342,76 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		asMap[c.PkgName] = c
 	}
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line)
+	aptService := aptBinding.NewActions()
+	aptPackages, err := aptService.Search("")
+	if err != nil {
+		return nil, err
+	}
 
-		if line == "" {
-			if pkg.Name != "" {
-				packages = append(packages, pkg)
-				pkg = Package{}
-				currentKey = ""
-			}
-			continue
-		}
-
-		if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
-			key := strings.TrimSpace(parts[0])
-			value := strings.TrimSpace(parts[1])
-			currentKey = key
-
-			switch key {
-			case "Package":
-				pkg.Name = value
-			case "Section":
-				pkg.Section = value
-			case "Installed Size":
-				sizeValue, err := strconv.Atoi(value)
-				if err != nil {
-					sizeValue = 0
+	packages = make([]Package, 0, len(aptPackages))
+	for _, ap := range aptPackages {
+		var depends []string
+		if ap.Depends != "" {
+			depList := strings.Split(ap.Depends, ",")
+			seen := make(map[string]bool)
+			for _, dep := range depList {
+				clean := strings.TrimSpace(dep)
+				if clean == "" {
+					continue
 				}
-
-				pkg.InstalledSize = sizeValue
-			case "Maintainer":
-				pkg.Maintainer = value
-			case "Version":
-				versionValue, errVersion := helper.GetVersionFromAptCache(value)
-				if errVersion != nil {
-					pkg.Version = value
-				} else {
-					pkg.Version = versionValue
+				clean = apt.CleanDependency(clean)
+				if clean != "" && !seen[clean] {
+					seen[clean] = true
+					depends = append(depends, clean)
 				}
-			case "Depends":
-				depList := strings.Split(value, ",")
-				seen := make(map[string]bool)
-				var cleanedDeps []string
-				for _, dep := range depList {
-					cleanDep := cleanDependency(dep)
-					if cleanDep != "" && !seen[cleanDep] {
-						seen[cleanDep] = true
-						cleanedDeps = append(cleanedDeps, cleanDep)
-					}
-				}
-				pkg.Depends = cleanedDeps
-			case "Provides":
-				provList := strings.Split(value, ",")
-				seen := make(map[string]bool)
-				var cleanedProviders []string
-				for _, prov := range provList {
-					cleanProv := cleanDependency(prov)
-					if cleanProv != "" && !seen[cleanProv] {
-						seen[cleanProv] = true
-						cleanedProviders = append(cleanedProviders, cleanProv)
-					}
-				}
-				pkg.Provides = cleanedProviders
-			case "Size":
-				sizeValue, err := strconv.Atoi(value)
-				if err != nil {
-					sizeValue = 0
-				}
-
-				pkg.Size = sizeValue
-			case "Filename":
-				pkg.Filename = value
-			case "Description":
-				pkg.Description = value
-			case "Changelog":
-				pkg.Changelog = value
-			default:
-			}
-		} else {
-			switch currentKey {
-			case "Description":
-				pkg.Description += "\n" + line
-			case "Changelog":
-				pkg.Changelog += "\n" + line
-			default:
 			}
 		}
-	}
-
-	if pkg.Name != "" {
-		packages = append(packages, pkg)
-	}
-
-	if err = scanner.Err(); err != nil {
-		if errors.Is(err, bufio.ErrTooLong) {
-			return nil, fmt.Errorf(lib.T_("String too large: (over %dMB) - "), maxCapacity/(1024*1024))
+		var provides []string
+		if ap.Provides != "" {
+			provList := strings.Split(ap.Provides, ",")
+			seen := make(map[string]bool)
+			for _, prov := range provList {
+				clean := strings.TrimSpace(prov)
+				if clean == "" {
+					continue
+				}
+				clean = apt.CleanDependency(clean)
+				if clean != "" && !seen[clean] {
+					seen[clean] = true
+					provides = append(provides, clean)
+				}
+			}
 		}
-		return nil, fmt.Errorf(lib.T_("Scanner error: %w"), err)
+
+		formattedVersion := ap.Version
+		if v, errParse := helper.GetVersionFromAptCache(ap.Version); errParse == nil && v != "" {
+			formattedVersion = v
+		}
+
+		p := Package{
+			Name:             ap.Name,
+			Section:          ap.Section,
+			InstalledSize:    int(ap.InstalledSize),
+			Maintainer:       ap.Maintainer,
+			Version:          formattedVersion,
+			VersionInstalled: "",
+			Depends:          depends,
+			Provides:         provides,
+			Size:             int(ap.DownloadSize),
+			Filename:         ap.Filename,
+			Description:      ap.Description,
+			AppStream:        nil,
+			Changelog:        ap.Changelog,
+			Installed:        false,
+			TypePackage:      typeInstall,
+		}
+		
+		if p.Description == "" {
+			p.Description = ap.ShortDescription
+		}
+		packages = append(packages, p)
 	}
 
-	if err = cmd.Wait(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Command execution error: %w"), err)
-	}
-
-	// добавляем AppStream и Changelog
 	for i := range packages {
 		if comp, ok := asMap[packages[i].Name]; ok {
 			packages[i].AppStream = comp
@@ -478,7 +426,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		}
 	}
 
-	// Обновляем информацию о том, установлены ли пакеты локально
+	// @TODO Обновляем информацию о том, установлены ли пакеты локально, на самом деле об этом можно узнать из биндингов
 	packages, err = a.updateInstalledInfo(ctx, packages)
 	if err != nil {
 		return nil, fmt.Errorf(lib.T_("Error updating information about installed packages: %w"), err)

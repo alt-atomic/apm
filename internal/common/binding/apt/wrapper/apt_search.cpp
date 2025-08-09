@@ -117,10 +117,45 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                         info.filename = strdup(Parser.FileName().c_str());
                         info.changelog = strdup(Parser.Changelog().c_str());
 
-                        // Parse homepage from full record
+                        // Parse fields from full record (Homepage, Version, Architecture)
                         const char *rec_start, *rec_stop;
                         Parser.GetRec(rec_start, rec_stop);
                         std::string record(rec_start, rec_stop - rec_start);
+
+                        // Version
+                        std::string record_version;
+                        {
+                            size_t pos = record.find("Version: ");
+                            if (pos != std::string::npos) {
+                                size_t start = pos + 9;
+                                size_t end = record.find('\n', start);
+                                if (end == std::string::npos) end = record.length();
+                                record_version = record.substr(start, end - start);
+                            }
+                        }
+                        // Architecture
+                        std::string record_arch;
+                        {
+                            size_t pos = record.find("Architecture: ");
+                            if (pos != std::string::npos) {
+                                size_t start = pos + 14;
+                                size_t end = record.find('\n', start);
+                                if (end == std::string::npos) end = record.length();
+                                record_arch = record.substr(start, end - start);
+                            }
+                        }
+
+                        // Provides
+                        std::string record_provides;
+                        {
+                            size_t pos = record.find("Provides: ");
+                            if (pos != std::string::npos) {
+                                size_t start = pos + 10;
+                                size_t end = record.find('\n', start);
+                                if (end == std::string::npos) end = record.length();
+                                record_provides = record.substr(start, end - start);
+                            }
+                        }
 
                         size_t homepage_pos = record.find("Homepage: ");
                         if (homepage_pos != std::string::npos) {
@@ -167,7 +202,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                                     break;
                             }
 
-                            // Get candidate version
+                            // Resolve version: candidate; else fallback to record Version field
                             pkgCache::VerIterator Ver = Plcy.GetCandidateVer(Pkg);
                             if (!Ver.end()) {
                                 info.version = strdup(Ver.VerStr() ? Ver.VerStr() : "unknown");
@@ -175,12 +210,66 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                                 info.priority = strdup(pkgCache::Priority(Ver->Priority));
                                 info.installed_size = Ver->InstalledSize;
                                 info.download_size = Ver->Size;
+                                // Collect provided virtual names from this version
+                                {
+                                    std::set<std::string> prov_names;
+                                    for (pkgCache::PrvIterator prv = Ver.ProvidesList(); !prv.end(); ++prv) {
+                                        const char* n = prv.Name();
+                                        if (n && *n) prov_names.insert(n);
+                                    }
+                                    if (!prov_names.empty()) {
+                                        std::string joined;
+                                        for (auto it = prov_names.begin(); it != prov_names.end(); ++it) {
+                                            if (!joined.empty()) joined += ", ";
+                                            joined += *it;
+                                        }
+                                        info.provides = strdup(joined.c_str());
+                                    }
+                                }
+                                // Collect hard dependencies (Depends/PreDepends) from this version
+                                {
+                                    std::set<std::string> dep_names;
+                                    for (pkgCache::DepIterator dep = Ver.DependsList(); !dep.end(); ++dep) {
+                                        if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
+                                        pkgCache::PkgIterator tpkg = dep.TargetPkg();
+                                        if (!tpkg.end() && tpkg.Name() != nullptr) {
+                                            dep_names.insert(tpkg.Name());
+                                        }
+                                    }
+                                    if (!dep_names.empty()) {
+                                        std::string joined;
+                                        for (auto it = dep_names.begin(); it != dep_names.end(); ++it) {
+                                            if (!joined.empty()) joined += ", ";
+                                            joined += *it;
+                                        }
+                                        info.depends = strdup(joined.c_str());
+                                    }
+                                }
                             } else {
-                                info.version = strdup("unknown");
-                                info.architecture = strdup("unknown");
+                                if (!record_version.empty()) {
+                                    info.version = strdup(record_version.c_str());
+                                } else {
+                                    info.version = strdup("unknown");
+                                }
+                                if (!record_arch.empty()) {
+                                    info.architecture = strdup(record_arch.c_str());
+                                } else {
+                                    info.architecture = strdup("unknown");
+                                }
                                 info.priority = strdup("unknown");
                                 info.installed_size = 0;
                                 info.download_size = 0;
+                                // Fallback depends from record line if present
+                                {
+                                    size_t pos = record.find("Depends: ");
+                                    if (pos != std::string::npos) {
+                                        size_t start = pos + 9;
+                                        size_t end = record.find('\n', start);
+                                        if (end == std::string::npos) end = record.length();
+                                        std::string deps = record.substr(start, end - start);
+                                        if (!deps.empty()) info.depends = strdup(deps.c_str());
+                                    }
+                                }
                             }
                         } else {
                             // Package not found in cache
@@ -189,20 +278,41 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                             info.essential = false;
                             info.auto_installed = false;
                             info.state = APT_PKG_STATE_NOT_INSTALLED;
-                            info.version = strdup("unknown");
-                            info.architecture = strdup("unknown");
+                            if (!record_version.empty()) {
+                                info.version = strdup(record_version.c_str());
+                            } else {
+                                info.version = strdup("unknown");
+                            }
+                            if (!record_arch.empty()) {
+                                info.architecture = strdup(record_arch.c_str());
+                            } else {
+                                info.architecture = strdup("unknown");
+                            }
                             info.priority = strdup("unknown");
                             info.installed_size = 0;
                             info.download_size = 0;
+                            // Fallback depends from record line if present
+                            {
+                                size_t pos = record.find("Depends: ");
+                                if (pos != std::string::npos) {
+                                    size_t start = pos + 9;
+                                    size_t end = record.find('\n', start);
+                                    if (end == std::string::npos) end = record.length();
+                                    std::string deps = record.substr(start, end - start);
+                                    if (!deps.empty()) info.depends = strdup(deps.c_str());
+                                }
+                            }
                         }
 
-                        // Simplified dependency info
-                        info.depends = strdup("");
-                        info.provides = strdup("");
-                        info.conflicts = strdup("");
-                        info.obsoletes = strdup("");
-                        info.recommends = strdup("");
-                        info.suggests = strdup("");
+                        // Finalize auxiliary fields (use record-provides if nothing collected from cache)
+                        if (info.provides == nullptr) {
+                            if (!record_provides.empty()) info.provides = strdup(record_provides.c_str());
+                            else info.provides = strdup("");
+                        }
+                        if (info.conflicts == nullptr) info.conflicts = strdup("");
+                        if (info.obsoletes == nullptr) info.obsoletes = strdup("");
+                        if (info.recommends == nullptr) info.recommends = strdup("");
+                        if (info.suggests == nullptr) info.suggests = strdup("");
 
                         matched_packages.push_back(info);
 

@@ -7,6 +7,8 @@ import (
 // TranslateKey принимает ключ и возвращает английский текст.
 func TranslateKey(key string) string {
 	switch key {
+	case "appStream":
+		return lib.T_("Application Information")
 	case "package":
 		return lib.T_("Package")
 	case "isApp":

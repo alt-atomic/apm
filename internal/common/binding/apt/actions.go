@@ -6,30 +6,33 @@ import (
 	"sync"
 )
 
-type Actions struct {
-	system     *lib.System
-	systemOnce sync.Once
-	systemErr  error
-}
+// Инициализация единственного экземпляра APT system, в конце его нужно ЗАКРЫТЬ
+var (
+	aptSystem     *lib.System
+	aptSystemOnce sync.Once
+	aptSystemErr  error
+)
+
+type Actions struct{}
 
 func NewActions() *Actions {
 	return &Actions{}
 }
 
-func (a *Actions) getSystem() (*lib.System, error) {
-	a.systemOnce.Do(func() {
-		a.system, a.systemErr = lib.NewSystem()
+func getSystem() (*lib.System, error) {
+	aptSystemOnce.Do(func() {
+		aptSystem, aptSystemErr = lib.NewSystem()
 	})
-	return a.system, a.systemErr
+	return aptSystem, aptSystemErr
 }
 
-func (a *Actions) Close() {
-	if a.system != nil {
-		a.system.Close()
-		a.system = nil
+func Close() {
+	if aptSystem != nil {
+		aptSystem.Close()
+		aptSystem = nil
 	}
-	a.systemErr = nil
-	a.systemOnce = sync.Once{}
+	aptSystemErr = nil
+	aptSystemOnce = sync.Once{}
 }
 
 // InstallPackages installs the given packages with optional progress handler (instance method)
@@ -43,12 +46,12 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 		err = a.checkAnyError(logs, err)
 	}()
 
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
 	if len(packageNames) == 0 {
-		err = lib.CustomError(int(lib.APT_ERROR_INVALID_PARAMETERS), "no packages specified")
+		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 		return
 	}
 	cache, err := lib.OpenCache(system, false)
@@ -89,12 +92,12 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.
 		err = a.checkAnyError(logs, err)
 	}()
 
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
 	if len(packageNames) == 0 {
-		err = lib.CustomError(int(lib.APT_ERROR_INVALID_PARAMETERS), "no packages specified")
+		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 		return
 	}
 	cache, err := lib.OpenCache(system, false)
@@ -135,7 +138,7 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler) (err error) {
 		err = a.checkAnyError(logs, err)
 	}()
 
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
@@ -164,7 +167,7 @@ func (a *Actions) Search(pattern string) (packages []lib.PackageInfo, err error)
 		err = a.checkAnyError(logs, err)
 	}()
 
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
@@ -188,7 +191,7 @@ func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
@@ -212,12 +215,12 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
 	if len(packageNames) == 0 {
-		err = lib.CustomError(int(lib.APT_ERROR_INVALID_PARAMETERS), "no packages specified")
+		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 		return
 	}
 	cache, err := lib.OpenCache(system, false)
@@ -240,12 +243,12 @@ func (a *Actions) SimulateRemove(packageNames []string) (packageInfo *lib.Packag
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
 	if len(packageNames) == 0 {
-		err = lib.CustomError(int(lib.APT_ERROR_INVALID_PARAMETERS), "no packages specified")
+		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 		return
 	}
 	cache, err := lib.OpenCache(system, false)
@@ -268,7 +271,7 @@ func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-	system, err := a.getSystem()
+	system, err := getSystem()
 	if err != nil {
 		return
 	}
