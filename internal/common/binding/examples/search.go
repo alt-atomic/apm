@@ -10,7 +10,7 @@ import (
 func Test(searchPattern string) {
 	aptService := apt.NewActions()
 
-	packages, err := aptService.Search(searchPattern)
+	packages, err := aptService.Search("")
 	if err != nil {
 		log.Fatalf("Failed to search packages: %v", err)
 	}

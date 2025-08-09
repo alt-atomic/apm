@@ -17,12 +17,12 @@ type System struct{ Ptr *C.AptSystem }
 func NewSystem() (*System, error) {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
-	if C.apt_init_config() != 0 {
-		return nil, &AptError{Code: -1, Message: "Failed to initialize APT configuration"}
+	if res := C.apt_init_config(); res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
 	}
 	var ptr *C.AptSystem
-	if res := C.apt_init_system(&ptr); res != 0 || ptr == nil {
-		return nil, &AptError{Code: int(res), Message: "Failed to initialize APT system"}
+	if res := C.apt_init_system(&ptr); res.code != C.APT_SUCCESS || ptr == nil {
+		return nil, ErrorFromResult(res)
 	}
 	s := &System{Ptr: ptr}
 	runtime.SetFinalizer(s, (*System).Close)

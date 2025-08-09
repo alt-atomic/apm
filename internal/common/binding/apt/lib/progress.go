@@ -54,8 +54,8 @@ func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) e
 		userData = unsafe.Pointer(uintptr(handle))
 		C.apt_use_go_progress_callback(userData)
 	}
-	if res := C.apt_install_packages(pm.Ptr, nil, userData); res != 0 {
-		return &AptError{Code: int(res), Message: "Failed to install packages"}
+	if res := C.apt_install_packages(pm.Ptr, nil, userData); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }
@@ -70,8 +70,8 @@ func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
 		userData = unsafe.Pointer(uintptr(handle))
 		C.apt_use_go_progress_callback(userData)
 	}
-	if res := C.apt_dist_upgrade_with_progress(c.Ptr, nil, userData); res != 0 {
-		return &AptError{Code: int(res), Message: "Failed to perform dist-upgrade with progress"}
+	if res := C.apt_dist_upgrade_with_progress(c.Ptr, nil, userData); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }

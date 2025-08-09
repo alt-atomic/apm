@@ -108,8 +108,6 @@ typedef void (*AptProgressCallback)(const char* package_name,
 // Optional log callback to route error/info messages instead of stderr
 typedef void (*AptLogCallback)(const char* message, void* user_data);
 
-// Note: Go-exported callbacks are not declared here to avoid cgo type conflicts.
-
 // Package states
 typedef enum {
     APT_PKG_STATE_NOT_INSTALLED = 0,
@@ -152,37 +150,43 @@ typedef struct {
     uint32_t package_id;
 } AptPackageInfo;
 
+// Structured result for operations: code + optional message (malloc'ed; caller must free)
+typedef struct {
+    AptErrorCode code;
+    char* message;
+} AptResult;
+
 // System initialization
-AptErrorCode apt_init_config();
-AptErrorCode apt_init_system(AptSystem** system);
+AptResult apt_init_config();
+AptResult apt_init_system(AptSystem** system);
 void apt_cleanup_system(AptSystem* system);
 
 // Cache management
-AptErrorCode apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock);
+AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock);
 void apt_cache_close(AptCache* cache);
-AptErrorCode apt_cache_refresh(AptCache* cache);
-AptErrorCode apt_cache_update(AptCache* cache);
-AptErrorCode apt_cache_dist_upgrade(AptCache* cache);
+AptResult apt_cache_refresh(AptCache* cache);
+AptResult apt_cache_update(AptCache* cache);
+AptResult apt_cache_dist_upgrade(AptCache* cache);
 
 // Package manager
-AptErrorCode apt_package_manager_create(AptCache* cache, AptPackageManager** pm);
+AptResult apt_package_manager_create(AptCache* cache, AptPackageManager** pm);
 void apt_package_manager_destroy(AptPackageManager* pm);
 
 // Package operations
-AptErrorCode apt_mark_install(AptCache* cache, const char* package_name, bool auto_install);
-AptErrorCode apt_mark_remove(AptCache* cache, const char* package_name, bool purge);
-AptErrorCode apt_mark_keep(AptCache* cache, const char* package_name);
-AptErrorCode apt_mark_auto(AptCache* cache, const char* package_name, bool auto_flag);
+AptResult apt_mark_install(AptCache* cache, const char* package_name, bool auto_install);
+AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge);
+AptResult apt_mark_keep(AptCache* cache, const char* package_name);
+AptResult apt_mark_auto(AptCache* cache, const char* package_name, bool auto_flag);
 
 // Package execution
-AptErrorCode apt_install_packages(AptPackageManager* pm,
-                                  AptProgressCallback callback,
-                                  void* user_data);
+AptResult apt_install_packages(AptPackageManager* pm,
+                               AptProgressCallback callback,
+                               void* user_data);
 
 // Full dist-upgrade execution with progress callbacks (mark + download + install)
-AptErrorCode apt_dist_upgrade_with_progress(AptCache* cache,
-                                            AptProgressCallback callback,
-                                            void* user_data);
+AptResult apt_dist_upgrade_with_progress(AptCache* cache,
+                                         AptProgressCallback callback,
+                                         void* user_data);
 
 // Register a default/global progress callback that will be used if the
 // per-call callback is NULL. Useful for language bindings.
@@ -196,7 +200,7 @@ void apt_use_go_progress_callback(void* user_data);
 void apt_enable_go_log_callback(void* user_data);
 
 // Package information (cleaned up - removed unsafe iterator-based functions)
-AptErrorCode apt_get_package_info(AptCache* cache, const char* package_name, AptPackageInfo* info);
+AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPackageInfo* info);
 void apt_free_package_info(AptPackageInfo* info);
 
 // Package searching
@@ -222,13 +226,13 @@ typedef struct {
     uint64_t install_size;         // Size in bytes after installation
 } AptPackageChanges;
 
-AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackageList* result);
+AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageList* result);
 void apt_free_package_list(AptPackageList* list);
 
 // Simulation functions (support multiple packages)
-AptErrorCode apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
-AptErrorCode apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
-AptErrorCode apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes);
+AptResult apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
+AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
+AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes);
 
 void apt_free_package_changes(AptPackageChanges* changes);
 

@@ -1,10 +1,8 @@
 #include "apt_internal.h"
 
-// Verbatim copy of apt_search_packages from apt_wrapper.cpp
-AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackageList* result) {
+AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageList* result) {
     if (!cache || !cache->dep_cache || !pattern || !result) {
-        set_error(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for search");
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for search");
     }
 
     result->packages = nullptr;
@@ -17,15 +15,13 @@ AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackag
 
         regex_t compiled_pattern;
         if (regcomp(&compiled_pattern, pattern, REG_EXTENDED | REG_ICASE | REG_NOSUB) != 0) {
-            set_error(APT_ERROR_UNKNOWN, "Failed to compile regex pattern");
-            return APT_ERROR_UNKNOWN;
+            return make_result(APT_ERROR_UNKNOWN, "Failed to compile regex pattern");
         }
 
         pkgRecords Recs(Cache);
         if (_error->PendingError() == true) {
             regfree(&compiled_pattern);
-            set_error(APT_ERROR_UNKNOWN, "Failed to create package records parser");
-            return APT_ERROR_UNKNOWN;
+            return make_result(APT_ERROR_UNKNOWN, "Failed to create package records parser");
         }
 
         struct ExVerFile {
@@ -211,7 +207,7 @@ AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackag
                         matched_packages.push_back(info);
 
                         // Limit results to prevent excessive memory usage
-                        if (matched_packages.size() >= 100000) {
+                        if (matched_packages.size() >= 150000) {
                             break;
                         }
                     }
@@ -227,7 +223,7 @@ AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackag
         regfree(&compiled_pattern);
 
         if (matched_packages.empty()) {
-            return APT_SUCCESS;
+            return make_result(APT_SUCCESS);
         }
 
         // Allocate result array
@@ -235,8 +231,7 @@ AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackag
         result->packages = (AptPackageInfo*)calloc(result->count, sizeof(AptPackageInfo));
         if (!result->packages) {
             result->count = 0;
-            set_error(APT_ERROR_UNKNOWN, "Failed to allocate memory for search results");
-            return APT_ERROR_UNKNOWN;
+            return make_result(APT_ERROR_UNKNOWN, "Failed to allocate memory for search results");
         }
 
         // Copy results from matched_packages vector
@@ -244,7 +239,7 @@ AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackag
             result->packages[i] = matched_packages[i];
         }
 
-        return APT_SUCCESS;
+        return make_result(APT_SUCCESS);
 
     } catch (const std::exception& e) {
         if (result->packages) {
@@ -255,8 +250,7 @@ AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackag
             result->packages = nullptr;
         }
         result->count = 0;
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception in search: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     } catch (...) {
         if (result->packages) {
             for (size_t i = 0; i < result->count; ++i) {
@@ -266,8 +260,7 @@ AptErrorCode apt_search_packages(AptCache* cache, const char* pattern, AptPackag
             result->packages = nullptr;
         }
         result->count = 0;
-        set_error(APT_ERROR_UNKNOWN, "Unknown exception in search");
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, "Unknown exception in search");
     }
 }
 

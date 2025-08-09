@@ -46,14 +46,6 @@ void emit_log(const std::string& msg) {
     }
 }
 
-void set_error(AptErrorCode code, const std::string& message) {
-    last_error = code;
-    last_error_message = message;
-    if (!message.empty()) {
-        emit_log(std::string("APT Error: ") + message);
-    }
-}
-
 bool check_apt_errors() {
     if (_error->PendingError()) {
         std::string error_msg;
@@ -75,47 +67,89 @@ bool check_apt_errors() {
             error_code = APT_ERROR_LOCK_FAILED;
         }
 
-        set_error(error_code, all_errors);
+        // inline set_error to avoid using it directly
+        last_error = error_code;
+        last_error_message = all_errors;
+        if (!all_errors.empty()) {
+            emit_log(std::string("APT Error: ") + all_errors);
+        }
         return false;
     }
     return true;
 }
 
+static std::string collect_pending_errors() {
+    std::string all_errors;
+    if (_error->PendingError()) {
+        std::string msg;
+        while (_error->PopMessage(msg)) {
+            if (!all_errors.empty()) all_errors += "; ";
+            all_errors += msg;
+        }
+    }
+    return all_errors;
+}
+
+static char* dup_cstr(const std::string& s) {
+    if (s.empty()) return nullptr;
+    char* p = (char*)malloc(s.size() + 1);
+    if (!p) return nullptr;
+    memcpy(p, s.c_str(), s.size() + 1);
+    return p;
+}
+
+AptResult make_result(AptErrorCode code, const char* explicit_msg) {
+    AptResult r{};
+    r.code = code;
+    if (code == APT_SUCCESS) {
+        r.message = nullptr;
+        return r;
+    }
+    std::string msg;
+    if (explicit_msg && *explicit_msg) {
+        msg = explicit_msg;
+    } else {
+        msg = collect_pending_errors();
+    }
+    if (msg.empty()) {
+        if (!last_error_message.empty() && last_error == code) msg = last_error_message;
+    }
+    if (msg.empty()) msg = apt_error_string(code);
+    r.message = dup_cstr(msg);
+    return r;
+}
+
 // System initialization
-AptErrorCode apt_init_config() {
+AptResult apt_init_config() {
     try {
         if (!pkgInitConfig(*_config)) {
-            set_error(APT_ERROR_INIT_FAILED, "Failed to initialize APT configuration");
-            return APT_ERROR_INIT_FAILED;
+            return make_result(APT_ERROR_INIT_FAILED, "Failed to initialize APT configuration");
         }
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_INIT_FAILED, std::string("Exception: ") + e.what());
-        return APT_ERROR_INIT_FAILED;
+        return make_result(APT_ERROR_INIT_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
-AptErrorCode apt_init_system(AptSystem** system) {
-    if (!system) return APT_ERROR_INIT_FAILED;
+AptResult apt_init_system(AptSystem** system) {
+    if (!system) return make_result(APT_ERROR_INIT_FAILED, "Invalid system pointer");
 
     try {
         if (!pkgInitSystem(*_config, _system)) {
-            set_error(APT_ERROR_INIT_FAILED, "Failed to initialize APT system");
-            return APT_ERROR_INIT_FAILED;
+            return make_result(APT_ERROR_INIT_FAILED, "Failed to initialize APT system");
         }
 
         // Create wrapper that points to global system
         *system = new AptSystem();
         (*system)->system = _system;
 
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception& e) {
         if (*system) {
             delete *system;
             *system = nullptr;
         }
-        set_error(APT_ERROR_INIT_FAILED, std::string("Exception: ") + e.what());
-        return APT_ERROR_INIT_FAILED;
+        return make_result(APT_ERROR_INIT_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
@@ -129,12 +163,11 @@ void apt_cleanup_system(AptSystem* system) {
 }
 
 // Cache management
-AptErrorCode apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
-    if (!system || !cache) return APT_ERROR_INIT_FAILED;
+AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
+    if (!system || !cache) return make_result(APT_ERROR_INIT_FAILED, "Invalid arguments for cache_open");
 
     if (!system->system) {
-        set_error(APT_ERROR_INIT_FAILED, "System not properly initialized");
-        return APT_ERROR_INIT_FAILED;
+        return make_result(APT_ERROR_INIT_FAILED, "System not properly initialized");
     }
 
     // Check if system can be locked before attempting to open cache
@@ -149,11 +182,10 @@ AptErrorCode apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock)
                     }
                     all_errors += error_msg;
                 }
-                set_error(APT_ERROR_LOCK_FAILED, all_errors);
+                return make_result(APT_ERROR_LOCK_FAILED, all_errors.c_str());
             } else {
-                set_error(APT_ERROR_LOCK_FAILED, "Unable to acquire APT system lock - another process may be using APT");
+                return make_result(APT_ERROR_LOCK_FAILED, "Unable to acquire APT system lock - another process may be using APT");
             }
-            return APT_ERROR_LOCK_FAILED;
         }
         system->system->UnLock(true);
     }
@@ -167,33 +199,29 @@ AptErrorCode apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock)
         if (!(*cache)->cache_file->Open()) {
             delete *cache;
             *cache = nullptr;
-            set_error(APT_ERROR_CACHE_OPEN_FAILED, "Failed to open APT cache");
-            return APT_ERROR_CACHE_OPEN_FAILED;
+            return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Failed to open APT cache");
         }
 
         if (!(*cache)->cache_file->CheckDeps()) {
             delete *cache;
             *cache = nullptr;
-            set_error(APT_ERROR_CACHE_OPEN_FAILED, "Failed to check dependencies");
-            return APT_ERROR_CACHE_OPEN_FAILED;
+            return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Failed to check dependencies");
         }
 
         (*cache)->dep_cache = (*cache)->cache_file->operator->();
         if (!(*cache)->dep_cache) {
             delete *cache;
             *cache = nullptr;
-            set_error(APT_ERROR_CACHE_OPEN_FAILED, "Failed to get dependency cache");
-            return APT_ERROR_CACHE_OPEN_FAILED;
+            return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Failed to get dependency cache");
         }
-
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
     } catch (const std::exception& e) {
         if (*cache) {
             delete *cache;
             *cache = nullptr;
         }
-        set_error(APT_ERROR_CACHE_OPEN_FAILED, std::string("Exception: ") + e.what());
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
@@ -206,9 +234,9 @@ void apt_cache_close(AptCache* cache) {
     }
 }
 
-AptErrorCode apt_cache_refresh(AptCache* cache) {
+AptResult apt_cache_refresh(AptCache* cache) {
     if (!cache) {
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED);
     }
 
     try {
@@ -218,30 +246,26 @@ AptErrorCode apt_cache_refresh(AptCache* cache) {
         cache->cache_file = std::make_unique<CacheFile>(nullstream, true);
 
         if (!cache->cache_file->Open()) {
-            set_error(APT_ERROR_CACHE_REFRESH_FAILED, "Failed to reopen cache after refresh");
-            return APT_ERROR_CACHE_REFRESH_FAILED;
+            return make_result(APT_ERROR_CACHE_REFRESH_FAILED, "Failed to reopen cache after refresh");
         }
 
         if (!cache->cache_file->CheckDeps()) {
-            set_error(APT_ERROR_DEPENDENCY_BROKEN, "Failed to check dependencies after refresh");
-            return APT_ERROR_DEPENDENCY_BROKEN;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to check dependencies after refresh");
         }
 
         cache->dep_cache = cache->cache_file->operator->();
         if (!cache->dep_cache) {
-            set_error(APT_ERROR_CACHE_REFRESH_FAILED, "Failed to get dependency cache after refresh");
-            return APT_ERROR_CACHE_REFRESH_FAILED;
+            return make_result(APT_ERROR_CACHE_REFRESH_FAILED, "Failed to get dependency cache after refresh");
         }
 
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_CACHE_REFRESH_FAILED, std::string("Exception during cache refresh: ") + e.what());
-        return APT_ERROR_CACHE_REFRESH_FAILED;
+        return make_result(APT_ERROR_CACHE_REFRESH_FAILED, (std::string("Exception during cache refresh: ") + e.what()).c_str());
     }
 }
 
-AptErrorCode apt_cache_update(AptCache* cache) {
-    if (!cache || !cache->cache_file) return APT_ERROR_CACHE_OPEN_FAILED;
+AptResult apt_cache_update(AptCache* cache) {
+    if (!cache || !cache->cache_file) return make_result(APT_ERROR_CACHE_OPEN_FAILED);
 
     try {
         ProgressStatus status;
@@ -249,36 +273,31 @@ AptErrorCode apt_cache_update(AptCache* cache) {
         pkgSourceList source_list;
 
         if (!source_list.ReadMainList()) {
-            set_error(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to read sources.list");
-            return APT_ERROR_CACHE_UPDATE_FAILED;
+            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to read sources.list");
         }
 
         if (!source_list.GetIndexes(&acquire)) {
-            set_error(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to get package indexes");
-            return APT_ERROR_CACHE_UPDATE_FAILED;
+            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to get package indexes");
         }
 
         auto fetch_result = acquire.Run();
         if (fetch_result != pkgAcquire::Continue) {
-            set_error(APT_ERROR_DOWNLOAD_FAILED, "Failed to download package lists");
-            return APT_ERROR_DOWNLOAD_FAILED;
+            return make_result(APT_ERROR_DOWNLOAD_FAILED, "Failed to download package lists");
         }
 
         if (!cache->cache_file->BuildCaches()) {
-            set_error(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to rebuild caches");
-            return APT_ERROR_CACHE_UPDATE_FAILED;
+            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to rebuild caches");
         }
-
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
 // Package manager
-AptErrorCode apt_package_manager_create(AptCache* cache, AptPackageManager** pm) {
-    if (!cache || !cache->dep_cache || !pm) return APT_ERROR_CACHE_OPEN_FAILED;
+AptResult apt_package_manager_create(AptCache* cache, AptPackageManager** pm) {
+    if (!cache || !cache->dep_cache || !pm) return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid cache or output pointer for pm create");
 
     try {
         *pm = new AptPackageManager(cache);
@@ -288,18 +307,16 @@ AptErrorCode apt_package_manager_create(AptCache* cache, AptPackageManager** pm)
         if (!(*pm)->pm) {
             delete *pm;
             *pm = nullptr;
-            set_error(APT_ERROR_INIT_FAILED, "Failed to create package manager");
-            return APT_ERROR_INIT_FAILED;
+            return make_result(APT_ERROR_INIT_FAILED, "Failed to create package manager");
         }
 
-        return APT_SUCCESS;
+        return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception& e) {
         if (*pm) {
             delete *pm;
             *pm = nullptr;
         }
-        set_error(APT_ERROR_INIT_FAILED, std::string("Exception: ") + e.what());
-        return APT_ERROR_INIT_FAILED;
+        return make_result(APT_ERROR_INIT_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
@@ -307,9 +324,9 @@ void apt_package_manager_destroy(AptPackageManager* pm) {
     delete pm;
 }
 
-AptErrorCode apt_mark_install(AptCache* cache, const char* package_name, bool auto_install) {
+AptResult apt_mark_install(AptCache* cache, const char* package_name, bool auto_install) {
     if (!cache || !cache->dep_cache || !package_name) {
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_install");
     }
 
     try {
@@ -327,12 +344,10 @@ AptErrorCode apt_mark_install(AptCache* cache, const char* package_name, bool au
                 }
             }
             if (candidate_providers.empty()) {
-                set_error(APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package not found: ") + package_name);
-                return APT_ERROR_PACKAGE_NOT_FOUND;
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
             }
             if (candidate_providers.size() > 1) {
-                set_error(APT_ERROR_DEPENDENCY_BROKEN, std::string("Virtual name '") + package_name + "' has multiple providers; specify exact package name");
-                return APT_ERROR_DEPENDENCY_BROKEN;
+                return make_result(APT_ERROR_DEPENDENCY_BROKEN, (std::string("Virtual name '") + package_name + "' has multiple providers; specify exact package name").c_str());
             }
             pkg = candidate_providers.front();
         }
@@ -357,15 +372,13 @@ AptErrorCode apt_mark_install(AptCache* cache, const char* package_name, bool au
             }
 
             if (GoodSolutions.empty()) {
-                set_error(APT_ERROR_PACKAGE_NOT_FOUND,
-                    std::string("Virtual package ") + package_name + " has no installable providers");
-                return APT_ERROR_PACKAGE_NOT_FOUND;
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                    (std::string("Virtual package ") + package_name + " has no installable providers").c_str());
             }
 
             if (GoodSolutions.size() > 1) {
-                set_error(APT_ERROR_DEPENDENCY_BROKEN,
-                    std::string("Virtual package ") + package_name + " has multiple providers. Please select specific package.");
-                return APT_ERROR_DEPENDENCY_BROKEN;
+                return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                    (std::string("Virtual package ") + package_name + " has multiple providers. Please select specific package.").c_str());
             }
 
             pkg = pkgCache::PkgIterator(*cache->dep_cache, GoodSolutions[0]);
@@ -375,7 +388,7 @@ AptErrorCode apt_mark_install(AptCache* cache, const char* package_name, bool au
         pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg];
         if (pkg->CurrentVer != 0 && State.Install() == false) {
             cache->dep_cache->MarkKeep(pkg);
-            return APT_SUCCESS;
+            return make_result(APT_SUCCESS, nullptr);
         }
 
         cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
@@ -386,29 +399,26 @@ AptErrorCode apt_mark_install(AptCache* cache, const char* package_name, bool au
 
         if (cache->dep_cache->BrokenCount() > 0) {
             if (!Fix.Resolve(true)) {
-                set_error(APT_ERROR_DEPENDENCY_BROKEN,
-                    std::string("Unable to resolve dependencies for package: ") + package_name);
-                return APT_ERROR_DEPENDENCY_BROKEN;
+                return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                    (std::string("Unable to resolve dependencies for package: ") + package_name).c_str());
             }
         }
 
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
-AptErrorCode apt_mark_remove(AptCache* cache, const char* package_name, bool purge) {
+AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge) {
     if (!cache || !cache->dep_cache || !package_name) {
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_remove");
     }
 
     try {
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
         if (pkg.end()) {
-            set_error(APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package not found: ") + package_name);
-            return APT_ERROR_PACKAGE_NOT_FOUND;
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
         }
 
         if ((*cache->dep_cache)[pkg].CandidateVer == 0 && pkg->ProvidesList != 0) {
@@ -425,26 +435,23 @@ AptErrorCode apt_mark_remove(AptCache* cache, const char* package_name, bool pur
             }
 
             if (InstalledProviders.empty()) {
-                set_error(APT_ERROR_PACKAGE_NOT_FOUND,
-                    std::string("Virtual package ") + package_name + " has no installed providers");
-                return APT_ERROR_PACKAGE_NOT_FOUND;
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                    (std::string("Virtual package ") + package_name + " has no installed providers").c_str());
             }
 
             if (InstalledProviders.size() > 1) {
-                set_error(APT_ERROR_DEPENDENCY_BROKEN,
-                    std::string("Virtual package ") + package_name +
+                return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                    (std::string("Virtual package ") + package_name +
                     " has multiple installed providers: " + providersList +
-                    ". Please remove specific package.");
-                return APT_ERROR_DEPENDENCY_BROKEN;
+                    ". Please remove specific package.").c_str());
             }
 
             pkg = pkgCache::PkgIterator(*cache->dep_cache, InstalledProviders[0]);
         }
 
         if (pkg->CurrentVer == 0) {
-            set_error(APT_ERROR_PACKAGE_NOT_FOUND,
-                std::string("Package ") + package_name + " is not installed");
-            return APT_ERROR_PACKAGE_NOT_FOUND;
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                (std::string("Package ") + package_name + " is not installed").c_str());
         }
 
         cache->dep_cache->MarkDelete(pkg, purge);
@@ -454,56 +461,50 @@ AptErrorCode apt_mark_remove(AptCache* cache, const char* package_name, bool pur
         Fix.Remove(pkg);
 
         if (!Fix.Resolve()) {
-            set_error(APT_ERROR_DEPENDENCY_BROKEN, "Problem resolver failed to handle package removal dependencies");
-            return APT_ERROR_DEPENDENCY_BROKEN;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Problem resolver failed to handle package removal dependencies");
         }
 
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
-AptErrorCode apt_mark_keep(AptCache* cache, const char* package_name) {
+AptResult apt_mark_keep(AptCache* cache, const char* package_name) {
     if (!cache || !cache->dep_cache || !package_name) {
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_keep");
     }
 
     try {
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
         if (pkg.end()) {
-            set_error(APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package not found: ") + package_name);
-            return APT_ERROR_PACKAGE_NOT_FOUND;
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
         }
 
         cache->dep_cache->MarkKeep(pkg);
 
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
-AptErrorCode apt_mark_auto(AptCache* cache, const char* package_name, bool auto_flag) {
+AptResult apt_mark_auto(AptCache* cache, const char* package_name, bool auto_flag) {
     if (!cache || !cache->dep_cache || !package_name) {
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_auto");
     }
 
     try {
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
         if (pkg.end()) {
-            set_error(APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package not found: ") + package_name);
-            return APT_ERROR_PACKAGE_NOT_FOUND;
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
         }
 
         cache->dep_cache->MarkAuto(pkg, auto_flag ? pkgDepCache::AutoMarkFlag::Auto : pkgDepCache::AutoMarkFlag::Manual);
 
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
@@ -614,6 +615,10 @@ void apt_free_package_list(AptPackageList* list) {
 
 // Utility functions
 const char* apt_error_string(AptErrorCode error) {
+    // Prefer the last detailed message captured via set_error if it matches the code
+    if (last_error == error && !last_error_message.empty()) {
+        return last_error_message.c_str();
+    }
     switch (error) {
         case APT_SUCCESS: return "Success";
 
@@ -765,7 +770,7 @@ AptErrorCode apt_set_config(const char* key, const char* value) {
         _config->Set(key, value);
         return APT_SUCCESS;
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception: ") + e.what());
+        emit_log(std::string("Exception: ") + e.what());
         return APT_ERROR_UNKNOWN;
     }
 }

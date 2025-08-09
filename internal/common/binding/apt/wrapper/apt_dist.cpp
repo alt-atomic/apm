@@ -1,27 +1,25 @@
 #include "apt_internal.h"
 
-AptErrorCode apt_dist_upgrade_with_progress(AptCache* cache,
-                                                       AptProgressCallback callback,
-                                                       void* user_data) {
-    if (!cache || !cache->dep_cache) return APT_ERROR_CACHE_OPEN_FAILED;
+AptResult apt_dist_upgrade_with_progress(AptCache* cache,
+                                         AptProgressCallback callback,
+                                         void* user_data) {
+    if (!cache || !cache->dep_cache) return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid cache for dist-upgrade");
 
     try {
         if (!pkgDistUpgrade(*cache->dep_cache)) {
-            set_error(APT_ERROR_CACHE_OPEN_FAILED, "Distribution upgrade failed");
-            return APT_ERROR_CACHE_OPEN_FAILED;
+            return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Distribution upgrade failed");
         }
 
         if (cache->dep_cache->DelCount() == 0 &&
             cache->dep_cache->InstCount() == 0 &&
             cache->dep_cache->BadCount() == 0) {
-            return APT_SUCCESS;
+            return make_result(APT_SUCCESS, nullptr);
         }
 
         std::unique_ptr<pkgPackageManager> pm;
         pm.reset(_system->CreatePM(cache->dep_cache));
         if (!pm) {
-            set_error(APT_ERROR_INIT_FAILED, "Failed to create package manager for dist-upgrade");
-            return APT_ERROR_INIT_FAILED;
+            return make_result(APT_ERROR_INIT_FAILED, "Failed to create package manager for dist-upgrade");
         }
 
         bool cb_set = false;
@@ -35,21 +33,18 @@ AptErrorCode apt_dist_upgrade_with_progress(AptCache* cache,
         pkgAcquire acquire(&status);
         pkgSourceList source_list;
         if (!source_list.ReadMainList()) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
             if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
         }
 
         pkgRecords records(*cache->dep_cache);
         if (!pm->GetArchives(&acquire, &source_list, &records)) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to get package archives for dist-upgrade");
             if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to get package archives for dist-upgrade");
         }
         if (acquire.Run() != pkgAcquire::Continue) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to download packages for dist-upgrade");
             if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages for dist-upgrade");
         }
 
         if (_system) {
@@ -141,41 +136,35 @@ AptErrorCode apt_dist_upgrade_with_progress(AptCache* cache,
             case pkgPackageManager::Completed:
                 break;
             case pkgPackageManager::Failed:
-                set_error(APT_ERROR_OPERATION_FAILED, "Package manager operation failed");
                 if (_system) _system->Lock();
                 if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-                return APT_ERROR_OPERATION_FAILED;
+                return make_result(APT_ERROR_OPERATION_FAILED, "Package manager operation failed");
             case pkgPackageManager::Incomplete:
-                set_error(APT_ERROR_OPERATION_INCOMPLETE, "Package manager operation incomplete");
                 if (_system) _system->Lock();
                 if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-                return APT_ERROR_OPERATION_INCOMPLETE;
+                return make_result(APT_ERROR_OPERATION_INCOMPLETE, "Package manager operation incomplete");
             default:
-                set_error(APT_ERROR_INSTALL_FAILED, "Unknown package manager result");
                 if (_system) _system->Lock();
                 if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-                return APT_ERROR_INSTALL_FAILED;
+                return make_result(APT_ERROR_INSTALL_FAILED, "Unknown package manager result");
         }
 
         bool update_marks = pm->UpdateMarks();
         if (!update_marks) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to update package marks after dist-upgrade");
             if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to update package marks after dist-upgrade");
         }
 
         if (!check_apt_errors()) {
             if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-            return last_error;
+            return make_result(last_error, nullptr);
         }
         if (cb_set) { global_callback = nullptr; global_user_data = nullptr; }
-        return APT_SUCCESS;
+        return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception: ") + e.what());
-        // Ensure we don't leak global callback on exceptions
         global_callback = nullptr;
         global_user_data = nullptr;
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 

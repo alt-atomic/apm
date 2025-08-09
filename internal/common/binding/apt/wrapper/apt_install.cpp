@@ -1,25 +1,22 @@
 #include "apt_internal.h"
 
-// Verbatim copy of apt_install_packages from apt_wrapper.cpp
-AptErrorCode apt_install_packages(AptPackageManager* pm, AptProgressCallback callback, void* user_data) {
-    if (!pm || !pm->pm) return APT_ERROR_INIT_FAILED;
+AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callback, void* user_data) {
+    if (!pm || !pm->pm) return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
 
     try {
         if (pm->cache->dep_cache->BrokenCount() != 0) {
-            set_error(APT_ERROR_DEPENDENCY_BROKEN, "Cannot install packages with broken dependencies!");
-            return APT_ERROR_DEPENDENCY_BROKEN;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Cannot install packages with broken dependencies");
         }
 
         if (pm->cache->dep_cache->DelCount() == 0 &&
             pm->cache->dep_cache->InstCount() == 0 &&
             pm->cache->dep_cache->BadCount() == 0) {
-            return APT_SUCCESS;
+            return make_result(APT_SUCCESS, nullptr);
         }
 
         if (pm->cache->dep_cache->DelCount() != 0 &&
             _config->FindB("APT::Get::Remove", true) == false) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Packages need to be removed but Remove is disabled.");
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Packages need to be removed but Remove is disabled");
         }
 
         if (_config && _config->FindB("APT::Get::Purge", false) == true) {
@@ -40,20 +37,17 @@ AptErrorCode apt_install_packages(AptPackageManager* pm, AptProgressCallback cal
         pkgSourceList source_list;
 
         if (!source_list.ReadMainList()) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
         }
 
         pkgRecords records(*pm->cache->dep_cache);
 
         if (!pm->pm->GetArchives(&acquire, &source_list, &records)) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to get package archives");
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to get package archives");
         }
 
         if (acquire.Run() != pkgAcquire::Continue) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to download packages");
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages");
         }
 
         if (_config) {
@@ -158,38 +152,31 @@ AptErrorCode apt_install_packages(AptPackageManager* pm, AptProgressCallback cal
             case pkgPackageManager::Completed:
                 break;
             case pkgPackageManager::Failed:
-                set_error(APT_ERROR_OPERATION_FAILED, "Package manager operation failed");
                 if (_system) _system->Lock();
-                return APT_ERROR_OPERATION_FAILED;
+                return make_result(APT_ERROR_OPERATION_FAILED, "Package manager operation failed");
             case pkgPackageManager::Incomplete:
-                set_error(APT_ERROR_OPERATION_INCOMPLETE, "Package manager operation incomplete");
                 if (_system) _system->Lock();
-                return APT_ERROR_OPERATION_INCOMPLETE;
+                return make_result(APT_ERROR_OPERATION_INCOMPLETE, "Package manager operation incomplete");
             default:
-                set_error(APT_ERROR_INSTALL_FAILED, "Unknown package manager result");
                 if (_system) _system->Lock();
-                return APT_ERROR_INSTALL_FAILED;
+                return make_result(APT_ERROR_INSTALL_FAILED, "Unknown package manager result");
         }
 
         bool update_result = pm->pm->UpdateMarks();
         if (!update_result) {
-            set_error(APT_ERROR_INSTALL_FAILED, "Failed to update package marks");
-            return APT_ERROR_INSTALL_FAILED;
+            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to update package marks");
         }
 
         global_callback = nullptr;
         global_user_data = nullptr;
 
-        return check_apt_errors() ? APT_SUCCESS : last_error;
+        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception& e) {
         global_callback = nullptr;
         global_user_data = nullptr;
         if (_system) {
             _system->Lock();
         }
-        set_error(APT_ERROR_INSTALL_FAILED, std::string("Exception: ") + e.what());
-        return APT_ERROR_INSTALL_FAILED;
+        return make_result(APT_ERROR_INSTALL_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
 }
-
-

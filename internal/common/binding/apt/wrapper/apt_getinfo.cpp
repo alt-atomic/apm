@@ -1,9 +1,8 @@
 #include "apt_internal.h"
 
-// Verbatim copy of apt_get_package_info from apt_wrapper.cpp
-AptErrorCode apt_get_package_info(AptCache* cache, const char* package_name, AptPackageInfo* info) {
+AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPackageInfo* info) {
     if (!cache || !cache->dep_cache || !package_name || !info) {
-        return APT_ERROR_CACHE_OPEN_FAILED;
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for get_package_info");
     }
 
     try {
@@ -11,8 +10,7 @@ AptErrorCode apt_get_package_info(AptCache* cache, const char* package_name, Apt
 
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
         if (pkg.end()) {
-            set_error(APT_ERROR_PACKAGE_NOT_FOUND, std::string("Package not found: ") + package_name);
-            return APT_ERROR_PACKAGE_NOT_FOUND;
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
         }
 
         info->name = strdup(pkg.Name());
@@ -106,10 +104,9 @@ AptErrorCode apt_get_package_info(AptCache* cache, const char* package_name, Apt
 
         info->priority = strdup("normal");
 
-        return APT_SUCCESS;
+        return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception& e) {
-        set_error(APT_ERROR_UNKNOWN, std::string("Exception in apt_get_package_info_direct: ") + e.what());
-        return APT_ERROR_UNKNOWN;
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 

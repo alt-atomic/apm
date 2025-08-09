@@ -1,6 +1,15 @@
 package lib
 
-import "fmt"
+/*
+#include "apt_wrapper.h"
+#include <stdlib.h>
+*/
+import "C"
+
+import (
+	"fmt"
+	"unsafe"
+)
 
 // Public Go types and error codes
 
@@ -76,6 +85,24 @@ type AptError struct {
 }
 
 func (e *AptError) Error() string { return fmt.Sprintf("APT Error %d: %s", e.Code, e.Message) }
+
+func CustomError(code int, message string) *AptError {
+	return &AptError{Code: code, Message: message}
+}
+
+// ErrorFromResult converts C.AptResult to Go error and frees message
+func ErrorFromResult(res C.AptResult) *AptError {
+	code := int(res.code)
+	var msg string
+	if res.message != nil {
+		msg = C.GoString(res.message)
+		C.free(unsafe.Pointer(res.message))
+	}
+	if msg == "" {
+		msg = C.GoString(C.apt_error_string(res.code))
+	}
+	return &AptError{Code: code, Message: msg}
+}
 
 type PackageInfo struct {
 	Name             string

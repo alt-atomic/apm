@@ -40,7 +40,7 @@ var (
 )
 
 func main() {
-	examples.Test("gnome-console")
+	examples.Test(".")
 	os.Exit(0)
 	lib.Log.Debugln("Starting apm…")
 

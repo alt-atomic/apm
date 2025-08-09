@@ -61,8 +61,13 @@ extern AptErrorCode last_error;
 extern std::string last_error_message;
 
 void emit_log(const std::string& msg);
-void set_error(AptErrorCode code, const std::string& message = "");
+// Deprecated: avoid using set_error; return make_result(...) directly instead
+inline void set_error(AptErrorCode code, const std::string& message = "") {
+    (void)code; (void)message;
+}
 bool check_apt_errors();
+// Build structured result from explicit message or current APT error stack
+AptResult make_result(AptErrorCode code, const char* message = nullptr);
 
 class ProgressStatus : public pkgAcquireStatus {
 public:

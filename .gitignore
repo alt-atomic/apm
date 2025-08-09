@@ -26,3 +26,4 @@ go.work.sum
 
 # env file
 .env
+/internal/common/binding/apt-pkg/

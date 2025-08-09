@@ -7,7 +7,6 @@ package lib
 import "C"
 
 import (
-	"fmt"
 	"runtime"
 	"unsafe"
 )
@@ -62,8 +61,8 @@ func OpenCache(system *System, readOnly bool) (*Cache, error) {
 	defer aptMutex.Unlock()
 	var ptr *C.AptCache
 	withLock := C.bool(!readOnly)
-	if res := C.apt_cache_open(system.Ptr, &ptr, withLock); res != 0 || ptr == nil {
-		return nil, &AptError{Code: int(res), Message: "Failed to open package cache"}
+	if res := C.apt_cache_open(system.Ptr, &ptr, withLock); res.code != C.APT_SUCCESS || ptr == nil {
+		return nil, ErrorFromResult(res)
 	}
 	c := &Cache{Ptr: ptr, system: system}
 	runtime.SetFinalizer(c, (*Cache).Close)
@@ -82,8 +81,8 @@ func (c *Cache) Close() {
 func (c *Cache) Update() error {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
-	if res := C.apt_cache_update(c.Ptr); res != 0 {
-		return &AptError{Code: int(res), Message: "Failed to update package cache"}
+	if res := C.apt_cache_update(c.Ptr); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }
@@ -91,8 +90,8 @@ func (c *Cache) Update() error {
 func (c *Cache) Refresh() error {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
-	if res := C.apt_cache_refresh(c.Ptr); res != 0 {
-		return &AptError{Code: int(res), Message: "Failed to refresh package cache"}
+	if res := C.apt_cache_refresh(c.Ptr); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }
@@ -113,8 +112,8 @@ func (c *Cache) MarkInstall(packageName string, autoInstall bool) error {
 	defer aptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
-	if res := C.apt_mark_install(c.Ptr, cname, C.bool(autoInstall)); res != 0 {
-		return &AptError{Code: int(res), Message: fmt.Sprintf("Failed to mark package '%s' for installation", packageName)}
+	if res := C.apt_mark_install(c.Ptr, cname, C.bool(autoInstall)); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }
@@ -124,8 +123,8 @@ func (c *Cache) MarkRemove(packageName string, purge bool) error {
 	defer aptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
-	if res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge)); res != 0 {
-		return &AptError{Code: int(res), Message: fmt.Sprintf("Failed to mark package '%s' for removal", packageName)}
+	if res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge)); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }
@@ -135,8 +134,8 @@ func (c *Cache) MarkKeep(packageName string) error {
 	defer aptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
-	if res := C.apt_mark_keep(c.Ptr, cname); res != 0 {
-		return &AptError{Code: int(res), Message: fmt.Sprintf("Failed to mark package '%s' to keep", packageName)}
+	if res := C.apt_mark_keep(c.Ptr, cname); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }
@@ -146,8 +145,8 @@ func (c *Cache) MarkAuto(packageName string, auto bool) error {
 	defer aptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
-	if res := C.apt_mark_auto(c.Ptr, cname, C.bool(auto)); res != 0 {
-		return &AptError{Code: int(res), Message: fmt.Sprintf("Failed to mark package '%s' auto status", packageName)}
+	if res := C.apt_mark_auto(c.Ptr, cname, C.bool(auto)); res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
 	}
 	return nil
 }
@@ -158,8 +157,8 @@ func (c *Cache) GetPackageInfo(packageName string) (*PackageInfo, error) {
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
 	var ci C.AptPackageInfo
-	if res := C.apt_get_package_info(c.Ptr, cname, &ci); res != 0 {
-		return nil, &AptError{Code: int(res), Message: fmt.Sprintf("Failed to get info for package '%s'", packageName)}
+	if res := C.apt_get_package_info(c.Ptr, cname, &ci); res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
 	}
 	defer C.apt_free_package_info(&ci)
 	info := &PackageInfo{}
@@ -173,8 +172,8 @@ func (c *Cache) SearchPackages(pattern string) ([]PackageInfo, error) {
 	cPattern := C.CString(pattern)
 	defer C.free(unsafe.Pointer(cPattern))
 	var list C.AptPackageList
-	if res := C.apt_search_packages(c.Ptr, cPattern, &list); res != 0 {
-		return nil, &AptError{Code: int(res), Message: fmt.Sprintf("Failed to search packages for pattern '%s'", pattern)}
+	if res := C.apt_search_packages(c.Ptr, cPattern, &list); res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
 	}
 	defer C.apt_free_package_list(&list)
 	pkgs := make([]PackageInfo, int(list.count))
@@ -194,8 +193,8 @@ func (c *Cache) SimulateDistUpgrade() (*PackageChanges, error) {
 	var cc C.AptPackageChanges
 	res := C.apt_simulate_dist_upgrade(c.Ptr, &cc)
 	defer C.apt_free_package_changes(&cc)
-	if res != 0 {
-		return nil, &AptError{Code: int(res), Message: "Failed to simulate dist-upgrade"}
+	if res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
 	}
 	changes := &PackageChanges{
 		UpgradedCount:     int(cc.upgraded_count),
@@ -233,7 +232,7 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
 	if len(packageNames) == 0 {
-		return nil, &AptError{Code: APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
+		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
 	}
 	cNames := make([]*C.char, len(packageNames))
 	for i, name := range packageNames {
@@ -243,8 +242,8 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 	var cc C.AptPackageChanges
 	res := C.apt_simulate_install(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
 	defer C.apt_free_package_changes(&cc)
-	if res != 0 {
-		return nil, &AptError{Code: int(res), Message: fmt.Sprintf("Failed to simulate install for packages: %v", packageNames)}
+	if res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
 	}
 	changes := &PackageChanges{
 		UpgradedCount:     int(cc.upgraded_count),
@@ -289,7 +288,7 @@ func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
 	if len(packageNames) == 0 {
-		return nil, &AptError{Code: APT_ERROR_INVALID_PARAMETERS, Message: "no packages specified"}
+		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
 	}
 	cNames := make([]*C.char, len(packageNames))
 	for i, name := range packageNames {
@@ -299,8 +298,8 @@ func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
 	var cc C.AptPackageChanges
 	res := C.apt_simulate_remove(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
 	defer C.apt_free_package_changes(&cc)
-	if res != 0 {
-		return nil, &AptError{Code: int(res), Message: fmt.Sprintf("Failed to simulate remove for packages: %v", packageNames)}
+	if res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
 	}
 	changes := &PackageChanges{
 		UpgradedCount:     int(cc.upgraded_count),
