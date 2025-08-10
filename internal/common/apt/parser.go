@@ -6,9 +6,12 @@ import (
 	"apm/internal/common/reply"
 	"apm/lib"
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/creack/pty"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -35,6 +38,145 @@ type Package struct {
 }
 
 var syncAptMutex sync.Mutex
+
+const (
+	TypeInstall = iota
+	TypeRemove
+	TypeChanged
+)
+
+func CommandWithProgress(ctx context.Context, command string, typeProcess int) []error {
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
+
+	// Запускаем команду через pty для захвата вывода в реальном времени.
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		return []error{err}
+	}
+	defer ptmx.Close()
+
+	scanner := bufio.NewScanner(ptmx)
+	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if i := bytes.IndexAny(data, "\r\n"); i >= 0 {
+			return i + 1, data[:i], nil
+		}
+		if atEOF && len(data) > 0 {
+			return len(data), data, nil
+		}
+		return 0, nil, nil
+	})
+
+	// Регулярное выражение для распознавания прогресса скачивания.
+	downloadRegex := regexp.MustCompile(`(?P<global>\d+)%\s*\[(?P<order>\d+)\s+(?P<pkg>[\w\-\+]+)\s+(?P<data>[0-9]+\/[0-9]+[KMG]?B)\s+(?P<local>\d+)%\]`)
+	// Регулярное выражение для распознавания прогресса установки.
+	installRegex := regexp.MustCompile(`^(?P<step>\d+):\s+(?P<pkg>[\w\-\:\+]+).*?\[\s*(?P<percent>\d+)%\]`)
+
+	// Мапы: ключ – уникальное имя события, значение – чистое имя пакета.
+	downloadEvents := make(map[string]string)
+	installEvents := make(map[string]string)
+
+	var textStatus string
+	switch typeProcess {
+	case TypeRemove:
+		textStatus = lib.T_("Removal")
+	case TypeChanged:
+		textStatus = lib.T_("Change")
+	default:
+		textStatus = lib.T_("Installation")
+	}
+
+	var outputLines []string
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for scanner.Scan() {
+			line := scanner.Text()
+			outputLines = append(outputLines, line)
+
+			if downloadRegex.MatchString(line) {
+				match := downloadRegex.FindStringSubmatch(line)
+				pkgName := match[downloadRegex.SubexpIndex("pkg")]
+				// Уникальное имя события
+				eventName := fmt.Sprintf("system.downloadProgress-%s", pkgName)
+				downloadEvents[eventName] = pkgName
+
+				percentStr := match[downloadRegex.SubexpIndex("local")]
+				if percent, err := strconv.Atoi(percentStr); err == nil {
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName(eventName),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkgName)),
+					)
+				}
+			} else if installRegex.MatchString(line) {
+				match := installRegex.FindStringSubmatch(line)
+				pkgName := match[installRegex.SubexpIndex("pkg")]
+				eventName := "system.installProgress"
+				installEvents[eventName] = pkgName
+
+				percentStr := match[installRegex.SubexpIndex("percent")]
+				if percent, err := strconv.Atoi(percentStr); err == nil {
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName(eventName),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf("%s: %s", textStatus, pkgName)),
+					)
+				}
+			}
+
+			// При получении строки "Done." завершаем все события.
+			if strings.Contains(line, "Done.") {
+				for event, pkg := range downloadEvents {
+					reply.CreateEventNotification(ctx, reply.StateAfter,
+						reply.WithEventName(event),
+						reply.WithProgress(true),
+						reply.WithProgressDoneText(pkg),
+						reply.WithProgressPercent(100),
+					)
+				}
+				for event, pkg := range installEvents {
+					reply.CreateEventNotification(ctx, reply.StateAfter,
+						reply.WithEventName(event),
+						reply.WithProgress(true),
+						reply.WithProgressDoneText(pkg),
+						reply.WithProgressPercent(100),
+					)
+				}
+			}
+		}
+	}()
+
+	// Ожидаем завершения выполнения команды.
+	if err = cmd.Wait(); err != nil {
+		wg.Wait()
+		aptErrors := ErrorLinesAnalyseAll(outputLines)
+		if len(aptErrors) > 0 {
+			var errorsSlice []error
+			for _, e := range aptErrors {
+				errorsSlice = append(errorsSlice, e)
+			}
+			return errorsSlice
+		}
+		return []error{fmt.Errorf(lib.T_("Installation error: %v"), err)}
+	}
+
+	wg.Wait()
+
+	aptErrors := ErrorLinesAnalyseAll(outputLines)
+	if len(aptErrors) > 0 {
+		var errorsSlice []error
+		for _, e := range aptErrors {
+			errorsSlice = append(errorsSlice, e)
+		}
+		return errorsSlice
+	}
+
+	return nil
+}
 
 func Update(ctx context.Context) ([]Package, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Update"))

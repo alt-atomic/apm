@@ -17,6 +17,7 @@
 package _package
 
 import (
+	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
@@ -43,7 +44,7 @@ var choices []string
 
 type model struct {
 	pkg        []Package
-	pckChange  PackageChanges
+	pckChange  aptLib.PackageChanges
 	cursor     int
 	choice     string
 	vp         viewport.Model
@@ -52,7 +53,7 @@ type model struct {
 }
 
 // NewDialog запускает диалог отображения информации о пакете с выбором действия.
-func NewDialog(packageInfo []Package, packageChange PackageChanges, action DialogAction) (bool, error) {
+func NewDialog(packageInfo []Package, packageChange aptLib.PackageChanges, action DialogAction) (bool, error) {
 	if lib.Env.Format != "text" || !reply.IsTTY() {
 		return true, nil
 	}

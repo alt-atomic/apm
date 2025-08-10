@@ -64,12 +64,12 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic
 }
 
 // Remove – обёртка над Actions.Remove.
-func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic bool, purge bool, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, packages, applyAtomic)
+	resp, err := w.actions.Remove(ctx, packages, purge, applyAtomic)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

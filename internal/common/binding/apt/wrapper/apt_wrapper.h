@@ -237,6 +237,13 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
 AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
 AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes);
 
+// Combined simulation: install and remove in a single transaction
+AptResult apt_simulate_change(AptCache* cache,
+                              const char** install_names, size_t install_count,
+                              const char** remove_names, size_t remove_count,
+                              bool purge,
+                              AptPackageChanges* changes);
+
 void apt_free_package_changes(AptPackageChanges* changes);
 
 // Utility functions

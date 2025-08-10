@@ -84,9 +84,16 @@ func CommandList() *cli.Command {
 						Value:   false,
 						Hidden:  !lib.Env.IsAtomic,
 					},
+					&cli.BoolFlag{
+						Name:    "purge",
+						Usage:   lib.T_("Delete all files"),
+						Aliases: []string{"a"},
+						Value:   false,
+						Hidden:  !lib.Env.IsAtomic,
+					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Remove(ctx, cmd.Args().Slice(), cmd.Bool("apply"))
+					resp, err := NewActions().Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("apply"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

@@ -1,7 +1,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754769994
+// cgo-timestamp: 1754816326
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -70,7 +70,6 @@ func OpenCache(system *System, readOnly bool) (*Cache, error) {
 	return c, nil
 }
 
-// Close frees the cache resources
 func (c *Cache) Close() {
 	if c.Ptr != nil {
 		C.apt_cache_close(c.Ptr)
@@ -187,7 +186,6 @@ func (c *Cache) SearchPackages(pattern string) ([]PackageInfo, error) {
 	return pkgs, nil
 }
 
-// Simulations
 func (c *Cache) SimulateDistUpgrade() (*PackageChanges, error) {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
@@ -302,6 +300,84 @@ func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
 	if res.code != C.APT_SUCCESS {
 		return nil, ErrorFromResult(res)
 	}
+	changes := &PackageChanges{
+		UpgradedCount:     int(cc.upgraded_count),
+		NewInstalledCount: int(cc.new_installed_count),
+		RemovedCount:      int(cc.removed_count),
+		NotUpgradedCount:  int(cc.not_upgraded_count),
+		DownloadSize:      uint64(cc.download_size),
+		InstallSize:       uint64(cc.install_size),
+	}
+	if cc.extra_installed_count > 0 {
+		changes.ExtraInstalled = make([]string, int(cc.extra_installed_count))
+		for i := 0; i < int(cc.extra_installed_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.extra_installed)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			changes.ExtraInstalled[i] = C.GoString(*ptr)
+		}
+	}
+	if cc.upgraded_count > 0 {
+		changes.UpgradedPackages = make([]string, int(cc.upgraded_count))
+		for i := 0; i < int(cc.upgraded_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.upgraded_packages)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			changes.UpgradedPackages[i] = C.GoString(*ptr)
+		}
+	}
+	if cc.new_installed_count > 0 {
+		changes.NewInstalledPackages = make([]string, int(cc.new_installed_count))
+		for i := 0; i < int(cc.new_installed_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.new_installed_packages)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			changes.NewInstalledPackages[i] = C.GoString(*ptr)
+		}
+	}
+	if cc.removed_count > 0 {
+		changes.RemovedPackages = make([]string, int(cc.removed_count))
+		for i := 0; i < int(cc.removed_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.removed_packages)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			changes.RemovedPackages[i] = C.GoString(*ptr)
+		}
+	}
+	return changes, nil
+}
+
+// SimulateChange simulates installing and removing packages in a single transaction
+func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool) (*PackageChanges, error) {
+	aptMutex.Lock()
+	defer aptMutex.Unlock()
+	if len(installNames) == 0 && len(removeNames) == 0 {
+		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
+	}
+
+	var cInst **C.char
+	var instCount C.size_t
+	if len(installNames) > 0 {
+		arr := make([]*C.char, len(installNames))
+		for i, n := range installNames {
+			arr[i] = C.CString(n)
+			defer C.free(unsafe.Pointer(arr[i]))
+		}
+		cInst = (**C.char)(unsafe.Pointer(&arr[0]))
+		instCount = C.size_t(len(installNames))
+	}
+
+	var cRem **C.char
+	var remCount C.size_t
+	if len(removeNames) > 0 {
+		arr := make([]*C.char, len(removeNames))
+		for i, n := range removeNames {
+			arr[i] = C.CString(n)
+			defer C.free(unsafe.Pointer(arr[i]))
+		}
+		cRem = (**C.char)(unsafe.Pointer(&arr[0]))
+		remCount = C.size_t(len(removeNames))
+	}
+
+	var cc C.AptPackageChanges
+	res := C.apt_simulate_change(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), &cc)
+	defer C.apt_free_package_changes(&cc)
+	if res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
+	}
+
 	changes := &PackageChanges{
 		UpgradedCount:     int(cc.upgraded_count),
 		NewInstalledCount: int(cc.new_installed_count),
