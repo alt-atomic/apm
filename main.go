@@ -40,6 +40,15 @@ var (
 )
 
 func main() {
+	//aptAction := apt.NewActions()
+	//packages, err := aptAction.Search("")
+	//if err != nil {
+	//	fmt.Printf("Failed to search apt packages: %s\n", err)
+	//}
+	//b, _ := json.MarshalIndent(packages, "", "  ")
+	//fmt.Println(string(b))
+	//fmt.Printf("Found %d packages:\n", len(packages))
+	//os.Exit(0)
 	lib.Log.Debugln("Starting apm…")
 
 	errInitial := lib.InitConfig()

@@ -217,19 +217,12 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 		return nil, errPackageNotFound
 	}
 
-	var names []string
-	var packagesInfo []_package.Package
-	for _, pkg := range packages {
-		packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, pkg)
-		if err != nil {
-			return nil, err
-		}
-
-		packagesInfo = append(packagesInfo, packageInfo)
-		names = append(names, packageInfo.Name)
+	packageNames, packagesInfo, errFind := a.serviceAptActions.FindPackage(ctx, packages)
+	if errFind != nil {
+		return nil, errFind
 	}
 
-	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, names)
+	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packageNames)
 	if aptError != nil {
 		return nil, aptError
 	}
@@ -252,7 +245,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 	}
 
 	reply.CreateSpinner()
-	err = a.serviceAptActions.Remove(ctx, names, purge)
+	err = a.serviceAptActions.Remove(ctx, packageNames, purge)
 	if err != nil {
 		return nil, err
 	}
@@ -305,60 +298,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		return nil, errPackageNotFound
 	}
 
-	var packageNames []string
-	var packagesInfo []_package.Package
-	for _, pkg := range packages {
-		originalPkg := pkg
-		var packageInfo _package.Package
-
-		packageInfo, err = a.serviceAptDatabase.GetPackageByName(ctx, pkg)
-		if err != nil {
-			filters := map[string]interface{}{
-				"provides": originalPkg,
-			}
-
-			alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
-			if errFind != nil {
-				return nil, errFind
-			}
-
-			if len(alternativePackages) == 0 {
-				errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), originalPkg)
-				return nil, errors.New(errorFindPackage)
-			}
-
-			var altNames []string
-			for _, altPkg := range alternativePackages {
-				altNames = append(altNames, altPkg.Name)
-			}
-
-			message := err.Error() + lib.T_(". Maybe you were looking for: ")
-
-			errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
-
-			return nil, errPackageNotFound
-		}
-
-		packagesInfo = append(packagesInfo, packageInfo)
-
-		// Обработка STPLR-пакетов
-		if packageInfo.TypePackage == int(_package.PackageTypeStplr) {
-			pkgForPreInstall := originalPkg
-			if len(originalPkg) > 0 {
-				lastChar := originalPkg[len(originalPkg)-1]
-				if lastChar == '+' || lastChar == '-' {
-					pkgForPreInstall = originalPkg[:len(originalPkg)-1]
-				}
-			}
-
-			rpmPath, errStplr := a.serviceStplr.PreInstall(ctx, pkgForPreInstall)
-			if errStplr != nil {
-				return nil, errStplr
-			}
-			packageNames = append(packageNames, rpmPath)
-		} else {
-			packageNames = append(packageNames, originalPkg)
-		}
+	packageNames, packagesInfo, errFind := a.serviceAptActions.FindPackage(ctx, packages)
+	if errFind != nil {
+		return nil, errFind
 	}
 
 	packageParse, aptError := a.serviceAptActions.CheckInstall(ctx, packageNames)

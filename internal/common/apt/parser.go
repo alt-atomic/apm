@@ -369,7 +369,12 @@ func extractLastMessage(changelog string) string {
 	return strings.Join(result, "\n")
 }
 
-func CleanDependency(dep string) string {
-	re := regexp.MustCompile(`\s*\(.*?\)`)
-	return strings.TrimSpace(re.ReplaceAllString(dep, ""))
+var soNameRe = regexp.MustCompile(`^(.+?\.so(?:\.[0-9]+)*).*`)
+
+func CleanDependency(s string) string {
+	s = strings.TrimSpace(s)
+	if m := soNameRe.FindStringSubmatch(s); len(m) > 1 {
+		return m[1]
+	}
+	return s
 }

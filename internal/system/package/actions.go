@@ -68,6 +68,82 @@ type Package struct {
 	TypePackage      int                  `json:"typePackage"`
 }
 
+func (a *Actions) FindPackage(ctx context.Context, req []string) ([]string, []Package, error) {
+	var packageNames []string
+	var packagesInfo []Package
+
+	seenNames := make(map[string]bool)
+	seenInfo := make(map[string]bool)
+
+	for _, original := range req {
+		if info, err := a.serviceAptDatabase.GetPackageByName(ctx, original); err == nil {
+			if !seenInfo[info.Name] {
+				seenInfo[info.Name] = true
+				packagesInfo = append(packagesInfo, info)
+			}
+			if info.TypePackage == int(PackageTypeStplr) {
+				rpmPath, errStplr := a.serviceStplr.PreInstall(ctx, original)
+				if errStplr != nil {
+					return nil, nil, errStplr
+				}
+				if !seenNames[rpmPath] {
+					seenNames[rpmPath] = true
+					packageNames = append(packageNames, rpmPath)
+				}
+			} else {
+				if !seenNames[original] {
+					seenNames[original] = true
+					packageNames = append(packageNames, original)
+				}
+			}
+			continue
+		}
+
+		if strings.Contains(original, "*") {
+			like := strings.ReplaceAll(original, "*", "%")
+			if strings.TrimSpace(like) != "" {
+				matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, false)
+				if errSearch != nil {
+					return nil, nil, errSearch
+				}
+				for _, mp := range matched {
+					if !seenInfo[mp.Name] {
+						seenInfo[mp.Name] = true
+						packagesInfo = append(packagesInfo, mp)
+					}
+					if !seenNames[mp.Name] {
+						seenNames[mp.Name] = true
+						packageNames = append(packageNames, mp.Name)
+					}
+				}
+			}
+		}
+
+		filters := map[string]interface{}{"provides": original}
+		alts, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 100, 0)
+		if errFind != nil {
+			return nil, nil, errFind
+		}
+		if len(alts) == 0 {
+			return nil, nil, fmt.Errorf(lib.T_("Failed to retrieve information about the package %s"), original)
+		}
+		for _, alt := range alts {
+			if infoAlt, errAlt := a.serviceAptDatabase.GetPackageByName(ctx, alt.Name); errAlt == nil {
+				if !seenInfo[infoAlt.Name] {
+					seenInfo[infoAlt.Name] = true
+					packagesInfo = append(packagesInfo, infoAlt)
+				}
+			}
+			if !seenNames[alt.Name] {
+				seenNames[alt.Name] = true
+				packageNames = append(packageNames, alt.Name)
+			}
+		}
+	}
+
+	return packageNames, packagesInfo, nil
+}
+
 func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
 	downloadOpen := make(map[string]bool)
 	lastDownloadPercent := make(map[string]int)
@@ -261,32 +337,38 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	packages = make([]Package, 0, len(aptPackages))
 	for _, ap := range aptPackages {
 		var depends []string
+		seen := make(map[string]bool)
+
 		if ap.Depends != "" {
 			depList := strings.Split(ap.Depends, ",")
-			seen := make(map[string]bool)
 			for _, dep := range depList {
 				clean := strings.TrimSpace(dep)
 				if clean == "" {
 					continue
 				}
-				clean = aptParser.CleanDependency(clean)
-				if clean != "" && !seen[clean] {
+				if strings.Contains(clean, ".so") {
+					clean = aptParser.CleanDependency(clean)
+				}
+				if !seen[clean] {
 					seen[clean] = true
 					depends = append(depends, clean)
 				}
 			}
 		}
 		var provides []string
+		seen = make(map[string]bool)
+
 		if ap.Provides != "" {
 			provList := strings.Split(ap.Provides, ",")
-			seen := make(map[string]bool)
 			for _, prov := range provList {
 				clean := strings.TrimSpace(prov)
 				if clean == "" {
 					continue
 				}
-				clean = aptParser.CleanDependency(clean)
-				if clean != "" && !seen[clean] {
+				if strings.Contains(clean, ".so") {
+					clean = aptParser.CleanDependency(clean)
+				}
+				if !seen[clean] {
 					seen[clean] = true
 					provides = append(provides, clean)
 				}
