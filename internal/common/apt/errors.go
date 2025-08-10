@@ -386,7 +386,6 @@ var errorPatterns = []ErrorEntry{
 	}, 1},
 	{ErrPackageNotFound, "Package not found: %s", func() string { return lib.T_("Package not found: %s") }, 1},
 	{ErrPackageIsNotInstalled, "Package is not installed: %s", func() string { return lib.T_("Package is not installed: %s") }, 1},
-	{ErrPackageIsNotInstalled, "Package is not installed: %s", func() string { return lib.T_("Package is not installed: %s") }, 1},
 	{ErrVirtualNoInstalledProviders, "Package %s has no installed providers", func() string { return lib.T_("Package %s has no installed providers") }, 1},
 	{ErrVirtualMultipleInstalledProviders, "Virtual package %s has multiple installed providers: %s. Please remove specific package.", func() string {
 		return lib.T_("Virtual package %s has multiple installed providers: %s. Please remove specific package.")

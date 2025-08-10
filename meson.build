@@ -14,20 +14,9 @@ go_root = run_command('printenv', 'GOROOT', check: false)
 go_bin = go_root.returncode() != 0 ? find_program('go') : find_program(join_paths(go_root.stdout().strip(), 'bin', 'go'))
 
 cpp = meson.get_compiler('cpp')
-apt_dep = dependency('apt-pkg', required: false)
-
-if not apt_dep.found()
-  apt_lib = cpp.find_library('apt-pkg',
-    dirs: ['/usr/lib64', '/usr/lib'],
-    required: true,
-  )
-  apt_inc = include_directories('/usr/include/apt-pkg')
-
-  apt_dep = declare_dependency(
-    include_directories: apt_inc,
-    dependencies: [apt_lib],
-  )
-endif
+apt_lib = cpp.find_library('apt-pkg', dirs: ['/usr/lib64', '/usr/lib'], required: true)
+apt_inc = include_directories('/usr/include/apt-pkg')
+apt_dep = declare_dependency(include_directories: apt_inc, dependencies: [apt_lib])
 
 SERVICE_ID = 'org.altlinux.APM'
 
