@@ -309,50 +309,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
-		messageNothingDo := lib.T_("The operation will not make any changes. Reasons: \n")
-		var alreadyInstalledPackages []string
-		var alreadyRemovedPackages []string
-
-		if apply && lib.Env.IsAtomic {
-			diffPackageFound := false
-			err = a.serviceHostConfig.LoadConfig()
-			if err != nil {
-				return nil, err
-			}
-
-			for _, removedPkg := range alreadyRemovedPackages {
-				cleanName := a.serviceAptActions.CleanPackageName(removedPkg, packageNames)
-				if !a.serviceHostConfig.IsRemoved(cleanName) {
-					diffPackageFound = true
-					err = a.serviceHostConfig.AddRemovePackage(cleanName)
-					if err != nil {
-						return nil, err
-					}
-				}
-			}
-
-			for _, installedPkg := range alreadyInstalledPackages {
-				cleanName := a.serviceAptActions.CleanPackageName(installedPkg, packageNames)
-				if !a.serviceHostConfig.IsInstalled(cleanName) {
-					diffPackageFound = true
-					err = a.serviceHostConfig.AddInstallPackage(cleanName)
-					if err != nil {
-						return nil, err
-					}
-				}
-			}
-
-			if diffPackageFound {
-				err = a.applyChange(ctx, packages, true)
-				if err != nil {
-					return nil, err
-				}
-
-				messageNothingDo += lib.T_("Found a discrepancy in the package list in the local configuration, the image has been updated")
-			}
-		}
-
-		return nil, errors.New(messageNothingDo)
+		return nil, errors.New(lib.T_("The operation will not make any changes"))
 	}
 
 	reply.StopSpinner()

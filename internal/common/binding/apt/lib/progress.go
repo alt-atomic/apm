@@ -1,7 +1,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754830815
+// cgo-timestamp: 1754842609
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -46,8 +46,8 @@ func goAptProgressCallback(cname *C.char, ctype C.int, ccurrent C.ulonglong, cto
 }
 
 func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	var userData unsafe.Pointer
 	if handler != nil {
 		handle := cgo_runtime.NewHandle(handler)
@@ -62,8 +62,8 @@ func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) e
 }
 
 func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	var userData unsafe.Pointer
 	if handler != nil {
 		handle := cgo_runtime.NewHandle(handler)

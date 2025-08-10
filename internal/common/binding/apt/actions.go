@@ -37,6 +37,8 @@ func Close() {
 
 // CombineInstallRemovePackages комбинированный метод установки и удаления
 func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string, handler lib.ProgressHandler) (err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -45,7 +47,6 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-
 	system, err := getSystem()
 	if err != nil {
 		return
@@ -87,6 +88,8 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 
 // InstallPackages установка пакетов
 func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHandler) (err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -95,7 +98,6 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-
 	system, err := getSystem()
 	if err != nil {
 		return
@@ -133,6 +135,8 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 
 // RemovePackages удаление пакетов
 func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.ProgressHandler) (err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -141,7 +145,6 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-
 	system, err := getSystem()
 	if err != nil {
 		return
@@ -179,6 +182,8 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.
 
 // DistUpgrade обновление системы
 func (a *Actions) DistUpgrade(handler lib.ProgressHandler) (err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -187,7 +192,6 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler) (err error) {
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-
 	system, err := getSystem()
 	if err != nil {
 		return
@@ -208,6 +212,8 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler) (err error) {
 
 // Update обновление локальной базы пакетов
 func (a *Actions) Update() (err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -216,7 +222,6 @@ func (a *Actions) Update() (err error) {
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-
 	system, err := getSystem()
 	if err != nil {
 		return
@@ -233,6 +238,8 @@ func (a *Actions) Update() (err error) {
 
 // Search поиск по пакетам
 func (a *Actions) Search(pattern string) (packages []lib.PackageInfo, err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -241,7 +248,6 @@ func (a *Actions) Search(pattern string) (packages []lib.PackageInfo, err error)
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-
 	system, err := getSystem()
 	if err != nil {
 		return
@@ -258,6 +264,8 @@ func (a *Actions) Search(pattern string) (packages []lib.PackageInfo, err error)
 
 // GetInfo поиск одного пакета
 func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -282,6 +290,8 @@ func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err
 
 // SimulateInstall симуляция установки
 func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.PackageChanges, err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -310,6 +320,8 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 
 // SimulateRemove симуляция удаления
 func (a *Actions) SimulateRemove(packageNames []string) (packageInfo *lib.PackageChanges, err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -338,6 +350,8 @@ func (a *Actions) SimulateRemove(packageNames []string) (packageInfo *lib.Packag
 
 // SimulateDistUpgrade симуляция обновления системы
 func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -362,6 +376,8 @@ func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err
 
 // SimulateChange комбинированная симуляция установки и удаления
 func (a *Actions) SimulateChange(installNames []string, removeNames []string, purge bool) (packageChanges *lib.PackageChanges, err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -370,7 +386,6 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 		lib.SetLogHandler(nil)
 		err = a.checkAnyError(logs, err)
 	}()
-
 	system, err := getSystem()
 	if err != nil {
 		return
@@ -391,14 +406,16 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 
 // checkAnyError анализ всех ошибок, включает в себя stdout из apt-lib
 func (a *Actions) checkAnyError(logs []string, err error) error {
-	if err == nil {
-		return nil
-	}
 	aptErrors := apt.ErrorLinesAnalyseAll(logs)
 	for _, errApr := range aptErrors {
 		if errApr.IsCritical() {
 			return errApr
 		}
 	}
+
+	if err == nil {
+		return nil
+	}
+
 	return err
 }

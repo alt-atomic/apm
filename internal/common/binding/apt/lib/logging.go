@@ -1,7 +1,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754830815
+// cgo-timestamp: 1754842609
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -41,8 +41,8 @@ func goAptLogCallback(cmsg *C.char, user unsafe.Pointer) {
 
 // SetLogHandler перехват stdout/stderr через LogHandler
 func SetLogHandler(handler LogHandler) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 
 	if logHandleSet {
 		logHandle.Delete()
@@ -60,8 +60,8 @@ func SetLogHandler(handler LogHandler) {
 
 // CaptureStdIO ручное включение/отключение stdout/stderr
 func CaptureStdIO(enable bool) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if enable {
 		C.apt_capture_stdio(C.int(1))
 	} else {

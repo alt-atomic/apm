@@ -18,6 +18,7 @@ package main
 
 import (
 	"apm/internal/common/binding/apt"
+	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
@@ -26,10 +27,11 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
-	"github.com/godbus/dbus/v5"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/godbus/dbus/v5"
 
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
@@ -92,8 +94,19 @@ func main() {
 			})
 		}
 
+		aptLib.WaitIdle()
 		cleanup()
-		os.Exit(1)
+		code := 1
+		if s, ok := sig.(syscall.Signal); ok {
+			if s == syscall.SIGINT {
+				code = 130
+			} else if s == syscall.SIGTERM {
+				code = 143
+			} else {
+				code = 128 + int(s)
+			}
+		}
+		os.Exit(code)
 	}()
 
 	// Основная команда приложения

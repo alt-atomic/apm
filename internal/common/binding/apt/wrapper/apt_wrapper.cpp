@@ -56,6 +56,8 @@ protected:
         if (ch == EOF) return 0;
         if (ch == '\n') {
             flush_line();
+        } else if (ch == '\r') {
+            flush_line();
         } else {
             buffer_.push_back(static_cast<char>(ch));
         }
@@ -104,6 +106,15 @@ extern "C" void apt_capture_stdio(int enable) {
         }
     } else {
         if (g_stdio_captured) {
+            // Flush any pending content in the emit stream and standard streams
+            try {
+                g_emit_stream.flush();
+                std::cout.flush();
+                std::cerr.flush();
+                std::clog.flush();
+            } catch (...) {
+                // ignore flush errors
+            }
             // Restore C++ iostreams
             std::cout.rdbuf(g_prev_cout);
             std::cerr.rdbuf(g_prev_cerr);
@@ -506,7 +517,7 @@ AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge)
 
             if (InstalledProviders.empty()) {
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                    (std::string("Virtual package ") + package_name + " has no installed providers").c_str());
+                    (std::string("Package ") + package_name + " has no installed providers").c_str());
             }
 
             if (InstalledProviders.size() > 1) {

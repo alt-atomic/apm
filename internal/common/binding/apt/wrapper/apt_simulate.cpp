@@ -289,8 +289,8 @@ AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + pkg_name).c_str());
             }
 
-            // If target is a virtual name, find installed provider
-            if (pkg.CurrentVer().end() && pkg->ProvidesList != 0) {
+            // If target is a truly virtual name (no versions at all), find installed provider
+            if (pkg.VersionList().end()) {
                 std::vector<pkgCache::PkgIterator> InstalledProviders;
                 std::string providersList;
                 for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
@@ -303,7 +303,7 @@ AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_
                 }
                 if (InstalledProviders.empty()) {
                     return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                        (std::string("Virtual package ") + pkg_name + " has no installed providers").c_str());
+                        (std::string("Package ") + pkg_name + " has no installed providers").c_str());
                 }
                 if (InstalledProviders.size() > 1) {
                     return make_result(APT_ERROR_DEPENDENCY_BROKEN,
@@ -458,8 +458,8 @@ AptResult apt_simulate_change(AptCache* cache,
                     return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + name).c_str());
                 }
 
-                // Handle virtual package removal by resolving installed provider
-                if (pkg.CurrentVer().end() && pkg->ProvidesList != 0) {
+                // Handle truly virtual package (no versions) by resolving installed provider
+                if (pkg.VersionList().end()) {
                     std::vector<pkgCache::PkgIterator> InstalledProviders;
                     std::string providersList;
                     for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
@@ -472,7 +472,7 @@ AptResult apt_simulate_change(AptCache* cache,
                     }
                     if (InstalledProviders.empty()) {
                         return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                            (std::string("Virtual package ") + name + " has no installed providers").c_str());
+                            (std::string("Package ") + name + " has no installed providers").c_str());
                     }
                     if (InstalledProviders.size() > 1) {
                         return make_result(APT_ERROR_DEPENDENCY_BROKEN,

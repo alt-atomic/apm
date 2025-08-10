@@ -1,7 +1,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754830815
+// cgo-timestamp: 1754842609
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -58,8 +58,8 @@ type Cache struct {
 
 // OpenCache opens the package cache
 func OpenCache(system *System, readOnly bool) (*Cache, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	var ptr *C.AptCache
 	withLock := C.bool(!readOnly)
 	if res := C.apt_cache_open(system.Ptr, &ptr, withLock); res.code != C.APT_SUCCESS || ptr == nil {
@@ -79,8 +79,8 @@ func (c *Cache) Close() {
 }
 
 func (c *Cache) Update() error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if res := C.apt_cache_update(c.Ptr); res.code != C.APT_SUCCESS {
 		return ErrorFromResult(res)
 	}
@@ -88,8 +88,8 @@ func (c *Cache) Update() error {
 }
 
 func (c *Cache) Refresh() error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if res := C.apt_cache_refresh(c.Ptr); res.code != C.APT_SUCCESS {
 		return ErrorFromResult(res)
 	}
@@ -97,19 +97,19 @@ func (c *Cache) Refresh() error {
 }
 
 func (c *Cache) BrokenCount() int {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	return int(C.apt_get_broken_count(c.Ptr))
 }
 func (c *Cache) HasBrokenPackages() bool {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	return bool(C.apt_has_broken_packages(c.Ptr))
 }
 
 func (c *Cache) MarkInstall(packageName string, autoInstall bool) error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
 	if res := C.apt_mark_install(c.Ptr, cname, C.bool(autoInstall)); res.code != C.APT_SUCCESS {
@@ -119,8 +119,8 @@ func (c *Cache) MarkInstall(packageName string, autoInstall bool) error {
 }
 
 func (c *Cache) MarkRemove(packageName string, purge bool) error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
 	if res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge)); res.code != C.APT_SUCCESS {
@@ -130,8 +130,8 @@ func (c *Cache) MarkRemove(packageName string, purge bool) error {
 }
 
 func (c *Cache) MarkKeep(packageName string) error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
 	if res := C.apt_mark_keep(c.Ptr, cname); res.code != C.APT_SUCCESS {
@@ -141,8 +141,8 @@ func (c *Cache) MarkKeep(packageName string) error {
 }
 
 func (c *Cache) MarkAuto(packageName string, auto bool) error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
 	if res := C.apt_mark_auto(c.Ptr, cname, C.bool(auto)); res.code != C.APT_SUCCESS {
@@ -152,8 +152,8 @@ func (c *Cache) MarkAuto(packageName string, auto bool) error {
 }
 
 func (c *Cache) GetPackageInfo(packageName string) (*PackageInfo, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
 	var ci C.AptPackageInfo
@@ -167,8 +167,8 @@ func (c *Cache) GetPackageInfo(packageName string) (*PackageInfo, error) {
 }
 
 func (c *Cache) SearchPackages(pattern string) ([]PackageInfo, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	cPattern := C.CString(pattern)
 	defer C.free(unsafe.Pointer(cPattern))
 	var list C.AptPackageList
@@ -187,8 +187,8 @@ func (c *Cache) SearchPackages(pattern string) ([]PackageInfo, error) {
 }
 
 func (c *Cache) SimulateDistUpgrade() (*PackageChanges, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	var cc C.AptPackageChanges
 	res := C.apt_simulate_dist_upgrade(c.Ptr, &cc)
 	defer C.apt_free_package_changes(&cc)
@@ -228,8 +228,8 @@ func (c *Cache) SimulateDistUpgrade() (*PackageChanges, error) {
 }
 
 func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if len(packageNames) == 0 {
 		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
 	}
@@ -284,8 +284,8 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 }
 
 func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if len(packageNames) == 0 {
 		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
 	}
@@ -341,8 +341,8 @@ func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
 
 // SimulateChange simulates installing and removing packages in a single transaction
 func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool) (*PackageChanges, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if len(installNames) == 0 && len(removeNames) == 0 {
 		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
 	}

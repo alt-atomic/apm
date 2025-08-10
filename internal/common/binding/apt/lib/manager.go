@@ -1,7 +1,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754830815
+// cgo-timestamp: 1754842609
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -13,8 +13,8 @@ import "runtime"
 type PackageManager struct{ Ptr *C.AptPackageManager }
 
 func NewPackageManager(cache *Cache) (*PackageManager, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	var ptr *C.AptPackageManager
 	if res := C.apt_package_manager_create(cache.Ptr, &ptr); res.code != C.APT_SUCCESS || ptr == nil {
 		return nil, ErrorFromResult(res)
@@ -33,8 +33,8 @@ func (pm *PackageManager) Close() {
 }
 
 func (pm *PackageManager) InstallPackages() error {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if res := C.apt_install_packages(pm.Ptr, nil, nil); res.code != C.APT_SUCCESS {
 		return ErrorFromResult(res)
 	}

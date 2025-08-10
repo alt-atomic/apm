@@ -1,7 +1,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754830815
+// cgo-timestamp: 1754842609
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -16,8 +16,8 @@ type System struct{ Ptr *C.AptSystem }
 
 // NewSystem initializes APT system
 func NewSystem() (*System, error) {
-	aptMutex.Lock()
-	defer aptMutex.Unlock()
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
 	if res := C.apt_init_config(); res.code != C.APT_SUCCESS {
 		return nil, ErrorFromResult(res)
 	}
