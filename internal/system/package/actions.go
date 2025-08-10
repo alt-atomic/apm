@@ -145,91 +145,58 @@ func (a *Actions) FindPackage(ctx context.Context, req []string) ([]string, []Pa
 }
 
 func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
-	downloadOpen := make(map[string]bool)
-	lastDownloadPercent := make(map[string]int)
-	installEvent := "system.installProgress"
-	installOpen := false
-	lastInstallPercent := -1
-
 	return func(pkg string, event aptLib.ProgressType, cur, total uint64) {
 		switch event {
 		case aptLib.CallbackDownloadStart:
 			ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
-			if !downloadOpen[ev] {
-				downloadOpen[ev] = true
-			}
 			reply.CreateEventNotification(ctx, reply.StateBefore,
 				reply.WithEventName(ev),
-				reply.WithProgress(true),
-				reply.WithProgressPercent(0),
 				reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkg)),
 			)
-
 		case aptLib.CallbackDownloadProgress:
 			if total > 0 {
 				percent := int((cur * 100) / total)
 				ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
-				if last, ok := lastDownloadPercent[ev]; !ok || percent != last {
-					lastDownloadPercent[ev] = percent
-					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName(ev),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkg)),
-					)
-				}
-			}
-
-		case aptLib.CallbackDownloadStop:
-			ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
-			if downloadOpen[ev] {
-				reply.CreateEventNotification(ctx, reply.StateAfter,
+				reply.CreateEventNotification(ctx, reply.StateBefore,
 					reply.WithEventName(ev),
 					reply.WithProgress(true),
-					reply.WithProgressDoneText(pkg),
-					reply.WithProgressPercent(100),
+					reply.WithProgressPercent(float64(percent)),
+					reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkg)),
 				)
-				delete(downloadOpen, ev)
-				delete(lastDownloadPercent, ev)
 			}
-
-		case aptLib.CallbackInstallStart:
-			if !installOpen {
-				installOpen = true
-				lastInstallPercent = 0
-			}
-			reply.CreateEventNotification(ctx, reply.StateBefore,
-				reply.WithEventName(installEvent),
+		case aptLib.CallbackDownloadStop:
+			ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
+			reply.CreateEventNotification(ctx, reply.StateAfter,
+				reply.WithEventName(ev),
 				reply.WithProgress(true),
-				reply.WithProgressPercent(0),
-				reply.WithEventView(fmt.Sprintf("%s: %s", lib.T_("Install:"), pkg)),
+				reply.WithProgressDoneText(pkg),
+				reply.WithProgressPercent(100),
 			)
-
+		case aptLib.CallbackInstallStart:
+			ev := fmt.Sprintf("system.installProgress-%s", pkg)
+			reply.CreateEventNotification(ctx, reply.StateBefore,
+				reply.WithEventName(ev),
+				reply.WithEventView(fmt.Sprintf(lib.T_("Install: %s"), pkg)),
+			)
 		case aptLib.CallbackInstallProgress:
+			ev := fmt.Sprintf("system.installProgress-%s", pkg)
 			if total > 0 {
 				percent := int((cur * 100) / total)
-				if percent != lastInstallPercent {
-					lastInstallPercent = percent
-					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName(installEvent),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf("%s: %s", lib.T_("Install progress:"), pkg)),
-					)
-				}
-			}
-
-		case aptLib.CallbackInstallStop:
-			if installOpen {
-				reply.CreateEventNotification(ctx, reply.StateAfter,
-					reply.WithEventName(installEvent),
+				reply.CreateEventNotification(ctx, reply.StateBefore,
+					reply.WithEventName(ev),
 					reply.WithProgress(true),
-					reply.WithProgressDoneText(pkg),
-					reply.WithProgressPercent(100),
+					reply.WithProgressPercent(float64(percent)),
+					reply.WithEventView(fmt.Sprintf(lib.T_("Install progress: %s"), pkg)),
 				)
-				installOpen = false
-				lastInstallPercent = -1
 			}
+		case aptLib.CallbackInstallStop:
+			ev := fmt.Sprintf("system.installProgress-%s", pkg)
+			reply.CreateEventNotification(ctx, reply.StateAfter,
+				reply.WithEventName(ev),
+				reply.WithProgress(true),
+				reply.WithProgressDoneText(pkg),
+				reply.WithProgressPercent(100),
+			)
 		}
 	}
 }

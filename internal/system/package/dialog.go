@@ -334,6 +334,11 @@ func (m model) buildContent() string {
 	sb.WriteString("\n" + formatLine(lib.T_("Will be installed"), packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(lib.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(lib.T_("Not affected"), packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
+	if m.choiceType == ActionUpgrade || m.choiceType == ActionInstall {
+		sb.WriteString("\n" + formatLine(lib.T_("Downloaded Size"), helper.AutoSize(int(m.pckChange.DownloadSize)), keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Installed Size"), helper.AutoSize(int(m.pckChange.InstallSize)), keyWidth, keyStyle, valueStyle))
+	}
+
 	return sb.String()
 }
 
