@@ -111,8 +111,9 @@ func main() {
 
 	// Основная команда приложения
 	rootCommand := &cli.Command{
-		Name:  "apm",
-		Usage: "Atomic Package Manager",
+		Name:                  "apm",
+		EnableShellCompletion: true,
+		Usage:                 "Atomic Package Manager",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",

@@ -15,65 +15,37 @@ typedef struct AptPackageManager AptPackageManager;
 
 typedef struct AptVersion AptVersion;
 
-// Error handling - based on real APT error patterns
+// Error handling - trimmed to used subset
 typedef enum {
     // Success
     APT_SUCCESS = 0,
-    
+
     // Initialization errors (1-10)
     APT_ERROR_INIT_FAILED = 1,
-    APT_ERROR_CONFIG_FAILED = 2,
-    APT_ERROR_SYSTEM_INIT_FAILED = 3,
-    
+
     // Cache errors (11-20)
     APT_ERROR_CACHE_OPEN_FAILED = 11,
     APT_ERROR_CACHE_REFRESH_FAILED = 12,
     APT_ERROR_CACHE_UPDATE_FAILED = 13,
-    APT_ERROR_CACHE_CORRUPTED = 14,
-    
+
     // Package errors (21-40)
     APT_ERROR_PACKAGE_NOT_FOUND = 21,
-    APT_ERROR_PACKAGE_NOT_INSTALLED = 22,
-    APT_ERROR_PACKAGE_ALREADY_INSTALLED = 23,
-    APT_ERROR_PACKAGE_VIRTUAL_MULTIPLE_PROVIDERS = 24,
-    APT_ERROR_PACKAGE_VIRTUAL_NO_PROVIDERS = 25,
-    APT_ERROR_PACKAGE_ESSENTIAL = 26,
-    APT_ERROR_PACKAGE_INFO_UNAVAILABLE = 27,
-    
-    // Dependency errors (41-50) - from APT CheckDeps/BrokenCount
+
+    // Dependency errors (41-50)
     APT_ERROR_DEPENDENCY_BROKEN = 41,
-    APT_ERROR_DEPENDENCY_UNRESOLVABLE = 42,
-    APT_ERROR_DEPENDENCY_CONFLICTS = 43,
-    APT_ERROR_UNMET_DEPENDENCIES = 44,
-    
-    // Package Manager Operation errors (51-70) - from pkgPackageManager::OrderResult
-    APT_ERROR_OPERATION_COMPLETED = 51,     // OrderResult::Completed
-    APT_ERROR_OPERATION_FAILED = 52,        // OrderResult::Failed
-    APT_ERROR_OPERATION_INCOMPLETE = 53,    // OrderResult::Incomplete
-    APT_ERROR_INSTALL_FAILED = 54,          // Installation specific failure
-    APT_ERROR_REMOVE_FAILED = 55,           // Removal specific failure
-    APT_ERROR_UPGRADE_FAILED = 56,          // Upgrade specific failure
-    APT_ERROR_DOWNLOAD_FAILED = 57,         // pkgAcquire::Failed
-    APT_ERROR_ARCHIVE_FAILED = 58,          // Archive operation failed
-    APT_ERROR_SUBPROCESS_ERROR = 59,        // Subprocess error (rpm/dpkg)
-    
-    // Lock and permission errors (71-80)
+
+    // Package Manager Operation errors (51-70)
+    APT_ERROR_OPERATION_FAILED = 52,
+    APT_ERROR_OPERATION_INCOMPLETE = 53,
+    APT_ERROR_INSTALL_FAILED = 54,
+    APT_ERROR_DOWNLOAD_FAILED = 57,
+
+    // Lock errors (71-80)
     APT_ERROR_LOCK_FAILED = 71,
-    APT_ERROR_PERMISSION_DENIED = 72,
-    APT_ERROR_LOCK_TIMEOUT = 73,
-    
-    // Resource errors (81-90)
-    APT_ERROR_OUT_OF_MEMORY = 81,
-    APT_ERROR_DISK_SPACE = 82,
-    APT_ERROR_NETWORK = 83,
-    APT_ERROR_IO_ERROR = 84,              // File I/O errors
-    APT_ERROR_PIPE_FAILED = 85,           // IPC pipe creation failed
-    
+
     // Validation errors (91-99)
     APT_ERROR_INVALID_PARAMETERS = 91,
-    APT_ERROR_INVALID_PACKAGE_NAME = 92,
-    APT_ERROR_INVALID_REGEX = 93,
-    
+
     // Generic/Unknown errors (999)
     APT_ERROR_UNKNOWN = 999
 } AptErrorCode;

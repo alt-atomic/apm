@@ -116,6 +116,9 @@ func (a *Actions) FindPackage(ctx context.Context, req []string) ([]string, []Pa
 						packageNames = append(packageNames, mp.Name)
 					}
 				}
+				if len(matched) > 0 {
+					continue
+				}
 			}
 		}
 

@@ -3,6 +3,7 @@ package apt
 import (
 	"apm/internal/common/apt"
 	"apm/internal/common/binding/apt/lib"
+	"strings"
 	"sync"
 )
 
@@ -415,6 +416,14 @@ func (a *Actions) checkAnyError(logs []string, err error) error {
 
 	if err == nil {
 		return nil
+	}
+
+	if msg := strings.TrimSpace(err.Error()); msg != "" {
+		if m := apt.CheckError(msg); m != nil {
+			if m.IsCritical() {
+				return m
+			}
+		}
 	}
 
 	return err

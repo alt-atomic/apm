@@ -704,50 +704,21 @@ const char* apt_error_string(AptErrorCode error) {
         case APT_SUCCESS: return "Success";
 
         case APT_ERROR_INIT_FAILED: return "Initialization failed";
-        case APT_ERROR_CONFIG_FAILED: return "Configuration failed";
-        case APT_ERROR_SYSTEM_INIT_FAILED: return "System initialization failed";
 
         case APT_ERROR_CACHE_OPEN_FAILED: return "Cache open failed";
         case APT_ERROR_CACHE_REFRESH_FAILED: return "Cache refresh failed";
         case APT_ERROR_CACHE_UPDATE_FAILED: return "Cache update failed";
-        case APT_ERROR_CACHE_CORRUPTED: return "Cache is corrupted";
 
         case APT_ERROR_PACKAGE_NOT_FOUND: return "Package not found";
-        case APT_ERROR_PACKAGE_NOT_INSTALLED: return "Package is not installed";
-        case APT_ERROR_PACKAGE_ALREADY_INSTALLED: return "Package is already installed";
-        case APT_ERROR_PACKAGE_VIRTUAL_MULTIPLE_PROVIDERS: return "Virtual package has multiple providers";
-        case APT_ERROR_PACKAGE_VIRTUAL_NO_PROVIDERS: return "Virtual package has no providers";
-        case APT_ERROR_PACKAGE_ESSENTIAL: return "Cannot modify essential package";
-        case APT_ERROR_PACKAGE_INFO_UNAVAILABLE: return "Package information unavailable";
-
         case APT_ERROR_DEPENDENCY_BROKEN: return "Broken dependencies";
-        case APT_ERROR_DEPENDENCY_UNRESOLVABLE: return "Unresolvable dependencies";
-        case APT_ERROR_DEPENDENCY_CONFLICTS: return "Dependency conflicts";
-        case APT_ERROR_UNMET_DEPENDENCIES: return "Unmet dependencies";
 
-        case APT_ERROR_OPERATION_COMPLETED: return "Operation completed successfully";
         case APT_ERROR_OPERATION_FAILED: return "Package manager operation failed";
         case APT_ERROR_OPERATION_INCOMPLETE: return "Package manager operation incomplete";
         case APT_ERROR_INSTALL_FAILED: return "Installation failed";
-        case APT_ERROR_REMOVE_FAILED: return "Removal failed";
-        case APT_ERROR_UPGRADE_FAILED: return "Upgrade failed";
         case APT_ERROR_DOWNLOAD_FAILED: return "Download failed";
-        case APT_ERROR_ARCHIVE_FAILED: return "Archive operation failed";
-        case APT_ERROR_SUBPROCESS_ERROR: return "Subprocess error";
 
         case APT_ERROR_LOCK_FAILED: return "Unable to acquire lock - another APT process is running";
-        case APT_ERROR_PERMISSION_DENIED: return "Permission denied - root privileges required";
-        case APT_ERROR_LOCK_TIMEOUT: return "Lock acquisition timeout";
-
-        case APT_ERROR_OUT_OF_MEMORY: return "Out of memory";
-        case APT_ERROR_DISK_SPACE: return "Insufficient disk space";
-        case APT_ERROR_NETWORK: return "Network error";
-        case APT_ERROR_IO_ERROR: return "File I/O error";
-        case APT_ERROR_PIPE_FAILED: return "IPC pipe creation failed";
-
         case APT_ERROR_INVALID_PARAMETERS: return "Invalid parameters";
-        case APT_ERROR_INVALID_PACKAGE_NAME: return "Invalid package name";
-        case APT_ERROR_INVALID_REGEX: return "Invalid regular expression";
 
         case APT_ERROR_UNKNOWN:
         default: return "Unknown error";
