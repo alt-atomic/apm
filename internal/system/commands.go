@@ -21,6 +21,8 @@ import (
 	"apm/internal/common/reply"
 	"apm/lib"
 	"context"
+	"fmt"
+
 	"github.com/urfave/cli/v3"
 )
 
@@ -31,6 +33,29 @@ func newErrorResponse(message string) reply.APIResponse {
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
+	}
+}
+
+func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
+	return func(ctx context.Context, cmd *cli.Command) {
+		if cmd.NArg() >= 2 {
+			return
+		}
+		prefix := ""
+		if cmd.NArg() == 1 {
+			prefix = cmd.Args().First()
+		}
+		like := prefix + "%"
+
+		svc := NewActions().serviceAptDatabase
+		if svc == nil {
+			return
+		}
+
+		pkgs, _ := svc.SearchPackagesMultiLimit(ctx, like, 100, installed)
+		for _, p := range pkgs {
+			fmt.Println(p.Name)
+		}
 	}
 }
 
@@ -71,6 +96,7 @@ func CommandList() *cli.Command {
 
 					return reply.CliResponse(ctx, *resp)
 				}),
+				ShellComplete: findPkgWithInstalled(false),
 			},
 			{
 				Name:      "remove",
@@ -100,6 +126,7 @@ func CommandList() *cli.Command {
 
 					return reply.CliResponse(ctx, *resp)
 				}),
+				ShellComplete: findPkgWithInstalled(true),
 			},
 			{
 				Name:  "update",
@@ -160,6 +187,7 @@ func CommandList() *cli.Command {
 
 					return reply.CliResponse(ctx, *resp)
 				}),
+				ShellComplete: findPkgWithInstalled(false),
 			},
 			{
 				Name:      "search",

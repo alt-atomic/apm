@@ -295,7 +295,6 @@ func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart st
 }
 
 // SearchPackagesByNameLike ищет пакеты по произвольному шаблону LIKE
-// Передавайте готовый шаблон с % и _ (например, "gnome-%" или "%-gnome")
 func (s *PackageDBService) SearchPackagesByNameLike(ctx context.Context, likePattern string, installed bool) ([]Package, error) {
 	query := s.db.WithContext(ctx).Model(&DBPackage{}).
 		Where("name LIKE ?", likePattern)
@@ -314,6 +313,33 @@ func (s *PackageDBService) SearchPackagesByNameLike(ctx context.Context, likePat
 		result = append(result, dbp.fromDBModel())
 	}
 	return result, nil
+}
+
+// SearchPackagesMultiLimit ищет пакеты по произвольному шаблону LIKE для автодополнения
+func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePattern string, limit int, installed bool) ([]Package, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+
+	query := s.db.WithContext(ctx).
+		Model(&DBPackage{}).
+		Where("(name LIKE ? OR (',' || provides || ',') LIKE ?)", likePattern, likePattern).
+		Limit(limit)
+
+	if installed {
+		query = query.Where("installed = ?", true)
+	}
+
+	var dbPkgs []DBPackage
+	if err := query.Find(&dbPkgs).Error; err != nil {
+		return nil, fmt.Errorf(lib.T_("Query execution error: %w"), err)
+	}
+
+	res := make([]Package, 0, len(dbPkgs))
+	for _, dbp := range dbPkgs {
+		res = append(res, dbp.fromDBModel())
+	}
+	return res, nil
 }
 
 // QueryHostImagePackages возвращает пакеты с возможностью фильтрации и сортировки

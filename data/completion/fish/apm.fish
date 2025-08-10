@@ -2,7 +2,7 @@
 
 function __fish_apm_no_subcommand --description 'Test if there has been any subcommand yet'
     for i in (commandline -opc)
-        if contains -- $i dbus-session1 dbus-system system s distrobox d help h completion
+        if contains -- $i dbus-session dbus-system system s distrobox d help h completion
             return 1
         end
     end
@@ -12,9 +12,9 @@ end
 complete -c apm -n '__fish_apm_no_subcommand' -f -l format -s f -r -d 'Формат вывода: json, text'
 complete -c apm -n '__fish_apm_no_subcommand' -f -l transaction -s t -r -d 'Внутреннее свойство, добавляющее транзакцию к выводу'
 complete -c apm -n '__fish_apm_no_subcommand' -f -l help -s h -d 'show help'
-complete -x -c apm -n '__fish_apm_no_subcommand' -a 'dbus-session1' -d 'Запустить сессионный сервис D-Bus org.altlinux.APM'
-complete -c apm -n '__fish_seen_subcommand_from dbus-session1' -f -l help -s h -d 'show help'
-complete -x -c apm -n '__fish_seen_subcommand_from dbus-session1; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
+complete -x -c apm -n '__fish_apm_no_subcommand' -a 'dbus-session' -d 'Запустить сессионный сервис D-Bus org.altlinux.APM'
+complete -c apm -n '__fish_seen_subcommand_from dbus-session' -f -l help -s h -d 'show help'
+complete -x -c apm -n '__fish_seen_subcommand_from dbus-session; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
 complete -x -c apm -n '__fish_apm_no_subcommand' -a 'dbus-system' -d 'Запустить системный сервис D-Bus org.altlinux.APM'
 complete -c apm -n '__fish_seen_subcommand_from dbus-system' -f -l help -s h -d 'show help'
 complete -x -c apm -n '__fish_seen_subcommand_from dbus-system; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
