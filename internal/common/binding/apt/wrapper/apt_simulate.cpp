@@ -115,7 +115,52 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
 
             pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
             if (pkg.end()) {
-                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + pkg_name).c_str());
+                // Resolve virtual name by scanning providers with installable candidate
+                std::vector<pkgCache::PkgIterator> candidate_providers;
+                for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); it.end() == false; ++it) {
+                    pkgCache::VerIterator cand = (*cache->dep_cache)[it].CandidateVerIter(*cache->dep_cache);
+                    if (cand.end()) continue;
+                    for (pkgCache::PrvIterator prv = cand.ProvidesList(); prv.end() == false; ++prv) {
+                        if (strcmp(prv.Name(), pkg_name.c_str()) == 0) {
+                            candidate_providers.push_back(it);
+                            break;
+                        }
+                    }
+                }
+                if (candidate_providers.empty()) {
+                    return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + pkg_name).c_str());
+                }
+                if (candidate_providers.size() > 1) {
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                        (std::string("Virtual name '") + pkg_name + "' has multiple providers; specify exact package name").c_str());
+                }
+                pkg = candidate_providers.front();
+            }
+
+            // If no candidate but package provides others, try choose a suitable provider of this virtual
+            pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg];
+            if (State.CandidateVer == 0 && pkg->ProvidesList != 0) {
+                std::vector<pkgCache::Package *> GoodSolutions;
+                for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
+                    pkgCache::PkgIterator ProvPkg = Prv.OwnerPkg();
+                    if (ProvPkg.CurrentVer() == Prv.OwnerVer()) {
+                        GoodSolutions.push_back(ProvPkg);
+                        continue;
+                    }
+                    pkgCache::VerIterator CandVer = (*cache->dep_cache)[ProvPkg].CandidateVerIter(*cache->dep_cache);
+                    if (!CandVer.end() && CandVer == Prv.OwnerVer()) {
+                        GoodSolutions.push_back(ProvPkg);
+                    }
+                }
+                if (GoodSolutions.empty()) {
+                    return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                        (std::string("Virtual package ") + pkg_name + " has no installable providers").c_str());
+                }
+                if (GoodSolutions.size() > 1) {
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                        (std::string("Virtual package ") + pkg_name + " has multiple providers. Please select specific package.").c_str());
+                }
+                pkg = pkgCache::PkgIterator(*cache->dep_cache, GoodSolutions[0]);
             }
 
             cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, true);
@@ -244,6 +289,31 @@ AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + pkg_name).c_str());
             }
 
+            // If target is a virtual name, find installed provider
+            if (pkg.CurrentVer().end() && pkg->ProvidesList != 0) {
+                std::vector<pkgCache::PkgIterator> InstalledProviders;
+                std::string providersList;
+                for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
+                    pkgCache::PkgIterator ProvPkg = Prv.OwnerPkg();
+                    if (ProvPkg.CurrentVer() == Prv.OwnerVer()) {
+                        InstalledProviders.push_back(ProvPkg);
+                        if (!providersList.empty()) providersList += ", ";
+                        providersList += ProvPkg.Name();
+                    }
+                }
+                if (InstalledProviders.empty()) {
+                    return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                        (std::string("Virtual package ") + pkg_name + " has no installed providers").c_str());
+                }
+                if (InstalledProviders.size() > 1) {
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                        (std::string("Virtual package ") + pkg_name +
+                         " has multiple installed providers: " + providersList +
+                         ". Please remove specific package.").c_str());
+                }
+                pkg = InstalledProviders.front();
+            }
+
             if (pkg.CurrentVer().end()) {
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package is not installed: ") + pkg_name).c_str());
             }
@@ -299,7 +369,7 @@ AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_
         }
 
         // Allocate and fill results
-        changes->extra_installed_count = extra_removed.size();
+        changes->extra_installed_count = 0;
         changes->upgraded_count = upgraded.size();
         changes->new_installed_count = new_installed.size();
         changes->removed_count = removed.size();
@@ -326,14 +396,6 @@ AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_
             changes->new_installed_packages = (char**)malloc(changes->new_installed_count * sizeof(char*));
             for (size_t i = 0; i < changes->new_installed_count; i++) {
                 changes->new_installed_packages[i] = strdup(new_installed[i].c_str());
-            }
-        }
-
-        // Store extra removed in extra_installed array (reusing field)
-        if (changes->extra_installed_count > 0) {
-            changes->extra_installed = (char**)malloc(changes->extra_installed_count * sizeof(char*));
-            for (size_t i = 0; i < changes->extra_installed_count; i++) {
-                changes->extra_installed[i] = strdup(extra_removed[i].c_str());
             }
         }
 
@@ -395,6 +457,32 @@ AptResult apt_simulate_change(AptCache* cache,
                 if (pkg.end()) {
                     return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + name).c_str());
                 }
+
+                // Handle virtual package removal by resolving installed provider
+                if (pkg.CurrentVer().end() && pkg->ProvidesList != 0) {
+                    std::vector<pkgCache::PkgIterator> InstalledProviders;
+                    std::string providersList;
+                    for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
+                        pkgCache::PkgIterator ProvPkg = Prv.OwnerPkg();
+                        if (ProvPkg.CurrentVer() == Prv.OwnerVer()) {
+                            InstalledProviders.push_back(ProvPkg);
+                            if (!providersList.empty()) providersList += ", ";
+                            providersList += ProvPkg.Name();
+                        }
+                    }
+                    if (InstalledProviders.empty()) {
+                        return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                            (std::string("Virtual package ") + name + " has no installed providers").c_str());
+                    }
+                    if (InstalledProviders.size() > 1) {
+                        return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                            (std::string("Virtual package ") + name +
+                             " has multiple installed providers: " + providersList +
+                             ". Please remove specific package.").c_str());
+                    }
+                    pkg = InstalledProviders.front();
+                }
+
                 if (pkg.CurrentVer().end()) {
                     return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package is not installed: ") + name).c_str());
                 }

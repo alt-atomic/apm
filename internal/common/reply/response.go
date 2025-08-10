@@ -220,8 +220,8 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 			}
 			t.Child(listNode)
 
-		//----------------------------------------------------------------------
-		// ДРУГИЕ СЛУЧАИ: структуры, срезы непонятных типов и т.д.
+			//----------------------------------------------------------------------
+			// ДРУГИЕ СЛУЧАИ: структуры, срезы непонятных типов и т.д.
 		default:
 			rv := reflect.ValueOf(v)
 			switch rv.Kind() {
@@ -235,6 +235,33 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
 						subTree := buildTreeFromMap(TranslateKey(k), mm)
 						t.Child(subTree)
+						continue
+					}
+				}
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
+
+			// СЛУЧАЙ: указатель (попробуем развернуть через JSON как структуру/срез)
+			case reflect.Ptr:
+				b, err := json.Marshal(vv)
+				if err == nil {
+					var mm map[string]interface{}
+					if err2 := json.Unmarshal(b, &mm); err2 == nil {
+						subTree := buildTreeFromMap(TranslateKey(k), mm)
+						t.Child(subTree)
+						continue
+					}
+					var arr []interface{}
+					if err2 := json.Unmarshal(b, &arr); err2 == nil {
+						listNode := tree.New().Root(TranslateKey(k))
+						for i, elem := range arr {
+							if mm, ok := elem.(map[string]interface{}); ok {
+								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm)
+								listNode.Child(subTree)
+							} else {
+								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
+							}
+						}
+						t.Child(listNode)
 						continue
 					}
 				}

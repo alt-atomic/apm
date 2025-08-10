@@ -9,6 +9,10 @@ func TranslateKey(key string) string {
 	switch key {
 	case "appStream":
 		return lib.T_("Application Information")
+	case "downloadSize":
+		return lib.T_("Downloaded Size")
+	case "installSize":
+		return lib.T_("Installed Size")
 	case "package":
 		return lib.T_("Package")
 	case "isApp":

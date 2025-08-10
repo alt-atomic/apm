@@ -1,14 +1,13 @@
 package lib
 
 /*
-// cgo-timestamp: 1754816326
+// cgo-timestamp: 1754823911
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
 import "C"
 
 import (
-	"fmt"
 	"unsafe"
 )
 
@@ -85,7 +84,8 @@ type AptError struct {
 	Message string
 }
 
-func (e *AptError) Error() string { return fmt.Sprintf("APT Error %d: %s", e.Code, e.Message) }
+//func (e *AptError) Error() string { return fmt.Sprintf("APT Error %d: %s", e.Code, e.Message) }
+func (e *AptError) Error() string { return e.Message }
 
 func CustomError(code int, message string) *AptError {
 	return &AptError{Code: code, Message: message}
