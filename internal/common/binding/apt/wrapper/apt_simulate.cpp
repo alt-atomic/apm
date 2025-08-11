@@ -90,7 +90,7 @@ AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes)
         return make_result(APT_SUCCESS, nullptr);
 
     } catch (const std::exception& e) {
-        return make_result(APT_ERROR_UNKNOWN, (std::string("Dist-upgrade simulation failed: ") + e.what()).c_str());
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Dist upgrade simulation failed: ") + e.what()).c_str());
     }
 }
 
