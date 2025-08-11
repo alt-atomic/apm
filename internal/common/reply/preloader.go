@@ -35,6 +35,7 @@ var (
 	tasksDoneChan chan struct{}
 	mu            sync.Mutex
 	lastLines     int
+	lastRender    string
 )
 
 // TaskUpdateMsg TASK" или "PROGRESS"
@@ -55,7 +56,6 @@ type task struct {
 
 	progressModel    *progress.Model
 	progressDoneText string
-	percent          float64
 }
 
 type model struct {
@@ -117,9 +117,33 @@ func StopSpinner() {
 		<-doneChan
 		p = nil
 
-		// Удалим с экрана последние строки, чтобы «убрать» артефакты
-		for i := 0; i < lastLines-1; i++ {
-			fmt.Print("\033[F\033[K")
+		// Безопасно перерисуем блок: очистим всё и выведем заново без первой строки
+		if lastLines > 0 {
+			// Подняться к первой строке блока
+			for i := 0; i < lastLines-1; i++ {
+				fmt.Print("\033[F")
+			}
+			// Очистить все строки блока
+			for i := 0; i < lastLines; i++ {
+				fmt.Print("\r\033[2K")
+				if i < lastLines-1 {
+					fmt.Print("\033[E")
+				}
+			}
+			// Вернуться к началу блока
+			for i := 0; i < lastLines-1; i++ {
+				fmt.Print("\033[F")
+			}
+
+			// Переотрисовать без первой строки (удаляем строку со спиннером "Executing tasks")
+			if lastRender != "" {
+				lines := strings.Split(lastRender, "\n")
+				if len(lines) > 1 {
+					fmt.Print(strings.Join(lines[1:], "\n"))
+					// гарантируем перевод строки после переотрисовки, чтобы следующий вывод не склеивался
+					fmt.Print("\n")
+				}
+			}
 		}
 	}
 }
@@ -346,6 +370,7 @@ func (m model) View() string {
 		}
 	}
 
+	lastRender = s
 	lastLines = strings.Count(s, "\n") + 1
 	return s
 }

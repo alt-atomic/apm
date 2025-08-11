@@ -150,12 +150,6 @@ func (a *Actions) FindPackage(ctx context.Context, req []string) ([]string, []Pa
 func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
 	return func(pkg string, event aptLib.ProgressType, cur, total uint64) {
 		switch event {
-		case aptLib.CallbackDownloadStart:
-			ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
-			reply.CreateEventNotification(ctx, reply.StateBefore,
-				reply.WithEventName(ev),
-				reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkg)),
-			)
 		case aptLib.CallbackDownloadProgress:
 			if total > 0 {
 				percent := int((cur * 100) / total)
@@ -174,12 +168,6 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 				reply.WithProgress(true),
 				reply.WithProgressDoneText(pkg),
 				reply.WithProgressPercent(100),
-			)
-		case aptLib.CallbackInstallStart:
-			ev := fmt.Sprintf("system.installProgress-%s", pkg)
-			reply.CreateEventNotification(ctx, reply.StateBefore,
-				reply.WithEventName(ev),
-				reply.WithEventView(fmt.Sprintf(lib.T_("Install: %s"), pkg)),
 			)
 		case aptLib.CallbackInstallProgress:
 			ev := fmt.Sprintf("system.installProgress-%s", pkg)
