@@ -14,19 +14,6 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
             return make_result(APT_SUCCESS, nullptr);
         }
 
-        if (pm->cache->dep_cache->DelCount() != 0 &&
-            _config->FindB("APT::Get::Remove", true) == false) {
-            return make_result(APT_ERROR_INSTALL_FAILED, "Packages need to be removed but Remove is disabled");
-        }
-
-        if (_config && _config->FindB("APT::Get::Purge", false) == true) {
-            for (pkgCache::PkgIterator I = pm->cache->dep_cache->PkgBegin(); !I.end(); ++I) {
-                if (I.Purge() == false && (*pm->cache->dep_cache)[I].Mode == pkgDepCache::ModeDelete) {
-                    pm->cache->dep_cache->MarkDelete(I, true);
-                }
-            }
-        }
-
         if (callback != nullptr) {
             global_callback = callback;
             global_user_data = user_data;
@@ -50,11 +37,6 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages");
         }
 
-        if (_config) {
-            _config->Set("APT::Get::Assume-Yes", "true");
-            _config->Set("APT::Get::Remove", "true");
-        }
-
         if (_system) {
             _system->UnLock();
         }
@@ -64,7 +46,7 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
             AptCache* cache {nullptr};
             std::vector<std::string> planned;
             size_t current_idx {0};
-            std::string current_name; // last known package name for ongoing item
+            std::string current_name;
         };
 
         // Prepare planned package names for fallback (new installs or deletes)
