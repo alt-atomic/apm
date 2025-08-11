@@ -90,6 +90,16 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 	}
 }
 
+// findPkgInfoOnlyFirstArg — как обычный поиск, но только для первого аргумента
+func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
+	return func(ctx context.Context, cmd *cli.Command) {
+		if cmd.NArg() >= 2 {
+			return
+		}
+		findPkgWithInstalled(false)(ctx, cmd)
+	}
+}
+
 func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
 	return func(ctx context.Context, cmd *cli.Command) error {
 		lib.Env.Format = cmd.String("format")
@@ -209,7 +219,7 @@ func CommandList() *cli.Command {
 
 					return reply.CliResponse(ctx, *resp)
 				}),
-				ShellComplete: findPkgWithInstalled(false),
+				ShellComplete: findPkgInfoOnlyFirstArg(),
 			},
 			{
 				Name:      "search",

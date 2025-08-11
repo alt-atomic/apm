@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1754939229
+// cgo-timestamp: 1754939522
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
