@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-11 19:02+0600\n"
+"POT-Creation-Date: 2025-08-12 00:01+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -433,7 +433,7 @@ msgid "Failed to update package marks"
 msgstr ""
 
 #: internal/common/apt/errors.go:368
-msgid "Invalid cache for dist-upgrade"
+msgid "Invalid cache for dist upgrade"
 msgstr ""
 
 #: internal/common/apt/errors.go:369
@@ -441,19 +441,19 @@ msgid "Distribution upgrade failed"
 msgstr ""
 
 #: internal/common/apt/errors.go:370
-msgid "Failed to create package manager for dist-upgrade"
+msgid "Failed to create package manager for dist upgrade"
 msgstr ""
 
 #: internal/common/apt/errors.go:371
-msgid "Failed to get package archives for dist-upgrade"
+msgid "Failed to get package archives for dist upgrade"
 msgstr ""
 
 #: internal/common/apt/errors.go:372
-msgid "Failed to download packages for dist-upgrade"
+msgid "Failed to download packages for dist upgrade"
 msgstr ""
 
 #: internal/common/apt/errors.go:373
-msgid "Failed to update package marks after dist-upgrade"
+msgid "Failed to update package marks after dist upgrade"
 msgstr ""
 
 #: internal/common/apt/errors.go:374
@@ -527,7 +527,7 @@ msgstr ""
 
 #: internal/common/apt/errors.go:393
 #, c-format
-msgid "Dist-upgrade simulation failed: %s"
+msgid "Dist upgrade simulation failed: %s"
 msgstr ""
 
 #: internal/common/apt/errors.go:394
@@ -1179,18 +1179,18 @@ msgstr ""
 
 #: internal/distrobox/actions.go:105 internal/distrobox/actions.go:145
 #: internal/distrobox/actions.go:259 internal/distrobox/actions.go:310
-#: internal/system/actions.go:658
+#: internal/system/actions.go:663
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr ""
 
-#: internal/distrobox/actions.go:114 internal/system/actions.go:523
+#: internal/distrobox/actions.go:114 internal/system/actions.go:528
 msgid "Package found"
 msgstr ""
 
 #: internal/distrobox/actions.go:154 internal/distrobox/actions.go:233
-#: internal/system/actions.go:586 internal/system/actions.go:671
-#: internal/system/actions.go:795
+#: internal/system/actions.go:591 internal/system/actions.go:676
+#: internal/system/actions.go:800
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -1257,11 +1257,11 @@ msgstr ""
 msgid "Container name. Required"
 msgstr ""
 
-#: internal/distrobox/commands.go:77 internal/system/commands.go:164
+#: internal/distrobox/commands.go:77 internal/system/commands.go:205
 msgid "Package information"
 msgstr ""
 
-#: internal/distrobox/commands.go:98 internal/system/commands.go:194
+#: internal/distrobox/commands.go:98 internal/system/commands.go:226
 msgid "Quick package search by name"
 msgstr ""
 
@@ -1277,21 +1277,21 @@ msgstr ""
 msgid "Field for sorting, for example: name, version"
 msgstr ""
 
-#: internal/distrobox/commands.go:131 internal/system/commands.go:228
+#: internal/distrobox/commands.go:131 internal/system/commands.go:260
 msgid "Sorting order: ASC or DESC"
 msgstr ""
 
-#: internal/distrobox/commands.go:136 internal/system/commands.go:233
-#: internal/system/commands.go:326
+#: internal/distrobox/commands.go:136 internal/system/commands.go:265
+#: internal/system/commands.go:358
 msgid "Maximum number of records to return"
 msgstr ""
 
-#: internal/distrobox/commands.go:141 internal/system/commands.go:238
-#: internal/system/commands.go:331
+#: internal/distrobox/commands.go:141 internal/system/commands.go:270
+#: internal/system/commands.go:363
 msgid "Starting position (offset) for the result set"
 msgstr ""
 
-#: internal/distrobox/commands.go:146 internal/system/commands.go:243
+#: internal/distrobox/commands.go:146 internal/system/commands.go:275
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1576,7 +1576,7 @@ msgid "No candidates for removal found"
 msgstr ""
 
 #: internal/system/actions.go:242 internal/system/actions.go:322
-#: internal/system/actions.go:449
+#: internal/system/actions.go:454
 msgid "Cancel dialog"
 msgstr ""
 
@@ -1601,176 +1601,176 @@ msgstr ""
 msgid "You must specify at least one package, for example, remove package"
 msgstr ""
 
-#: internal/system/actions.go:312 internal/system/actions.go:435
+#: internal/system/actions.go:312 internal/system/actions.go:440
 msgid "The operation will not make any changes"
 msgstr ""
 
-#: internal/system/actions.go:338
+#: internal/system/actions.go:343
 msgid ""
 "A repository connection error occurred. The package list has been updated, "
 "please try running the command again"
 msgstr ""
 
-#: internal/system/actions.go:353 internal/system/actions.go:463
+#: internal/system/actions.go:358 internal/system/actions.go:468
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/actions.go:354 internal/system/actions.go:464
+#: internal/system/actions.go:359 internal/system/actions.go:469
 msgid "and"
 msgstr ""
 
-#: internal/system/actions.go:355 internal/system/actions.go:465
+#: internal/system/actions.go:360 internal/system/actions.go:470
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/actions.go:364
+#: internal/system/actions.go:369
 msgid ". The system image has been changed."
 msgstr ""
 
-#: internal/system/actions.go:368
+#: internal/system/actions.go:373
 msgid ""
 ". The system image has not been changed! To apply changes, you need to run "
 "with the -a flag."
 msgstr ""
 
-#: internal/system/actions.go:401
+#: internal/system/actions.go:406
 msgid "Package list updated successfully"
 msgstr ""
 
-#: internal/system/actions.go:470
+#: internal/system/actions.go:475
 msgid "The system has been upgrade successfully"
 msgstr ""
 
-#: internal/system/actions.go:484
+#: internal/system/actions.go:489
 msgid "Package name must be specified, for example info package"
 msgstr ""
 
-#: internal/system/actions.go:505 internal/system/package/actions.go:131
+#: internal/system/actions.go:510 internal/system/package/actions.go:131
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr ""
 
-#: internal/system/actions.go:514
+#: internal/system/actions.go:519
 msgid ". Maybe you were looking for: "
 msgstr ""
 
-#: internal/system/actions.go:583 internal/system/actions.go:668
+#: internal/system/actions.go:588 internal/system/actions.go:673
 msgid "Nothing found"
 msgstr ""
 
-#: internal/system/actions.go:635
+#: internal/system/actions.go:640
 msgid "System package"
 msgstr ""
 
-#: internal/system/actions.go:636
+#: internal/system/actions.go:641
 msgid "Stplr package"
 msgstr ""
 
-#: internal/system/actions.go:698 internal/system/commands.go:294
+#: internal/system/actions.go:703 internal/system/commands.go:326
 msgid "Image status"
 msgstr ""
 
-#: internal/system/actions.go:731
+#: internal/system/actions.go:736
 msgid "Command executed successfully"
 msgstr ""
 
-#: internal/system/actions.go:769
+#: internal/system/actions.go:774
 msgid "Changes applied successfully. A reboot is required"
 msgstr ""
 
-#: internal/system/actions.go:812 main.go:224
+#: internal/system/actions.go:817 main.go:224
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 
-#: internal/system/actions.go:828
+#: internal/system/actions.go:833
 msgid "This option is only available for an atomic system"
 msgstr ""
 
-#: internal/system/actions.go:930
+#: internal/system/actions.go:935
 msgid "Modified image. Configuration file: "
 msgstr ""
 
-#: internal/system/actions.go:937
+#: internal/system/actions.go:942
 msgid "Cloud image without changes"
 msgstr ""
 
-#: internal/system/commands.go:76
+#: internal/system/commands.go:117
 msgid "System package management"
 msgstr ""
 
-#: internal/system/commands.go:80
+#: internal/system/commands.go:121
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 
-#: internal/system/commands.go:85 internal/system/commands.go:108
+#: internal/system/commands.go:126 internal/system/commands.go:149
 msgid "Apply to image"
 msgstr ""
 
-#: internal/system/commands.go:103
+#: internal/system/commands.go:144
 msgid "List of packages to remove"
 msgstr ""
 
-#: internal/system/commands.go:115
+#: internal/system/commands.go:156
 msgid "Delete all files"
 msgstr ""
 
-#: internal/system/commands.go:133
+#: internal/system/commands.go:174
 msgid "Updating package database"
 msgstr ""
 
-#: internal/system/commands.go:145
+#: internal/system/commands.go:186
 msgid "General system upgrade"
 msgstr ""
 
-#: internal/system/commands.go:169
+#: internal/system/commands.go:210
 msgid "Full output of information"
 msgstr ""
 
-#: internal/system/commands.go:199
+#: internal/system/commands.go:231
 msgid "Only installed"
 msgstr ""
 
-#: internal/system/commands.go:205 internal/system/commands.go:252
+#: internal/system/commands.go:237 internal/system/commands.go:284
 msgid "Full information output"
 msgstr ""
 
-#: internal/system/commands.go:220
+#: internal/system/commands.go:252
 msgid "Building a query to get a list of packages"
 msgstr ""
 
-#: internal/system/commands.go:224
+#: internal/system/commands.go:256
 msgid "Building query to fetch package list"
 msgstr ""
 
-#: internal/system/commands.go:247
+#: internal/system/commands.go:279
 msgid "Force update all packages before query"
 msgstr ""
 
-#: internal/system/commands.go:276
+#: internal/system/commands.go:308
 msgid "Module for working with the image"
 msgstr ""
 
-#: internal/system/commands.go:282
+#: internal/system/commands.go:314
 msgid "Apply changes to the host"
 msgstr ""
 
-#: internal/system/commands.go:306
+#: internal/system/commands.go:338
 msgid "Image update"
 msgstr ""
 
-#: internal/system/commands.go:318
+#: internal/system/commands.go:350
 msgid "Image changes history"
 msgstr ""
 
-#: internal/system/commands.go:322
+#: internal/system/commands.go:354
 msgid "Filter by image name"
 msgstr ""
 
