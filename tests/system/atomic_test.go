@@ -173,7 +173,7 @@ func TestAtomicRemove(t *testing.T) {
 	ctx := context.Background()
 
 	// Тестируем удаление пакета в атомарной системе
-	resp, err := actions.Remove(ctx, []string{"nonexistent-package"}, false)
+	resp, err := actions.Remove(ctx, []string{"nonexistent-package"}, false, false)
 	if err != nil {
 		t.Logf("Remove error (expected for nonexistent package): %v", err)
 		assert.NotContains(t, err.Error(), "Elevated rights are required")

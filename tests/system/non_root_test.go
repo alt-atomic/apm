@@ -37,7 +37,7 @@ func TestNonRootInfo(t *testing.T) {
 
 	ctx := context.Background()
 
-	resp, err := actions.Info(ctx, "hello", false)
+	resp, err := actions.Info(ctx, testPackage, false)
 	if err != nil {
 		t.Logf("Info error (may be expected if package not in DB): %v", err)
 		// Проверяем что это не критическая ошибка
@@ -81,7 +81,7 @@ func TestNonRootSearch(t *testing.T) {
 
 	ctx := context.Background()
 
-	resp, err := actions.Search(ctx, "hello", false, false)
+	resp, err := actions.Search(ctx, testPackage, false, false)
 	if err != nil {
 		t.Logf("Search error (may be expected): %v", err)
 		assert.True(t,
@@ -107,7 +107,7 @@ func TestNonRootCheckInstall(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err := actions.CheckInstall(ctx, []string{"hello"})
+	_, err := actions.CheckInstall(ctx, []string{testPackage})
 	if err != nil {
 		t.Logf("CheckInstall error (may be expected): %v", err)
 		assert.NotContains(t, err.Error(), "Elevated rights are required")

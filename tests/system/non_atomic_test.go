@@ -20,62 +20,57 @@ import (
 	"apm/internal/system"
 	"apm/lib"
 	"context"
+	"fmt"
+	"os/exec"
 	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNonAtomicInstall тестирует установку пакетов в неатомарной системе
-func TestNonAtomicInstall(t *testing.T) {
-	if lib.Env.IsAtomic {
-		t.Skip("This test is available only for non-atomic systems")
-	}
+const testPackage = "hello"
 
-	if syscall.Geteuid() != 0 {
-		t.Skip("This test requires root privileges. Run with sudo.")
-	}
-
-	actions := system.NewActions()
-	assert.NotNil(t, actions)
-
-	ctx := context.Background()
-
-	resp, err := actions.Install(ctx, []string{"hello"}, false)
-	if err != nil {
-		t.Logf("Install error (may be expected if already installed): %v", err)
-		assert.NotContains(t, err.Error(), "Elevated rights are required")
-	} else {
-		assert.NotNil(t, resp)
-		assert.False(t, resp.Error)
-		t.Logf("Install successful: %+v", resp.Data)
-	}
+func isInstalled(pkg string) bool {
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s rpm -q %s", lib.Env.CommandPrefix, pkg))
+	return cmd.Run() == nil
 }
 
-// TestNonAtomicRemove тестирует удаление пакетов в неатомарной системе
-func TestNonAtomicRemove(t *testing.T) {
+func TestNonAtomicInstallRemoveHello(t *testing.T) {
 	if lib.Env.IsAtomic {
 		t.Skip("This test is available only for non-atomic systems")
 	}
-
 	if syscall.Geteuid() != 0 {
 		t.Skip("This test requires root privileges. Run with sudo.")
 	}
 
+	ctx := context.Background()
 	actions := system.NewActions()
 	assert.NotNil(t, actions)
 
-	ctx := context.Background()
-
-	resp, err := actions.Remove(ctx, []string{"nonexistent-package"}, false)
-	if err != nil {
-		t.Logf("Remove error (expected for nonexistent package): %v", err)
-		assert.NotContains(t, err.Error(), "Elevated rights are required")
-	} else {
-		assert.NotNil(t, resp)
-		assert.False(t, resp.Error)
-		t.Logf("Remove successful")
+	if isInstalled(testPackage) {
+		_, err := actions.Remove(ctx, []string{testPackage}, false, false)
+		if err != nil {
+			t.Fatalf("Remove failed: %v", err)
+		}
 	}
+	t.Cleanup(func() {
+		if isInstalled(testPackage) {
+			_, err := actions.Remove(ctx, []string{testPackage}, false, false)
+			if err != nil {
+				t.Fatalf("Remove failed: %v", err)
+			}
+		}
+	})
+
+	resp, err := actions.Install(ctx, []string{testPackage}, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.False(t, resp.Error)
+
+	resp, err = actions.Remove(ctx, []string{testPackage}, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.False(t, resp.Error)
 }
 
 // TestNonAtomicUpdate тестирует обновление системы в неатомарной системе

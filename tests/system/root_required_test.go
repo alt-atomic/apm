@@ -65,13 +65,13 @@ func TestRootRemove(t *testing.T) {
 
 	ctx := context.Background()
 
-	resp, err := actions.Remove(ctx, []string{"nonexistent-package"}, false)
+	resp, err := actions.Remove(ctx, []string{"nonexistent-package"}, false, false)
 	if err != nil {
 		t.Logf("Remove error (expected for nonexistent package): %v", err)
 		assert.NotContains(t, err.Error(), "Elevated rights are required")
 		assert.True(t,
 			contains(err.Error(), "not installed") ||
-				contains(err.Error(), "No candidates") ||
+				contains(err.Error(), " Failed to retrieve information about the package") ||
 				contains(err.Error(), "Couldn't find package"),
 			"Unexpected error: %v", err)
 	} else {

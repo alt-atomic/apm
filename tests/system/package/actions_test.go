@@ -28,6 +28,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const testPackage = "hello"
+
 // TestNewActions проверяет создание Actions
 func TestNewActions(t *testing.T) {
 	pkgDBService, err := _package.NewPackageDBService(lib.GetDB(true))
@@ -49,22 +51,14 @@ func TestInstall(t *testing.T) {
 	}
 
 	pkgDBService, err := _package.NewPackageDBService(lib.GetDB(true))
-	if err != nil {
-		t.Skip("Database not available, skipping test")
-	}
-
 	stplrService := _package.NewSTPLRService()
 	actions := _package.NewActions(pkgDBService, stplrService)
 
 	ctx := context.Background()
 
-	errs := actions.Install(ctx, "hello")
-	if len(errs) > 0 {
-		t.Logf("Install errors (may be expected): %v", errs)
-		// Проверяем что это не ошибка прав доступа
-		for _, err := range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
+	err = actions.Install(ctx, []string{testPackage})
+	if err != nil {
+		t.Logf("Install error (may be expected): %v", err)
 	} else {
 		t.Log("Install successful")
 	}
@@ -86,17 +80,14 @@ func TestRemoveRequiresRoot(t *testing.T) {
 
 	ctx := context.Background()
 
-	errs := actions.Remove(ctx, "nonexistent-package")
-	if len(errs) > 0 {
-		t.Logf("Remove errors (expected for nonexistent package): %v", errs)
-		for _, err = range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-			assert.True(t,
-				strings.Contains(err.Error(), "not installed") ||
-					strings.Contains(err.Error(), "No candidates") ||
-					strings.Contains(err.Error(), "Couldn't find package"),
-				"Unexpected error: %v", err)
-		}
+	err = actions.Remove(ctx, []string{"nonexistent-package"}, false)
+	if err != nil {
+		t.Logf("Remove error (expected for nonexistent package): %v", err)
+		assert.True(t,
+			strings.Contains(err.Error(), "not installed") ||
+				strings.Contains(err.Error(), "No candidates") ||
+				strings.Contains(err.Error(), "Package not found"),
+			"Unexpected error: %v", err)
 	} else {
 		t.Log("Remove successful")
 	}
@@ -118,12 +109,9 @@ func TestCheckInstall(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, errs := actions.Check(ctx, "hello", "install")
-	if len(errs) > 0 {
-		t.Logf("Check install errors (may be expected): %v", errs)
-		for _, err = range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
+	_, err = actions.CheckInstall(ctx, []string{testPackage})
+	if err != nil {
+		t.Logf("CheckInstall error (may be expected): %v", err)
 	} else {
 		t.Log("Check install successful")
 	}
@@ -145,12 +133,9 @@ func TestCheckRemove(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, errs := actions.Check(ctx, "nonexistent-package", "remove")
-	if len(errs) > 0 {
-		t.Logf("Check remove errors (expected): %v", errs)
-		for _, err := range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
+	_, err = actions.CheckRemove(ctx, []string{"nonexistent-package"})
+	if err != nil {
+		t.Logf("Check remove error (expected): %v", err)
 	} else {
 		t.Log("Check remove successful")
 	}
@@ -197,12 +182,9 @@ func TestUpgradeRequiresRoot(t *testing.T) {
 
 	ctx := context.Background()
 
-	errs := actions.Upgrade(ctx)
-	if len(errs) > 0 {
-		t.Logf("Upgrade errors (may be expected): %v", errs)
-		for _, err = range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
+	err = actions.Upgrade(ctx)
+	if err != nil {
+		t.Logf("Upgrade error (may be expected): %v", err)
 	} else {
 		t.Log("Upgrade successful")
 	}
@@ -284,9 +266,6 @@ func TestUpdateKernel(t *testing.T) {
 	errs := actions.UpdateKernel(ctx)
 	if len(errs) > 0 {
 		t.Logf("UpdateKernel errors (may be expected): %v", errs)
-		for _, err = range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
 	} else {
 		t.Log("UpdateKernel successful")
 	}

@@ -326,6 +326,11 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 	reply.CreateSpinner()
 
+	_, err = a.serviceAptActions.Update(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	errInstall := a.serviceAptActions.Install(ctx, packageNames)
 	if errInstall != nil {
 		var matchedErr *apt.MatchedError

@@ -33,6 +33,11 @@ sh ./po/update_pot.sh
 sh ./po/update_po.sh
 ```
 
+## Тесты
+```
+sudo meson test -C build go-test
+```
+
 Общая справка:
 ```
 apm -h

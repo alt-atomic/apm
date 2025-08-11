@@ -126,26 +126,26 @@ func TestUnitFormatPackageOutput(t *testing.T) {
 		nil, nil, nil, nil, nil,
 	)
 
-	testPackage := _package.Package{
+	testNewPackage := _package.Package{
 		Name:        "vim",
 		Version:     "8.2",
 		Installed:   true,
 		Description: "Vi Improved",
 	}
 
-	result := actions.FormatPackageOutput(testPackage, true)
+	result := actions.FormatPackageOutput(testNewPackage, true)
 	assert.IsType(t, _package.Package{}, result)
 	resultPkg := result.(_package.Package)
 	assert.Equal(t, "vim", resultPkg.Name)
 
-	result = actions.FormatPackageOutput(testPackage, false)
+	result = actions.FormatPackageOutput(testNewPackage, false)
 	assert.IsType(t, system.ShortPackageResponse{}, result)
 	shortResult := result.(system.ShortPackageResponse)
 	assert.Equal(t, "vim", shortResult.Name)
 	assert.Equal(t, "8.2", shortResult.Version)
 	assert.True(t, shortResult.Installed)
 
-	testPackages := []_package.Package{testPackage}
+	testPackages := []_package.Package{testNewPackage}
 	result = actions.FormatPackageOutput(testPackages, false)
 	assert.IsType(t, []system.ShortPackageResponse{}, result)
 	resultList := result.([]system.ShortPackageResponse)

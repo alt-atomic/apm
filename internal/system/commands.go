@@ -171,15 +171,6 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					//examples.Test(cmd.Args().First())
-					//return reply.CliResponse(ctx, reply.APIResponse{
-					//	Data: map[string]interface{}{
-					//		"message":     "",
-					//		"packageInfo": "",
-					//	},
-					//	Error: false,
-					//})
-
 					resp, err := NewActions().Info(ctx, cmd.Args().First(), cmd.Bool("full"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))

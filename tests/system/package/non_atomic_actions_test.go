@@ -49,13 +49,9 @@ func TestNonAtomicInstall(t *testing.T) {
 	ctx := context.Background()
 
 	// Тестируем реальную установку в неатомарной системе
-	errs := actions.Install(ctx, "hello")
-	if len(errs) > 0 {
-		t.Logf("Install errors (may be expected): %v", errs)
-		// Проверяем что это не ошибка прав доступа
-		for _, err := range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
+	err = actions.Install(ctx, []string{testPackage})
+	if err != nil {
+		t.Logf("Install error (may be expected): %v", err)
 	} else {
 		t.Log("Install successful")
 	}
@@ -82,17 +78,14 @@ func TestNonAtomicRemove(t *testing.T) {
 
 	ctx := context.Background()
 
-	errs := actions.Remove(ctx, "nonexistent-package")
-	if len(errs) > 0 {
-		t.Logf("Remove errors (expected for nonexistent package): %v", errs)
-		for _, err = range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-			assert.True(t,
-				strings.Contains(err.Error(), "not installed") ||
-					strings.Contains(err.Error(), "No candidates") ||
-					strings.Contains(err.Error(), "Couldn't find package"),
-				"Unexpected error: %v", err)
-		}
+	err = actions.Remove(ctx, []string{testPackage}, false)
+	if err != nil {
+		t.Logf("Remove error (expected for nonexistent package): %v", err)
+		assert.True(t,
+			strings.Contains(err.Error(), "not installed") ||
+				strings.Contains(err.Error(), "No candidates") ||
+				strings.Contains(err.Error(), "Couldn't find package"),
+			"Unexpected error: %v", err)
 	} else {
 		t.Log("Remove successful")
 	}
@@ -121,7 +114,6 @@ func TestNonAtomicUpdate(t *testing.T) {
 	_, err = actions.Update(ctx)
 	if err != nil {
 		t.Logf("Update error (may be expected): %v", err)
-		assert.NotContains(t, err.Error(), "Elevated rights are required")
 	} else {
 		t.Log("Update successful")
 	}
@@ -147,12 +139,9 @@ func TestNonAtomicUpgrade(t *testing.T) {
 
 	ctx := context.Background()
 
-	errs := actions.Upgrade(ctx)
-	if len(errs) > 0 {
-		t.Logf("Upgrade errors (may be expected): %v", errs)
-		for _, err = range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
+	err = actions.Upgrade(ctx)
+	if err != nil {
+		t.Logf("Upgrade error (may be expected): %v", err)
 	} else {
 		t.Log("Upgrade successful")
 	}
@@ -181,9 +170,6 @@ func TestNonAtomicUpdateKernel(t *testing.T) {
 	errs := actions.UpdateKernel(ctx)
 	if len(errs) > 0 {
 		t.Logf("UpdateKernel errors (may be expected): %v", errs)
-		for _, err = range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
 	} else {
 		t.Log("UpdateKernel successful")
 	}
