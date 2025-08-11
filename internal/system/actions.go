@@ -326,7 +326,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 	reply.CreateSpinner()
 
-	_, err = a.serviceAptActions.Update(ctx)
+	err = a.serviceAptActions.AptUpdate(ctx)
 	if err != nil {
 		return nil, err
 	}
