@@ -22,6 +22,7 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/urfave/cli/v3"
 )
@@ -38,23 +39,53 @@ func newErrorResponse(message string) reply.APIResponse {
 
 func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
-		if cmd.NArg() >= 2 {
+		args := cmd.Args().Slice()
+
+		// Текущий токен — последний позиционный аргумент (если есть)
+		var currentToken string
+		if len(args) > 0 {
+			currentToken = args[len(args)-1]
+		}
+		currentToken = strings.TrimSpace(currentToken)
+		if currentToken == "" {
+			// Пользователь ещё ничего не ввёл — не предлагаем варианты
 			return
 		}
-		prefix := ""
-		if cmd.NArg() == 1 {
-			prefix = cmd.Args().First()
-		}
-		like := prefix + "%"
 
+		base := strings.TrimRight(currentToken, "+-")
+		if base == "" {
+			return
+		}
+		suffix := currentToken[len(base):]
+
+		exclude := make(map[string]struct{}, len(args))
+		for i := 0; i < len(args)-1; i++ {
+			exclude[strings.TrimRight(strings.TrimSpace(args[i]), "+-")] = struct{}{}
+		}
+
+		like := base + "%"
 		svc := NewActions().serviceAptDatabase
 		if svc == nil {
 			return
 		}
 
-		pkgs, _ := svc.SearchPackagesMultiLimit(ctx, like, 100, installed)
+		pkgs, _ := svc.SearchPackagesMultiLimit(ctx, like, 200, installed)
+
+		// Избегаем самоповторов и дубликатов в выводе
+		printed := make(map[string]struct{}, len(pkgs))
 		for _, p := range pkgs {
-			fmt.Println(p.Name)
+			if _, seen := exclude[p.Name]; seen {
+				continue
+			}
+			candidate := p.Name + suffix
+			if strings.EqualFold(candidate, currentToken) {
+				continue
+			}
+			if _, dup := printed[candidate]; dup {
+				continue
+			}
+			printed[candidate] = struct{}{}
+			fmt.Println(candidate)
 		}
 	}
 }

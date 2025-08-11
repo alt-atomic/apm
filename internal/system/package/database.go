@@ -323,7 +323,7 @@ func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePat
 
 	query := s.db.WithContext(ctx).
 		Model(&DBPackage{}).
-		Where("(name LIKE ? OR (',' || provides || ',') LIKE ?)", likePattern, likePattern).
+		Where("name LIKE ?", likePattern).
 		Limit(limit)
 
 	if installed {

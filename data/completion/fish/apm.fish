@@ -128,3 +128,10 @@ complete -x -c apm -n '__fish_seen_subcommand_from distrobox d; and not __fish_s
 complete -x -c apm -n '__fish_apm_no_subcommand' -a 'help' -d 'Показать список команд или справку по каждой команде'
 complete -c apm -n '__fish_seen_subcommand_from completion' -f -l help -s h -d 'show help'
 complete -x -c apm -n '__fish_seen_subcommand_from completion; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
+
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from remove; and not string match -r -- "^-" -- (commandline -ct)' \
+  -a '(set -l prev (commandline -opc); set -l cur (commandline -ct); apm $prev $cur --generate-shell-completion)'
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from install; and not string match -r -- "^-" -- (commandline -ct)' \
+  -a '(set -l prev (commandline -opc); set -l cur (commandline -ct); apm $prev $cur --generate-shell-completion)'
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from info; and not string match -r -- "^-" -- (commandline -ct)' \
+  -a '(set -l prev (commandline -opc); set -l cur (commandline -ct); apm $prev $cur --generate-shell-completion)'

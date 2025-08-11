@@ -20,11 +20,7 @@ __apm_bash_autocomplete() {
       __apm_init_completion -n "=:" || return
     fi
     words=("${words[@]:0:$cword}")
-    if [[ "$cur" == "-"* ]]; then
-      requestComp="${words[*]} ${cur} --generate-shell-completion"
-    else
-      requestComp="${words[*]} --generate-shell-completion"
-    fi
+    requestComp="${words[*]} ${cur} --generate-shell-completion"
     opts=$(eval "${requestComp}" 2>/dev/null)
     COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
     return 0
