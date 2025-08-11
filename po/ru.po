@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-02 17:44+0600\n"
+"POT-Creation-Date: 2025-08-11 19:02+0600\n"
 "PO-Revision-Date: 2025-03-25 17:42+0300\n"
 "Last-Translator: David Sultaniiazov <x1z53@alt-gnome.ru>\n"
 "Language-Team: Russian\n"
@@ -20,1481 +20,85 @@ msgstr ""
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 47.1\n"
 
-#: cmd/common/helper/polkit.go:100
-msgid "polkit dbus failure: %w"
-msgstr "polkit dbus ошибка: %w"
-
-#: cmd/common/helper/polkit.go:103
-msgid "polkit unpack failure: %w"
-msgstr "polkit, ошибка распаковки: %w"
-
-#: cmd/common/helper/polkit.go:123
-#, c-format
-msgid "not authorized by polkit (action=%s)"
-msgstr "не авторизовано polkit (действие=%s)"
-
-#: cmd/common/helper/text.go:67
-msgid "version not found"
-msgstr "версия не найдена"
-
-#: cmd/common/helper/text.go:75
-#, c-format
-msgid "%.2f MB"
-msgstr "%.2f МБ"
-
-#: cmd/common/helper/translate.go:50 cmd/common/helper/translate.go:78
-#: cmd/common/helper/translate.go:106
-msgid "Module:"
-msgstr "Модуль:"
-
-#: cmd/common/helper/translate.go:51 cmd/common/helper/translate.go:79
-#: cmd/common/helper/translate.go:107
-msgid "Usage:"
-msgstr "Применение:"
-
-#: cmd/common/helper/translate.go:52
-msgid "Version:"
-msgstr "Версия:"
-
-#: cmd/common/helper/translate.go:53 cmd/common/helper/translate.go:81
-#: cmd/common/helper/translate.go:109
-msgid "Description:"
-msgstr "Описание:"
-
-#: cmd/common/helper/translate.go:54 cmd/common/helper/translate.go:110
-msgid "Commands:"
-msgstr "Команды:"
-
-#: cmd/common/helper/translate.go:55 cmd/common/helper/translate.go:56
-#: cmd/common/helper/translate.go:82 cmd/common/helper/translate.go:83
-#: cmd/common/helper/translate.go:111 cmd/common/helper/translate.go:112
-msgid "Options:"
-msgstr "Параметры:"
-
-#: cmd/common/helper/translate.go:80 cmd/common/helper/translate.go:108
-msgid "Category:"
-msgstr "Категория:"
-
-#: cmd/common/helper/translate.go:84
-msgid "Global options:"
-msgstr "Глобальные параметры:"
-
-#: cmd/common/icon/service.go:61
-msgid "Icon for package %s (container: %s) not found: %v"
-msgstr "Иконка пакета %s (контейнер: %s) не найдена: %v"
-
-#: cmd/common/icon/service.go:86 cmd/common/icon/service.go:102
-msgid "Error saving icon %s: %v"
-msgstr "Ошибка при сохранении иконки %s: %v"
-
-#: cmd/common/icon/service.go:112
-msgid "Error calculating icon statistics: "
-msgstr "Ошибка вычисления статистики иконки: "
-
-#: cmd/common/icon/service.go:114
-#, c-format
-msgid "Total number of icons in the database: %d, total size: %d bytes"
-msgstr "Общее количество иконок в базе данных: %d, общий размер: %d байт"
-
-#: cmd/common/icon/service.go:134
-msgid "Error preparing temporary directories: %v"
-msgstr "Ошибка подготовки временных директорий: %v"
-
-#: cmd/common/icon/service.go:152
-msgid "Error checking the existence of the icon in the database: "
-msgstr "Ошибка проверки существования иконки в базе данных: "
-
-#: cmd/common/icon/service.go:165
-#, c-format
-msgid "Error retrieving icon: %s"
-msgstr "Ошибка извлечения иконки: %s"
-
-#: cmd/common/icon/service.go:171
-msgid "Error compressing the icon: "
-msgstr "Ошибка сжатия иконки: "
-
-#: cmd/common/icon/service.go:196
-msgid "Error writing icon %s to the database: %v"
-msgstr "Ошибка записи иконки %s в базу данных: %v"
-
-#: cmd/common/icon/service.go:212
-#, c-format
-msgid "Icon %s not found"
-msgstr "Иконка %s не найдена"
-
-#: cmd/common/icon/service.go:216
-msgid "Error unpacking icon %s: %v"
-msgstr "Ошибка распаковки иконки %s: %v"
-
-#: cmd/common/icon/swcat.go:86
-msgid "Error copying from container: %v, stderr: %s"
-msgstr "Ошибка копирования из контейнера: %v, ошибка: %s"
-
-#: cmd/common/icon/swcat.go:176
-#, c-format
-msgid "File %s not found in %s"
-msgstr "Файл %s не найден в %s"
-
-#: cmd/common/icon/swcat.go:246
-#, c-format
-msgid "Icon not found for package %s"
-msgstr "Иконка не найдена для пакета %s"
-
-#: cmd/common/icon/swcat.go:259
-msgid "Failed to read directory %s: %w"
+#: internal/common/appstream/swcat.go:123
+#, fuzzy
+msgid "Cannot read dir %s: %w"
 msgstr "Не удалось прочитать директорию %s: %w"
 
-#: cmd/common/icon/swcat.go:271
-msgid "Error retrieving files in %s: %v, stderr: %s"
-msgstr "Ошибка извлечения файлов в %s: %v, ошибка: %s"
-
-#: cmd/common/icon/swcat.go:292
-msgid "Failed to read file %s: %w"
-msgstr "Не удалось прочитать файл %s: %w"
-
-#: cmd/common/icon/swcat.go:298
-msgid "Error executing command for file %s: %v, stderr: %s"
-msgstr "Ошибка выполнения команды для файла %s: %v, ошибка: %s"
-
-#: cmd/common/icon/swcat.go:305
-msgid "Failed to unpack file %s: %w"
-msgstr "Не удалось распаковать файл %s: %w"
-
-#: cmd/common/icon/swcat.go:311
-msgid "Error parsing XML file %s: %w"
-msgstr "Ошибка парсинга XML-файла %s: %w"
-
-#: cmd/common/reply/event.go:110
-msgid "Failed to retrieve call information"
-msgstr "Не удалось извлечь информацию вызова"
-
-#: cmd/common/reply/event.go:116
-msgid "FuncForPC returned nil"
-msgstr "FuncForPC вернуло nil"
-
-#: cmd/common/reply/event.go:161
-msgid "DBus connection is not initialized"
-msgstr "Соединение DBus не было инициализировано"
-
-#: cmd/common/reply/event.go:170
-msgid "Error sending notification: %v"
-msgstr "Ошибка отправки уведомления: %v"
-
-#: cmd/common/reply/event.go:177 cmd/common/reply/event.go:219
-msgid "Saving packages to the database"
-msgstr "Сохранение пакетов в базу данных"
-
-#: cmd/common/reply/event.go:179
-msgid "Requesting list of containers"
-msgstr "Запрос списка контейнеров"
-
-#: cmd/common/reply/event.go:181
-msgid "Exporting package"
-msgstr "Экспортирование пакета"
-
-#: cmd/common/reply/event.go:183
-msgid "Requesting container information"
-msgstr "Запрос информации о контейнере"
-
-#: cmd/common/reply/event.go:185
-msgid "Creating container"
-msgstr "Создание контейнера"
-
-#: cmd/common/reply/event.go:187
-msgid "Deleting container"
-msgstr "Удаление контейнера"
-
-#: cmd/common/reply/event.go:189
-msgid "Installing package"
-msgstr "Установка пакета"
-
-#: cmd/common/reply/event.go:191
-msgid "Removing package"
-msgstr "Удаление пакета"
-
-#: cmd/common/reply/event.go:193
-msgid "Retrieving list of packages"
-msgstr "Извлечение списка пакетов"
-
-#: cmd/common/reply/event.go:195
-msgid "Determining file owner"
-msgstr "Определение владельца файла"
-
-#: cmd/common/reply/event.go:197
-msgid "Searching package paths"
-msgstr "Поиск путей пакета"
-
-#: cmd/common/reply/event.go:199
-msgid "Retrieving package information"
-msgstr "Извлечение информации о пакете"
-
-#: cmd/common/reply/event.go:201
-msgid "Updating packages"
-msgstr "Обновление пакетов"
-
-#: cmd/common/reply/event.go:203
-msgid "Filtering packages"
-msgstr "Фильтрация пакетов"
-
-#: cmd/common/reply/event.go:205
-msgid "Working with packages"
-msgstr "Работа с пакетами"
-
-#: cmd/common/reply/event.go:207
-msgid "System update"
-msgstr "Обновление системы"
-
-#: cmd/common/reply/event.go:209
-msgid "Analyzing packages"
-msgstr "Анализ пакетов"
-
-#: cmd/common/reply/event.go:211
-msgid "General update process"
-msgstr "Общий процесс обновления"
-
-#: cmd/common/reply/event.go:213
-msgid "General update kernel"
-msgstr "Общий процесс обновления"
-
-#: cmd/common/reply/event.go:215
-msgid "Loading package list from STPLR repository"
-msgstr "Загрузка списка пакетов из репозитория STPLR"
-
-#: cmd/common/reply/event.go:217
-msgid "Loading package list from ALT repository"
-msgstr "Загрузка списка пакетов из репозитория ALT"
-
-#: cmd/common/reply/event.go:221
-msgid "Saving image history to the database"
-msgstr "Сохранение истории образа в базу данных"
-
-#: cmd/common/reply/event.go:223
-msgid "Building local image"
-msgstr "Создание локального образа"
-
-#: cmd/common/reply/event.go:225
-msgid "Switching to local image"
-msgstr "Переключение на локальный образ"
-
-#: cmd/common/reply/event.go:227
-msgid "General Image Update Process"
-msgstr "Общий процесс обновления образа"
-
-#: cmd/common/reply/event.go:229
-msgid "Downloading base image update"
-msgstr "Загрузка обновления базового образа"
-
-#: cmd/common/reply/event.go:231
-msgid "Cleaning up old images"
-msgstr "Очистка старых образов"
-
-#: cmd/common/reply/event.go:233
-msgid "Synchronizing database"
-msgstr "Синхронизация базы данных"
-
-#. Общий спиннер + фраза
-#: cmd/common/reply/preloader.go:309
-msgid "Executing tasks"
-msgstr "Выполнение задач"
-
-#: cmd/common/reply/preloader.go:326
-msgid "Progress completed"
-msgstr "Прогресс завершён"
-
-#: cmd/common/reply/preloader.go:328
-#, c-format
-msgid "Progress: %s completed"
-msgstr "Прогресс: %s завершён"
-
-#: cmd/common/reply/response.go:111 cmd/common/reply/response.go:134
-#: cmd/common/reply/response.go:241 cmd/common/reply/response.go:267
-msgid "%T (unknown type)"
-msgstr "%T (неизвестный тип)"
-
-#: cmd/common/reply/response.go:130 cmd/common/reply/response.go:263
-msgid "%T (slice of unknown type)"
-msgstr "%T (фрагмент неизвестного типа)"
-
-#: cmd/common/reply/response.go:157 cmd/common/reply/response.go:164
-#, c-format
-msgid "%s: no"
-msgstr "%s: нет"
-
-#: cmd/common/reply/response.go:174
-msgid "yes"
-msgstr "да"
-
-#: cmd/common/reply/response.go:176
-msgid "no"
-msgstr "нет"
-
-#: cmd/common/reply/translate.go:11
-msgid "Package"
-msgstr "Пакет"
-
-#: cmd/common/reply/translate.go:13
-msgid "Type Package"
-msgstr "Тип пакета"
-
-#: cmd/common/reply/translate.go:15
-msgid "Count"
-msgstr "Количество"
-
-#: cmd/common/reply/translate.go:17
-msgid "Console Application"
-msgstr "Консольная утилита"
-
-#: cmd/common/reply/translate.go:19
-msgid "Package Information"
-msgstr "Информация о пакете"
-
-#: cmd/common/reply/translate.go:21 cmd/system/package/dialog.go:63
-#: cmd/system/package/dialog.go:91
-msgid "Install"
-msgstr "Установить"
-
-#: cmd/common/reply/translate.go:23
-msgid "Storage Type"
-msgstr "Тип хранилища"
-
-#: cmd/common/reply/translate.go:25 cmd/common/reply/translate.go:77
-msgid "Date"
-msgstr "Дата"
-
-#: cmd/common/reply/translate.go:27
-msgid "Image Digest"
-msgstr "Дайджест образа"
-
-#: cmd/common/reply/translate.go:29
-msgid "Distribution"
-msgstr "Дистрибутив"
-
-#: cmd/common/reply/translate.go:31
-msgid "Container"
-msgstr "Контейнер"
-
-#: cmd/common/reply/translate.go:33 cmd/system/package/dialog.go:288
-msgid "Name"
-msgstr "Название"
-
-#: cmd/common/reply/translate.go:35
-msgid "Extra Installed"
-msgstr "Дополнительно установлено"
-
-#: cmd/common/reply/translate.go:37
-msgid "Upgraded Count"
-msgstr "Количество обновлённых"
-
-#: cmd/common/reply/translate.go:39
-msgid "Booted Image"
-msgstr "Загруженный образ"
-
-#: cmd/common/reply/translate.go:41
-msgid "Removed Packages"
-msgstr "Удалённые пакеты"
-
-#: cmd/common/reply/translate.go:43
-msgid "Provides"
-msgstr "Обеспечивает"
-
-#: cmd/common/reply/translate.go:45
-msgid "Providers"
-msgstr "Поставщики"
-
-#: cmd/common/reply/translate.go:47
-msgid "Version"
-msgstr "Версия"
-
-#: cmd/common/reply/translate.go:49
-msgid "History"
-msgstr "История"
-
-#: cmd/common/reply/translate.go:51 cmd/system/package/dialog.go:312
-msgid "Dependencies"
-msgstr "Зависимости"
-
-#: cmd/common/reply/translate.go:53
-msgid "Installed Size"
-msgstr "Размер при установке"
-
-#: cmd/common/reply/translate.go:55
-msgid "Removed Count"
-msgstr "Количество удалённых"
-
-#: cmd/common/reply/translate.go:57
-msgid "Upgraded Packages"
-msgstr "Обновлённые пакеты"
-
-#: cmd/common/reply/translate.go:59
-msgid "Package Name"
-msgstr "Имя пакета"
-
-#: cmd/common/reply/translate.go:61
-msgid "Image"
-msgstr "Образ"
-
-#: cmd/common/reply/translate.go:63
-msgid "Commands"
-msgstr "Команды"
-
-#: cmd/common/reply/translate.go:65 cmd/system/package/dialog.go:291
-msgid "Maintainer"
-msgstr "Сопровождающий"
-
-#: cmd/common/reply/translate.go:67
-msgid "Installed Version"
-msgstr "Установленная версия"
-
-#: cmd/common/reply/translate.go:69 cmd/system/package/dialog.go:65
-#: cmd/system/package/dialog.go:91
-msgid "Remove"
-msgstr "Удалить"
-
-#: cmd/common/reply/translate.go:71
-msgid "Containers"
-msgstr "Контейнеры"
-
-#: cmd/common/reply/translate.go:73
-msgid "Paths"
-msgstr "Пути"
-
-#: cmd/common/reply/translate.go:75
-msgid "Description"
-msgstr "Описание"
-
-#: cmd/common/reply/translate.go:79
-msgid "Newly Installed Count"
-msgstr "Количество свежеустановленных"
-
-#: cmd/common/reply/translate.go:81
-msgid "Active"
-msgstr "Активно"
-
-#: cmd/common/reply/translate.go:83
-msgid "Information"
-msgstr "Информация"
-
-#: cmd/common/reply/translate.go:85
-msgid "Total Count"
-msgstr "Общее количество"
-
-#: cmd/common/reply/translate.go:87 cmd/system/package/dialog.go:292
-msgid "Installed"
-msgstr "Установлено"
-
-#: cmd/common/reply/translate.go:89
-msgid "Package Manager"
-msgstr "Пакетный менеджер"
-
-#: cmd/common/reply/translate.go:91
-msgid "Last Changelog"
-msgstr "Последние изменения"
-
-#: cmd/common/reply/translate.go:93
-msgid "Section"
-msgstr "Секция"
-
-#: cmd/common/reply/translate.go:95
-msgid "Specification"
-msgstr "Спецификация"
-
-#: cmd/common/reply/translate.go:97
-msgid "Booted"
-msgstr "Загружено"
-
-#: cmd/common/reply/translate.go:99
-msgid "Staged"
-msgstr "Зафиксированно"
-
-#: cmd/common/reply/translate.go:101 cmd/system/package/dialog.go:309
-msgid "Size"
-msgstr "Размер"
-
-#: cmd/common/reply/translate.go:103
-msgid "Newly Installed Packages"
-msgstr "Свежеустановленные пакеты"
-
-#: cmd/common/reply/translate.go:105
-msgid "Not Upgraded Count"
-msgstr "Количество не обновлённых"
-
-#: cmd/common/reply/translate.go:107
-msgid "Container Name"
-msgstr "Имя контейнера"
-
-#: cmd/common/reply/translate.go:109
-msgid "Configuration"
-msgstr "Конфигурация"
-
-#: cmd/common/reply/translate.go:111
-msgid "Exporting"
-msgstr "Экспортировано"
-
-#: cmd/common/reply/translate.go:113
-msgid "Status"
-msgstr "Статус"
-
-#: cmd/common/reply/translate.go:115
-msgid "Image Date"
-msgstr "Дата образа"
-
-#: cmd/common/reply/translate.go:117
-msgid "Packages"
-msgstr "Пакеты"
-
-#: cmd/common/reply/translate.go:119
-msgid "Filename"
-msgstr "Имя файла"
-
-#: cmd/common/reply/translate.go:121
-msgid "Container Information"
-msgstr "Информация о контейнере"
-
-#: cmd/common/reply/translate.go:123
-msgid "Image Name"
-msgstr "Имя образа"
-
-#: cmd/common/reply/translate.go:125
-msgid "Transport"
-msgstr "Транспорт"
-
-#: cmd/common/reply/translate.go:127
-msgid "Pinned"
-msgstr "Закреплено"
-
-#: cmd/common/reply/translate.go:129
-msgid "List"
-msgstr "Список"
-
-#: cmd/distrobox/actions.go:82
-msgid "Package list successfully updated"
-msgstr "Список пакетов успешно обновлён"
-
-#: cmd/distrobox/actions.go:104 cmd/distrobox/actions.go:144
-#: cmd/distrobox/actions.go:258 cmd/distrobox/actions.go:309
-#: cmd/system/actions.go:829
-#, c-format
-msgid "You must specify the package name, for example `%s package`"
-msgstr "Необходимо указать имя пакета, к примеру `%s package`"
-
-#: cmd/distrobox/actions.go:113 cmd/system/actions.go:743
-msgid "Package found"
-msgstr "Найден пакет"
-
-#: cmd/distrobox/actions.go:153 cmd/distrobox/actions.go:232
-#: cmd/system/actions.go:806 cmd/system/actions.go:842
-#: cmd/system/actions.go:966
-#, c-format
-msgid "%d record found"
-msgid_plural "%d records found"
-msgstr[0] "Найдена %d запись"
-msgstr[1] "Найдено %d записи"
-msgstr[2] "Найдено %d записей"
-
-#: cmd/distrobox/actions.go:286
-#, c-format
-msgid "Package %s installed"
-msgstr "Пакет %s установлен"
-
-#: cmd/distrobox/actions.go:338
-#, c-format
-msgid "Package %s removed"
-msgstr "Пакет %s удалён"
-
-#: cmd/distrobox/actions.go:379
-msgid "You must specify the image link (--image)"
-msgstr "Необходимо указать ссылку на образ (--image)"
-
-#: cmd/distrobox/actions.go:384 cmd/distrobox/actions.go:413
-msgid "You must specify the container name (--name)"
-msgstr "Необходимо указать имя контейнера (--name)"
-
-#: cmd/distrobox/actions.go:395
-#, c-format
-msgid "Container %s successfully created"
-msgstr "Контейнер %s успешно создан"
-
-#: cmd/distrobox/actions.go:424
-#, c-format
-msgid "Container %s successfully deleted"
-msgstr "Контейнер %s успешно удалён"
-
-#: cmd/distrobox/actions.go:432
-msgid "Error deleting container: %v"
-msgstr "Ошибка удаления контейнера: %s"
-
-#: cmd/distrobox/actions.go:510
-msgid "You must specify the container name"
-msgstr "Необходимо указать имя контейнера"
-
-#: cmd/distrobox/actions.go:518
-msgid "Failed to delete container records: %w"
-msgstr "Не удалось удалить записи контейнера: %w"
-
-#: cmd/distrobox/actions.go:542 main.go:138
-msgid ""
-"Elevated rights are not allowed to perform this action. Please do not use "
-"sudo or su"
-msgstr ""
-"Действие не допускает выполнения с повышенными правами. Не используйте sudo "
-"или su"
-
-#: cmd/distrobox/commands.go:52
-msgid "Managing packages and containers in distrobox"
-msgstr "Управление пакетами и контейнерами в distobox"
-
-#: cmd/distrobox/commands.go:56
-msgid "Update and synchronize the list of installed packages with the host"
-msgstr "Обновить и синхронизировать список установленных пакетов с хостом"
-
-#: cmd/distrobox/commands.go:60 cmd/distrobox/commands.go:81
-#: cmd/distrobox/commands.go:179 cmd/distrobox/commands.go:205
-#: cmd/distrobox/commands.go:295 cmd/distrobox/commands.go:329
-msgid "Container name. Required"
-msgstr "Имя контейнера. Обязательно"
-
-#: cmd/distrobox/commands.go:76 cmd/system/commands.go:129
-msgid "Package information"
-msgstr "Информация о пакете"
-
-#: cmd/distrobox/commands.go:97 cmd/system/commands.go:149
-msgid "Quick package search by name"
-msgstr "Быстрый поиск пакета по имени"
-
-#: cmd/distrobox/commands.go:102 cmd/distrobox/commands.go:121
-msgid "Container name. Optional flag"
-msgstr "Имя контейнера. Необязательный флаг"
-
-#: cmd/distrobox/commands.go:117
-msgid "Building query to retrieve package list"
-msgstr "Построение запроса для извлечения списка пакетов"
-
-#: cmd/distrobox/commands.go:126
-msgid "Field for sorting, for example: name, version"
-msgstr "Поле для сортировки, к примеру: name, version"
-
-#: cmd/distrobox/commands.go:130 cmd/system/commands.go:183
-msgid "Sorting order: ASC or DESC"
-msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
-
-#: cmd/distrobox/commands.go:135 cmd/system/commands.go:188
-#: cmd/system/commands.go:281
-msgid "Maximum number of records to return"
-msgstr "Максимальное количество возвращаемых записей"
-
-#: cmd/distrobox/commands.go:140 cmd/system/commands.go:193
-#: cmd/system/commands.go:286
-msgid "Starting position (offset) for the result set"
-msgstr "Начальная позиция (смещение) для результата выборки"
-
-#: cmd/distrobox/commands.go:145 cmd/system/commands.go:198
-msgid ""
-"Filter in the format key=value. The flag can be specified multiple times, "
-"for example: --filter name=zip --filter installed=true"
-msgstr ""
-"Фильтр в формате ключ=занчение. Флаг может быть указан несколько раз, к "
-"примеру: --filter name=zip --filter installed=true"
-
-#: cmd/distrobox/commands.go:149
-msgid "Force update all packages before the request"
-msgstr "Принудительное обновление всех пакетов перед запросом"
-
-#: cmd/distrobox/commands.go:174
-msgid "Install package"
-msgstr "Установка пакета"
-
-#: cmd/distrobox/commands.go:185
-msgid "Export package"
-msgstr "Экспорт пакета"
-
-#: cmd/distrobox/commands.go:200
-msgid "Remove package"
-msgstr "Удаление пакета"
-
-#: cmd/distrobox/commands.go:211
-msgid "Remove only from host, leave package in container"
-msgstr "Удалить только с хоста, оставить пакет в контейнере"
-
-#: cmd/distrobox/commands.go:226
-msgid "Module for working with containers"
-msgstr "Модуль для работы с контейнерами"
-
-#: cmd/distrobox/commands.go:231
-msgid "List of containers"
-msgstr "Список контейнеров"
-
-#: cmd/distrobox/commands.go:243
-msgid "Add container"
-msgstr "Добавить контейнер"
-
-#: cmd/distrobox/commands.go:247
-msgid "Container. Must be specified, options: alt, ubuntu, arch"
-msgstr "Контейнер. Должен быть указан, опции: alt, ubuntu, arch"
-
-#: cmd/distrobox/commands.go:263
-msgid "The value for image must be one of: alt, ubuntu, arch"
-msgstr "Значение для образа, одно из: alt, ubuntu, arch"
-
-#: cmd/distrobox/commands.go:286
-msgid "Manual container addition"
-msgstr "Ручное добавление контейнера"
-
-#: cmd/distrobox/commands.go:290
-msgid "Image link. Required"
-msgstr "Ссылка на образ. Обязательно"
-
-#: cmd/distrobox/commands.go:300
-msgid "List of packages to install"
-msgstr "Список пакетов для установки"
-
-#: cmd/distrobox/commands.go:305
-msgid "Calling hook to execute commands"
-msgstr "Вызов обработчика для исполнения команд"
-
-#: cmd/distrobox/commands.go:324
-msgid "Remove container"
-msgstr "Удалить контейнер"
-
-#: cmd/distrobox/dbus.go:113 cmd/system/dbus.go:103
-msgid "Failed to parse JSON: %w"
-msgstr "Не удалось спарсить JSON: %w"
-
-#: cmd/distrobox/service/alt.go:46 cmd/distrobox/service/arch.go:45
-#: cmd/distrobox/service/ubuntu.go:47
-msgid "Failed to update package database: %v, stderr: %s"
-msgstr "Не удалось обновить базу данных пакетов: %s, ошибка: %s"
-
-#: cmd/distrobox/service/alt.go:54 cmd/system/package/actions.go:328
-msgid "Error opening stdout pipe: %w"
-msgstr "Ошибка открытия канала стандартного вывода: %w"
-
-#: cmd/distrobox/service/alt.go:57 cmd/system/package/actions.go:331
-msgid "Error executing command: %w"
-msgstr "Ошибка исполнения команды: %w"
-
-#: cmd/distrobox/service/alt.go:63 cmd/distrobox/service/arch.go:57
-msgid "Error retrieving installed packages: "
-msgstr "Ошибка извлечения установленных пакетов: "
-
-#: cmd/distrobox/service/alt.go:138 cmd/system/package/actions.go:438
-#, c-format
-msgid "String too large: (over %dMB) - "
-msgstr "Строка слишком велика: (больше, чем %dMB) - "
-
-#: cmd/distrobox/service/alt.go:140 cmd/system/package/actions.go:440
-msgid "Scanner error: %w"
-msgstr "Ошибка сканера: %w"
-
-#: cmd/distrobox/service/alt.go:144 cmd/system/package/actions.go:443
-msgid "Command execution error: %w"
-msgstr "Ошибка исполнения команды: %w"
-
-#: cmd/distrobox/service/alt.go:166 cmd/distrobox/service/arch.go:79
-#: cmd/distrobox/service/ubuntu.go:122
-msgid "Failed to remove package %s: %v, stderr: %s"
-msgstr "Не удалось удалить пакет %s: %v, ошибка: %s"
-
-#: cmd/distrobox/service/alt.go:176 cmd/distrobox/service/arch.go:89
-#: cmd/distrobox/service/ubuntu.go:111
-msgid "Failed to install package %s: %v, stderr: %s"
-msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
-
-#: cmd/distrobox/service/alt.go:186 cmd/distrobox/service/alt.go:206
-#: cmd/distrobox/service/ubuntu.go:75
-#, c-format
-msgid "Command execution error: %s %s"
-msgstr "Ошибка исполнения команды: %s %s"
-
-#: cmd/distrobox/service/alt.go:220
-msgid "Error executing command rpm -qia: %w"
-msgstr "Ошибка исполнения команды rpm -qia: %w"
-
-#: cmd/distrobox/service/alt.go:236 cmd/system/package/actions.go:555
-msgid "Error scanning rpm output: %w"
-msgstr "Ошибка сканирования вывода rpm"
-
-#: cmd/distrobox/service/arch.go:52
-msgid "Failed to search packages (pacman -Ss): %v, stderr: %s"
-msgstr "Не удалось найти пакеты (pacman -Ss): %v, ошибка: %s"
-
-#: cmd/distrobox/service/arch.go:63
-msgid "Error parsing official packages: %v"
-msgstr "Ошибка парсинга официальных пакетов: %v"
-
-#: cmd/distrobox/service/arch.go:112
-#, c-format
-msgid "Failed to recognize the owner for file '%s'"
-msgstr "Не удалось распознать владельца файла '%s'"
-
-#: cmd/distrobox/service/arch.go:119
-msgid "Failed to find a package for file '%s': %v, stderr: %s"
-msgstr "Не удалось найти пакет для файла '%s': %v, ошибка: %s"
-
-#: cmd/distrobox/service/arch.go:141
-#, c-format
-msgid "Failed to determine the package for file '%s'"
-msgstr "Не удалось определить пакет для файла '%s'"
-
-#: cmd/distrobox/service/arch.go:150
-msgid "Command execution error: %v, stderr: %s"
-msgstr "Ошибка исполнения команды: %v, ошибка: %s"
-
-#: cmd/distrobox/service/database.go:118
-msgid ""
-"The 'container' field cannot be empty when saving packages to the database"
-msgstr ""
-"Поле 'контейнер' не может быть пустым при сохранении пакетов в базу данных"
-
-#: cmd/distrobox/service/database.go:154
-msgid ""
-"The database does not have any records, it is necessary to create or update "
-"any container"
-msgstr ""
-"База данных не имеет записей, необходимо создать или обновить любой контейнер"
-
-#: cmd/distrobox/service/database.go:160
-msgid ""
-"The database contains no records, you need to create or update any container"
-msgstr ""
-"База данных не имеет записей, необходимо создать или обновить любой "
-"контейнер."
-
-#: cmd/distrobox/service/database.go:176
-#, c-format
-msgid "No records found for container %s"
-msgstr "Не найдено записей для контейнера %s."
-
-#: cmd/distrobox/service/database.go:216
-#, c-format
-msgid "Invalid sort field: %s. Available fields: %s."
-msgstr "Некорректное поле сортировки: %s. Доступные поля: %s."
-
-#: cmd/distrobox/service/database.go:275
-#, c-format
-msgid "The field %s cannot be updated."
-msgstr "Поле %s не может быть обновлено."
-
-#: cmd/distrobox/service/database.go:307
-msgid "Error deleting container records %s: %v"
-msgstr "Ошибка удаления записей контейнера %s: %v"
-
-#: cmd/distrobox/service/database.go:316
-#, c-format
-msgid "Invalid filter field: %s. Available fields: %s."
-msgstr "Некорректное поле фильтра: %s. Доступные поля: %s."
-
-#: cmd/distrobox/service/distrobox.go:55
-msgid "Failed to retrieve the list of containers: "
-msgstr "Не удалось извлечь список контейнеров: "
-
-#: cmd/distrobox/service/distrobox.go:155
-msgid "Error executing command %q: %v"
-msgstr "Ошибка исполнения команды %q: %v"
-
-#: cmd/distrobox/service/distrobox.go:180
-msgid "Error getting OS information for container %s: %v, stderr: %s"
-msgstr "Ошибка получения информации об ОС для контейнера %s: %v, ошибка: %s"
-
-#: cmd/distrobox/service/distrobox.go:231
-msgid "Failed to get the list of containers: %v"
-msgstr "Не удалось получить список контейнеров: %v"
-
-#: cmd/distrobox/service/distrobox.go:243
-#, c-format
-msgid "Container %s not found"
-msgstr "Контейнер %s не найден"
-
-#: cmd/distrobox/service/distrobox.go:264
-#, c-format
-msgid "Container already exists: %s"
-msgstr "Контейнер уже существует: %s"
-
-#: cmd/distrobox/service/distrobox.go:298
-msgid "Failed to create container %s: %v, stderr: %s"
-msgstr "Не удалось создать контейнер %s: %v, ошибка: %s"
-
-#: cmd/distrobox/service/distrobox.go:299
-msgid "Failed to create container %s: %v"
-msgstr "Не удалось создать контейнер %s: %v"
-
-#: cmd/distrobox/service/distrobox.go:322
-msgid "Failed to delete container %s: %v, stderr: %s"
-msgstr "Не удалось удалить контейнер %s: %v, ошибка %s"
-
-#: cmd/distrobox/service/provider.go:93
-msgid "This container is not supported: "
-msgstr "Этот контейнер не поддерживается: "
-
-#: cmd/distrobox/service/provider.go:164
-#, c-format
-msgid "Failed to retrieve package information: %s"
-msgstr "Не удалось извлечь информацию о пакете: %s"
-
-#: cmd/distrobox/service/provider.go:170
-msgid "Error retrieving desktop file path: %v"
-msgstr "Ошибка извлечения пути desktop-файла: %v"
-
-#: cmd/distrobox/service/provider.go:184
-msgid "Error retrieving console path: %v"
-msgstr "Ошибка извлечения пути консоли: %s"
-
-#: cmd/distrobox/service/provider.go:219
-msgid "A container must be specified for the forced update operation"
-msgstr ""
-"В контейнере должен быть указан для выполнения операцию принудительного "
-"обновления"
-
-#: cmd/distrobox/service/provider.go:276
-msgid "Error retrieving desktop applications for container %s: %v"
-msgstr "Ошибка извлечения desktop-файла приложений для контейнера %s: %v"
-
-#: cmd/distrobox/service/provider.go:279
-msgid "Error retrieving console applications for container %s: %v"
-msgstr "Ошибка извлечения консольных утилит для контейнера %s: %v"
-
-#: cmd/distrobox/service/provider.go:304 cmd/distrobox/service/provider.go:348
-msgid "Failed to retrieve home directory: %v"
-msgstr "Не удалось извлечь домашнюю директорию: %v"
-
-#: cmd/distrobox/service/provider.go:310 cmd/distrobox/service/provider.go:354
-msgid "Error reading directory %s: %v"
-msgstr "Ошибка чтения директории %s: %v"
-
-#: cmd/distrobox/service/provider.go:325 cmd/distrobox/service/provider.go:373
-msgid "Error retrieving owner for file %s: %v"
-msgstr "Ошибка извлечения владельца для файла %s: %v"
-
-#: cmd/distrobox/service/provider.go:366
-msgid "Error processing file %s: %v"
-msgstr "Ошибка обработки файла %s: %v"
-
-#: cmd/distrobox/service/ubuntu.go:53
-msgid "Failed to execute apt search: %v, stderr: %s"
-msgstr "Не удалось выполнить apt search: %v, ошибка: %s"
-
-#: cmd/distrobox/service/ubuntu.go:58
-msgid "Failed to retrieve installed packages: "
-msgstr "Не удалось извлечь установленные пакеты: "
-
-#: cmd/system/actions.go:99 cmd/system/actions.go:155 cmd/system/actions.go:174
-#: cmd/system/actions.go:194
-msgid "Inspection information"
-msgstr "Информация об инспекции"
-
-#: cmd/system/actions.go:111 cmd/system/actions.go:144
-msgid "This option is available only for a non-atomic system"
-msgstr "Эта опция доступна только на не-атомарной системе"
-
-#: cmd/system/actions.go:132
-msgid "Kernel update finished"
+#: internal/common/appstream/swcat.go:136
+#, fuzzy
+msgid "Read file %s failed: %w"
+msgstr "Ошибка чтения файла %s: %w"
+
+#: internal/common/appstream/swcat.go:140
+#, fuzzy
+msgid "Unpack %s failed: %w"
+msgstr "polkit, ошибка распаковки: %w"
+
+#: internal/common/appstream/swcat.go:146
+msgid "Parse %s failed: %w"
 msgstr ""
 
-#: cmd/system/actions.go:216
-msgid "At least one package must be specified, for example, remove package"
-msgstr "Должен быть указан хотя бы один пакет, к примеру, remove package"
-
-#: cmd/system/actions.go:250
-msgid "No candidates for removal found"
-msgstr "Кандидатов на удаление не найдено"
-
-#: cmd/system/actions.go:282
-msgid ""
-".\n"
-"A difference in the package list was found in the local configuration, the "
-"image has been updated"
-msgstr ""
-".\n"
-"Была найдена разница в списке пакетов локальной конфигурации, образ будет "
-"обновлён"
-
-#: cmd/system/actions.go:296 cmd/system/actions.go:539
-#: cmd/system/actions.go:668
-msgid "Cancel dialog"
-msgstr "Отмена диалога"
-
-#: cmd/system/actions.go:312
-msgid ""
-"A communication error with the repository occurred. The package list has "
-"been updated, please try running the command again"
-msgstr ""
-"Произошла ошибка связи с репозиторием. Список пакетов обновлён, пожалуйста, "
-"попробуйте запустить команду ещё раз"
-
-#: cmd/system/actions.go:326
-#, c-format
-msgid "%s removed successfully"
-msgid_plural "%s removed successfully"
-msgstr[0] "%s успешно удалён"
-msgstr[1] "%s успешно удалены"
-msgstr[2] "%s успешно удалены"
-
-#: cmd/system/actions.go:332
-msgid ". The system image has been modified"
-msgstr ". Образ системы был модифицирован"
-
-#: cmd/system/actions.go:336
-msgid ""
-". The system image has not been modified! To apply changes, run with the -a "
-"flag"
-msgstr ""
-". Образ системы не был модифицирован! Чтобы применить изменения, запустите с "
-"флагом -a"
-
-#: cmd/system/actions.go:363
-msgid "You must specify at least one package, for example, remove package"
-msgstr "Необходимо указать хотя бы один пакет, к примеру, remove package"
-
-#: cmd/system/actions.go:400 cmd/system/actions.go:725
-#, c-format
-msgid "Failed to retrieve information about the package %s"
-msgstr "Не удалось извлечь информацию о пакете %s"
-
-#: cmd/system/actions.go:409 cmd/system/actions.go:734
-msgid ". Maybe you were looking for: "
-msgstr ". Возможно, вы искали: "
-
-#: cmd/system/actions.go:469
-msgid "The operation will not make any changes. Reasons: \n"
-msgstr "Операция не будет нести изменений. Причины:\n"
-
-#: cmd/system/actions.go:520
-msgid ""
-"Found a discrepancy in the package list in the local configuration, the "
-"image has been updated"
-msgstr ""
-"Обнаружено несоответствие в списке пакетов локальной конфигурации, образ был "
-"обновлён"
-
-#: cmd/system/actions.go:556
-msgid ""
-"A repository connection error occurred. The package list has been updated, "
-"please try running the command again"
-msgstr ""
-"Произошла ошибка при подключении к репозиторию. Список пакетов обновлён, "
-"пожалуйста, попробуйте запустить команду ещё раз"
-
-#: cmd/system/actions.go:571 cmd/system/actions.go:683
-#, c-format
-msgid "%d package successfully installed"
-msgid_plural "%d packages successfully installed"
-msgstr[0] "%d пакет успешно установлен"
-msgstr[1] "%d пакета успешно установлено"
-msgstr[2] "%d пакетов успешно установлено"
-
-#: cmd/system/actions.go:572 cmd/system/actions.go:684
-msgid "and"
-msgstr "и"
-
-#: cmd/system/actions.go:573 cmd/system/actions.go:685
-#, c-format
-msgid "%d updated"
-msgid_plural "%d updated"
-msgstr[0] "%d обновлён"
-msgstr[1] "%d обновлено"
-msgstr[2] "%d обновлено"
-
-#: cmd/system/actions.go:582
-msgid ". The system image has been changed."
-msgstr ". Образ системы был изменён."
-
-#: cmd/system/actions.go:586
-msgid ""
-". The system image has not been changed! To apply changes, you need to run "
-"with the -a flag."
-msgstr ""
-". Образ системы не был изменён! Для применения изменения выполните с флагом -"
-"a."
-
-#: cmd/system/actions.go:619
-msgid "Package list updated successfully"
-msgstr "Список пакетов успешно обновлён"
-
-#: cmd/system/actions.go:654
-msgid "The operation will not make any changes"
-msgstr "Операция не будет нести изменений"
-
-#: cmd/system/actions.go:690
-msgid "The system has been upgrade successfully"
-msgstr "Система была успешно обновлена"
-
-#: cmd/system/actions.go:704
-msgid "Package name must be specified, for example info package"
-msgstr "Необходимо указать имя пакета, к примеру, info package"
-
-#: cmd/system/actions.go:803 cmd/system/actions.go:839
-msgid "Nothing found"
-msgstr "Ничего не найдено"
-
-#: cmd/system/actions.go:869 cmd/system/commands.go:249
-msgid "Image status"
-msgstr "Статус образа"
-
-#: cmd/system/actions.go:902
-msgid "Command executed successfully"
-msgstr "Команда успешно выполнена"
-
-#: cmd/system/actions.go:940
-msgid "Changes applied successfully. A reboot is required"
-msgstr "Изменения были успешно применены. Необходима перезагрука"
-
-#: cmd/system/actions.go:983 main.go:193
-msgid ""
-"Elevated rights are required to perform this action. Please use sudo or su"
-msgstr ""
-"Для выполнения этого действия необходимо повышенные прав. Пожалуйста, "
-"используйте sudo или su"
-
-#: cmd/system/actions.go:999
-msgid "This option is only available for an atomic system"
-msgstr "Эта опция доступна только на атомарной системе"
-
-#: cmd/system/actions.go:1101
-msgid "Modified image. Configuration file: "
-msgstr "Образ изменён. Конфигурационный файл: "
-
-#: cmd/system/actions.go:1108
-msgid "Cloud image without changes"
-msgstr "Облачный образ без изменений"
-
-#: cmd/system/commands.go:50
-msgid "System package management"
-msgstr "Управление системными пакетами"
-
-#: cmd/system/commands.go:54
-msgid ""
-"Package list for installation. The format package- package+ is supported."
-msgstr ""
-"Список пакетов для установки. Формат package- и package+ поддерживается"
-
-#: cmd/system/commands.go:59 cmd/system/commands.go:81
-msgid "Apply to image"
-msgstr "Применить к образу"
-
-#: cmd/system/commands.go:76
-msgid "List of packages to remove"
-msgstr "Список пакетов на удаление"
-
-#: cmd/system/commands.go:98
-msgid "Updating package database"
-msgstr "Обновление базы данных пакетов"
-
-#: cmd/system/commands.go:110
-msgid "General system upgrade"
-msgstr "Общее обновление системы"
-
-#: cmd/system/commands.go:134
-msgid "Full output of information"
-msgstr "Полный вывод информации"
-
-#: cmd/system/commands.go:154
-msgid "Only installed"
-msgstr "Только установленные"
-
-#: cmd/system/commands.go:160 cmd/system/commands.go:207
-msgid "Full information output"
-msgstr "Полный вывод информации"
-
-#: cmd/system/commands.go:179
-msgid "Building query to fetch package list"
-msgstr "Сборка запроса для извлечения списка пакетов"
-
-#: cmd/system/commands.go:202
-msgid "Force update all packages before query"
-msgstr "Принудительное обновление всех пакетов до запроса"
-
-#: cmd/system/commands.go:231
-msgid "Module for working with the image"
-msgstr "Модуль для работы с образом"
-
-#: cmd/system/commands.go:237
-msgid "Apply changes to the host"
-msgstr "Применить изменения на хосте"
-
-#: cmd/system/commands.go:261
-msgid "Image update"
-msgstr "Обновление образа"
-
-#: cmd/system/commands.go:273
-msgid "Image changes history"
-msgstr "История изменения образа"
-
-#: cmd/system/commands.go:277
-msgid "Filter by image name"
-msgstr "Фильтрация по имени образа"
-
-#: cmd/system/package/actions.go:159
-msgid "Installation"
-msgstr "Установка"
-
-#: cmd/system/package/actions.go:161
-msgid "Removal"
-msgstr "Удаление"
-
-#: cmd/system/package/actions.go:163
-msgid "Change"
-msgstr "Изменение"
-
-#: cmd/system/package/actions.go:188
-#, c-format
-msgid "Downloading: %s"
-msgstr "Загружается: %s"
-
-#: cmd/system/package/actions.go:241
-msgid "Installation error: %v"
-msgstr "Ошибка установки: %v"
-
-#: cmd/system/package/actions.go:296 cmd/system/package/actions.go:303
-#: cmd/system/package/actions.go:308 cmd/system/package/kernel.go:48
-#: cmd/system/package/kernel.go:61
-msgid "Package verification error: %v"
-msgstr "Ошибка верификации пакета: %v"
-
-#: cmd/system/package/actions.go:302
-#, c-format
-msgid "Package verification error: %s"
-msgstr "Ошибка верификации пакета: %s"
-
-#: cmd/system/package/actions.go:459
-msgid "Error updating information about installed packages: %w"
-msgstr "Ошибка обновления информации об установленных пакетах: %w"
-
-#: cmd/system/package/actions.go:509
-msgid "Error executing the rpm -qia command: %w"
-msgstr "Ошибка выполнения команды rpm -qia: %w"
-
-#: cmd/system/package/actions.go:579
-msgid "Error updating packages: %v, output: %s"
-msgstr "Ошибка обновления пакетов: %v, вывод: %s"
-
-#: cmd/system/package/database.go:181
-msgid "Table cleanup error: %w"
-msgstr "Ошибка очистки таблицы: %w"
-
-#: cmd/system/package/database.go:200
-msgid "Batch insert error: %w"
-msgstr "Ошибка пакетной вставки: %w"
-
-#: cmd/system/package/database.go:216
-#, c-format
-msgid "failed to get information about package %s"
-msgstr "Не удалось извлечь информацию о пакете %s"
-
-#: cmd/system/package/database.go:229
-msgid "Temporary table drop error: %w"
-msgstr "Ошибка создания временной таблицы: %w"
-
-#: cmd/system/package/database.go:233
-msgid "Temporary table creation error: %w"
-msgstr "Ошибка создания временной таблицы: %w"
-
-#: cmd/system/package/database.go:245
-msgid "Batch insert into temporary table error: %w"
-msgstr "Ошибка пакетной вставки во временную таблицу: %w"
-
-#: cmd/system/package/database.go:264
-msgid "Batch update error: %w"
-msgstr "Ошибка пакетного обновления"
-
-#: cmd/system/package/database.go:283 cmd/system/package/database.go:331
-msgid "Query execution error: %w"
-msgstr "Ошибка исполнения запроса"
-
-#: cmd/system/package/database.go:313
-#, c-format
-msgid "Invalid sort field: %s. Available fields: %s"
-msgstr "Некорректное поле сортировки: %s. Доступные поля: %s"
-
-#: cmd/system/package/database.go:355
-msgid "Package count error: %w"
-msgstr "Ошибка количества пакетов: %w"
-
-#: cmd/system/package/database.go:366
-#, c-format
-msgid "Invalid filter field: %s. Available fields: %s"
-msgstr "Некорректное поле фильтра: %s. Доступные поля: %s"
-
-#: cmd/system/package/database.go:411
-#, c-format
-msgid "Table %s exists but contains no records"
-msgstr "Таблица %s существует, но не содержит записей"
-
-#: cmd/system/package/dialog.go:61 cmd/system/package/dialog.go:91
-msgid "Edit"
-msgstr "Изменить"
-
-#: cmd/system/package/dialog.go:61 cmd/system/package/dialog.go:63
-#: cmd/system/package/dialog.go:65 cmd/system/package/dialog.go:67
-msgid "Abort"
-msgstr "Прервать"
-
-#: cmd/system/package/dialog.go:67 cmd/system/package/dialog.go:91
-msgid "Upgrade"
-msgstr "Обновить"
-
-#: cmd/system/package/dialog.go:82
-msgid "Error starting TEA: %v"
-msgstr "Ошибка запуска TEA: %v"
-
-#: cmd/system/package/dialog.go:88 cmd/system/package/dialog.go:94
-#: cmd/system/package/errors.go:132
-msgid "Operation cancelled"
-msgstr "Операция отменена"
-
-#. Формируем строку с подсказками по клавишам
-#: cmd/system/package/dialog.go:209
-msgid ""
-"Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/"
-"bottom, Enter - choose, Esc/q - cancel"
-msgstr ""
-"Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - наверх/"
-"вниз, Enter - выбор, Esc/q - отмена"
-
-#: cmd/system/package/dialog.go:213
-msgid "Select an action:"
-msgstr "Выберите действие:"
-
-#: cmd/system/package/dialog.go:274
-msgid "Package information:"
-msgid_plural "Packages information:"
-msgstr[0] "Информация о пакете:"
-msgstr[1] "Информация о пакетах:"
-msgstr[2] "Информация о пакетах:"
-
-#: cmd/system/package/dialog.go:281
-#, c-format
-msgid ""
-"\n"
-"Package %d:"
-msgstr ""
-"\n"
-"Пакет %d:"
-
-#: cmd/system/package/dialog.go:283 cmd/system/package/dialog.go:351
-#: cmd/system/package/dialog.go:372
-msgid "No"
-msgstr "Нет"
-
-#: cmd/system/package/dialog.go:285
-msgid "Yes"
-msgstr "Да"
-
-#: cmd/system/package/dialog.go:289
-msgid "Action"
-msgstr "Действие"
-
-#: cmd/system/package/dialog.go:290
-msgid "Category"
-msgstr "Категория"
-
-#. Выводим "Версия в облаке" обычным стилем
-#: cmd/system/package/dialog.go:296 cmd/system/package/dialog.go:307
-msgid "Repository version"
-msgstr "Версия в репозитории"
-
-#. Выводим "Версия в системе", уже с раскрашенным текстом
-#: cmd/system/package/dialog.go:305
-msgid "System version"
-msgstr "Версия в системе"
-
-#: cmd/system/package/dialog.go:315
-msgid "Affected changes:"
-msgstr "Затронутые изменения:"
-
-#: cmd/system/package/dialog.go:320
-msgid "Extra packages"
-msgstr "Будет добавлено"
-
-#: cmd/system/package/dialog.go:321 cmd/system/package/dialog.go:331
-#: cmd/system/package/dialog.go:344
-msgid "Will be updated"
-msgstr "Будет обновлено"
-
-#: cmd/system/package/dialog.go:322 cmd/system/package/dialog.go:332
-#: cmd/system/package/dialog.go:340
-msgid "Will be installed"
-msgstr "Будет установлено"
-
-#: cmd/system/package/dialog.go:323 cmd/system/package/dialog.go:333
-#: cmd/system/package/dialog.go:348
-msgid "Will be removed"
-msgstr "Будет удалено"
-
-#: cmd/system/package/dialog.go:325 cmd/system/package/dialog.go:326
-#: cmd/system/package/dialog.go:327 cmd/system/package/dialog.go:328
-#, c-format
-msgid "%d package"
-msgid_plural "%d packages"
-msgstr[0] "%d пакет"
-msgstr[1] "%d пакета"
-msgstr[2] "%d пакетов"
-
-#: cmd/system/package/dialog.go:330
-msgid "Total:"
-msgstr "Итого:"
-
-#: cmd/system/package/dialog.go:334
-msgid "Not affected"
-msgstr "Не затронуто"
-
-#: cmd/system/package/dialog.go:375
-msgid "and others"
-msgstr "и другие"
-
-#: cmd/system/package/errors.go:105
+#: internal/common/apt/errors.go:160
 msgid "Broken packages"
 msgstr "Повреждённые пакеты"
 
-#: cmd/system/package/errors.go:108
+#: internal/common/apt/errors.go:163
 msgid "You have no permissions for that"
 msgstr "Недостаточно прав для этого"
 
-#: cmd/system/package/errors.go:111
+#: internal/common/apt/errors.go:166
 msgid "Internal Error, InstallPackages was called with broken packages!"
 msgstr ""
 "Внутренняя ошибка, InstallPackages был вызван для повреждённых пакетов!"
 
-#: cmd/system/package/errors.go:114
+#: internal/common/apt/errors.go:169
 msgid "Packages need to be removed but Remove is disabled."
 msgstr "Пакеты необходимо удалить, но Remove выключен."
 
-#: cmd/system/package/errors.go:117
+#: internal/common/apt/errors.go:172
 msgid "Unable to lock the download directory"
 msgstr "Невозможно заблокировать директорию загрузки"
 
-#: cmd/system/package/errors.go:120
+#: internal/common/apt/errors.go:175
 msgid "There are problems and -y was used without --force-yes"
 msgstr "Обнаружены проблемы, и -y был использован без --force-yes"
 
-#: cmd/system/package/errors.go:123
+#: internal/common/apt/errors.go:178
 #, c-format
 msgid "You don't have enough free space in %s"
 msgstr "Недостаточно места в %s"
 
-#: cmd/system/package/errors.go:126
+#: internal/common/apt/errors.go:181
 #, c-format
 msgid "Package file %s is out of sync"
 msgstr "Файл пакета %s не синхронизирован"
 
-#: cmd/system/package/errors.go:129
+#: internal/common/apt/errors.go:184
 msgid "Trivial Only specified but this is not a trivial operation"
 msgstr "Указана только тривиальная операция, но это не тривиальная операция"
 
-#: cmd/system/package/errors.go:135
+#: internal/common/apt/errors.go:187 internal/system/package/dialog.go:90
+#: internal/system/package/dialog.go:96
+msgid "Operation cancelled"
+msgstr "Операция отменена"
+
+#: internal/common/apt/errors.go:190
 msgid "Must specify at least one package to check builddeps for"
 msgstr ""
 "Должен быть указан хотя бы один пакет для проверки зависимостей сборки для %s"
 
-#: cmd/system/package/errors.go:138
+#: internal/common/apt/errors.go:193
 #, c-format
 msgid "Unable to find a source package for %s"
 msgstr "Невозможно найти пакет-источник для %s"
 
-#: cmd/system/package/errors.go:141
+#: internal/common/apt/errors.go:196
 #, c-format
 msgid "Unable to get build-dependency information for %s"
 msgstr "Невозможно получить информацию о зависимостях сборки для %s"
 
-#: cmd/system/package/errors.go:144
+#: internal/common/apt/errors.go:199
 #, c-format
 msgid ""
 "Some broken packages were found while trying to process build-dependencies "
@@ -1503,62 +107,62 @@ msgstr ""
 "Было найдено несколько повреждённых пакетов во время попытки вычисления "
 "зависимостей сборки для %s"
 
-#: cmd/system/package/errors.go:147
+#: internal/common/apt/errors.go:202
 #, c-format
 msgid "Package %s is a virtual package with no good providers"
 msgstr "Пакет %s является виртуальным без хороших поставщиков"
 
-#: cmd/system/package/errors.go:150
+#: internal/common/apt/errors.go:205
 #, c-format
 msgid "Package %s is a virtual package with multiple good providers"
 msgstr "Пакет %s является виртуальным с несколькими хороших поставщиков"
 
-#: cmd/system/package/errors.go:153
+#: internal/common/apt/errors.go:208
 msgid "No packages found"
 msgstr "Не найдено пакетов"
 
-#: cmd/system/package/errors.go:156
+#: internal/common/apt/errors.go:211
 #, c-format
 msgid "Package %s is not installed, so not removed"
 msgstr "Пакет %s не установлен, поэтому не удалён"
 
-#: cmd/system/package/errors.go:159
+#: internal/common/apt/errors.go:214
 #, c-format
 msgid "Release %s'%s' for '%s' was not found"
 msgstr "Релиз %s'%s' для '%s' не найден"
 
-#: cmd/system/package/errors.go:162
+#: internal/common/apt/errors.go:217
 #, c-format
 msgid "Version %s'%s' for '%s' was not found"
 msgstr "Версия %s'%s' для '%s' не найден"
 
-#: cmd/system/package/errors.go:165
+#: internal/common/apt/errors.go:220
 #, c-format
 msgid "Sources list %s could not be read"
 msgstr "Список источников %s не может быть прочтён"
 
-#: cmd/system/package/errors.go:168
+#: internal/common/apt/errors.go:223
 #, c-format
 msgid "Sources list %s doesn't exist"
 msgstr "Списка источников %s не существует"
 
-#: cmd/system/package/errors.go:171
+#: internal/common/apt/errors.go:226
 msgid "Excessive arguments"
 msgstr "Избыточные аргументы"
 
-#: cmd/system/package/errors.go:174
+#: internal/common/apt/errors.go:229
 msgid "Internal Error, problem resolver broke stuff"
 msgstr "Внутренняя ошибка, средство решения проблем сломало что-то"
 
-#: cmd/system/package/errors.go:177
+#: internal/common/apt/errors.go:232
 msgid "Internal Error, Ordering didn't finish"
 msgstr "Внутренняя ошибка, заказ не был выполнен"
 
-#: cmd/system/package/errors.go:180
+#: internal/common/apt/errors.go:235
 msgid "Some files failed to download"
 msgstr "Некоторые файлы не были скачены"
 
-#: cmd/system/package/errors.go:183
+#: internal/common/apt/errors.go:238
 msgid ""
 "Unable to fetch some archives, maybe run apt-get update or try with --fix-"
 "missing?"
@@ -1566,36 +170,36 @@ msgstr ""
 "Невозможно извлечь некоторые архивы, возможно стоит попробовать запустить "
 "apt-get update или запустить с --fix-missing?"
 
-#: cmd/system/package/errors.go:186
+#: internal/common/apt/errors.go:241
 msgid "--fix-missing and media swapping is not currently supported"
 msgstr "--fix-missing и смена медиа сейчас не поддерживаются"
 
-#: cmd/system/package/errors.go:189
+#: internal/common/apt/errors.go:244
 msgid "Unable to correct missing packages"
 msgstr "Невозможно исправить отсутствующие пакеты"
 
-#: cmd/system/package/errors.go:192
+#: internal/common/apt/errors.go:247
 msgid "Aborting Install"
 msgstr "Прервать установку"
 
-#: cmd/system/package/errors.go:195
+#: internal/common/apt/errors.go:250
 msgid "Could not open RPM database"
 msgstr "Не удалось открыть базу данных RPM"
 
-#: cmd/system/package/errors.go:198
+#: internal/common/apt/errors.go:253
 #, c-format
 msgid "Couldn't parse name '%s'"
 msgstr "Не удалось спарсить имя '%s'"
 
-#: cmd/system/package/errors.go:201
+#: internal/common/apt/errors.go:256
 msgid "Write to stdout failed"
 msgstr "Запись в канал стандартного вывода не удалась"
 
-#: cmd/system/package/errors.go:204
+#: internal/common/apt/errors.go:259
 msgid "Exceeded maximum number of command arguments"
 msgstr "Привышено максимальное количество аргументов команды"
 
-#: cmd/system/package/errors.go:207
+#: internal/common/apt/errors.go:262
 #, c-format
 msgid ""
 "Package %s dependency for %s cannot be satisfied because the package %s "
@@ -1604,89 +208,89 @@ msgstr ""
 "Пакет-зависимость %s для %s не может быть разрешён, так как пакет %s не "
 "может быть найден"
 
-#: cmd/system/package/errors.go:210
+#: internal/common/apt/errors.go:265
 #, c-format
 msgid "Regex compilation error - %s"
 msgstr "Ошибка обработки регулярного выражения - %s"
 
-#: cmd/system/package/errors.go:213
+#: internal/common/apt/errors.go:268
 #, c-format
 msgid "Package %s has no installation candidate"
 msgstr "Пакет %s не имеет кандидатов для установки"
 
-#: cmd/system/package/errors.go:216
+#: internal/common/apt/errors.go:271
 msgid "Internal Error, AllUpgrade broke stuff"
 msgstr "Внутренняя ошибка, AllUpgrade что-то сломал"
 
-#: cmd/system/package/errors.go:219
+#: internal/common/apt/errors.go:274
 msgid "Requested autoremove failed."
 msgstr "Требуемое автоудаление не выполнено."
 
-#: cmd/system/package/errors.go:222
+#: internal/common/apt/errors.go:277
 #, c-format
 msgid "Couldn't find package %s"
 msgstr "Не удалось найти пакет %s"
 
-#: cmd/system/package/errors.go:225
+#: internal/common/apt/errors.go:280
 #, c-format
 msgid "%s dependency for %s cannot be satisfied"
 msgstr "Зависимость %s для %s не может быть разрешена"
 
-#: cmd/system/package/errors.go:228
+#: internal/common/apt/errors.go:283
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: Installed package %s is too new"
 msgstr ""
 "Не удалось разрешить зависимость %s для %s: Установленный пакет %s слишком "
 "новый"
 
-#: cmd/system/package/errors.go:231
+#: internal/common/apt/errors.go:286
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: %s"
 msgstr "Не удалось разрешить зависимость %s для %s: %s"
 
-#: cmd/system/package/errors.go:234
+#: internal/common/apt/errors.go:289
 msgid "You must give exactly one pattern"
 msgstr "Необходимо передать хотя бы один паттерн"
 
-#: cmd/system/package/errors.go:236
+#: internal/common/apt/errors.go:291
 msgid "No help for that"
 msgstr "Нет справки для этого"
 
-#: cmd/system/package/errors.go:238
+#: internal/common/apt/errors.go:293
 #, c-format
 msgid "%s is already the newest version."
 msgstr "Версия %s уже самая новая."
 
-#: cmd/system/package/errors.go:241
+#: internal/common/apt/errors.go:296
 msgid "The list of sources could not be read."
 msgstr "Список источников не может быть прочитан."
 
-#: cmd/system/package/errors.go:244
+#: internal/common/apt/errors.go:299
 msgid "There are changes to be made"
 msgstr "Необходимо внести некоторые изменения"
 
-#: cmd/system/package/errors.go:247
+#: internal/common/apt/errors.go:302
 msgid "Failed to fetch some archives."
 msgstr "Не удалось извлечь некоторые архивы."
 
-#: cmd/system/package/errors.go:250
+#: internal/common/apt/errors.go:305
 #, c-format
 msgid "Failed to fetch %s  %s"
 msgstr "Не удалось извлечь %s  %s"
 
-#: cmd/system/package/errors.go:253
+#: internal/common/apt/errors.go:308
 msgid ""
 "Some index files failed to download. They have been ignored, or old ones "
 "used instead."
 msgstr "Не удалось загрузить некоторые "
 
-#: cmd/system/package/errors.go:256
+#: internal/common/apt/errors.go:311
 msgid ""
 "'apt-get upgrade' is disabled because it can leave system in a broken state."
 msgstr ""
 "'apt-get upgrade' выключен, потому что это может повредить состояние системы."
 
-#: cmd/system/package/errors.go:259
+#: internal/common/apt/errors.go:314
 msgid ""
 "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or "
 "specify a solution)."
@@ -1694,129 +298,1850 @@ msgstr ""
 "Неразрешённые зависимости. Попробуйте 'apt-get --fix-broken install' без "
 "пакетов (или укажите решение)."
 
-#: cmd/system/package/errors.go:262
+#: internal/common/apt/errors.go:317
 msgid "Must specify at least one package to fetch source for"
 msgstr "Должен быть указан хотя бы один пакет для извлечения из источника для"
 
-#: cmd/system/package/errors.go:265
+#: internal/common/apt/errors.go:320
 #, c-format
 msgid "Fatal: conflicts violated %s"
 msgstr ""
 
-#: cmd/system/package/errors.go:268
+#: internal/common/apt/errors.go:323
 msgid "Child process failed"
 msgstr "Ошибка дочернего процесса"
 
-#: cmd/system/package/errors.go:271
+#: internal/common/apt/errors.go:326
 msgid "Must specify at least one package to get changelog for"
 msgstr "Необходимо указать хотя бы один пакет для получения изменений для"
 
-#: cmd/system/package/errors.go:274
+#: internal/common/apt/errors.go:329
 msgid "Failed to process build dependencies"
 msgstr "Не удалось просчитать зависимости сборки"
 
-#: cmd/system/package/errors.go:277
+#: internal/common/apt/errors.go:332
 #, c-format
 msgid "Package %s is a virtual package with no "
 msgstr "Пакет %s является виртуальным пакетом без "
 
-#: cmd/system/package/errors.go:280
+#: internal/common/apt/errors.go:335
 #, c-format
 msgid "Package %s is a virtual package with multiple "
 msgstr "Пакет %s является виртуальным с несколькими "
 
-#: cmd/system/package/kernel.go:55
+#. Bindings specific patterns (from C++ bindings messages)
+#: internal/common/apt/errors.go:338
+#, fuzzy
+msgid "Failed to initialize APT configuration"
+msgstr "Не удалось извлечь информацию вызова"
+
+#: internal/common/apt/errors.go:339
+msgid "Invalid system pointer"
+msgstr ""
+
+#: internal/common/apt/errors.go:340
+msgid "Failed to initialize APT system"
+msgstr ""
+
+#: internal/common/apt/errors.go:341
+msgid "Invalid arguments for cache_open"
+msgstr ""
+
+#: internal/common/apt/errors.go:342
+msgid "System not properly initialized"
+msgstr ""
+
+#: internal/common/apt/errors.go:343
+msgid "Unable to acquire APT system lock - another process may be using APT"
+msgstr ""
+
+#: internal/common/apt/errors.go:344
+#, fuzzy
+msgid "Failed to open APT cache"
+msgstr "Не удалось открыть файл %s: %2"
+
+#: internal/common/apt/errors.go:345
+#, fuzzy
+msgid "Failed to check dependencies"
+msgstr "Не удалось просчитать зависимости сборки"
+
+#: internal/common/apt/errors.go:346
+#, fuzzy
+msgid "Failed to get dependency cache"
+msgstr "Не удалось просчитать зависимости сборки"
+
+#: internal/common/apt/errors.go:347
+#, fuzzy
+msgid "Failed to reopen cache after refresh"
+msgstr "Не удалось распознать владельца файла '%s'"
+
+#: internal/common/apt/errors.go:348
+#, fuzzy
+msgid "Failed to check dependencies after refresh"
+msgstr "Не удалось просчитать зависимости сборки"
+
+#: internal/common/apt/errors.go:349
+#, fuzzy
+msgid "Failed to get dependency cache after refresh"
+msgstr "Не удалось разрешить зависимость %s для %s: %s"
+
+#: internal/common/apt/errors.go:350
+#, fuzzy
+msgid "Failed to get package indexes"
+msgstr "Не удалось извлечь информацию о пакете: %s"
+
+#: internal/common/apt/errors.go:351
+#, fuzzy
+msgid "Failed to download package lists"
+msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
+
+#: internal/common/apt/errors.go:352
+#, fuzzy
+msgid "Failed to rebuild caches"
+msgstr "Не удалось просчитать зависимости сборки"
+
+#: internal/common/apt/errors.go:353
+msgid "Invalid cache or output pointer for pm create"
+msgstr ""
+
+#: internal/common/apt/errors.go:354
+#, fuzzy
+msgid "Failed to create package manager"
+msgstr "Не удалось извлечь информацию о пакете: %s"
+
+#: internal/common/apt/errors.go:355
+msgid "Invalid arguments for mark_install"
+msgstr ""
+
+#: internal/common/apt/errors.go:356
+msgid "Invalid arguments for mark_remove"
+msgstr ""
+
+#: internal/common/apt/errors.go:357
+msgid "Problem resolver failed to handle package removal dependencies"
+msgstr ""
+
+#: internal/common/apt/errors.go:358
+msgid "Invalid arguments for mark_keep"
+msgstr ""
+
+#: internal/common/apt/errors.go:359
+msgid "Invalid arguments for mark_auto"
+msgstr ""
+
+#: internal/common/apt/errors.go:360
+msgid "Invalid package manager instance"
+msgstr ""
+
+#: internal/common/apt/errors.go:361
+#, fuzzy
+msgid "Cannot install packages with broken dependencies"
+msgstr ""
+"Внутренняя ошибка, InstallPackages был вызван для повреждённых пакетов!"
+
+#: internal/common/apt/errors.go:362
+#, fuzzy
+msgid "Failed to get package archives"
+msgstr "Не удалось извлечь некоторые архивы."
+
+#: internal/common/apt/errors.go:363
+#, fuzzy
+msgid "Failed to download packages"
+msgstr "Не удалось извлечь установленные пакеты: "
+
+#: internal/common/apt/errors.go:364
+#, fuzzy
+msgid "Package manager operation failed"
+msgstr "Информация о пакете"
+
+#: internal/common/apt/errors.go:365
+msgid "Package manager operation incomplete"
+msgstr ""
+
+#: internal/common/apt/errors.go:366
+#, fuzzy
+msgid "Unknown package manager result"
+msgstr "Управление системными пакетами"
+
+#: internal/common/apt/errors.go:367
+#, fuzzy
+msgid "Failed to update package marks"
+msgstr "Не удалось обновить базу данных пакетов: %s, ошибка: %s"
+
+#: internal/common/apt/errors.go:368
+msgid "Invalid cache for dist-upgrade"
+msgstr ""
+
+#: internal/common/apt/errors.go:369
+#, fuzzy
+msgid "Distribution upgrade failed"
+msgstr "Не удалось обновить bootc: %s"
+
+#: internal/common/apt/errors.go:370
+#, fuzzy
+msgid "Failed to create package manager for dist-upgrade"
+msgstr "Не удалось извлечь информацию о пакете: %s"
+
+#: internal/common/apt/errors.go:371
+#, fuzzy
+msgid "Failed to get package archives for dist-upgrade"
+msgstr "Не удалось извлечь информацию о пакете: %s"
+
+#: internal/common/apt/errors.go:372
+#, fuzzy
+msgid "Failed to download packages for dist-upgrade"
+msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
+
+#: internal/common/apt/errors.go:373
+#, fuzzy
+msgid "Failed to update package marks after dist-upgrade"
+msgstr "Не удалось обновить базу данных пакетов: %s, ошибка: %s"
+
+#: internal/common/apt/errors.go:374
+msgid "Invalid parameters for search"
+msgstr ""
+
+#: internal/common/apt/errors.go:375
+msgid "Failed to compile regex pattern"
+msgstr ""
+
+#: internal/common/apt/errors.go:376
+#, fuzzy
+msgid "Failed to create package records parser"
+msgstr "Не удалось удалить записи контейнера: %w"
+
+#: internal/common/apt/errors.go:377
+msgid "Failed to allocate memory for search results"
+msgstr ""
+
+#: internal/common/apt/errors.go:378
+msgid "Unknown exception in search"
+msgstr ""
+
+#: internal/common/apt/errors.go:379
+msgid "Invalid parameters for get_package_info"
+msgstr ""
+
+#: internal/common/apt/errors.go:380
+msgid "Invalid parameters for simulation"
+msgstr ""
+
+#: internal/common/apt/errors.go:381
+msgid "Cache file not available"
+msgstr ""
+
+#: internal/common/apt/errors.go:382
+msgid "Invalid parameters for multi-package simulation"
+msgstr ""
+
+#: internal/common/apt/errors.go:383
+#, fuzzy, c-format
+msgid "Virtual package %s has no installable providers"
+msgstr "Пакет %s не имеет кандидатов для установки"
+
+#: internal/common/apt/errors.go:385
+#, c-format
+msgid ""
+"Virtual package %s has multiple providers. Please select specific package."
+msgstr ""
+
+#: internal/common/apt/errors.go:387
+#, fuzzy, c-format
+msgid "Package not found: %s"
+msgstr "Найден пакет"
+
+#: internal/common/apt/errors.go:388
+#, fuzzy, c-format
+msgid "Package is not installed: %s"
+msgstr "Пакет %s установлен"
+
+#: internal/common/apt/errors.go:389
+#, fuzzy, c-format
+msgid "Package %s has no installed providers"
+msgstr "Пакет %s не имеет кандидатов для установки"
+
+#: internal/common/apt/errors.go:391
+#, c-format
+msgid ""
+"Virtual package %s has multiple installed providers: %s. Please remove "
+"specific package."
+msgstr ""
+
+#: internal/common/apt/errors.go:393
+#, fuzzy, c-format
+msgid "Dist-upgrade simulation failed: %s"
+msgstr "Не удалось обновить bootc: %s"
+
+#: internal/common/apt/errors.go:394
+#, c-format
+msgid "Multi-package install simulation failed: %s"
+msgstr ""
+
+#: internal/common/apt/errors.go:395
+#, c-format
+msgid "Multi-package remove simulation failed: %s"
+msgstr ""
+
+#: internal/common/apt/errors.go:396
+#, fuzzy, c-format
+msgid "Combined simulation failed: %s"
+msgstr "Образ изменён. Конфигурационный файл: "
+
+#: internal/common/apt/errors.go:397
+#, c-format
+msgid "Virtual name '%s' has multiple providers; specify exact package name"
+msgstr ""
+
+#: internal/common/apt/parser.go:98
+msgid "Removal"
+msgstr "Удаление"
+
+#: internal/common/apt/parser.go:100
+msgid "Change"
+msgstr "Изменение"
+
+#: internal/common/apt/parser.go:102
+msgid "Installation"
+msgstr "Установка"
+
+#: internal/common/apt/parser.go:127 internal/system/package/actions.go:157
+#: internal/system/package/actions.go:167
+#, c-format
+msgid "Downloading: %s"
+msgstr "Загружается: %s"
+
+#: internal/common/apt/parser.go:180
+msgid "Installation error: %v"
+msgstr "Ошибка установки: %v"
+
+#: internal/common/apt/parser.go:211 internal/distrobox/service/alt.go:54
+msgid "Error opening stdout pipe: %w"
+msgstr "Ошибка открытия канала стандартного вывода: %w"
+
+#: internal/common/apt/parser.go:214 internal/distrobox/service/alt.go:57
+msgid "Error executing command: %w"
+msgstr "Ошибка исполнения команды: %w"
+
+#: internal/common/apt/parser.go:321 internal/distrobox/service/alt.go:138
+#, c-format
+msgid "String too large: (over %dMB) - "
+msgstr "Строка слишком велика: (больше, чем %dMB) - "
+
+#: internal/common/apt/parser.go:323 internal/distrobox/service/alt.go:140
+msgid "Scanner error: %w"
+msgstr "Ошибка сканера: %w"
+
+#: internal/common/apt/parser.go:327 internal/distrobox/service/alt.go:144
+msgid "Command execution error: %w"
+msgstr "Ошибка исполнения команды: %w"
+
+#: internal/common/apt/parser.go:356
+msgid "Error updating packages: %v, output: %s"
+msgstr "Ошибка обновления пакетов: %v, вывод: %s"
+
+#: internal/common/helper/polkit.go:100
+msgid "polkit dbus failure: %w"
+msgstr "polkit dbus ошибка: %w"
+
+#: internal/common/helper/polkit.go:103
+msgid "polkit unpack failure: %w"
+msgstr "polkit, ошибка распаковки: %w"
+
+#: internal/common/helper/polkit.go:123
+#, c-format
+msgid "not authorized by polkit (action=%s)"
+msgstr "не авторизовано polkit (действие=%s)"
+
+#: internal/common/helper/text.go:67
+msgid "version not found"
+msgstr "версия не найдена"
+
+#: internal/common/helper/text.go:75
+#, c-format
+msgid "%.2f MB"
+msgstr "%.2f МБ"
+
+#: internal/common/helper/translate.go:50
+#: internal/common/helper/translate.go:78
+#: internal/common/helper/translate.go:106
+msgid "Module:"
+msgstr "Модуль:"
+
+#: internal/common/helper/translate.go:51
+#: internal/common/helper/translate.go:79
+#: internal/common/helper/translate.go:107
+msgid "Usage:"
+msgstr "Применение:"
+
+#: internal/common/helper/translate.go:52
+msgid "Version:"
+msgstr "Версия:"
+
+#: internal/common/helper/translate.go:53
+#: internal/common/helper/translate.go:81
+#: internal/common/helper/translate.go:109
+msgid "Description:"
+msgstr "Описание:"
+
+#: internal/common/helper/translate.go:54
+#: internal/common/helper/translate.go:110
+msgid "Commands:"
+msgstr "Команды:"
+
+#: internal/common/helper/translate.go:55
+#: internal/common/helper/translate.go:56
+#: internal/common/helper/translate.go:82
+#: internal/common/helper/translate.go:83
+#: internal/common/helper/translate.go:111
+#: internal/common/helper/translate.go:112
+msgid "Options:"
+msgstr "Параметры:"
+
+#: internal/common/helper/translate.go:80
+#: internal/common/helper/translate.go:108
+msgid "Category:"
+msgstr "Категория:"
+
+#: internal/common/helper/translate.go:84
+msgid "Global options:"
+msgstr "Глобальные параметры:"
+
+#: internal/common/icon/service.go:61
+msgid "Icon for package %s (container: %s) not found: %v"
+msgstr "Иконка пакета %s (контейнер: %s) не найдена: %v"
+
+#: internal/common/icon/service.go:86 internal/common/icon/service.go:102
+msgid "Error saving icon %s: %v"
+msgstr "Ошибка при сохранении иконки %s: %v"
+
+#: internal/common/icon/service.go:112
+msgid "Error calculating icon statistics: "
+msgstr "Ошибка вычисления статистики иконки: "
+
+#: internal/common/icon/service.go:114
+#, c-format
+msgid "Total number of icons in the database: %d, total size: %d bytes"
+msgstr "Общее количество иконок в базе данных: %d, общий размер: %d байт"
+
+#: internal/common/icon/service.go:134
+msgid "Error preparing temporary directories: %v"
+msgstr "Ошибка подготовки временных директорий: %v"
+
+#: internal/common/icon/service.go:152
+msgid "Error checking the existence of the icon in the database: "
+msgstr "Ошибка проверки существования иконки в базе данных: "
+
+#: internal/common/icon/service.go:165
+#, c-format
+msgid "Error retrieving icon: %s"
+msgstr "Ошибка извлечения иконки: %s"
+
+#: internal/common/icon/service.go:171
+msgid "Error compressing the icon: "
+msgstr "Ошибка сжатия иконки: "
+
+#: internal/common/icon/service.go:196
+msgid "Error writing icon %s to the database: %v"
+msgstr "Ошибка записи иконки %s в базу данных: %v"
+
+#: internal/common/icon/service.go:212
+#, c-format
+msgid "Icon %s not found"
+msgstr "Иконка %s не найдена"
+
+#: internal/common/icon/service.go:216
+msgid "Error unpacking icon %s: %v"
+msgstr "Ошибка распаковки иконки %s: %v"
+
+#: internal/common/icon/swcat.go:86
+msgid "Error copying from container: %v, stderr: %s"
+msgstr "Ошибка копирования из контейнера: %v, ошибка: %s"
+
+#: internal/common/icon/swcat.go:176
+#, c-format
+msgid "File %s not found in %s"
+msgstr "Файл %s не найден в %s"
+
+#: internal/common/icon/swcat.go:246
+#, c-format
+msgid "Icon not found for package %s"
+msgstr "Иконка не найдена для пакета %s"
+
+#: internal/common/icon/swcat.go:259
+msgid "Failed to read directory %s: %w"
+msgstr "Не удалось прочитать директорию %s: %w"
+
+#: internal/common/icon/swcat.go:271
+msgid "Error retrieving files in %s: %v, stderr: %s"
+msgstr "Ошибка извлечения файлов в %s: %v, ошибка: %s"
+
+#: internal/common/icon/swcat.go:292
+msgid "Failed to read file %s: %w"
+msgstr "Не удалось прочитать файл %s: %w"
+
+#: internal/common/icon/swcat.go:298
+msgid "Error executing command for file %s: %v, stderr: %s"
+msgstr "Ошибка выполнения команды для файла %s: %v, ошибка: %s"
+
+#: internal/common/icon/swcat.go:305
+msgid "Failed to unpack file %s: %w"
+msgstr "Не удалось распаковать файл %s: %w"
+
+#: internal/common/icon/swcat.go:311
+msgid "Error parsing XML file %s: %w"
+msgstr "Ошибка парсинга XML-файла %s: %w"
+
+#: internal/common/reply/event.go:111
+msgid "Failed to retrieve call information"
+msgstr "Не удалось извлечь информацию вызова"
+
+#: internal/common/reply/event.go:117
+msgid "FuncForPC returned nil"
+msgstr "FuncForPC вернуло nil"
+
+#: internal/common/reply/event.go:162
+msgid "DBus connection is not initialized"
+msgstr "Соединение DBus не было инициализировано"
+
+#: internal/common/reply/event.go:171
+msgid "Error sending notification: %v"
+msgstr "Ошибка отправки уведомления: %v"
+
+#: internal/common/reply/event.go:178 internal/common/reply/event.go:220
+msgid "Saving packages to the database"
+msgstr "Сохранение пакетов в базу данных"
+
+#: internal/common/reply/event.go:180
+msgid "Requesting list of containers"
+msgstr "Запрос списка контейнеров"
+
+#: internal/common/reply/event.go:182
+msgid "Exporting package"
+msgstr "Экспортирование пакета"
+
+#: internal/common/reply/event.go:184
+msgid "Requesting container information"
+msgstr "Запрос информации о контейнере"
+
+#: internal/common/reply/event.go:186
+msgid "Creating container"
+msgstr "Создание контейнера"
+
+#: internal/common/reply/event.go:188
+msgid "Deleting container"
+msgstr "Удаление контейнера"
+
+#: internal/common/reply/event.go:190
+msgid "Installing package"
+msgstr "Установка пакета"
+
+#: internal/common/reply/event.go:192
+msgid "Removing package"
+msgstr "Удаление пакета"
+
+#: internal/common/reply/event.go:194
+msgid "Retrieving list of packages"
+msgstr "Извлечение списка пакетов"
+
+#: internal/common/reply/event.go:196
+msgid "Determining file owner"
+msgstr "Определение владельца файла"
+
+#: internal/common/reply/event.go:198
+msgid "Searching package paths"
+msgstr "Поиск путей пакета"
+
+#: internal/common/reply/event.go:200
+msgid "Retrieving package information"
+msgstr "Извлечение информации о пакете"
+
+#: internal/common/reply/event.go:202
+msgid "Updating packages"
+msgstr "Обновление пакетов"
+
+#: internal/common/reply/event.go:204
+msgid "Filtering packages"
+msgstr "Фильтрация пакетов"
+
+#: internal/common/reply/event.go:206
+msgid "Working with packages"
+msgstr "Работа с пакетами"
+
+#: internal/common/reply/event.go:208
+msgid "System update"
+msgstr "Обновление системы"
+
+#: internal/common/reply/event.go:210
+msgid "Analyzing packages"
+msgstr "Анализ пакетов"
+
+#: internal/common/reply/event.go:212
+msgid "General update process"
+msgstr "Общий процесс обновления"
+
+#: internal/common/reply/event.go:214
+msgid "General update kernel"
+msgstr "Общий процесс обновления"
+
+#: internal/common/reply/event.go:216
+msgid "Loading package list from STPLR repository"
+msgstr "Загрузка списка пакетов из репозитория STPLR"
+
+#: internal/common/reply/event.go:218
+msgid "Loading package list from ALT repository"
+msgstr "Загрузка списка пакетов из репозитория ALT"
+
+#: internal/common/reply/event.go:222
+msgid "Saving image history to the database"
+msgstr "Сохранение истории образа в базу данных"
+
+#: internal/common/reply/event.go:224
+msgid "Building local image"
+msgstr "Создание локального образа"
+
+#: internal/common/reply/event.go:226
+msgid "Switching to local image"
+msgstr "Переключение на локальный образ"
+
+#: internal/common/reply/event.go:228
+msgid "General Image Update Process"
+msgstr "Общий процесс обновления образа"
+
+#: internal/common/reply/event.go:230
+msgid "Downloading base image update"
+msgstr "Загрузка обновления базового образа"
+
+#: internal/common/reply/event.go:232
+msgid "Cleaning up old images"
+msgstr "Очистка старых образов"
+
+#: internal/common/reply/event.go:234
+msgid "Synchronizing database"
+msgstr "Синхронизация базы данных"
+
+#: internal/common/reply/event.go:236
+#, fuzzy
+msgid "Update information about applications"
+msgstr "Не удалось извлечь информацию о пакете %s"
+
+#. Общий спиннер + фраза
+#: internal/common/reply/preloader.go:309
+msgid "Executing tasks"
+msgstr "Выполнение задач"
+
+#: internal/common/reply/preloader.go:326
+msgid "Progress completed"
+msgstr "Прогресс завершён"
+
+#: internal/common/reply/preloader.go:328
+#, c-format
+msgid "Progress: %s completed"
+msgstr "Прогресс: %s завершён"
+
+#: internal/common/reply/response.go:111 internal/common/reply/response.go:134
+#: internal/common/reply/response.go:241 internal/common/reply/response.go:268
+#: internal/common/reply/response.go:294
+msgid "%T (unknown type)"
+msgstr "%T (неизвестный тип)"
+
+#: internal/common/reply/response.go:130 internal/common/reply/response.go:290
+msgid "%T (slice of unknown type)"
+msgstr "%T (фрагмент неизвестного типа)"
+
+#: internal/common/reply/response.go:157 internal/common/reply/response.go:164
+#, c-format
+msgid "%s: no"
+msgstr "%s: нет"
+
+#: internal/common/reply/response.go:174
+msgid "yes"
+msgstr "да"
+
+#: internal/common/reply/response.go:176
+msgid "no"
+msgstr "нет"
+
+#: internal/common/reply/translate.go:11
+msgid "Result"
+msgstr ""
+
+#: internal/common/reply/translate.go:13
+#, fuzzy
+msgid "Application Information"
+msgstr "Информация об инспекции"
+
+#: internal/common/reply/translate.go:15 internal/system/package/dialog.go:338
+#, fuzzy
+msgid "Downloaded Size"
+msgstr "Размер при установке"
+
+#: internal/common/reply/translate.go:17 internal/common/reply/translate.go:63
+#: internal/system/package/dialog.go:339
+msgid "Installed Size"
+msgstr "Размер при установке"
+
+#: internal/common/reply/translate.go:19
+msgid "Package"
+msgstr "Пакет"
+
+#: internal/common/reply/translate.go:21
+#, fuzzy
+msgid "This Application"
+msgstr "Консольная утилита"
+
+#: internal/common/reply/translate.go:23
+msgid "Type Package"
+msgstr "Тип пакета"
+
+#: internal/common/reply/translate.go:25
+msgid "Count"
+msgstr "Количество"
+
+#: internal/common/reply/translate.go:27
+msgid "Console Application"
+msgstr "Консольная утилита"
+
+#: internal/common/reply/translate.go:29
+msgid "Package Information"
+msgstr "Информация о пакете"
+
+#: internal/common/reply/translate.go:31 internal/system/package/dialog.go:65
+#: internal/system/package/dialog.go:93
+msgid "Install"
+msgstr "Установить"
+
+#: internal/common/reply/translate.go:33
+msgid "Storage Type"
+msgstr "Тип хранилища"
+
+#: internal/common/reply/translate.go:35 internal/common/reply/translate.go:87
+msgid "Date"
+msgstr "Дата"
+
+#: internal/common/reply/translate.go:37
+msgid "Image Digest"
+msgstr "Дайджест образа"
+
+#: internal/common/reply/translate.go:39
+msgid "Distribution"
+msgstr "Дистрибутив"
+
+#: internal/common/reply/translate.go:41
+msgid "Container"
+msgstr "Контейнер"
+
+#: internal/common/reply/translate.go:43 internal/system/package/dialog.go:290
+msgid "Name"
+msgstr "Название"
+
+#: internal/common/reply/translate.go:45
+msgid "Extra Installed"
+msgstr "Дополнительно установлено"
+
+#: internal/common/reply/translate.go:47
+msgid "Upgraded Count"
+msgstr "Количество обновлённых"
+
+#: internal/common/reply/translate.go:49
+msgid "Booted Image"
+msgstr "Загруженный образ"
+
+#: internal/common/reply/translate.go:51
+msgid "Removed Packages"
+msgstr "Удалённые пакеты"
+
+#: internal/common/reply/translate.go:53
+msgid "Provides"
+msgstr "Обеспечивает"
+
+#: internal/common/reply/translate.go:55
+msgid "Providers"
+msgstr "Поставщики"
+
+#: internal/common/reply/translate.go:57
+msgid "Version"
+msgstr "Версия"
+
+#: internal/common/reply/translate.go:59
+msgid "History"
+msgstr "История"
+
+#: internal/common/reply/translate.go:61 internal/system/package/dialog.go:314
+msgid "Dependencies"
+msgstr "Зависимости"
+
+#: internal/common/reply/translate.go:65
+msgid "Removed Count"
+msgstr "Количество удалённых"
+
+#: internal/common/reply/translate.go:67
+msgid "Upgraded Packages"
+msgstr "Обновлённые пакеты"
+
+#: internal/common/reply/translate.go:69
+msgid "Package Name"
+msgstr "Имя пакета"
+
+#: internal/common/reply/translate.go:71
+msgid "Image"
+msgstr "Образ"
+
+#: internal/common/reply/translate.go:73
+msgid "Commands"
+msgstr "Команды"
+
+#: internal/common/reply/translate.go:75 internal/system/package/dialog.go:293
+msgid "Maintainer"
+msgstr "Сопровождающий"
+
+#: internal/common/reply/translate.go:77
+msgid "Installed Version"
+msgstr "Установленная версия"
+
+#: internal/common/reply/translate.go:79 internal/system/package/dialog.go:67
+#: internal/system/package/dialog.go:93
+msgid "Remove"
+msgstr "Удалить"
+
+#: internal/common/reply/translate.go:81
+msgid "Containers"
+msgstr "Контейнеры"
+
+#: internal/common/reply/translate.go:83
+msgid "Paths"
+msgstr "Пути"
+
+#: internal/common/reply/translate.go:85
+msgid "Description"
+msgstr "Описание"
+
+#: internal/common/reply/translate.go:89
+msgid "Newly Installed Count"
+msgstr "Количество свежеустановленных"
+
+#: internal/common/reply/translate.go:91
+msgid "Active"
+msgstr "Активно"
+
+#: internal/common/reply/translate.go:93
+msgid "Information"
+msgstr "Информация"
+
+#: internal/common/reply/translate.go:95
+msgid "Total Count"
+msgstr "Общее количество"
+
+#: internal/common/reply/translate.go:97 internal/system/package/dialog.go:294
+msgid "Installed"
+msgstr "Установлено"
+
+#: internal/common/reply/translate.go:99
+msgid "Package Manager"
+msgstr "Пакетный менеджер"
+
+#: internal/common/reply/translate.go:101
+msgid "Last Changelog"
+msgstr "Последние изменения"
+
+#: internal/common/reply/translate.go:103
+msgid "Section"
+msgstr "Секция"
+
+#: internal/common/reply/translate.go:105
+msgid "Specification"
+msgstr "Спецификация"
+
+#: internal/common/reply/translate.go:107
+msgid "Booted"
+msgstr "Загружено"
+
+#: internal/common/reply/translate.go:109
+msgid "Staged"
+msgstr "Зафиксированно"
+
+#: internal/common/reply/translate.go:111 internal/system/package/dialog.go:311
+msgid "Size"
+msgstr "Размер"
+
+#: internal/common/reply/translate.go:113
+msgid "Newly Installed Packages"
+msgstr "Свежеустановленные пакеты"
+
+#: internal/common/reply/translate.go:115
+msgid "Not Upgraded Count"
+msgstr "Количество не обновлённых"
+
+#: internal/common/reply/translate.go:117
+msgid "Container Name"
+msgstr "Имя контейнера"
+
+#: internal/common/reply/translate.go:119
+msgid "Configuration"
+msgstr "Конфигурация"
+
+#: internal/common/reply/translate.go:121
+msgid "Exporting"
+msgstr "Экспортировано"
+
+#: internal/common/reply/translate.go:123
+msgid "Status"
+msgstr "Статус"
+
+#: internal/common/reply/translate.go:125
+msgid "Image Date"
+msgstr "Дата образа"
+
+#: internal/common/reply/translate.go:127
+msgid "Packages"
+msgstr "Пакеты"
+
+#: internal/common/reply/translate.go:129
+msgid "Filename"
+msgstr "Имя файла"
+
+#: internal/common/reply/translate.go:131
+msgid "Container Information"
+msgstr "Информация о контейнере"
+
+#: internal/common/reply/translate.go:133
+msgid "Image Name"
+msgstr "Имя образа"
+
+#: internal/common/reply/translate.go:135
+msgid "Transport"
+msgstr "Транспорт"
+
+#: internal/common/reply/translate.go:137
+msgid "Pinned"
+msgstr "Закреплено"
+
+#: internal/common/reply/translate.go:139
+msgid "List"
+msgstr "Список"
+
+#: internal/distrobox/actions.go:83
+msgid "Package list successfully updated"
+msgstr "Список пакетов успешно обновлён"
+
+#: internal/distrobox/actions.go:105 internal/distrobox/actions.go:145
+#: internal/distrobox/actions.go:259 internal/distrobox/actions.go:310
+#: internal/system/actions.go:658
+#, c-format
+msgid "You must specify the package name, for example `%s package`"
+msgstr "Необходимо указать имя пакета, к примеру `%s package`"
+
+#: internal/distrobox/actions.go:114 internal/system/actions.go:523
+msgid "Package found"
+msgstr "Найден пакет"
+
+#: internal/distrobox/actions.go:154 internal/distrobox/actions.go:233
+#: internal/system/actions.go:586 internal/system/actions.go:671
+#: internal/system/actions.go:795
+#, c-format
+msgid "%d record found"
+msgid_plural "%d records found"
+msgstr[0] "Найдена %d запись"
+msgstr[1] "Найдено %d записи"
+msgstr[2] "Найдено %d записей"
+
+#: internal/distrobox/actions.go:287
+#, c-format
+msgid "Package %s installed"
+msgstr "Пакет %s установлен"
+
+#: internal/distrobox/actions.go:339
+#, c-format
+msgid "Package %s removed"
+msgstr "Пакет %s удалён"
+
+#: internal/distrobox/actions.go:380
+msgid "You must specify the image link (--image)"
+msgstr "Необходимо указать ссылку на образ (--image)"
+
+#: internal/distrobox/actions.go:385 internal/distrobox/actions.go:414
+msgid "You must specify the container name (--name)"
+msgstr "Необходимо указать имя контейнера (--name)"
+
+#: internal/distrobox/actions.go:396
+#, c-format
+msgid "Container %s successfully created"
+msgstr "Контейнер %s успешно создан"
+
+#: internal/distrobox/actions.go:425
+#, c-format
+msgid "Container %s successfully deleted"
+msgstr "Контейнер %s успешно удалён"
+
+#: internal/distrobox/actions.go:433
+msgid "Error deleting container: %v"
+msgstr "Ошибка удаления контейнера: %s"
+
+#: internal/distrobox/actions.go:511
+msgid "You must specify the container name"
+msgstr "Необходимо указать имя контейнера"
+
+#: internal/distrobox/actions.go:519
+msgid "Failed to delete container records: %w"
+msgstr "Не удалось удалить записи контейнера: %w"
+
+#: internal/distrobox/actions.go:543 main.go:168
+msgid ""
+"Elevated rights are not allowed to perform this action. Please do not use "
+"sudo or su"
+msgstr ""
+"Действие не допускает выполнения с повышенными правами. Не используйте sudo "
+"или su"
+
+#: internal/distrobox/commands.go:53
+msgid "Managing packages and containers in distrobox"
+msgstr "Управление пакетами и контейнерами в distobox"
+
+#: internal/distrobox/commands.go:57
+msgid "Update and synchronize the list of installed packages with the host"
+msgstr "Обновить и синхронизировать список установленных пакетов с хостом"
+
+#: internal/distrobox/commands.go:61 internal/distrobox/commands.go:82
+#: internal/distrobox/commands.go:180 internal/distrobox/commands.go:206
+#: internal/distrobox/commands.go:296 internal/distrobox/commands.go:330
+msgid "Container name. Required"
+msgstr "Имя контейнера. Обязательно"
+
+#: internal/distrobox/commands.go:77 internal/system/commands.go:164
+msgid "Package information"
+msgstr "Информация о пакете"
+
+#: internal/distrobox/commands.go:98 internal/system/commands.go:194
+msgid "Quick package search by name"
+msgstr "Быстрый поиск пакета по имени"
+
+#: internal/distrobox/commands.go:103 internal/distrobox/commands.go:122
+msgid "Container name. Optional flag"
+msgstr "Имя контейнера. Необязательный флаг"
+
+#: internal/distrobox/commands.go:118
+msgid "Building query to retrieve package list"
+msgstr "Построение запроса для извлечения списка пакетов"
+
+#: internal/distrobox/commands.go:127
+msgid "Field for sorting, for example: name, version"
+msgstr "Поле для сортировки, к примеру: name, version"
+
+#: internal/distrobox/commands.go:131 internal/system/commands.go:228
+msgid "Sorting order: ASC or DESC"
+msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
+
+#: internal/distrobox/commands.go:136 internal/system/commands.go:233
+#: internal/system/commands.go:326
+msgid "Maximum number of records to return"
+msgstr "Максимальное количество возвращаемых записей"
+
+#: internal/distrobox/commands.go:141 internal/system/commands.go:238
+#: internal/system/commands.go:331
+msgid "Starting position (offset) for the result set"
+msgstr "Начальная позиция (смещение) для результата выборки"
+
+#: internal/distrobox/commands.go:146 internal/system/commands.go:243
+msgid ""
+"Filter in the format key=value. The flag can be specified multiple times, "
+"for example: --filter name=zip --filter installed=true"
+msgstr ""
+"Фильтр в формате ключ=занчение. Флаг может быть указан несколько раз, к "
+"примеру: --filter name=zip --filter installed=true"
+
+#: internal/distrobox/commands.go:150
+msgid "Force update all packages before the request"
+msgstr "Принудительное обновление всех пакетов перед запросом"
+
+#: internal/distrobox/commands.go:175
+msgid "Install package"
+msgstr "Установка пакета"
+
+#: internal/distrobox/commands.go:186
+msgid "Export package"
+msgstr "Экспорт пакета"
+
+#: internal/distrobox/commands.go:201
+msgid "Remove package"
+msgstr "Удаление пакета"
+
+#: internal/distrobox/commands.go:212
+msgid "Remove only from host, leave package in container"
+msgstr "Удалить только с хоста, оставить пакет в контейнере"
+
+#: internal/distrobox/commands.go:227
+msgid "Module for working with containers"
+msgstr "Модуль для работы с контейнерами"
+
+#: internal/distrobox/commands.go:232
+msgid "List of containers"
+msgstr "Список контейнеров"
+
+#: internal/distrobox/commands.go:244
+msgid "Add container"
+msgstr "Добавить контейнер"
+
+#: internal/distrobox/commands.go:248
+msgid "Container. Must be specified, options: alt, ubuntu, arch"
+msgstr "Контейнер. Должен быть указан, опции: alt, ubuntu, arch"
+
+#: internal/distrobox/commands.go:264
+msgid "The value for image must be one of: alt, ubuntu, arch"
+msgstr "Значение для образа, одно из: alt, ubuntu, arch"
+
+#: internal/distrobox/commands.go:287
+msgid "Manual container addition"
+msgstr "Ручное добавление контейнера"
+
+#: internal/distrobox/commands.go:291
+msgid "Image link. Required"
+msgstr "Ссылка на образ. Обязательно"
+
+#: internal/distrobox/commands.go:301
+msgid "List of packages to install"
+msgstr "Список пакетов для установки"
+
+#: internal/distrobox/commands.go:306
+msgid "Calling hook to execute commands"
+msgstr "Вызов обработчика для исполнения команд"
+
+#: internal/distrobox/commands.go:325
+msgid "Remove container"
+msgstr "Удалить контейнер"
+
+#: internal/distrobox/dbus.go:114 internal/system/dbus.go:125
+msgid "Failed to parse JSON: %w"
+msgstr "Не удалось спарсить JSON: %w"
+
+#: internal/distrobox/service/alt.go:46 internal/distrobox/service/arch.go:45
+#: internal/distrobox/service/ubuntu.go:47
+msgid "Failed to update package database: %v, stderr: %s"
+msgstr "Не удалось обновить базу данных пакетов: %s, ошибка: %s"
+
+#: internal/distrobox/service/alt.go:63 internal/distrobox/service/arch.go:57
+msgid "Error retrieving installed packages: "
+msgstr "Ошибка извлечения установленных пакетов: "
+
+#: internal/distrobox/service/alt.go:166 internal/distrobox/service/arch.go:79
+#: internal/distrobox/service/ubuntu.go:122
+msgid "Failed to remove package %s: %v, stderr: %s"
+msgstr "Не удалось удалить пакет %s: %v, ошибка: %s"
+
+#: internal/distrobox/service/alt.go:176 internal/distrobox/service/arch.go:89
+#: internal/distrobox/service/ubuntu.go:111
+msgid "Failed to install package %s: %v, stderr: %s"
+msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
+
+#: internal/distrobox/service/alt.go:186 internal/distrobox/service/alt.go:206
+#: internal/distrobox/service/ubuntu.go:75
+#, c-format
+msgid "Command execution error: %s %s"
+msgstr "Ошибка исполнения команды: %s %s"
+
+#: internal/distrobox/service/alt.go:220
+msgid "Error executing command rpm -qia: %w"
+msgstr "Ошибка исполнения команды rpm -qia: %w"
+
+#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:490
+msgid "Error scanning rpm output: %w"
+msgstr "Ошибка сканирования вывода rpm"
+
+#: internal/distrobox/service/arch.go:52
+msgid "Failed to search packages (pacman -Ss): %v, stderr: %s"
+msgstr "Не удалось найти пакеты (pacman -Ss): %v, ошибка: %s"
+
+#: internal/distrobox/service/arch.go:63
+msgid "Error parsing official packages: %v"
+msgstr "Ошибка парсинга официальных пакетов: %v"
+
+#: internal/distrobox/service/arch.go:112
+#, c-format
+msgid "Failed to recognize the owner for file '%s'"
+msgstr "Не удалось распознать владельца файла '%s'"
+
+#: internal/distrobox/service/arch.go:119
+msgid "Failed to find a package for file '%s': %v, stderr: %s"
+msgstr "Не удалось найти пакет для файла '%s': %v, ошибка: %s"
+
+#: internal/distrobox/service/arch.go:141
+#, c-format
+msgid "Failed to determine the package for file '%s'"
+msgstr "Не удалось определить пакет для файла '%s'"
+
+#: internal/distrobox/service/arch.go:150
+msgid "Command execution error: %v, stderr: %s"
+msgstr "Ошибка исполнения команды: %v, ошибка: %s"
+
+#: internal/distrobox/service/database.go:120
+msgid ""
+"The 'container' field cannot be empty when saving packages to the database"
+msgstr ""
+"Поле 'контейнер' не может быть пустым при сохранении пакетов в базу данных"
+
+#: internal/distrobox/service/database.go:156
+msgid ""
+"The database does not have any records, it is necessary to create or update "
+"any container"
+msgstr ""
+"База данных не имеет записей, необходимо создать или обновить любой контейнер"
+
+#: internal/distrobox/service/database.go:162
+msgid ""
+"The database contains no records, you need to create or update any container"
+msgstr ""
+"База данных не имеет записей, необходимо создать или обновить любой "
+"контейнер."
+
+#: internal/distrobox/service/database.go:178
+#, c-format
+msgid "No records found for container %s"
+msgstr "Не найдено записей для контейнера %s."
+
+#: internal/distrobox/service/database.go:218
+#, c-format
+msgid "Invalid sort field: %s. Available fields: %s."
+msgstr "Некорректное поле сортировки: %s. Доступные поля: %s."
+
+#: internal/distrobox/service/database.go:277
+#, c-format
+msgid "The field %s cannot be updated."
+msgstr "Поле %s не может быть обновлено."
+
+#: internal/distrobox/service/database.go:309
+msgid "Error deleting container records %s: %v"
+msgstr "Ошибка удаления записей контейнера %s: %v"
+
+#: internal/distrobox/service/database.go:318
+#, c-format
+msgid "Invalid filter field: %s. Available fields: %s."
+msgstr "Некорректное поле фильтра: %s. Доступные поля: %s."
+
+#: internal/distrobox/service/distrobox.go:55
+msgid "Failed to retrieve the list of containers: "
+msgstr "Не удалось извлечь список контейнеров: "
+
+#: internal/distrobox/service/distrobox.go:155
+msgid "Error executing command %q: %v"
+msgstr "Ошибка исполнения команды %q: %v"
+
+#: internal/distrobox/service/distrobox.go:180
+msgid "Error getting OS information for container %s: %v, stderr: %s"
+msgstr "Ошибка получения информации об ОС для контейнера %s: %v, ошибка: %s"
+
+#: internal/distrobox/service/distrobox.go:231
+msgid "Failed to get the list of containers: %v"
+msgstr "Не удалось получить список контейнеров: %v"
+
+#: internal/distrobox/service/distrobox.go:243
+#, c-format
+msgid "Container %s not found"
+msgstr "Контейнер %s не найден"
+
+#: internal/distrobox/service/distrobox.go:264
+#, c-format
+msgid "Container already exists: %s"
+msgstr "Контейнер уже существует: %s"
+
+#: internal/distrobox/service/distrobox.go:298
+msgid "Failed to create container %s: %v, stderr: %s"
+msgstr "Не удалось создать контейнер %s: %v, ошибка: %s"
+
+#: internal/distrobox/service/distrobox.go:299
+msgid "Failed to create container %s: %v"
+msgstr "Не удалось создать контейнер %s: %v"
+
+#: internal/distrobox/service/distrobox.go:322
+msgid "Failed to delete container %s: %v, stderr: %s"
+msgstr "Не удалось удалить контейнер %s: %v, ошибка %s"
+
+#: internal/distrobox/service/provider.go:93
+msgid "This container is not supported: "
+msgstr "Этот контейнер не поддерживается: "
+
+#: internal/distrobox/service/provider.go:164
+#, c-format
+msgid "Failed to retrieve package information: %s"
+msgstr "Не удалось извлечь информацию о пакете: %s"
+
+#: internal/distrobox/service/provider.go:170
+msgid "Error retrieving desktop file path: %v"
+msgstr "Ошибка извлечения пути desktop-файла: %v"
+
+#: internal/distrobox/service/provider.go:184
+msgid "Error retrieving console path: %v"
+msgstr "Ошибка извлечения пути консоли: %s"
+
+#: internal/distrobox/service/provider.go:219
+msgid "A container must be specified for the forced update operation"
+msgstr ""
+"В контейнере должен быть указан для выполнения операцию принудительного "
+"обновления"
+
+#: internal/distrobox/service/provider.go:276
+msgid "Error retrieving desktop applications for container %s: %v"
+msgstr "Ошибка извлечения desktop-файла приложений для контейнера %s: %v"
+
+#: internal/distrobox/service/provider.go:279
+msgid "Error retrieving console applications for container %s: %v"
+msgstr "Ошибка извлечения консольных утилит для контейнера %s: %v"
+
+#: internal/distrobox/service/provider.go:304
+#: internal/distrobox/service/provider.go:348
+msgid "Failed to retrieve home directory: %v"
+msgstr "Не удалось извлечь домашнюю директорию: %v"
+
+#: internal/distrobox/service/provider.go:310
+#: internal/distrobox/service/provider.go:354
+msgid "Error reading directory %s: %v"
+msgstr "Ошибка чтения директории %s: %v"
+
+#: internal/distrobox/service/provider.go:325
+#: internal/distrobox/service/provider.go:373
+msgid "Error retrieving owner for file %s: %v"
+msgstr "Ошибка извлечения владельца для файла %s: %v"
+
+#: internal/distrobox/service/provider.go:366
+msgid "Error processing file %s: %v"
+msgstr "Ошибка обработки файла %s: %v"
+
+#: internal/distrobox/service/ubuntu.go:53
+msgid "Failed to execute apt search: %v, stderr: %s"
+msgstr "Не удалось выполнить apt search: %v, ошибка: %s"
+
+#: internal/distrobox/service/ubuntu.go:58
+msgid "Failed to retrieve installed packages: "
+msgstr "Не удалось извлечь установленные пакеты: "
+
+#: internal/system/actions.go:101 internal/system/actions.go:157
+#: internal/system/actions.go:175 internal/system/actions.go:193
+msgid "Inspection information"
+msgstr "Информация об инспекции"
+
+#: internal/system/actions.go:113 internal/system/actions.go:146
+msgid "This option is available only for a non-atomic system"
+msgstr "Эта опция доступна только на не-атомарной системе"
+
+#: internal/system/actions.go:134
+msgid "Kernel update finished"
+msgstr ""
+
+#: internal/system/actions.go:215
+msgid "At least one package must be specified, for example, remove package"
+msgstr "Должен быть указан хотя бы один пакет, к примеру, remove package"
+
+#: internal/system/actions.go:231
+msgid "No candidates for removal found"
+msgstr "Кандидатов на удаление не найдено"
+
+#: internal/system/actions.go:242 internal/system/actions.go:322
+#: internal/system/actions.go:449
+msgid "Cancel dialog"
+msgstr "Отмена диалога"
+
+#: internal/system/actions.go:259
+#, c-format
+msgid "%s removed successfully"
+msgid_plural "%s removed successfully"
+msgstr[0] "%s успешно удалён"
+msgstr[1] "%s успешно удалены"
+msgstr[2] "%s успешно удалены"
+
+#: internal/system/actions.go:265
+msgid ". The system image has been modified"
+msgstr ". Образ системы был модифицирован"
+
+#: internal/system/actions.go:269
+msgid ""
+". The system image has not been modified! To apply changes, run with the -a "
+"flag"
+msgstr ""
+". Образ системы не был модифицирован! Чтобы применить изменения, запустите с "
+"флагом -a"
+
+#: internal/system/actions.go:296
+msgid "You must specify at least one package, for example, remove package"
+msgstr "Необходимо указать хотя бы один пакет, к примеру, remove package"
+
+#: internal/system/actions.go:312 internal/system/actions.go:435
+msgid "The operation will not make any changes"
+msgstr "Операция не будет нести изменений"
+
+#: internal/system/actions.go:338
+msgid ""
+"A repository connection error occurred. The package list has been updated, "
+"please try running the command again"
+msgstr ""
+"Произошла ошибка при подключении к репозиторию. Список пакетов обновлён, "
+"пожалуйста, попробуйте запустить команду ещё раз"
+
+#: internal/system/actions.go:353 internal/system/actions.go:463
+#, c-format
+msgid "%d package successfully installed"
+msgid_plural "%d packages successfully installed"
+msgstr[0] "%d пакет успешно установлен"
+msgstr[1] "%d пакета успешно установлено"
+msgstr[2] "%d пакетов успешно установлено"
+
+#: internal/system/actions.go:354 internal/system/actions.go:464
+msgid "and"
+msgstr "и"
+
+#: internal/system/actions.go:355 internal/system/actions.go:465
+#, c-format
+msgid "%d updated"
+msgid_plural "%d updated"
+msgstr[0] "%d обновлён"
+msgstr[1] "%d обновлено"
+msgstr[2] "%d обновлено"
+
+#: internal/system/actions.go:364
+msgid ". The system image has been changed."
+msgstr ". Образ системы был изменён."
+
+#: internal/system/actions.go:368
+msgid ""
+". The system image has not been changed! To apply changes, you need to run "
+"with the -a flag."
+msgstr ""
+". Образ системы не был изменён! Для применения изменения выполните с флагом -"
+"a."
+
+#: internal/system/actions.go:401
+msgid "Package list updated successfully"
+msgstr "Список пакетов успешно обновлён"
+
+#: internal/system/actions.go:470
+msgid "The system has been upgrade successfully"
+msgstr "Система была успешно обновлена"
+
+#: internal/system/actions.go:484
+msgid "Package name must be specified, for example info package"
+msgstr "Необходимо указать имя пакета, к примеру, info package"
+
+#: internal/system/actions.go:505 internal/system/package/actions.go:131
+#, c-format
+msgid "Failed to retrieve information about the package %s"
+msgstr "Не удалось извлечь информацию о пакете %s"
+
+#: internal/system/actions.go:514
+msgid ". Maybe you were looking for: "
+msgstr ". Возможно, вы искали: "
+
+#: internal/system/actions.go:583 internal/system/actions.go:668
+msgid "Nothing found"
+msgstr "Ничего не найдено"
+
+#: internal/system/actions.go:635
+#, fuzzy
+msgid "System package"
+msgstr "Обновление системы"
+
+#: internal/system/actions.go:636
+#, fuzzy
+msgid "Stplr package"
+msgstr "Экспорт пакета"
+
+#: internal/system/actions.go:698 internal/system/commands.go:294
+msgid "Image status"
+msgstr "Статус образа"
+
+#: internal/system/actions.go:731
+msgid "Command executed successfully"
+msgstr "Команда успешно выполнена"
+
+#: internal/system/actions.go:769
+msgid "Changes applied successfully. A reboot is required"
+msgstr "Изменения были успешно применены. Необходима перезагрука"
+
+#: internal/system/actions.go:812 main.go:224
+msgid ""
+"Elevated rights are required to perform this action. Please use sudo or su"
+msgstr ""
+"Для выполнения этого действия необходимо повышенные прав. Пожалуйста, "
+"используйте sudo или su"
+
+#: internal/system/actions.go:828
+msgid "This option is only available for an atomic system"
+msgstr "Эта опция доступна только на атомарной системе"
+
+#: internal/system/actions.go:930
+msgid "Modified image. Configuration file: "
+msgstr "Образ изменён. Конфигурационный файл: "
+
+#: internal/system/actions.go:937
+msgid "Cloud image without changes"
+msgstr "Облачный образ без изменений"
+
+#: internal/system/commands.go:76
+msgid "System package management"
+msgstr "Управление системными пакетами"
+
+#: internal/system/commands.go:80
+msgid ""
+"Package list for installation. The format package- package+ is supported."
+msgstr ""
+"Список пакетов для установки. Формат package- и package+ поддерживается"
+
+#: internal/system/commands.go:85 internal/system/commands.go:108
+msgid "Apply to image"
+msgstr "Применить к образу"
+
+#: internal/system/commands.go:103
+msgid "List of packages to remove"
+msgstr "Список пакетов на удаление"
+
+#: internal/system/commands.go:115
+msgid "Delete all files"
+msgstr ""
+
+#: internal/system/commands.go:133
+msgid "Updating package database"
+msgstr "Обновление базы данных пакетов"
+
+#: internal/system/commands.go:145
+msgid "General system upgrade"
+msgstr "Общее обновление системы"
+
+#: internal/system/commands.go:169
+msgid "Full output of information"
+msgstr "Полный вывод информации"
+
+#: internal/system/commands.go:199
+msgid "Only installed"
+msgstr "Только установленные"
+
+#: internal/system/commands.go:205 internal/system/commands.go:252
+msgid "Full information output"
+msgstr "Полный вывод информации"
+
+#: internal/system/commands.go:220
+#, fuzzy
+msgid "Building a query to get a list of packages"
+msgstr "Сборка запроса для извлечения списка пакетов"
+
+#: internal/system/commands.go:224
+msgid "Building query to fetch package list"
+msgstr "Сборка запроса для извлечения списка пакетов"
+
+#: internal/system/commands.go:247
+msgid "Force update all packages before query"
+msgstr "Принудительное обновление всех пакетов до запроса"
+
+#: internal/system/commands.go:276
+msgid "Module for working with the image"
+msgstr "Модуль для работы с образом"
+
+#: internal/system/commands.go:282
+msgid "Apply changes to the host"
+msgstr "Применить изменения на хосте"
+
+#: internal/system/commands.go:306
+msgid "Image update"
+msgstr "Обновление образа"
+
+#: internal/system/commands.go:318
+msgid "Image changes history"
+msgstr "История изменения образа"
+
+#: internal/system/commands.go:322
+msgid "Filter by image name"
+msgstr "Фильтрация по имени образа"
+
+#: internal/system/package/actions.go:182
+#, fuzzy, c-format
+msgid "Install: %s"
+msgstr "Установить"
+
+#: internal/system/package/actions.go:192
+#, fuzzy, c-format
+msgid "Install progress: %s"
+msgstr "Ошибка установки: %v"
+
+#: internal/system/package/actions.go:292
+msgid "AppStream load failed: %v"
+msgstr ""
+
+#: internal/system/package/actions.go:394
+msgid "Error updating information about installed packages: %w"
+msgstr "Ошибка обновления информации об установленных пакетах: %w"
+
+#: internal/system/package/actions.go:444
+msgid "Error executing the rpm -qia command: %w"
+msgstr "Ошибка выполнения команды rpm -qia: %w"
+
+#: internal/system/package/database.go:184
+msgid "Table cleanup error: %w"
+msgstr "Ошибка очистки таблицы: %w"
+
+#: internal/system/package/database.go:203
+msgid "Batch insert error: %w"
+msgstr "Ошибка пакетной вставки: %w"
+
+#: internal/system/package/database.go:219
+#, c-format
+msgid "failed to get information about package %s"
+msgstr "Не удалось извлечь информацию о пакете %s"
+
+#: internal/system/package/database.go:232
+msgid "Temporary table drop error: %w"
+msgstr "Ошибка создания временной таблицы: %w"
+
+#: internal/system/package/database.go:236
+msgid "Temporary table creation error: %w"
+msgstr "Ошибка создания временной таблицы: %w"
+
+#: internal/system/package/database.go:248
+msgid "Batch insert into temporary table error: %w"
+msgstr "Ошибка пакетной вставки во временную таблицу: %w"
+
+#: internal/system/package/database.go:267
+msgid "Batch update error: %w"
+msgstr "Ошибка пакетного обновления"
+
+#: internal/system/package/database.go:286
+#: internal/system/package/database.go:308
+#: internal/system/package/database.go:335
+#: internal/system/package/database.go:382
+msgid "Query execution error: %w"
+msgstr "Ошибка исполнения запроса"
+
+#: internal/system/package/database.go:364
+#, c-format
+msgid "Invalid sort field: %s. Available fields: %s"
+msgstr "Некорректное поле сортировки: %s. Доступные поля: %s"
+
+#: internal/system/package/database.go:406
+msgid "Package count error: %w"
+msgstr "Ошибка количества пакетов: %w"
+
+#: internal/system/package/database.go:417
+#, c-format
+msgid "Invalid filter field: %s. Available fields: %s"
+msgstr "Некорректное поле фильтра: %s. Доступные поля: %s"
+
+#: internal/system/package/database.go:472
+#, c-format
+msgid "Table %s exists but contains no records"
+msgstr "Таблица %s существует, но не содержит записей"
+
+#: internal/system/package/dialog.go:63 internal/system/package/dialog.go:93
+msgid "Edit"
+msgstr "Изменить"
+
+#: internal/system/package/dialog.go:63 internal/system/package/dialog.go:65
+#: internal/system/package/dialog.go:67 internal/system/package/dialog.go:69
+msgid "Abort"
+msgstr "Прервать"
+
+#: internal/system/package/dialog.go:69 internal/system/package/dialog.go:93
+msgid "Upgrade"
+msgstr "Обновить"
+
+#: internal/system/package/dialog.go:84
+msgid "Error starting TEA: %v"
+msgstr "Ошибка запуска TEA: %v"
+
+#. Формируем строку с подсказками по клавишам
+#: internal/system/package/dialog.go:211
+msgid ""
+"Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/"
+"bottom, Enter - choose, Esc/q - cancel"
+msgstr ""
+"Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - наверх/"
+"вниз, Enter - выбор, Esc/q - отмена"
+
+#: internal/system/package/dialog.go:215
+msgid "Select an action:"
+msgstr "Выберите действие:"
+
+#: internal/system/package/dialog.go:276
+msgid "Package information:"
+msgid_plural "Packages information:"
+msgstr[0] "Информация о пакете:"
+msgstr[1] "Информация о пакетах:"
+msgstr[2] "Информация о пакетах:"
+
+#: internal/system/package/dialog.go:283
+#, c-format
+msgid ""
+"\n"
+"Package %d:"
+msgstr ""
+"\n"
+"Пакет %d:"
+
+#: internal/system/package/dialog.go:285 internal/system/package/dialog.go:358
+#: internal/system/package/dialog.go:379
+msgid "No"
+msgstr "Нет"
+
+#: internal/system/package/dialog.go:287
+msgid "Yes"
+msgstr "Да"
+
+#: internal/system/package/dialog.go:291
+msgid "Action"
+msgstr "Действие"
+
+#: internal/system/package/dialog.go:292
+msgid "Category"
+msgstr "Категория"
+
+#. Выводим "Версия в облаке" обычным стилем
+#: internal/system/package/dialog.go:298 internal/system/package/dialog.go:309
+msgid "Repository version"
+msgstr "Версия в репозитории"
+
+#. Выводим "Версия в системе", уже с раскрашенным текстом
+#: internal/system/package/dialog.go:307
+msgid "System version"
+msgstr "Версия в системе"
+
+#: internal/system/package/dialog.go:317
+msgid "Affected changes:"
+msgstr "Затронутые изменения:"
+
+#: internal/system/package/dialog.go:322
+msgid "Extra packages"
+msgstr "Будет добавлено"
+
+#: internal/system/package/dialog.go:323 internal/system/package/dialog.go:333
+#: internal/system/package/dialog.go:351
+msgid "Will be updated"
+msgstr "Будет обновлено"
+
+#: internal/system/package/dialog.go:324 internal/system/package/dialog.go:334
+#: internal/system/package/dialog.go:347
+msgid "Will be installed"
+msgstr "Будет установлено"
+
+#: internal/system/package/dialog.go:325 internal/system/package/dialog.go:335
+#: internal/system/package/dialog.go:355
+msgid "Will be removed"
+msgstr "Будет удалено"
+
+#: internal/system/package/dialog.go:327 internal/system/package/dialog.go:328
+#: internal/system/package/dialog.go:329 internal/system/package/dialog.go:330
+#, c-format
+msgid "%d package"
+msgid_plural "%d packages"
+msgstr[0] "%d пакет"
+msgstr[1] "%d пакета"
+msgstr[2] "%d пакетов"
+
+#: internal/system/package/dialog.go:332
+msgid "Total:"
+msgstr "Итого:"
+
+#: internal/system/package/dialog.go:336
+msgid "Not affected"
+msgstr "Не затронуто"
+
+#: internal/system/package/dialog.go:382
+msgid "and others"
+msgstr "и другие"
+
+#: internal/system/package/kernel.go:52 internal/system/package/kernel.go:65
+msgid "Package verification error: %v"
+msgstr "Ошибка верификации пакета: %v"
+
+#: internal/system/package/kernel.go:59
 #, c-format
 msgid "update-kernel exited with code %d"
 msgstr ""
 
-#: cmd/system/package/stplr.go:50
+#: internal/system/package/stplr.go:50
 msgid "Error searching for old RPMs %w"
 msgstr "Ошибка поиска старых RPMs %s: %w"
 
-#: cmd/system/package/stplr.go:62 cmd/system/package/stplr.go:67
+#: internal/system/package/stplr.go:62 internal/system/package/stplr.go:67
 #, c-format
 msgid "Build STPLR package %s"
 msgstr "Сборка STPLR пакета %s"
 
-#: cmd/system/package/stplr.go:84 cmd/system/package/stplr.go:114
-#: cmd/system/package/stplr.go:122
-#, c-format
-msgid "Error stplr command '%s': %s"
+#: internal/system/package/stplr.go:84
+#, fuzzy
+msgid "Error stplr command '%s': %s: %w"
 msgstr "Ошибка выполнения stplr команды %s: %v"
 
-#: cmd/system/package/stplr.go:89
+#: internal/system/package/stplr.go:89
 #, c-format
 msgid "Not found rpm file %s"
 msgstr "Не найден rpm файл %s"
 
-#: cmd/system/package/stplr.go:93
+#: internal/system/package/stplr.go:93
 #, fuzzy, c-format
 msgid "Unable to find built RPM for package %s in %s"
 msgstr "Не удалось найти собранный RPM для пакета для %s"
 
-#: cmd/system/package/stplr.go:139
+#: internal/system/package/stplr.go:114 internal/system/package/stplr.go:122
+#, c-format
+msgid "Error stplr command '%s': %s"
+msgstr "Ошибка выполнения stplr команды %s: %v"
+
+#: internal/system/package/stplr.go:139
 msgid "Error stplr command '%s': %w"
 msgstr "Ошибка выполнения stplr команды %s: %v"
 
-#: cmd/system/service/config.go:79
+#: internal/system/service/config.go:80
 msgid "Image must be specified in the configuration file"
 msgstr "Образ должен быть указан в конфигурационном файле"
 
-#: cmd/system/service/config.go:89
+#: internal/system/service/config.go:90
 msgid "Configuration not loaded"
 msgstr "Конфигурация не загружена"
 
-#: cmd/system/service/config.go:176
+#: internal/system/service/config.go:179
 msgid "Local image configuration file has no changes"
 msgstr "Конфигурационный файл локального образа не имеет изменений"
 
-#: cmd/system/service/database.go:91
+#: internal/system/service/database.go:93
 msgid "Config conversion error: %v"
 msgstr "Ошибка преобразования конфигурации: %v"
 
-#: cmd/system/service/database.go:105
+#: internal/system/service/database.go:107
 msgid "Error parsing date %s: %v"
 msgstr "Ошибка парсинга даты %s: %v"
 
-#: cmd/system/service/database.go:110
+#: internal/system/service/database.go:112
 msgid "Error serializing config: %v"
 msgstr "Ошибка сериализации кофигурации: %v"
 
-#: cmd/system/service/database.go:133
+#: internal/system/service/database.go:135
 msgid "Error inserting data: %v"
 msgstr "Ошибка ввода данных: %v"
 
-#: cmd/system/service/database.go:156 cmd/system/service/database.go:184
+#: internal/system/service/database.go:158
+#: internal/system/service/database.go:186
 msgid "History not found"
 msgstr "История не найдена"
 
-#: cmd/system/service/database.go:158 cmd/system/service/database.go:186
-#: cmd/system/service/database.go:206
+#: internal/system/service/database.go:160
+#: internal/system/service/database.go:188
+#: internal/system/service/database.go:208
 msgid "Query execution error: %v"
 msgstr "Ошибка выполнения запроса: %v"
 
-#: cmd/system/service/database.go:211
+#: internal/system/service/database.go:213
 msgid "History config conversion error: %v"
 msgstr "Ошибка преобразования истории конфигурации: %v"
 
-#: cmd/system/service/host.go:85
+#: internal/system/service/host.go:86
 msgid "Failed to execute bootc command: %v"
 msgstr "Не удалось выполнить команду bootc: %v"
 
-#: cmd/system/service/host.go:89
+#: internal/system/service/host.go:90
 msgid "Failed to parse JSON: %v"
 msgstr "Не удалось спарсить JSON: %v"
 
-#: cmd/system/service/host.go:109
+#: internal/system/service/host.go:110
 msgid "Failed to open file %s: %w"
 msgstr "Не удалось открыть файл %s: %2"
 
-#: cmd/system/service/host.go:125
+#: internal/system/service/host.go:126
 msgid "Error reading file %s: %w"
 msgstr "Ошибка чтения файла %s: %w"
 
-#: cmd/system/service/host.go:128
+#: internal/system/service/host.go:129
 #, c-format
 msgid ""
 "Failed to determine the distribution image, please specify it manually in "
@@ -1825,84 +2150,89 @@ msgstr ""
 "Не удалось определить образ дистрибутива, пожалуйста, укажите его вручную в "
 "файле: %s"
 
-#: cmd/system/service/host.go:135
+#: internal/system/service/host.go:136
 msgid "Access error to /proc/mounts: %v"
 msgstr "Ошибка доступа к /proc/mounts: %v"
 
-#: cmd/system/service/host.go:162
+#: internal/system/service/host.go:142
+#, fuzzy
+msgid "Failed to close /proc/mounts: %v"
+msgstr "Ошибка доступа к /proc/mounts: %v"
+
+#: internal/system/service/host.go:169
 #, c-format
 msgid "Error activating usr-overlay: %s"
 msgstr "Ошибка активации usr-overlay: %s"
 
-#: cmd/system/service/host.go:180
+#: internal/system/service/host.go:187
 #, c-format
 msgid "Error building image: %s status: %d"
 msgstr "Ошибка сборки образа: %s статус: %d"
 
-#: cmd/system/service/host.go:186
+#: internal/system/service/host.go:193
 msgid "Error podman image: %v"
 msgstr "Ошибка образа podman: %v"
 
-#: cmd/system/service/host.go:191
+#: internal/system/service/host.go:198
 msgid "No valid images with tag 'os'. Please build the image first."
 msgstr ""
 "Нет корректных образов с тегом 'os'. Пожалуйста, сперва соберите образ."
 
-#: cmd/system/service/host.go:205
+#: internal/system/service/host.go:212
 #, c-format
 msgid "Error switching to the new image: %s"
 msgstr "Ошибка перехода на новый образ: %s"
 
-#: cmd/system/service/host.go:217
+#: internal/system/service/host.go:224
 msgid "Error retrieving information: %v"
 msgstr "Ошибка извлечения информации: %v"
 
-#: cmd/system/service/host.go:236
+#: internal/system/service/host.go:243
 #, c-format
 msgid "Error, file %s not found"
 msgstr "Ошибка, файл %s не найден"
 
-#: cmd/system/service/host.go:275
+#: internal/system/service/host.go:284
 msgid "Skopeo inspect error: %v"
 msgstr "Ошибка инспектирования Skopeo: %w"
 
-#: cmd/system/service/host.go:280
+#: internal/system/service/host.go:289
 msgid "Failed to parse skopeo inspect: %w"
 msgstr "Не удалось обработать skopeo ответ: %w"
 
-#: cmd/system/service/host.go:292
+#: internal/system/service/host.go:301
 #, c-format
 msgid "Bootc upgrade failed: %s"
 msgstr "Не удалось обновить bootc: %s"
 
-#: cmd/system/service/host.go:302
+#: internal/system/service/host.go:314
 msgid "The image has not changed, build paused"
 msgstr "Образ не был изменён, остановка сборки"
 
 #. Возвращаем вывод вместе с ошибкой для более подробной диагностики
-#: cmd/system/service/podman.go:85
+#: internal/system/service/podman.go:85
 msgid "Command failed with error: %v, output: %s"
 msgstr "Команда завершилась с ошибкой: %v, вывод: %s"
 
-#: cmd/system/service/podman.go:158
+#: internal/system/service/podman.go:158
 #, c-format
 msgid "Cannot parse size: %s"
 msgstr "Невозможно спарсить разме: %s"
 
-#: cmd/system/service/podman.go:178
+#: internal/system/service/podman.go:178
 #, c-format
 msgid "Unknown suffix: %s"
 msgstr "Неизвестный суффикс: %s"
 
-#: cmd/system/service/podman.go:192
+#: internal/system/service/podman.go:192
 msgid "Error deleting old images: %v, output: %s"
 msgstr "Ошибка удаления старых образов: %v, вывод: %s"
 
-#: cmd/system/service/podman.go:199
+#: internal/system/service/podman.go:199
 msgid "Error retrieving podman image: %v"
 msgstr "Ошибка извлечения образа podman: %v"
 
-#: cmd/system/service/podman.go:214
+#: internal/system/service/podman.go:214
 msgid "Error deleting image %s: %v, output: %s\n"
 msgstr "Ошибка удаления образа %s: %v, вывод: %s\n"
 
@@ -1927,56 +2257,91 @@ msgstr "Интерфейс org.altlinux.APM уже используется"
 msgid "Translations folder not found at path: %s"
 msgstr "Папка перевода не найдена по пути: %s"
 
-#: main.go:66
+#: main.go:78
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:75
+#: main.go:87
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:96
+#: main.go:120
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
 
-#: main.go:102
+#: main.go:126
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:109
+#: main.go:133
 msgid "Start session D-Bus service org.altlinux.APM"
 msgstr "Запустить сессионный сервис D-Bus org.altlinux.APM"
 
-#: main.go:114
+#: main.go:138
 msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
-#: main.go:122
+#: main.go:146
 msgid "Show the list of commands or help for each command"
 msgstr "Показать список команд или справку по каждой команде"
 
-#: main.go:123
+#: main.go:147
 msgid "[command]"
 msgstr "[команда]"
 
-#: main.go:217
+#: main.go:156
+#, c-format
+msgid "Unknown command: %s. See 'apm help'"
+msgstr ""
+
+#: main.go:248
 msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
-#: main.go:244
+#: main.go:275
 msgid "Terminating the application. Releasing resources…"
 msgstr "Завершение работы приложения. Высвобождение ресурсов…"
 
-#: main.go:249
+#: main.go:281
 msgid "Error closing KV database: "
 msgstr "Ошибка закрытия базы данных KV: "
 
-#: main.go:255
+#: main.go:287
 msgid "Error closing SQL database: "
 msgstr "Ошибка закрытия базы данных SQL: "
+
+#~ msgid ""
+#~ ".\n"
+#~ "A difference in the package list was found in the local configuration, "
+#~ "the image has been updated"
+#~ msgstr ""
+#~ ".\n"
+#~ "Была найдена разница в списке пакетов локальной конфигурации, образ будет "
+#~ "обновлён"
+
+#~ msgid ""
+#~ "A communication error with the repository occurred. The package list has "
+#~ "been updated, please try running the command again"
+#~ msgstr ""
+#~ "Произошла ошибка связи с репозиторием. Список пакетов обновлён, "
+#~ "пожалуйста, попробуйте запустить команду ещё раз"
+
+#~ msgid "The operation will not make any changes. Reasons: \n"
+#~ msgstr "Операция не будет нести изменений. Причины:\n"
+
+#~ msgid ""
+#~ "Found a discrepancy in the package list in the local configuration, the "
+#~ "image has been updated"
+#~ msgstr ""
+#~ "Обнаружено несоответствие в списке пакетов локальной конфигурации, образ "
+#~ "был обновлён"
+
+#, c-format
+#~ msgid "Package verification error: %s"
+#~ msgstr "Ошибка верификации пакета: %s"
 
 #~ msgid "Package from ALR"
 #~ msgstr "Пакет из ALR"

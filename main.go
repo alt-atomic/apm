@@ -151,13 +151,19 @@ func main() {
 	}
 
 	rootCommand.Suggest = true
+	rootCommand.CommandNotFound = func(ctx context.Context, cmd *cli.Command, name string) {
+		lib.Env.Format = cmd.String("format")
+		msg := fmt.Sprintf(lib.T_("Unknown command: %s. See 'apm help'"), name)
+		_ = reply.CliResponse(ctx, reply.APIResponse{Data: map[string]interface{}{"message": msg}, Error: true})
+	}
 	if err := rootCommand.Run(ctx, os.Args); err != nil {
 		cleanup()
 		os.Exit(1)
 	}
 }
 
-func sessionDbus(ctx context.Context, _ *cli.Command) error {
+func sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	lib.Env.Format = cmd.String("format")
 	if syscall.Geteuid() == 0 {
 		errPermission := lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
 		_ = reply.CliResponse(ctx, reply.APIResponse{
@@ -212,7 +218,8 @@ func sessionDbus(ctx context.Context, _ *cli.Command) error {
 	select {}
 }
 
-func systemDbus(ctx context.Context, _ *cli.Command) error {
+func systemDbus(ctx context.Context, cmd *cli.Command) error {
+	lib.Env.Format = cmd.String("format")
 	if syscall.Geteuid() != 0 {
 		errPermission := lib.T_("Elevated rights are required to perform this action. Please use sudo or su")
 		_ = reply.CliResponse(ctx, reply.APIResponse{
