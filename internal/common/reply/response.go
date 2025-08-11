@@ -180,7 +180,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: числа (int, float64)
 		case int, float64:
-			if k == "size" || k == "installedSize" {
+			if k == "size" || k == "installedSize" || k == "downloadSize" || k == "installSize" {
 				sizeVal := 0
 				switch valueTyped := vv.(type) {
 				case int:
@@ -344,9 +344,9 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 
 			var t *tree.Tree
 			if resp.Error {
-				t = buildTreeFromMap("⚛", data)
+				t = buildTreeFromMap("", data)
 			} else {
-				t = buildTreeFromMap("⚛", data)
+				t = buildTreeFromMap("", data)
 			}
 
 			var rootColor lipgloss.Style
