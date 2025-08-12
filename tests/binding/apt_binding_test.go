@@ -1,6 +1,8 @@
 // Atomic Package Manager
 // Copyright (C) 2025 Дмитрий Удалов
 
+//go:build apt_binding
+
 package binding
 
 import (

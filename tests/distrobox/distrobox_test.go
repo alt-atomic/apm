@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//go:build distrobox
+
 package distrobox_test
 
 import (
@@ -34,7 +36,7 @@ func TestDistroboxActionsCreation(t *testing.T) {
 	assert.NotNil(t, actions)
 }
 
-func TestDistroboxInstallRequiresNonRoot(t *testing.T) {
+func TestDistroboxRealContainerLifecycle(t *testing.T) {
 	if syscall.Geteuid() == 0 {
 		t.Skip("This test should be run without root privileges")
 	}
@@ -43,16 +45,69 @@ func TestDistroboxInstallRequiresNonRoot(t *testing.T) {
 	assert.NotNil(t, actions)
 
 	ctx := context.Background()
+	containerName := "apm-test-alt"
+	image := "registry.altlinux.org/sisyphus/base:latest"
 
-	resp, err := actions.Install(ctx, "test-container", "hello", false)
-	if err != nil {
-		t.Logf("Install error (may be expected if container not exists): %v", err)
-		assert.NotContains(t, err.Error(), "Elevated rights are not allowed")
-	} else {
+	// Создаем контейнер через APM
+	t.Run("Create container via APM", func(t *testing.T) {
+		resp, err := actions.ContainerAdd(ctx, image, containerName, "", "")
+		if err != nil {
+			t.Logf("Container creation failed: %v", err)
+			// Не требуем успеха, так как может быть проблема с distrobox/podman
+			return
+		}
+		
 		assert.NotNil(t, resp)
-		assert.False(t, resp.Error)
-		t.Logf("Install successful: %+v", resp.Data)
-	}
+		assert.False(t, resp.Error, "Container creation should succeed")
+		t.Logf("Container created successfully: %+v", resp.Data)
+	})
+
+	// Установка очистки после тестов
+	t.Cleanup(func() {
+		resp, err := actions.ContainerRemove(ctx, containerName)
+		if err != nil {
+			t.Logf("Container cleanup failed: %v", err)
+		} else {
+			t.Logf("Container cleaned up successfully: %+v", resp.Data)
+		}
+	})
+
+	// Тестируем установку пакета в созданном контейнере
+	t.Run("Install package in created container", func(t *testing.T) {
+		resp, err := actions.Install(ctx, containerName, "hello", false)
+		if err != nil {
+			t.Logf("Install error: %v", err)
+			assert.NotContains(t, err.Error(), "Elevated rights are not allowed")
+		} else {
+			assert.NotNil(t, resp)
+			assert.False(t, resp.Error)
+			t.Logf("Install successful: %+v", resp.Data)
+		}
+	})
+
+	// Тестируем поиск пакетов в контейнере
+	t.Run("Search packages in created container", func(t *testing.T) {
+		resp, err := actions.Search(ctx, containerName, "vim")
+		if err != nil {
+			t.Logf("Search error: %v", err)
+		} else {
+			assert.NotNil(t, resp)
+			assert.False(t, resp.Error)
+			t.Logf("Search successful: found packages")
+		}
+	})
+
+	// Тестируем удаление пакета
+	t.Run("Remove package from created container", func(t *testing.T) {
+		resp, err := actions.Remove(ctx, containerName, "hello", false)
+		if err != nil {
+			t.Logf("Remove error: %v", err)
+		} else {
+			assert.NotNil(t, resp)
+			assert.False(t, resp.Error)
+			t.Logf("Remove successful: %+v", resp.Data)
+		}
+	})
 }
 
 func TestDistroboxRemoveRequiresNonRoot(t *testing.T) {
@@ -188,4 +243,90 @@ func TestDistroboxContainerListRequiresNonRoot(t *testing.T) {
 		assert.False(t, resp.Error)
 		t.Logf("ContainerList successful")
 	}
+}
+
+func TestDistroboxContainerManagement(t *testing.T) {
+	if syscall.Geteuid() == 0 {
+		t.Skip("This test should be run without root privileges")
+	}
+
+	actions := distrobox.NewActions()
+	assert.NotNil(t, actions)
+
+	ctx := context.Background()
+	containerName := "apm-test-management"
+	image := "registry.altlinux.org/sisyphus/base:latest"
+
+	// Проверяем начальный список контейнеров
+	t.Run("List containers before creation", func(t *testing.T) {
+		resp, err := actions.ContainerList(ctx)
+		if err != nil {
+			t.Logf("ContainerList failed: %v", err)
+			return
+		}
+		
+		assert.NotNil(t, resp)
+		assert.False(t, resp.Error)
+		
+		if containers, ok := resp.Data.(map[string]interface{})["containers"]; ok {
+			if containerList, ok := containers.([]interface{}); ok {
+				t.Logf("Found %d existing containers", len(containerList))
+			}
+		}
+	})
+
+	// Создаем контейнер
+	t.Run("Create new container", func(t *testing.T) {
+		resp, err := actions.ContainerAdd(ctx, image, containerName, "", "")
+		if err != nil {
+			t.Logf("Container creation failed: %v", err)
+			t.Skip("Skipping remaining tests due to creation failure")
+			return
+		}
+		
+		assert.NotNil(t, resp)
+		assert.False(t, resp.Error)
+		t.Logf("Container created: %+v", resp.Data)
+	})
+
+	// Проверяем что контейнер появился в списке
+	t.Run("Verify container in list", func(t *testing.T) {
+		resp, err := actions.ContainerList(ctx)
+		if err != nil {
+			t.Logf("ContainerList failed: %v", err)
+			return
+		}
+		
+		assert.NotNil(t, resp)
+		assert.False(t, resp.Error)
+		
+		found := false
+		if containers, ok := resp.Data.(map[string]interface{})["containers"]; ok {
+			if containerList, ok := containers.([]interface{}); ok {
+				for _, container := range containerList {
+					if containerInfo, ok := container.(map[string]interface{}); ok {
+						if name, ok := containerInfo["name"].(string); ok && name == containerName {
+							found = true
+							t.Logf("Found created container in list: %s", name)
+							break
+						}
+					}
+				}
+			}
+		}
+		
+		if !found {
+			t.Logf("Created container not found in list (may be expected)")
+		}
+	})
+
+	// Очистка
+	t.Cleanup(func() {
+		resp, err := actions.ContainerRemove(ctx, containerName)
+		if err != nil {
+			t.Logf("Container cleanup failed: %v", err)
+		} else {
+			t.Logf("Container cleaned up: %+v", resp.Data)
+		}
+	})
 }

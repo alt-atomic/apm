@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//go:build system
+
 package package_test
 
 import (
@@ -27,6 +29,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+const testPackage = "hello"
 
 // TestNonAtomicInstall проверяет Install
 func TestNonAtomicInstall(t *testing.T) {

@@ -110,28 +110,42 @@ go_test_env = [
   'CGO_LDFLAGS=' + '-L' + meson.current_build_dir() + ' ' + '-Wl,-Bstatic -lapt_wrapper -Wl,-Bdynamic -lapt-pkg -lstdc++',
 ]
 
-test('go-tests',
+# Unit tests (no APT dependencies)
+test('go-unit-tests',
   bash,
-  args: ['-lc', 'cd ' + meson.current_source_dir() + ' && go test -v -p 1 -count=1 ./... -tags apt_binding'],
+  args: ['-lc', 'cd ' + meson.current_source_dir() + ' && go test -v -p 1 -count=1 ./tests/common/... ./tests/lib/... -tags "unit"'],
   env: go_test_env,
   depends: [apt_wrapper_lib],
-  suite: 'go',
+  suite: 'unit',
+  timeout: 300,
+)
+
+# APT binding tests (requires APT)
+test('go-apt-tests',
+  bash,
+  args: ['-lc', 'cd ' + meson.current_source_dir() + ' && go test -v -p 1 -count=1 ./tests/binding/... -tags "apt_binding"'],
+  env: go_test_env,
+  depends: [apt_wrapper_lib],
+  suite: 'apt',
   timeout: 1200,
 )
 
-custom_target(
-  'go-tests-live',
-  build_by_default: false,
-  console: true,
-  output: 'go-tests-live.done',
-  command: [
-    bash, '-lc',
-    'cd ' + meson.current_source_dir() + ' && ' +
-    'CGO_ENABLED=1 ' +
-    'CGO_CFLAGS=' + '\'' + '-I' + meson.current_source_dir() + '/internal/common/binding/apt/wrapper -I/usr/include/apt-pkg' + '\'' + ' ' +
-    'CGO_LDFLAGS=' + '\'' + '-L' + meson.current_build_dir() + ' -Wl,-Bstatic -lapt_wrapper -Wl,-Bdynamic -lapt-pkg -lstdc++' + '\'' + ' ' +
-    'go test -v -p 1 -count=1 ./... -tags apt_binding ; ' +
-    'echo ok > go-tests-live.done'
-  ],
+# System integration tests (requires root and system access)
+test('go-system-tests',
+  bash,
+  args: ['-lc', 'cd ' + meson.current_source_dir() + ' && go test -v -p 1 -count=1 ./tests/system/... ./tests/mocks/... -tags "system,apt_binding"'],
+  env: go_test_env,
   depends: [apt_wrapper_lib],
+  suite: 'integration',
+  timeout: 1800,
+)
+
+# Distrobox tests
+test('go-distrobox-tests',
+  bash,
+  args: ['-lc', 'cd ' + meson.current_source_dir() + ' && go test -v -p 1 -count=1 ./tests/distrobox/... -tags "distrobox"'],
+  env: go_test_env,
+  depends: [apt_wrapper_lib],
+  suite: 'distrobox',
+  timeout: 600,
 )
