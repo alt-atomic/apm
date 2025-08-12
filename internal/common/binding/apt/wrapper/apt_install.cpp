@@ -5,7 +5,15 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
 
     try {
         if (pm->cache->dep_cache->BrokenCount() != 0) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Cannot install packages with broken dependencies");
+            // Attribute the error to a concrete broken package similar to cache open/simulate
+            for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+                pkgDepCache::StateCache &st = (*pm->cache->dep_cache)[it];
+                if (st.InstBroken() || st.NowBroken()) {
+                    std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + it.Name();
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                }
+            }
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
         }
 
         if (pm->cache->dep_cache->DelCount() == 0 &&

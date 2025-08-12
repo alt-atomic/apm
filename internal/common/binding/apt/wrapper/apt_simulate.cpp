@@ -23,7 +23,15 @@ AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes)
             (void)Fix.Resolve(true);
         }
         if (cache->dep_cache->BrokenCount() > 0) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Unmet dependencies");
+            // Attribute error to a concrete broken package for clarity
+            for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+                pkgDepCache::StateCache &st = (*cache->dep_cache)[it];
+                if (st.InstBroken() || st.NowBroken()) {
+                    std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + it.Name();
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                }
+            }
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
         }
 
         if (!check_apt_errors()) {
@@ -115,6 +123,7 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
 
     try {
         memset(changes, 0, sizeof(AptPackageChanges));
+        std::vector<std::string> requested_order;
 
         std::set<std::string> requested_packages;
         for (size_t i = 0; i < count; i++) {
@@ -122,6 +131,7 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
 
             std::string pkg_name(package_names[i]);
             requested_packages.insert(pkg_name);
+            requested_order.push_back(pkg_name);
 
             pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
             if (pkg.end()) {
@@ -183,7 +193,26 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
             (void)Fix.Resolve(true);
         }
         if (cache->dep_cache->BrokenCount() > 0) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Unmet dependencies");
+            // Prefer attributing the error to the first requested package that is broken/uninstallable
+            for (const auto &name : requested_order) {
+                pkgCache::PkgIterator p = cache->dep_cache->FindPkg(name.c_str());
+                if (!p.end()) {
+                    pkgDepCache::StateCache &st = (*cache->dep_cache)[p];
+                    if (st.InstBroken() || st.NowBroken() || st.CandidateVer == 0) {
+                        std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + name;
+                        return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                    }
+                }
+            }
+            // Fallback: find any broken package
+            for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+                pkgDepCache::StateCache &st = (*cache->dep_cache)[it];
+                if (st.InstBroken() || st.NowBroken()) {
+                    std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + it.Name();
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                }
+            }
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
         }
 
         if (!check_apt_errors()) {
@@ -229,6 +258,23 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
 
                 if (pkg_state.InstallVer != 0) {
                     install_size -= pkg_state.InstallVer->InstalledSize;
+                }
+            }
+        }
+
+        // If none of the requested packages made it into a plan and they are not already installed,
+        // surface an error attributed to the first such requested package
+        bool any_planned = (changes->new_installed_count > 0) || (changes->upgraded_count > 0) || (changes->removed_count > 0);
+        if (!any_planned && !requested_order.empty()) {
+            for (const auto &name : requested_order) {
+                pkgCache::PkgIterator p = cache->dep_cache->FindPkg(name.c_str());
+                if (!p.end()) {
+                    pkgDepCache::StateCache &st = (*cache->dep_cache)[p];
+                    bool already_installed = !p.CurrentVer().end();
+                    if (!already_installed && (st.CandidateVer == 0 || (!st.NewInstall() && !st.Upgrade()))) {
+                        std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + name;
+                        return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                    }
                 }
             }
         }
