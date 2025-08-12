@@ -16,6 +16,16 @@ AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes)
 
         pkgDistUpgrade(*cache->dep_cache);
 
+        // Try to resolve problems like apt-get does before declaring broken
+        if (cache->dep_cache->BrokenCount() > 0) {
+            pkgProblemResolver Fix(cache->dep_cache);
+            Fix.InstallProtect();
+            (void)Fix.Resolve(true);
+        }
+        if (cache->dep_cache->BrokenCount() > 0) {
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Unmet dependencies");
+        }
+
         if (!check_apt_errors()) {
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
         }
@@ -164,6 +174,16 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
             }
 
             cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, true);
+        }
+
+        // Try to resolve problems like apt-get does before declaring broken
+        if (cache->dep_cache->BrokenCount() > 0) {
+            pkgProblemResolver Fix(cache->dep_cache);
+            Fix.InstallProtect();
+            (void)Fix.Resolve(true);
+        }
+        if (cache->dep_cache->BrokenCount() > 0) {
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Unmet dependencies");
         }
 
         if (!check_apt_errors()) {
@@ -319,6 +339,16 @@ AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_
             }
 
             cache->dep_cache->MarkDelete(pkg, true); // true = purge
+        }
+
+        // Try to resolve problems like apt-get does before declaring broken
+        if (cache->dep_cache->BrokenCount() > 0) {
+            pkgProblemResolver Fix(cache->dep_cache);
+            Fix.InstallProtect();
+            (void)Fix.Resolve(true);
+        }
+        if (cache->dep_cache->BrokenCount() > 0) {
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Unmet dependencies");
         }
 
         if (!check_apt_errors()) {
@@ -488,6 +518,16 @@ AptResult apt_simulate_change(AptCache* cache,
                 }
                 cache->dep_cache->MarkDelete(pkg, purge);
             }
+        }
+
+        // Try to resolve problems like apt-get does before declaring broken
+        if (cache->dep_cache->BrokenCount() > 0) {
+            pkgProblemResolver Fix(cache->dep_cache);
+            Fix.InstallProtect();
+            (void)Fix.Resolve(true);
+        }
+        if (cache->dep_cache->BrokenCount() > 0) {
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Unmet dependencies");
         }
 
         if (!check_apt_errors()) {
