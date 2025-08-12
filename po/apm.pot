@@ -95,7 +95,7 @@ msgstr ""
 #, c-format
 msgid ""
 "Some broken packages were found while trying to process build-dependencies "
-"for %s."
+"for %s"
 msgstr ""
 
 #: internal/common/apt/errors.go:202

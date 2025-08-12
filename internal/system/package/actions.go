@@ -81,20 +81,9 @@ func (a *Actions) FindPackage(ctx context.Context, req []string) ([]string, []Pa
 				seenInfo[info.Name] = true
 				packagesInfo = append(packagesInfo, info)
 			}
-			if info.TypePackage == int(PackageTypeStplr) {
-				rpmPath, errStplr := a.serviceStplr.PreInstall(ctx, original)
-				if errStplr != nil {
-					return nil, nil, errStplr
-				}
-				if !seenNames[rpmPath] {
-					seenNames[rpmPath] = true
-					packageNames = append(packageNames, rpmPath)
-				}
-			} else {
-				if !seenNames[original] {
-					seenNames[original] = true
-					packageNames = append(packageNames, original)
-				}
+			if !seenNames[original] {
+				seenNames[original] = true
+				packageNames = append(packageNames, original)
 			}
 			continue
 		}
@@ -369,12 +358,12 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
 	}
 
-	if lib.Env.ExistStplr {
-		packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
-		if err != nil {
-			lib.Log.Errorf(err.Error())
-		}
-	}
+	//if lib.Env.ExistStplr {
+	//	packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
+	//	if err != nil {
+	//		lib.Log.Errorf(err.Error())
+	//	}
+	//}
 
 	// @TODO Обновляем информацию о том, установлены ли пакеты локально, на самом деле об этом можно узнать из биндингов
 	packages, err = a.updateInstalledInfo(ctx, packages)

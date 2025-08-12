@@ -99,10 +99,10 @@ msgstr "Невозможно получить информацию о завис
 #, c-format
 msgid ""
 "Some broken packages were found while trying to process build-dependencies "
-"for %s."
+"for %s"
 msgstr ""
 "Было найдено несколько повреждённых пакетов во время попытки вычисления "
-"зависимостей сборки для %s."
+"зависимостей сборки для %s"
 
 #: internal/common/apt/errors.go:202
 #, c-format

@@ -195,8 +195,8 @@ var errorPatterns = []ErrorEntry{
 	{ErrBuilddepInfoFailed, "Unable to get build-dependency information for %s", func() string {
 		return lib.T_("Unable to get build-dependency information for %s")
 	}, 1},
-	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s.", func() string {
-		return lib.T_("Some broken packages were found while trying to process build-dependencies for %s.")
+	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s", func() string {
+		return lib.T_("Some broken packages were found while trying to process build-dependencies for %s")
 	}, 1},
 	{ErrVirtualNoProviders, "Package %s is a virtual package with no good providers", func() string {
 		return lib.T_("Package %s is a virtual package with no good providers")

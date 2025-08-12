@@ -171,6 +171,17 @@ static std::string collect_pending_errors() {
     return all_errors;
 }
 
+static const char* find_first_broken_pkg(pkgDepCache* dep) {
+    if (dep == nullptr) return nullptr;
+    for (pkgCache::PkgIterator it = dep->PkgBegin(); !it.end(); ++it) {
+        pkgDepCache::StateCache &st = (*dep)[it];
+        if (st.InstBroken() || st.NowBroken()) {
+            return it.Name();
+        }
+    }
+    return nullptr;
+}
+
 static char* dup_cstr(const std::string& s) {
     if (s.empty()) return nullptr;
     char* p = (char*)malloc(s.size() + 1);
@@ -284,9 +295,16 @@ AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
         }
 
         if (!(*cache)->cache_file->CheckDeps()) {
+            const char* broken = find_first_broken_pkg((*cache)->cache_file->operator->());
+            std::string out;
+            if (broken && *broken) {
+                out = std::string("Some broken packages were found while trying to process build-dependencies for ") + broken;
+            } else {
+                out = "Broken dependencies";
+            }
             delete *cache;
             *cache = nullptr;
-            return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Failed to check dependencies");
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
         }
 
         (*cache)->dep_cache = (*cache)->cache_file->operator->();
@@ -331,7 +349,12 @@ AptResult apt_cache_refresh(AptCache* cache) {
         }
 
         if (!cache->cache_file->CheckDeps()) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to check dependencies after refresh");
+            const char* broken = find_first_broken_pkg(cache->cache_file->operator->());
+            if (broken && *broken) {
+                std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + broken + ".";
+                return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+            }
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
         }
 
         cache->dep_cache = cache->cache_file->operator->();

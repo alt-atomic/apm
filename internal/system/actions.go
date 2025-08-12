@@ -312,19 +312,21 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		return nil, errors.New(lib.T_("The operation will not make any changes"))
 	}
 
-	reply.StopSpinner()
-	dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionInstall)
-	if err != nil {
-		return nil, err
+	if len(packagesInfo) > 0 {
+		reply.StopSpinner()
+		dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionInstall)
+		if err != nil {
+			return nil, err
+		}
+
+		if !dialogStatus {
+			errDialog := errors.New(lib.T_("Cancel dialog"))
+
+			return nil, errDialog
+		}
+
+		reply.CreateSpinner()
 	}
-
-	if !dialogStatus {
-		errDialog := errors.New(lib.T_("Cancel dialog"))
-
-		return nil, errDialog
-	}
-
-	reply.CreateSpinner()
 
 	err = a.serviceAptActions.AptUpdate(ctx)
 	if err != nil {
