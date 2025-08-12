@@ -38,6 +38,8 @@ type Colors struct {
 	ScrollBar      string `yaml:"scrollBar"`
 	DialogKeyLight string `yaml:"dialogKeyLight"`
 	DialogKeyDark  string `yaml:"dialogKeyDark"`
+	ProgressStart  string `yaml:"progressStart"`
+	ProgressEnd    string `yaml:"progressEnd"`
 }
 
 type Environment struct {
@@ -91,6 +93,8 @@ func InitConfig() error {
 		ScrollBar:      "#ff0000",
 		DialogKeyLight: "#234f55",
 		DialogKeyDark:  "#82a0a3",
+		ProgressStart:  "#c4c8c6",
+		ProgressEnd:    "#26a269",
 	}
 
 	// Переопределяем значения из ldflags, если они заданы

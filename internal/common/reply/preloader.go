@@ -281,7 +281,7 @@ func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
 				m.tasks[i].progressDoneText = msg.progressDoneText
 				// Инициализируем progressModel, если впервые
 				if m.tasks[i].progressModel == nil {
-					pm := progress.New(progress.WithDefaultGradient())
+					pm := progress.New(progress.WithGradient(lib.Env.Colors.ProgressStart, lib.Env.Colors.ProgressEnd))
 					pm.Width = 40
 					m.tasks[i].progressModel = &pm
 				}
@@ -307,7 +307,7 @@ func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
 
 		if msg.eventType == "PROGRESS" {
 			// Создаём прогресс-бар
-			pm := progress.New(progress.WithDefaultGradient())
+			pm := progress.New(progress.WithGradient(lib.Env.Colors.ProgressStart, lib.Env.Colors.ProgressEnd))
 			pm.Width = 40
 			newT.progressModel = &pm
 
