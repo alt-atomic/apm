@@ -25,6 +25,21 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+type Colors struct {
+	Enumerator     string `yaml:"enumerator"`
+	Accent         string `yaml:"accent"`
+	ItemLight      string `yaml:"itemLight"`
+	ItemDark       string `yaml:"itemDark"`
+	Success        string `yaml:"success"`
+	Error          string `yaml:"error"`
+	Delete         string `yaml:"delete"`
+	Install        string `yaml:"install"`
+	Shortcut       string `yaml:"shortcut"`
+	ScrollBar      string `yaml:"scrollBar"`
+	DialogKeyLight string `yaml:"dialogKeyLight"`
+	DialogKeyDark  string `yaml:"dialogKeyDark"`
+}
+
 type Environment struct {
 	CommandPrefix   string `yaml:"commandPrefix"`
 	Environment     string `yaml:"environment"`
@@ -33,6 +48,7 @@ type Environment struct {
 	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
 	PathDBKV        string `yaml:"pathDBKV"`
 	PathImageFile   string `yaml:"pathImageFile"`
+	Colors          Colors `yaml:"colors"`
 	// Internal variables
 	ExistStplr     bool
 	ExistDistrobox bool
@@ -60,6 +76,22 @@ var (
 func InitConfig() error {
 	var configPath string
 	var err error
+
+	// Устанавливаем значения цветов по умолчанию
+	Env.Colors = Colors{
+		Enumerator:     "#2aa1b3",
+		Accent:         "#a2734c",
+		ItemLight:      "#171717",
+		ItemDark:       "#c4c8c6",
+		Success:        "2",
+		Error:          "9",
+		Delete:         "#a81c1f",
+		Install:        "#2bb389",
+		Shortcut:       "#888888",
+		ScrollBar:      "#ff0000",
+		DialogKeyLight: "#234f55",
+		DialogKeyDark:  "#82a0a3",
+	}
 
 	// Переопределяем значения из ldflags, если они заданы
 	if BuildCommandPrefix != "" {

@@ -185,18 +185,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-var (
-	deleteStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#a81c1f"))
-	installStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#2bb389"))
-	shortcutStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Faint(true)
-)
+// getDeleteStyle возвращает стиль для удаления.
+func getDeleteStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Delete))
+}
+
+// getInstallStyle возвращает стиль для установки.
+func getInstallStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Install))
+}
+
+// getShortcutStyle возвращает стиль для подсказок.
+func getShortcutStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Shortcut)).Faint(true)
+}
 
 func (m model) View() string {
 	// Определяем стили для вывода
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(lib.Env.Colors.Accent))
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: "#171717",
-		Dark:  "#c4c8c6",
+		Light: lib.Env.Colors.ItemLight,
+		Dark:  lib.Env.Colors.ItemDark,
 	})
 
 	contentView := m.vp.View()
@@ -208,7 +217,7 @@ func (m model) View() string {
 	}
 
 	// Формируем строку с подсказками по клавишам
-	keyboardShortcuts := shortcutStyle.Render(lib.T_("Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/bottom, Enter - choose, Esc/q - cancel"))
+	keyboardShortcuts := getShortcutStyle().Render(lib.T_("Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/bottom, Enter - choose, Esc/q - cancel"))
 
 	// Формируем футер с выбором действия
 	var footer strings.Builder
@@ -222,9 +231,9 @@ func (m model) View() string {
 		var btnStyle lipgloss.Style
 		if i == 0 {
 			if m.choiceType == ActionRemove {
-				btnStyle = deleteStyle
+				btnStyle = getDeleteStyle()
 			} else {
-				btnStyle = installStyle
+				btnStyle = getInstallStyle()
 			}
 		} else {
 			btnStyle = valueStyle
@@ -245,7 +254,7 @@ func addScrollIndicator(contentView string, yOffset, totalLines, viewportHeight 
 		thumbIndex = viewportHeight - 1
 	}
 
-	indicatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
+	indicatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.ScrollBar))
 	for i := range lines {
 		indicator := " "
 		if i == thumbIndex {
@@ -259,14 +268,14 @@ func addScrollIndicator(contentView string, yOffset, totalLines, viewportHeight 
 // buildContent генерирует основное содержимое, которое помещается в viewport.
 // Здесь выводится информация о пакетах и изменения, без интерактивного меню.
 func (m model) buildContent() string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(lib.Env.Colors.Accent))
 	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: "#234f55",
-		Dark:  "#82a0a3",
+		Light: lib.Env.Colors.DialogKeyLight,
+		Dark:  lib.Env.Colors.DialogKeyDark,
 	}).PaddingLeft(1)
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: "#171717",
-		Dark:  "#c4c8c6",
+		Light: lib.Env.Colors.ItemLight,
+		Dark:  lib.Env.Colors.ItemDark,
 	})
 
 	var sb strings.Builder
@@ -282,9 +291,9 @@ func (m model) buildContent() string {
 			sb.WriteString(titleStyle.Render("\n"))
 			sb.WriteString(titleStyle.Render(fmt.Sprintf(lib.T_("\nPackage %d:"), i+1)))
 		}
-		installedText := shortcutStyle.Render(lib.T_("No"))
+		installedText := getShortcutStyle().Render(lib.T_("No"))
 		if pkg.Installed {
-			installedText = installStyle.Render(lib.T_("Yes"))
+			installedText = getInstallStyle().Render(lib.T_("Yes"))
 		}
 
 		sb.WriteString("\n" + formatLine(lib.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
@@ -299,9 +308,9 @@ func (m model) buildContent() string {
 			// Сравниваем версию в системе и облаке
 			var systemVersionColored string
 			if pkg.VersionInstalled == pkg.Version {
-				systemVersionColored = installStyle.Render(pkg.VersionInstalled)
+				systemVersionColored = getInstallStyle().Render(pkg.VersionInstalled)
 			} else {
-				systemVersionColored = deleteStyle.Render(pkg.VersionInstalled)
+				systemVersionColored = getDeleteStyle().Render(pkg.VersionInstalled)
 			}
 			// Выводим "Версия в системе", уже с раскрашенным текстом
 			sb.WriteString("\n" + formatLine(lib.T_("System version"), systemVersionColored, keyWidth, keyStyle, valueStyle))
@@ -344,18 +353,18 @@ func (m model) buildContent() string {
 
 func (m model) statusPackage(pkg string) string {
 	if contains(m.pckChange.ExtraInstalled, pkg) || contains(m.pckChange.NewInstalledPackages, pkg) {
-		return installStyle.Render(lib.T_("Will be installed"))
+		return getInstallStyle().Render(lib.T_("Will be installed"))
 	}
 
 	if contains(m.pckChange.UpgradedPackages, pkg) {
-		return installStyle.Render(lib.T_("Will be updated"))
+		return getInstallStyle().Render(lib.T_("Will be updated"))
 	}
 
 	if contains(m.pckChange.RemovedPackages, pkg) {
-		return deleteStyle.Render(lib.T_("Will be removed"))
+		return getDeleteStyle().Render(lib.T_("Will be removed"))
 	}
 
-	return shortcutStyle.Render(lib.T_("No"))
+	return getShortcutStyle().Render(lib.T_("No"))
 }
 
 func contains(slice []string, pkg string) bool {

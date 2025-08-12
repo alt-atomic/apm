@@ -40,27 +40,33 @@ type APIResponse struct {
 	Transaction string      `json:"transaction,omitempty"`
 }
 
-// Глобальные стили для дерева.
-var (
-	// Стиль нумерации (веток).
-	enumeratorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#2aa1b3")).
-			MarginRight(1)
+// getEnumeratorStyle возвращает стиль нумерации (веток).
+func getEnumeratorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color(lib.Env.Colors.Enumerator)).
+		MarginRight(1)
+}
 
-	// Адаптивный цвет для пунктов (для светлой/тёмной темы).
-	adaptiveItemColor = lipgloss.AdaptiveColor{
-		Light: "#171717", // для светлой темы
-		Dark:  "#c4c8c6", // для тёмной темы
+// getAdaptiveItemColor возвращает адаптивный цвет для пунктов.
+func getAdaptiveItemColor() lipgloss.AdaptiveColor {
+	return lipgloss.AdaptiveColor{
+		Light: lib.Env.Colors.ItemLight, // для светлой темы
+		Dark:  lib.Env.Colors.ItemDark,  // для тёмной темы
 	}
+}
 
-	accentStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#a2734c"))
+// getAccentStyle возвращает стиль акцента.
+func getAccentStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color(lib.Env.Colors.Accent))
+}
 
-	// Стиль для узлов дерева.
-	itemStyle = lipgloss.NewStyle().
-			Foreground(adaptiveItemColor)
-)
+// getItemStyle возвращает стиль для узлов дерева.
+func getItemStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(getAdaptiveItemColor())
+}
 
 // IsTTY пользователь запустил приложение в интерактивной консоли
 func IsTTY() bool {
@@ -70,7 +76,7 @@ func IsTTY() bool {
 func formatField(key string, value interface{}) string {
 	valStr := fmt.Sprintf("%v", value)
 	if key == "name" {
-		return accentStyle.Render(valStr)
+		return getAccentStyle().Render(valStr)
 	}
 
 	return valStr
@@ -353,17 +359,17 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 			if resp.Error {
 				rootColor = lipgloss.NewStyle().
 					Bold(true).
-					Foreground(lipgloss.Color("9")) // красный
+					Foreground(lipgloss.Color(lib.Env.Colors.Error)) // красный
 			} else {
 				rootColor = lipgloss.NewStyle().
 					Bold(true).
-					Foreground(lipgloss.Color("2")) // зелёный
+					Foreground(lipgloss.Color(lib.Env.Colors.Success)) // зелёный
 			}
 
 			t.Enumerator(tree.RoundedEnumerator).
-				EnumeratorStyle(enumeratorStyle).
+				EnumeratorStyle(getEnumeratorStyle()).
 				RootStyle(rootColor).
-				ItemStyle(itemStyle)
+				ItemStyle(getItemStyle())
 
 			fmt.Println(t.String())
 
