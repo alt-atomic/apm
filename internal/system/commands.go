@@ -156,7 +156,6 @@ func CommandList() *cli.Command {
 						Usage:   lib.T_("Delete all files"),
 						Aliases: []string{"p"},
 						Value:   false,
-						Hidden:  !lib.Env.IsAtomic,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {

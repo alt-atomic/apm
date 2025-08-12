@@ -22,10 +22,23 @@ complete -x -c apm -n '__fish_apm_no_subcommand' -a 'system' -d 'Управле�
 complete -c apm -n '__fish_seen_subcommand_from system s' -f -l help -s h -d 'show help'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and not __fish_seen_subcommand_from install remove update upgrade info search list image i help h' -a 'install' -d 'Список пакетов для установки. Формат package- и package+ поддерживается'
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from install' -f -l help -s h -d 'show help'
-complete -x -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from install; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
+# autocomplete install, remove, info
+function __fish_apm_complete_packages
+    set -l cmd (commandline -opc)
+    set -l current (commandline -ct)
+    if test (count $cmd) -gt 1
+        set -l args $cmd[2..-1]
+        apm $args $current --generate-shell-completion 2>/dev/null
+    end
+end
+
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from install' -f -a '(__fish_apm_complete_packages)'
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from remove' -f -a '(__fish_apm_complete_packages)'
+
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from install; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and not __fish_seen_subcommand_from install remove update upgrade info search list image i help h' -a 'remove' -d 'Список пакетов на удаление'
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from remove' -f -l help -s h -d 'show help'
-complete -x -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from remove; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from remove; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and not __fish_seen_subcommand_from install remove update upgrade info search list image i help h' -a 'update' -d 'Обновление базы данных пакетов'
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from update' -f -l help -s h -d 'show help'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from update; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
@@ -33,9 +46,10 @@ complete -x -c apm -n '__fish_seen_subcommand_from system s; and not __fish_seen
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from upgrade' -f -l help -s h -d 'show help'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from upgrade; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and not __fish_seen_subcommand_from install remove update upgrade info search list image i help h' -a 'info' -d 'Информация о пакете'
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from info' -f -a '(__fish_apm_complete_packages)'
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from info' -f -l full -d 'Полный вывод информации'
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from info' -f -l help -s h -d 'show help'
-complete -x -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from info; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
+complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from info; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and not __fish_seen_subcommand_from install remove update upgrade info search list image i help h' -a 'search' -d 'Быстрый поиск пакета по имени'
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from search' -f -l installed -s i -d 'Только установленные'
 complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from search' -f -l full -d 'Полный вывод информации'
@@ -129,9 +143,3 @@ complete -x -c apm -n '__fish_apm_no_subcommand' -a 'help' -d 'Показать 
 complete -c apm -n '__fish_seen_subcommand_from completion' -f -l help -s h -d 'show help'
 complete -x -c apm -n '__fish_seen_subcommand_from completion; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
 
-complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from remove; and not string match -r -- "^-" -- (commandline -ct)' \
-  -a '(set -l prev (commandline -opc); set -l cur (commandline -ct); apm $prev $cur --generate-shell-completion)'
-complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from install; and not string match -r -- "^-" -- (commandline -ct)' \
-  -a '(set -l prev (commandline -opc); set -l cur (commandline -ct); apm $prev $cur --generate-shell-completion)'
-complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from info; and not string match -r -- "^-" -- (commandline -ct)' \
-  -a '(set -l prev (commandline -opc); set -l cur (commandline -ct); apm $prev $cur --generate-shell-completion)'
