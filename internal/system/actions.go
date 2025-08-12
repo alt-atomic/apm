@@ -232,7 +232,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 		return nil, errors.New(messageNothingDo)
 	}
 
-	reply.StopSpinner()
+	reply.StopSpinnerForDialog()
 	dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionRemove)
 	if err != nil {
 		return nil, err
@@ -313,7 +313,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	if len(packagesInfo) > 0 {
-		reply.StopSpinner()
+		reply.StopSpinnerForDialog()
 		dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionInstall)
 		if err != nil {
 			return nil, err
@@ -445,7 +445,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 		}, nil
 	}
 
-	reply.StopSpinner()
+	reply.StopSpinnerForDialog()
 
 	dialogStatus, err := _package.NewDialog([]_package.Package{}, *packageParse, _package.ActionUpgrade)
 	if err != nil {

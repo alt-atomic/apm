@@ -42,15 +42,6 @@ var (
 )
 
 func main() {
-	//aptAction := apt.NewActions()
-	//packages, err := aptAction.Search("")
-	//if err != nil {
-	//	fmt.Printf("Failed to search apt packages: %s\n", err)
-	//}
-	//b, _ := json.MarshalIndent(packages, "", "  ")
-	//fmt.Println(string(b))
-	//fmt.Printf("Found %d packages:\n", len(packages))
-	//os.Exit(0)
 	lib.Log.Debugln("Starting apm…")
 
 	errInitial := lib.InitConfig()
@@ -109,11 +100,13 @@ func main() {
 		os.Exit(code)
 	}()
 
+	systemCommands := system.CommandList()
+	distroboxCommands := distrobox.CommandList()
+
 	// Основная команда приложения
 	rootCommand := &cli.Command{
-		Name:                  "apm",
-		EnableShellCompletion: true,
-		Usage:                 "Atomic Package Manager",
+		Name:  "apm",
+		Usage: "Atomic Package Manager",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -138,8 +131,8 @@ func main() {
 				Usage:  lib.T_("Start system D-Bus service org.altlinux.APM"),
 				Action: systemDbus,
 			},
-			system.CommandList(),
-			distrobox.CommandList(),
+			systemCommands,
+			distroboxCommands,
 			{
 				Name:      "help",
 				Aliases:   []string{"h"},
@@ -150,15 +143,27 @@ func main() {
 		},
 	}
 
-	rootCommand.Suggest = true
-	rootCommand.CommandNotFound = func(ctx context.Context, cmd *cli.Command, name string) {
+	applyCommandSetting(rootCommand)
+	applyCommandSetting(distroboxCommands)
+	applyCommandSetting(systemCommands)
+
+	if err := rootCommand.Run(ctx, os.Args); err != nil {
+		cleanup()
+		os.Exit(1)
+	}
+}
+
+func applyCommandSetting(cliCommand *cli.Command) {
+	cliCommand.CommandNotFound = func(ctx context.Context, cmd *cli.Command, name string) {
 		lib.Env.Format = cmd.String("format")
 		msg := fmt.Sprintf(lib.T_("Unknown command: %s. See 'apm help'"), name)
 		_ = reply.CliResponse(ctx, reply.APIResponse{Data: map[string]interface{}{"message": msg}, Error: true})
 	}
-	if err := rootCommand.Run(ctx, os.Args); err != nil {
-		cleanup()
-		os.Exit(1)
+	cliCommand.EnableShellCompletion = true
+	cliCommand.Suggest = true
+
+	for _, sub := range cliCommand.Commands {
+		applyCommandSetting(sub)
 	}
 }
 

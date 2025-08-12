@@ -154,7 +154,7 @@ func CommandList() *cli.Command {
 					&cli.BoolFlag{
 						Name:    "purge",
 						Usage:   lib.T_("Delete all files"),
-						Aliases: []string{"a"},
+						Aliases: []string{"p"},
 						Value:   false,
 						Hidden:  !lib.Env.IsAtomic,
 					},

@@ -96,6 +96,11 @@ func CreateSpinner() {
 
 // StopSpinner Остановка и очистка вывода
 func StopSpinner() {
+	StopSpinnerWithKeepTasks(true)
+}
+
+// StopSpinnerWithKeepTasks Остановка с возможностью сохранения задач
+func StopSpinnerWithKeepTasks(keepTasks bool) {
 	if lib.Env.Format != "text" || !IsTTY() {
 		return
 	}
@@ -136,7 +141,7 @@ func StopSpinner() {
 			}
 
 			// Переотрисовать без первой строки (удаляем строку со спиннером "Executing tasks")
-			if lastRender != "" {
+			if keepTasks && lastRender != "" {
 				lines := strings.Split(lastRender, "\n")
 				if len(lines) > 1 {
 					fmt.Print(strings.Join(lines[1:], "\n"))
@@ -146,6 +151,11 @@ func StopSpinner() {
 			}
 		}
 	}
+}
+
+// StopSpinnerForDialog останавливает спиннер и полностью очищает экран перед диалогом
+func StopSpinnerForDialog() {
+	StopSpinnerWithKeepTasks(false)
 }
 
 // UpdateTask  Функция для внешнего вызова: отправить задачу/прогресс в модель ===
