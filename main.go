@@ -202,7 +202,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if err = lib.DBUSConn.Export(
-		introspect.Introspectable(helper.UserIntrospectXML),
+		introspect.Introspectable(helper.GetUserIntrospectXML()),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
@@ -263,7 +263,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if err = lib.DBUSConn.Export(
-		introspect.Introspectable(helper.SystemIntrospectXML),
+		introspect.Introspectable(helper.GetSystemIntrospectXML()),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {

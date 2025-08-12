@@ -16,7 +16,10 @@
 
 package helper
 
-import "github.com/godbus/dbus/v5/introspect"
+import (
+	"apm/lib"
+	"github.com/godbus/dbus/v5/introspect"
+)
 
 const UserIntrospectXML = `
 <node>
@@ -213,3 +216,151 @@ const SystemIntrospectXML = `
     </method>
   </interface>
 ` + introspect.IntrospectDataString + `</node>`
+
+// GetUserIntrospectXML возвращает XML интроспекции для пользовательской сессии
+// в зависимости от наличия distrobox в системе
+func GetUserIntrospectXML() string {
+	if lib.Env.ExistDistrobox {
+		return UserIntrospectXML
+	}
+
+	// Если distrobox не найден, возвращаем только базовый интерфейс
+	return `<node>
+  <interface name="org.altlinux.APM">
+    <signal name="Notification">
+      <arg type="s" name="message" direction="out"/>
+    </signal>
+  </interface>
+
+  <interface name="org.altlinux.APM.distrobox">
+    <method name="GetIconByPackage">
+      <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="container"/>
+      <arg direction="out" type="ay" name="result"/>
+    </method>
+  </interface>
+` + introspect.IntrospectDataString + `</node>`
+}
+
+// GetSystemIntrospectXML возвращает XML интроспекции для системной сессии
+// в зависимости от типа системы (атомарная или обычная)
+func GetSystemIntrospectXML() string {
+	baseSystemXML := `<node>
+  <interface name="org.altlinux.APM">
+    <signal name="Notification">
+      <arg type="s" name="message" direction="out"/>
+    </signal>
+  </interface>
+
+  <interface name="org.altlinux.APM.system">
+
+    <method name="GetFilterFields">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="CheckUpgrade">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="UpdateKernel">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="CheckUpdateKernel">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Upgrade">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Install">
+      <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="b" name="applyAtomic"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="Remove">
+      <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="b" name="applyAtomic"/>
+      <arg direction="in" type="b" name="purge"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Update">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="List">
+      <arg direction="in" type="s" name="paramsJSON"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="Info">
+      <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="CheckInstall">
+      <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="CheckRemove">
+      <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="Search">
+      <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="in" type="b" name="installed"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>`
+
+	// Если система атомарная, добавляем методы для работы с образом
+	if lib.Env.IsAtomic {
+		baseSystemXML += `
+    
+    <method name="ImageApply">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="ImageHistory">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="in" type="s" name="imageName"/>
+      <arg direction="in" type="x" name="limit"/>
+      <arg direction="in" type="x" name="offset"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="ImageUpdate">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+    
+    <method name="ImageStatus">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>`
+	}
+
+	baseSystemXML += `
+  </interface>
+` + introspect.IntrospectDataString + `</node>`
+
+	return baseSystemXML
+}

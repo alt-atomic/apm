@@ -58,7 +58,7 @@ type PackageIcon struct {
 func (s *Service) GetIcon(pkgName, container string) ([]byte, error) {
 	data, err := s.getIconFromDB(pkgName, container)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Icon for package %s (container: %s) not found: %v"), pkgName, container, err)
+		return nil, fmt.Errorf(lib.T_("Icon for package %s not found: %v"), pkgName, err)
 	}
 	return data, nil
 }
