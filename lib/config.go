@@ -79,7 +79,7 @@ func InitConfig() error {
 
 	// Устанавливаем значения цветов по умолчанию
 	Env.Colors = Colors{
-		Enumerator:     "#2aa1b3",
+		Enumerator:     "#c4c8c6",
 		Accent:         "#a2734c",
 		ItemLight:      "#171717",
 		ItemDark:       "#c4c8c6",

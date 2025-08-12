@@ -38,7 +38,7 @@ sh ./po/update_po.sh
 /etc/apm/config.yml
 colors:
     # Основные цвета для вывода
-    enumerator: "#2aa1b3"      # Цвет нумерации веток
+    enumerator: "#c4c8c6"      # Цвет нумерации веток
     accent: "#a2734c"          # Цвет акцентов и заголовков
     itemLight: "#171717"       # Цвет текста для светлой темы
     itemDark: "#c4c8c6"        # Цвет текста для тёмной темы
