@@ -244,6 +244,24 @@ func (a *Actions) CheckRemove(ctx context.Context, packageName []string) (packag
 	return
 }
 
+func (a *Actions) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+
+	aptService := aptBinding.NewActions()
+	packageChanges, err = aptService.SimulateAutoRemove()
+	return
+}
+
+func (a *Actions) GetInfo(ctx context.Context, packageName string) (packageChanges *aptLib.PackageInfo, err error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+
+	aptService := aptBinding.NewActions()
+	packageChanges, err = aptService.GetInfo(packageName)
+	return
+}
+
 func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))

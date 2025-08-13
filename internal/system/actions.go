@@ -298,92 +298,101 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		return nil, errPackageNotFound
 	}
 
-	packageNames, packagesInfo, errFind := a.serviceAptActions.FindPackage(ctx, packages)
-	if errFind != nil {
-		return nil, errFind
-	}
+	//packageNames, packagesInfo, errFind := a.serviceAptActions.FindPackage(ctx, packages)
+	//if errFind != nil {
+	//	return nil, errFind
+	//}
 
-	packageParse, aptError := a.serviceAptActions.CheckInstall(ctx, packageNames)
+	packageParse, aptError := a.serviceAptActions.CheckInstall(ctx, packages)
 	if aptError != nil {
 		return nil, aptError
 	}
 
-	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
-		return nil, errors.New(lib.T_("The operation will not make any changes"))
-	}
-
-	if len(packagesInfo) > 0 {
-		reply.StopSpinnerForDialog()
-		dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionInstall)
-		if err != nil {
-			return nil, err
-		}
-
-		if !dialogStatus {
-			errDialog := errors.New(lib.T_("Cancel dialog"))
-
-			return nil, errDialog
-		}
-
-		reply.CreateSpinner()
-	}
-
-	err = a.serviceAptActions.AptUpdate(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	errInstall := a.serviceAptActions.Install(ctx, packageNames)
-	if errInstall != nil {
-		var matchedErr *apt.MatchedError
-		if errors.As(errInstall, &matchedErr) && matchedErr.NeedUpdate() {
-			_, err = a.serviceAptActions.Update(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			errAptRepo := errors.New(lib.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
-
-			return nil, errAptRepo
-		}
-
-		return nil, errInstall
-	}
-
-	err = a.updateAllPackagesDB(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	messageAnswer := fmt.Sprintf(
-		"%s %s %s",
-		fmt.Sprintf(lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
-		lib.T_("and"),
-		fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
-	)
-
-	if apply {
-		err = a.applyChange(ctx, packages, true)
-		if err != nil {
-			return nil, err
-		}
-
-		messageAnswer += lib.T_(". The system image has been changed.")
-	}
-
-	if !apply && lib.Env.IsAtomic {
-		messageAnswer += lib.T_(". The system image has not been changed! To apply changes, you need to run with the -a flag.")
-	}
-
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": messageAnswer,
+			"message": "",
 			"info":    packageParse,
 		},
 		Error: false,
 	}
-
+	
 	return &resp, nil
+	//if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
+	//	return nil, errors.New(lib.T_("The operation will not make any changes"))
+	//}
+	//
+	//if len(packagesInfo) > 0 {
+	//	reply.StopSpinnerForDialog()
+	//	dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionInstall)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	if !dialogStatus {
+	//		errDialog := errors.New(lib.T_("Cancel dialog"))
+	//
+	//		return nil, errDialog
+	//	}
+	//
+	//	reply.CreateSpinner()
+	//}
+	//
+	//err = a.serviceAptActions.AptUpdate(ctx)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//errInstall := a.serviceAptActions.Install(ctx, packageNames)
+	//if errInstall != nil {
+	//	var matchedErr *apt.MatchedError
+	//	if errors.As(errInstall, &matchedErr) && matchedErr.NeedUpdate() {
+	//		_, err = a.serviceAptActions.Update(ctx)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//
+	//		errAptRepo := errors.New(lib.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
+	//
+	//		return nil, errAptRepo
+	//	}
+	//
+	//	return nil, errInstall
+	//}
+	//
+	//err = a.updateAllPackagesDB(ctx)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//messageAnswer := fmt.Sprintf(
+	//	"%s %s %s",
+	//	fmt.Sprintf(lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+	//	lib.T_("and"),
+	//	fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
+	//)
+	//
+	//if apply {
+	//	err = a.applyChange(ctx, packages, true)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	messageAnswer += lib.T_(". The system image has been changed.")
+	//}
+	//
+	//if !apply && lib.Env.IsAtomic {
+	//	messageAnswer += lib.T_(". The system image has not been changed! To apply changes, you need to run with the -a flag.")
+	//}
+	//
+	//resp := reply.APIResponse{
+	//	Data: map[string]interface{}{
+	//		"message": messageAnswer,
+	//		"info":    packageParse,
+	//	},
+	//	Error: false,
+	//}
+	//
+	//return &resp, nil
 }
 
 // Update обновляет информацию или базу данных пакетов.

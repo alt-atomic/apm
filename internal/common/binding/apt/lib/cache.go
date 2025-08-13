@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755076902
+// cgo-timestamp: 1755098130
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -216,6 +216,46 @@ func (c *Cache) SimulateDistUpgrade() (*PackageChanges, error) {
 		NewInstalledCount: int(cc.new_installed_count),
 		RemovedCount:      int(cc.removed_count),
 		NotUpgradedCount:  int(cc.not_upgraded_count),
+		DownloadSize:      uint64(cc.download_size),
+		InstallSize:       uint64(cc.install_size),
+	}
+	if cc.upgraded_count > 0 {
+		changes.UpgradedPackages = make([]string, int(cc.upgraded_count))
+		for i := 0; i < int(cc.upgraded_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.upgraded_packages)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			changes.UpgradedPackages[i] = C.GoString(*ptr)
+		}
+	}
+	if cc.new_installed_count > 0 {
+		changes.NewInstalledPackages = make([]string, int(cc.new_installed_count))
+		for i := 0; i < int(cc.new_installed_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.new_installed_packages)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			changes.NewInstalledPackages[i] = C.GoString(*ptr)
+		}
+	}
+	if cc.removed_count > 0 {
+		changes.RemovedPackages = make([]string, int(cc.removed_count))
+		for i := 0; i < int(cc.removed_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(cc.removed_packages)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			changes.RemovedPackages[i] = C.GoString(*ptr)
+		}
+	}
+	return changes, nil
+}
+
+func (c *Cache) SimulateAutoRemove() (*PackageChanges, error) {
+	AptMutex.Lock()
+	defer AptMutex.Unlock()
+	var cc C.AptPackageChanges
+	res := C.apt_simulate_autoremove(c.Ptr, &cc)
+	defer C.apt_free_package_changes(&cc)
+	if res.code != C.APT_SUCCESS {
+		return nil, ErrorFromResult(res)
+	}
+	changes := &PackageChanges{
+		UpgradedCount:     int(cc.upgraded_count),
+		NewInstalledCount: int(cc.new_installed_count),
+		RemovedCount:      int(cc.removed_count),
 		DownloadSize:      uint64(cc.download_size),
 		InstallSize:       uint64(cc.install_size),
 	}

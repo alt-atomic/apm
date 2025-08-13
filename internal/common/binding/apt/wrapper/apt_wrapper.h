@@ -208,6 +208,7 @@ void apt_free_package_list(AptPackageList* list);
 AptResult apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
 AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
 AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes);
+AptResult apt_simulate_autoremove(AptCache* cache, AptPackageChanges* changes);
 
 // Combined simulation: install and remove in a single transaction
 AptResult apt_simulate_change(AptCache* cache,

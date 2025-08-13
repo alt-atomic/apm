@@ -391,6 +391,32 @@ func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err
 	return
 }
 
+// SimulateAutoRemove симуляция автоматического удаления неиспользуемых пакетов
+func (a *Actions) SimulateAutoRemove() (packageChanges *lib.PackageChanges, err error) {
+	lib.StartOperation()
+	defer lib.EndOperation()
+	logs := make([]string, 0, 256)
+	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
+	lib.CaptureStdIO(true)
+	defer func() {
+		lib.CaptureStdIO(false)
+		lib.SetLogHandler(nil)
+		err = a.checkAnyError(logs, err)
+	}()
+	system, err := getSystem()
+	if err != nil {
+		return
+	}
+	cache, err := lib.OpenCache(system, false)
+	if err != nil {
+		return
+	}
+	defer cache.Close()
+
+	packageChanges, err = cache.SimulateAutoRemove()
+	return
+}
+
 // SimulateChange комбинированная симуляция установки и удаления
 func (a *Actions) SimulateChange(installNames []string, removeNames []string, purge bool) (packageChanges *lib.PackageChanges, err error) {
 	lib.StartOperation()
