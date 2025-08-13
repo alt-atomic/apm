@@ -7,12 +7,22 @@ APM располагает комплексной системой тестир�
 ### В контейнере
 
 ```bash
-# Безопасные тесты не требующие сложной среды с dbus и тд.
+./scripts/test-container.sh all
 ./scripts/test-container.sh safe
-# Unit тесты
 ./scripts/test-container.sh unit
-# APT биндинги
+./scripts/test-container.sh system
 ./scripts/test-container.sh apt
+```
+
+### Скриптом
+
+```bash
+./scripts/test-local.sh all
+./scripts/test-local.sh unit
+./scripts/test-local.sh system
+./scripts/test-local.sh apt
+./scripts/test-local.sh integration
+./scripts/test-local.sh distrobox
 ```
 
 ### Ручные
