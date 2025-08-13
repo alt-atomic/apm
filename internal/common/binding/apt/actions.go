@@ -83,7 +83,7 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 	}
 
 	for _, name := range packagesInstall {
-		if e := cache.MarkInstall(name, true); e != nil {
+		if e := cache.MarkInstall(name); e != nil {
 			err = e
 			return
 		}
@@ -130,7 +130,7 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 	defer cache.Close()
 
 	for _, name := range packageNames {
-		if e := cache.MarkInstall(name, true); e != nil {
+		if e := cache.MarkInstall(name); e != nil {
 			err = e
 			return
 		}

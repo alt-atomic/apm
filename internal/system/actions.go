@@ -217,14 +217,9 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 		return nil, errPackageNotFound
 	}
 
-	packageNames, packagesInfo, errFind := a.serviceAptActions.FindPackage(ctx, packages)
+	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindRemove)
 	if errFind != nil {
 		return nil, errFind
-	}
-
-	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packageNames)
-	if aptError != nil {
-		return nil, aptError
 	}
 
 	if packageParse.RemovedCount == 0 {
@@ -311,14 +306,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	//	Error: false,
 	//}
 
-	packageNames, packagesInfo, errFind := a.serviceAptActions.FindPackage(ctx, packages)
+	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindInstall)
 	if errFind != nil {
 		return nil, errFind
-	}
-
-	packageParse, aptError := a.serviceAptActions.CheckInstall(ctx, packageNames)
-	if aptError != nil {
-		return nil, aptError
 	}
 
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {

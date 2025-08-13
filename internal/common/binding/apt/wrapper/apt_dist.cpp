@@ -51,13 +51,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache* cache,
             _system->UnLock();
         }
 
-        struct CallbackBridge {
-            void* user_data {nullptr};
-            AptCache* cache {nullptr};
-            std::vector<std::string> planned;
-            size_t current_idx {0};
-            std::string current_name;
-        } bridgeData;
+        CallbackBridge bridgeData;
         bridgeData.user_data = user_data;
         bridgeData.cache = cache;
         if (cache && cache->dep_cache) {
@@ -69,67 +63,8 @@ AptResult apt_dist_upgrade_with_progress(AptCache* cache,
             }
         }
 
-        PackageManagerCallback_t apt_callback = [](const char *nevra, aptCallbackType what, uint64_t amount, uint64_t total, void *callbackData) {
-            CallbackBridge* bd = static_cast<CallbackBridge*>(callbackData);
-            AptCallbackType our_type = APT_CALLBACK_UNKNOWN;
-            switch (what) {
-                case APTCALLBACK_INST_PROGRESS: our_type = APT_CALLBACK_INST_PROGRESS; break;
-                case APTCALLBACK_INST_START: our_type = APT_CALLBACK_INST_START; break;
-                case APTCALLBACK_INST_STOP: our_type = APT_CALLBACK_INST_STOP; break;
-                case APTCALLBACK_TRANS_PROGRESS: our_type = APT_CALLBACK_TRANS_PROGRESS; break;
-                case APTCALLBACK_TRANS_START: our_type = APT_CALLBACK_TRANS_START; break;
-                case APTCALLBACK_TRANS_STOP: our_type = APT_CALLBACK_TRANS_STOP; break;
-                case APTCALLBACK_UNINST_PROGRESS: our_type = APT_CALLBACK_REMOVE_PROGRESS; break;
-                case APTCALLBACK_UNINST_START: our_type = APT_CALLBACK_REMOVE_START; break;
-                case APTCALLBACK_UNINST_STOP: our_type = APT_CALLBACK_REMOVE_STOP; break;
-                case APTCALLBACK_ELEM_PROGRESS: our_type = APT_CALLBACK_ELEM_PROGRESS; break;
-                default: our_type = APT_CALLBACK_UNKNOWN; break;
-            }
-
-            const bool has_nevra = (nevra != nullptr && nevra[0] != '\0');
-            const char* effective_name = "";
-            switch (what) {
-                case APTCALLBACK_INST_START:
-                case APTCALLBACK_UNINST_START:
-                    if (has_nevra) {
-                        bd->current_name = nevra;
-                    } else {
-                        if (bd && !bd->planned.empty()) {
-                            if (bd->current_idx >= bd->planned.size()) bd->current_idx = bd->planned.size() - 1;
-                            bd->current_name = bd->planned[bd->current_idx];
-                        }
-                    }
-                    effective_name = bd->current_name.c_str();
-                    break;
-                case APTCALLBACK_INST_PROGRESS:
-                case APTCALLBACK_UNINST_PROGRESS:
-                case APTCALLBACK_ELEM_PROGRESS:
-                    if (bd->current_name.empty()) {
-                        if (has_nevra) bd->current_name = nevra; else if (bd && !bd->planned.empty()) {
-                            if (bd->current_idx >= bd->planned.size()) bd->current_idx = bd->planned.size() - 1;
-                            bd->current_name = bd->planned[bd->current_idx];
-                        }
-                    }
-                    effective_name = bd->current_name.c_str();
-                    break;
-                case APTCALLBACK_INST_STOP:
-                case APTCALLBACK_UNINST_STOP:
-                    if (!bd->current_name.empty()) effective_name = bd->current_name.c_str(); else if (bd && !bd->planned.empty()) {
-                        if (bd->current_idx >= bd->planned.size()) bd->current_idx = bd->planned.size() - 1;
-                        effective_name = bd->planned[bd->current_idx].c_str();
-                    }
-                    if (bd->current_idx < bd->planned.size()) bd->current_idx++;
-                    bd->current_name.clear();
-                    break;
-                default:
-                    effective_name = has_nevra ? nevra : "";
-                    break;
-            }
-
-            if (global_callback) {
-                global_callback(effective_name, our_type, amount, total, global_user_data);
-            }
-        };
+        // Use common progress callback implementation
+        PackageManagerCallback_t apt_callback = create_common_progress_callback(&bridgeData);
 
         auto result = pm->DoInstall(apt_callback, &bridgeData);
         switch (result) {

@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755104567
+// cgo-timestamp: 1755114014
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -123,12 +123,12 @@ func (c *Cache) HasBrokenPackages() bool {
 	return bool(C.apt_has_broken_packages(c.Ptr))
 }
 
-func (c *Cache) MarkInstall(packageName string, autoInstall bool) error {
+func (c *Cache) MarkInstall(packageName string) error {
 	AptMutex.Lock()
 	defer AptMutex.Unlock()
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
-	if res := C.apt_mark_install(c.Ptr, cname, C.bool(autoInstall)); res.code != C.APT_SUCCESS {
+	if res := C.apt_mark_install(c.Ptr, cname); res.code != C.APT_SUCCESS {
 		return ErrorFromResult(res)
 	}
 	return nil

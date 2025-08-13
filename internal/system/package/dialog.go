@@ -78,6 +78,7 @@ func NewDialog(packageInfo []Package, packageChange aptLib.PackageChanges, actio
 	p := tea.NewProgram(m,
 		tea.WithOutput(os.Stdout),
 		tea.WithAltScreen(),
+		tea.WithMouseCellMotion(),
 		tea.WithoutSignalHandler())
 	finalModel, err := p.Run()
 	if err != nil {
@@ -97,6 +98,7 @@ func NewDialog(packageInfo []Package, packageChange aptLib.PackageChanges, actio
 }
 
 func (m model) Init() tea.Cmd {
+	m.vp.SetContent(m.buildContent())
 	return nil
 }
 
@@ -181,6 +183,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.vp, cmd = m.vp.Update(msg)
 			return m, cmd
 		}
+
+	case tea.MouseMsg:
+		// Передаем события мыши в viewport для скролла
+		var cmd tea.Cmd
+		m.vp, cmd = m.vp.Update(msg)
+		return m, cmd
 	}
 	return m, nil
 }

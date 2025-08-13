@@ -430,7 +430,7 @@ void apt_package_manager_destroy(AptPackageManager* pm) {
     delete pm;
 }
 
-AptResult apt_mark_install(AptCache* cache, const char* package_name, bool auto_install) {
+AptResult apt_mark_install(AptCache* cache, const char* package_name) {
     if (!cache || !cache->dep_cache || !package_name) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_install");
     }
@@ -758,4 +758,89 @@ void apt_free_package_changes(AptPackageChanges* changes) {
     }
 
     memset(changes, 0, sizeof(AptPackageChanges));
+}
+
+// Common progress callback implementation
+PackageManagerCallback_t create_common_progress_callback(CallbackBridge* /* bridgeData - parameter not used in function signature, only as lambda context */) {
+    return [](const char *nevra, aptCallbackType what, uint64_t amount, uint64_t total, void *callbackData) {
+        CallbackBridge* bd = static_cast<CallbackBridge*>(callbackData);
+        AptCallbackType our_type = APT_CALLBACK_UNKNOWN;
+        
+        // Map internal APT callback types to public API types
+        switch (what) {
+            case APTCALLBACK_INST_PROGRESS: our_type = APT_CALLBACK_INST_PROGRESS; break;
+            case APTCALLBACK_INST_START: our_type = APT_CALLBACK_INST_START; break;
+            case APTCALLBACK_INST_STOP: our_type = APT_CALLBACK_INST_STOP; break;
+            case APTCALLBACK_TRANS_PROGRESS: our_type = APT_CALLBACK_TRANS_PROGRESS; break;
+            case APTCALLBACK_TRANS_START: our_type = APT_CALLBACK_TRANS_START; break;
+            case APTCALLBACK_TRANS_STOP: our_type = APT_CALLBACK_TRANS_STOP; break;
+            case APTCALLBACK_UNINST_PROGRESS: our_type = APT_CALLBACK_REMOVE_PROGRESS; break;
+            case APTCALLBACK_UNINST_START: our_type = APT_CALLBACK_REMOVE_START; break;
+            case APTCALLBACK_UNINST_STOP: our_type = APT_CALLBACK_REMOVE_STOP; break;
+            case APTCALLBACK_ELEM_PROGRESS: our_type = APT_CALLBACK_ELEM_PROGRESS; break;
+            default: our_type = APT_CALLBACK_UNKNOWN; break;
+        }
+
+        // Helper function to pick current planned package
+        auto pick_planned_current = [&]() -> const char* {
+            if (bd == nullptr || bd->planned.empty()) return "";
+            if (bd->current_idx >= bd->planned.size()) return bd->planned.back().c_str();
+            return bd->planned[bd->current_idx].c_str();
+        };
+
+        const bool has_nevra = (nevra != nullptr && nevra[0] != '\0');
+        const char* effective_name = "";
+
+        // Determine effective package name based on event type
+        switch (what) {
+            case APTCALLBACK_INST_START:
+            case APTCALLBACK_UNINST_START:
+                if (has_nevra) {
+                    bd->current_name = nevra;
+                } else if (bd != nullptr) {
+                    bd->current_name = pick_planned_current();
+                }
+                effective_name = bd ? bd->current_name.c_str() : (has_nevra ? nevra : "");
+                break;
+
+            case APTCALLBACK_INST_PROGRESS:
+            case APTCALLBACK_UNINST_PROGRESS:
+            case APTCALLBACK_ELEM_PROGRESS:
+                if (bd != nullptr && bd->current_name.empty()) {
+                    bd->current_name = has_nevra ? std::string(nevra) : std::string(pick_planned_current());
+                }
+                effective_name = bd ? bd->current_name.c_str() : (has_nevra ? nevra : "");
+                break;
+
+            case APTCALLBACK_INST_STOP:
+            case APTCALLBACK_UNINST_STOP:
+                // For stop events, prioritize nevra (from RPM header) as it's most reliable
+                // If nevra is not available, use current name or fallback to planned name
+                if (has_nevra) {
+                    effective_name = nevra;
+                } else if (bd && !bd->current_name.empty()) {
+                    effective_name = bd->current_name.c_str();
+                } else {
+                    effective_name = pick_planned_current();
+                }
+                // Note: We advance index and clear name AFTER the callback is invoked
+                break;
+
+            default:
+                effective_name = has_nevra ? nevra : "";
+                break;
+        }
+
+        // Invoke the global callback
+        if (global_callback) {
+            global_callback(effective_name, our_type, amount, total, global_user_data);
+        }
+
+        // Handle state advancement for stop events AFTER the callback is invoked
+        if ((what == APTCALLBACK_INST_STOP || what == APTCALLBACK_UNINST_STOP) && bd != nullptr) {
+            // Advance to next planned item on stop; clear current
+            if (bd->current_idx < bd->planned.size()) bd->current_idx++;
+            bd->current_name.clear();
+        }
+    };
 }

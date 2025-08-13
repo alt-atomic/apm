@@ -68,32 +68,36 @@ type Package struct {
 	TypePackage      int                  `json:"typePackage"`
 }
 
-func (a *Actions) FindPackage(ctx context.Context, req []string) ([]string, []Package, error) {
-	var packageNames []string
-	var packagesInfo []Package
+type FindType uint8
 
+const (
+	FindInstall FindType = iota + 1
+	FindRemove
+)
+
+func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindType) ([]string, []Package, *aptLib.PackageChanges, error) {
+	var packagesInfo []Package
+	var finalPackageNames []string
 	seenNames := make(map[string]bool)
 	seenInfo := make(map[string]bool)
 
+	// Сначала добавляем исходные пакеты из запроса пользователя (как есть)
+	finalPackageNames = append(finalPackageNames, req...)
 	for _, original := range req {
-		if info, err := a.serviceAptDatabase.GetPackageByName(ctx, original); err == nil {
-			if !seenInfo[info.Name] {
-				seenInfo[info.Name] = true
-				packagesInfo = append(packagesInfo, info)
-			}
-			if !seenNames[original] {
-				seenNames[original] = true
-				packageNames = append(packageNames, original)
-			}
-			continue
-		}
+		seenNames[original] = true
+	}
 
+	// Обрабатываем wildcard пакеты и создаём расширенный запрос
+	var expandedReq []string
+
+	for _, original := range req {
 		if strings.Contains(original, "*") {
+			// Для wildcard пакетов - находим конкретные пакеты и добавляем их вместо wildcard
 			like := strings.ReplaceAll(original, "*", "%")
 			if strings.TrimSpace(like) != "" {
 				matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, false)
 				if errSearch != nil {
-					return nil, nil, errSearch
+					return nil, nil, nil, errSearch
 				}
 				for _, mp := range matched {
 					if !seenInfo[mp.Name] {
@@ -102,38 +106,51 @@ func (a *Actions) FindPackage(ctx context.Context, req []string) ([]string, []Pa
 					}
 					if !seenNames[mp.Name] {
 						seenNames[mp.Name] = true
-						packageNames = append(packageNames, mp.Name)
+						finalPackageNames = append(finalPackageNames, mp.Name)
+						expandedReq = append(expandedReq, mp.Name)
 					}
 				}
-				if len(matched) > 0 {
-					continue
-				}
 			}
+		} else {
+			// Для обычных пакетов - копируем как есть в expandedReq
+			expandedReq = append(expandedReq, original)
 		}
+	}
 
-		filters := map[string]interface{}{"provides": original}
-		alts, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 100, 0)
-		if errFind != nil {
-			return nil, nil, errFind
-		}
-		if len(alts) == 0 {
-			return nil, nil, fmt.Errorf(lib.T_("Failed to retrieve information about the package %s"), original)
-		}
-		for _, alt := range alts {
-			if infoAlt, errAlt := a.serviceAptDatabase.GetPackageByName(ctx, alt.Name); errAlt == nil {
-				if !seenInfo[infoAlt.Name] {
-					seenInfo[infoAlt.Name] = true
-					packagesInfo = append(packagesInfo, infoAlt)
+	var aptError error
+	var packageChanges *aptLib.PackageChanges
+	if findType == FindInstall {
+		packageChanges, aptError = a.CheckInstall(ctx, expandedReq)
+	} else if findType == FindRemove {
+		packageChanges, aptError = a.CheckRemove(ctx, expandedReq)
+	}
+
+	if aptError != nil {
+		return nil, nil, nil, aptError
+	}
+
+	// Добавляем информацию о дополнительных пакетах из packageChanges только в packagesInfo
+	if packageChanges != nil {
+		for _, list := range [][]string{
+			packageChanges.ExtraInstalled,
+			packageChanges.UpgradedPackages,
+			packageChanges.NewInstalledPackages,
+			packageChanges.RemovedPackages,
+		} {
+			for _, pkgName := range list {
+				if !seenInfo[pkgName] {
+					info, err := a.serviceAptDatabase.GetPackageByName(ctx, pkgName)
+					if err != nil {
+						return nil, nil, nil, err
+					}
+					seenInfo[pkgName] = true
+					packagesInfo = append(packagesInfo, info)
 				}
-			}
-			if !seenNames[alt.Name] {
-				seenNames[alt.Name] = true
-				packageNames = append(packageNames, alt.Name)
 			}
 		}
 	}
 
-	return packageNames, packagesInfo, nil
+	return finalPackageNames, packagesInfo, packageChanges, nil
 }
 
 func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
@@ -143,40 +160,42 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 			if total > 0 {
 				percent := int((cur * 100) / total)
 				ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
-				reply.CreateEventNotification(ctx, reply.StateBefore,
-					reply.WithEventName(ev),
-					reply.WithProgress(true),
-					reply.WithProgressPercent(float64(percent)),
-					reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkg)),
-				)
+				if percent < 100 {
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName(ev),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkg)),
+					)
+				} else if percent >= 100 {
+					reply.CreateEventNotification(ctx, reply.StateAfter,
+						reply.WithEventName(ev),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(100),
+						reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Downloading %s"), pkg)),
+					)
+				}
 			}
-		case aptLib.CallbackDownloadStop:
-			ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
-			reply.CreateEventNotification(ctx, reply.StateAfter,
-				reply.WithEventName(ev),
-				reply.WithProgress(true),
-				reply.WithProgressDoneText(pkg),
-				reply.WithProgressPercent(100),
-			)
 		case aptLib.CallbackInstallProgress:
 			ev := fmt.Sprintf("system.installProgress-%s", pkg)
 			if total > 0 {
 				percent := int((cur * 100) / total)
-				reply.CreateEventNotification(ctx, reply.StateBefore,
-					reply.WithEventName(ev),
-					reply.WithProgress(true),
-					reply.WithProgressPercent(float64(percent)),
-					reply.WithEventView(fmt.Sprintf(lib.T_("Install progress: %s"), pkg)),
-				)
+				if percent < 100 {
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName(ev),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf(lib.T_("Installing progress: %s"), pkg)),
+					)
+				} else if percent >= 100 {
+					reply.CreateEventNotification(ctx, reply.StateAfter,
+						reply.WithEventName(ev),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(100),
+						reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Installing %s"), pkg)),
+					)
+				}
 			}
-		case aptLib.CallbackInstallStop:
-			ev := fmt.Sprintf("system.installProgress-%s", pkg)
-			reply.CreateEventNotification(ctx, reply.StateAfter,
-				reply.WithEventName(ev),
-				reply.WithProgress(true),
-				reply.WithProgressDoneText(pkg),
-				reply.WithProgressPercent(100),
-			)
 		}
 	}
 }

@@ -145,7 +145,7 @@ AptResult apt_package_manager_create(AptCache* cache, AptPackageManager** pm);
 void apt_package_manager_destroy(AptPackageManager* pm);
 
 // Package operations
-AptResult apt_mark_install(AptCache* cache, const char* package_name, bool auto_install);
+AptResult apt_mark_install(AptCache* cache, const char* package_name);
 AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge);
 
 // Package execution

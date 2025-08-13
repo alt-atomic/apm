@@ -90,4 +90,18 @@ AptResult plan_change_internal(
     bool apply,
     AptPackageChanges* changes);
 
+// Common callback bridge structure for progress handling
+struct CallbackBridge {
+    void* user_data;
+    AptCache* cache;
+    std::vector<std::string> planned;
+    size_t current_idx;
+    std::string current_name;
+    
+    CallbackBridge() : user_data(nullptr), cache(nullptr), current_idx(0) {}
+};
+
+// Common progress callback function used by both install and dist-upgrade
+PackageManagerCallback_t create_common_progress_callback(CallbackBridge* bridgeData);
+
 
