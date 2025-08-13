@@ -14,6 +14,8 @@
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/algorithms.h>
 #include <apt-pkg/fileutl.h>
+// For pkgVersioningSystem (VS().CheckDep)
+#include <apt-pkg/version.h>
 
 #include <memory>
 #include <string>
@@ -434,81 +436,12 @@ AptResult apt_mark_install(AptCache* cache, const char* package_name, bool auto_
     }
 
     try {
-        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
-        if (pkg.end()) {
-            std::vector<pkgCache::PkgIterator> candidate_providers;
-            for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); it.end() == false; ++it) {
-                pkgCache::VerIterator cand = (*cache->dep_cache)[it].CandidateVerIter(*cache->dep_cache);
-                if (cand.end()) continue;
-                for (pkgCache::PrvIterator prv = cand.ProvidesList(); prv.end() == false; ++prv) {
-                    if (strcmp(prv.Name(), package_name) == 0) {
-                        candidate_providers.push_back(it);
-                        break;
-                    }
-                }
-            }
-            if (candidate_providers.empty()) {
-                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
-            }
-            if (candidate_providers.size() > 1) {
-                return make_result(APT_ERROR_DEPENDENCY_BROKEN, (std::string("Virtual name '") + package_name + "' has multiple providers; specify exact package name").c_str());
-            }
-            pkg = candidate_providers.front();
-        }
-
-        pkgProblemResolver Fix(cache->dep_cache);
-
-        if ((*cache->dep_cache)[pkg].CandidateVer == 0 && pkg->ProvidesList != 0) {
-            std::vector<pkgCache::Package *> GoodSolutions;
-
-            for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
-                pkgCache::PkgIterator ProvPkg = Prv.OwnerPkg();
-
-                if (ProvPkg.CurrentVer() == Prv.OwnerVer()) {
-                    GoodSolutions.push_back(ProvPkg);
-                    continue;
-                }
-
-                pkgCache::VerIterator CandVer = (*cache->dep_cache)[ProvPkg].CandidateVerIter(*cache->dep_cache);
-                if (!CandVer.end() && CandVer == Prv.OwnerVer()) {
-                    GoodSolutions.push_back(ProvPkg);
-                }
-            }
-
-            if (GoodSolutions.empty()) {
-                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                    (std::string("Virtual package ") + package_name + " has no installable providers").c_str());
-            }
-
-            if (GoodSolutions.size() > 1) {
-                return make_result(APT_ERROR_DEPENDENCY_BROKEN,
-                    (std::string("Virtual package ") + package_name + " has multiple providers. Please select specific package.").c_str());
-            }
-
-            pkg = pkgCache::PkgIterator(*cache->dep_cache, GoodSolutions[0]);
-        }
-
-        // Check if already installed
-        pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg];
-        if (pkg->CurrentVer != 0 && State.Install() == false) {
-            cache->dep_cache->MarkKeep(pkg);
-            return make_result(APT_SUCCESS, nullptr);
-        }
-
-        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
-
-        if (State.InstBroken() == true && auto_install == true) {
-            cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::DontChange, true);
-        }
-
-        if (cache->dep_cache->BrokenCount() > 0) {
-            if (!Fix.Resolve(true)) {
-                return make_result(APT_ERROR_DEPENDENCY_BROKEN,
-                    (std::string("Unable to resolve dependencies for package: ") + package_name).c_str());
-            }
-        }
-
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
+        // Delegate to unified planner to guarantee parity with simulation
+        const char* install_names[1] = { package_name };
+        AptPackageChanges dummy{};
+        AptResult r = plan_change_internal(cache, install_names, 1, nullptr, 0, false, true, &dummy);
+        apt_free_package_changes(&dummy);
+        return r;
     } catch (const std::exception& e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
@@ -520,93 +453,12 @@ AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge)
     }
 
     try {
-        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
-        if (pkg.end()) {
-            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
-        }
-
-        if ((*cache->dep_cache)[pkg].CandidateVer == 0 && pkg->ProvidesList != 0) {
-            std::vector<pkgCache::Package *> InstalledProviders;
-            std::string providersList;
-
-            for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
-                pkgCache::PkgIterator ProvPkg = Prv.OwnerPkg();
-                if (ProvPkg.CurrentVer() == Prv.OwnerVer()) {
-                    InstalledProviders.push_back(ProvPkg);
-                    if (!providersList.empty()) providersList += ", ";
-                    providersList += ProvPkg.Name();
-                }
-            }
-
-            if (InstalledProviders.empty()) {
-                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                    (std::string("Package ") + package_name + " has no installed providers").c_str());
-            }
-
-            if (InstalledProviders.size() > 1) {
-                return make_result(APT_ERROR_DEPENDENCY_BROKEN,
-                    (std::string("Virtual package ") + package_name +
-                    " has multiple installed providers: " + providersList +
-                    ". Please remove specific package.").c_str());
-            }
-
-            pkg = pkgCache::PkgIterator(*cache->dep_cache, InstalledProviders[0]);
-        }
-
-        if (pkg->CurrentVer == 0) {
-            return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                (std::string("Package ") + package_name + " is not installed").c_str());
-        }
-
-        cache->dep_cache->MarkDelete(pkg, purge);
-
-        pkgProblemResolver Fix(cache->dep_cache);
-
-        Fix.Remove(pkg);
-
-        if (!Fix.Resolve()) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Problem resolver failed to handle package removal dependencies");
-        }
-
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
-    } catch (const std::exception& e) {
-        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
-    }
-}
-
-AptResult apt_mark_keep(AptCache* cache, const char* package_name) {
-    if (!cache || !cache->dep_cache || !package_name) {
-        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_keep");
-    }
-
-    try {
-        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
-        if (pkg.end()) {
-            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
-        }
-
-        cache->dep_cache->MarkKeep(pkg);
-
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
-    } catch (const std::exception& e) {
-        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
-    }
-}
-
-AptResult apt_mark_auto(AptCache* cache, const char* package_name, bool auto_flag) {
-    if (!cache || !cache->dep_cache || !package_name) {
-        return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_auto");
-    }
-
-    try {
-        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
-        if (pkg.end()) {
-            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
-        }
-
-        cache->dep_cache->MarkAuto(pkg, auto_flag ? pkgDepCache::AutoMarkFlag::Auto : pkgDepCache::AutoMarkFlag::Manual);
-
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
+        // Delegate to unified planner to guarantee parity with simulation
+        const char* remove_names[1] = { package_name };
+        AptPackageChanges dummy{};
+        AptResult r = plan_change_internal(cache, nullptr, 0, remove_names, 1, purge, true, &dummy);
+        apt_free_package_changes(&dummy);
+        return r;
     } catch (const std::exception& e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }

@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755098130
+// cgo-timestamp: 1755104567
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -140,28 +140,6 @@ func (c *Cache) MarkRemove(packageName string, purge bool) error {
 	cname := C.CString(packageName)
 	defer C.free(unsafe.Pointer(cname))
 	if res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge)); res.code != C.APT_SUCCESS {
-		return ErrorFromResult(res)
-	}
-	return nil
-}
-
-func (c *Cache) MarkKeep(packageName string) error {
-	AptMutex.Lock()
-	defer AptMutex.Unlock()
-	cname := C.CString(packageName)
-	defer C.free(unsafe.Pointer(cname))
-	if res := C.apt_mark_keep(c.Ptr, cname); res.code != C.APT_SUCCESS {
-		return ErrorFromResult(res)
-	}
-	return nil
-}
-
-func (c *Cache) MarkAuto(packageName string, auto bool) error {
-	AptMutex.Lock()
-	defer AptMutex.Unlock()
-	cname := C.CString(packageName)
-	defer C.free(unsafe.Pointer(cname))
-	if res := C.apt_mark_auto(c.Ptr, cname, C.bool(auto)); res.code != C.APT_SUCCESS {
 		return ErrorFromResult(res)
 	}
 	return nil

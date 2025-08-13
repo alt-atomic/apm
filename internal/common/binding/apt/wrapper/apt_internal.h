@@ -81,4 +81,13 @@ private:
     std::string active_name_;
 };
 
+// Unified internal planner used by simulation and marking
+AptResult plan_change_internal(
+    AptCache* cache,
+    const char** install_names, size_t install_count,
+    const char** remove_names, size_t remove_count,
+    bool purge,
+    bool apply,
+    AptPackageChanges* changes);
+
 
