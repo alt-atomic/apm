@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testPackage = "hello"
+const nonAtomicTestPackage = "hello"
 
 func isInstalled(pkg string) bool {
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s rpm -q %s", lib.Env.CommandPrefix, pkg))
@@ -49,27 +49,27 @@ func TestNonAtomicInstallRemoveHello(t *testing.T) {
 	actions := system.NewActions()
 	assert.NotNil(t, actions)
 
-	if isInstalled(testPackage) {
-		_, err := actions.Remove(ctx, []string{testPackage}, false, false)
+	if isInstalled(nonAtomicTestPackage) {
+		_, err := actions.Remove(ctx, []string{nonAtomicTestPackage}, false, false)
 		if err != nil {
 			t.Fatalf("Remove failed: %v", err)
 		}
 	}
 	t.Cleanup(func() {
-		if isInstalled(testPackage) {
-			_, err := actions.Remove(ctx, []string{testPackage}, false, false)
+		if isInstalled(nonAtomicTestPackage) {
+			_, err := actions.Remove(ctx, []string{nonAtomicTestPackage}, false, false)
 			if err != nil {
 				t.Fatalf("Remove failed: %v", err)
 			}
 		}
 	})
 
-	resp, err := actions.Install(ctx, []string{testPackage}, false)
+	resp, err := actions.Install(ctx, []string{nonAtomicTestPackage}, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.False(t, resp.Error)
 
-	resp, err = actions.Remove(ctx, []string{testPackage}, false, false)
+	resp, err = actions.Remove(ctx, []string{nonAtomicTestPackage}, false, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.False(t, resp.Error)

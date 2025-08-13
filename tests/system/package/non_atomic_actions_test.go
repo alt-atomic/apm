@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testPackage = "hello"
+const nonAtomicActionsTestPackage = "hello"
 
 // TestNonAtomicInstall проверяет Install
 func TestNonAtomicInstall(t *testing.T) {
@@ -53,7 +53,7 @@ func TestNonAtomicInstall(t *testing.T) {
 	ctx := context.Background()
 
 	// Тестируем реальную установку в неатомарной системе
-	err = actions.Install(ctx, []string{testPackage})
+	err = actions.Install(ctx, []string{nonAtomicActionsTestPackage})
 	if err != nil {
 		t.Logf("Install error (may be expected): %v", err)
 	} else {
@@ -82,7 +82,7 @@ func TestNonAtomicRemove(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = actions.Remove(ctx, []string{testPackage}, false)
+	err = actions.Remove(ctx, []string{nonAtomicActionsTestPackage}, false)
 	if err != nil {
 		t.Logf("Remove error (expected for nonexistent package): %v", err)
 		assert.True(t,

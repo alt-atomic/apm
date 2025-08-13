@@ -1,0 +1,43 @@
+# Build artifacts
+builddir/
+builddir-container/
+build/
+*.o
+*.so
+*.a
+apm
+
+# Go build cache
+vendor/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation (only during build)
+*.md
+README*
+
+# Test results
+*.log
+testlog.*
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Container files (don't copy themselves)
+Dockerfile*
+.dockerignore

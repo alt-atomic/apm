@@ -97,7 +97,21 @@ func TestAptSimulateRemove(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	// Removing a very likely uninstalled package should still simulate successfully
+	// First, try to install the test package (ignore if already newest version)
+	err := actions.InstallPackages([]string{testPackage}, nil)
+	if err != nil {
+		if matchedErr := aptErrors.CheckError(err.Error()); matchedErr != nil {
+			if matchedErr.Entry.Code == aptErrors.ErrPackageIsAlreadyNewest {
+				t.Logf("Package %s is already the newest version", testPackage)
+			} else {
+				t.Logf("Failed to install %s: %v", testPackage, err)
+			}
+		} else {
+			t.Logf("Failed to install %s: %v", testPackage, err)
+		}
+	}
+
+	// Now simulate removing the package (should work since we ensured it's installed)
 	changes, err := actions.SimulateRemove([]string{testPackage})
 	if err != nil {
 		t.Fatalf("SimulateRemove failed: %v", err)

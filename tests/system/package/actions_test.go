@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testPackage = "hello"
+const actionsTestPackage = "hello"
 
 // TestNewActions проверяет создание Actions
 func TestNewActions(t *testing.T) {
@@ -58,7 +58,7 @@ func TestInstall(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = actions.Install(ctx, []string{testPackage})
+	err = actions.Install(ctx, []string{actionsTestPackage})
 	if err != nil {
 		t.Logf("Install error (may be expected): %v", err)
 	} else {
@@ -111,7 +111,7 @@ func TestCheckInstall(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err = actions.CheckInstall(ctx, []string{testPackage})
+	_, err = actions.CheckInstall(ctx, []string{actionsTestPackage})
 	if err != nil {
 		t.Logf("CheckInstall error (may be expected): %v", err)
 	} else {

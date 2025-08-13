@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testPackage = "hello"
+const threadSafeTestPackage = "hello"
 
 // TestThreadSafePackageOperations проверяет потокобезопасность операций с пакетами
 func TestThreadSafePackageOperations(t *testing.T) {
@@ -45,7 +45,7 @@ func TestThreadSafePackageOperations(t *testing.T) {
 	// Тест 1: Последовательные операции с использованием мьютекса
 	t.Run("Sequential operations with mutex", func(t *testing.T) {
 		err := common.WithAPTLock(func() error {
-			_, err := actions.Info(ctx, testPackage, false)
+			_, err := actions.Info(ctx, threadSafeTestPackage, false)
 			return err
 		})
 		
@@ -54,7 +54,7 @@ func TestThreadSafePackageOperations(t *testing.T) {
 		}
 
 		err = common.WithAPTLock(func() error {
-			_, err := actions.CheckInstall(ctx, []string{testPackage})
+			_, err := actions.CheckInstall(ctx, []string{threadSafeTestPackage})
 			return err
 		})
 		
@@ -66,7 +66,7 @@ func TestThreadSafePackageOperations(t *testing.T) {
 	// Тест 2: Операции с таймаутом
 	t.Run("Operations with timeout", func(t *testing.T) {
 		err := common.WithAPTLockAndTimeout(func() error {
-			_, err := actions.Search(ctx, testPackage, false, false)
+			_, err := actions.Search(ctx, threadSafeTestPackage, false, false)
 			return err
 		}, 10*time.Second)
 
@@ -98,7 +98,7 @@ func TestConcurrentReadOperations(t *testing.T) {
 		// Первая горутина
 		go func() {
 			defer func() { done <- true }()
-			_, err := actions.Info(ctx, testPackage, false)
+			_, err := actions.Info(ctx, threadSafeTestPackage, false)
 			if err != nil {
 				t.Logf("Concurrent info 1 error (may be expected): %v", err)
 			}
@@ -137,13 +137,13 @@ func TestPackageOperationLocking(t *testing.T) {
 		// Первая операция удерживает блокировку
 		err1 := common.WithAPTLock(func() error {
 			time.Sleep(1 * time.Second) // Имитируем долгую операцию
-			_, err := actions.CheckInstall(ctx, []string{testPackage})
+			_, err := actions.CheckInstall(ctx, []string{threadSafeTestPackage})
 			return err
 		})
 		
 		// Вторая операция должна ждать
 		err2 := common.WithAPTLock(func() error {
-			_, err := actions.CheckRemove(ctx, []string{testPackage})
+			_, err := actions.CheckRemove(ctx, []string{threadSafeTestPackage})
 			return err
 		})
 		
@@ -176,7 +176,7 @@ func TestTimeoutHandling(t *testing.T) {
 		err := common.WithAPTLockAndTimeout(func() error {
 			// Имитируем очень долгую операцию
 			time.Sleep(2 * time.Second)
-			_, err := actions.Info(ctx, testPackage, false)
+			_, err := actions.Info(ctx, threadSafeTestPackage, false)
 			return err
 		}, 500*time.Millisecond) // Короткий таймаут
 
@@ -216,7 +216,7 @@ func TestResourceCleanup(t *testing.T) {
 
 		// Проверяем что мьютекс доступен после паники
 		err := common.WithAPTLockAndTimeout(func() error {
-			_, err := actions.Info(ctx, testPackage, false)
+			_, err := actions.Info(ctx, threadSafeTestPackage, false)
 			return err
 		}, 1*time.Second)
 

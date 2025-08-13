@@ -1,0 +1,64 @@
+# Test container for APM (Atomic Package Manager)
+# Based on ALT Linux Sisyphus with all build dependencies pre-installed
+FROM registry.altlinux.org/sisyphus/base:latest
+
+LABEL maintainer="Дмитрий Удалов <dmitry@udalov.online>"
+LABEL description="APM test environment with all dependencies"
+LABEL version="1.0"
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV GOROOT=/usr/lib/golang
+ENV GOPATH=/go
+ENV PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+
+# Update package lists and install all build dependencies
+RUN apt-get update && \
+    apt-get install -y \
+        # Build tools
+        build-essential \
+        meson \
+        ninja-build \
+        cmake \
+        pkg-config \
+        systemd-devel \
+        # Go language
+        golang \
+        # APT development libraries
+        libapt-devel \
+        # C++ development
+        gcc-c++ \
+        libstdc++-devel \
+        # Git for source management
+        git \
+        # Test utilities
+        curl \
+        wget \
+        # Common test packages
+        hello \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Set Go module mode
+ENV GO111MODULE=on
+
+# Create non-root user for testing
+RUN useradd -m -s /bin/bash testuser
+
+# Copy project files (will be mounted in practice)
+# COPY . /workspace/
+
+# Set ownership for test user
+RUN chown -R testuser:testuser /workspace
+
+# Switch to test user
+USER testuser
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command runs the test script
+CMD ["bash", "-c", "scripts/run-tests.sh unit && scripts/run-tests.sh system"]
