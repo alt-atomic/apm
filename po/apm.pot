@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-14 21:34+0600\n"
+"POT-Creation-Date: 2025-08-15 00:53+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,540 +34,544 @@ msgstr ""
 msgid "Parse %s failed: %w"
 msgstr ""
 
-#: internal/common/apt/errors.go:164
+#: internal/common/apt/errors.go:166
 msgid "Broken packages"
 msgstr ""
 
-#: internal/common/apt/errors.go:167
+#: internal/common/apt/errors.go:169
 msgid "You have no permissions for that"
 msgstr ""
 
-#: internal/common/apt/errors.go:170
+#: internal/common/apt/errors.go:172
 msgid "Internal Error, InstallPackages was called with broken packages!"
 msgstr ""
 
-#: internal/common/apt/errors.go:173
+#: internal/common/apt/errors.go:175
 msgid "Packages need to be removed but Remove is disabled."
 msgstr ""
 
-#: internal/common/apt/errors.go:176
+#: internal/common/apt/errors.go:178
 msgid "Unable to lock the download directory"
 msgstr ""
 
-#: internal/common/apt/errors.go:179
+#: internal/common/apt/errors.go:181
 msgid "There are problems and -y was used without --force-yes"
 msgstr ""
 
-#: internal/common/apt/errors.go:182
+#: internal/common/apt/errors.go:184
 #, c-format
 msgid "You don't have enough free space in %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:185
+#: internal/common/apt/errors.go:187
 #, c-format
 msgid "Package file %s is out of sync"
 msgstr ""
 
-#: internal/common/apt/errors.go:188
+#: internal/common/apt/errors.go:190
 msgid "Trivial Only specified but this is not a trivial operation"
 msgstr ""
 
-#: internal/common/apt/errors.go:191 internal/system/package/dialog.go:91
+#: internal/common/apt/errors.go:193 internal/system/package/dialog.go:91
 #: internal/system/package/dialog.go:97
 msgid "Operation cancelled"
 msgstr ""
 
-#: internal/common/apt/errors.go:194
+#: internal/common/apt/errors.go:196
 msgid "Must specify at least one package to check builddeps for"
 msgstr ""
 
-#: internal/common/apt/errors.go:197
+#: internal/common/apt/errors.go:199
 #, c-format
 msgid "Unable to find a source package for %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:200
+#: internal/common/apt/errors.go:202
 #, c-format
 msgid "Unable to get build-dependency information for %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:203
+#: internal/common/apt/errors.go:205 internal/common/apt/errors.go:409
 #, c-format
 msgid ""
 "Some broken packages were found while trying to process build-dependencies "
 "for %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:206
+#: internal/common/apt/errors.go:208
 #, c-format
 msgid "Package %s is a virtual package with no good providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:209
+#: internal/common/apt/errors.go:211
 #, c-format
 msgid "Package %s is a virtual package with multiple good providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:212
+#: internal/common/apt/errors.go:214
 msgid "No packages found"
 msgstr ""
 
-#: internal/common/apt/errors.go:215
+#: internal/common/apt/errors.go:217
 #, c-format
 msgid "Package %s is not installed, so not removed"
 msgstr ""
 
-#: internal/common/apt/errors.go:218
+#: internal/common/apt/errors.go:220
 #, c-format
 msgid "Release %s'%s' for '%s' was not found"
 msgstr ""
 
-#: internal/common/apt/errors.go:221
+#: internal/common/apt/errors.go:223
 #, c-format
 msgid "Version %s'%s' for '%s' was not found"
 msgstr ""
 
-#: internal/common/apt/errors.go:224
+#: internal/common/apt/errors.go:226
 #, c-format
 msgid "Sources list %s could not be read"
 msgstr ""
 
-#: internal/common/apt/errors.go:227
+#: internal/common/apt/errors.go:229
 #, c-format
 msgid "Sources list %s doesn't exist"
 msgstr ""
 
-#: internal/common/apt/errors.go:230
+#: internal/common/apt/errors.go:232
 msgid "Excessive arguments"
 msgstr ""
 
-#: internal/common/apt/errors.go:233
+#: internal/common/apt/errors.go:235
 msgid "Internal Error, problem resolver broke stuff"
 msgstr ""
 
-#: internal/common/apt/errors.go:236
+#: internal/common/apt/errors.go:238
 msgid "Internal Error, Ordering didn't finish"
 msgstr ""
 
-#: internal/common/apt/errors.go:239
+#: internal/common/apt/errors.go:241
 msgid "Some files failed to download"
 msgstr ""
 
-#: internal/common/apt/errors.go:242
+#: internal/common/apt/errors.go:244
 msgid ""
 "Unable to fetch some archives, maybe run apt-get update or try with --fix-"
 "missing?"
 msgstr ""
 
-#: internal/common/apt/errors.go:245
+#: internal/common/apt/errors.go:247
 msgid "--fix-missing and media swapping is not currently supported"
 msgstr ""
 
-#: internal/common/apt/errors.go:248
+#: internal/common/apt/errors.go:250
 msgid "Unable to correct missing packages"
 msgstr ""
 
-#: internal/common/apt/errors.go:251
+#: internal/common/apt/errors.go:253
 msgid "Aborting Install"
 msgstr ""
 
-#: internal/common/apt/errors.go:254
+#: internal/common/apt/errors.go:256
 msgid "Could not open RPM database"
 msgstr ""
 
-#: internal/common/apt/errors.go:257
+#: internal/common/apt/errors.go:259
 #, c-format
 msgid "Couldn't parse name '%s'"
 msgstr ""
 
-#: internal/common/apt/errors.go:260
+#: internal/common/apt/errors.go:262
 msgid "Write to stdout failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:263
+#: internal/common/apt/errors.go:265
 msgid "Exceeded maximum number of command arguments"
 msgstr ""
 
-#: internal/common/apt/errors.go:266
+#: internal/common/apt/errors.go:268
 #, c-format
 msgid ""
 "Package %s dependency for %s cannot be satisfied because the package %s "
 "cannot be found"
 msgstr ""
 
-#: internal/common/apt/errors.go:269
+#: internal/common/apt/errors.go:271
 #, c-format
 msgid "Regex compilation error - %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:272
+#: internal/common/apt/errors.go:274
 #, c-format
 msgid "Package %s has no installation candidate"
 msgstr ""
 
-#: internal/common/apt/errors.go:275
+#: internal/common/apt/errors.go:277
 msgid "Internal Error, AllUpgrade broke stuff"
 msgstr ""
 
-#: internal/common/apt/errors.go:278
+#: internal/common/apt/errors.go:280
 msgid "Requested autoremove failed."
 msgstr ""
 
-#: internal/common/apt/errors.go:281
+#: internal/common/apt/errors.go:283
 #, c-format
 msgid "Couldn't find package %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:284
+#: internal/common/apt/errors.go:286
 #, c-format
 msgid "%s dependency for %s cannot be satisfied"
 msgstr ""
 
-#: internal/common/apt/errors.go:287
+#: internal/common/apt/errors.go:289
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: Installed package %s is too new"
 msgstr ""
 
-#: internal/common/apt/errors.go:290
+#: internal/common/apt/errors.go:292
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:293
+#: internal/common/apt/errors.go:295
 msgid "You must give exactly one pattern"
 msgstr ""
 
-#: internal/common/apt/errors.go:295
+#: internal/common/apt/errors.go:297
 msgid "No help for that"
 msgstr ""
 
-#: internal/common/apt/errors.go:297
+#: internal/common/apt/errors.go:299
 #, c-format
 msgid "%s is already the newest version."
 msgstr ""
 
-#: internal/common/apt/errors.go:300
+#: internal/common/apt/errors.go:302
 msgid "The list of sources could not be read."
 msgstr ""
 
-#: internal/common/apt/errors.go:303
+#: internal/common/apt/errors.go:305
 msgid "There are changes to be made"
 msgstr ""
 
-#: internal/common/apt/errors.go:306
+#: internal/common/apt/errors.go:308
 msgid "Failed to fetch some archives."
 msgstr ""
 
-#: internal/common/apt/errors.go:309
+#: internal/common/apt/errors.go:311
 #, c-format
 msgid "Failed to fetch %s  %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:312
+#: internal/common/apt/errors.go:314
 msgid ""
 "Some index files failed to download. They have been ignored, or old ones "
 "used instead."
 msgstr ""
 
-#: internal/common/apt/errors.go:315
+#: internal/common/apt/errors.go:317
 msgid ""
 "'apt-get upgrade' is disabled because it can leave system in a broken state."
 msgstr ""
 
-#: internal/common/apt/errors.go:318
+#: internal/common/apt/errors.go:320
 msgid ""
 "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or "
 "specify a solution)."
 msgstr ""
 
-#: internal/common/apt/errors.go:321
+#: internal/common/apt/errors.go:323
 msgid "Must specify at least one package to fetch source for"
 msgstr ""
 
-#: internal/common/apt/errors.go:324
+#: internal/common/apt/errors.go:326
 #, c-format
 msgid "Fatal: conflicts violated %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:327
+#: internal/common/apt/errors.go:329
 msgid "Child process failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:330
+#: internal/common/apt/errors.go:332
 msgid "Must specify at least one package to get changelog for"
 msgstr ""
 
-#: internal/common/apt/errors.go:333
+#: internal/common/apt/errors.go:335
 msgid "Failed to process build dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:336
+#: internal/common/apt/errors.go:338
 #, c-format
 msgid "Package %s is a virtual package with no "
 msgstr ""
 
-#: internal/common/apt/errors.go:339
+#: internal/common/apt/errors.go:341
 #, c-format
 msgid "Package %s is a virtual package with multiple "
 msgstr ""
 
 #. Bindings specific patterns (from C++ bindings messages)
-#: internal/common/apt/errors.go:342
+#: internal/common/apt/errors.go:344
 msgid "Failed to initialize APT configuration"
 msgstr ""
 
-#: internal/common/apt/errors.go:343
+#: internal/common/apt/errors.go:345
 msgid "Invalid system pointer"
 msgstr ""
 
-#: internal/common/apt/errors.go:344
+#: internal/common/apt/errors.go:346
 msgid "Failed to initialize APT system"
 msgstr ""
 
-#: internal/common/apt/errors.go:345
+#: internal/common/apt/errors.go:347
 msgid "Invalid arguments for cache_open"
 msgstr ""
 
-#: internal/common/apt/errors.go:346
+#: internal/common/apt/errors.go:348
 msgid "System not properly initialized"
 msgstr ""
 
-#: internal/common/apt/errors.go:347
+#: internal/common/apt/errors.go:349
 msgid "Unable to acquire APT system lock - another process may be using APT"
 msgstr ""
 
-#: internal/common/apt/errors.go:348
+#: internal/common/apt/errors.go:350
 msgid "Failed to open APT cache"
 msgstr ""
 
-#: internal/common/apt/errors.go:349
+#: internal/common/apt/errors.go:351
 msgid "Failed to check dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:350
+#: internal/common/apt/errors.go:352
 msgid "Failed to get dependency cache"
 msgstr ""
 
-#: internal/common/apt/errors.go:351
+#: internal/common/apt/errors.go:353
 msgid "Failed to reopen cache after refresh"
 msgstr ""
 
-#: internal/common/apt/errors.go:352
+#: internal/common/apt/errors.go:354
 msgid "Failed to check dependencies after refresh"
 msgstr ""
 
-#: internal/common/apt/errors.go:353
+#: internal/common/apt/errors.go:355
 msgid "Failed to get dependency cache after refresh"
 msgstr ""
 
-#: internal/common/apt/errors.go:354
+#: internal/common/apt/errors.go:356
 msgid "Failed to get package indexes"
 msgstr ""
 
-#: internal/common/apt/errors.go:355
+#: internal/common/apt/errors.go:357
 msgid "Failed to download package lists"
 msgstr ""
 
-#: internal/common/apt/errors.go:356
+#: internal/common/apt/errors.go:358
 msgid "Failed to rebuild caches"
 msgstr ""
 
-#: internal/common/apt/errors.go:357
+#: internal/common/apt/errors.go:359
 msgid "Invalid cache or output pointer for pm create"
 msgstr ""
 
-#: internal/common/apt/errors.go:358
+#: internal/common/apt/errors.go:360
 msgid "Failed to create package manager"
 msgstr ""
 
-#: internal/common/apt/errors.go:359
+#: internal/common/apt/errors.go:361
 msgid "Invalid arguments for mark_install"
 msgstr ""
 
-#: internal/common/apt/errors.go:360
+#: internal/common/apt/errors.go:362
 msgid "Invalid arguments for mark_remove"
 msgstr ""
 
-#: internal/common/apt/errors.go:361
+#: internal/common/apt/errors.go:363
 msgid "Problem resolver failed to handle package removal dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:362
+#: internal/common/apt/errors.go:364
 msgid "Invalid arguments for mark_keep"
 msgstr ""
 
-#: internal/common/apt/errors.go:363
+#: internal/common/apt/errors.go:365
 msgid "Invalid arguments for mark_auto"
 msgstr ""
 
-#: internal/common/apt/errors.go:364
+#: internal/common/apt/errors.go:366
 msgid "Invalid package manager instance"
 msgstr ""
 
-#: internal/common/apt/errors.go:365
+#: internal/common/apt/errors.go:367
 msgid "Cannot install packages with broken dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:366
+#: internal/common/apt/errors.go:368
 msgid "Failed to get package archives"
 msgstr ""
 
-#: internal/common/apt/errors.go:367
+#: internal/common/apt/errors.go:369
 msgid "Failed to download packages"
 msgstr ""
 
-#: internal/common/apt/errors.go:368
+#: internal/common/apt/errors.go:370
 msgid "Package manager operation failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:369
+#: internal/common/apt/errors.go:371
 msgid "Package manager operation incomplete"
 msgstr ""
 
-#: internal/common/apt/errors.go:370
+#: internal/common/apt/errors.go:372
 msgid "Unknown package manager result"
 msgstr ""
 
-#: internal/common/apt/errors.go:371
+#: internal/common/apt/errors.go:373
 msgid "Failed to update package marks"
 msgstr ""
 
-#: internal/common/apt/errors.go:372
+#: internal/common/apt/errors.go:374
 msgid "Invalid cache for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:373
+#: internal/common/apt/errors.go:375
 msgid "Distribution upgrade failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:374
+#: internal/common/apt/errors.go:376
 msgid "Failed to create package manager for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:375
+#: internal/common/apt/errors.go:377
 msgid "Failed to get package archives for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:376
+#: internal/common/apt/errors.go:378
 msgid "Failed to download packages for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:377
+#: internal/common/apt/errors.go:379
 msgid "Failed to update package marks after dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:378
+#: internal/common/apt/errors.go:380
 msgid "Invalid parameters for search"
 msgstr ""
 
-#: internal/common/apt/errors.go:379
+#: internal/common/apt/errors.go:381
 msgid "Failed to compile regex pattern"
 msgstr ""
 
-#: internal/common/apt/errors.go:380
+#: internal/common/apt/errors.go:382
 msgid "Failed to create package records parser"
 msgstr ""
 
-#: internal/common/apt/errors.go:381
+#: internal/common/apt/errors.go:383
 msgid "Failed to allocate memory for search results"
 msgstr ""
 
-#: internal/common/apt/errors.go:382
+#: internal/common/apt/errors.go:384
 msgid "Unknown exception in search"
 msgstr ""
 
-#: internal/common/apt/errors.go:383
+#: internal/common/apt/errors.go:385
 msgid "Invalid parameters for get_package_info"
 msgstr ""
 
-#: internal/common/apt/errors.go:384
+#: internal/common/apt/errors.go:386
 msgid "Invalid parameters for simulation"
 msgstr ""
 
-#: internal/common/apt/errors.go:385
+#: internal/common/apt/errors.go:387
 msgid "Cache file not available"
 msgstr ""
 
-#: internal/common/apt/errors.go:386
+#: internal/common/apt/errors.go:388
 msgid "Invalid parameters for multi-package simulation"
 msgstr ""
 
-#: internal/common/apt/errors.go:387
+#: internal/common/apt/errors.go:389
 #, c-format
 msgid "Virtual package %s has no installable providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:389
+#: internal/common/apt/errors.go:391
 #, c-format
 msgid ""
 "Virtual package %s has multiple providers. Please select specific package."
 msgstr ""
 
-#: internal/common/apt/errors.go:391
+#: internal/common/apt/errors.go:393
 #, c-format
 msgid "Package not found: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:392
+#: internal/common/apt/errors.go:394
 #, c-format
 msgid "Package is not installed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:393
+#: internal/common/apt/errors.go:395
 #, c-format
 msgid "Package %s has no installed providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:395
+#: internal/common/apt/errors.go:397
 #, c-format
 msgid ""
 "Virtual package %s has multiple installed providers: %s. Please remove "
 "specific package."
 msgstr ""
 
-#: internal/common/apt/errors.go:397
+#: internal/common/apt/errors.go:399
 #, c-format
 msgid "Dist upgrade simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:398
+#: internal/common/apt/errors.go:400
 #, c-format
 msgid "Multi-package install simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:399
+#: internal/common/apt/errors.go:401
 #, c-format
 msgid "Multi-package remove simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:400
+#: internal/common/apt/errors.go:402
 #, c-format
 msgid "Combined simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:401
+#: internal/common/apt/errors.go:403
 #, c-format
 msgid "Virtual name '%s' has multiple providers; specify exact package name"
 msgstr ""
 
-#: internal/common/apt/errors.go:402
+#: internal/common/apt/errors.go:404
 #, c-format
 msgid "Cannot remove %s not installed"
 msgstr ""
 
-#: internal/common/apt/errors.go:403
+#: internal/common/apt/errors.go:405
 #, c-format
 msgid "Cannot remove %s essential package"
 msgstr ""
 
-#: internal/common/apt/errors.go:404
+#: internal/common/apt/errors.go:406
 #, c-format
 msgid "Cannot remove %s kept by dependency resolution"
 msgstr ""
 
-#: internal/common/apt/errors.go:405
+#: internal/common/apt/errors.go:407
 #, c-format
 msgid "Cannot remove %s. Try removing together: %s"
+msgstr ""
+
+#: internal/common/apt/errors.go:411
+msgid "Broken dependencies"
 msgstr ""
 
 #: internal/common/apt/parser.go:104
@@ -582,7 +586,7 @@ msgstr ""
 msgid "Installation"
 msgstr ""
 
-#: internal/common/apt/parser.go:133 internal/system/package/actions.go:170
+#: internal/common/apt/parser.go:133 internal/system/package/actions.go:174
 #, c-format
 msgid "Downloading: %s"
 msgstr ""
@@ -1417,7 +1421,7 @@ msgstr ""
 msgid "Error executing command rpm -qia: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:516
+#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:520
 msgid "Error scanning rpm output: %w"
 msgstr ""
 
@@ -1801,30 +1805,30 @@ msgstr ""
 msgid "Filter by image name"
 msgstr ""
 
-#: internal/system/package/actions.go:177
+#: internal/system/package/actions.go:181
 #, c-format
 msgid "Downloading %s"
 msgstr ""
 
-#: internal/system/package/actions.go:190
+#: internal/system/package/actions.go:194
 #, c-format
 msgid "Installing progress: %s"
 msgstr ""
 
-#: internal/system/package/actions.go:197
+#: internal/system/package/actions.go:201
 #, c-format
 msgid "Installing %s"
 msgstr ""
 
-#: internal/system/package/actions.go:308
+#: internal/system/package/actions.go:312
 msgid "AppStream load failed: %v"
 msgstr ""
 
-#: internal/system/package/actions.go:408
+#: internal/system/package/actions.go:412
 msgid "Error updating information about installed packages: %w"
 msgstr ""
 
-#: internal/system/package/actions.go:458
+#: internal/system/package/actions.go:462
 msgid "Error executing the rpm -qia command: %w"
 msgstr ""
 

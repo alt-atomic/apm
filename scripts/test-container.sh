@@ -1,6 +1,7 @@
 #!/bin/bash
 # Test runner script for containerized testing using pre-built container
 # Usage: ./scripts/test-container.sh [test-suite]
+# Usage: ./scripts/test-container.sh exec - to enter container interactively
 
 set -euo pipefail
 
@@ -108,6 +109,29 @@ print_success "Project built successfully"
 
 print_info "🧪 Running tests..."
 
+# Handle exec mode for interactive container access
+if [ "${TEST_SUITE}" = "exec" ]; then
+    print_info "🚀 Entering container interactively as root..."
+    print_info "Container has been built and is ready for manual testing."
+    print_info "Your project is available at /tmp/apm-src (built) and /workspace (source)"
+    print_info "Use 'exit' to leave the container"
+    
+    # Remove the cleanup trap for exec mode so container stays running
+    trap - EXIT
+    
+    # Enter container interactively as root
+    if podman exec -it --user root "${CONTAINER_NAME}" bash -c "cd /tmp/apm-src && exec bash"; then
+        print_success "Exited container successfully"
+    else
+        print_warning "Container session ended"
+    fi
+    
+    # Manual cleanup for exec mode
+    print_info "🧹 Cleaning up container ${CONTAINER_NAME} ..."
+    podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+    exit 0
+fi
+
 # Run different test suites based on parameter
 case "${TEST_SUITE}" in
     "unit")
@@ -164,7 +188,7 @@ case "${TEST_SUITE}" in
         ;;
     *)
         print_error "Unknown test suite: ${TEST_SUITE}"
-        print_info "Available test suites: unit, system, apt, safe, all"
+        print_info "Available test suites: unit, system, apt, safe, all, exec"
         exit 1
         ;;
 esac

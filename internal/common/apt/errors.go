@@ -143,6 +143,7 @@ const (
 	ErrCannotRemoveEssential
 	ErrCannotRemoveKeptByResolver
 	ErrCannotRemoveTryTogether
+	ErrSomeBrokenDependencies
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -403,6 +404,7 @@ var errorPatterns = []ErrorEntry{
 	{ErrCannotRemoveEssential, "cannot remove %s essential package", func() string { return lib.T_("Cannot remove %s essential package") }, 1},
 	{ErrCannotRemoveKeptByResolver, "cannot remove %s kept by dependency resolution", func() string { return lib.T_("Cannot remove %s kept by dependency resolution") }, 1},
 	{ErrCannotRemoveTryTogether, "cannot remove %s try removing together: %s", func() string { return lib.T_("Cannot remove %s. Try removing together: %s") }, 2},
+	{ErrSomeBrokenDependencies, "Broken dependencies", func() string { return lib.T_("Broken dependencies") }, 0},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.
