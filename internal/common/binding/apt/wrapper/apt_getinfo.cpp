@@ -7,13 +7,47 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
 
     try {
         memset(info, 0, sizeof(AptPackageInfo));
+        info->aliases = nullptr;
+        info->alias_count = 0;
 
-        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
-        if (pkg.end()) {
-            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + package_name).c_str());
+        // Normalize incoming name: strip .32bit alias suffix
+        std::string requested = package_name ? std::string(package_name) : std::string();
+        if (!requested.empty() && requested.size() > 7 && requested.rfind(".32bit") == requested.size() - 7) {
+            requested.erase(requested.size() - 7);
         }
 
-        info->name = strdup(pkg.Name());
+        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(requested.c_str());
+        if (pkg.end()) {
+            // Try common ALT biarch provider name: i586-<requested>
+            std::string i586_name = std::string("i586-") + requested;
+            pkg = cache->dep_cache->FindPkg(i586_name.c_str());
+        }
+        if (pkg.end()) {
+            // Fallback: resolve via providers (candidate versions)
+            pkgDepCache::Policy Plcy;
+            for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); it.end() == false; ++it) {
+                pkgCache::VerIterator cand = Plcy.GetCandidateVer(it);
+                if (cand.end()) continue;
+                for (pkgCache::PrvIterator prv = cand.ProvidesList(); !prv.end(); ++prv) {
+                    const char* prov_name = prv.Name();
+                    if (prov_name && (requested == prov_name || (package_name && std::string(package_name) == prov_name))) {
+                        pkg = it;
+                        break;
+                    }
+                }
+                if (!pkg.end()) break;
+            }
+        }
+        if (pkg.end()) {
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + requested).c_str());
+        }
+
+        // Use the requested normalized name as primary display name when it differs (to honor aliases)
+        if (!requested.empty()) {
+            info->name = strdup(requested.c_str());
+        } else {
+            info->name = strdup(pkg.Name());
+        }
         info->package_id = pkg->ID;
 
         info->essential = (pkg->Flags & pkgCache::Flag::Essential) != 0;
@@ -58,8 +92,8 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
             }
         }
 
-        pkgDepCache::StateCache& state = (*cache->dep_cache)[pkg];
-        pkgCache::VerIterator candidate_ver = state.CandidateVerIter(*cache->dep_cache);
+        pkgDepCache::Policy Plcy;
+        pkgCache::VerIterator candidate_ver = Plcy.GetCandidateVer(pkg);
 
         if (!candidate_ver.end()) {
             info->version = strdup(candidate_ver.VerStr());

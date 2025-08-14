@@ -553,6 +553,12 @@ void apt_free_package_info(AptPackageInfo* info) {
     free(info->obsoletes);
     free(info->recommends);
     free(info->suggests);
+    if (info->aliases) {
+        for (size_t i = 0; i < info->alias_count; ++i) {
+            free(info->aliases[i]);
+        }
+        free(info->aliases);
+    }
 
     memset(info, 0, sizeof(AptPackageInfo));
 }

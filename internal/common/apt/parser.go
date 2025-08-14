@@ -26,13 +26,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/creack/pty"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/creack/pty"
 )
 
 type Package struct {
@@ -389,8 +390,43 @@ var soNameRe = regexp.MustCompile(`^(.+?\.so(?:\.[0-9]+)*).*`)
 
 func CleanDependency(s string) string {
 	s = strings.TrimSpace(s)
-	if m := soNameRe.FindStringSubmatch(s); len(m) > 1 {
+
+	if m := soNameRe.FindStringSubmatch(s); len(m) > 1 && strings.HasPrefix(s, "lib") {
 		return m[1]
 	}
+
+	if idx := strings.IndexByte(s, '('); idx != -1 {
+		inner := s[idx+1:]
+		if j := strings.IndexByte(inner, ')'); j != -1 {
+			inner = inner[:j]
+		}
+		// Если скобка не закрыта, inner уже содержит всё до конца строки
+		inner = strings.TrimSpace(inner)
+
+		if inner != "" && (strings.Contains(inner, ".so") || strings.Contains(inner, "/")) {
+			return s
+		}
+	}
+
+	// Убираем версионные ограничения только для обычных зависимостей пакетов
+	s = regexp.MustCompile(`\s*\((?i:64bit)\)$`).ReplaceAllString(s, "")
+	s = regexp.MustCompile(`\s*\([<>!=][^)]*\)$`).ReplaceAllString(s, "")
+
+	if idx := strings.IndexByte(s, '('); idx != -1 {
+		inner := s[idx+1:]
+		if j := strings.IndexByte(inner, ')'); j != -1 {
+			inner = inner[:j]
+		}
+		inner = strings.TrimSpace(inner)
+		if inner == "" {
+			s = strings.TrimSpace(s[:idx])
+		}
+	}
+	
+	s = strings.TrimSpace(s)
+	if idx := strings.IndexByte(s, ':'); idx > 0 && s[0] >= '0' && s[0] <= '9' {
+		s = s[idx+1:]
+	}
+
 	return s
 }

@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755114014
+// cgo-timestamp: 1755162090
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -121,6 +121,7 @@ type PackageInfo struct {
 	InstalledSize    uint64
 	DownloadSize     uint64
 	PackageID        uint32
+	Aliases          []string
 }
 
 // PackageChanges represents the changes that would occur during package ops

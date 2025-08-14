@@ -97,12 +97,14 @@ func (t PackageType) Value() (driver.Value, error) { return int64(t), nil }
 // DBPackage — модель для GORM, отражающая структуру таблицы в БД.
 type DBPackage struct {
 	Name             string               `gorm:"column:name;primaryKey"`
+	Architecture     string               `gorm:"column:architecture"`
 	Section          string               `gorm:"column:section"`
 	InstalledSize    int                  `gorm:"column:installed_size"`
 	Maintainer       string               `gorm:"column:maintainer"`
 	Version          string               `gorm:"column:version;primaryKey"`
 	VersionInstalled string               `gorm:"column:versionInstalled"`
 	Depends          string               `gorm:"column:depends"`
+	Aliases          string               `gorm:"column:aliases"`
 	Provides         string               `gorm:"column:provides"`
 	Size             int                  `gorm:"column:size"`
 	Filename         string               `gorm:"column:filename"`
@@ -122,6 +124,7 @@ func (DBPackage) TableName() string {
 func (dbp DBPackage) fromDBModel() Package {
 	p := Package{
 		Name:             dbp.Name,
+		Architecture:     dbp.Architecture,
 		Section:          dbp.Section,
 		InstalledSize:    dbp.InstalledSize,
 		Maintainer:       dbp.Maintainer,
@@ -134,6 +137,9 @@ func (dbp DBPackage) fromDBModel() Package {
 		Changelog:        dbp.Changelog,
 		Installed:        dbp.Installed,
 		TypePackage:      int(dbp.TypePackage),
+	}
+	if strings.TrimSpace(dbp.Aliases) != "" {
+		p.Aliases = strings.Split(dbp.Aliases, ",")
 	}
 	if strings.TrimSpace(dbp.Depends) != "" {
 		p.Depends = strings.Split(dbp.Depends, ",")
@@ -148,6 +154,7 @@ func (dbp DBPackage) fromDBModel() Package {
 func (p Package) toDBModel() DBPackage {
 	dbp := DBPackage{
 		Name:             p.Name,
+		Architecture:     p.Architecture,
 		Section:          p.Section,
 		InstalledSize:    p.InstalledSize,
 		Maintainer:       p.Maintainer,
@@ -160,6 +167,9 @@ func (p Package) toDBModel() DBPackage {
 		Changelog:        p.Changelog,
 		Installed:        p.Installed,
 		TypePackage:      PackageType(p.TypePackage),
+	}
+	if len(p.Aliases) > 0 {
+		dbp.Aliases = strings.Join(p.Aliases, ",")
 	}
 	if len(p.Depends) > 0 {
 		dbp.Depends = strings.Join(p.Depends, ",")
@@ -213,10 +223,10 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName string) (Package, error) {
 	var dbPkg DBPackage
 	err := s.db.WithContext(ctx).
-		Where("name = ?", packageName).
+		Where("name = ? OR (',' || aliases || ',') LIKE ?", packageName, "%,"+packageName+",%").
 		First(&dbPkg).Error
 	if err != nil {
-		return Package{}, fmt.Errorf(lib.T_("failed to get information about package %s"), packageName)
+		return Package{}, fmt.Errorf(lib.T_("Failed to get information about the package %s"), packageName)
 	}
 
 	return dbPkg.fromDBModel(), nil

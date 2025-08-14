@@ -305,7 +305,7 @@ func (m model) buildContent() string {
 		}
 
 		sb.WriteString("\n" + formatLine(lib.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(lib.T_("Action"), m.statusPackage(pkg.Name), keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(lib.T_("Action"), m.statusPackage(pkg), keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine(lib.T_("Category"), pkg.Section, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine(lib.T_("Maintainer"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine(lib.T_("Installed"), installedText, keyWidth, keyStyle, valueStyle))
@@ -359,17 +359,34 @@ func (m model) buildContent() string {
 	return sb.String()
 }
 
-func (m model) statusPackage(pkg string) string {
-	if contains(m.pckChange.ExtraInstalled, pkg) || contains(m.pckChange.NewInstalledPackages, pkg) {
-		return getInstallStyle().Render(lib.T_("Will be installed"))
+func (m model) statusPackage(pkg Package) string {
+	// Создаём список возможных имён пакета для поиска в изменениях
+	possibleNames := []string{pkg.Name}
+	
+	// Если архитектура i586, добавляем дополнительные варианты имён
+	if pkg.Architecture == "i586" {
+		possibleNames = append(possibleNames, 
+			"i586-"+pkg.Name,
+			"i586-"+pkg.Name+".32bit",
+		)
 	}
+	
+	// Добавляем aliases если они есть
+	possibleNames = append(possibleNames, pkg.Aliases...)
+	
+	// Проверяем все возможные имена во всех списках изменений
+	for _, name := range possibleNames {
+		if contains(m.pckChange.ExtraInstalled, name) || contains(m.pckChange.NewInstalledPackages, name) {
+			return getInstallStyle().Render(lib.T_("Will be installed"))
+		}
 
-	if contains(m.pckChange.UpgradedPackages, pkg) {
-		return getInstallStyle().Render(lib.T_("Will be updated"))
-	}
+		if contains(m.pckChange.UpgradedPackages, name) {
+			return getInstallStyle().Render(lib.T_("Will be updated"))
+		}
 
-	if contains(m.pckChange.RemovedPackages, pkg) {
-		return getDeleteStyle().Render(lib.T_("Will be removed"))
+		if contains(m.pckChange.RemovedPackages, name) {
+			return getDeleteStyle().Render(lib.T_("Will be removed"))
+		}
 	}
 
 	return getShortcutStyle().Render(lib.T_("No"))

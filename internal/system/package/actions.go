@@ -52,12 +52,14 @@ func NewActions(serviceAptDatabase *PackageDBService, serviceStplr *StplrService
 // Package описывает структуру для хранения информации о пакете.
 type Package struct {
 	Name             string               `json:"name"`
+	Architecture     string               `json:"architecture"`
 	Section          string               `json:"section"`
 	InstalledSize    int                  `json:"installedSize"`
 	Maintainer       string               `json:"maintainer"`
 	Version          string               `json:"version"`
 	VersionInstalled string               `json:"versionInstalled"`
 	Depends          []string             `json:"depends"`
+	Aliases          []string             `json:"aliases"`
 	Provides         []string             `json:"provides"`
 	Size             int                  `json:"size"`
 	Filename         string               `json:"filename"`
@@ -330,9 +332,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 				if clean == "" {
 					continue
 				}
-				if strings.Contains(clean, ".so") {
-					clean = aptParser.CleanDependency(clean)
-				}
+				clean = aptParser.CleanDependency(clean)
 				if !seen[clean] {
 					seen[clean] = true
 					depends = append(depends, clean)
@@ -349,9 +349,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 				if clean == "" {
 					continue
 				}
-				if strings.Contains(clean, ".so") {
-					clean = aptParser.CleanDependency(clean)
-				}
+				clean = aptParser.CleanDependency(clean)
 				if !seen[clean] {
 					seen[clean] = true
 					provides = append(provides, clean)
@@ -366,12 +364,14 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 
 		p := Package{
 			Name:             ap.Name,
+			Architecture:     ap.Architecture,
 			Section:          ap.Section,
 			InstalledSize:    int(ap.InstalledSize),
 			Maintainer:       ap.Maintainer,
 			Version:          formattedVersion,
 			VersionInstalled: "",
 			Depends:          depends,
+			Aliases:          ap.Aliases,
 			Provides:         provides,
 			Size:             int(ap.DownloadSize),
 			Filename:         ap.Filename,
@@ -416,19 +416,19 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	return packages, nil
 }
 
-// CleanPackageName очищаем странный суффикс в ответе apt
-func (a *Actions) CleanPackageName(pkg string, packageNames []string) string {
-	if strings.HasSuffix(pkg, ".32bit") {
-		basePkg := strings.TrimSuffix(pkg, ".32bit")
-		for _, validPkg := range packageNames {
-			if validPkg == basePkg {
-				return basePkg
-			}
-		}
-	}
-
-	return pkg
-}
+//// CleanPackageName очищаем странный суффикс в ответе apt
+//func (a *Actions) CleanPackageName(pkg string, packageNames []string) string {
+//	if strings.HasSuffix(pkg, ".32bit") {
+//		basePkg := strings.TrimSuffix(pkg, ".32bit")
+//		for _, validPkg := range packageNames {
+//			if validPkg == basePkg {
+//				return basePkg
+//			}
+//		}
+//	}
+//
+//	return pkg
+//}
 
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
 func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) ([]Package, error) {
@@ -460,22 +460,28 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 
 	installed := make(map[string]string)
 	scanner := bufio.NewScanner(strings.NewReader(string(output)))
-	var currentName, currentVersion string
+	var currentName, currentVersion, currentArch string
+
+	flushCurrent := func() {
+		if currentName == "" {
+			return
+		}
+		name := currentName
+		if strings.HasPrefix(name, "i586-") && (currentArch == "i586" || currentArch == "i386") {
+			name = strings.TrimPrefix(name, "i586-")
+		}
+		installed[name] = currentVersion
+		currentName, currentVersion, currentArch = "", "", ""
+	}
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
 		if strings.HasPrefix(line, "Name") {
-			if currentName != "" {
-				installed[currentName] = currentVersion
-				currentName, currentVersion = "", ""
-			}
+			flushCurrent()
 		}
 		if line == "" {
-			if currentName != "" {
-				installed[currentName] = currentVersion
-				currentName, currentVersion = "", ""
-			}
+			flushCurrent()
 			continue
 		}
 
@@ -494,11 +500,17 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 			}
 			continue
 		}
+
+		if strings.HasPrefix(line, "Architecture") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				currentArch = strings.TrimSpace(parts[1])
+			}
+			continue
+		}
 	}
 
-	if currentName != "" {
-		installed[currentName] = currentVersion
-	}
+	flushCurrent()
 
 	if err = scanner.Err(); err != nil {
 		return nil, fmt.Errorf(lib.T_("Error scanning rpm output: %w"), err)

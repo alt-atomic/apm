@@ -94,8 +94,35 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                 }
 
                 if (Match == true && !pkg_name.empty()) {
-                    if (seen_packages.find(pkg_name) == seen_packages.end()) {
-                        seen_packages.insert(pkg_name);
+                    // Fold i586-* packages into their base if base REAL package exists (has candidate version)
+                    // Do not emit separate entry in that case. If base is virtual-only, keep this entry (we will retitle name below).
+                    if (pkg_name.rfind("i586-", 0) == 0) {
+                        std::string base_name = pkg_name.substr(5);
+                        pkgCache::PkgIterator base_pkg = Cache.FindPkg(base_name);
+                        if (!base_pkg.end()) {
+                            pkgCache::VerIterator base_ver = Plcy.GetCandidateVer(base_pkg);
+                            if (!base_ver.end()) {
+                                // Real base package exists, skip this i586-* duplicate
+                                continue;
+                            }
+                        }
+                    }
+                    // Determine effective display name: if this is i586-* and base is virtual-only, use base name
+                    std::string effective_name = pkg_name;
+                    bool is_i586 = (pkg_name.rfind("i586-", 0) == 0);
+                    if (is_i586) {
+                        std::string base_name = pkg_name.substr(5);
+                        pkgCache::PkgIterator base_pkg = Cache.FindPkg(base_name);
+                        if (!base_pkg.end()) {
+                            pkgCache::VerIterator base_ver = Plcy.GetCandidateVer(base_pkg);
+                            if (base_ver.end()) {
+                                effective_name = base_name;
+                            }
+                        }
+                    }
+
+                    if (seen_packages.find(effective_name) == seen_packages.end()) {
+                        seen_packages.insert(effective_name);
 
                         // Find the package in cache for proper info
                         pkgCache::PkgIterator Pkg = Cache.FindPkg(pkg_name);
@@ -165,15 +192,19 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                             std::string homepage = record.substr(start, end - start);
                             info.homepage = strdup(homepage.c_str());
                         } else {
-                            info.homepage = strdup("");
+                            // leave homepage as nullptr if not present
                         }
 
-                        // Basic package information - use Parser.Name() directly
-                        info.name = strdup(Parser.Name().c_str());
+                        // Basic package information: use effective_name as primary name
+                        info.name = strdup(effective_name.c_str());
+                        info.aliases = nullptr;
+                        info.alias_count = 0;
 
                         if (!Pkg.end()) {
                             info.package_id = Pkg->ID;
-                            info.section = strdup(Pkg.Section() ? Pkg.Section() : "unknown");
+                            if (Pkg.Section() != nullptr && *Pkg.Section() != '\0') {
+                                info.section = strdup(Pkg.Section());
+                            }
                             info.essential = (Pkg->Flags & pkgCache::Flag::Essential) != 0;
                             info.auto_installed = (Pkg->Flags & pkgCache::Flag::Auto) != 0;
 
@@ -205,9 +236,15 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                             // Resolve version: candidate; else fallback to record Version field
                             pkgCache::VerIterator Ver = Plcy.GetCandidateVer(Pkg);
                             if (!Ver.end()) {
-                                info.version = strdup(Ver.VerStr() ? Ver.VerStr() : "unknown");
-                                info.architecture = strdup(Ver.Arch() ? Ver.Arch() : "unknown");
-                                info.priority = strdup(pkgCache::Priority(Ver->Priority));
+                                if (Ver.VerStr() != nullptr && *Ver.VerStr() != '\0') {
+                                    info.version = strdup(Ver.VerStr());
+                                }
+                                if (Ver.Arch() != nullptr && *Ver.Arch() != '\0') {
+                                    info.architecture = strdup(Ver.Arch());
+                                }
+                                if (pkgCache::Priority(Ver->Priority) != nullptr && *pkgCache::Priority(Ver->Priority) != '\0') {
+                                    info.priority = strdup(pkgCache::Priority(Ver->Priority));
+                                }
                                 info.installed_size = Ver->InstalledSize;
                                 info.download_size = Ver->Size;
                                 // Collect provided virtual names from this version
@@ -248,15 +285,10 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                             } else {
                                 if (!record_version.empty()) {
                                     info.version = strdup(record_version.c_str());
-                                } else {
-                                    info.version = strdup("unknown");
                                 }
                                 if (!record_arch.empty()) {
                                     info.architecture = strdup(record_arch.c_str());
-                                } else {
-                                    info.architecture = strdup("unknown");
                                 }
-                                info.priority = strdup("unknown");
                                 info.installed_size = 0;
                                 info.download_size = 0;
                                 // Fallback depends from record line if present
@@ -274,21 +306,16 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                         } else {
                             // Package not found in cache
                             info.package_id = 0;
-                            info.section = strdup("unknown");
+                            // leave section nullptr
                             info.essential = false;
                             info.auto_installed = false;
                             info.state = APT_PKG_STATE_NOT_INSTALLED;
                             if (!record_version.empty()) {
                                 info.version = strdup(record_version.c_str());
-                            } else {
-                                info.version = strdup("unknown");
                             }
                             if (!record_arch.empty()) {
                                 info.architecture = strdup(record_arch.c_str());
-                            } else {
-                                info.architecture = strdup("unknown");
                             }
-                            info.priority = strdup("unknown");
                             info.installed_size = 0;
                             info.download_size = 0;
                             // Fallback depends from record line if present
@@ -305,14 +332,55 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                         }
 
                         // Finalize auxiliary fields (use record-provides if nothing collected from cache)
-                        if (info.provides == nullptr) {
-                            if (!record_provides.empty()) info.provides = strdup(record_provides.c_str());
-                            else info.provides = strdup("");
+                        if (info.provides == nullptr && !record_provides.empty()) info.provides = strdup(record_provides.c_str());
+
+                        // Build aliases list for biarch naming (ALT): i586-<name>, <name>.32bit, i586-<name>.32bit
+                        {
+                            std::vector<std::string> aliases;
+                            std::string current_name = Parser.Name();
+                            std::string base_name_for_alias = effective_name;
+
+                            // If this package is i586- prefixed and base exists, add that relation
+                            bool has_i586_prefix = (!current_name.empty() && current_name.rfind("i586-", 0) == 0);
+                            if (has_i586_prefix) {
+                                std::string stripped = current_name.substr(5);
+                                pkgCache::PkgIterator base_pkg = Cache.FindPkg(stripped);
+                                if (!base_pkg.end()) {
+                                    // Current is i586-<name>. Always add the provider name itself and its .32bit alias
+                                    aliases.push_back(current_name);
+                                    aliases.push_back(current_name + ".32bit");
+                                }
+                            } else {
+                                // Current is base name. If i586- variant exists or arch is 32-bit, add aliases
+                                std::string i586_variant = std::string("i586-") + base_name_for_alias;
+                                pkgCache::PkgIterator i586_pkg = Cache.FindPkg(i586_variant);
+                                bool has_i586_variant = !i586_pkg.end();
+
+                                bool is_32bit_arch = false;
+                                if (!Pkg.end()) {
+                                    pkgCache::VerIterator cand = Plcy.GetCandidateVer(Pkg);
+                                    if (!cand.end() && cand.Arch() != nullptr) {
+                                        const char* a = cand.Arch();
+                                        if (strcmp(a, "i586") == 0 || strcmp(a, "i386") == 0) {
+                                            is_32bit_arch = true;
+                                        }
+                                    }
+                                }
+
+                                if (has_i586_variant || is_32bit_arch) {
+                                    aliases.push_back(i586_variant);
+                                    aliases.push_back(i586_variant + ".32bit");
+                                }
+                            }
+
+                            if (!aliases.empty()) {
+                                info.alias_count = aliases.size();
+                                info.aliases = (char**)calloc(info.alias_count, sizeof(char*));
+                                for (size_t ai = 0; ai < aliases.size(); ++ai) {
+                                    info.aliases[ai] = strdup(aliases[ai].c_str());
+                                }
+                            }
                         }
-                        if (info.conflicts == nullptr) info.conflicts = strdup("");
-                        if (info.obsoletes == nullptr) info.obsoletes = strdup("");
-                        if (info.recommends == nullptr) info.recommends = strdup("");
-                        if (info.suggests == nullptr) info.suggests = strdup("");
 
                         matched_packages.push_back(info);
 

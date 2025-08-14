@@ -1854,7 +1854,7 @@ msgstr "Ошибка пакетной вставки: %w"
 
 #: internal/system/package/database.go:219
 #, c-format
-msgid "failed to get information about package %s"
+msgid "Failed to get information about the package %s"
 msgstr "не удалось извлечь информацию о пакете %s"
 
 #: internal/system/package/database.go:232

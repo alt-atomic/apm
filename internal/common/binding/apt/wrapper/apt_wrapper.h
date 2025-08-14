@@ -120,6 +120,9 @@ typedef struct {
     uint64_t installed_size;
     uint64_t download_size;
     uint32_t package_id;
+    // Aliases for this package (e.g., i586-<name>, i586-<name>.32bit)
+    char** aliases;
+    size_t alias_count;
 } AptPackageInfo;
 
 // Structured result for operations: code + optional message (malloc'ed; caller must free)

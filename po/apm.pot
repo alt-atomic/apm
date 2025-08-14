@@ -1806,7 +1806,7 @@ msgstr ""
 
 #: internal/system/package/database.go:219
 #, c-format
-msgid "failed to get information about package %s"
+msgid "Failed to get information about the package %s"
 msgstr ""
 
 #: internal/system/package/database.go:232

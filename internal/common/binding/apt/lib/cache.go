@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755114014
+// cgo-timestamp: 1755162090
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -64,6 +64,14 @@ func (p *PackageInfo) fromCStruct(c *C.AptPackageInfo) {
 	p.InstalledSize = uint64(c.installed_size)
 	p.DownloadSize = uint64(c.download_size)
 	p.PackageID = uint32(c.package_id)
+	if c.alias_count > 0 && c.aliases != nil {
+		aliases := make([]string, int(c.alias_count))
+		for i := 0; i < int(c.alias_count); i++ {
+			ptr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(c.aliases)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil))))
+			aliases[i] = C.GoString(*ptr)
+		}
+		p.Aliases = aliases
+	}
 }
 
 // Cache represents package cache

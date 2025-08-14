@@ -18,7 +18,6 @@ package system
 
 import (
 	"apm/internal/common/apt"
-	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	_package "apm/internal/system/package"
 	"apm/internal/system/service"
@@ -489,7 +488,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 // Info возвращает информацию о системном пакете.
 func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (*reply.APIResponse, error) {
 	packageName = strings.TrimSpace(packageName)
-	packageName = helper.CleanPackageName(packageName)
+	//packageName = helper.CleanPackageName(packageName)
 	if packageName == "" {
 		errMsg := lib.T_("Package name must be specified, for example info package")
 		return nil, errors.New(errMsg)
