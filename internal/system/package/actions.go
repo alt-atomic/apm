@@ -140,12 +140,16 @@ func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindTy
 			packageChanges.RemovedPackages,
 		} {
 			for _, pkgName := range list {
-				if !seenInfo[pkgName] {
-					info, err := a.serviceAptDatabase.GetPackageByName(ctx, pkgName)
+				cleanName := helper.CleanPackageName(strings.TrimSpace(pkgName))
+				if cleanName == "" {
+					continue
+				}
+				if !seenInfo[cleanName] {
+					info, err := a.serviceAptDatabase.GetPackageByName(ctx, cleanName)
 					if err != nil {
 						return nil, nil, nil, err
 					}
-					seenInfo[pkgName] = true
+					seenInfo[cleanName] = true
 					packagesInfo = append(packagesInfo, info)
 				}
 			}
