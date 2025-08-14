@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755168202
+// cgo-timestamp: 1755168837
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -31,21 +31,8 @@ import (
 type ProgressType int
 
 const (
-	CallbackUnknown          ProgressType = 0
 	CallbackInstallProgress  ProgressType = 1
-	CallbackInstallStart     ProgressType = 2
-	CallbackInstallStop      ProgressType = 3
-	CallbackRemoveProgress   ProgressType = 4
-	CallbackRemoveStart      ProgressType = 5
-	CallbackRemoveStop       ProgressType = 6
-	CallbackError            ProgressType = 7
-	CallbackTransProgress    ProgressType = 8
-	CallbackTransStart       ProgressType = 9
-	CallbackTransStop        ProgressType = 10
-	CallbackElemProgress     ProgressType = 11
-	CallbackDownloadStart    ProgressType = 20
 	CallbackDownloadProgress ProgressType = 21
-	CallbackDownloadStop     ProgressType = 22
 )
 
 type ProgressHandler func(packageName string, eventType ProgressType, current, total uint64)

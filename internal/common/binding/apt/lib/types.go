@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755168202
+// cgo-timestamp: 1755168837
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -31,41 +31,10 @@ import (
 
 type PackageState int
 
-const (
-	PackageStateNotInstalled PackageState = iota
-	PackageStateInstalled
-	PackageStateConfigFiles
-	PackageStateUnpacked
-	PackageStateHalfConfigured
-	PackageStateHalfInstalled
-	PackageStateTriggersAwaited
-	PackageStateTriggerssPending
-)
-
 // APT error codes (must match apt_wrapper.h)
 const (
-	APT_SUCCESS = 0
-
-	APT_ERROR_INIT_FAILED = 1
-
-	APT_ERROR_CACHE_OPEN_FAILED    = 11
-	APT_ERROR_CACHE_REFRESH_FAILED = 12
-	APT_ERROR_CACHE_UPDATE_FAILED  = 13
-
-	APT_ERROR_PACKAGE_NOT_FOUND = 21
-
-	APT_ERROR_DEPENDENCY_BROKEN = 41
-
-	APT_ERROR_OPERATION_FAILED     = 52
-	APT_ERROR_OPERATION_INCOMPLETE = 53
-	APT_ERROR_INSTALL_FAILED       = 54
-	APT_ERROR_DOWNLOAD_FAILED      = 57
-
-	APT_ERROR_LOCK_FAILED = 71
-
+	APT_ERROR_PACKAGE_NOT_FOUND  = 21
 	APT_ERROR_INVALID_PARAMETERS = 91
-
-	APT_ERROR_UNKNOWN = 999
 )
 
 type AptError struct {

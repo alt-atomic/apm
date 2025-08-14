@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755168202
+// cgo-timestamp: 1755168837
 #cgo CPPFLAGS: -I${SRCDIR}/../wrapper
 #cgo LDFLAGS: -lapt_wrapper -lapt-pkg -lstdc++
 

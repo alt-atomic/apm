@@ -113,7 +113,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 // ExportingApp экспортирует пакет в хост-систему.
 // Если isConsole == false, формируется команда экспорта GUI приложения;
 // если isConsole == true, формируются команды для каждого пути из pathList.
-func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
+func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo ContainerInfo, _ string, isConsole bool, pathList []string, deleteApp bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.ExportingApp"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.ExportingApp"))
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.

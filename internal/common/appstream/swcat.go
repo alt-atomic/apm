@@ -256,6 +256,11 @@ func decompressGzip(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func(r *gzip.Reader) {
+		err = r.Close()
+		if err != nil {
+			lib.Log.Error("decompressGzip", err)
+		}
+	}(r)
 	return io.ReadAll(r)
 }

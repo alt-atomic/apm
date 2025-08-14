@@ -232,11 +232,16 @@ func (s *SwCatIconService) getIconFromPackage(pkg PackageIconsSwCat, cachedIcons
 			if err != nil {
 				continue
 			}
-			defer resp.Body.Close()
+			// Close response body immediately after use instead of defer in loop
 			if resp.StatusCode != http.StatusOK {
+				_ = resp.Body.Close()
 				continue
 			}
 			data, err := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if closeErr != nil {
+				lib.Log.Error(closeErr)
+			}
 			if err == nil {
 				return data, nil
 			}
@@ -353,7 +358,12 @@ func (s *SwCatIconService) decompressGzip(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer reader.Close()
+	defer func(reader *gzip.Reader) {
+		err = reader.Close()
+		if err != nil {
+			lib.Log.Error(err)
+		}
+	}(reader)
 	return io.ReadAll(reader)
 }
 

@@ -71,7 +71,12 @@ func CommandWithProgress(ctx context.Context, command string, typeProcess int) [
 	if err != nil {
 		return []error{err}
 	}
-	defer ptmx.Close()
+	defer func(ptmx *os.File) {
+		err = ptmx.Close()
+		if err != nil {
+			lib.Log.Error(err)
+		}
+	}(ptmx)
 
 	scanner := bufio.NewScanner(ptmx)
 	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -422,7 +427,7 @@ func CleanDependency(s string) string {
 			s = strings.TrimSpace(s[:idx])
 		}
 	}
-	
+
 	s = strings.TrimSpace(s)
 	if idx := strings.IndexByte(s, ':'); idx > 0 && s[0] >= '0' && s[0] <= '9' {
 		s = s[idx+1:]

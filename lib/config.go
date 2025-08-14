@@ -65,14 +65,14 @@ var DevMode bool
 // Глобальные переменные для возможности переопределения значений при сборке
 
 var (
-	BuildCommandPrefix   string
-	BuildEnvironment     string
-	BuildPathLocales     string
-	BuildPathLogFile     string
-	BuildPathDBSQLUser   string
+	BuildCommandPrefix string
+	BuildEnvironment   string
+	BuildPathLocales   string
+	BuildPathLogFile   string
+	// BuildPathDBSQLSystem BuildPathDBSQLUser   string
 	BuildPathDBSQLSystem string
-	BuildPathDBKV        string
-	BuildPathImageFile   string
+	// BuildPathImageFile BuildPathDBKV        string
+	BuildPathImageFile string
 )
 
 func InitConfig() error {
