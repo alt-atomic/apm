@@ -67,12 +67,12 @@ lib_dir = join_paths(meson.current_source_dir(), 'internal/common/binding/apt/li
 lib_go_files = [
   join_paths(lib_dir, 'cgo.go'),
   join_paths(lib_dir, 'cache.go'),
+  join_paths(lib_dir, 'helpers.go'),
   join_paths(lib_dir, 'manager.go'),
   join_paths(lib_dir, 'progress.go'),
   join_paths(lib_dir, 'system.go'),
   join_paths(lib_dir, 'types.go'),
   join_paths(lib_dir, 'logging.go'),
-  join_paths(lib_dir, 'mutex.go'),
 ]
 
 custom_target(

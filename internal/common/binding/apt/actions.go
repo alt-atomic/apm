@@ -52,398 +52,326 @@ func Close() {
 	aptSystemOnce = sync.Once{}
 }
 
-// CombineInstallRemovePackages комбинированный метод установки и удаления
-func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string, handler lib.ProgressHandler) (err error) {
+// operationWrapper обёртка для всех операций с APT
+func (a *Actions) operationWrapper(fn func() error) error {
 	lib.StartOperation()
 	defer lib.EndOperation()
+
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
 
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
+	// Выполняем основную функцию
+	err := fn()
 
-	for _, name := range packagesRemove {
-		if e := cache.MarkRemove(name, false); e != nil {
-			err = e
-			return
+	// Очищаем и анализируем ошибки
+	lib.CaptureStdIO(false)
+	lib.SetLogHandler(nil)
+
+	return a.checkAnyError(logs, err)
+}
+
+// CombineInstallRemovePackages комбинированный метод установки и удаления
+func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string, handler lib.ProgressHandler) error {
+	return a.operationWrapper(func() error {
+		system, err := getSystem()
+		if err != nil {
+			return err
 		}
-	}
 
-	for _, name := range packagesInstall {
-		if e := cache.MarkInstall(name); e != nil {
-			err = e
-			return
+		cache, err := lib.OpenCache(system, false)
+		if err != nil {
+			return err
 		}
-	}
+		defer cache.Close()
 
-	pm, err := lib.NewPackageManager(cache)
-	if err != nil {
-		return
-	}
-	defer pm.Close()
+		for _, name := range packagesRemove {
+			if e := cache.MarkRemove(name, false); e != nil {
+				return e
+			}
+		}
 
-	if handler != nil {
-		err = pm.InstallPackagesWithProgress(handler)
-	} else {
-		err = pm.InstallPackages()
-	}
-	return
+		for _, name := range packagesInstall {
+			if e := cache.MarkInstall(name); e != nil {
+				return e
+			}
+		}
+
+		pm, err := lib.NewPackageManager(cache)
+		if err != nil {
+			return err
+		}
+		defer pm.Close()
+
+		if handler != nil {
+			return pm.InstallPackagesWithProgress(handler)
+		}
+		return pm.InstallPackages()
+	})
 }
 
 // InstallPackages установка пакетов
-func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHandler) (err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
+func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHandler) error {
 	if len(packageNames) == 0 {
-		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
-		return
+		return lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
 
-	for _, name := range packageNames {
-		if e := cache.MarkInstall(name); e != nil {
-			err = e
-			return
+	return a.operationWrapper(func() error {
+		system, err := getSystem()
+		if err != nil {
+			return err
 		}
-	}
 
-	pm, err := lib.NewPackageManager(cache)
-	if err != nil {
-		return
-	}
-	defer pm.Close()
+		cache, err := lib.OpenCache(system, false)
+		if err != nil {
+			return err
+		}
+		defer cache.Close()
 
-	if handler != nil {
-		err = pm.InstallPackagesWithProgress(handler)
-	} else {
-		err = pm.InstallPackages()
-	}
-	return
+		for _, name := range packageNames {
+			if e := cache.MarkInstall(name); e != nil {
+				return e
+			}
+		}
+
+		pm, err := lib.NewPackageManager(cache)
+		if err != nil {
+			return err
+		}
+		defer pm.Close()
+
+		if handler != nil {
+			return pm.InstallPackagesWithProgress(handler)
+		}
+		return pm.InstallPackages()
+	})
 }
 
 // RemovePackages удаление пакетов
-func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.ProgressHandler) (err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
+func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.ProgressHandler) error {
 	if len(packageNames) == 0 {
-		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
-		return
+		return lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
 
-	for _, name := range packageNames {
-		if e := cache.MarkRemove(name, purge); e != nil {
-			err = e
-			return
+	return a.operationWrapper(func() error {
+		system, err := getSystem()
+		if err != nil {
+			return err
 		}
-	}
 
-	pm, err := lib.NewPackageManager(cache)
-	if err != nil {
-		return
-	}
-	defer pm.Close()
+		cache, err := lib.OpenCache(system, false)
+		if err != nil {
+			return err
+		}
+		defer cache.Close()
 
-	if handler != nil {
-		err = pm.InstallPackagesWithProgress(handler)
-	} else {
-		err = pm.InstallPackages()
-	}
-	return
+		for _, name := range packageNames {
+			if e := cache.MarkRemove(name, purge); e != nil {
+				return e
+			}
+		}
+
+		pm, err := lib.NewPackageManager(cache)
+		if err != nil {
+			return err
+		}
+		defer pm.Close()
+
+		if handler != nil {
+			return pm.InstallPackagesWithProgress(handler)
+		}
+		return pm.InstallPackages()
+	})
 }
 
 // DistUpgrade обновление системы
-func (a *Actions) DistUpgrade(handler lib.ProgressHandler) (err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
+func (a *Actions) DistUpgrade(handler lib.ProgressHandler) error {
+	return a.operationWrapper(func() error {
+		system, err := getSystem()
+		if err != nil {
+			return err
+		}
 
-	if handler != nil {
-		err = cache.DistUpgradeWithProgress(handler)
-	} else {
-		err = cache.DistUpgradeWithProgress(nil)
-	}
-	return
+		cache, err := lib.OpenCache(system, false)
+		if err != nil {
+			return err
+		}
+		defer cache.Close()
+
+		if handler != nil {
+			return cache.DistUpgradeWithProgress(handler)
+		}
+		return cache.DistUpgradeWithProgress(nil)
+	})
 }
 
 // Update обновление локальной базы пакетов
-func (a *Actions) Update() (err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
-	err = cache.Update()
+func (a *Actions) Update() error {
+	return a.operationWrapper(func() error {
+		system, err := getSystem()
+		if err != nil {
+			return err
+		}
 
-	return
+		cache, err := lib.OpenCache(system, false)
+		if err != nil {
+			return err
+		}
+		defer cache.Close()
+
+		return cache.Update()
+	})
 }
 
 // Search поиск по пакетам
 func (a *Actions) Search(pattern string) (packages []lib.PackageInfo, err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
-	cache, err := lib.OpenCache(system, true)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
 
-	packages, err = cache.SearchPackages(pattern)
+		cache, e := lib.OpenCache(system, true)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packages, e = cache.SearchPackages(pattern)
+		return e
+	})
 	return
 }
 
 // GetInfo поиск одного пакета
 func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
-	cache, err := lib.OpenCache(system, true)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
 
-	packageInfo, err = cache.GetPackageInfo(packageName)
+		cache, e := lib.OpenCache(system, true)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageInfo, e = cache.GetPackageInfo(packageName)
+		return e
+	})
 	return
 }
 
 // SimulateInstall симуляция установки
 func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.PackageChanges, err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
 	if len(packageNames) == 0 {
-		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
-		return
+		return nil, lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
 
-	packageInfo, err = cache.SimulateInstall(packageNames)
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
+
+		cache, e := lib.OpenCache(system, false)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageInfo, e = cache.SimulateInstall(packageNames)
+		return e
+	})
 	return
 }
 
 // SimulateRemove симуляция удаления
 func (a *Actions) SimulateRemove(packageNames []string) (packageInfo *lib.PackageChanges, err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
 	if len(packageNames) == 0 {
-		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
-		return
+		return nil, lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
 
-	packageInfo, err = cache.SimulateRemove(packageNames)
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
+
+		cache, e := lib.OpenCache(system, false)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageInfo, e = cache.SimulateRemove(packageNames)
+		return e
+	})
 	return
 }
 
 // SimulateDistUpgrade симуляция обновления системы
 func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
 
-	packageChanges, err = cache.SimulateDistUpgrade()
+		cache, e := lib.OpenCache(system, false)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageChanges, e = cache.SimulateDistUpgrade()
+		return e
+	})
 	return
 }
 
 // SimulateAutoRemove симуляция автоматического удаления неиспользуемых пакетов
 func (a *Actions) SimulateAutoRemove() (packageChanges *lib.PackageChanges, err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
 
-	packageChanges, err = cache.SimulateAutoRemove()
+		cache, e := lib.OpenCache(system, false)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageChanges, e = cache.SimulateAutoRemove()
+		return e
+	})
 	return
 }
 
 // SimulateChange комбинированная симуляция установки и удаления
 func (a *Actions) SimulateChange(installNames []string, removeNames []string, purge bool) (packageChanges *lib.PackageChanges, err error) {
-	lib.StartOperation()
-	defer lib.EndOperation()
-	logs := make([]string, 0, 256)
-	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
-	lib.CaptureStdIO(true)
-	defer func() {
-		lib.CaptureStdIO(false)
-		lib.SetLogHandler(nil)
-		err = a.checkAnyError(logs, err)
-	}()
-	system, err := getSystem()
-	if err != nil {
-		return
-	}
 	if len(installNames) == 0 && len(removeNames) == 0 {
-		err = lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
-		return
+		return nil, lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
 	}
-	cache, err := lib.OpenCache(system, false)
-	if err != nil {
-		return
-	}
-	defer cache.Close()
 
-	packageChanges, err = cache.SimulateChange(installNames, removeNames, purge)
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
+
+		cache, e := lib.OpenCache(system, false)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageChanges, e = cache.SimulateChange(installNames, removeNames, purge)
+		return e
+	})
 	return
 }
 

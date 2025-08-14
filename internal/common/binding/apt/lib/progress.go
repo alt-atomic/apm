@@ -17,7 +17,6 @@
 package lib
 
 /*
-// cgo-timestamp: 1755168837
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -46,38 +45,4 @@ func goAptProgressCallback(cname *C.char, ctype C.int, ccurrent C.ulonglong, cto
 			handler(C.GoString(cname), ProgressType(int(ctype)), uint64(ccurrent), uint64(ctotal))
 		}
 	}
-}
-
-func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) error {
-	AptMutex.Lock()
-	defer AptMutex.Unlock()
-	var userData unsafe.Pointer
-	if handler != nil {
-		handle := cgoRuntime.NewHandle(handler)
-		defer handle.Delete()
-		// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
-		userData = unsafe.Pointer(uintptr(handle))
-		C.apt_use_go_progress_callback(userData)
-	}
-	if res := C.apt_install_packages(pm.Ptr, nil, userData); res.code != C.APT_SUCCESS {
-		return ErrorFromResult(res)
-	}
-	return nil
-}
-
-func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
-	AptMutex.Lock()
-	defer AptMutex.Unlock()
-	var userData unsafe.Pointer
-	if handler != nil {
-		handle := cgoRuntime.NewHandle(handler)
-		defer handle.Delete()
-		// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
-		userData = unsafe.Pointer(uintptr(handle))
-		C.apt_use_go_progress_callback(userData)
-	}
-	if res := C.apt_dist_upgrade_with_progress(c.Ptr, nil, userData); res.code != C.APT_SUCCESS {
-		return ErrorFromResult(res)
-	}
-	return nil
 }

@@ -17,29 +17,36 @@
 package lib
 
 /*
-// cgo-timestamp: 1755168837
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
 import "C"
 
-import "runtime"
+import (
+	"runtime"
+	cgoRuntime "runtime/cgo"
+	"unsafe"
+)
 
-// PackageManager handles install/remove operations via C++ layer
+// PackageManager обрабатывает операции установки/удаления через уровень C++
 type PackageManager struct{ Ptr *C.AptPackageManager }
 
+// NewPackageManager создает новый экземпляр менеджера пакетов
 func NewPackageManager(cache *Cache) (*PackageManager, error) {
-	AptMutex.Lock()
-	defer AptMutex.Unlock()
-	var ptr *C.AptPackageManager
-	if res := C.apt_package_manager_create(cache.Ptr, &ptr); res.code != C.APT_SUCCESS || ptr == nil {
-		return nil, ErrorFromResult(res)
-	}
-	pm := &PackageManager{Ptr: ptr}
-	runtime.SetFinalizer(pm, (*PackageManager).Close)
-	return pm, nil
+	var pm *PackageManager
+	err := withMutex(func() error {
+		var ptr *C.AptPackageManager
+		if res := C.apt_package_manager_create(cache.Ptr, &ptr); res.code != C.APT_SUCCESS || ptr == nil {
+			return ErrorFromResult(res)
+		}
+		pm = &PackageManager{Ptr: ptr}
+		runtime.SetFinalizer(pm, (*PackageManager).Close)
+		return nil
+	})
+	return pm, err
 }
 
+// Close уничтожает менеджер пакетов и освобождает ресурсы
 func (pm *PackageManager) Close() {
 	if pm.Ptr != nil {
 		C.apt_package_manager_destroy(pm.Ptr)
@@ -48,11 +55,48 @@ func (pm *PackageManager) Close() {
 	}
 }
 
+// InstallPackages выполняет установку пакета без обратного вызова прогресса
 func (pm *PackageManager) InstallPackages() error {
-	AptMutex.Lock()
-	defer AptMutex.Unlock()
-	if res := C.apt_install_packages(pm.Ptr, nil, nil); res.code != C.APT_SUCCESS {
-		return ErrorFromResult(res)
-	}
-	return nil
+	return withMutex(func() error {
+		if res := C.apt_install_packages(pm.Ptr, nil, nil); res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+		return nil
+	})
+}
+
+// InstallPackagesWithProgress выполняет установку пакета с обратным вызовом прогресса
+func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) error {
+	return withMutex(func() error {
+		var userData unsafe.Pointer
+		if handler != nil {
+			handle := cgoRuntime.NewHandle(handler)
+			defer handle.Delete()
+			// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
+			userData = unsafe.Pointer(uintptr(handle))
+			C.apt_use_go_progress_callback(userData)
+		}
+		if res := C.apt_install_packages(pm.Ptr, nil, userData); res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+		return nil
+	})
+}
+
+// DistUpgradeWithProgress выполняет полное обновление системы с прогрессом
+func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
+	return withMutex(func() error {
+		var userData unsafe.Pointer
+		if handler != nil {
+			handle := cgoRuntime.NewHandle(handler)
+			defer handle.Delete()
+			// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
+			userData = unsafe.Pointer(uintptr(handle))
+			C.apt_use_go_progress_callback(userData)
+		}
+		if res := C.apt_dist_upgrade_with_progress(c.Ptr, nil, userData); res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+		return nil
+	})
 }
