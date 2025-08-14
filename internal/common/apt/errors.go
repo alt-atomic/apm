@@ -139,6 +139,10 @@ const (
 	ErrMultiRemoveSimulationFailed
 	ErrCombinedSimulationFailed
 	ErrVirtualNameMultipleProvidersExact
+	ErrCannotRemoveNotInstalledShort
+	ErrCannotRemoveEssential
+	ErrCannotRemoveKeptByResolver
+	ErrCannotRemoveTryTogether
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -395,6 +399,10 @@ var errorPatterns = []ErrorEntry{
 	{ErrMultiRemoveSimulationFailed, "Multi-package remove simulation failed: %s", func() string { return lib.T_("Multi-package remove simulation failed: %s") }, 1},
 	{ErrCombinedSimulationFailed, "Combined simulation failed: %s", func() string { return lib.T_("Combined simulation failed: %s") }, 1},
 	{ErrVirtualNameMultipleProvidersExact, "Virtual name '%s' has multiple providers; specify exact package name", func() string { return lib.T_("Virtual name '%s' has multiple providers; specify exact package name") }, 1},
+	{ErrCannotRemoveNotInstalledShort, "cannot remove %s not installed", func() string { return lib.T_("Cannot remove %s not installed") }, 1},
+	{ErrCannotRemoveEssential, "cannot remove %s essential package", func() string { return lib.T_("Cannot remove %s essential package") }, 1},
+	{ErrCannotRemoveKeptByResolver, "cannot remove %s kept by dependency resolution", func() string { return lib.T_("Cannot remove %s kept by dependency resolution") }, 1},
+	{ErrCannotRemoveTryTogether, "cannot remove %s try removing together: %s", func() string { return lib.T_("Cannot remove %s. Try removing together: %s") }, 2},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.

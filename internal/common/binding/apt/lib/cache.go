@@ -215,7 +215,7 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 }
 
 // SimulateRemove симулирует удаление пакетов
-func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
+func (c *Cache) SimulateRemove(packageNames []string, purge bool) (*PackageChanges, error) {
 	if len(packageNames) == 0 {
 		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
 	}
@@ -226,7 +226,7 @@ func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
 		defer freeCStringArray(cNames)
 
 		var cc C.AptPackageChanges
-		res := C.apt_simulate_remove(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
+		res := C.apt_simulate_remove(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), C.bool(purge), &cc)
 		defer C.apt_free_package_changes(&cc)
 
 		if res.code != C.APT_SUCCESS {

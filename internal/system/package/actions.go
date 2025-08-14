@@ -77,7 +77,7 @@ const (
 	FindRemove
 )
 
-func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindType) ([]string, []Package, *aptLib.PackageChanges, error) {
+func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindType, purge bool) ([]string, []Package, *aptLib.PackageChanges, error) {
 	var packagesInfo []Package
 	var finalPackageNames []string
 	seenNames := make(map[string]bool)
@@ -124,7 +124,7 @@ func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindTy
 	if findType == FindInstall {
 		packageChanges, aptError = a.CheckInstall(ctx, expandedReq)
 	} else if findType == FindRemove {
-		packageChanges, aptError = a.CheckRemove(ctx, expandedReq)
+		packageChanges, aptError = a.CheckRemove(ctx, expandedReq, purge)
 	}
 
 	if aptError != nil {
@@ -256,12 +256,12 @@ func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packa
 	return
 }
 
-func (a *Actions) CheckRemove(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
+func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge bool) (packageChanges *aptLib.PackageChanges, err error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
 	aptService := aptBinding.NewActions()
-	packageChanges, err = aptService.SimulateRemove(packageName)
+	packageChanges, err = aptService.SimulateRemove(packageName, purge)
 	return
 }
 

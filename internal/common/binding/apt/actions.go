@@ -288,7 +288,7 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 }
 
 // SimulateRemove симуляция удаления
-func (a *Actions) SimulateRemove(packageNames []string) (packageInfo *lib.PackageChanges, err error) {
+func (a *Actions) SimulateRemove(packageNames []string, purge bool) (packageInfo *lib.PackageChanges, err error) {
 	if len(packageNames) == 0 {
 		return nil, lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
 	}
@@ -305,7 +305,7 @@ func (a *Actions) SimulateRemove(packageNames []string) (packageInfo *lib.Packag
 		}
 		defer cache.Close()
 
-		packageInfo, e = cache.SimulateRemove(packageNames)
+		packageInfo, e = cache.SimulateRemove(packageNames, purge)
 		return e
 	})
 	return

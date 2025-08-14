@@ -247,7 +247,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transac
 		return "", err
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
-	resp, err := w.actions.CheckRemove(ctx, packages)
+	resp, err := w.actions.CheckRemove(ctx, packages, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

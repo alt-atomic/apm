@@ -158,9 +158,9 @@ AptResult apt_simulate_install(AptCache* cache, const char** package_names, size
     return apt_simulate_change(cache, package_names, count, nullptr, 0, false, changes);
 }
 
-AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes) {
-    // Delegate to unified change simulator with purge=true
-    return apt_simulate_change(cache, nullptr, 0, package_names, count, true, changes);
+AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, bool purge, AptPackageChanges* changes) {
+    // Delegate to unified change simulator
+    return apt_simulate_change(cache, nullptr, 0, package_names, count, purge, changes);
 }
 
 AptResult plan_change_internal(
@@ -182,6 +182,7 @@ AptResult plan_change_internal(
 
         std::set<std::string> requested_install;
         std::set<std::string> requested_remove;
+        std::vector<std::pair<std::string, pkgCache::PkgIterator>> remove_targets;
 
         pkgProblemResolver Fix(cache->dep_cache);
 
@@ -320,6 +321,7 @@ AptResult plan_change_internal(
                     return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package ") + raw + " is not installed, so not removed").c_str());
                 }
                 cache->dep_cache->MarkDelete(pkg, purge);
+                remove_targets.emplace_back(req.name, pkg);
             }
         }
 
@@ -396,6 +398,89 @@ AptResult plan_change_internal(
         if (changes->new_installed_count > 0) {
             changes->new_installed_packages = (char**)malloc(changes->new_installed_count * sizeof(char*));
             for (size_t i = 0; i < changes->new_installed_count; ++i) changes->new_installed_packages[i] = strdup(new_installed[i].c_str());
+        }
+
+        // If some explicitly requested removals are still not marked for delete, report why
+        if (!remove_targets.empty()) {
+            std::vector<std::string> failure_msgs;
+            std::vector<std::string> blocked_required_names;
+            std::set<std::string> union_suggest;
+
+            for (const auto &entry : remove_targets) {
+                const std::string &rawName = entry.first;
+                pkgCache::PkgIterator pkg = entry.second;
+                if (pkg.end()) continue;
+                pkgDepCache::StateCache &st = (*cache->dep_cache)[pkg];
+                if (!st.Delete()) {
+                    // Build reason
+                    std::string reason;
+                    if (pkg->CurrentState == pkgCache::State::NotInstalled) {
+                        reason = "not installed";
+                    } else if ((pkg->Flags & pkgCache::Flag::Essential) != 0) {
+                        reason = "package is essential";
+                    } else {
+                        // Find a few installed reverse dependencies that keep it
+                        std::vector<std::string> rdeps;
+                        int cap = 10;
+                        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end() && (int)rdeps.size() < cap; ++it) {
+                            pkgCache::VerIterator cur = it.CurrentVer();
+                            if (cur.end()) continue;
+                            for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
+                                if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
+                                if (dep.TargetPkg() == pkg) {
+                                    rdeps.emplace_back(it.Name());
+                                    break;
+                                }
+                            }
+                        }
+                        if (!rdeps.empty()) {
+                            reason = "required by ";
+                            for (size_t i = 0; i < rdeps.size(); ++i) {
+                                if (i) reason += ", ";
+                                reason += rdeps[i];
+                            }
+                            // collect for a single combined suggestion line
+                            blocked_required_names.push_back(rawName);
+                            union_suggest.insert(rawName);
+                            for (const auto &nm : rdeps) union_suggest.insert(nm);
+                        } else {
+                            reason = "kept by dependency resolution";
+                        }
+                    }
+                    if (reason == "package is essential") {
+                        failure_msgs.emplace_back(std::string("cannot remove ") + rawName + " essential package");
+                    } else if (reason == "not installed") {
+                        failure_msgs.emplace_back(std::string("cannot remove ") + rawName + " not installed");
+                    } else if (reason == "kept by dependency resolution") {
+                        failure_msgs.emplace_back(std::string("cannot remove ") + rawName + " kept by dependency resolution");
+                    }
+                }
+            }
+            // If we have required-by blocks, prefer a single combined suggestion
+            if (!blocked_required_names.empty()) {
+                // build comma-separated left side and space-separated suggestion set
+                std::string left;
+                for (size_t i = 0; i < blocked_required_names.size(); ++i) {
+                    if (i) left += ", ";
+                    left += blocked_required_names[i];
+                }
+                std::string suggest;
+                size_t count = 0;
+                for (const auto &nm : union_suggest) {
+                    if (count++) suggest += " ";
+                    suggest += nm;
+                }
+                return make_result(APT_ERROR_OPERATION_INCOMPLETE,
+                                   (std::string("cannot remove ") + left + " try removing together: " + suggest).c_str());
+            }
+            if (!failure_msgs.empty() && removed.empty()) {
+                std::string msg;
+                for (size_t i = 0; i < failure_msgs.size(); ++i) {
+                    if (i) msg += "; ";
+                    msg += failure_msgs[i];
+                }
+                return make_result(APT_ERROR_OPERATION_INCOMPLETE, msg.c_str());
+            }
         }
 
         // Restore marks if this is only a simulation

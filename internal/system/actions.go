@@ -89,8 +89,8 @@ type ImageStatus struct {
 }
 
 // CheckRemove проверяем пакеты перед удалением
-func (a *Actions) CheckRemove(ctx context.Context, packages []string) (*reply.APIResponse, error) {
-	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages)
+func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool) (*reply.APIResponse, error) {
+	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge)
 	if aptError != nil {
 		return nil, aptError
 	}
@@ -216,7 +216,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 		return nil, errPackageNotFound
 	}
 
-	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindRemove)
+	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindRemove, purge)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -305,7 +305,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	//	Error: false,
 	//}
 
-	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindInstall)
+	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindInstall, false)
 	if errFind != nil {
 		return nil, errFind
 	}
