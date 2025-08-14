@@ -171,7 +171,7 @@ esac
 
 # Cleanup function
 cleanup() {
-    print_info "🧹 Cleaning up container..."
+    print_info "🧹 Cleaning up container ${CONTAINER_NAME} ..."
     podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 }
 

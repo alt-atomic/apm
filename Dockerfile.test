@@ -20,6 +20,7 @@ RUN apt-get update && \
         meson \
         ninja-build \
         cmake \
+        zsh \
         pkg-config \
         systemd-devel \
         # Go language

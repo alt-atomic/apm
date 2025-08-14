@@ -112,7 +112,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	}
 
 	// Now simulate removing the package (should work since we ensured it's installed)
-	changes, err := actions.SimulateRemove([]string{testPackage})
+	changes, err := actions.SimulateRemove([]string{testPackage}, true)
 	if err != nil {
 		t.Fatalf("SimulateRemove failed: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestAptInvalidParameters(t *testing.T) {
 		t.Fatalf("expected error for empty package list in SimulateInstall")
 	}
 
-	if _, err := actions.SimulateRemove([]string{}); err == nil {
+	if _, err := actions.SimulateRemove([]string{}, true); err == nil {
 		t.Fatalf("expected error for empty package list in SimulateRemove")
 	}
 
