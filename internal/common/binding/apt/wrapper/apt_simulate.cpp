@@ -273,7 +273,7 @@ AptResult plan_change_internal(
                         }
                     }
                     if (candidate_providers.empty()) {
-                        return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package not found: ") + raw).c_str());
+                        return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package ") + raw + " is not installed, so not removed").c_str());
                     }
                     if (candidate_providers.size() > 1) {
                         std::string providersList;
@@ -306,7 +306,7 @@ AptResult plan_change_internal(
                     }
                     if (InstalledProviders.empty()) {
                         return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                            (std::string("Package ") + raw + " has no installed providers").c_str());
+                            (std::string("Package ") + raw + " is not installed, so not removed").c_str());
                     }
                     if (InstalledProviders.size() > 1) {
                         return make_result(APT_ERROR_DEPENDENCY_BROKEN,
@@ -317,7 +317,7 @@ AptResult plan_change_internal(
                     pkg = InstalledProviders.front();
                 }
                 if (pkg.CurrentVer().end()) {
-                    return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package is not installed: ") + raw).c_str());
+                    return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package ") + raw + " is not installed, so not removed").c_str());
                 }
                 cache->dep_cache->MarkDelete(pkg, purge);
             }

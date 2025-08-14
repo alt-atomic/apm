@@ -451,9 +451,7 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 func (a *Actions) checkAnyError(logs []string, err error) error {
 	aptErrors := apt.ErrorLinesAnalyseAll(logs)
 	for _, errApr := range aptErrors {
-		if errApr.IsCritical() {
-			return errApr
-		}
+		return errApr
 	}
 
 	if err == nil {
@@ -462,9 +460,7 @@ func (a *Actions) checkAnyError(logs []string, err error) error {
 
 	if msg := strings.TrimSpace(err.Error()); msg != "" {
 		if m := apt.CheckError(msg); m != nil {
-			if m.IsCritical() {
-				return m
-			}
+			return m
 		}
 	}
 
