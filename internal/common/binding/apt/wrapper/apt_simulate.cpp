@@ -381,17 +381,63 @@ AptResult plan_change_internal(
          	Fix2.InstallProtect();
          	(void)Fix2.Resolve(true);
          }
-         if (cache->dep_cache->BrokenCount() > 0) {
-         // Attribute error to a concrete broken package for clarity
-         for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-             pkgDepCache::StateCache &st = (*cache->dep_cache)[it];
-             if (st.InstBroken() || st.NowBroken()) {
-             	std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + it.Name();
-             	return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
-         		}
-         	}
-         	return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
+        if (cache->dep_cache->BrokenCount() != 0) {
+             for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+                 pkgDepCache::StateCache &st = (*cache->dep_cache)[it];
+                 if (st.InstBroken() || st.NowBroken()) {
+                     std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + it.Name();
+                     return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                 }
+             }
+             return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
          }
+
+        // Additional unmet-deps diagnosis for install requests even if resolver hid BrokenCount
+        if (!requested_install.empty()) {
+            pkgDepCache::Policy Plcy;
+            auto is_dep_satisfied = [&](pkgCache::DepIterator dep) -> bool {
+                // Evaluate OR-group: any alternative acceptable
+                for (;; ++dep) {
+                    pkgCache::PkgIterator tp = dep.TargetPkg();
+                    if (!tp.end()) {
+                        // installed provider/package
+                        if (!tp.CurrentVer().end()) return true;
+                        // candidate version for real package
+                        if (!tp.VersionList().end()) {
+                            if (!Plcy.GetCandidateVer(tp).end()) return true;
+                        } else {
+                            // virtual: look for any provider with installed/candidate
+                            for (pkgCache::PrvIterator prv = tp.ProvidesList(); !prv.end(); ++prv) {
+                                pkgCache::PkgIterator prov = prv.OwnerPkg();
+                                if (!prov.CurrentVer().end()) return true;
+                                if (!Plcy.GetCandidateVer(prov).end()) return true;
+                            }
+                        }
+                    }
+                    if (dep.end() || dep->CompareOp != pkgCache::Dep::Or) break;
+                }
+                return false;
+            };
+
+            for (const auto &name : requested_install) {
+                pkgCache::PkgIterator p = cache->dep_cache->FindPkg(name.c_str());
+                if (p.end()) continue;
+                pkgCache::VerIterator ver = Plcy.GetCandidateVer(p);
+                if (ver.end()) {
+                    std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + p.Name();
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                }
+                for (pkgCache::DepIterator dep = ver.DependsList(); !dep.end(); ++dep) {
+                    if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
+                    if (!is_dep_satisfied(dep)) {
+                        std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + p.Name();
+                        return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+                    }
+                    // advance to next OR group end handled inside helper
+                    while (!dep.end() && dep->CompareOp == pkgCache::Dep::Or) ++dep;
+                }
+            }
+        }
 
          if (!check_apt_errors()) {
              return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
