@@ -17,14 +17,14 @@
 package lib
 
 /*
-// cgo-timestamp: 1755167622
+// cgo-timestamp: 1755168202
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
 import "C"
 
 import (
-	cgo_runtime "runtime/cgo"
+	cgoRuntime "runtime/cgo"
 	"unsafe"
 )
 
@@ -53,7 +53,7 @@ type ProgressHandler func(packageName string, eventType ProgressType, current, t
 //export goAptProgressCallback
 func goAptProgressCallback(cname *C.char, ctype C.int, ccurrent C.ulonglong, ctotal C.ulonglong, user unsafe.Pointer) {
 	defer func() { _ = recover() }()
-	h := cgo_runtime.Handle(uintptr(user))
+	h := cgoRuntime.Handle(uintptr(user))
 	if v := h.Value(); v != nil {
 		if handler, ok := v.(ProgressHandler); ok && handler != nil {
 			handler(C.GoString(cname), ProgressType(int(ctype)), uint64(ccurrent), uint64(ctotal))
@@ -66,8 +66,9 @@ func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) e
 	defer AptMutex.Unlock()
 	var userData unsafe.Pointer
 	if handler != nil {
-		handle := cgo_runtime.NewHandle(handler)
+		handle := cgoRuntime.NewHandle(handler)
 		defer handle.Delete()
+		// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
 		userData = unsafe.Pointer(uintptr(handle))
 		C.apt_use_go_progress_callback(userData)
 	}
@@ -82,8 +83,9 @@ func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
 	defer AptMutex.Unlock()
 	var userData unsafe.Pointer
 	if handler != nil {
-		handle := cgo_runtime.NewHandle(handler)
+		handle := cgoRuntime.NewHandle(handler)
 		defer handle.Delete()
+		// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
 		userData = unsafe.Pointer(uintptr(handle))
 		C.apt_use_go_progress_callback(userData)
 	}

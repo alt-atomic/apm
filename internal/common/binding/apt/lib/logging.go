@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755167622
+// cgo-timestamp: 1755168202
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -71,6 +71,8 @@ func SetLogHandler(handler LogHandler) {
 	}
 	logHandle = cgoruntime.NewHandle(handler)
 	logHandleSet = true
+	// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
+	// and safe usage pattern for cgo.Handle as documented in runtime/cgo
 	C.apt_enable_go_log_callback(unsafe.Pointer(uintptr(logHandle)))
 }
 

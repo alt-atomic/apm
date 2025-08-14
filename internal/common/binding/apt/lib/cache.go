@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755167622
+// cgo-timestamp: 1755168202
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -278,8 +278,14 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 	cNames := make([]*C.char, len(packageNames))
 	for i, name := range packageNames {
 		cNames[i] = C.CString(name)
-		defer C.free(unsafe.Pointer(cNames[i]))
 	}
+	// Free all C strings after the function completes
+	defer func() {
+		for i := range cNames {
+			C.free(unsafe.Pointer(cNames[i]))
+		}
+	}()
+
 	var cc C.AptPackageChanges
 	res := C.apt_simulate_install(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
 	defer C.apt_free_package_changes(&cc)
@@ -334,8 +340,13 @@ func (c *Cache) SimulateRemove(packageNames []string) (*PackageChanges, error) {
 	cNames := make([]*C.char, len(packageNames))
 	for i, name := range packageNames {
 		cNames[i] = C.CString(name)
-		defer C.free(unsafe.Pointer(cNames[i]))
 	}
+	// Free all C strings after the function completes
+	defer func() {
+		for i := range cNames {
+			C.free(unsafe.Pointer(cNames[i]))
+		}
+	}()
 	var cc C.AptPackageChanges
 	res := C.apt_simulate_remove(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
 	defer C.apt_free_package_changes(&cc)
@@ -391,27 +402,37 @@ func (c *Cache) SimulateChange(installNames []string, removeNames []string, purg
 
 	var cInst **C.char
 	var instCount C.size_t
+	var installArr []*C.char
 	if len(installNames) > 0 {
-		arr := make([]*C.char, len(installNames))
+		installArr = make([]*C.char, len(installNames))
 		for i, n := range installNames {
-			arr[i] = C.CString(n)
-			defer C.free(unsafe.Pointer(arr[i]))
+			installArr[i] = C.CString(n)
 		}
-		cInst = (**C.char)(unsafe.Pointer(&arr[0]))
+		cInst = (**C.char)(unsafe.Pointer(&installArr[0]))
 		instCount = C.size_t(len(installNames))
 	}
 
 	var cRem **C.char
 	var remCount C.size_t
+	var removeArr []*C.char
 	if len(removeNames) > 0 {
-		arr := make([]*C.char, len(removeNames))
+		removeArr = make([]*C.char, len(removeNames))
 		for i, n := range removeNames {
-			arr[i] = C.CString(n)
-			defer C.free(unsafe.Pointer(arr[i]))
+			removeArr[i] = C.CString(n)
 		}
-		cRem = (**C.char)(unsafe.Pointer(&arr[0]))
+		cRem = (**C.char)(unsafe.Pointer(&removeArr[0]))
 		remCount = C.size_t(len(removeNames))
 	}
+
+	// Free all C strings after the function completes
+	defer func() {
+		for i := range installArr {
+			C.free(unsafe.Pointer(installArr[i]))
+		}
+		for i := range removeArr {
+			C.free(unsafe.Pointer(removeArr[i]))
+		}
+	}()
 
 	var cc C.AptPackageChanges
 	res := C.apt_simulate_change(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), &cc)
