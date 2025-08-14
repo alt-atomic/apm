@@ -180,8 +180,9 @@ AptResult plan_change_internal(
      try {
          memset(changes, 0, sizeof(AptPackageChanges));
 
-         std::set<std::string> requested_install;
-         std::set<std::string> requested_remove;
+        std::set<std::string> requested_install;
+        std::set<std::string> requested_remove;
+        std::vector<std::pair<std::string, pkgCache::PkgIterator>> remove_targets;
 
          pkgProblemResolver Fix(cache->dep_cache);
 
@@ -291,10 +292,38 @@ AptResult plan_change_internal(
                      pkg = candidate_providers[0];
                  }
 
-                 // Check if package is installed
-                 if (pkg.CurrentVer().end()) {
-                     return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package ") + raw + " is not installed, so not removed").c_str());
-                 }
+                // Check if package is installed; if this is a virtual name (no installed version),
+                // resolve to an installed provider that matches this virtual.
+                if (pkg.CurrentVer().end()) {
+                    std::vector<pkgCache::PkgIterator> installed_providers;
+                    std::string providersList;
+                    for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
+                        pkgCache::VerIterator current = iter.CurrentVer();
+                        if (current.end()) continue;
+                        for (pkgCache::PrvIterator prv = current.ProvidesList(); !prv.end(); ++prv) {
+                            if (strcmp(prv.Name(), req.name.c_str()) != 0) continue;
+                            if (req.has_version) {
+                                const char* pv = prv.ProvideVersion();
+                                if (pv == nullptr) continue;
+                                if (cache->dep_cache->VS().CheckDep(pv, req.op, req.version.c_str()) == false) continue;
+                            }
+                            installed_providers.push_back(iter);
+                            if (!providersList.empty()) providersList += ", ";
+                            providersList += iter.Name();
+                            break;
+                        }
+                    }
+                    if (installed_providers.empty()) {
+                        return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Package ") + raw + " is not installed, so not removed").c_str());
+                    }
+                    if (installed_providers.size() > 1) {
+                        return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                            (std::string("Virtual package ") + raw +
+                             " has multiple installed providers: " + providersList +
+                             ". Please remove specific package.").c_str());
+                    }
+                    pkg = installed_providers.front();
+                }
 
                  // Check if package is essential - still block this
                  if ((pkg->Flags & pkgCache::Flag::Essential) != 0) {
@@ -304,44 +333,45 @@ AptResult plan_change_internal(
 
                  // Mark for deletion with autofix enabled to remove dependent packages
                  cache->dep_cache->MarkDelete(pkg, purge);
-
+                 remove_targets.emplace_back(req.name, pkg);
+                 
                  // Now mark all packages that depend on this one for removal too
                  // This mimics apt-get behavior
                  for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-                     if (it == pkg) continue; // Skip the package itself
-
-                     pkgCache::VerIterator cur = it.CurrentVer();
-                     if (cur.end()) continue; // Skip not installed packages
-
-                     bool depends_on_removed = false;
-                     for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
-                         // Check only hard dependencies
-                         if (dep->Type != pkgCache::Dep::Depends &&
-                             dep->Type != pkgCache::Dep::PreDepends) continue;
-
-                         // Check if this dependency points to our package
-                         if (dep.TargetPkg() == pkg) {
-                             depends_on_removed = true;
-                             break;
-                         }
-
-                         // Also check if it depends on a virtual package that our package provides
-                         for (pkgCache::PrvIterator prv = pkg.CurrentVer().ProvidesList(); !prv.end(); ++prv) {
-                             if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
-                                 depends_on_removed = true;
-                                 break;
-                             }
-                         }
-                         if (depends_on_removed) break;
-                     }
-
-                     if (depends_on_removed) {
-                         // Skip essential packages
-                         if ((it->Flags & pkgCache::Flag::Essential) == 0) {
-                             cache->dep_cache->MarkDelete(it, purge);
-                         }
+                 if (it == pkg) continue; // Skip the package itself
+                 
+                 pkgCache::VerIterator cur = it.CurrentVer();
+                 if (cur.end()) continue; // Skip not installed packages
+                 
+                 bool depends_on_removed = false;
+                 for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
+                 // Check only hard dependencies
+                 if (dep->Type != pkgCache::Dep::Depends && 
+                     dep->Type != pkgCache::Dep::PreDepends) continue;
+                 
+                 // Check if this dependency points to our package
+                 if (dep.TargetPkg() == pkg) {
+                 depends_on_removed = true;
+                     break;
+                 }
+                 
+                 // Also check if it depends on a virtual package that our package provides
+                 for (pkgCache::PrvIterator prv = pkg.CurrentVer().ProvidesList(); !prv.end(); ++prv) {
+                 if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
+                 depends_on_removed = true;
+                     break;
                      }
                  }
+                     if (depends_on_removed) break;
+                 }
+                 
+                 if (depends_on_removed) {
+                 // Skip essential packages
+                 if ((it->Flags & pkgCache::Flag::Essential) == 0) {
+                     cache->dep_cache->MarkDelete(it, purge);
+                     }
+                     }
+                }
              }
          }
 
@@ -405,14 +435,76 @@ AptResult plan_change_internal(
              }
          }
 
-         // Fill the changes structure
-         changes->extra_installed_count = extra_installed.size();
-         changes->upgraded_count = upgraded.size();
-         changes->new_installed_count = new_installed.size();
-         changes->removed_count = removed.size();
-         changes->not_upgraded_count = 0;
-         changes->download_size = download_size;
-         changes->install_size = install_size;
+         // Check if requested removals actually happened
+         if (!remove_targets.empty()) {
+             std::vector<std::string> blocked_packages;
+             std::set<std::string> blocking_packages;
+             
+             for (const auto &entry : remove_targets) {
+                const std::string &rawName = entry.first;
+                pkgCache::PkgIterator pkg = entry.second;
+                if (pkg.end()) continue;
+                
+                pkgDepCache::StateCache &st = (*cache->dep_cache)[pkg];
+                if (!st.Delete()) {
+                    // Package was not marked for deletion - find out why
+                    blocked_packages.push_back(rawName);
+                    
+                    // Find packages that still depend on this one
+                    for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+                        if (it == pkg) continue;
+                        
+                        pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
+                        // Skip packages that are being removed
+                        if (it_st.Delete()) continue;
+                        
+                        pkgCache::VerIterator cur = it.CurrentVer();
+                        if (cur.end()) continue;
+                        
+                        for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
+                            if (dep->Type != pkgCache::Dep::Depends && 
+                                dep->Type != pkgCache::Dep::PreDepends) continue;
+                            
+                            if (dep.TargetPkg() == pkg) {
+                                blocking_packages.insert(it.Name());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If some packages couldn't be removed, report why
+            if (!blocked_packages.empty() && removed.empty()) {
+                std::string msg = "Cannot remove ";
+                for (size_t i = 0; i < blocked_packages.size(); ++i) {
+                    if (i > 0) msg += ", ";
+                    msg += blocked_packages[i];
+                }
+                
+                if (!blocking_packages.empty()) {
+                    msg += ". Try removing together: ";
+                    blocking_packages.insert(blocked_packages.begin(), blocked_packages.end());
+                    bool first = true;
+                    for (const auto &name : blocking_packages) {
+                        if (!first) msg += " ";
+                        first = false;
+                        msg += name;
+                    }
+                }
+                
+                return make_result(APT_ERROR_OPERATION_INCOMPLETE, msg.c_str());
+            }
+        }
+        
+        // Fill the changes structure
+        changes->extra_installed_count = extra_installed.size();
+        changes->upgraded_count = upgraded.size();
+        changes->new_installed_count = new_installed.size();
+        changes->removed_count = removed.size();
+        changes->not_upgraded_count = 0;
+        changes->download_size = download_size;
+        changes->install_size = install_size;
 
          if (changes->extra_installed_count > 0) {
              changes->extra_installed = (char**)malloc(changes->extra_installed_count * sizeof(char*));

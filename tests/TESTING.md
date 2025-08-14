@@ -7,6 +7,7 @@ APM располагает комплексной системой тестир�
 ### В контейнере
 
 ```bash
+./scripts/test-container.sh exec # запуск контейнера для ручных тестов, софт внутри ./builddir/apm
 ./scripts/test-container.sh all
 ./scripts/test-container.sh safe
 ./scripts/test-container.sh unit
