@@ -387,6 +387,23 @@ func (a *Actions) checkAnyError(logs []string, err error) error {
 	}
 
 	if msg := strings.TrimSpace(err.Error()); msg != "" {
+		lines := strings.Split(msg, "\n")
+		if m := apt.ErrorLinesAnalise(lines); m != nil {
+			// Если это ошибка с провайдерами, захватываем весь список
+			if m.Entry.Code == apt.ErrMultiInstallProvidersSelect && len(lines) > 1 {
+				var providers []string
+				for i := 1; i < len(lines); i++ {
+					line := strings.TrimSpace(lines[i])
+					if line != "" && !strings.HasPrefix(line, "You should") {
+						providers = append(providers, line)
+					}
+				}
+				if len(providers) > 0 {
+					m.Params = append(m.Params, strings.Join(providers, "\n"))
+				}
+			}
+			return m
+		}
 		if m := apt.CheckError(msg); m != nil {
 			return m
 		}

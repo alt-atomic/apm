@@ -4,6 +4,7 @@
 
 // For pkgVersioningSystem (VS().CheckDep)
 #include <apt-pkg/version.h>
+#include <set>
 
 
 struct RequirementSpec {
@@ -226,21 +227,41 @@ AptResult plan_change_internal(
                  // If we resolved the name to a virtual package entry, pick a concrete provider
                  pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg];
                  if (State.CandidateVer == 0 && pkg->ProvidesList != 0) {
+                     std::vector<std::pair<std::string, std::string>> provider_info; // name, version
                      std::vector<pkgCache::Package*> provider_pkgs;
+
                      for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
-                         if (req.has_version) {
-                             const char* prvVer = Prv.ProvideVersion();
-                             if (prvVer == nullptr) continue;
-                             if (cache->dep_cache->VS().CheckDep(prvVer, req.op, req.version.c_str()) == false) continue;
+                         pkgCache::PkgIterator prov = Prv.OwnerPkg();
+                         pkgCache::VerIterator prov_ver = (*cache->dep_cache)[prov].CandidateVerIter(*cache->dep_cache);
+
+                         if (!prov_ver.end()) {
+                             if (req.has_version) {
+                                 const char* prvVer = Prv.ProvideVersion();
+                                 if (prvVer == nullptr) continue;
+                                 if (cache->dep_cache->VS().CheckDep(prvVer, req.op, req.version.c_str()) == false) continue;
+                             }
+                             provider_pkgs.push_back(prov);
+
+//                             std::string ver_str = prov_ver.VerStr() ? prov_ver.VerStr() : "";
+                             std::string status = prov.CurrentVer().end() ? "" : "[Installed]";
+                             provider_info.push_back(std::make_pair(prov.Name(), status));
                          }
-                         provider_pkgs.push_back(Prv.OwnerPkg());
                      }
+
                      if (provider_pkgs.empty()) {
                          return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
                              (std::string("Virtual package ") + req.name + " has no installable providers").c_str());
                      }
-                     Fix.MakeScores();
-                     qsort(provider_pkgs.data(), provider_pkgs.size(), sizeof(provider_pkgs[0]), &(Fix.ScoreSort));
+
+                     // If multiple providers exist, return an error like apt-get
+                     if (provider_pkgs.size() > 1) {
+                         std::string msg = "Virtual package " + req.name + " is provided by:\n";
+                         for (const auto& info : provider_info) {
+                             msg += "  " + info.first + " " + info.second + "\n";
+                         }
+                         return make_result(APT_ERROR_PACKAGE_NOT_FOUND, msg.c_str());
+                     }
+
                      pkg = pkgCache::PkgIterator(*cache->dep_cache, provider_pkgs.front());
                  }
 
@@ -334,43 +355,64 @@ AptResult plan_change_internal(
                  // Mark for deletion with autofix enabled to remove dependent packages
                  cache->dep_cache->MarkDelete(pkg, purge);
                  remove_targets.emplace_back(req.name, pkg);
-                 
-                 // Now mark all packages that depend on this one for removal too
-                 // This mimics apt-get behavior
-                 for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-                 if (it == pkg) continue; // Skip the package itself
-                 
-                 pkgCache::VerIterator cur = it.CurrentVer();
-                 if (cur.end()) continue; // Skip not installed packages
-                 
-                 bool depends_on_removed = false;
-                 for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
-                 // Check only hard dependencies
-                 if (dep->Type != pkgCache::Dep::Depends && 
-                     dep->Type != pkgCache::Dep::PreDepends) continue;
-                 
-                 // Check if this dependency points to our package
-                 if (dep.TargetPkg() == pkg) {
-                 depends_on_removed = true;
-                     break;
-                 }
-                 
-                 // Also check if it depends on a virtual package that our package provides
-                 for (pkgCache::PrvIterator prv = pkg.CurrentVer().ProvidesList(); !prv.end(); ++prv) {
-                 if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
-                    depends_on_removed = true;
-                     break;
+
+                 // Recursively mark all dependent packages for removal
+                 std::set<pkgCache::PkgIterator> to_remove;
+                 std::set<pkgCache::PkgIterator> processed;
+                 to_remove.insert(pkg);
+
+                 while (!to_remove.empty()) {
+                     pkgCache::PkgIterator current = *to_remove.begin();
+                     to_remove.erase(to_remove.begin());
+                     
+                     if (processed.find(current) != processed.end()) continue;
+                     processed.insert(current);
+
+                     // Find all packages that depend on the current package
+                     for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+                         if (processed.find(it) != processed.end()) continue;
+
+                         pkgCache::VerIterator cur = it.CurrentVer();
+                         if (cur.end()) continue; // Skip not installed packages
+
+                         // Check if already marked for deletion
+                         pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
+                         if (it_st.Delete()) continue;
+
+                         bool depends_on_current = false;
+                         for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
+                             // Check only hard dependencies
+                             if (dep->Type != pkgCache::Dep::Depends && 
+                                 dep->Type != pkgCache::Dep::PreDepends) continue;
+
+                             // Check if this dependency points to our package
+                             if (dep.TargetPkg() == current) {
+                                 depends_on_current = true;
+                                 break;
+                             }
+
+                             // Also check if it depends on a virtual package that our package provides
+                             pkgCache::VerIterator cur_ver = current.CurrentVer();
+                             if (!cur_ver.end()) {
+                                 for (pkgCache::PrvIterator prv = cur_ver.ProvidesList(); !prv.end(); ++prv) {
+                                     if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
+                                         depends_on_current = true;
+                                         break;
+                                     }
+                                 }
+                             }
+                             if (depends_on_current) break;
+                         }
+
+                         if (depends_on_current) {
+                             // Skip essential packages
+                             if ((it->Flags & pkgCache::Flag::Essential) == 0) {
+                                 cache->dep_cache->MarkDelete(it, purge);
+                                 to_remove.insert(it); // Add to queue for recursive processing
+                             }
+                         }
                      }
                  }
-                     if (depends_on_removed) break;
-                 }
-                 
-                 if (depends_on_removed) {
-                     if ((it->Flags & pkgCache::Flag::Essential) == 0) {
-                        cache->dep_cache->MarkDelete(it, purge);
-                     }
-                 }
-                }
              }
          }
 

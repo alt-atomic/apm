@@ -141,9 +141,9 @@ const (
 	ErrVirtualNameMultipleProvidersExact
 	ErrCannotRemoveNotInstalledShort
 	ErrCannotRemoveEssential
-	ErrCannotRemoveKeptByResolver
 	ErrCannotRemoveTryTogether
 	ErrSomeBrokenDependencies
+	ErrMultiInstallProvidersSelect
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -404,6 +404,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrCannotRemoveEssential, "Cannot remove essential package %s", func() string { return lib.T_("Cannot remove essential package %s") }, 1},
 	{ErrCannotRemoveTryTogether, "Cannot remove %s. Try removing together: %s", func() string { return lib.T_("Cannot remove %s. Try removing together: %s") }, 2},
 	{ErrSomeBrokenDependencies, "Broken dependencies", func() string { return lib.T_("Broken dependencies") }, 0},
+	{ErrMultiInstallProvidersSelect, "Virtual package %s is provided by:", func() string {
+		return lib.T_("Virtual package %s is provided by:\n%s \nYou should explicitly select one to install")
+	}, 2},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.
