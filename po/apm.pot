@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-15 17:27+0600\n"
+"POT-Creation-Date: 2025-08-15 18:14+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -589,7 +589,7 @@ msgstr ""
 msgid "Installation"
 msgstr ""
 
-#: internal/common/apt/parser.go:133 internal/system/package/actions.go:174
+#: internal/common/apt/parser.go:133 internal/system/package/actions.go:233
 #, c-format
 msgid "Downloading: %s"
 msgstr ""
@@ -1424,7 +1424,7 @@ msgstr ""
 msgid "Error executing command rpm -qia: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:520
+#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:579
 msgid "Error scanning rpm output: %w"
 msgstr ""
 
@@ -1808,30 +1808,41 @@ msgstr ""
 msgid "Filter by image name"
 msgstr ""
 
-#: internal/system/package/actions.go:181
+#: internal/system/package/actions.go:180
 #, c-format
-msgid "Downloading %s"
+msgid "Downloading packages: %d%%"
 msgstr ""
 
 #: internal/system/package/actions.go:194
+msgid "All packages downloaded"
+msgstr ""
+
+#: internal/system/package/actions.go:206
+#: internal/system/package/actions.go:253
 #, c-format
 msgid "Installing progress: %s"
 msgstr ""
 
-#: internal/system/package/actions.go:201
+#: internal/system/package/actions.go:213
+#: internal/system/package/actions.go:260
 #, c-format
 msgid "Installing %s"
 msgstr ""
 
-#: internal/system/package/actions.go:312
+#: internal/system/package/actions.go:240
+#, c-format
+msgid "Downloading %s"
+msgstr ""
+
+#: internal/system/package/actions.go:371
 msgid "AppStream load failed: %v"
 msgstr ""
 
-#: internal/system/package/actions.go:412
+#: internal/system/package/actions.go:471
 msgid "Error updating information about installed packages: %w"
 msgstr ""
 
-#: internal/system/package/actions.go:462
+#: internal/system/package/actions.go:521
 msgid "Error executing the rpm -qia command: %w"
 msgstr ""
 

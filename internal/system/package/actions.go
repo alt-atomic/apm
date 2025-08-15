@@ -160,27 +160,39 @@ func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindTy
 }
 
 func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
+	lastDownloadPercent := 0
+	downloadCompleted := false
+
 	return func(pkg string, event aptLib.ProgressType, cur, total uint64) {
 		switch event {
 		case aptLib.CallbackDownloadProgress:
-			if total > 0 {
+			if total > 0 && !downloadCompleted {
 				percent := int((cur * 100) / total)
-				ev := fmt.Sprintf("system.downloadProgress-%s", pkg)
-				if percent < 100 {
-					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName(ev),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkg)),
-					)
-				} else if percent >= 100 {
-					reply.CreateEventNotification(ctx, reply.StateAfter,
-						reply.WithEventName(ev),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(100),
-						reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Downloading %s"), pkg)),
-					)
+				if pkg == "" {
+					if percent != lastDownloadPercent {
+						lastDownloadPercent = percent
+
+						if percent < 100 {
+							reply.CreateEventNotification(ctx, reply.StateBefore,
+								reply.WithEventName("system.downloadProgress"),
+								reply.WithProgress(true),
+								reply.WithProgressPercent(float64(percent)),
+								reply.WithEventView(fmt.Sprintf(lib.T_("Downloading packages"))),
+							)
+						}
+					}
 				}
+			}
+		case aptLib.CallbackDownloadStop:
+			// Событие завершения загрузки всех пакетов
+			if pkg == "" && !downloadCompleted {
+				downloadCompleted = true
+				reply.CreateEventNotification(ctx, reply.StateAfter,
+					reply.WithEventName("system.downloadProgress"),
+					reply.WithProgress(true),
+					reply.WithProgressPercent(100),
+					reply.WithProgressDoneText(lib.T_("All packages downloaded")),
+				)
 			}
 		case aptLib.CallbackInstallProgress:
 			ev := fmt.Sprintf("system.installProgress-%s", pkg)
@@ -419,20 +431,6 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 
 	return packages, nil
 }
-
-//// CleanPackageName очищаем странный суффикс в ответе apt
-//func (a *Actions) CleanPackageName(pkg string, packageNames []string) string {
-//	if strings.HasSuffix(pkg, ".32bit") {
-//		basePkg := strings.TrimSuffix(pkg, ".32bit")
-//		for _, validPkg := range packageNames {
-//			if validPkg == basePkg {
-//				return basePkg
-//			}
-//		}
-//	}
-//
-//	return pkg
-//}
 
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
 func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) ([]Package, error) {

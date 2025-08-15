@@ -32,6 +32,7 @@ type ProgressType int
 const (
 	CallbackInstallProgress  ProgressType = 1
 	CallbackDownloadProgress ProgressType = 21
+	CallbackDownloadStop     ProgressType = 22
 )
 
 type ProgressHandler func(packageName string, eventType ProgressType, current, total uint64)

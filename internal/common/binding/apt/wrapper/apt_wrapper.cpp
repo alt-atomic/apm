@@ -492,11 +492,15 @@ public:
 
 // ProgressStatus implementations (after global_callback is defined)
 bool ProgressStatus::Pulse(pkgAcquire *Owner) {
-    if (global_callback != nullptr && has_active_item_ && TotalBytes > 0 && CurrentBytes > 0) {
-        global_callback(active_name_.c_str(), APT_CALLBACK_DOWNLOAD_PROGRESS,
-                        static_cast<uint64_t>(CurrentBytes),
-                        static_cast<uint64_t>(TotalBytes),
-                        global_user_data);
+    if (global_callback != nullptr) {
+        // Send overall download progress
+        if (TotalBytes > 0) {
+            // Use "" as package name to indicate overall progress
+            global_callback("", APT_CALLBACK_DOWNLOAD_PROGRESS,
+                            static_cast<uint64_t>(CurrentBytes),
+                            static_cast<uint64_t>(TotalBytes),
+                            global_user_data);
+        }
     }
     return pkgAcquireStatus::Pulse(Owner);
 }

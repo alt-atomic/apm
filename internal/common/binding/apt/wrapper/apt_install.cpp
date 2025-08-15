@@ -41,7 +41,14 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to get package archives");
         }
 
-        if (acquire.Run() != pkgAcquire::Continue) {
+        auto acquire_result = acquire.Run();
+        
+        // Send final download complete event
+        if (global_callback != nullptr) {
+            global_callback("", APT_CALLBACK_DOWNLOAD_STOP, 100, 100, global_user_data);
+        }
+        
+        if (acquire_result != pkgAcquire::Continue) {
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages");
         }
 

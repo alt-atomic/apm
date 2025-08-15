@@ -294,41 +294,60 @@ func (m model) buildContent() string {
 		sb.WriteString(titleStyle.Render(infoPackage))
 	}
 
-	for i, pkg := range m.pkg {
-		if len(m.pkg) > 1 {
-			sb.WriteString(titleStyle.Render("\n"))
-			sb.WriteString(titleStyle.Render(fmt.Sprintf(lib.T_("\nPackage %d:"), i+1)))
-		}
-		installedText := getShortcutStyle().Render(lib.T_("No"))
-		if pkg.Installed {
-			installedText = getInstallStyle().Render(lib.T_("Yes"))
-		}
-
-		sb.WriteString("\n" + formatLine(lib.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(lib.T_("Action"), m.statusPackage(pkg), keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(lib.T_("Category"), pkg.Section, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(lib.T_("Maintainer"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(lib.T_("Installed"), installedText, keyWidth, keyStyle, valueStyle))
-
-		if pkg.Installed {
-			// Выводим "Версия в облаке" обычным стилем
-			sb.WriteString("\n" + formatLine(lib.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
-			// Сравниваем версию в системе и облаке
-			var systemVersionColored string
-			if pkg.VersionInstalled == pkg.Version {
-				systemVersionColored = getInstallStyle().Render(pkg.VersionInstalled)
-			} else {
-				systemVersionColored = getDeleteStyle().Render(pkg.VersionInstalled)
+	// Для больших списков показываем только названия пакетов
+	if len(m.pkg) > 100 {
+		for i, pkg := range m.pkg {
+			if i == 0 && len(m.pkg) > 1 {
+				sb.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", lib.T_("Package list:"))))
 			}
-			// Выводим "Версия в системе", уже с раскрашенным текстом
-			sb.WriteString("\n" + formatLine(lib.T_("System version"), systemVersionColored, keyWidth, keyStyle, valueStyle))
-		} else {
-			sb.WriteString("\n" + formatLine(lib.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
+			
+			statusText := m.statusPackage(pkg)
+			installedText := ""
+			if pkg.Installed {
+				installedText = " " + getInstallStyle().Render(lib.T_("[Installed]"))
+			}
+			
+			line := fmt.Sprintf("• %s%s - %s", pkg.Name, installedText, statusText)
+			sb.WriteString("\n" + valueStyle.Render(line))
 		}
-		sb.WriteString("\n" + formatLine(lib.T_("Size"), helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
+	} else {
+		// Обычный детальный вывод для списков ≤100 пакетов
+		for i, pkg := range m.pkg {
+			if len(m.pkg) > 1 {
+				sb.WriteString(titleStyle.Render("\n"))
+				sb.WriteString(titleStyle.Render(fmt.Sprintf(lib.T_("\nPackage %d:"), i+1)))
+			}
+			installedText := getShortcutStyle().Render(lib.T_("No"))
+			if pkg.Installed {
+				installedText = getInstallStyle().Render(lib.T_("Yes"))
+			}
 
-		dependsStr := formatDependencies(pkg.Depends)
-		sb.WriteString("\n" + formatLine(lib.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("Action"), m.statusPackage(pkg), keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("Category"), pkg.Section, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("Maintainer"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(lib.T_("Installed"), installedText, keyWidth, keyStyle, valueStyle))
+
+			if pkg.Installed {
+				// Выводим "Версия в облаке" обычным стилем
+				sb.WriteString("\n" + formatLine(lib.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
+				// Сравниваем версию в системе и облаке
+				var systemVersionColored string
+				if pkg.VersionInstalled == pkg.Version {
+					systemVersionColored = getInstallStyle().Render(pkg.VersionInstalled)
+				} else {
+					systemVersionColored = getDeleteStyle().Render(pkg.VersionInstalled)
+				}
+				// Выводим "Версия в системе", уже с раскрашенным текстом
+				sb.WriteString("\n" + formatLine(lib.T_("System version"), systemVersionColored, keyWidth, keyStyle, valueStyle))
+			} else {
+				sb.WriteString("\n" + formatLine(lib.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
+			}
+			sb.WriteString("\n" + formatLine(lib.T_("Size"), helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
+
+			dependsStr := formatDependencies(pkg.Depends)
+			sb.WriteString("\n" + formatLine(lib.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
+		}
 	}
 
 	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", lib.T_("Affected changes:"))))

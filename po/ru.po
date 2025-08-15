@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-15 17:27+0600\n"
-"PO-Revision-Date: 2025-08-15 17:28+0600\n"
+"POT-Creation-Date: 2025-08-15 18:14+0600\n"
+"PO-Revision-Date: 2025-08-15 18:15+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
@@ -620,7 +620,7 @@ msgstr "Изменение"
 msgid "Installation"
 msgstr "Установка"
 
-#: internal/common/apt/parser.go:133 internal/system/package/actions.go:174
+#: internal/common/apt/parser.go:133 internal/system/package/actions.go:233
 #, c-format
 msgid "Downloading: %s"
 msgstr "Загружается: %s"
@@ -1460,7 +1460,7 @@ msgstr "Ошибка исполнения команды: %s %s"
 msgid "Error executing command rpm -qia: %w"
 msgstr "Ошибка исполнения команды rpm -qia: %w"
 
-#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:520
+#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:579
 msgid "Error scanning rpm output: %w"
 msgstr "Ошибка сканирования вывода rpm"
 
@@ -1861,30 +1861,41 @@ msgstr "История изменения образа"
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
-#: internal/system/package/actions.go:181
-#, c-format
-msgid "Downloading %s"
-msgstr "Загрузка: %s"
+#: internal/system/package/actions.go:180
+#, fuzzy, c-format
+msgid "Downloading packages: %d%%"
+msgstr "Загружается: %d%%"
 
 #: internal/system/package/actions.go:194
+msgid "All packages downloaded"
+msgstr "Загрузка всех пакетов"
+
+#: internal/system/package/actions.go:206
+#: internal/system/package/actions.go:253
 #, fuzzy, c-format
 msgid "Installing progress: %s"
 msgstr "Прогресс установки: %s"
 
-#: internal/system/package/actions.go:201
+#: internal/system/package/actions.go:213
+#: internal/system/package/actions.go:260
 #, c-format
 msgid "Installing %s"
 msgstr "Установка %s"
 
-#: internal/system/package/actions.go:312
+#: internal/system/package/actions.go:240
+#, c-format
+msgid "Downloading %s"
+msgstr "Загрузка: %s"
+
+#: internal/system/package/actions.go:371
 msgid "AppStream load failed: %v"
 msgstr "Не удалось загрузить AppStream: %v"
 
-#: internal/system/package/actions.go:412
+#: internal/system/package/actions.go:471
 msgid "Error updating information about installed packages: %w"
 msgstr "Ошибка обновления информации об установленных пакетах: %w"
 
-#: internal/system/package/actions.go:462
+#: internal/system/package/actions.go:521
 msgid "Error executing the rpm -qia command: %w"
 msgstr "Ошибка выполнения команды rpm -qia: %w"
 
