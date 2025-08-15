@@ -382,11 +382,26 @@ AptResult apt_cache_update(AptCache* cache) {
             return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to read sources.list");
         }
 
+        // Step 1: Update release files
+        if (!source_list.InvalidateReleases()) {
+            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to invalidate releases");
+        }
+
+        if (!source_list.GetReleases(&acquire)) {
+            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to get release files");
+        }
+
+        auto fetch_result = acquire.Run();
+        if (fetch_result != pkgAcquire::Continue) {
+            return make_result(APT_ERROR_DOWNLOAD_FAILED, "Failed to download release files");
+        }
+
+        // Step 2: Update package indexes
         if (!source_list.GetIndexes(&acquire)) {
             return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to get package indexes");
         }
 
-        auto fetch_result = acquire.Run();
+        fetch_result = acquire.Run();
         if (fetch_result != pkgAcquire::Continue) {
             return make_result(APT_ERROR_DOWNLOAD_FAILED, "Failed to download package lists");
         }
