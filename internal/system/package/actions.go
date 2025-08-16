@@ -176,7 +176,6 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 	var packageMutex sync.Mutex
 
 	return func(pkg string, event aptLib.ProgressType, cur, total uint64) {
-		lib.Log.Error(event, " ", pkg, " ", cur, " ", total)
 		switch event {
 		case aptLib.CallbackDownloadProgress:
 			percent := int((cur * 100) / total)
