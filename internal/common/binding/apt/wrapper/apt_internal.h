@@ -75,6 +75,7 @@ public:
     void Fetch(pkgAcquire::ItemDesc &Itm) override;
     void Done(pkgAcquire::ItemDesc &Itm) override;
     void Fail(pkgAcquire::ItemDesc &Itm) override;
+    void Stop() override;
 
 private:
     bool has_active_item_ = false;

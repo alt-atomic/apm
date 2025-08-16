@@ -30,6 +30,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 // syncAptMutex защищает операции apt-get от дублированного вызова
@@ -159,45 +160,114 @@ func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindTy
 	return finalPackageNames, packagesInfo, packageChanges, nil
 }
 
+// Вспомогательная структура для отслеживания прогресса пакета
+type packageProgress struct {
+	lastPercent int
+	lastUpdate  time.Time
+}
+
 func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
-	lastDownloadPercent := 0
-	downloadCompleted := false
+	// Состояние для загрузки
+	lastDownloadPercent := -1
+	lastDownloadUpdate := time.Now()
+
+	// Состояние для установки пакетов
+	packageState := make(map[string]*packageProgress)
+	var packageMutex sync.Mutex
 
 	return func(pkg string, event aptLib.ProgressType, cur, total uint64) {
+		lib.Log.Error(event, " ", pkg, " ", cur, " ", total)
 		switch event {
 		case aptLib.CallbackDownloadProgress:
-			if total > 0 && !downloadCompleted {
-				percent := int((cur * 100) / total)
-				if pkg == "" {
-					if percent != lastDownloadPercent {
-						lastDownloadPercent = percent
+			percent := int((cur * 100) / total)
 
-						if percent < 100 {
-							reply.CreateEventNotification(ctx, reply.StateBefore,
-								reply.WithEventName("system.downloadProgress"),
-								reply.WithProgress(true),
-								reply.WithProgressPercent(float64(percent)),
-								reply.WithEventView(fmt.Sprintf(lib.T_("Downloading packages"))),
-							)
-						}
+			if total > 0 && percent < 100 {
+				now := time.Now()
+				elapsed := now.Sub(lastDownloadUpdate)
+
+				// Throttling для загрузки
+				shouldUpdate := false
+
+				if lastDownloadPercent == -1 {
+					shouldUpdate = true
+				} else if percent != lastDownloadPercent {
+					if percent < 10 || percent > 90 {
+						shouldUpdate = elapsed >= 50*time.Millisecond
+					} else {
+						shouldUpdate = elapsed >= 100*time.Millisecond
 					}
 				}
+
+				if shouldUpdate && percent < 100 {
+					lastDownloadPercent = percent
+					lastDownloadUpdate = now
+
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName("system.downloadProgress"),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading packages"))),
+					)
+				}
 			}
-		case aptLib.CallbackDownloadStop:
-			// Событие завершения загрузки всех пакетов
-			if pkg == "" && !downloadCompleted {
-				downloadCompleted = true
-				reply.CreateEventNotification(ctx, reply.StateAfter,
-					reply.WithEventName("system.downloadProgress"),
-					reply.WithProgress(true),
-					reply.WithProgressPercent(100),
-					reply.WithProgressDoneText(lib.T_("All packages downloaded")),
-				)
-			}
+		case aptLib.CallbackDownloadComplete:
+			reply.CreateEventNotification(ctx, reply.StateAfter,
+				reply.WithEventName("system.downloadProgress"),
+				reply.WithProgress(true),
+				reply.WithProgressPercent(100),
+				reply.WithProgressDoneText(lib.T_("All packages downloaded")),
+			)
 		case aptLib.CallbackInstallProgress:
-			ev := fmt.Sprintf("system.installProgress-%s", pkg)
-			if total > 0 {
-				percent := int((cur * 100) / total)
+			if pkg == "" || total == 0 {
+				return
+			}
+
+			packageMutex.Lock()
+			defer packageMutex.Unlock()
+
+			state, exists := packageState[pkg]
+			if !exists {
+				state = &packageProgress{
+					lastPercent: -1,
+					lastUpdate:  time.Now(),
+				}
+				packageState[pkg] = state
+			}
+
+			percent := int((cur * 100) / total)
+			now := time.Now()
+			elapsed := now.Sub(state.lastUpdate)
+
+			// Throttling для установки пакетов
+			shouldUpdate := false
+
+			if state.lastPercent == -1 {
+				// Первое обновление
+				shouldUpdate = true
+			} else if percent == 100 {
+				// Завершение - всегда показываем
+				shouldUpdate = true
+			} else if percent != state.lastPercent {
+				percentDiff := helper.Abs(percent - state.lastPercent)
+
+				if percentDiff >= 10 {
+					// Большое изменение - обновляем быстрее
+					shouldUpdate = elapsed >= 50*time.Millisecond
+				} else if percentDiff >= 5 {
+					// Среднее изменение
+					shouldUpdate = elapsed >= 100*time.Millisecond
+				} else {
+					// Маленькое изменение - обновляем редко
+					shouldUpdate = elapsed >= 200*time.Millisecond
+				}
+			}
+
+			if shouldUpdate {
+				state.lastPercent = percent
+				state.lastUpdate = now
+
+				ev := fmt.Sprintf("system.installProgress-%s", pkg)
+
 				if percent < 100 {
 					reply.CreateEventNotification(ctx, reply.StateBefore,
 						reply.WithEventName(ev),
@@ -205,13 +275,16 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 						reply.WithProgressPercent(float64(percent)),
 						reply.WithEventView(fmt.Sprintf(lib.T_("Installing progress: %s"), pkg)),
 					)
-				} else if percent >= 100 {
+				} else {
 					reply.CreateEventNotification(ctx, reply.StateAfter,
 						reply.WithEventName(ev),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(100),
 						reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Installing %s"), pkg)),
 					)
+
+					// Удаляем из отслеживания
+					delete(packageState, pkg)
 				}
 			}
 		}

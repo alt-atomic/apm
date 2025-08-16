@@ -540,14 +540,17 @@ void ProgressStatus::Done(pkgAcquire::ItemDesc &Itm) {
 }
 
 void ProgressStatus::Fail(pkgAcquire::ItemDesc &Itm) {
-    if (global_callback != nullptr) {
-        global_callback(active_name_.c_str(), APT_CALLBACK_ERROR, 0, 0, global_user_data);
-    }
     has_active_item_ = false;
     active_name_.clear();
     pkgAcquireStatus::Fail(Itm);
 }
 
+void ProgressStatus::Stop() {
+    if (global_callback != nullptr) {
+        global_callback("", APT_CALLBACK_DOWNLOAD_COMPLETE, 100, 100, global_user_data);
+    }
+    pkgAcquireStatus::Stop();
+}
 
 void apt_free_package_info(AptPackageInfo* info) {
     if (!info) return;
@@ -785,87 +788,40 @@ void apt_free_package_changes(AptPackageChanges* changes) {
     memset(changes, 0, sizeof(AptPackageChanges));
 }
 
-// Common progress callback implementation
-PackageManagerCallback_t create_common_progress_callback(CallbackBridge* /* bridgeData - parameter not used in function signature, only as lambda context */) {
+// Optimized progress callback implementation - simplified for performance
+PackageManagerCallback_t create_common_progress_callback(CallbackBridge*) {
     return [](const char *nevra, aptCallbackType what, uint64_t amount, uint64_t total, void *callbackData) {
-        CallbackBridge* bd = static_cast<CallbackBridge*>(callbackData);
-        AptCallbackType our_type = APT_CALLBACK_UNKNOWN;
-        
-        // Map internal APT callback types to public API types
+        // Fast path - only handle the callbacks we care about
+        AptCallbackType our_type;
         switch (what) {
             case APTCALLBACK_INST_PROGRESS: our_type = APT_CALLBACK_INST_PROGRESS; break;
             case APTCALLBACK_INST_START: our_type = APT_CALLBACK_INST_START; break;
             case APTCALLBACK_INST_STOP: our_type = APT_CALLBACK_INST_STOP; break;
-            case APTCALLBACK_TRANS_PROGRESS: our_type = APT_CALLBACK_TRANS_PROGRESS; break;
-            case APTCALLBACK_TRANS_START: our_type = APT_CALLBACK_TRANS_START; break;
-            case APTCALLBACK_TRANS_STOP: our_type = APT_CALLBACK_TRANS_STOP; break;
-            case APTCALLBACK_UNINST_PROGRESS: our_type = APT_CALLBACK_REMOVE_PROGRESS; break;
-            case APTCALLBACK_UNINST_START: our_type = APT_CALLBACK_REMOVE_START; break;
-            case APTCALLBACK_UNINST_STOP: our_type = APT_CALLBACK_REMOVE_STOP; break;
-            case APTCALLBACK_ELEM_PROGRESS: our_type = APT_CALLBACK_ELEM_PROGRESS; break;
-            default: our_type = APT_CALLBACK_UNKNOWN; break;
+            default: return; // Skip unknown callbacks immediately
         }
 
-        // Helper function to pick current planned package
-        auto pick_planned_current = [&]() -> const char* {
-            if (bd == nullptr || bd->planned.empty()) return "";
-            if (bd->current_idx >= bd->planned.size()) return bd->planned.back().c_str();
-            return bd->planned[bd->current_idx].c_str();
-        };
-
-        const bool has_nevra = (nevra != nullptr && nevra[0] != '\0');
+        CallbackBridge* bd = static_cast<CallbackBridge*>(callbackData);
         const char* effective_name = "";
 
-        // Determine effective package name based on event type
-        switch (what) {
-            case APTCALLBACK_INST_START:
-            case APTCALLBACK_UNINST_START:
-                if (has_nevra) {
-                    bd->current_name = nevra;
-                } else if (bd != nullptr) {
-                    bd->current_name = pick_planned_current();
-                }
-                effective_name = bd ? bd->current_name.c_str() : (has_nevra ? nevra : "");
-                break;
-
-            case APTCALLBACK_INST_PROGRESS:
-            case APTCALLBACK_UNINST_PROGRESS:
-            case APTCALLBACK_ELEM_PROGRESS:
-                if (bd != nullptr && bd->current_name.empty()) {
-                    bd->current_name = has_nevra ? std::string(nevra) : std::string(pick_planned_current());
-                }
-                effective_name = bd ? bd->current_name.c_str() : (has_nevra ? nevra : "");
-                break;
-
-            case APTCALLBACK_INST_STOP:
-            case APTCALLBACK_UNINST_STOP:
-                // For stop events, prioritize nevra (from RPM header) as it's most reliable
-                // If nevra is not available, use current name or fallback to planned name
-                if (has_nevra) {
-                    effective_name = nevra;
-                } else if (bd && !bd->current_name.empty()) {
-                    effective_name = bd->current_name.c_str();
-                } else {
-                    effective_name = pick_planned_current();
-                }
-                // Note: We advance index and clear name AFTER the callback is invoked
-                break;
-
-            default:
-                effective_name = has_nevra ? nevra : "";
-                break;
+        // Simple logic to get package name
+        if (nevra && nevra[0]) {
+            effective_name = nevra;
+        } else if (bd && !bd->planned.empty()) {
+            // Use current index if available, otherwise use first package
+            size_t idx = (bd->current_idx < bd->planned.size()) ? bd->current_idx : 0;
+            effective_name = bd->planned[idx].c_str();
         }
 
-        // Invoke the global callback
+        // Update index on stop event for next package
+        if (what == APTCALLBACK_INST_STOP && bd) {
+            if (bd->current_idx < bd->planned.size()) {
+                bd->current_idx++;
+            }
+        }
+        
+        // Direct callback without additional processing
         if (global_callback) {
             global_callback(effective_name, our_type, amount, total, global_user_data);
-        }
-
-        // Handle state advancement for stop events AFTER the callback is invoked
-        if ((what == APTCALLBACK_INST_STOP || what == APTCALLBACK_UNINST_STOP) && bd != nullptr) {
-            // Advance to next planned item on stop; clear current
-            if (bd->current_idx < bd->planned.size()) bd->current_idx++;
-            bd->current_name.clear();
         }
     };
 }
