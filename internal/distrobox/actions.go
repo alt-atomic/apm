@@ -386,7 +386,12 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 		return nil, errors.New(errMsg)
 	}
 
-	result, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
+	osInfo, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = a.servicePackage.UpdatePackages(ctx, osInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +399,7 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":       fmt.Sprintf(lib.T_("Container %s successfully created"), name),
-			"containerInfo": result,
+			"containerInfo": osInfo,
 		},
 		Error: false,
 	}

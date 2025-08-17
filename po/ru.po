@@ -936,7 +936,7 @@ msgstr "Синхронизация базы данных"
 
 #: internal/common/reply/event.go:236
 msgid "Update information about applications"
-msgstr "Обновить информцию о приложениях"
+msgstr "Обновить информацию о приложениях"
 
 #. Общий спиннер + фраза
 #: internal/common/reply/preloader.go:343
