@@ -47,6 +47,7 @@ apt_wrapper_sources = [
   'internal/common/binding/apt/wrapper/apt_install.cpp',
   'internal/common/binding/apt/wrapper/apt_dist.cpp',
   'internal/common/binding/apt/wrapper/apt_simulate.cpp',
+  'internal/common/binding/apt/wrapper/apt_package_operations.cpp',
   'internal/common/binding/apt/wrapper/apt_search.cpp',
   'internal/common/binding/apt/wrapper/apt_getinfo.cpp',
 ]
