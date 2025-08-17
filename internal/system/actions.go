@@ -216,7 +216,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 		return nil, errPackageNotFound
 	}
 
-	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge)
+	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -296,7 +296,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		return nil, errPrepare
 	}
 
-	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false)
+	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -312,7 +312,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		if packageParse.RemovedCount > 0 {
 			action = _package.ActionMultiInstall
 		}
-		
+
 		dialogStatus, errDialog := _package.NewDialog(packagesInfo, *packageParse, action)
 		if errDialog != nil {
 			return nil, errDialog
@@ -332,7 +332,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		return nil, err
 	}
 
-	errInstall := a.serviceAptActions.Install(ctx, packageNames)
+	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove)
 	if errInstall != nil {
 		var matchedErr *apt.MatchedError
 		if errors.As(errInstall, &matchedErr) && matchedErr.NeedUpdate() {

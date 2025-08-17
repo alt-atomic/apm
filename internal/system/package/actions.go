@@ -74,8 +74,6 @@ type Package struct {
 type FindType uint8
 
 // PrepareInstallPackages разбирает список пакетов с суффиксами +/- и возвращает два списка
-// Формат: package+ (установить), package- (удалить), package (установить по умолчанию)
-// Учитывает пакеты с + и - в названии (например, gcc-c++, libstdc++-devel)
 func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string) (install []string, remove []string, err error) {
 	for _, pkg := range packages {
 		pkg = strings.TrimSpace(pkg)
@@ -83,48 +81,27 @@ func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string)
 			continue
 		}
 
-		// Проверяем суффиксы + и -
+		// Сначала проверяем, существует ли пакет с таким именем как есть
+		existsAsIs, checkErr := a.checkPackageExists(ctx, pkg)
+		if checkErr != nil {
+			return nil, nil, checkErr
+		}
+
+		// Пакет существует с таким именем - добавляем на установку
+		if existsAsIs {
+			install = append(install, pkg)
+			continue
+		}
+
 		if strings.HasSuffix(pkg, "+") {
 			baseName := strings.TrimSuffix(pkg, "+")
 			if baseName != "" {
-				exists, checkErr := a.checkPackageExists(ctx, baseName)
-				if checkErr != nil {
-					return nil, nil, checkErr
-				}
-				if exists {
-					install = append(install, baseName)
-				} else {
-					exists2, checkErr2 := a.checkPackageExists(ctx, pkg)
-					if checkErr2 != nil {
-						return nil, nil, checkErr2
-					}
-					if exists2 {
-						install = append(install, pkg)
-					} else {
-						install = append(install, baseName) // Добавляем как есть, пусть APT решает
-					}
-				}
+				install = append(install, baseName)
 			}
 		} else if strings.HasSuffix(pkg, "-") {
 			baseName := strings.TrimSuffix(pkg, "-")
 			if baseName != "" {
-				exists, checkErr := a.checkPackageExists(ctx, baseName)
-				if checkErr != nil {
-					return nil, nil, checkErr
-				}
-				if exists {
-					remove = append(remove, baseName)
-				} else {
-					exists2, checkErr2 := a.checkPackageExists(ctx, pkg)
-					if checkErr2 != nil {
-						return nil, nil, checkErr2
-					}
-					if exists2 {
-						install = append(install, pkg)
-					} else {
-						remove = append(remove, baseName) // Добавляем как есть, пусть APT решает
-					}
-				}
+				remove = append(remove, baseName)
 			}
 		} else {
 			install = append(install, pkg)
@@ -143,7 +120,7 @@ func (a *Actions) checkPackageExists(ctx context.Context, packageName string) (b
 	return true, nil
 }
 
-func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool) ([]string, []Package, *aptLib.PackageChanges, error) {
+func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 	var packagesInfo []Package
@@ -197,12 +174,12 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 
 	// Обрабатываем пакеты на установку
 	if err := processPackageList(installed, &expandedInstall); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// Обрабатываем пакеты на удаление
 	if err := processPackageList(removed, &expandedRemove); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	var aptError error
@@ -210,7 +187,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 	aptService := aptBinding.NewActions()
 	packageChanges, aptError = aptService.SimulateChange(expandedInstall, expandedRemove, purge)
 	if aptError != nil {
-		return nil, nil, nil, aptError
+		return nil, nil, nil, nil, aptError
 	}
 
 	// Добавляем информацию о дополнительных пакетах из packageChanges только в packagesInfo
@@ -229,7 +206,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 				if !seenInfo[cleanName] {
 					info, err := a.serviceAptDatabase.GetPackageByName(ctx, cleanName)
 					if err != nil {
-						return nil, nil, nil, err
+						return nil, nil, nil, nil, err
 					}
 					seenInfo[cleanName] = true
 					packagesInfo = append(packagesInfo, info)
@@ -238,7 +215,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 		}
 	}
 
-	return finalPackageNames, packagesInfo, packageChanges, nil
+	return expandedInstall, expandedRemove, packagesInfo, packageChanges, nil
 }
 
 // Вспомогательная структура для отслеживания прогресса пакета
@@ -379,6 +356,21 @@ func (a *Actions) Install(ctx context.Context, packages []string) error {
 
 	aptService := aptBinding.NewActions()
 	err := aptService.InstallPackages(packages, a.getHandler(ctx))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string, packagesRemove []string) error {
+	syncAptMutex.Lock()
+	defer syncAptMutex.Unlock()
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
+
+	aptService := aptBinding.NewActions()
+	err := aptService.CombineInstallRemovePackages(packagesInstall, packagesRemove, a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
