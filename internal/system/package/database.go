@@ -282,28 +282,6 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 	return err
 }
 
-// SearchPackagesByName ищет пакеты в таблице по части названия.
-func (s *PackageDBService) SearchPackagesByName(ctx context.Context, namePart string, installed bool) ([]Package, error) {
-	query := s.db.WithContext(ctx).Model(&DBPackage{}).
-		Where("name LIKE ?", "%"+namePart+"%")
-
-	if installed {
-		query = query.Where("installed = ?", true)
-	}
-
-	var dbPkgs []DBPackage
-	if err := query.Find(&dbPkgs).Error; err != nil {
-		return nil, fmt.Errorf(lib.T_("Query execution error: %w"), err)
-	}
-
-	// Конвертируем в бизнес-структуры
-	result := make([]Package, 0, len(dbPkgs))
-	for _, dbp := range dbPkgs {
-		result = append(result, dbp.fromDBModel())
-	}
-	return result, nil
-}
-
 // SearchPackagesByNameLike ищет пакеты по произвольному шаблону LIKE
 func (s *PackageDBService) SearchPackagesByNameLike(ctx context.Context, likePattern string, installed bool) ([]Package, error) {
 	query := s.db.WithContext(ctx).Model(&DBPackage{}).

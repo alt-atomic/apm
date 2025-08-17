@@ -73,61 +73,142 @@ type Package struct {
 
 type FindType uint8
 
-const (
-	FindInstall FindType = iota + 1
-	FindRemove
-)
+// PrepareInstallPackages разбирает список пакетов с суффиксами +/- и возвращает два списка
+// Формат: package+ (установить), package- (удалить), package (установить по умолчанию)
+// Учитывает пакеты с + и - в названии (например, gcc-c++, libstdc++-devel)
+func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string) (install []string, remove []string, err error) {
+	for _, pkg := range packages {
+		pkg = strings.TrimSpace(pkg)
+		if pkg == "" {
+			continue
+		}
 
-func (a *Actions) FindPackage(ctx context.Context, req []string, findType FindType, purge bool) ([]string, []Package, *aptLib.PackageChanges, error) {
+		// Проверяем суффиксы + и -
+		if strings.HasSuffix(pkg, "+") {
+			baseName := strings.TrimSuffix(pkg, "+")
+			if baseName != "" {
+				exists, checkErr := a.checkPackageExists(ctx, baseName)
+				if checkErr != nil {
+					return nil, nil, checkErr
+				}
+				if exists {
+					install = append(install, baseName)
+				} else {
+					exists2, checkErr2 := a.checkPackageExists(ctx, pkg)
+					if checkErr2 != nil {
+						return nil, nil, checkErr2
+					}
+					if exists2 {
+						install = append(install, pkg)
+					} else {
+						install = append(install, baseName) // Добавляем как есть, пусть APT решает
+					}
+				}
+			}
+		} else if strings.HasSuffix(pkg, "-") {
+			baseName := strings.TrimSuffix(pkg, "-")
+			if baseName != "" {
+				exists, checkErr := a.checkPackageExists(ctx, baseName)
+				if checkErr != nil {
+					return nil, nil, checkErr
+				}
+				if exists {
+					remove = append(remove, baseName)
+				} else {
+					exists2, checkErr2 := a.checkPackageExists(ctx, pkg)
+					if checkErr2 != nil {
+						return nil, nil, checkErr2
+					}
+					if exists2 {
+						install = append(install, pkg)
+					} else {
+						remove = append(remove, baseName) // Добавляем как есть, пусть APT решает
+					}
+				}
+			}
+		} else {
+			install = append(install, pkg)
+		}
+	}
+
+	return install, remove, nil
+}
+
+// checkPackageExists проверяет существует ли пакет в базе данных
+func (a *Actions) checkPackageExists(ctx context.Context, packageName string) (bool, error) {
+	_, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool) ([]string, []Package, *aptLib.PackageChanges, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 	var packagesInfo []Package
 	var finalPackageNames []string
 	seenNames := make(map[string]bool)
 	seenInfo := make(map[string]bool)
 
+	// Объединяем все запрошенные пакеты для обработки wildcard
+	allReq := append([]string{}, installed...)
+	allReq = append(allReq, removed...)
+
 	// Сначала добавляем исходные пакеты из запроса пользователя (как есть)
-	finalPackageNames = append(finalPackageNames, req...)
-	for _, original := range req {
+	finalPackageNames = append(finalPackageNames, allReq...)
+	for _, original := range allReq {
 		seenNames[original] = true
 	}
 
 	// Обрабатываем wildcard пакеты и создаём расширенный запрос
-	var expandedReq []string
+	var expandedInstall []string
+	var expandedRemove []string
 
-	for _, original := range req {
-		if strings.Contains(original, "*") {
-			// Для wildcard пакетов - находим конкретные пакеты и добавляем их вместо wildcard
-			like := strings.ReplaceAll(original, "*", "%")
-			if strings.TrimSpace(like) != "" {
-				matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, false)
-				if errSearch != nil {
-					return nil, nil, nil, errSearch
-				}
-				for _, mp := range matched {
-					if !seenInfo[mp.Name] {
-						seenInfo[mp.Name] = true
-						packagesInfo = append(packagesInfo, mp)
+	// Вспомогательная функция для обработки списка пакетов
+	processPackageList := func(packages []string, targetList *[]string) error {
+		for _, original := range packages {
+			if strings.Contains(original, "*") {
+				like := strings.ReplaceAll(original, "*", "%")
+				if strings.TrimSpace(like) != "" {
+					matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, false)
+					if errSearch != nil {
+						return errSearch
 					}
-					if !seenNames[mp.Name] {
-						seenNames[mp.Name] = true
-						finalPackageNames = append(finalPackageNames, mp.Name)
-						expandedReq = append(expandedReq, mp.Name)
+					for _, mp := range matched {
+						if !seenInfo[mp.Name] {
+							seenInfo[mp.Name] = true
+							packagesInfo = append(packagesInfo, mp)
+						}
+						if !seenNames[mp.Name] {
+							seenNames[mp.Name] = true
+							finalPackageNames = append(finalPackageNames, mp.Name)
+							*targetList = append(*targetList, mp.Name)
+						}
 					}
 				}
+			} else {
+				// Для обычных пакетов - копируем как есть
+				*targetList = append(*targetList, original)
 			}
-		} else {
-			// Для обычных пакетов - копируем как есть в expandedReq
-			expandedReq = append(expandedReq, original)
 		}
+		return nil
+	}
+
+	// Обрабатываем пакеты на установку
+	if err := processPackageList(installed, &expandedInstall); err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Обрабатываем пакеты на удаление
+	if err := processPackageList(removed, &expandedRemove); err != nil {
+		return nil, nil, nil, err
 	}
 
 	var aptError error
 	var packageChanges *aptLib.PackageChanges
-	if findType == FindInstall {
-		packageChanges, aptError = a.CheckInstall(ctx, expandedReq)
-	} else if findType == FindRemove {
-		packageChanges, aptError = a.CheckRemove(ctx, expandedReq, purge)
-	}
-
+	aptService := aptBinding.NewActions()
+	packageChanges, aptError = aptService.SimulateChange(expandedInstall, expandedRemove, purge)
 	if aptError != nil {
 		return nil, nil, nil, aptError
 	}

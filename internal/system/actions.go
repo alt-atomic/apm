@@ -216,7 +216,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 		return nil, errPackageNotFound
 	}
 
-	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindRemove, purge)
+	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -288,24 +288,15 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 	if len(packages) == 0 {
 		errPackageNotFound := errors.New(lib.T_("You must specify at least one package, for example, remove package"))
-
 		return nil, errPackageNotFound
 	}
-	//
-	//packageParse, aptError := a.serviceAptActions.GetInfo(ctx, packages[0])
-	//if aptError != nil {
-	//	return nil, aptError
-	//}
-	//
-	//resp := reply.APIResponse{
-	//	Data: map[string]interface{}{
-	//		"message": messageAnswer,
-	//		"info":    packageParse,
-	//	},
-	//	Error: false,
-	//}
 
-	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packages, _package.FindInstall, false)
+	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
+	if errPrepare != nil {
+		return nil, errPrepare
+	}
+
+	packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -316,13 +307,19 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 
 	if len(packagesInfo) > 0 {
 		reply.StopSpinnerForDialog()
-		dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionInstall)
-		if err != nil {
-			return nil, err
+
+		action := _package.ActionInstall
+		if packageParse.RemovedCount > 0 {
+			action = _package.ActionMultiInstall
+		}
+		
+		dialogStatus, errDialog := _package.NewDialog(packagesInfo, *packageParse, action)
+		if errDialog != nil {
+			return nil, errDialog
 		}
 
 		if !dialogStatus {
-			errDialog := errors.New(lib.T_("Cancel dialog"))
+			errDialog = errors.New(lib.T_("Cancel dialog"))
 
 			return nil, errDialog
 		}
@@ -668,7 +665,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 		return nil, errors.New(errMsg)
 	}
 
-	packages, err := a.serviceAptDatabase.SearchPackagesByName(ctx, packageName, installed)
+	packages, err := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, "%"+packageName+"%", installed)
 	if err != nil {
 		return nil, err
 	}
