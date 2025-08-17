@@ -208,7 +208,7 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 		osName = "Arch"
 		active = true
 	case strings.Contains(lowerOsName, "alt"):
-		osName = "Altinux"
+		osName = "ALT Linux"
 		active = true
 	case strings.Contains(lowerOsName, "ubuntu"):
 		osName = "Ubuntu"
