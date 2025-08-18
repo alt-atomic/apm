@@ -47,12 +47,12 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // Install – обёртка над Actions.Install.
-func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
-	resp, err := w.actions.Install(ctx, packages, applyAtomic)
+	resp, err := w.actions.Install(ctx, packages)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -64,12 +64,12 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic
 }
 
 // Remove – обёртка над Actions.Remove.
-func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic bool, purge bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, packages, purge, applyAtomic)
+	resp, err := w.actions.Remove(ctx, packages, purge)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

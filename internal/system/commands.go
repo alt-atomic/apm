@@ -120,17 +120,8 @@ func CommandList() *cli.Command {
 				Name:      "install",
 				Usage:     lib.T_("Package list for installation. The format package- package+ is supported."),
 				ArgsUsage: "packages",
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "apply",
-						Usage:   lib.T_("Apply to image"),
-						Aliases: []string{"a"},
-						Value:   false,
-						Hidden:  !lib.Env.IsAtomic,
-					},
-				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Install(ctx, cmd.Args().Slice(), cmd.Bool("apply"))
+					resp, err := NewActions().Install(ctx, cmd.Args().Slice())
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -145,13 +136,6 @@ func CommandList() *cli.Command {
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
-						Name:    "apply",
-						Usage:   lib.T_("Apply to image"),
-						Aliases: []string{"a"},
-						Value:   false,
-						Hidden:  !lib.Env.IsAtomic,
-					},
-					&cli.BoolFlag{
 						Name:    "purge",
 						Usage:   lib.T_("Delete all files"),
 						Aliases: []string{"p"},
@@ -159,7 +143,7 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("apply"))
+					resp, err := NewActions().Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

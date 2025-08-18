@@ -170,14 +170,12 @@ func GetSystemIntrospectXML() string {
 
     <method name="Install">
       <arg direction="in" type="as" name="packages"/>
-      <arg direction="in" type="b" name="applyAtomic"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     
     <method name="Remove">
       <arg direction="in" type="as" name="packages"/>
-      <arg direction="in" type="b" name="applyAtomic"/>
       <arg direction="in" type="b" name="purge"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>

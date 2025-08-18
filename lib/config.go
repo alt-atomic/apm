@@ -74,7 +74,7 @@ var (
 	BuildPathDBSQLSystem string
 	// BuildPathImageFile BuildPathDBKV        string
 	BuildPathImageFile string
-	BuildVersion string
+	BuildVersion       string
 )
 
 func InitConfig() error {
@@ -165,7 +165,7 @@ func InitConfig() error {
 	}
 
 	if _, errAtomic := os.Stat("/usr/bin/bootc"); os.IsNotExist(errAtomic) {
-		Env.IsAtomic = false
+		Env.IsAtomic = true
 	} else {
 		Env.IsAtomic = true
 	}

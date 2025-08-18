@@ -82,10 +82,7 @@ func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string)
 		}
 
 		// Сначала проверяем, существует ли пакет с таким именем как есть
-		existsAsIs, checkErr := a.checkPackageExists(ctx, pkg)
-		if checkErr != nil {
-			return nil, nil, checkErr
-		}
+		existsAsIs := a.checkPackageExists(ctx, pkg)
 
 		// Пакет существует с таким именем - добавляем на установку
 		if existsAsIs {
@@ -112,12 +109,12 @@ func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string)
 }
 
 // checkPackageExists проверяет существует ли пакет в базе данных
-func (a *Actions) checkPackageExists(ctx context.Context, packageName string) (bool, error) {
+func (a *Actions) checkPackageExists(ctx context.Context, packageName string) bool {
 	_, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
 	if err != nil {
-		return false, nil
+		return false
 	}
-	return true, nil
+	return true
 }
 
 func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {

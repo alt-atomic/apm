@@ -31,12 +31,13 @@ import (
 
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
-	serviceHostImage    *service.HostImageService
-	serviceAptActions   *_package.Actions
-	serviceAptDatabase  *_package.PackageDBService
-	serviceHostDatabase *service.HostDBService
-	serviceHostConfig   *service.HostConfigService
-	serviceStplr        *_package.StplrService
+	serviceHostImage       *service.HostImageService
+	serviceAptActions      *_package.Actions
+	serviceAptDatabase     *_package.PackageDBService
+	serviceHostDatabase    *service.HostDBService
+	serviceHostConfig      *service.HostConfigService
+	serviceTemporaryConfig *service.TemporaryConfigService
+	serviceStplr           *_package.StplrService
 }
 
 // NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
@@ -46,13 +47,15 @@ func NewActionsWithDeps(
 	hostImage *service.HostImageService,
 	hostDB *service.HostDBService,
 	hostConfig *service.HostConfigService,
+	temporaryConfig *service.TemporaryConfigService,
 ) *Actions {
 	return &Actions{
-		serviceHostImage:    hostImage,
-		serviceAptActions:   aptActions,
-		serviceAptDatabase:  aptDB,
-		serviceHostDatabase: hostDB,
-		serviceHostConfig:   hostConfig,
+		serviceHostImage:       hostImage,
+		serviceAptActions:      aptActions,
+		serviceAptDatabase:     aptDB,
+		serviceHostDatabase:    hostDB,
+		serviceHostConfig:      hostConfig,
+		serviceTemporaryConfig: temporaryConfig,
 	}
 }
 
@@ -68,17 +71,19 @@ func NewActions() *Actions {
 	}
 
 	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
+	hostTemporarySvc := service.NewTemporaryConfigService("/tmp/apm.tmp")
 	hostImageSvc := service.NewHostImageService(hostConfigSvc)
 	hostALRSvc := _package.NewSTPLRService()
 	hostAptSvc := _package.NewActions(hostPackageDBSvc, hostALRSvc)
 
 	return &Actions{
-		serviceHostImage:    hostImageSvc,
-		serviceAptActions:   hostAptSvc,
-		serviceAptDatabase:  hostPackageDBSvc,
-		serviceHostDatabase: hostDBSvc,
-		serviceHostConfig:   hostConfigSvc,
-		serviceStplr:        hostALRSvc,
+		serviceHostImage:       hostImageSvc,
+		serviceAptActions:      hostAptSvc,
+		serviceAptDatabase:     hostPackageDBSvc,
+		serviceHostDatabase:    hostDBSvc,
+		serviceHostConfig:      hostConfigSvc,
+		serviceStplr:           hostALRSvc,
+		serviceTemporaryConfig: hostTemporarySvc,
 	}
 }
 
@@ -199,7 +204,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, apply bool) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
 		return nil, err
@@ -211,7 +216,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := errors.New(lib.T_("At least one package must be specified, for example, remove package"))
+		errPackageNotFound := errors.New(lib.T_("At least one package must be specified"))
 
 		return nil, errPackageNotFound
 	}
@@ -251,16 +256,13 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 	}
 
 	messageAnswer := fmt.Sprintf(lib.TN_("%s removed successfully", "%s removed successfully", packageParse.RemovedCount), removePackageNames)
-	if apply {
-		err = a.applyChange(ctx, packages, false)
-		if err != nil {
-			return nil, err
-		}
-		messageAnswer += lib.T_(". The system image has been modified")
-	}
 
-	if !apply && lib.Env.IsAtomic {
-		messageAnswer += lib.T_(". The system image has not been modified! To apply changes, run with the -a flag")
+	if lib.Env.IsAtomic {
+		messageAnswer += lib.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
+		errSave := a.saveChange([]string{}, packageNames)
+		if errSave != nil {
+			return nil, errSave
+		}
 	}
 
 	resp := reply.APIResponse{
@@ -275,7 +277,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, app
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	err := a.checkRoot()
 	if err != nil {
 		return nil, err
@@ -287,7 +289,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := errors.New(lib.T_("You must specify at least one package, for example, remove package"))
+		errPackageNotFound := errors.New(lib.T_("You must specify at least one package"))
 		return nil, errPackageNotFound
 	}
 
@@ -361,17 +363,12 @@ func (a *Actions) Install(ctx context.Context, packages []string, apply bool) (*
 		fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
 	)
 
-	if apply {
-		err = a.applyChange(ctx, packages, true)
-		if err != nil {
-			return nil, err
+	if lib.Env.IsAtomic {
+		messageAnswer += lib.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
+		errSave := a.saveChange(packagesInstall, packagesRemove)
+		if errSave != nil {
+			return nil, errSave
 		}
-
-		messageAnswer += lib.T_(". The system image has been changed.")
-	}
-
-	if !apply && lib.Env.IsAtomic {
-		messageAnswer += lib.T_(". The system image has not been changed! To apply changes, you need to run with the -a flag.")
 	}
 
 	resp := reply.APIResponse{
@@ -750,9 +747,45 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
+	err = a.serviceTemporaryConfig.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
+	}
+
+	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
+		reply.StopSpinnerForDialog()
+		// Показываем диалог выбора пакетов
+		result, errDialog := _package.NewPackageSelectionDialog(
+			a.serviceTemporaryConfig.Config.Packages.Install,
+			a.serviceTemporaryConfig.Config.Packages.Remove,
+		)
+		if errDialog != nil {
+			return nil, errDialog
+		}
+
+		if result.Canceled {
+			errDialog = errors.New(lib.T_("Cancel dialog"))
+			return nil, errDialog
+		}
+
+		reply.CreateSpinner()
+		for _, pkg := range result.InstallPackages {
+			err = a.serviceHostConfig.AddInstallPackage(pkg)
+			if err != nil {
+				return nil, err
+			}
+		}
+		for _, pkg := range result.RemovePackages {
+			err = a.serviceHostConfig.AddRemovePackage(pkg)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	err = a.serviceHostConfig.GenerateDockerfile()
@@ -769,6 +802,8 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	_ = a.serviceTemporaryConfig.DeleteFile()
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
@@ -828,61 +863,39 @@ func (a *Actions) checkRoot() error {
 	return nil
 }
 
-// applyChange применяет изменения к образу системы
-func (a *Actions) applyChange(ctx context.Context, packages []string, isInstall bool) error {
+// saveChange применяет изменения к образу системы
+func (a *Actions) saveChange(packagesInstall []string, packagesRemove []string) error {
 	if !lib.Env.IsAtomic {
 		return errors.New(lib.T_("This option is only available for an atomic system"))
 	}
 
-	err := a.serviceHostConfig.LoadConfig()
-	if err != nil {
+	if err := a.serviceTemporaryConfig.LoadConfig(); err != nil {
 		return err
 	}
 
-	for _, pkg := range packages {
-		if len(pkg) == 0 {
-			continue
-		}
-
-		originalPkg := pkg
-		canonicalPkg := pkg
-
-		if _, errFull := a.serviceAptDatabase.GetPackageByName(ctx, canonicalPkg); errFull != nil {
-			for len(canonicalPkg) > 0 && (canonicalPkg[len(canonicalPkg)-1] == '+' || canonicalPkg[len(canonicalPkg)-1] == '-') {
-				canonicalPkg = canonicalPkg[:len(canonicalPkg)-1]
-				if _, errTmp := a.serviceAptDatabase.GetPackageByName(ctx, canonicalPkg); errTmp == nil {
-					break
+	// Вспомогательная функция для обработки списка пакетов
+	processPackages := func(packages []string, addFunc func(string) error) error {
+		for _, pkg := range packages {
+			if pkg = strings.TrimSpace(pkg); pkg != "" {
+				if err := addFunc(pkg); err != nil {
+					return err
 				}
 			}
 		}
-
-		if originalPkg[len(originalPkg)-1] == '+' {
-			err = a.serviceHostConfig.AddInstallPackage(canonicalPkg)
-		} else if originalPkg[len(originalPkg)-1] == '-' {
-			err = a.serviceHostConfig.AddRemovePackage(canonicalPkg)
-		} else {
-			if isInstall {
-				err = a.serviceHostConfig.AddInstallPackage(canonicalPkg)
-			} else {
-				err = a.serviceHostConfig.AddRemovePackage(canonicalPkg)
-			}
-		}
-		if err != nil {
-			return err
-		}
+		return nil
 	}
 
-	err = a.serviceHostConfig.GenerateDockerfile()
-	if err != nil {
+	// Обрабатываем пакеты на установку
+	if err := processPackages(packagesInstall, a.serviceTemporaryConfig.AddInstallPackage); err != nil {
 		return err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, false, false)
-	if err != nil {
+	// Обрабатываем пакеты на удаление
+	if err := processPackages(packagesRemove, a.serviceTemporaryConfig.AddRemovePackage); err != nil {
 		return err
 	}
 
-	return nil
+	return a.serviceTemporaryConfig.SaveConfig()
 }
 
 // validateDB проверяет, существует ли база данных
