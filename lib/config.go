@@ -57,6 +57,7 @@ type Environment struct {
 	Format         string
 	IsAtomic       bool
 	PathLocales    string
+	Version        string
 }
 
 var Env Environment
@@ -73,6 +74,7 @@ var (
 	BuildPathDBSQLSystem string
 	// BuildPathImageFile BuildPathDBKV        string
 	BuildPathImageFile string
+	BuildVersion string
 )
 
 func InitConfig() error {
@@ -115,6 +117,9 @@ func InitConfig() error {
 	}
 	if BuildPathImageFile != "" {
 		Env.PathImageFile = BuildPathImageFile
+	}
+	if BuildVersion != "" {
+		Env.Version = BuildVersion
 	}
 
 	// User's files

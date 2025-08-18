@@ -107,6 +107,7 @@ func main() {
 	rootCommand := &cli.Command{
 		Name:  "apm",
 		Usage: "Atomic Package Manager",
+		Version: lib.Env.Version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
