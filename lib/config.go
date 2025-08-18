@@ -165,7 +165,7 @@ func InitConfig() error {
 	}
 
 	if _, errAtomic := os.Stat("/usr/bin/bootc"); os.IsNotExist(errAtomic) {
-		Env.IsAtomic = true
+		Env.IsAtomic = false
 	} else {
 		Env.IsAtomic = true
 	}
