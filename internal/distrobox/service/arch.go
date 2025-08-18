@@ -144,22 +144,44 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 // GetPathByPackageName возвращает список путей для файла, принадлежащего указанному пакету,
 // используя команду pacman -Ql и фильтрацию по filePath.
 func (p *ArchProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
+	parseOutput := func(output string) []string {
+		lines := strings.Split(output, "\n")
+		var paths []string
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
+				parts := strings.Fields(trimmed)
+				if len(parts) > 1 {
+					paths = append(paths, parts[1])
+				}
+			}
+		}
+		return paths
+	}
+
 	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Command execution error: %v, stderr: %s"), err, stderr)
+		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
-	lines := strings.Split(stdout, "\n")
-	var paths []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
-			parts := strings.Fields(trimmed)
-			if len(parts) > 1 {
-				paths = append(paths, parts[1])
-			}
+
+	paths := parseOutput(stdout)
+	if len(paths) == 0 {
+		fallbackCommand := fmt.Sprintf("%s distrobox enter %s -- pacman -Qq | grep '^%s' | xargs pacman -Ql | grep '%s' | sort",
+			lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
+		fallbackStdout, fallbackStderr, fallbackErr := helper.RunCommand(ctx, fallbackCommand)
+		if fallbackErr != nil {
+			lib.Log.Debugf(lib.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
+			return paths, nil
+		}
+
+		fallbackPaths := parseOutput(fallbackStdout)
+		if len(fallbackPaths) > 0 {
+			lib.Log.Debugf(lib.T_("Fallback search found %d files"), len(fallbackPaths))
+			return fallbackPaths, nil
 		}
 	}
+
 	return paths, nil
 }
 
