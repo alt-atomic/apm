@@ -274,7 +274,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		packageInfo, _ = a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	}
 	if export && !packageInfo.Package.Exporting {
-		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
+		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.DesktopPaths, packageInfo.ConsolePaths, false)
 		if errExport != nil {
 			return nil, errExport
 		}
@@ -317,10 +317,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 	}
 
 	if packageInfo.Package.Exporting {
-		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
-		if errExport != nil {
-			return nil, errExport
-		}
+		_ = a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.DesktopPaths, packageInfo.ConsolePaths, true)
 		packageInfo.Package.Exporting = false
 		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", false)
 	}

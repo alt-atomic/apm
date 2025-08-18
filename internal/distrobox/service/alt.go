@@ -207,72 +207,73 @@ func (p *AltProvider) getPackageDependencies(ctx context.Context, containerInfo 
 
 // GetPathByPackageName возвращает список путей для файла пакета, найденных через rpm -ql.
 // Теперь также ищет в зависимостях пакета.
-func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
-	var allPaths []string
-	processedPackages := make(map[string]bool)
-
-	// Функция для поиска файлов в конкретном пакете
-	searchInPackage := func(pkgName string) []string {
-		if processedPackages[pkgName] {
-			return []string{}
-		}
-		processedPackages[pkgName] = true
-
-		command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, pkgName, filePath)
-		stdout, stderr, err := helper.RunCommand(ctx, command)
-		if err != nil {
-			lib.Log.Debugf(lib.T_("Command execution error for package %s: %s %s"), pkgName, stderr, err.Error())
-			return []string{}
-		}
-
-		var paths []string
-		lines := strings.Split(stdout, "\n")
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
-				paths = append(paths, trimmed)
-			}
-		}
-		return paths
-	}
-
-	// Сначала ищем в основном пакете
-	paths := searchInPackage(packageName)
-	allPaths = append(allPaths, paths...)
-
-	// Получаем зависимости и ищем в них
-	dependencies, err := p.getPackageDependencies(ctx, containerInfo, packageName)
-	if err != nil {
-		lib.Log.Debugf(lib.T_("Failed to get dependencies for package %s: %s"), packageName, err.Error())
-	} else {
-		for _, depName := range dependencies {
-			depPaths := searchInPackage(depName)
-			allPaths = append(allPaths, depPaths...)
-		}
-	}
-
-	return allPaths, nil
-}
-
-// GetPathByPackageName возвращает список путей для файла пакета, найденных через rpm -ql.
 //func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
-//	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
-//	stdout, stderr, err := helper.RunCommand(ctx, command)
-//	if err != nil {
-//		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
-//		return []string{}, err
+//	var allPaths []string
+//	processedPackages := make(map[string]bool)
+//
+//	// Функция для поиска файлов в конкретном пакете
+//	searchInPackage := func(pkgName string) []string {
+//		if processedPackages[pkgName] {
+//			return []string{}
+//		}
+//		processedPackages[pkgName] = true
+//
+//		command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, pkgName, filePath)
+//		fmt.Println(command)
+//		stdout, stderr, err := helper.RunCommand(ctx, command)
+//		if err != nil {
+//			lib.Log.Debugf(lib.T_("Command execution error for package %s: %s %s"), pkgName, stderr, err.Error())
+//			return []string{}
+//		}
+//
+//		var paths []string
+//		lines := strings.Split(stdout, "\n")
+//		for _, line := range lines {
+//			trimmed := strings.TrimSpace(line)
+//			if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
+//				paths = append(paths, trimmed)
+//			}
+//		}
+//		return paths
 //	}
 //
-//	lines := strings.Split(stdout, "\n")
-//	var paths []string
-//	for _, line := range lines {
-//		trimmed := strings.TrimSpace(line)
-//		if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
-//			paths = append(paths, trimmed)
+//	// Сначала ищем в основном пакете
+//	paths := searchInPackage(packageName)
+//	allPaths = append(allPaths, paths...)
+//
+//	// Получаем зависимости и ищем в них
+//	dependencies, err := p.getPackageDependencies(ctx, containerInfo, packageName)
+//	if err != nil {
+//		lib.Log.Debugf(lib.T_("Failed to get dependencies for package %s: %s"), packageName, err.Error())
+//	} else {
+//		for _, depName := range dependencies {
+//			depPaths := searchInPackage(depName)
+//			allPaths = append(allPaths, depPaths...)
 //		}
 //	}
-//	return paths, nil
+//
+//	return allPaths, nil
 //}
+
+// GetPathByPackageName возвращает список путей для файла пакета, найденных через rpm -ql.
+func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
+	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
+	stdout, stderr, err := helper.RunCommand(ctx, command)
+	if err != nil {
+		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
+		return []string{}, err
+	}
+
+	lines := strings.Split(stdout, "\n")
+	var paths []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
+			paths = append(paths, trimmed)
+		}
+	}
+	return paths, nil
+}
 
 // GetPackageOwner определяет пакет-владельца файла через rpm -qf.
 func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
