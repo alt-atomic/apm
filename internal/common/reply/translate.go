@@ -9,6 +9,10 @@ func TranslateKey(key string) string {
 	switch key {
 	case "aliases":
 		return lib.T_("Aliases")
+	case "desktopPaths":
+		return lib.T_("Desktop Paths")
+	case "consolePaths":
+		return lib.T_("Console Paths")
 	case "architecture":
 		return lib.T_("Architecture")
 	case "result":
