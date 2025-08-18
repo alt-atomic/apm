@@ -9,16 +9,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-18 18:50+0600\n"
-"PO-Revision-Date: 2025-08-15 18:15+0600\n"
+"POT-Creation-Date: 2025-08-19 04:51+0600\n"
+"PO-Revision-Date: 2025-08-19 04:58+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 48.0\n"
 
 #: internal/common/appstream/swcat.go:123
@@ -970,265 +970,273 @@ msgid "Aliases"
 msgstr "Псевдонимы"
 
 #: internal/common/reply/translate.go:13
+msgid "Desktop Paths"
+msgstr "Пути приложений"
+
+#: internal/common/reply/translate.go:15
+msgid "Console Paths"
+msgstr "Консольные пути"
+
+#: internal/common/reply/translate.go:17
 msgid "Architecture"
 msgstr "Архитектура"
 
-#: internal/common/reply/translate.go:15
+#: internal/common/reply/translate.go:19
 msgid "Result"
 msgstr "Результат"
 
-#: internal/common/reply/translate.go:17
+#: internal/common/reply/translate.go:21
 msgid "Application Information"
 msgstr "Информация о приложении"
 
-#: internal/common/reply/translate.go:19 internal/system/package/dialog.go:374
+#: internal/common/reply/translate.go:23 internal/system/package/dialog.go:374
 msgid "Downloaded Size"
 msgstr "Размер при загрузке"
 
-#: internal/common/reply/translate.go:21 internal/common/reply/translate.go:67
+#: internal/common/reply/translate.go:25 internal/common/reply/translate.go:71
 #: internal/system/package/dialog.go:375
 msgid "Installed Size"
 msgstr "Размер при установке"
 
-#: internal/common/reply/translate.go:23
+#: internal/common/reply/translate.go:27
 msgid "Package"
 msgstr "Пакет"
 
-#: internal/common/reply/translate.go:25
+#: internal/common/reply/translate.go:29
 msgid "This Application"
 msgstr "Это приложение"
 
-#: internal/common/reply/translate.go:27
+#: internal/common/reply/translate.go:31
 msgid "Type Package"
 msgstr "Тип пакета"
 
-#: internal/common/reply/translate.go:29
+#: internal/common/reply/translate.go:33
 msgid "Count"
 msgstr "Количество"
 
-#: internal/common/reply/translate.go:31
+#: internal/common/reply/translate.go:35
 msgid "Console Application"
 msgstr "Консольная утилита"
 
-#: internal/common/reply/translate.go:33
+#: internal/common/reply/translate.go:37
 msgid "Package Information"
 msgstr "Информация о пакете"
 
 #. Резервируем место для заголовка, подсказок и кнопок
 #. Создаем панели
-#: internal/common/reply/translate.go:35 internal/system/package/dialog.go:65
+#: internal/common/reply/translate.go:39 internal/system/package/dialog.go:65
 #: internal/system/package/dialog.go:94
 #: internal/system/package/dialog_image.go:217
 msgid "Install"
 msgstr "Установить"
 
-#: internal/common/reply/translate.go:37
+#: internal/common/reply/translate.go:41
 msgid "Storage Type"
 msgstr "Тип хранилища"
 
-#: internal/common/reply/translate.go:39 internal/common/reply/translate.go:91
+#: internal/common/reply/translate.go:43 internal/common/reply/translate.go:95
 msgid "Date"
 msgstr "Дата"
 
-#: internal/common/reply/translate.go:41
+#: internal/common/reply/translate.go:45
 msgid "Image Digest"
 msgstr "Дайджест образа"
 
-#: internal/common/reply/translate.go:43
+#: internal/common/reply/translate.go:47
 msgid "Distribution"
 msgstr "Дистрибутив"
 
-#: internal/common/reply/translate.go:45
+#: internal/common/reply/translate.go:49
 msgid "Container"
 msgstr "Контейнер"
 
-#: internal/common/reply/translate.go:47 internal/system/package/dialog.go:325
+#: internal/common/reply/translate.go:51 internal/system/package/dialog.go:325
 msgid "Name"
 msgstr "Название"
 
-#: internal/common/reply/translate.go:49
+#: internal/common/reply/translate.go:53
 msgid "Extra Installed"
 msgstr "Дополнительно установлено"
 
-#: internal/common/reply/translate.go:51
+#: internal/common/reply/translate.go:55
 msgid "Upgraded Count"
 msgstr "Количество обновлённых"
 
-#: internal/common/reply/translate.go:53
+#: internal/common/reply/translate.go:57
 msgid "Booted Image"
 msgstr "Загруженный образ"
 
-#: internal/common/reply/translate.go:55
+#: internal/common/reply/translate.go:59
 msgid "Removed Packages"
 msgstr "Удалённые пакеты"
 
-#: internal/common/reply/translate.go:57
+#: internal/common/reply/translate.go:61
 msgid "Provides"
 msgstr "Обеспечивает"
 
-#: internal/common/reply/translate.go:59
+#: internal/common/reply/translate.go:63
 msgid "Providers"
 msgstr "Поставщики"
 
-#: internal/common/reply/translate.go:61
+#: internal/common/reply/translate.go:65
 msgid "Version"
 msgstr "Версия"
 
-#: internal/common/reply/translate.go:63
+#: internal/common/reply/translate.go:67
 msgid "History"
 msgstr "История"
 
-#: internal/common/reply/translate.go:65 internal/system/package/dialog.go:349
+#: internal/common/reply/translate.go:69 internal/system/package/dialog.go:349
 msgid "Dependencies"
 msgstr "Зависимости"
 
-#: internal/common/reply/translate.go:69
+#: internal/common/reply/translate.go:73
 msgid "Removed Count"
 msgstr "Количество удалённых"
 
-#: internal/common/reply/translate.go:71
+#: internal/common/reply/translate.go:75
 msgid "Upgraded Packages"
 msgstr "Обновлённые пакеты"
 
-#: internal/common/reply/translate.go:73
+#: internal/common/reply/translate.go:77
 msgid "Package Name"
 msgstr "Имя пакета"
 
-#: internal/common/reply/translate.go:75
+#: internal/common/reply/translate.go:79
 msgid "Image"
 msgstr "Образ"
 
-#: internal/common/reply/translate.go:77
+#: internal/common/reply/translate.go:81
 msgid "Commands"
 msgstr "Команды"
 
-#: internal/common/reply/translate.go:79 internal/system/package/dialog.go:328
+#: internal/common/reply/translate.go:83 internal/system/package/dialog.go:328
 msgid "Maintainer"
 msgstr "Сопровождающий"
 
-#: internal/common/reply/translate.go:81
+#: internal/common/reply/translate.go:85
 msgid "Installed Version"
 msgstr "Установленная версия"
 
-#: internal/common/reply/translate.go:83 internal/system/package/dialog.go:67
+#: internal/common/reply/translate.go:87 internal/system/package/dialog.go:67
 #: internal/system/package/dialog.go:94
 #: internal/system/package/dialog_image.go:218
 msgid "Remove"
 msgstr "Удалить"
 
-#: internal/common/reply/translate.go:85
+#: internal/common/reply/translate.go:89
 msgid "Containers"
 msgstr "Контейнеры"
 
-#: internal/common/reply/translate.go:87
+#: internal/common/reply/translate.go:91
 msgid "Paths"
 msgstr "Пути"
 
-#: internal/common/reply/translate.go:89
+#: internal/common/reply/translate.go:93
 msgid "Description"
 msgstr "Описание"
 
-#: internal/common/reply/translate.go:93
+#: internal/common/reply/translate.go:97
 msgid "Newly Installed Count"
 msgstr "Количество свежеустановленных"
 
-#: internal/common/reply/translate.go:95
+#: internal/common/reply/translate.go:99
 msgid "Active"
 msgstr "Активно"
 
-#: internal/common/reply/translate.go:97
+#: internal/common/reply/translate.go:101
 msgid "Information"
 msgstr "Информация"
 
-#: internal/common/reply/translate.go:99
+#: internal/common/reply/translate.go:103
 msgid "Total Count"
 msgstr "Общее количество"
 
-#: internal/common/reply/translate.go:101 internal/system/package/dialog.go:329
+#: internal/common/reply/translate.go:105 internal/system/package/dialog.go:329
 msgid "Installed"
 msgstr "Установлено"
 
-#: internal/common/reply/translate.go:103
+#: internal/common/reply/translate.go:107
 msgid "Package Manager"
 msgstr "Пакетный менеджер"
 
-#: internal/common/reply/translate.go:105
+#: internal/common/reply/translate.go:109
 msgid "Last Changelog"
 msgstr "Последние изменения"
 
-#: internal/common/reply/translate.go:107
+#: internal/common/reply/translate.go:111
 msgid "Section"
 msgstr "Секция"
 
-#: internal/common/reply/translate.go:109
+#: internal/common/reply/translate.go:113
 msgid "Specification"
 msgstr "Спецификация"
 
-#: internal/common/reply/translate.go:111
+#: internal/common/reply/translate.go:115
 msgid "Booted"
 msgstr "Загружено"
 
-#: internal/common/reply/translate.go:113
+#: internal/common/reply/translate.go:117
 msgid "Staged"
 msgstr "Зафиксированно"
 
-#: internal/common/reply/translate.go:115 internal/system/package/dialog.go:346
+#: internal/common/reply/translate.go:119 internal/system/package/dialog.go:346
 msgid "Size"
 msgstr "Размер"
 
-#: internal/common/reply/translate.go:117
+#: internal/common/reply/translate.go:121
 msgid "Newly Installed Packages"
 msgstr "Свежеустановленные пакеты"
 
-#: internal/common/reply/translate.go:119
+#: internal/common/reply/translate.go:123
 msgid "Not Upgraded Count"
 msgstr "Количество не обновлённых"
 
-#: internal/common/reply/translate.go:121
+#: internal/common/reply/translate.go:125
 msgid "Container Name"
 msgstr "Имя контейнера"
 
-#: internal/common/reply/translate.go:123
+#: internal/common/reply/translate.go:127
 msgid "Configuration"
 msgstr "Конфигурация"
 
-#: internal/common/reply/translate.go:125
+#: internal/common/reply/translate.go:129
 msgid "Exporting"
 msgstr "Экспортировано"
 
-#: internal/common/reply/translate.go:127
+#: internal/common/reply/translate.go:131
 msgid "Status"
 msgstr "Статус"
 
-#: internal/common/reply/translate.go:129
+#: internal/common/reply/translate.go:133
 msgid "Image Date"
 msgstr "Дата образа"
 
-#: internal/common/reply/translate.go:131
+#: internal/common/reply/translate.go:135
 msgid "Packages"
 msgstr "Пакеты"
 
-#: internal/common/reply/translate.go:133
+#: internal/common/reply/translate.go:137
 msgid "Filename"
 msgstr "Имя файла"
 
-#: internal/common/reply/translate.go:135
+#: internal/common/reply/translate.go:139
 msgid "Container Information"
 msgstr "Информация о контейнере"
 
-#: internal/common/reply/translate.go:137
+#: internal/common/reply/translate.go:141
 msgid "Image Name"
 msgstr "Имя образа"
 
-#: internal/common/reply/translate.go:139
+#: internal/common/reply/translate.go:143
 msgid "Transport"
 msgstr "Транспорт"
 
-#: internal/common/reply/translate.go:141
+#: internal/common/reply/translate.go:145
 msgid "Pinned"
 msgstr "Закреплено"
 
-#: internal/common/reply/translate.go:143
+#: internal/common/reply/translate.go:147
 msgid "List"
 msgstr "Список"
 
@@ -1262,42 +1270,42 @@ msgstr[2] "Найдено %d записей"
 msgid "Package %s installed"
 msgstr "Пакет %s установлен"
 
-#: internal/distrobox/actions.go:339
+#: internal/distrobox/actions.go:336
 #, c-format
 msgid "Package %s removed"
 msgstr "Пакет %s удалён"
 
-#: internal/distrobox/actions.go:380
+#: internal/distrobox/actions.go:377
 msgid "You must specify the image link (--image)"
 msgstr "Необходимо указать ссылку на образ (--image)"
 
-#: internal/distrobox/actions.go:385 internal/distrobox/actions.go:419
+#: internal/distrobox/actions.go:382 internal/distrobox/actions.go:416
 msgid "You must specify the container name (--name)"
 msgstr "Необходимо указать имя контейнера (--name)"
 
-#: internal/distrobox/actions.go:401
+#: internal/distrobox/actions.go:398
 #, c-format
 msgid "Container %s successfully created"
 msgstr "Контейнер %s успешно создан"
 
-#: internal/distrobox/actions.go:430
+#: internal/distrobox/actions.go:427
 #, c-format
 msgid "Container %s successfully deleted"
 msgstr "Контейнер %s успешно удалён"
 
-#: internal/distrobox/actions.go:438
+#: internal/distrobox/actions.go:435
 msgid "Error deleting container: %v"
 msgstr "Ошибка удаления контейнера: %s"
 
-#: internal/distrobox/actions.go:516
+#: internal/distrobox/actions.go:513
 msgid "You must specify the container name"
 msgstr "Необходимо указать имя контейнера"
 
-#: internal/distrobox/actions.go:524
+#: internal/distrobox/actions.go:521
 msgid "Failed to delete container records: %w"
 msgstr "Не удалось удалить записи контейнера: %w"
 
-#: internal/distrobox/actions.go:548 main.go:174
+#: internal/distrobox/actions.go:545 main.go:174
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -1421,7 +1429,8 @@ msgstr "Вызов обработчика для исполнения коман
 msgid "Remove container"
 msgstr "Удалить контейнер"
 
-#: internal/distrobox/dbus.go:114 internal/system/dbus.go:125
+#: internal/distrobox/dbus.go:114 internal/system/dbus.go:126
+#: internal/system/dbus.go:364
 msgid "Failed to parse JSON: %w"
 msgstr "Не удалось спарсить JSON: %w"
 
@@ -1444,17 +1453,27 @@ msgstr "Не удалось удалить пакет %s: %v, ошибка: %s"
 msgid "Failed to install package %s: %v, stderr: %s"
 msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
 
-#: internal/distrobox/service/alt.go:186 internal/distrobox/service/alt.go:206
+#: internal/distrobox/service/alt.go:198 internal/distrobox/service/alt.go:226
 #: internal/distrobox/service/ubuntu.go:75
 #, c-format
 msgid "Command execution error: %s %s"
 msgstr "Ошибка исполнения команды: %s %s"
 
-#: internal/distrobox/service/alt.go:220
+#: internal/distrobox/service/alt.go:207
+#, c-format
+msgid "Fallback command execution error: %s %s"
+msgstr "Ошибка выполнения резервной команды: %s %s"
+
+#: internal/distrobox/service/alt.go:213
+#, c-format
+msgid "Fallback search found %d files"
+msgstr "Резервный поиск нашел %d файлов"
+
+#: internal/distrobox/service/alt.go:240
 msgid "Error executing command rpm -qia: %w"
 msgstr "Ошибка исполнения команды rpm -qia: %w"
 
-#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:660
+#: internal/distrobox/service/alt.go:256 internal/system/package/actions.go:660
 msgid "Error scanning rpm output: %w"
 msgstr "Ошибка сканирования вывода rpm"
 
@@ -1531,87 +1550,87 @@ msgstr "Некорректное поле фильтра: %s. Доступные
 msgid "Failed to retrieve the list of containers: "
 msgstr "Не удалось извлечь список контейнеров: "
 
-#: internal/distrobox/service/distrobox.go:155
+#: internal/distrobox/service/distrobox.go:154
 msgid "Error executing command %q: %v"
 msgstr "Ошибка исполнения команды %q: %v"
 
-#: internal/distrobox/service/distrobox.go:180
+#: internal/distrobox/service/distrobox.go:179
 msgid "Error getting OS information for container %s: %v, stderr: %s"
 msgstr "Ошибка получения информации об ОС для контейнера %s: %v, ошибка: %s"
 
-#: internal/distrobox/service/distrobox.go:231
+#: internal/distrobox/service/distrobox.go:230
 msgid "Failed to get the list of containers: %v"
 msgstr "Не удалось получить список контейнеров: %v"
 
-#: internal/distrobox/service/distrobox.go:243
+#: internal/distrobox/service/distrobox.go:242
 #, c-format
 msgid "Container %s not found"
 msgstr "Контейнер %s не найден"
 
-#: internal/distrobox/service/distrobox.go:264
+#: internal/distrobox/service/distrobox.go:263
 #, c-format
 msgid "Container already exists: %s"
 msgstr "Контейнер уже существует: %s"
 
-#: internal/distrobox/service/distrobox.go:298
+#: internal/distrobox/service/distrobox.go:297
 msgid "Failed to create container %s: %v, stderr: %s"
 msgstr "Не удалось создать контейнер %s: %v, ошибка: %s"
 
-#: internal/distrobox/service/distrobox.go:299
+#: internal/distrobox/service/distrobox.go:298
 msgid "Failed to create container %s: %v"
 msgstr "Не удалось создать контейнер %s: %v"
 
-#: internal/distrobox/service/distrobox.go:322
+#: internal/distrobox/service/distrobox.go:321
 msgid "Failed to delete container %s: %v, stderr: %s"
 msgstr "Не удалось удалить контейнер %s: %v, ошибка %s"
 
-#: internal/distrobox/service/provider.go:93
+#: internal/distrobox/service/provider.go:94
 msgid "This container is not supported: "
 msgstr "Этот контейнер не поддерживается: "
 
-#: internal/distrobox/service/provider.go:164
+#: internal/distrobox/service/provider.go:165
 #, c-format
 msgid "Failed to retrieve package information: %s"
 msgstr "Не удалось извлечь информацию о пакете: %s"
 
-#: internal/distrobox/service/provider.go:170
+#: internal/distrobox/service/provider.go:171
 msgid "Error retrieving desktop file path: %v"
 msgstr "Ошибка извлечения пути desktop-файла: %v"
 
-#: internal/distrobox/service/provider.go:184
+#: internal/distrobox/service/provider.go:178
 msgid "Error retrieving console path: %v"
 msgstr "Ошибка извлечения пути консоли: %s"
 
-#: internal/distrobox/service/provider.go:219
+#: internal/distrobox/service/provider.go:218
 msgid "A container must be specified for the forced update operation"
 msgstr ""
 "В контейнере должен быть указан для выполнения операцию принудительного "
 "обновления"
 
-#: internal/distrobox/service/provider.go:276
+#: internal/distrobox/service/provider.go:275
 msgid "Error retrieving desktop applications for container %s: %v"
 msgstr "Ошибка извлечения desktop-файла приложений для контейнера %s: %v"
 
-#: internal/distrobox/service/provider.go:279
+#: internal/distrobox/service/provider.go:278
 msgid "Error retrieving console applications for container %s: %v"
 msgstr "Ошибка извлечения консольных утилит для контейнера %s: %v"
 
-#: internal/distrobox/service/provider.go:304
-#: internal/distrobox/service/provider.go:348
+#: internal/distrobox/service/provider.go:303
+#: internal/distrobox/service/provider.go:347
 msgid "Failed to retrieve home directory: %v"
 msgstr "Не удалось извлечь домашнюю директорию: %v"
 
-#: internal/distrobox/service/provider.go:310
-#: internal/distrobox/service/provider.go:354
+#: internal/distrobox/service/provider.go:309
+#: internal/distrobox/service/provider.go:353
 msgid "Error reading directory %s: %v"
 msgstr "Ошибка чтения директории %s: %v"
 
-#: internal/distrobox/service/provider.go:325
-#: internal/distrobox/service/provider.go:373
+#: internal/distrobox/service/provider.go:324
+#: internal/distrobox/service/provider.go:372
 msgid "Error retrieving owner for file %s: %v"
 msgstr "Ошибка извлечения владельца для файла %s: %v"
 
-#: internal/distrobox/service/provider.go:366
+#: internal/distrobox/service/provider.go:365
 msgid "Error processing file %s: %v"
 msgstr "Ошибка обработки файла %s: %v"
 
@@ -1659,18 +1678,16 @@ msgstr[1] "%s успешно удалены"
 msgstr[2] "%s успешно удалены"
 
 #: internal/system/actions.go:261 internal/system/actions.go:367
-#, fuzzy
 msgid ""
 ". The system image has not been changed. To apply the changes, run: apm s "
 "image apply"
 msgstr ""
-". Образ системы не был изменён! Для применения изменения выполните с флагом -"
-"a."
+". Образ системы не был изменён! Для применения изменений выполните: apm s "
+"image apply"
 
 #: internal/system/actions.go:292
-#, fuzzy
 msgid "You must specify at least one package"
-msgstr "Необходимо указать имя контейнера"
+msgstr "Необходимо выбрать хотя бы один пакет"
 
 #: internal/system/actions.go:307 internal/system/actions.go:438
 msgid "The operation will not make any changes"
@@ -1749,22 +1766,22 @@ msgstr "Команда успешно выполнена"
 msgid "Changes applied successfully. A reboot is required"
 msgstr "Изменения были успешно применены. Необходима перезагрука"
 
-#: internal/system/actions.go:853 main.go:230
+#: internal/system/actions.go:904 main.go:230
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 "Для выполнения этого действия необходимо повышенные прав. Пожалуйста, "
 "используйте sudo или su"
 
-#: internal/system/actions.go:869
+#: internal/system/actions.go:920
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: internal/system/actions.go:949
+#: internal/system/actions.go:1000
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/system/actions.go:956
+#: internal/system/actions.go:1007
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
@@ -1839,9 +1856,8 @@ msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
 #: internal/system/package/actions.go:263
-#, fuzzy
 msgid "Downloading packages"
-msgstr "Загружается: %d%%"
+msgstr "Загрузка пакетов"
 
 #: internal/system/package/actions.go:272
 msgid "All packages downloaded"
@@ -1964,14 +1980,12 @@ msgstr[1] "Информация о пакетах:"
 msgstr[2] "Информация о пакетах:"
 
 #: internal/system/package/dialog.go:301
-#, fuzzy
 msgid "Package list:"
-msgstr "Пакеты"
+msgstr "Список пакетов:"
 
 #: internal/system/package/dialog.go:307
-#, fuzzy
 msgid "[Installed]"
-msgstr "Установлено"
+msgstr "[Установлено]"
 
 #: internal/system/package/dialog.go:318
 #, c-format
@@ -2056,23 +2070,21 @@ msgstr "и другие"
 #: internal/system/package/dialog_image.go:80
 #: internal/system/package/dialog_image.go:145
 msgid "Apply"
-msgstr ""
+msgstr "Применить"
 
 #. Заголовок
 #: internal/system/package/dialog_image.go:210
-#, fuzzy
 msgid "Select packages to apply"
-msgstr "Список пакетов для установки"
+msgstr "Выберите пакеты для применения"
 
 #. Подсказки по клавишам
 #: internal/system/package/dialog_image.go:230
-#, fuzzy
 msgid ""
 "Navigation: ↑/↓ - move, ←/→/Tab - switch panel, Space - toggle, a - select "
 "all, n - none, Enter - apply, Esc/q - cancel"
 msgstr ""
-"Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - наверх/"
-"вниз, Enter - выбор, Esc/q - отмена"
+"Навигация: ↑/↓ - движение, ←/→/Tab - переключение, Space - выбор, a - "
+"выбрать всё, n - снять всё, Enter - применить, Esc/q - отмена"
 
 #: internal/system/package/dialog_image.go:251
 #, fuzzy
@@ -2080,9 +2092,8 @@ msgid "No packages"
 msgstr "Не найдено пакетов"
 
 #: internal/system/package/dialog_image.go:302
-#, fuzzy
 msgid "Action:"
-msgstr "Действие"
+msgstr "Действие:"
 
 #: internal/system/package/kernel.go:52 internal/system/package/kernel.go:65
 msgid "Package verification error: %v"

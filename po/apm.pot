@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-18 18:50+0600\n"
+"POT-Creation-Date: 2025-08-19 04:51+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -939,265 +939,273 @@ msgid "Aliases"
 msgstr ""
 
 #: internal/common/reply/translate.go:13
-msgid "Architecture"
+msgid "Desktop Paths"
 msgstr ""
 
 #: internal/common/reply/translate.go:15
-msgid "Result"
+msgid "Console Paths"
 msgstr ""
 
 #: internal/common/reply/translate.go:17
+msgid "Architecture"
+msgstr ""
+
+#: internal/common/reply/translate.go:19
+msgid "Result"
+msgstr ""
+
+#: internal/common/reply/translate.go:21
 msgid "Application Information"
 msgstr ""
 
-#: internal/common/reply/translate.go:19 internal/system/package/dialog.go:374
+#: internal/common/reply/translate.go:23 internal/system/package/dialog.go:374
 msgid "Downloaded Size"
 msgstr ""
 
-#: internal/common/reply/translate.go:21 internal/common/reply/translate.go:67
+#: internal/common/reply/translate.go:25 internal/common/reply/translate.go:71
 #: internal/system/package/dialog.go:375
 msgid "Installed Size"
 msgstr ""
 
-#: internal/common/reply/translate.go:23
+#: internal/common/reply/translate.go:27
 msgid "Package"
 msgstr ""
 
-#: internal/common/reply/translate.go:25
+#: internal/common/reply/translate.go:29
 msgid "This Application"
 msgstr ""
 
-#: internal/common/reply/translate.go:27
+#: internal/common/reply/translate.go:31
 msgid "Type Package"
 msgstr ""
 
-#: internal/common/reply/translate.go:29
+#: internal/common/reply/translate.go:33
 msgid "Count"
 msgstr ""
 
-#: internal/common/reply/translate.go:31
+#: internal/common/reply/translate.go:35
 msgid "Console Application"
 msgstr ""
 
-#: internal/common/reply/translate.go:33
+#: internal/common/reply/translate.go:37
 msgid "Package Information"
 msgstr ""
 
 #. Резервируем место для заголовка, подсказок и кнопок
 #. Создаем панели
-#: internal/common/reply/translate.go:35 internal/system/package/dialog.go:65
+#: internal/common/reply/translate.go:39 internal/system/package/dialog.go:65
 #: internal/system/package/dialog.go:94
 #: internal/system/package/dialog_image.go:217
 msgid "Install"
 msgstr ""
 
-#: internal/common/reply/translate.go:37
+#: internal/common/reply/translate.go:41
 msgid "Storage Type"
 msgstr ""
 
-#: internal/common/reply/translate.go:39 internal/common/reply/translate.go:91
+#: internal/common/reply/translate.go:43 internal/common/reply/translate.go:95
 msgid "Date"
 msgstr ""
 
-#: internal/common/reply/translate.go:41
+#: internal/common/reply/translate.go:45
 msgid "Image Digest"
 msgstr ""
 
-#: internal/common/reply/translate.go:43
+#: internal/common/reply/translate.go:47
 msgid "Distribution"
 msgstr ""
 
-#: internal/common/reply/translate.go:45
+#: internal/common/reply/translate.go:49
 msgid "Container"
 msgstr ""
 
-#: internal/common/reply/translate.go:47 internal/system/package/dialog.go:325
+#: internal/common/reply/translate.go:51 internal/system/package/dialog.go:325
 msgid "Name"
 msgstr ""
 
-#: internal/common/reply/translate.go:49
+#: internal/common/reply/translate.go:53
 msgid "Extra Installed"
 msgstr ""
 
-#: internal/common/reply/translate.go:51
+#: internal/common/reply/translate.go:55
 msgid "Upgraded Count"
 msgstr ""
 
-#: internal/common/reply/translate.go:53
+#: internal/common/reply/translate.go:57
 msgid "Booted Image"
 msgstr ""
 
-#: internal/common/reply/translate.go:55
+#: internal/common/reply/translate.go:59
 msgid "Removed Packages"
 msgstr ""
 
-#: internal/common/reply/translate.go:57
+#: internal/common/reply/translate.go:61
 msgid "Provides"
 msgstr ""
 
-#: internal/common/reply/translate.go:59
+#: internal/common/reply/translate.go:63
 msgid "Providers"
 msgstr ""
 
-#: internal/common/reply/translate.go:61
+#: internal/common/reply/translate.go:65
 msgid "Version"
 msgstr ""
 
-#: internal/common/reply/translate.go:63
+#: internal/common/reply/translate.go:67
 msgid "History"
 msgstr ""
 
-#: internal/common/reply/translate.go:65 internal/system/package/dialog.go:349
+#: internal/common/reply/translate.go:69 internal/system/package/dialog.go:349
 msgid "Dependencies"
 msgstr ""
 
-#: internal/common/reply/translate.go:69
+#: internal/common/reply/translate.go:73
 msgid "Removed Count"
 msgstr ""
 
-#: internal/common/reply/translate.go:71
+#: internal/common/reply/translate.go:75
 msgid "Upgraded Packages"
 msgstr ""
 
-#: internal/common/reply/translate.go:73
+#: internal/common/reply/translate.go:77
 msgid "Package Name"
 msgstr ""
 
-#: internal/common/reply/translate.go:75
+#: internal/common/reply/translate.go:79
 msgid "Image"
 msgstr ""
 
-#: internal/common/reply/translate.go:77
+#: internal/common/reply/translate.go:81
 msgid "Commands"
 msgstr ""
 
-#: internal/common/reply/translate.go:79 internal/system/package/dialog.go:328
+#: internal/common/reply/translate.go:83 internal/system/package/dialog.go:328
 msgid "Maintainer"
 msgstr ""
 
-#: internal/common/reply/translate.go:81
+#: internal/common/reply/translate.go:85
 msgid "Installed Version"
 msgstr ""
 
-#: internal/common/reply/translate.go:83 internal/system/package/dialog.go:67
+#: internal/common/reply/translate.go:87 internal/system/package/dialog.go:67
 #: internal/system/package/dialog.go:94
 #: internal/system/package/dialog_image.go:218
 msgid "Remove"
 msgstr ""
 
-#: internal/common/reply/translate.go:85
+#: internal/common/reply/translate.go:89
 msgid "Containers"
 msgstr ""
 
-#: internal/common/reply/translate.go:87
+#: internal/common/reply/translate.go:91
 msgid "Paths"
 msgstr ""
 
-#: internal/common/reply/translate.go:89
+#: internal/common/reply/translate.go:93
 msgid "Description"
 msgstr ""
 
-#: internal/common/reply/translate.go:93
+#: internal/common/reply/translate.go:97
 msgid "Newly Installed Count"
 msgstr ""
 
-#: internal/common/reply/translate.go:95
+#: internal/common/reply/translate.go:99
 msgid "Active"
 msgstr ""
 
-#: internal/common/reply/translate.go:97
+#: internal/common/reply/translate.go:101
 msgid "Information"
 msgstr ""
 
-#: internal/common/reply/translate.go:99
+#: internal/common/reply/translate.go:103
 msgid "Total Count"
 msgstr ""
 
-#: internal/common/reply/translate.go:101 internal/system/package/dialog.go:329
+#: internal/common/reply/translate.go:105 internal/system/package/dialog.go:329
 msgid "Installed"
 msgstr ""
 
-#: internal/common/reply/translate.go:103
+#: internal/common/reply/translate.go:107
 msgid "Package Manager"
 msgstr ""
 
-#: internal/common/reply/translate.go:105
+#: internal/common/reply/translate.go:109
 msgid "Last Changelog"
 msgstr ""
 
-#: internal/common/reply/translate.go:107
+#: internal/common/reply/translate.go:111
 msgid "Section"
 msgstr ""
 
-#: internal/common/reply/translate.go:109
+#: internal/common/reply/translate.go:113
 msgid "Specification"
 msgstr ""
 
-#: internal/common/reply/translate.go:111
+#: internal/common/reply/translate.go:115
 msgid "Booted"
 msgstr ""
 
-#: internal/common/reply/translate.go:113
+#: internal/common/reply/translate.go:117
 msgid "Staged"
 msgstr ""
 
-#: internal/common/reply/translate.go:115 internal/system/package/dialog.go:346
+#: internal/common/reply/translate.go:119 internal/system/package/dialog.go:346
 msgid "Size"
 msgstr ""
 
-#: internal/common/reply/translate.go:117
+#: internal/common/reply/translate.go:121
 msgid "Newly Installed Packages"
 msgstr ""
 
-#: internal/common/reply/translate.go:119
+#: internal/common/reply/translate.go:123
 msgid "Not Upgraded Count"
 msgstr ""
 
-#: internal/common/reply/translate.go:121
+#: internal/common/reply/translate.go:125
 msgid "Container Name"
 msgstr ""
 
-#: internal/common/reply/translate.go:123
+#: internal/common/reply/translate.go:127
 msgid "Configuration"
 msgstr ""
 
-#: internal/common/reply/translate.go:125
+#: internal/common/reply/translate.go:129
 msgid "Exporting"
 msgstr ""
 
-#: internal/common/reply/translate.go:127
+#: internal/common/reply/translate.go:131
 msgid "Status"
 msgstr ""
 
-#: internal/common/reply/translate.go:129
+#: internal/common/reply/translate.go:133
 msgid "Image Date"
 msgstr ""
 
-#: internal/common/reply/translate.go:131
+#: internal/common/reply/translate.go:135
 msgid "Packages"
 msgstr ""
 
-#: internal/common/reply/translate.go:133
+#: internal/common/reply/translate.go:137
 msgid "Filename"
 msgstr ""
 
-#: internal/common/reply/translate.go:135
+#: internal/common/reply/translate.go:139
 msgid "Container Information"
 msgstr ""
 
-#: internal/common/reply/translate.go:137
+#: internal/common/reply/translate.go:141
 msgid "Image Name"
 msgstr ""
 
-#: internal/common/reply/translate.go:139
+#: internal/common/reply/translate.go:143
 msgid "Transport"
 msgstr ""
 
-#: internal/common/reply/translate.go:141
+#: internal/common/reply/translate.go:145
 msgid "Pinned"
 msgstr ""
 
-#: internal/common/reply/translate.go:143
+#: internal/common/reply/translate.go:147
 msgid "List"
 msgstr ""
 
@@ -1230,42 +1238,42 @@ msgstr[1] ""
 msgid "Package %s installed"
 msgstr ""
 
-#: internal/distrobox/actions.go:339
+#: internal/distrobox/actions.go:336
 #, c-format
 msgid "Package %s removed"
 msgstr ""
 
-#: internal/distrobox/actions.go:380
+#: internal/distrobox/actions.go:377
 msgid "You must specify the image link (--image)"
 msgstr ""
 
-#: internal/distrobox/actions.go:385 internal/distrobox/actions.go:419
+#: internal/distrobox/actions.go:382 internal/distrobox/actions.go:416
 msgid "You must specify the container name (--name)"
 msgstr ""
 
-#: internal/distrobox/actions.go:401
+#: internal/distrobox/actions.go:398
 #, c-format
 msgid "Container %s successfully created"
 msgstr ""
 
-#: internal/distrobox/actions.go:430
+#: internal/distrobox/actions.go:427
 #, c-format
 msgid "Container %s successfully deleted"
 msgstr ""
 
-#: internal/distrobox/actions.go:438
+#: internal/distrobox/actions.go:435
 msgid "Error deleting container: %v"
 msgstr ""
 
-#: internal/distrobox/actions.go:516
+#: internal/distrobox/actions.go:513
 msgid "You must specify the container name"
 msgstr ""
 
-#: internal/distrobox/actions.go:524
+#: internal/distrobox/actions.go:521
 msgid "Failed to delete container records: %w"
 msgstr ""
 
-#: internal/distrobox/actions.go:548 main.go:174
+#: internal/distrobox/actions.go:545 main.go:174
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -1385,7 +1393,8 @@ msgstr ""
 msgid "Remove container"
 msgstr ""
 
-#: internal/distrobox/dbus.go:114 internal/system/dbus.go:125
+#: internal/distrobox/dbus.go:114 internal/system/dbus.go:126
+#: internal/system/dbus.go:364
 msgid "Failed to parse JSON: %w"
 msgstr ""
 
@@ -1408,17 +1417,27 @@ msgstr ""
 msgid "Failed to install package %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:186 internal/distrobox/service/alt.go:206
+#: internal/distrobox/service/alt.go:198 internal/distrobox/service/alt.go:226
 #: internal/distrobox/service/ubuntu.go:75
 #, c-format
 msgid "Command execution error: %s %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:220
+#: internal/distrobox/service/alt.go:207
+#, c-format
+msgid "Fallback command execution error: %s %s"
+msgstr ""
+
+#: internal/distrobox/service/alt.go:213
+#, c-format
+msgid "Fallback search found %d files"
+msgstr ""
+
+#: internal/distrobox/service/alt.go:240
 msgid "Error executing command rpm -qia: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:236 internal/system/package/actions.go:660
+#: internal/distrobox/service/alt.go:256 internal/system/package/actions.go:660
 msgid "Error scanning rpm output: %w"
 msgstr ""
 
@@ -1492,85 +1511,85 @@ msgstr ""
 msgid "Failed to retrieve the list of containers: "
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:155
+#: internal/distrobox/service/distrobox.go:154
 msgid "Error executing command %q: %v"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:180
+#: internal/distrobox/service/distrobox.go:179
 msgid "Error getting OS information for container %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:231
+#: internal/distrobox/service/distrobox.go:230
 msgid "Failed to get the list of containers: %v"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:243
+#: internal/distrobox/service/distrobox.go:242
 #, c-format
 msgid "Container %s not found"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:264
+#: internal/distrobox/service/distrobox.go:263
 #, c-format
 msgid "Container already exists: %s"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:298
+#: internal/distrobox/service/distrobox.go:297
 msgid "Failed to create container %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:299
+#: internal/distrobox/service/distrobox.go:298
 msgid "Failed to create container %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:322
+#: internal/distrobox/service/distrobox.go:321
 msgid "Failed to delete container %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:93
+#: internal/distrobox/service/provider.go:94
 msgid "This container is not supported: "
 msgstr ""
 
-#: internal/distrobox/service/provider.go:164
+#: internal/distrobox/service/provider.go:165
 #, c-format
 msgid "Failed to retrieve package information: %s"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:170
+#: internal/distrobox/service/provider.go:171
 msgid "Error retrieving desktop file path: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:184
+#: internal/distrobox/service/provider.go:178
 msgid "Error retrieving console path: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:219
+#: internal/distrobox/service/provider.go:218
 msgid "A container must be specified for the forced update operation"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:276
+#: internal/distrobox/service/provider.go:275
 msgid "Error retrieving desktop applications for container %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:279
+#: internal/distrobox/service/provider.go:278
 msgid "Error retrieving console applications for container %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:304
-#: internal/distrobox/service/provider.go:348
+#: internal/distrobox/service/provider.go:303
+#: internal/distrobox/service/provider.go:347
 msgid "Failed to retrieve home directory: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:310
-#: internal/distrobox/service/provider.go:354
+#: internal/distrobox/service/provider.go:309
+#: internal/distrobox/service/provider.go:353
 msgid "Error reading directory %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:325
-#: internal/distrobox/service/provider.go:373
+#: internal/distrobox/service/provider.go:324
+#: internal/distrobox/service/provider.go:372
 msgid "Error retrieving owner for file %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:366
+#: internal/distrobox/service/provider.go:365
 msgid "Error processing file %s: %v"
 msgstr ""
 
@@ -1698,20 +1717,20 @@ msgstr ""
 msgid "Changes applied successfully. A reboot is required"
 msgstr ""
 
-#: internal/system/actions.go:853 main.go:230
+#: internal/system/actions.go:904 main.go:230
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 
-#: internal/system/actions.go:869
+#: internal/system/actions.go:920
 msgid "This option is only available for an atomic system"
 msgstr ""
 
-#: internal/system/actions.go:949
+#: internal/system/actions.go:1000
 msgid "Modified image. Configuration file: "
 msgstr ""
 
-#: internal/system/actions.go:956
+#: internal/system/actions.go:1007
 msgid "Cloud image without changes"
 msgstr ""
 
