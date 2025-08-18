@@ -30,13 +30,10 @@ func SetupHelpTemplates() {
 
 	// Overriding the "root" template (the equivalent of AppHelpTemplate)
 	cli.RootCommandHelpTemplate = fmt.Sprintf(`%s
-   {{template "helpNameTemplate" .}}
+   {{template "helpNameTemplate" .}} {{if .Version}}{{if not .HideVersion}}{{.Version}}{{end}}{{end}}{{if .Description}}
 
-%s
-   {{if .UsageText}}{{wrap .UsageText 3}}{{else}}{{.FullName}} [command [command options]]{{end}}{{if .Version}}{{if not .HideVersion}}
-
-%s
-   {{.Version}}{{end}}{{end}}{{if .Description}}
+%s 
+   {{if .UsageText}}{{wrap .UsageText 3}}{{else}}{{.FullName}} [command [command options]]{{end}}
 
 %s
    {{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
@@ -49,7 +46,6 @@ func SetupHelpTemplates() {
 `,
 		titleStyle.Render(lib.T_("Module:")),
 		titleStyle.Render(lib.T_("Usage:")),
-		titleStyle.Render(lib.T_("Version:")),
 		titleStyle.Render(lib.T_("Description:")),
 		titleStyle.Render(lib.T_("Commands:")),
 		titleStyle.Render(lib.T_("Options:")),
