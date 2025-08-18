@@ -847,6 +847,57 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 	return &resp, nil
 }
 
+// ImageGetConfig получить конфиг
+func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.serviceHostConfig.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := reply.APIResponse{
+		Data: map[string]interface{}{
+			"config": a.serviceHostConfig.Config,
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
+// ImageSaveConfig сохранить конфиг
+func (a *Actions) ImageSaveConfig(config service.Config) (*reply.APIResponse, error) {
+	err := a.checkRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.serviceHostConfig.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	a.serviceHostConfig.Config = &config
+
+	err = a.serviceHostConfig.SaveConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := reply.APIResponse{
+		Data: map[string]interface{}{
+			"config": a.serviceHostConfig.Config,
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
 // checkRoot проверяет, запущен ли установщик от имени root
 func (a *Actions) checkRoot() error {
 	if syscall.Geteuid() != 0 {

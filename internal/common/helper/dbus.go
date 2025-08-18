@@ -226,6 +226,15 @@ func GetSystemIntrospectXML() string {
       <arg direction="out" type="s" name="result"/>
     </method>
     
+    <method name="ImageGetConfig">
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="ImageSaveConfig">
+      <arg direction="in" type="s" name="config"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
     <method name="ImageHistory">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="in" type="s" name="imageName"/>

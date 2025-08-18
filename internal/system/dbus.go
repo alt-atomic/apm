@@ -19,6 +19,7 @@ package system
 import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/system/service"
 	"apm/lib"
 	"context"
 	"encoding/json"
@@ -333,6 +334,36 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageStatus(ctx)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// ImageGetConfig получить конфиг
+func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
+	resp, err := w.actions.ImageGetConfig()
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// ImageSaveConfig сохранить конфиг
+func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
+	configObject := service.Config{}
+	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
+		return "", dbus.MakeFailedError(fmt.Errorf(lib.T_("Failed to parse JSON: %w"), err))
+	}
+	resp, err := w.actions.ImageSaveConfig(configObject)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
