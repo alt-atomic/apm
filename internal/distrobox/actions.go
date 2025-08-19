@@ -278,8 +278,10 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		if errExport != nil {
 			return nil, errExport
 		}
-		packageInfo.Package.Exporting = true
-		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", true)
+		if len(packageInfo.DesktopPaths) > 0 || len(packageInfo.ConsolePaths) > 0 {
+			packageInfo.Package.Exporting = true
+			a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", true)
+		}
 	}
 
 	resp := reply.APIResponse{
