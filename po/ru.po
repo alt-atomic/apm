@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-19 04:51+0600\n"
+"POT-Creation-Date: 2025-08-20 21:05+0600\n"
 "PO-Revision-Date: 2025-08-19 04:58+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
@@ -1245,7 +1245,7 @@ msgid "Package list successfully updated"
 msgstr "Список пакетов успешно обновлён"
 
 #: internal/distrobox/actions.go:105 internal/distrobox/actions.go:145
-#: internal/distrobox/actions.go:259 internal/distrobox/actions.go:310
+#: internal/distrobox/actions.go:259 internal/distrobox/actions.go:312
 #: internal/system/actions.go:661
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
@@ -1257,7 +1257,7 @@ msgstr "Найден пакет"
 
 #: internal/distrobox/actions.go:154 internal/distrobox/actions.go:233
 #: internal/system/actions.go:589 internal/system/actions.go:674
-#: internal/system/actions.go:836
+#: internal/system/actions.go:816
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -1265,47 +1265,47 @@ msgstr[0] "Найдена %d запись"
 msgstr[1] "Найдено %d записи"
 msgstr[2] "Найдено %d записей"
 
-#: internal/distrobox/actions.go:287
+#: internal/distrobox/actions.go:289
 #, c-format
 msgid "Package %s installed"
 msgstr "Пакет %s установлен"
 
-#: internal/distrobox/actions.go:336
+#: internal/distrobox/actions.go:338
 #, c-format
 msgid "Package %s removed"
 msgstr "Пакет %s удалён"
 
-#: internal/distrobox/actions.go:377
+#: internal/distrobox/actions.go:379
 msgid "You must specify the image link (--image)"
 msgstr "Необходимо указать ссылку на образ (--image)"
 
-#: internal/distrobox/actions.go:382 internal/distrobox/actions.go:416
+#: internal/distrobox/actions.go:384 internal/distrobox/actions.go:418
 msgid "You must specify the container name (--name)"
 msgstr "Необходимо указать имя контейнера (--name)"
 
-#: internal/distrobox/actions.go:398
+#: internal/distrobox/actions.go:400
 #, c-format
 msgid "Container %s successfully created"
 msgstr "Контейнер %s успешно создан"
 
-#: internal/distrobox/actions.go:427
+#: internal/distrobox/actions.go:429
 #, c-format
 msgid "Container %s successfully deleted"
 msgstr "Контейнер %s успешно удалён"
 
-#: internal/distrobox/actions.go:435
+#: internal/distrobox/actions.go:437
 msgid "Error deleting container: %v"
 msgstr "Ошибка удаления контейнера: %s"
 
-#: internal/distrobox/actions.go:513
+#: internal/distrobox/actions.go:515
 msgid "You must specify the container name"
 msgstr "Необходимо указать имя контейнера"
 
-#: internal/distrobox/actions.go:521
+#: internal/distrobox/actions.go:523
 msgid "Failed to delete container records: %w"
 msgstr "Не удалось удалить записи контейнера: %w"
 
-#: internal/distrobox/actions.go:545 main.go:174
+#: internal/distrobox/actions.go:547 main.go:174
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -1327,11 +1327,11 @@ msgstr "Обновить и синхронизировать список уст
 msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
-#: internal/distrobox/commands.go:77 internal/system/commands.go:188
+#: internal/distrobox/commands.go:77 internal/system/commands.go:200
 msgid "Package information"
 msgstr "Информация о пакете"
 
-#: internal/distrobox/commands.go:98 internal/system/commands.go:209
+#: internal/distrobox/commands.go:98 internal/system/commands.go:221
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
@@ -1347,21 +1347,21 @@ msgstr "Построение запроса для извлечения спис
 msgid "Field for sorting, for example: name, version"
 msgstr "Поле для сортировки, к примеру: name, version"
 
-#: internal/distrobox/commands.go:131 internal/system/commands.go:243
+#: internal/distrobox/commands.go:131 internal/system/commands.go:255
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
-#: internal/distrobox/commands.go:136 internal/system/commands.go:248
-#: internal/system/commands.go:341
+#: internal/distrobox/commands.go:136 internal/system/commands.go:260
+#: internal/system/commands.go:353
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
-#: internal/distrobox/commands.go:141 internal/system/commands.go:253
-#: internal/system/commands.go:346
+#: internal/distrobox/commands.go:141 internal/system/commands.go:265
+#: internal/system/commands.go:358
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
-#: internal/distrobox/commands.go:146 internal/system/commands.go:258
+#: internal/distrobox/commands.go:146 internal/system/commands.go:270
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1444,27 +1444,30 @@ msgid "Error retrieving installed packages: "
 msgstr "Ошибка извлечения установленных пакетов: "
 
 #: internal/distrobox/service/alt.go:166 internal/distrobox/service/arch.go:79
-#: internal/distrobox/service/ubuntu.go:122
+#: internal/distrobox/service/ubuntu.go:142
 msgid "Failed to remove package %s: %v, stderr: %s"
 msgstr "Не удалось удалить пакет %s: %v, ошибка: %s"
 
 #: internal/distrobox/service/alt.go:176 internal/distrobox/service/arch.go:89
-#: internal/distrobox/service/ubuntu.go:111
+#: internal/distrobox/service/ubuntu.go:131
 msgid "Failed to install package %s: %v, stderr: %s"
 msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
 
 #: internal/distrobox/service/alt.go:198 internal/distrobox/service/alt.go:226
-#: internal/distrobox/service/ubuntu.go:75
+#: internal/distrobox/service/arch.go:165
+#: internal/distrobox/service/ubuntu.go:87
 #, c-format
 msgid "Command execution error: %s %s"
 msgstr "Ошибка исполнения команды: %s %s"
 
-#: internal/distrobox/service/alt.go:207
+#: internal/distrobox/service/alt.go:207 internal/distrobox/service/arch.go:174
+#: internal/distrobox/service/ubuntu.go:96
 #, c-format
 msgid "Fallback command execution error: %s %s"
 msgstr "Ошибка выполнения резервной команды: %s %s"
 
-#: internal/distrobox/service/alt.go:213
+#: internal/distrobox/service/alt.go:213 internal/distrobox/service/arch.go:180
+#: internal/distrobox/service/ubuntu.go:102
 #, c-format
 msgid "Fallback search found %d files"
 msgstr "Резервный поиск нашел %d файлов"
@@ -1498,10 +1501,6 @@ msgstr "Не удалось найти пакет для файла '%s': %v, о
 #, c-format
 msgid "Failed to determine the package for file '%s'"
 msgstr "Не удалось определить пакет для файла '%s'"
-
-#: internal/distrobox/service/arch.go:150
-msgid "Command execution error: %v, stderr: %s"
-msgstr "Ошибка исполнения команды: %v, ошибка: %s"
 
 #: internal/distrobox/service/database.go:120
 msgid ""
@@ -1665,7 +1664,7 @@ msgid "No candidates for removal found"
 msgstr "Кандидатов на удаление не найдено"
 
 #: internal/system/actions.go:241 internal/system/actions.go:324
-#: internal/system/actions.go:452 internal/system/actions.go:772
+#: internal/system/actions.go:452 internal/system/actions.go:757
 msgid "Cancel dialog"
 msgstr "Отмена диалога"
 
@@ -1754,104 +1753,104 @@ msgstr "Системный пакет"
 msgid "Stplr package"
 msgstr "Пакет Stplr"
 
-#: internal/system/actions.go:701 internal/system/commands.go:309
+#: internal/system/actions.go:696 internal/system/commands.go:321
 msgid "Image status"
 msgstr "Статус образа"
 
-#: internal/system/actions.go:734
+#: internal/system/actions.go:724
 msgid "Command executed successfully"
 msgstr "Команда успешно выполнена"
 
-#: internal/system/actions.go:810
+#: internal/system/actions.go:795
 msgid "Changes applied successfully. A reboot is required"
 msgstr "Изменения были успешно применены. Необходима перезагрука"
 
-#: internal/system/actions.go:904 main.go:230
+#: internal/system/actions.go:886
+msgid "This option is only available for an atomic system"
+msgstr "Эта опция доступна только на атомарной системе"
+
+#: internal/system/actions.go:922 internal/system/commands.go:111 main.go:230
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 "Для выполнения этого действия необходимо повышенные прав. Пожалуйста, "
 "используйте sudo или su"
 
-#: internal/system/actions.go:920
-msgid "This option is only available for an atomic system"
-msgstr "Эта опция доступна только на атомарной системе"
-
-#: internal/system/actions.go:1000
+#: internal/system/actions.go:965
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/system/actions.go:1007
+#: internal/system/actions.go:972
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
-#: internal/system/commands.go:117
+#: internal/system/commands.go:129
 msgid "System package management"
 msgstr "Управление системными пакетами"
 
-#: internal/system/commands.go:121
+#: internal/system/commands.go:133
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 "Список пакетов для установки. Формат package- и package+ поддерживается."
 
-#: internal/system/commands.go:135
+#: internal/system/commands.go:147
 msgid "List of packages to remove"
 msgstr "Список пакетов на удаление"
 
-#: internal/system/commands.go:140
+#: internal/system/commands.go:152
 msgid "Delete all files"
 msgstr "Удалить все файлы"
 
-#: internal/system/commands.go:157
+#: internal/system/commands.go:169
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/system/commands.go:169
+#: internal/system/commands.go:181
 msgid "General system upgrade"
 msgstr "Общее обновление системы"
 
-#: internal/system/commands.go:193
+#: internal/system/commands.go:205
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:214
+#: internal/system/commands.go:226
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/system/commands.go:220 internal/system/commands.go:267
+#: internal/system/commands.go:232 internal/system/commands.go:279
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:235
+#: internal/system/commands.go:247
 msgid "Building a query to get a list of packages"
 msgstr "Создание очереди для получения списка пакетов"
 
-#: internal/system/commands.go:239
+#: internal/system/commands.go:251
 msgid "Building query to fetch package list"
 msgstr "Сборка запроса для извлечения списка пакетов"
 
-#: internal/system/commands.go:262
+#: internal/system/commands.go:274
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/system/commands.go:291
+#: internal/system/commands.go:303
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/system/commands.go:297
+#: internal/system/commands.go:309
 msgid "Apply changes to the host"
 msgstr "Применить изменения на хосте"
 
-#: internal/system/commands.go:321
+#: internal/system/commands.go:333
 msgid "Image update"
 msgstr "Обновление образа"
 
-#: internal/system/commands.go:333
+#: internal/system/commands.go:345
 msgid "Image changes history"
 msgstr "История изменения образа"
 
-#: internal/system/commands.go:337
+#: internal/system/commands.go:349
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
@@ -2366,6 +2365,17 @@ msgstr "Ошибка закрытия базы данных KV: "
 msgid "Error closing SQL database: "
 msgstr "Ошибка закрытия базы данных SQL: "
 
+#, fuzzy
+#~ msgid ""
+#~ ". The system image has not been changed. To apply the changes, run: apm s "
+#~ "image apply1"
+#~ msgstr ""
+#~ ". Образ системы не был изменён! Для применения изменений выполните: apm s "
+#~ "image apply"
+
+#~ msgid "Command execution error: %v, stderr: %s"
+#~ msgstr "Ошибка исполнения команды: %v, ошибка: %s"
+
 #~ msgid "Version:"
 #~ msgstr "Версия:"
 
@@ -2379,8 +2389,8 @@ msgstr "Ошибка закрытия базы данных SQL: "
 #~ msgstr ". Образ системы был модифицирован"
 
 #~ msgid ""
-#~ ". The system image has not been modified! To apply changes, run with the -"
-#~ "a flag"
+#~ ". The system image has not been modified! To apply changes, run with the "
+#~ "-a flag"
 #~ msgstr ""
 #~ ". Образ системы не был модифицирован! Чтобы применить изменения, "
 #~ "запустите с флагом -a"

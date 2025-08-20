@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-19 04:51+0600\n"
+"POT-Creation-Date: 2025-08-20 21:05+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1214,7 +1214,7 @@ msgid "Package list successfully updated"
 msgstr ""
 
 #: internal/distrobox/actions.go:105 internal/distrobox/actions.go:145
-#: internal/distrobox/actions.go:259 internal/distrobox/actions.go:310
+#: internal/distrobox/actions.go:259 internal/distrobox/actions.go:312
 #: internal/system/actions.go:661
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
@@ -1226,54 +1226,54 @@ msgstr ""
 
 #: internal/distrobox/actions.go:154 internal/distrobox/actions.go:233
 #: internal/system/actions.go:589 internal/system/actions.go:674
-#: internal/system/actions.go:836
+#: internal/system/actions.go:816
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/distrobox/actions.go:287
+#: internal/distrobox/actions.go:289
 #, c-format
 msgid "Package %s installed"
 msgstr ""
 
-#: internal/distrobox/actions.go:336
+#: internal/distrobox/actions.go:338
 #, c-format
 msgid "Package %s removed"
 msgstr ""
 
-#: internal/distrobox/actions.go:377
+#: internal/distrobox/actions.go:379
 msgid "You must specify the image link (--image)"
 msgstr ""
 
-#: internal/distrobox/actions.go:382 internal/distrobox/actions.go:416
+#: internal/distrobox/actions.go:384 internal/distrobox/actions.go:418
 msgid "You must specify the container name (--name)"
 msgstr ""
 
-#: internal/distrobox/actions.go:398
+#: internal/distrobox/actions.go:400
 #, c-format
 msgid "Container %s successfully created"
 msgstr ""
 
-#: internal/distrobox/actions.go:427
+#: internal/distrobox/actions.go:429
 #, c-format
 msgid "Container %s successfully deleted"
 msgstr ""
 
-#: internal/distrobox/actions.go:435
+#: internal/distrobox/actions.go:437
 msgid "Error deleting container: %v"
 msgstr ""
 
-#: internal/distrobox/actions.go:513
+#: internal/distrobox/actions.go:515
 msgid "You must specify the container name"
 msgstr ""
 
-#: internal/distrobox/actions.go:521
+#: internal/distrobox/actions.go:523
 msgid "Failed to delete container records: %w"
 msgstr ""
 
-#: internal/distrobox/actions.go:545 main.go:174
+#: internal/distrobox/actions.go:547 main.go:174
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -1293,11 +1293,11 @@ msgstr ""
 msgid "Container name. Required"
 msgstr ""
 
-#: internal/distrobox/commands.go:77 internal/system/commands.go:188
+#: internal/distrobox/commands.go:77 internal/system/commands.go:200
 msgid "Package information"
 msgstr ""
 
-#: internal/distrobox/commands.go:98 internal/system/commands.go:209
+#: internal/distrobox/commands.go:98 internal/system/commands.go:221
 msgid "Quick package search by name"
 msgstr ""
 
@@ -1313,21 +1313,21 @@ msgstr ""
 msgid "Field for sorting, for example: name, version"
 msgstr ""
 
-#: internal/distrobox/commands.go:131 internal/system/commands.go:243
+#: internal/distrobox/commands.go:131 internal/system/commands.go:255
 msgid "Sorting order: ASC or DESC"
 msgstr ""
 
-#: internal/distrobox/commands.go:136 internal/system/commands.go:248
-#: internal/system/commands.go:341
+#: internal/distrobox/commands.go:136 internal/system/commands.go:260
+#: internal/system/commands.go:353
 msgid "Maximum number of records to return"
 msgstr ""
 
-#: internal/distrobox/commands.go:141 internal/system/commands.go:253
-#: internal/system/commands.go:346
+#: internal/distrobox/commands.go:141 internal/system/commands.go:265
+#: internal/system/commands.go:358
 msgid "Starting position (offset) for the result set"
 msgstr ""
 
-#: internal/distrobox/commands.go:146 internal/system/commands.go:258
+#: internal/distrobox/commands.go:146 internal/system/commands.go:270
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1408,27 +1408,30 @@ msgid "Error retrieving installed packages: "
 msgstr ""
 
 #: internal/distrobox/service/alt.go:166 internal/distrobox/service/arch.go:79
-#: internal/distrobox/service/ubuntu.go:122
+#: internal/distrobox/service/ubuntu.go:142
 msgid "Failed to remove package %s: %v, stderr: %s"
 msgstr ""
 
 #: internal/distrobox/service/alt.go:176 internal/distrobox/service/arch.go:89
-#: internal/distrobox/service/ubuntu.go:111
+#: internal/distrobox/service/ubuntu.go:131
 msgid "Failed to install package %s: %v, stderr: %s"
 msgstr ""
 
 #: internal/distrobox/service/alt.go:198 internal/distrobox/service/alt.go:226
-#: internal/distrobox/service/ubuntu.go:75
+#: internal/distrobox/service/arch.go:165
+#: internal/distrobox/service/ubuntu.go:87
 #, c-format
 msgid "Command execution error: %s %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:207
+#: internal/distrobox/service/alt.go:207 internal/distrobox/service/arch.go:174
+#: internal/distrobox/service/ubuntu.go:96
 #, c-format
 msgid "Fallback command execution error: %s %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:213
+#: internal/distrobox/service/alt.go:213 internal/distrobox/service/arch.go:180
+#: internal/distrobox/service/ubuntu.go:102
 #, c-format
 msgid "Fallback search found %d files"
 msgstr ""
@@ -1461,10 +1464,6 @@ msgstr ""
 #: internal/distrobox/service/arch.go:141
 #, c-format
 msgid "Failed to determine the package for file '%s'"
-msgstr ""
-
-#: internal/distrobox/service/arch.go:150
-msgid "Command execution error: %v, stderr: %s"
 msgstr ""
 
 #: internal/distrobox/service/database.go:120
@@ -1623,7 +1622,7 @@ msgid "No candidates for removal found"
 msgstr ""
 
 #: internal/system/actions.go:241 internal/system/actions.go:324
-#: internal/system/actions.go:452 internal/system/actions.go:772
+#: internal/system/actions.go:452 internal/system/actions.go:757
 msgid "Cancel dialog"
 msgstr ""
 
@@ -1705,101 +1704,101 @@ msgstr ""
 msgid "Stplr package"
 msgstr ""
 
-#: internal/system/actions.go:701 internal/system/commands.go:309
+#: internal/system/actions.go:696 internal/system/commands.go:321
 msgid "Image status"
 msgstr ""
 
-#: internal/system/actions.go:734
+#: internal/system/actions.go:724
 msgid "Command executed successfully"
 msgstr ""
 
-#: internal/system/actions.go:810
+#: internal/system/actions.go:795
 msgid "Changes applied successfully. A reboot is required"
 msgstr ""
 
-#: internal/system/actions.go:904 main.go:230
+#: internal/system/actions.go:886
+msgid "This option is only available for an atomic system"
+msgstr ""
+
+#: internal/system/actions.go:922 internal/system/commands.go:111 main.go:230
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 
-#: internal/system/actions.go:920
-msgid "This option is only available for an atomic system"
-msgstr ""
-
-#: internal/system/actions.go:1000
+#: internal/system/actions.go:965
 msgid "Modified image. Configuration file: "
 msgstr ""
 
-#: internal/system/actions.go:1007
+#: internal/system/actions.go:972
 msgid "Cloud image without changes"
 msgstr ""
 
-#: internal/system/commands.go:117
+#: internal/system/commands.go:129
 msgid "System package management"
 msgstr ""
 
-#: internal/system/commands.go:121
+#: internal/system/commands.go:133
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 
-#: internal/system/commands.go:135
+#: internal/system/commands.go:147
 msgid "List of packages to remove"
 msgstr ""
 
-#: internal/system/commands.go:140
+#: internal/system/commands.go:152
 msgid "Delete all files"
 msgstr ""
 
-#: internal/system/commands.go:157
+#: internal/system/commands.go:169
 msgid "Updating package database"
 msgstr ""
 
-#: internal/system/commands.go:169
+#: internal/system/commands.go:181
 msgid "General system upgrade"
 msgstr ""
 
-#: internal/system/commands.go:193
+#: internal/system/commands.go:205
 msgid "Full output of information"
 msgstr ""
 
-#: internal/system/commands.go:214
+#: internal/system/commands.go:226
 msgid "Only installed"
 msgstr ""
 
-#: internal/system/commands.go:220 internal/system/commands.go:267
+#: internal/system/commands.go:232 internal/system/commands.go:279
 msgid "Full information output"
 msgstr ""
 
-#: internal/system/commands.go:235
+#: internal/system/commands.go:247
 msgid "Building a query to get a list of packages"
 msgstr ""
 
-#: internal/system/commands.go:239
+#: internal/system/commands.go:251
 msgid "Building query to fetch package list"
 msgstr ""
 
-#: internal/system/commands.go:262
+#: internal/system/commands.go:274
 msgid "Force update all packages before query"
 msgstr ""
 
-#: internal/system/commands.go:291
+#: internal/system/commands.go:303
 msgid "Module for working with the image"
 msgstr ""
 
-#: internal/system/commands.go:297
+#: internal/system/commands.go:309
 msgid "Apply changes to the host"
 msgstr ""
 
-#: internal/system/commands.go:321
+#: internal/system/commands.go:333
 msgid "Image update"
 msgstr ""
 
-#: internal/system/commands.go:333
+#: internal/system/commands.go:345
 msgid "Image changes history"
 msgstr ""
 
-#: internal/system/commands.go:337
+#: internal/system/commands.go:349
 msgid "Filter by image name"
 msgstr ""
 
