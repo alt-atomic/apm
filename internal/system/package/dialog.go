@@ -295,18 +295,18 @@ func (m model) buildContent() string {
 	}
 
 	// Для больших списков показываем только названия пакетов
-	if len(m.pkg) > 100 {
+	if len(m.pkg) > 200 {
 		for i, pkg := range m.pkg {
 			if i == 0 && len(m.pkg) > 1 {
 				sb.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", lib.T_("Package list:"))))
 			}
-			
+
 			statusText := m.statusPackage(pkg)
 			installedText := ""
 			if pkg.Installed {
 				installedText = " " + getInstallStyle().Render(lib.T_("[Installed]"))
 			}
-			
+
 			line := fmt.Sprintf("• %s%s - %s", pkg.Name, installedText, statusText)
 			sb.WriteString("\n" + valueStyle.Render(line))
 		}
@@ -381,18 +381,18 @@ func (m model) buildContent() string {
 func (m model) statusPackage(pkg Package) string {
 	// Создаём список возможных имён пакета для поиска в изменениях
 	possibleNames := []string{pkg.Name}
-	
+
 	// Если архитектура i586, добавляем дополнительные варианты имён
 	if pkg.Architecture == "i586" {
-		possibleNames = append(possibleNames, 
+		possibleNames = append(possibleNames,
 			"i586-"+pkg.Name,
 			"i586-"+pkg.Name+".32bit",
 		)
 	}
-	
+
 	// Добавляем aliases если они есть
 	possibleNames = append(possibleNames, pkg.Aliases...)
-	
+
 	// Проверяем все возможные имена во всех списках изменений
 	for _, name := range possibleNames {
 		if contains(m.pckChange.ExtraInstalled, name) || contains(m.pckChange.NewInstalledPackages, name) {
