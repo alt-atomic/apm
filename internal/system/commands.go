@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"syscall"
 
 	"github.com/urfave/cli/v3"
 )
@@ -100,15 +101,26 @@ func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 	}
 }
 
-func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
-	return func(ctx context.Context, cmd *cli.Command) error {
-		lib.Env.Format = cmd.String("format")
-		ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
+func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
+	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
+		return func(ctx context.Context, cmd *cli.Command) error {
+			lib.Env.Format = cmd.String("format")
+			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
-		reply.CreateSpinner()
-		return action(ctx, cmd)
+			if requireRoot && syscall.Geteuid() != 0 {
+				return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+			}
+
+			actions := NewActions()
+
+			reply.CreateSpinner()
+			return actionFunc(ctx, cmd, actions)
+		}
 	}
 }
+
+var withGlobalWrapper = wrapperWithOptions(false)
+var withRootCheckWrapper = wrapperWithOptions(true)
 
 func CommandList() *cli.Command {
 	return &cli.Command{
@@ -120,8 +132,8 @@ func CommandList() *cli.Command {
 				Name:      "install",
 				Usage:     lib.T_("Package list for installation. The format package- package+ is supported."),
 				ArgsUsage: "packages",
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Install(ctx, cmd.Args().Slice())
+				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Install(ctx, cmd.Args().Slice())
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -142,8 +154,8 @@ func CommandList() *cli.Command {
 						Value:   false,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"))
+				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -155,8 +167,8 @@ func CommandList() *cli.Command {
 			{
 				Name:  "update",
 				Usage: lib.T_("Updating package database"),
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Update(ctx)
+				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Update(ctx)
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -167,13 +179,13 @@ func CommandList() *cli.Command {
 			{
 				Name:  "upgrade",
 				Usage: lib.T_("General system upgrade"),
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					var resp *reply.APIResponse
 					var err error
 					if lib.Env.IsAtomic {
-						resp, err = NewActions().ImageUpdate(ctx)
+						resp, err = actions.ImageUpdate(ctx)
 					} else {
-						resp, err = NewActions().Upgrade(ctx)
+						resp, err = actions.Upgrade(ctx)
 					}
 
 					if err != nil {
@@ -194,8 +206,8 @@ func CommandList() *cli.Command {
 						Value: false,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Info(ctx, cmd.Args().First(), cmd.Bool("full"))
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Info(ctx, cmd.Args().First(), cmd.Bool("full"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -221,8 +233,8 @@ func CommandList() *cli.Command {
 						Value: false,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Search(ctx, cmd.Args().First(), cmd.Bool("installed"), cmd.Bool("full"))
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Search(ctx, cmd.Args().First(), cmd.Bool("installed"), cmd.Bool("full"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -268,7 +280,7 @@ func CommandList() *cli.Command {
 						Value: false,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					params := ListParams{
 						Sort:        cmd.String("sort"),
 						Order:       cmd.String("order"),
@@ -278,7 +290,7 @@ func CommandList() *cli.Command {
 						ForceUpdate: cmd.Bool("force-update"),
 					}
 
-					resp, err := NewActions().List(ctx, params, cmd.Bool("full"))
+					resp, err := actions.List(ctx, params, cmd.Bool("full"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -295,7 +307,7 @@ func CommandList() *cli.Command {
 					{
 						Name:  "apply",
 						Usage: lib.T_("Apply changes to the host"),
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := NewActions().ImageApply(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
@@ -307,8 +319,8 @@ func CommandList() *cli.Command {
 					{
 						Name:  "status",
 						Usage: lib.T_("Image status"),
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageStatus(ctx)
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ImageStatus(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -319,8 +331,8 @@ func CommandList() *cli.Command {
 					{
 						Name:  "update",
 						Usage: lib.T_("Image update"),
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageUpdate(ctx)
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ImageUpdate(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -347,8 +359,8 @@ func CommandList() *cli.Command {
 								Value: 0,
 							},
 						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}

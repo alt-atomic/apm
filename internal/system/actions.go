@@ -205,7 +205,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 
 // Remove удаляет системный пакет.
 func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*reply.APIResponse, error) {
-	err := a.checkRoot()
+	err := a.checkOverlay()
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +278,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 
 // Install осуществляет установку системного пакета.
 func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIResponse, error) {
-	err := a.checkRoot()
+	err := a.checkOverlay()
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +384,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 
 // Update обновляет информацию или базу данных пакетов.
 func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkRoot()
+	err := a.checkOverlay()
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +412,7 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 
 // Upgrade общее обновление системы
 func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkRoot()
+	err := a.checkOverlay()
 	if err != nil {
 		return nil, err
 	}
@@ -686,11 +686,6 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 
 // ImageStatus возвращает статус актуального образа
 func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
 		return nil, err
@@ -709,12 +704,7 @@ func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageUpdate обновляет образ.
 func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	err = a.serviceHostConfig.LoadConfig()
+	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -742,12 +732,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageApply применить изменения к хосту
 func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	err = a.serviceTemporaryConfig.LoadConfig()
+	err := a.serviceTemporaryConfig.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -818,11 +803,6 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageHistory история изменений образа
 func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int, offset int) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	history, err := a.serviceHostDatabase.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
 	if err != nil {
 		return nil, err
@@ -849,12 +829,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 
 // ImageGetConfig получить конфиг
 func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	err = a.serviceHostConfig.LoadConfig()
+	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -871,12 +846,7 @@ func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
 
 // ImageSaveConfig сохранить конфиг
 func (a *Actions) ImageSaveConfig(config service.Config) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	err = a.serviceHostConfig.LoadConfig()
+	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -898,12 +868,8 @@ func (a *Actions) ImageSaveConfig(config service.Config) (*reply.APIResponse, er
 	return &resp, nil
 }
 
-// checkRoot проверяет, запущен ли установщик от имени root
-func (a *Actions) checkRoot() error {
-	if syscall.Geteuid() != 0 {
-		return errors.New(lib.T_("Elevated rights are required to perform this action. Please use sudo or su"))
-	}
-
+// checkOverlay проверяет, включен ли overlay
+func (a *Actions) checkOverlay() error {
 	if lib.Env.IsAtomic {
 		err := a.serviceHostImage.EnableOverlay()
 		if err != nil {
@@ -952,9 +918,8 @@ func (a *Actions) saveChange(packagesInstall []string, packagesRemove []string) 
 // validateDB проверяет, существует ли база данных
 func (a *Actions) validateDB(ctx context.Context) error {
 	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
-		err = a.checkRoot()
-		if err != nil {
-			return err
+		if syscall.Geteuid() != 0 {
+			return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are required to perform this action. Please use sudo or su")))
 		}
 
 		_, err = a.serviceAptActions.Update(ctx)
