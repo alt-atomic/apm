@@ -1315,7 +1315,7 @@ msgstr ""
 
 #: internal/distrobox/commands.go:53
 msgid "Managing packages and containers in distrobox"
-msgstr "Управление пакетами и контейнерами в distobox"
+msgstr "Управление пакетами и контейнерами в distrobox"
 
 #: internal/distrobox/commands.go:57
 msgid "Update and synchronize the list of installed packages with the host"
