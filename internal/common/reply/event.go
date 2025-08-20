@@ -21,10 +21,6 @@ import (
 	"apm/lib"
 	"context"
 	"encoding/json"
-	"errors"
-	"runtime"
-	"strings"
-
 	"github.com/godbus/dbus/v5"
 )
 
@@ -104,43 +100,24 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 		opt(&ed)
 	}
 
-	// Если имя события не задано, определяем его через runtime
+	// Если имя события не задано
 	if ed.Name == "" {
-		pc, _, _, ok := runtime.Caller(1)
-		if !ok {
-			errText := lib.T_("Failed to retrieve call information")
-			lib.Log.Error(errors.New(errText))
-			return
-		}
-		fn := runtime.FuncForPC(pc)
-		if fn == nil {
-			errText := lib.T_("FuncForPC returned nil")
-			lib.Log.Error(errors.New(errText))
-			return
-		}
-		fullName := fn.Name()
-		parts := strings.Split(fullName, "/")
-		ed.Name = parts[len(parts)-1]
+		ed.Name = "unknown"
 	}
 
 	if ed.View == "" {
 		ed.View = getTaskText(ed.Name)
 	}
 
-	SendFuncNameDBUS(ctx, ed)
+	SendFuncNameDBUS(ctx, &ed)
 }
 
 // SendFuncNameDBUS отправляет уведомление через DBUS.
-func SendFuncNameDBUS(ctx context.Context, eventData EventData) {
+func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 	txVal := ctx.Value(helper.TransactionKey)
 	txStr, ok := txVal.(string)
 	if ok {
 		eventData.Transaction = txStr
-	}
-
-	b, err := json.MarshalIndent(eventData, "", "  ")
-	if err != nil {
-		lib.Log.Debug(err.Error())
 	}
 
 	eventType := "PROGRESS"
@@ -149,11 +126,16 @@ func SendFuncNameDBUS(ctx context.Context, eventData EventData) {
 	}
 
 	UpdateTask(eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
-	SendNotificationResponse(string(b))
+	SendNotificationResponse(eventData)
 }
 
 // SendNotificationResponse отправляет ответы через DBus.
-func SendNotificationResponse(message string) {
+func SendNotificationResponse(eventData *EventData) {
+	message, err := json.MarshalIndent(eventData, "", "  ")
+	if err != nil {
+		lib.Log.Debug(err.Error())
+	}
+
 	if lib.Env.Format != "dbus" {
 		return
 	}
@@ -166,7 +148,7 @@ func SendNotificationResponse(message string) {
 	objPath := dbus.ObjectPath("/org/altlinux/APM")
 	signalName := "org.altlinux.APM.Notification"
 
-	err := lib.DBUSConn.Emit(objPath, signalName, message)
+	err = lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {
 		lib.Log.Error(lib.T_("Error sending notification: %v"), err)
 	}
@@ -233,9 +215,8 @@ func getTaskText(task string) string {
 	case "system.updateAllPackagesDB":
 		return lib.T_("Synchronizing database")
 	case "system.UpdateAppStream":
-		return lib.T_("Update AppStream information")
+		return lib.T_("Update information about applications")
 	default:
-		// If the task name is unknown, we return it unchanged.
 		return task
 	}
 }

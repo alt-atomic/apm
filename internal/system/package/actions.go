@@ -18,22 +18,19 @@ package _package
 
 import (
 	"apm/internal/common/appstream"
+	aptParser "apm/internal/common/apt"
+	aptBinding "apm/internal/common/binding/apt"
+	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
 	"bufio"
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"os"
 	"os/exec"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/creack/pty"
+	"time"
 )
 
 // syncAptMutex защищает операции apt-get от дублированного вызова
@@ -53,28 +50,17 @@ func NewActions(serviceAptDatabase *PackageDBService, serviceStplr *StplrService
 	}
 }
 
-// PackageChanges Структура, для хранения результатов apt-get -s
-type PackageChanges struct {
-	ExtraInstalled       []string `json:"extraInstalled"`
-	UpgradedPackages     []string `json:"upgradedPackages"`
-	NewInstalledPackages []string `json:"newInstalledPackages"`
-	RemovedPackages      []string `json:"removedPackages"`
-
-	UpgradedCount     int `json:"upgradedCount"`
-	NewInstalledCount int `json:"newInstalledCount"`
-	RemovedCount      int `json:"removedCount"`
-	NotUpgradedCount  int `json:"notUpgradedCount"`
-}
-
 // Package описывает структуру для хранения информации о пакете.
 type Package struct {
 	Name             string               `json:"name"`
+	Architecture     string               `json:"architecture"`
 	Section          string               `json:"section"`
 	InstalledSize    int                  `json:"installedSize"`
 	Maintainer       string               `json:"maintainer"`
 	Version          string               `json:"version"`
 	VersionInstalled string               `json:"versionInstalled"`
 	Depends          []string             `json:"depends"`
+	Aliases          []string             `json:"aliases"`
 	Provides         []string             `json:"provides"`
 	Size             int                  `json:"size"`
 	Filename         string               `json:"filename"`
@@ -85,25 +71,288 @@ type Package struct {
 	TypePackage      int                  `json:"typePackage"`
 }
 
-const (
-	typeInstall = iota
-	typeRemove
-	typeChanged
-)
+type FindType uint8
 
-func (a *Actions) Install(ctx context.Context, packageName string) []error {
+// PrepareInstallPackages разбирает список пакетов с суффиксами +/- и возвращает два списка
+func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string) (install []string, remove []string, err error) {
+	for _, pkg := range packages {
+		pkg = strings.TrimSpace(pkg)
+		if pkg == "" {
+			continue
+		}
+
+		// Сначала проверяем, существует ли пакет с таким именем как есть
+		existsAsIs := a.checkPackageExists(ctx, pkg)
+
+		// Пакет существует с таким именем - добавляем на установку
+		if existsAsIs {
+			install = append(install, pkg)
+			continue
+		}
+
+		if strings.HasSuffix(pkg, "+") {
+			baseName := strings.TrimSuffix(pkg, "+")
+			if baseName != "" {
+				install = append(install, baseName)
+			}
+		} else if strings.HasSuffix(pkg, "-") {
+			baseName := strings.TrimSuffix(pkg, "-")
+			if baseName != "" {
+				remove = append(remove, baseName)
+			}
+		} else {
+			install = append(install, pkg)
+		}
+	}
+
+	return install, remove, nil
+}
+
+// checkPackageExists проверяет существует ли пакет в базе данных
+func (a *Actions) checkPackageExists(ctx context.Context, packageName string) bool {
+	_, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	var packagesInfo []Package
+	var finalPackageNames []string
+	seenNames := make(map[string]bool)
+	seenInfo := make(map[string]bool)
+
+	// Объединяем все запрошенные пакеты для обработки wildcard
+	allReq := append([]string{}, installed...)
+	allReq = append(allReq, removed...)
+
+	// Сначала добавляем исходные пакеты из запроса пользователя (как есть)
+	finalPackageNames = append(finalPackageNames, allReq...)
+	for _, original := range allReq {
+		seenNames[original] = true
+	}
+
+	// Обрабатываем wildcard пакеты и создаём расширенный запрос
+	var expandedInstall []string
+	var expandedRemove []string
+
+	// Вспомогательная функция для обработки списка пакетов
+	processPackageList := func(packages []string, targetList *[]string) error {
+		for _, original := range packages {
+			if strings.Contains(original, "*") {
+				like := strings.ReplaceAll(original, "*", "%")
+				if strings.TrimSpace(like) != "" {
+					matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, false)
+					if errSearch != nil {
+						return errSearch
+					}
+					for _, mp := range matched {
+						if !seenInfo[mp.Name] {
+							seenInfo[mp.Name] = true
+							packagesInfo = append(packagesInfo, mp)
+						}
+						if !seenNames[mp.Name] {
+							seenNames[mp.Name] = true
+							finalPackageNames = append(finalPackageNames, mp.Name)
+							*targetList = append(*targetList, mp.Name)
+						}
+					}
+				}
+			} else {
+				// Для обычных пакетов - копируем как есть
+				*targetList = append(*targetList, original)
+			}
+		}
+		return nil
+	}
+
+	// Обрабатываем пакеты на установку
+	if err := processPackageList(installed, &expandedInstall); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	// Обрабатываем пакеты на удаление
+	if err := processPackageList(removed, &expandedRemove); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	var aptError error
+	var packageChanges *aptLib.PackageChanges
+	aptService := aptBinding.NewActions()
+	packageChanges, aptError = aptService.SimulateChange(expandedInstall, expandedRemove, purge)
+	if aptError != nil {
+		return nil, nil, nil, nil, aptError
+	}
+
+	// Добавляем информацию о дополнительных пакетах из packageChanges только в packagesInfo
+	if packageChanges != nil {
+		for _, list := range [][]string{
+			packageChanges.ExtraInstalled,
+			packageChanges.UpgradedPackages,
+			packageChanges.NewInstalledPackages,
+			packageChanges.RemovedPackages,
+		} {
+			for _, pkgName := range list {
+				cleanName := helper.CleanPackageName(strings.TrimSpace(pkgName))
+				if cleanName == "" {
+					continue
+				}
+				if !seenInfo[cleanName] {
+					info, err := a.serviceAptDatabase.GetPackageByName(ctx, cleanName)
+					if err != nil {
+						return nil, nil, nil, nil, err
+					}
+					seenInfo[cleanName] = true
+					packagesInfo = append(packagesInfo, info)
+				}
+			}
+		}
+	}
+
+	return expandedInstall, expandedRemove, packagesInfo, packageChanges, nil
+}
+
+// Вспомогательная структура для отслеживания прогресса пакета
+type packageProgress struct {
+	lastPercent int
+	lastUpdate  time.Time
+}
+
+func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
+	// Состояние для загрузки
+	lastDownloadPercent := -1
+	lastDownloadUpdate := time.Now()
+
+	// Состояние для установки пакетов
+	packageState := make(map[string]*packageProgress)
+	var packageMutex sync.Mutex
+
+	return func(pkg string, event aptLib.ProgressType, cur, total uint64) {
+		switch event {
+		case aptLib.CallbackDownloadProgress:
+			percent := int((cur * 100) / total)
+
+			if total > 0 && percent < 100 {
+				now := time.Now()
+				elapsed := now.Sub(lastDownloadUpdate)
+
+				// Throttling для загрузки
+				shouldUpdate := false
+
+				if lastDownloadPercent == -1 {
+					shouldUpdate = true
+				} else if percent != lastDownloadPercent {
+					if percent < 10 || percent > 90 {
+						shouldUpdate = elapsed >= 50*time.Millisecond
+					} else {
+						shouldUpdate = elapsed >= 100*time.Millisecond
+					}
+				}
+
+				if shouldUpdate && percent < 100 {
+					lastDownloadPercent = percent
+					lastDownloadUpdate = now
+
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName("system.downloadProgress"),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading packages"))),
+					)
+				}
+			}
+		case aptLib.CallbackDownloadComplete:
+			reply.CreateEventNotification(ctx, reply.StateAfter,
+				reply.WithEventName("system.downloadProgress"),
+				reply.WithProgress(true),
+				reply.WithProgressPercent(100),
+				reply.WithProgressDoneText(lib.T_("All packages downloaded")),
+			)
+		case aptLib.CallbackInstallProgress:
+			if pkg == "" || total == 0 {
+				return
+			}
+
+			packageMutex.Lock()
+			defer packageMutex.Unlock()
+
+			state, exists := packageState[pkg]
+			if !exists {
+				state = &packageProgress{
+					lastPercent: -1,
+					lastUpdate:  time.Now(),
+				}
+				packageState[pkg] = state
+			}
+
+			percent := int((cur * 100) / total)
+			now := time.Now()
+			elapsed := now.Sub(state.lastUpdate)
+
+			// Throttling для установки пакетов
+			shouldUpdate := false
+
+			if state.lastPercent == -1 {
+				// Первое обновление
+				shouldUpdate = true
+			} else if percent == 100 {
+				// Завершение - всегда показываем
+				shouldUpdate = true
+			} else if percent != state.lastPercent {
+				percentDiff := helper.Abs(percent - state.lastPercent)
+
+				if percentDiff >= 10 {
+					// Большое изменение - обновляем быстрее
+					shouldUpdate = elapsed >= 50*time.Millisecond
+				} else if percentDiff >= 5 {
+					// Среднее изменение
+					shouldUpdate = elapsed >= 100*time.Millisecond
+				} else {
+					// Маленькое изменение - обновляем редко
+					shouldUpdate = elapsed >= 200*time.Millisecond
+				}
+			}
+
+			if shouldUpdate {
+				state.lastPercent = percent
+				state.lastUpdate = now
+
+				ev := fmt.Sprintf("system.installProgress-%s", pkg)
+
+				if percent < 100 {
+					reply.CreateEventNotification(ctx, reply.StateBefore,
+						reply.WithEventName(ev),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(float64(percent)),
+						reply.WithEventView(fmt.Sprintf(lib.T_("Installing progress: %s"), pkg)),
+					)
+				} else {
+					reply.CreateEventNotification(ctx, reply.StateAfter,
+						reply.WithEventName(ev),
+						reply.WithProgress(true),
+						reply.WithProgressPercent(100),
+						reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Installing %s"), pkg)),
+					)
+
+					// Удаляем из отслеживания
+					delete(packageState, pkg)
+				}
+			}
+		}
+	}
+}
+
+func (a *Actions) Install(ctx context.Context, packages []string) error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	typeProcess := typeInstall
-	if hasChangePackage(packageName) {
-		typeProcess = typeChanged
-	}
-
-	command := fmt.Sprintf("%s apt-get -y install %s", lib.Env.CommandPrefix, packageName)
-	err := a.commandWithProgress(ctx, command, typeProcess)
+	aptService := aptBinding.NewActions()
+	err := aptService.InstallPackages(packages, a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -111,14 +360,14 @@ func (a *Actions) Install(ctx context.Context, packageName string) []error {
 	return nil
 }
 
-func (a *Actions) Remove(ctx context.Context, packageName string) []error {
+func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string, packagesRemove []string) error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	command := fmt.Sprintf("%s apt-get -y remove %s", lib.Env.CommandPrefix, packageName)
-	err := a.commandWithProgress(ctx, command, typeRemove)
+	aptService := aptBinding.NewActions()
+	err := aptService.CombineInstallRemovePackages(packagesInstall, packagesRemove, a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -126,151 +375,29 @@ func (a *Actions) Remove(ctx context.Context, packageName string) []error {
 	return nil
 }
 
-// CommandWithProgress запускает команду с прогрессом
-func (a *Actions) commandWithProgress(ctx context.Context, command string, typeProcess int) []error {
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	cmd.Env = append(os.Environ(), "LC_ALL=C")
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) error {
+	syncAptMutex.Lock()
+	defer syncAptMutex.Unlock()
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	// Запускаем команду через pty для захвата вывода в реальном времени.
-	ptmx, err := pty.Start(cmd)
+	aptService := aptBinding.NewActions()
+	err := aptService.RemovePackages(packages, purge, a.getHandler(ctx))
 	if err != nil {
-		return []error{err}
-	}
-	defer ptmx.Close()
-
-	scanner := bufio.NewScanner(ptmx)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if i := bytes.IndexAny(data, "\r\n"); i >= 0 {
-			return i + 1, data[:i], nil
-		}
-		if atEOF && len(data) > 0 {
-			return len(data), data, nil
-		}
-		return 0, nil, nil
-	})
-
-	// Регулярное выражение для распознавания прогресса скачивания.
-	// Пример строки: "2% [10 speed-dreams-data 39368080/2037MB 1%]"
-	downloadRegex := regexp.MustCompile(`(?P<global>\d+)%\s*\[(?P<order>\d+)\s+(?P<pkg>[\w\-\+]+)\s+(?P<data>[0-9]+\/[0-9]+[KMG]?B)\s+(?P<local>\d+)%\]`)
-	// Регулярное выражение для распознавания прогресса установки.
-	// Пример строки: "1: erlang-otp-1:26.2.5.3-alt2  ########## [ 25%]"
-	installRegex := regexp.MustCompile(`^(?P<step>\d+):\s+(?P<pkg>[\w\-\:\+]+).*?\[\s*(?P<percent>\d+)%\]`)
-
-	// Мапы: ключ – уникальное имя события, значение – чистое имя пакета.
-	downloadEvents := make(map[string]string)
-	installEvents := make(map[string]string)
-
-	var textStatus string
-	switch typeProcess {
-	case typeRemove:
-		textStatus = lib.T_("Removal")
-	case typeChanged:
-		textStatus = lib.T_("Change")
-	default:
-		textStatus = lib.T_("Installation")
-	}
-
-	var outputLines []string
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for scanner.Scan() {
-			line := scanner.Text()
-			outputLines = append(outputLines, line)
-
-			if downloadRegex.MatchString(line) {
-				match := downloadRegex.FindStringSubmatch(line)
-				pkgName := match[downloadRegex.SubexpIndex("pkg")]
-				// Уникальное имя события
-				eventName := fmt.Sprintf("system.downloadProgress-%s", pkgName)
-				downloadEvents[eventName] = pkgName
-
-				percentStr := match[downloadRegex.SubexpIndex("local")]
-				if percent, err := strconv.Atoi(percentStr); err == nil {
-					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName(eventName),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading: %s"), pkgName)),
-					)
-				}
-			} else if installRegex.MatchString(line) {
-				match := installRegex.FindStringSubmatch(line)
-				pkgName := match[installRegex.SubexpIndex("pkg")]
-				eventName := "system.installProgress"
-				installEvents[eventName] = pkgName
-
-				percentStr := match[installRegex.SubexpIndex("percent")]
-				if percent, err := strconv.Atoi(percentStr); err == nil {
-					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName(eventName),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf("%s: %s", textStatus, pkgName)),
-					)
-				}
-			}
-
-			// При получении строки "Done." завершаем все события.
-			if strings.Contains(line, "Done.") {
-				for event, pkg := range downloadEvents {
-					reply.CreateEventNotification(ctx, reply.StateAfter,
-						reply.WithEventName(event),
-						reply.WithProgress(true),
-						reply.WithProgressDoneText(pkg),
-						reply.WithProgressPercent(100),
-					)
-				}
-				for event, pkg := range installEvents {
-					reply.CreateEventNotification(ctx, reply.StateAfter,
-						reply.WithEventName(event),
-						reply.WithProgress(true),
-						reply.WithProgressDoneText(pkg),
-						reply.WithProgressPercent(100),
-					)
-				}
-			}
-		}
-	}()
-
-	// Ожидаем завершения выполнения команды.
-	if err = cmd.Wait(); err != nil {
-		wg.Wait()
-		aptErrors := ErrorLinesAnalyseAll(outputLines)
-		if len(aptErrors) > 0 {
-			var errorsSlice []error
-			for _, e := range aptErrors {
-				errorsSlice = append(errorsSlice, e)
-			}
-			return errorsSlice
-		}
-		return []error{fmt.Errorf(lib.T_("Installation error: %v"), err)}
-	}
-
-	wg.Wait()
-
-	aptErrors := ErrorLinesAnalyseAll(outputLines)
-	if len(aptErrors) > 0 {
-		var errorsSlice []error
-		for _, e := range aptErrors {
-			errorsSlice = append(errorsSlice, e)
-		}
-		return errorsSlice
+		return err
 	}
 
 	return nil
 }
 
-func (a *Actions) Upgrade(ctx context.Context) []error {
+func (a *Actions) Upgrade(ctx context.Context) error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
-
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Upgrade"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Upgrade"))
 
-	command := fmt.Sprintf("%s apt-get -y dist-upgrade", lib.Env.CommandPrefix)
-	err := a.commandWithProgress(ctx, command, typeRemove)
+	aptService := aptBinding.NewActions()
+	err := aptService.DistUpgrade(a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -278,74 +405,61 @@ func (a *Actions) Upgrade(ctx context.Context) []error {
 	return nil
 }
 
-func (a *Actions) Check(ctx context.Context, packageName string, aptCommand string) (PackageChanges, []error) {
+func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	command := fmt.Sprintf("%s apt-get -s %s %s", lib.Env.CommandPrefix, aptCommand, packageName)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	cmd.Env = append(os.Environ(), "LC_ALL=C")
+	aptService := aptBinding.NewActions()
+	packageChanges, err = aptService.SimulateInstall(packageName)
+	return
+}
 
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-	lines := strings.Split(outputStr, "\n")
-	aptErrors := ErrorLinesAnalyseAll(lines)
+func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge bool) (packageChanges *aptLib.PackageChanges, err error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	var packageParse PackageChanges
-	if len(aptErrors) > 0 {
-		var errorsSlice []error
-		for _, e := range aptErrors {
-			errorsSlice = append(errorsSlice, e)
-		}
+	aptService := aptBinding.NewActions()
+	packageChanges, err = aptService.SimulateRemove(packageName, purge)
+	return
+}
 
-		packageParse, err = parseAptOutput(outputStr)
-		if err != nil {
-			return PackageChanges{}, []error{fmt.Errorf(lib.T_("Package verification error: %v"), err)}
-		}
-		return packageParse, errorsSlice
-	}
+func (a *Actions) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	if err != nil {
-		lib.Log.Errorf(lib.T_("Package verification error: %s"), outputStr)
-		return PackageChanges{}, []error{fmt.Errorf(lib.T_("Package verification error: %v"), err)}
-	}
+	aptService := aptBinding.NewActions()
+	packageChanges, err = aptService.SimulateAutoRemove()
+	return
+}
 
-	packageParse, err = parseAptOutput(outputStr)
-	if err != nil {
-		return PackageChanges{}, []error{fmt.Errorf(lib.T_("Package verification error: %v"), err)}
-	}
+func (a *Actions) GetInfo(ctx context.Context, packageName string) (packageChanges *aptLib.PackageInfo, err error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	return packageParse, nil
+	aptService := aptBinding.NewActions()
+	packageChanges, err = aptService.GetInfo(packageName)
+	return
+}
+
+func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+
+	aptService := aptBinding.NewActions()
+	packageChanges, err = aptService.SimulateDistUpgrade()
+	return
 }
 
 func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Update"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Update"))
 
-	err := aptUpdate(ctx)
+	err := a.AptUpdate(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	command := fmt.Sprintf("%s apt-cache dumpavail", lib.Env.CommandPrefix)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error opening stdout pipe: %w"), err)
-	}
-	if err = cmd.Start(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Error executing command: %w"), err)
-	}
-
-	const maxCapacity = 1024 * 1024 * 350 // 350MB
-	buf := make([]byte, maxCapacity)
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(buf, maxCapacity)
-
 	var packages []Package
-	var pkg Package
-	var currentKey string
 
 	asComponents, errAS := a.appStream.Load(ctx)
 	if errAS != nil {
@@ -358,111 +472,80 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		asMap[c.PkgName] = c
 	}
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line)
+	aptService := aptBinding.NewActions()
+	aptPackages, err := aptService.Search("")
+	if err != nil {
+		return nil, err
+	}
 
-		if line == "" {
-			if pkg.Name != "" {
-				packages = append(packages, pkg)
-				pkg = Package{}
-				currentKey = ""
-			}
-			continue
-		}
+	packages = make([]Package, 0, len(aptPackages))
+	for _, ap := range aptPackages {
+		var depends []string
+		seen := make(map[string]bool)
 
-		if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
-			key := strings.TrimSpace(parts[0])
-			value := strings.TrimSpace(parts[1])
-			currentKey = key
-
-			switch key {
-			case "Package":
-				pkg.Name = value
-			case "Section":
-				pkg.Section = value
-			case "Installed Size":
-				sizeValue, err := strconv.Atoi(value)
-				if err != nil {
-					sizeValue = 0
+		if ap.Depends != "" {
+			depList := strings.Split(ap.Depends, ",")
+			for _, dep := range depList {
+				clean := strings.TrimSpace(dep)
+				if clean == "" {
+					continue
 				}
-
-				pkg.InstalledSize = sizeValue
-			case "Maintainer":
-				pkg.Maintainer = value
-			case "Version":
-				versionValue, errVersion := helper.GetVersionFromAptCache(value)
-				if errVersion != nil {
-					pkg.Version = value
-				} else {
-					pkg.Version = versionValue
+				clean = aptParser.CleanDependency(clean)
+				if !seen[clean] {
+					seen[clean] = true
+					depends = append(depends, clean)
 				}
-			case "Depends":
-				depList := strings.Split(value, ",")
-				seen := make(map[string]bool)
-				var cleanedDeps []string
-				for _, dep := range depList {
-					cleanDep := cleanDependency(dep)
-					if cleanDep != "" && !seen[cleanDep] {
-						seen[cleanDep] = true
-						cleanedDeps = append(cleanedDeps, cleanDep)
-					}
-				}
-				pkg.Depends = cleanedDeps
-			case "Provides":
-				provList := strings.Split(value, ",")
-				seen := make(map[string]bool)
-				var cleanedProviders []string
-				for _, prov := range provList {
-					cleanProv := cleanDependency(prov)
-					if cleanProv != "" && !seen[cleanProv] {
-						seen[cleanProv] = true
-						cleanedProviders = append(cleanedProviders, cleanProv)
-					}
-				}
-				pkg.Provides = cleanedProviders
-			case "Size":
-				sizeValue, err := strconv.Atoi(value)
-				if err != nil {
-					sizeValue = 0
-				}
-
-				pkg.Size = sizeValue
-			case "Filename":
-				pkg.Filename = value
-			case "Description":
-				pkg.Description = value
-			case "Changelog":
-				pkg.Changelog = value
-			default:
-			}
-		} else {
-			switch currentKey {
-			case "Description":
-				pkg.Description += "\n" + line
-			case "Changelog":
-				pkg.Changelog += "\n" + line
-			default:
 			}
 		}
-	}
+		var provides []string
+		seen = make(map[string]bool)
 
-	if pkg.Name != "" {
-		packages = append(packages, pkg)
-	}
-
-	if err = scanner.Err(); err != nil {
-		if errors.Is(err, bufio.ErrTooLong) {
-			return nil, fmt.Errorf(lib.T_("String too large: (over %dMB) - "), maxCapacity/(1024*1024))
+		if ap.Provides != "" {
+			provList := strings.Split(ap.Provides, ",")
+			for _, prov := range provList {
+				clean := strings.TrimSpace(prov)
+				if clean == "" {
+					continue
+				}
+				clean = aptParser.CleanDependency(clean)
+				if !seen[clean] {
+					seen[clean] = true
+					provides = append(provides, clean)
+				}
+			}
 		}
-		return nil, fmt.Errorf(lib.T_("Scanner error: %w"), err)
+
+		formattedVersion := ap.Version
+		if v, errParse := helper.GetVersionFromAptCache(ap.Version); errParse == nil && v != "" {
+			formattedVersion = v
+		}
+
+		p := Package{
+			Name:             ap.Name,
+			Architecture:     ap.Architecture,
+			Section:          ap.Section,
+			InstalledSize:    int(ap.InstalledSize),
+			Maintainer:       ap.Maintainer,
+			Version:          formattedVersion,
+			VersionInstalled: "",
+			Depends:          depends,
+			Aliases:          ap.Aliases,
+			Provides:         provides,
+			Size:             int(ap.DownloadSize),
+			Filename:         ap.Filename,
+			Description:      ap.Description,
+			AppStream:        nil,
+			Changelog:        ap.Changelog,
+			Installed:        false,
+			TypePackage:      int(PackageTypeSystem),
+		}
+
+		if p.Description == "" {
+			p.Description = ap.ShortDescription
+		}
+		packages = append(packages, p)
 	}
 
-	if err = cmd.Wait(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Command execution error: %w"), err)
-	}
-
-	// добавляем AppStream и Changelog
 	for i := range packages {
 		if comp, ok := asMap[packages[i].Name]; ok {
 			packages[i].AppStream = comp
@@ -470,14 +553,14 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
 	}
 
-	if lib.Env.ExistStplr {
-		packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
-		if err != nil {
-			lib.Log.Errorf(err.Error())
-		}
-	}
+	//if lib.Env.ExistStplr {
+	//	packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
+	//	if err != nil {
+	//		lib.Log.Errorf(err.Error())
+	//	}
+	//}
 
-	// Обновляем информацию о том, установлены ли пакеты локально
+	// @TODO Обновляем информацию о том, установлены ли пакеты локально, на самом деле об этом можно узнать из биндингов
 	packages, err = a.updateInstalledInfo(ctx, packages)
 	if err != nil {
 		return nil, fmt.Errorf(lib.T_("Error updating information about installed packages: %w"), err)
@@ -489,20 +572,6 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	}
 
 	return packages, nil
-}
-
-// CleanPackageName очищаем странный суффикс в ответе apt
-func (a *Actions) CleanPackageName(pkg string, packageNames []string) string {
-	if strings.HasSuffix(pkg, ".32bit") {
-		basePkg := strings.TrimSuffix(pkg, ".32bit")
-		for _, validPkg := range packageNames {
-			if validPkg == basePkg {
-				return basePkg
-			}
-		}
-	}
-
-	return pkg
 }
 
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
@@ -535,22 +604,28 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 
 	installed := make(map[string]string)
 	scanner := bufio.NewScanner(strings.NewReader(string(output)))
-	var currentName, currentVersion string
+	var currentName, currentVersion, currentArch string
+
+	flushCurrent := func() {
+		if currentName == "" {
+			return
+		}
+		name := currentName
+		if strings.HasPrefix(name, "i586-") && (currentArch == "i586" || currentArch == "i386") {
+			name = strings.TrimPrefix(name, "i586-")
+		}
+		installed[name] = currentVersion
+		currentName, currentVersion, currentArch = "", "", ""
+	}
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
 		if strings.HasPrefix(line, "Name") {
-			if currentName != "" {
-				installed[currentName] = currentVersion
-				currentName, currentVersion = "", ""
-			}
+			flushCurrent()
 		}
 		if line == "" {
-			if currentName != "" {
-				installed[currentName] = currentVersion
-				currentName, currentVersion = "", ""
-			}
+			flushCurrent()
 			continue
 		}
 
@@ -569,11 +644,17 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 			}
 			continue
 		}
+
+		if strings.HasPrefix(line, "Architecture") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				currentArch = strings.TrimSpace(parts[1])
+			}
+			continue
+		}
 	}
 
-	if currentName != "" {
-		installed[currentName] = currentVersion
-	}
+	flushCurrent()
 
 	if err = scanner.Err(); err != nil {
 		return nil, fmt.Errorf(lib.T_("Error scanning rpm output: %w"), err)
@@ -582,25 +663,16 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 	return installed, nil
 }
 
-func aptUpdate(ctx context.Context) error {
+func (a *Actions) AptUpdate(ctx context.Context) error {
 	syncAptMutex.Lock()
 	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.AptUpdate"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.AptUpdate"))
 
-	command := fmt.Sprintf("%s apt-get update", lib.Env.CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
-
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-	lines := strings.Split(outputStr, "\n")
-	aptError := ErrorLinesAnalise(lines)
-	if aptError != nil {
-		return errors.New(aptError.Error())
-	}
+	aptService := aptBinding.NewActions()
+	err := aptService.Update()
 	if err != nil {
-		return fmt.Errorf(lib.T_("Error updating packages: %v, output: %s"), err, string(output))
+		return err
 	}
 
 	return nil
@@ -630,93 +702,4 @@ func extractLastMessage(changelog string) string {
 	}
 
 	return strings.Join(result, "\n")
-}
-
-func cleanDependency(dep string) string {
-	re := regexp.MustCompile(`\s*\(.*?\)`)
-	return strings.TrimSpace(re.ReplaceAllString(dep, ""))
-}
-
-func parseAptOutput(output string) (PackageChanges, error) {
-	pc := &PackageChanges{}
-	lines := strings.Split(output, "\n")
-
-	// Pre-compile regex for performance
-	statsRegex := regexp.MustCompile(`(\d+) upgraded, (\d+) newly installed, (\d+) removed and (\d+) not upgraded\.`)
-
-	var currentSection string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		// Определяем заголовки секций
-		if strings.HasPrefix(line, "The following extra packages will be installed:") {
-			currentSection = "extra_installed"
-			continue
-		}
-		if strings.HasPrefix(line, "The following packages will be upgraded") {
-			currentSection = "upgraded"
-			continue
-		}
-		if strings.HasPrefix(line, "The following NEW packages will be installed:") {
-			currentSection = "new_installed"
-			continue
-		}
-		if strings.HasPrefix(line, "The following packages will be REMOVED:") {
-			currentSection = "removed"
-			continue
-		}
-
-		// Если строка содержит статистику, то обрабатываем отдельно
-		if statsRegex.MatchString(line) {
-			matches := statsRegex.FindStringSubmatch(line)
-			if len(matches) == 5 {
-				if count, err := strconv.Atoi(matches[1]); err == nil {
-					pc.UpgradedCount = count
-				}
-				if count, err := strconv.Atoi(matches[2]); err == nil {
-					pc.NewInstalledCount = count
-				}
-				if count, err := strconv.Atoi(matches[3]); err == nil {
-					pc.RemovedCount = count
-				}
-				if count, err := strconv.Atoi(matches[4]); err == nil {
-					pc.NotUpgradedCount = count
-				}
-			}
-			currentSection = ""
-			continue
-		}
-
-		if strings.HasSuffix(line, "...") {
-			continue
-		}
-		switch currentSection {
-		case "extra_installed":
-			pkgs := strings.Fields(line)
-			pc.ExtraInstalled = append(pc.ExtraInstalled, pkgs...)
-		case "upgraded":
-			pkgs := strings.Fields(line)
-			pc.UpgradedPackages = append(pc.UpgradedPackages, pkgs...)
-		case "new_installed":
-			pkgs := strings.Fields(line)
-			pc.NewInstalledPackages = append(pc.NewInstalledPackages, pkgs...)
-		case "removed":
-			pkgs := strings.Fields(line)
-			pc.RemovedPackages = append(pc.RemovedPackages, pkgs...)
-		}
-	}
-
-	return *pc, nil
-}
-
-func hasChangePackage(packageName string) bool {
-	words := strings.Fields(packageName)
-	for _, word := range words {
-		if strings.HasSuffix(word, "-") {
-			return true
-		}
-	}
-	return false
 }

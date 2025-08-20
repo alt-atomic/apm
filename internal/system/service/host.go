@@ -109,7 +109,12 @@ func (h *HostImageService) GetImageFromDocker() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(lib.T_("Failed to open file %s: %w"), h.containerPath, err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err = file.Close()
+		if err != nil {
+			lib.Log.Error(err)
+		}
+	}(file)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

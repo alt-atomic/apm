@@ -111,9 +111,8 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 }
 
 // ExportingApp экспортирует пакет в хост-систему.
-// Если isConsole == false, формируется команда экспорта GUI приложения;
-// если isConsole == true, формируются команды для каждого пути из pathList.
-func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo ContainerInfo, packageName string, isConsole bool, pathList []string, deleteApp bool) error {
+// Принимает отдельные списки для desktop и консольных приложений и обрабатывает каждый тип соответственно.
+func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo ContainerInfo, _ string, desktopPaths, consolePaths []string, deleteApp bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.ExportingApp"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.ExportingApp"))
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.
@@ -124,18 +123,18 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 
 	var commands []string
 
-	if !isConsole {
-		for _, path := range pathList {
-			appCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export --app %s %s",
-				lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
-			commands = append(commands, appCommand)
-		}
-	} else {
-		for _, path := range pathList {
-			pathCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export -b %s %s",
-				lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
-			commands = append(commands, pathCommand)
-		}
+	// Обрабатываем desktop приложения
+	for _, path := range desktopPaths {
+		appCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export --app %s %s",
+			lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
+		commands = append(commands, appCommand)
+	}
+
+	// Обрабатываем консольные приложения
+	for _, path := range consolePaths {
+		pathCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export -b %s %s",
+			lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
+		commands = append(commands, pathCommand)
 	}
 
 	// Выполняем все команды параллельно
@@ -208,7 +207,7 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 		osName = "Arch"
 		active = true
 	case strings.Contains(lowerOsName, "alt"):
-		osName = "Altinux"
+		osName = "ALT Linux"
 		active = true
 	case strings.Contains(lowerOsName, "ubuntu"):
 		osName = "Ubuntu"

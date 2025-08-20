@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package _package
+package apt
 
 import (
 	"apm/lib"
@@ -84,6 +84,66 @@ const (
 	ErrRpmDatabaseLock
 	ErrPackageIsAlreadyNewest
 	ErrConflictsViolated
+	// ErrAptInitConfigFailed bindings-specific (APT wrapper messages)
+	ErrAptInitConfigFailed
+	ErrInvalidSystemPointer
+	ErrAptInitSystemFailed
+	ErrInvalidArgsCacheOpen
+	ErrSystemNotInitialized
+	ErrAptLockFailed
+	ErrCacheOpenFailed
+	ErrCheckDepsFailed
+	ErrGetDepCacheFailed
+	ErrCacheReopenFailed
+	ErrCheckDepsAfterRefreshFailed
+	ErrGetDepCacheAfterRefreshFailed
+	ErrGetPackageIndexesFailed
+	ErrDownloadPackageListsFailed
+	ErrRebuildCachesFailed
+	ErrInvalidCacheForPM
+	ErrCreatePackageManagerFailed
+	ErrInvalidArgsMarkInstall
+	ErrInvalidArgsMarkRemove
+	ErrResolverRemoveDepsFailed
+	ErrInvalidArgsMarkKeep
+	ErrInvalidArgsMarkAuto
+	ErrInvalidPMInstance
+	ErrCannotInstallWithBrokenDeps
+	ErrGetPackageArchivesFailed
+	ErrDownloadPackagesFailed
+	ErrPMOperationFailed
+	ErrPMOperationIncomplete
+	ErrPMUnknownResult
+	ErrUpdatePackageMarksFailed
+	ErrInvalidCacheForDistUpgrade
+	ErrDistUpgradeFailed
+	ErrCreatePMForDistUpgradeFailed
+	ErrGetArchivesForDistUpgradeFailed
+	ErrDownloadPackagesForDist
+	ErrUpdateMarksAfterDistUpgradeFailed
+	ErrInvalidParametersForSearch
+	ErrCreatePackageRecordsParserFailed
+	ErrAllocSearchResultsFailed
+	ErrUnknownExceptionInSearch
+	ErrInvalidParametersForGetInfo
+	ErrInvalidParametersForSimulation
+	ErrCacheFileNotAvailable
+	ErrInvalidParametersForMultiSimulation
+	ErrVirtualNoInstallableProviders
+	ErrVirtualMultipleProvidersNeedSelect
+	ErrPackageIsNotInstalled
+	ErrVirtualNoInstalledProviders
+	ErrVirtualMultipleInstalledProviders
+	ErrDistUpgradeSimulationFailed
+	ErrMultiInstallSimulationFailed
+	ErrMultiRemoveSimulationFailed
+	ErrCombinedSimulationFailed
+	ErrVirtualNameMultipleProvidersExact
+	ErrCannotRemoveNotInstalledShort
+	ErrCannotRemoveEssential
+	ErrCannotRemoveTryTogether
+	ErrSomeBrokenDependencies
+	ErrMultiInstallProvidersSelect
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -140,8 +200,8 @@ var errorPatterns = []ErrorEntry{
 	{ErrBuilddepInfoFailed, "Unable to get build-dependency information for %s", func() string {
 		return lib.T_("Unable to get build-dependency information for %s")
 	}, 1},
-	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s.", func() string {
-		return lib.T_("Some broken packages were found while trying to process build-dependencies for %s.")
+	{ErrBuilddepBrokenPackages, "Some broken packages were found while trying to process build-dependencies for %s", func() string {
+		return lib.T_("Some broken packages were found while trying to process build-dependencies for %s")
 	}, 1},
 	{ErrVirtualNoProviders, "Package %s is a virtual package with no good providers", func() string {
 		return lib.T_("Package %s is a virtual package with no good providers")
@@ -279,6 +339,74 @@ var errorPatterns = []ErrorEntry{
 	{ErrVirtualMultipleProvidersShort, "Package %s is a virtual package with multiple ", func() string {
 		return lib.T_("Package %s is a virtual package with multiple ")
 	}, 1},
+	// Bindings specific patterns (from C++ bindings messages)
+	{ErrAptInitConfigFailed, "Failed to initialize APT configuration", func() string { return lib.T_("Failed to initialize APT configuration") }, 0},
+	{ErrInvalidSystemPointer, "Invalid system pointer", func() string { return lib.T_("Invalid system pointer") }, 0},
+	{ErrAptInitSystemFailed, "Failed to initialize APT system", func() string { return lib.T_("Failed to initialize APT system") }, 0},
+	{ErrInvalidArgsCacheOpen, "Invalid arguments for cache_open", func() string { return lib.T_("Invalid arguments for cache_open") }, 0},
+	{ErrSystemNotInitialized, "System not properly initialized", func() string { return lib.T_("System not properly initialized") }, 0},
+	{ErrAptLockFailed, "Unable to acquire APT system lock - another process may be using APT", func() string { return lib.T_("Unable to acquire APT system lock - another process may be using APT") }, 0},
+	{ErrCacheOpenFailed, "Failed to open APT cache", func() string { return lib.T_("Failed to open APT cache") }, 0},
+	{ErrCheckDepsFailed, "Failed to check dependencies", func() string { return lib.T_("Failed to check dependencies") }, 0},
+	{ErrGetDepCacheFailed, "Failed to get dependency cache", func() string { return lib.T_("Failed to get dependency cache") }, 0},
+	{ErrCacheReopenFailed, "Failed to reopen cache after refresh", func() string { return lib.T_("Failed to reopen cache after refresh") }, 0},
+	{ErrCheckDepsAfterRefreshFailed, "Failed to check dependencies after refresh", func() string { return lib.T_("Failed to check dependencies after refresh") }, 0},
+	{ErrGetDepCacheAfterRefreshFailed, "Failed to get dependency cache after refresh", func() string { return lib.T_("Failed to get dependency cache after refresh") }, 0},
+	{ErrGetPackageIndexesFailed, "Failed to get package indexes", func() string { return lib.T_("Failed to get package indexes") }, 0},
+	{ErrDownloadPackageListsFailed, "Failed to download package lists", func() string { return lib.T_("Failed to download package lists") }, 0},
+	{ErrRebuildCachesFailed, "Failed to rebuild caches", func() string { return lib.T_("Failed to rebuild caches") }, 0},
+	{ErrInvalidCacheForPM, "Invalid cache or output pointer for pm create", func() string { return lib.T_("Invalid cache or output pointer for pm create") }, 0},
+	{ErrCreatePackageManagerFailed, "Failed to create package manager", func() string { return lib.T_("Failed to create package manager") }, 0},
+	{ErrInvalidArgsMarkInstall, "Invalid arguments for mark_install", func() string { return lib.T_("Invalid arguments for mark_install") }, 0},
+	{ErrInvalidArgsMarkRemove, "Invalid arguments for mark_remove", func() string { return lib.T_("Invalid arguments for mark_remove") }, 0},
+	{ErrResolverRemoveDepsFailed, "Problem resolver failed to handle package removal dependencies", func() string { return lib.T_("Problem resolver failed to handle package removal dependencies") }, 0},
+	{ErrInvalidArgsMarkKeep, "Invalid arguments for mark_keep", func() string { return lib.T_("Invalid arguments for mark_keep") }, 0},
+	{ErrInvalidArgsMarkAuto, "Invalid arguments for mark_auto", func() string { return lib.T_("Invalid arguments for mark_auto") }, 0},
+	{ErrInvalidPMInstance, "Invalid package manager instance", func() string { return lib.T_("Invalid package manager instance") }, 0},
+	{ErrCannotInstallWithBrokenDeps, "Cannot install packages with broken dependencies", func() string { return lib.T_("Cannot install packages with broken dependencies") }, 0},
+	{ErrGetPackageArchivesFailed, "Failed to get package archives", func() string { return lib.T_("Failed to get package archives") }, 0},
+	{ErrDownloadPackagesFailed, "Failed to download packages", func() string { return lib.T_("Failed to download packages") }, 0},
+	{ErrPMOperationFailed, "Package manager operation failed", func() string { return lib.T_("Package manager operation failed") }, 0},
+	{ErrPMOperationIncomplete, "Package manager operation incomplete", func() string { return lib.T_("Package manager operation incomplete") }, 0},
+	{ErrPMUnknownResult, "Unknown package manager result", func() string { return lib.T_("Unknown package manager result") }, 0},
+	{ErrUpdatePackageMarksFailed, "Failed to update package marks", func() string { return lib.T_("Failed to update package marks") }, 0},
+	{ErrInvalidCacheForDistUpgrade, "Invalid cache for dist upgrade", func() string { return lib.T_("Invalid cache for dist upgrade") }, 0},
+	{ErrDistUpgradeFailed, "Distribution upgrade failed", func() string { return lib.T_("Distribution upgrade failed") }, 0},
+	{ErrCreatePMForDistUpgradeFailed, "Failed to create package manager for dist upgrade", func() string { return lib.T_("Failed to create package manager for dist upgrade") }, 0},
+	{ErrGetArchivesForDistUpgradeFailed, "Failed to get package archives for dist upgrade", func() string { return lib.T_("Failed to get package archives for dist upgrade") }, 0},
+	{ErrDownloadPackagesForDist, "Failed to download packages for dist upgrade", func() string { return lib.T_("Failed to download packages for dist upgrade") }, 0},
+	{ErrUpdateMarksAfterDistUpgradeFailed, "Failed to update package marks after dist upgrade", func() string { return lib.T_("Failed to update package marks after dist upgrade") }, 0},
+	{ErrInvalidParametersForSearch, "Invalid parameters for search", func() string { return lib.T_("Invalid parameters for search") }, 0},
+	{ErrRegexCompilationError, "Failed to compile regex pattern", func() string { return lib.T_("Failed to compile regex pattern") }, 0},
+	{ErrCreatePackageRecordsParserFailed, "Failed to create package records parser", func() string { return lib.T_("Failed to create package records parser") }, 0},
+	{ErrAllocSearchResultsFailed, "Failed to allocate memory for search results", func() string { return lib.T_("Failed to allocate memory for search results") }, 0},
+	{ErrUnknownExceptionInSearch, "Unknown exception in search", func() string { return lib.T_("Unknown exception in search") }, 0},
+	{ErrInvalidParametersForGetInfo, "Invalid parameters for get_package_info", func() string { return lib.T_("Invalid parameters for get_package_info") }, 0},
+	{ErrInvalidParametersForSimulation, "Invalid parameters for simulation", func() string { return lib.T_("Invalid parameters for simulation") }, 0},
+	{ErrCacheFileNotAvailable, "Cache file not available", func() string { return lib.T_("Cache file not available") }, 0},
+	{ErrInvalidParametersForMultiSimulation, "Invalid parameters for multi-package simulation", func() string { return lib.T_("Invalid parameters for multi-package simulation") }, 0},
+	{ErrVirtualNoInstallableProviders, "Virtual package %s has no installable providers", func() string { return lib.T_("Virtual package %s has no installable providers") }, 1},
+	{ErrVirtualMultipleProvidersNeedSelect, "Virtual package %s has multiple providers. Please select specific package.", func() string {
+		return lib.T_("Virtual package %s has multiple providers. Please select specific package.")
+	}, 1},
+	{ErrPackageNotFound, "Package not found: %s", func() string { return lib.T_("Package not found: %s") }, 1},
+	{ErrPackageIsNotInstalled, "Package is not installed: %s", func() string { return lib.T_("Package is not installed: %s") }, 1},
+	{ErrVirtualNoInstalledProviders, "Package %s has no installed providers", func() string { return lib.T_("Package %s has no installed providers") }, 1},
+	{ErrVirtualMultipleInstalledProviders, "Virtual package %s has multiple installed providers: %s. Please remove specific package.", func() string {
+		return lib.T_("Virtual package %s has multiple installed providers: %s. Please remove specific package.")
+	}, 2},
+	{ErrDistUpgradeSimulationFailed, "Dist upgrade simulation failed: %s", func() string { return lib.T_("Dist upgrade simulation failed: %s") }, 1},
+	{ErrMultiInstallSimulationFailed, "Multi-package install simulation failed: %s", func() string { return lib.T_("Multi-package install simulation failed: %s") }, 1},
+	{ErrMultiRemoveSimulationFailed, "Multi-package remove simulation failed: %s", func() string { return lib.T_("Multi-package remove simulation failed: %s") }, 1},
+	{ErrCombinedSimulationFailed, "Combined simulation failed: %s", func() string { return lib.T_("Combined simulation failed: %s") }, 1},
+	{ErrVirtualNameMultipleProvidersExact, "Virtual name '%s' has multiple providers; specify exact package name", func() string { return lib.T_("Virtual name '%s' has multiple providers; specify exact package name") }, 1},
+	{ErrCannotRemoveNotInstalledShort, "cannot remove %s not installed", func() string { return lib.T_("Cannot remove %s not installed") }, 1},
+	{ErrCannotRemoveEssential, "Cannot remove essential package %s", func() string { return lib.T_("Cannot remove essential package %s") }, 1},
+	{ErrCannotRemoveTryTogether, "Cannot remove %s. Try removing together: %s", func() string { return lib.T_("Cannot remove %s. Try removing together: %s") }, 2},
+	{ErrSomeBrokenDependencies, "Broken dependencies", func() string { return lib.T_("Broken dependencies") }, 0},
+	{ErrMultiInstallProvidersSelect, "Virtual package %s is provided by:", func() string {
+		return lib.T_("Virtual package %s is provided by:\n%s \nYou should explicitly select one to install")
+	}, 2},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.

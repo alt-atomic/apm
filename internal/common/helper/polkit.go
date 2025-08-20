@@ -44,7 +44,7 @@ func getStartTime(pid uint32) (uint64, error) {
 
 	fields := make([][]byte, 0, 24)
 	inParen := false
-	field := []byte{}
+	var field []byte
 	for _, c := range data {
 		switch {
 		case c == '(':

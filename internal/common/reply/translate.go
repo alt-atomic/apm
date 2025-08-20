@@ -7,6 +7,22 @@ import (
 // TranslateKey принимает ключ и возвращает английский текст.
 func TranslateKey(key string) string {
 	switch key {
+	case "aliases":
+		return lib.T_("Aliases")
+	case "desktopPaths":
+		return lib.T_("Desktop Paths")
+	case "consolePaths":
+		return lib.T_("Console Paths")
+	case "architecture":
+		return lib.T_("Architecture")
+	case "result":
+		return lib.T_("Result")
+	case "appStream":
+		return lib.T_("Application Information")
+	case "downloadSize":
+		return lib.T_("Downloaded Size")
+	case "installSize":
+		return lib.T_("Installed Size")
 	case "package":
 		return lib.T_("Package")
 	case "isApp":

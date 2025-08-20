@@ -274,12 +274,14 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		packageInfo, _ = a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	}
 	if export && !packageInfo.Package.Exporting {
-		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, false)
+		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.DesktopPaths, packageInfo.ConsolePaths, false)
 		if errExport != nil {
 			return nil, errExport
 		}
-		packageInfo.Package.Exporting = true
-		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", true)
+		if len(packageInfo.DesktopPaths) > 0 || len(packageInfo.ConsolePaths) > 0 {
+			packageInfo.Package.Exporting = true
+			a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", true)
+		}
 	}
 
 	resp := reply.APIResponse{
@@ -317,10 +319,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 	}
 
 	if packageInfo.Package.Exporting {
-		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.IsConsole, packageInfo.Paths, true)
-		if errExport != nil {
-			return nil, errExport
-		}
+		_ = a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.DesktopPaths, packageInfo.ConsolePaths, true)
 		packageInfo.Package.Exporting = false
 		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "exporting", false)
 	}
@@ -386,7 +385,12 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 		return nil, errors.New(errMsg)
 	}
 
-	result, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
+	osInfo, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = a.servicePackage.UpdatePackages(ctx, osInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +398,7 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":       fmt.Sprintf(lib.T_("Container %s successfully created"), name),
-			"containerInfo": result,
+			"containerInfo": osInfo,
 		},
 		Error: false,
 	}

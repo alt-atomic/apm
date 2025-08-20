@@ -21,8 +21,11 @@ import (
 	"apm/internal/common/reply"
 	"apm/lib"
 	"context"
-	"github.com/urfave/cli/v3"
+	"fmt"
+	"strings"
 	"syscall"
+
+	"github.com/urfave/cli/v3"
 )
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
@@ -32,6 +35,69 @@ func newErrorResponse(message string) reply.APIResponse {
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
 		Error: true,
+	}
+}
+
+func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
+	return func(ctx context.Context, cmd *cli.Command) {
+		args := cmd.Args().Slice()
+
+		// Текущий токен — последний позиционный аргумент (если есть)
+		var currentToken string
+		if len(args) > 0 {
+			currentToken = args[len(args)-1]
+		}
+		currentToken = strings.TrimSpace(currentToken)
+		if currentToken == "" {
+			// Пользователь ещё ничего не ввёл — не предлагаем варианты
+			return
+		}
+
+		base := strings.TrimRight(currentToken, "+-")
+		if base == "" {
+			return
+		}
+		suffix := currentToken[len(base):]
+
+		exclude := make(map[string]struct{}, len(args))
+		for i := 0; i < len(args)-1; i++ {
+			exclude[strings.TrimRight(strings.TrimSpace(args[i]), "+-")] = struct{}{}
+		}
+
+		like := base + "%"
+		svc := NewActions().serviceAptDatabase
+		if svc == nil {
+			return
+		}
+
+		pkgs, _ := svc.SearchPackagesMultiLimit(ctx, like, 200, installed)
+
+		// Избегаем самоповторов и дубликатов в выводе
+		printed := make(map[string]struct{}, len(pkgs))
+		for _, p := range pkgs {
+			if _, seen := exclude[p.Name]; seen {
+				continue
+			}
+			candidate := p.Name + suffix
+			if strings.EqualFold(candidate, currentToken) {
+				continue
+			}
+			if _, dup := printed[candidate]; dup {
+				continue
+			}
+			printed[candidate] = struct{}{}
+			fmt.Println(candidate)
+		}
+	}
+}
+
+// findPkgInfoOnlyFirstArg — как обычный поиск, но только для первого аргумента
+func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
+	return func(ctx context.Context, cmd *cli.Command) {
+		if cmd.NArg() >= 2 {
+			return
+		}
+		findPkgWithInstalled(false)(ctx, cmd)
 	}
 }
 
@@ -66,23 +132,15 @@ func CommandList() *cli.Command {
 				Name:      "install",
 				Usage:     lib.T_("Package list for installation. The format package- package+ is supported."),
 				ArgsUsage: "packages",
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "apply",
-						Usage:   lib.T_("Apply to image"),
-						Aliases: []string{"a"},
-						Value:   false,
-						Hidden:  !lib.Env.IsAtomic,
-					},
-				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("apply"))
+					resp, err := actions.Install(ctx, cmd.Args().Slice())
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
 				}),
+				ShellComplete: findPkgWithInstalled(false),
 			},
 			{
 				Name:      "remove",
@@ -90,21 +148,21 @@ func CommandList() *cli.Command {
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
-						Name:    "apply",
-						Usage:   lib.T_("Apply to image"),
-						Aliases: []string{"a"},
+						Name:    "purge",
+						Usage:   lib.T_("Delete all files"),
+						Aliases: []string{"p"},
 						Value:   false,
-						Hidden:  !lib.Env.IsAtomic,
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("apply"))
+					resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
 				}),
+				ShellComplete: findPkgWithInstalled(true),
 			},
 			{
 				Name:  "update",
@@ -156,6 +214,7 @@ func CommandList() *cli.Command {
 
 					return reply.CliResponse(ctx, *resp)
 				}),
+				ShellComplete: findPkgInfoOnlyFirstArg(),
 			},
 			{
 				Name:      "search",

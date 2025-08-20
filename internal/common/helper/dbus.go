@@ -16,7 +16,10 @@
 
 package helper
 
-import "github.com/godbus/dbus/v5/introspect"
+import (
+	"apm/lib"
+	"github.com/godbus/dbus/v5/introspect"
+)
 
 const UserIntrospectXML = `
 <node>
@@ -103,8 +106,35 @@ const UserIntrospectXML = `
   </interface>
 ` + introspect.IntrospectDataString + `</node>`
 
-const SystemIntrospectXML = `
-<node>
+// GetUserIntrospectXML возвращает XML интроспекции для пользовательской сессии
+// в зависимости от наличия distrobox в системе
+func GetUserIntrospectXML() string {
+	if lib.Env.ExistDistrobox {
+		return UserIntrospectXML
+	}
+
+	// Если distrobox не найден, возвращаем только базовый интерфейс
+	return `<node>
+  <interface name="org.altlinux.APM">
+    <signal name="Notification">
+      <arg type="s" name="message" direction="out"/>
+    </signal>
+  </interface>
+
+  <interface name="org.altlinux.APM.distrobox">
+    <method name="GetIconByPackage">
+      <arg direction="in" type="s" name="packageName"/>
+      <arg direction="in" type="s" name="container"/>
+      <arg direction="out" type="ay" name="result"/>
+    </method>
+  </interface>
+` + introspect.IntrospectDataString + `</node>`
+}
+
+// GetSystemIntrospectXML возвращает XML интроспекции для системной сессии
+// в зависимости от типа системы (атомарная или обычная)
+func GetSystemIntrospectXML() string {
+	baseSystemXML := `<node>
   <interface name="org.altlinux.APM">
     <signal name="Notification">
       <arg type="s" name="message" direction="out"/>
@@ -140,14 +170,13 @@ const SystemIntrospectXML = `
 
     <method name="Install">
       <arg direction="in" type="as" name="packages"/>
-      <arg direction="in" type="b" name="applyAtomic"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     
     <method name="Remove">
       <arg direction="in" type="as" name="packages"/>
-      <arg direction="in" type="b" name="applyAtomic"/>
+      <arg direction="in" type="b" name="purge"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
@@ -186,13 +215,26 @@ const SystemIntrospectXML = `
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="in" type="b" name="installed"/>
       <arg direction="out" type="s" name="result"/>
-    </method>
+    </method>`
+
+	// Если система атомарная, добавляем методы для работы с образом
+	if lib.Env.IsAtomic {
+		baseSystemXML += `
     
     <method name="ImageApply">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
     
+    <method name="ImageGetConfig">
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="ImageSaveConfig">
+      <arg direction="in" type="s" name="config"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
     <method name="ImageHistory">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="in" type="s" name="imageName"/>
@@ -209,6 +251,12 @@ const SystemIntrospectXML = `
     <method name="ImageStatus">
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
-    </method>
+    </method>`
+	}
+
+	baseSystemXML += `
   </interface>
 ` + introspect.IntrospectDataString + `</node>`
+
+	return baseSystemXML
+}

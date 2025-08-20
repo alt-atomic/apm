@@ -1,6 +1,8 @@
 package _package
 
 import (
+	aptParser "apm/internal/common/apt"
+	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/reply"
 	"apm/lib"
 	"context"
@@ -8,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -19,13 +23,13 @@ func (a *Actions) UpdateKernel(ctx context.Context) []error {
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.UpdateKernel"))
 
 	cmdStr := fmt.Sprintf("%s update-kernel -f -y", lib.Env.CommandPrefix)
-	errs := a.commandWithProgress(ctx, cmdStr, typeInstall)
+	errs := aptParser.CommandWithProgress(ctx, cmdStr, aptParser.TypeInstall)
 
 	return errs
 }
 
 // CheckUpdateKernel проверка пакетов для обновления ядра
-func (a *Actions) CheckUpdateKernel(ctx context.Context) (PackageChanges, []error) {
+func (a *Actions) CheckUpdateKernel(ctx context.Context) (aptLib.PackageChanges, []error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
@@ -36,7 +40,7 @@ func (a *Actions) CheckUpdateKernel(ctx context.Context) (PackageChanges, []erro
 	rawLines := strings.Split(string(out), "\n")
 
 	cleanLines := filterNoise(rawLines)
-	aptErrRaw := ErrorLinesAnalyseAll(cleanLines)
+	aptErrRaw := aptParser.ErrorLinesAnalyseAll(cleanLines)
 	pkgs, parseErr := parseAptOutput(strings.Join(cleanLines, "\n"))
 
 	if len(aptErrRaw) > 0 {
@@ -51,13 +55,13 @@ func (a *Actions) CheckUpdateKernel(ctx context.Context) (PackageChanges, []erro
 	}
 
 	if runErr != nil {
-		return PackageChanges{}, []error{
+		return aptLib.PackageChanges{}, []error{
 			fmt.Errorf(lib.T_("update-kernel exited with code %d"), exitCode(runErr)),
 		}
 	}
 
 	if parseErr != nil {
-		return PackageChanges{}, []error{
+		return aptLib.PackageChanges{}, []error{
 			fmt.Errorf(lib.T_("Package verification error: %v"), parseErr),
 		}
 	}
@@ -95,4 +99,77 @@ func filterNoise(lines []string) []string {
 		}
 	}
 	return cleaned
+}
+
+func parseAptOutput(output string) (aptLib.PackageChanges, error) {
+	pc := &aptLib.PackageChanges{}
+	lines := strings.Split(output, "\n")
+
+	statsRegex := regexp.MustCompile(`(\d+) upgraded, (\d+) newly installed, (\d+) removed and (\d+) not upgraded\.`)
+
+	var currentSection string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// Определяем заголовки секций
+		if strings.HasPrefix(line, "The following extra packages will be installed:") {
+			currentSection = "extra_installed"
+			continue
+		}
+		if strings.HasPrefix(line, "The following packages will be upgraded") {
+			currentSection = "upgraded"
+			continue
+		}
+		if strings.HasPrefix(line, "The following NEW packages will be installed:") {
+			currentSection = "new_installed"
+			continue
+		}
+		if strings.HasPrefix(line, "The following packages will be REMOVED:") {
+			currentSection = "removed"
+			continue
+		}
+
+		// Если строка содержит статистику, то обрабатываем отдельно
+		if statsRegex.MatchString(line) {
+			matches := statsRegex.FindStringSubmatch(line)
+			if len(matches) == 5 {
+				if count, err := strconv.Atoi(matches[1]); err == nil {
+					pc.UpgradedCount = count
+				}
+				if count, err := strconv.Atoi(matches[2]); err == nil {
+					pc.NewInstalledCount = count
+				}
+				if count, err := strconv.Atoi(matches[3]); err == nil {
+					pc.RemovedCount = count
+				}
+				if count, err := strconv.Atoi(matches[4]); err == nil {
+					pc.NotUpgradedCount = count
+				}
+			}
+			currentSection = ""
+			continue
+		}
+
+		if strings.HasSuffix(line, "...") {
+			continue
+		}
+		switch currentSection {
+		case "extra_installed":
+			pkgs := strings.Fields(line)
+			pc.ExtraInstalled = append(pc.ExtraInstalled, pkgs...)
+		case "upgraded":
+			pkgs := strings.Fields(line)
+			pc.UpgradedPackages = append(pc.UpgradedPackages, pkgs...)
+		case "new_installed":
+			pkgs := strings.Fields(line)
+			pc.NewInstalledPackages = append(pc.NewInstalledPackages, pkgs...)
+		case "removed":
+			pkgs := strings.Fields(line)
+			pc.RemovedPackages = append(pc.RemovedPackages, pkgs...)
+		}
+	}
+
+	return *pc, nil
 }

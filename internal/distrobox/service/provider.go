@@ -65,9 +65,10 @@ type PackageQueryBuilder struct {
 }
 
 type InfoPackageAnswer struct {
-	Package   PackageInfo `json:"package"`
-	Paths     []string    `json:"paths"`
-	IsConsole bool        `json:"isConsole"`
+	Package      PackageInfo `json:"package"`
+	DesktopPaths []string    `json:"desktopPaths"`
+	ConsolePaths []string    `json:"consolePaths"`
+	IsConsole    bool        `json:"isConsole"`
 }
 
 // PackageProvider задаёт интерфейс для работы с пакетами в контейнере.
@@ -154,7 +155,7 @@ func (p *PackageService) GetPathByPackageName(ctx context.Context, containerInfo
 	return provider.GetPathByPackageName(ctx, containerInfo, packageName, filePath)
 }
 
-// GetInfoPackage возвращает информацию о пакете
+// GetInfoPackage возвращает информацию о пакете с путями как для desktop, так и для консольных приложений
 func (p *PackageService) GetInfoPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) (InfoPackageAnswer, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetInfoPackage"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetInfoPackage"))
@@ -164,30 +165,28 @@ func (p *PackageService) GetInfoPackage(ctx context.Context, containerInfo Conta
 		return InfoPackageAnswer{}, fmt.Errorf(lib.T_("Failed to retrieve package information: %s"), packageName)
 	}
 
-	// Пробуем получить пути для GUI-приложений
+	// Получаем пути для GUI-приложений
 	desktopPaths, err := p.GetPathByPackageName(ctx, containerInfo, packageName, "/usr/share/applications/")
 	if err != nil {
 		lib.Log.Debugf(fmt.Sprintf(lib.T_("Error retrieving desktop file path: %v"), err))
+		desktopPaths = []string{}
 	}
 
-	if len(desktopPaths) > 0 {
-		return InfoPackageAnswer{
-			Package:   info,
-			Paths:     desktopPaths,
-			IsConsole: false,
-		}, nil
-	}
-
-	// Если GUI-пути не найдены, ищем консольные приложения
+	// Получаем пути для консольных приложений
 	consolePaths, err := p.GetPathByPackageName(ctx, containerInfo, packageName, "/usr/bin/")
 	if err != nil {
 		lib.Log.Debugf(fmt.Sprintf(lib.T_("Error retrieving console path: %v"), err))
+		consolePaths = []string{}
 	}
 
+	// Определяем, является ли пакет консольным (имеет только консольные пути)
+	isConsole := len(desktopPaths) == 0 && len(consolePaths) > 0
+
 	return InfoPackageAnswer{
-		Package:   info,
-		Paths:     consolePaths,
-		IsConsole: len(consolePaths) > 0,
+		Package:      info,
+		DesktopPaths: desktopPaths,
+		ConsolePaths: consolePaths,
+		IsConsole:    isConsole,
 	}, nil
 }
 

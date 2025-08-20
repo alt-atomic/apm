@@ -19,6 +19,7 @@ package system
 import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/system/service"
 	"apm/lib"
 	"context"
 	"encoding/json"
@@ -47,12 +48,12 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // Install – обёртка над Actions.Install.
-func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
-	resp, err := w.actions.Install(ctx, packages, applyAtomic)
+	resp, err := w.actions.Install(ctx, packages)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -64,12 +65,12 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, applyAtomic
 }
 
 // Remove – обёртка над Actions.Remove.
-func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, applyAtomic bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, packages, applyAtomic)
+	resp, err := w.actions.Remove(ctx, packages, purge)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -247,7 +248,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transac
 		return "", err
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
-	resp, err := w.actions.CheckRemove(ctx, packages)
+	resp, err := w.actions.CheckRemove(ctx, packages, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -333,6 +334,36 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	}
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageStatus(ctx)
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// ImageGetConfig получить конфиг
+func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
+	resp, err := w.actions.ImageGetConfig()
+	if err != nil {
+		return "", dbus.MakeFailedError(err)
+	}
+	data, jerr := json.Marshal(resp)
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// ImageSaveConfig сохранить конфиг
+func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
+	configObject := service.Config{}
+	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
+		return "", dbus.MakeFailedError(fmt.Errorf(lib.T_("Failed to parse JSON: %w"), err))
+	}
+	resp, err := w.actions.ImageSaveConfig(configObject)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

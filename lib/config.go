@@ -25,6 +25,23 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+type Colors struct {
+	Enumerator     string `yaml:"enumerator"`
+	Accent         string `yaml:"accent"`
+	ItemLight      string `yaml:"itemLight"`
+	ItemDark       string `yaml:"itemDark"`
+	Success        string `yaml:"success"`
+	Error          string `yaml:"error"`
+	Delete         string `yaml:"delete"`
+	Install        string `yaml:"install"`
+	Shortcut       string `yaml:"shortcut"`
+	ScrollBar      string `yaml:"scrollBar"`
+	DialogKeyLight string `yaml:"dialogKeyLight"`
+	DialogKeyDark  string `yaml:"dialogKeyDark"`
+	ProgressStart  string `yaml:"progressStart"`
+	ProgressEnd    string `yaml:"progressEnd"`
+}
+
 type Environment struct {
 	CommandPrefix   string `yaml:"commandPrefix"`
 	Environment     string `yaml:"environment"`
@@ -33,12 +50,14 @@ type Environment struct {
 	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
 	PathDBKV        string `yaml:"pathDBKV"`
 	PathImageFile   string `yaml:"pathImageFile"`
+	Colors          Colors `yaml:"colors"`
 	// Internal variables
 	ExistStplr     bool
 	ExistDistrobox bool
 	Format         string
 	IsAtomic       bool
 	PathLocales    string
+	Version        string
 }
 
 var Env Environment
@@ -47,19 +66,38 @@ var DevMode bool
 // Глобальные переменные для возможности переопределения значений при сборке
 
 var (
-	BuildCommandPrefix   string
-	BuildEnvironment     string
-	BuildPathLocales     string
-	BuildPathLogFile     string
-	BuildPathDBSQLUser   string
+	BuildCommandPrefix string
+	BuildEnvironment   string
+	BuildPathLocales   string
+	BuildPathLogFile   string
+	// BuildPathDBSQLSystem BuildPathDBSQLUser   string
 	BuildPathDBSQLSystem string
-	BuildPathDBKV        string
-	BuildPathImageFile   string
+	// BuildPathImageFile BuildPathDBKV        string
+	BuildPathImageFile string
+	BuildVersion       string
 )
 
 func InitConfig() error {
 	var configPath string
 	var err error
+
+	// Устанавливаем значения цветов по умолчанию
+	Env.Colors = Colors{
+		Enumerator:     "#c4c8c6",
+		Accent:         "#a2734c",
+		ItemLight:      "#171717",
+		ItemDark:       "#c4c8c6",
+		Success:        "2",
+		Error:          "9",
+		Delete:         "#a81c1f",
+		Install:        "#2bb389",
+		Shortcut:       "#888888",
+		ScrollBar:      "#ff0000",
+		DialogKeyLight: "#234f55",
+		DialogKeyDark:  "#82a0a3",
+		ProgressStart:  "#c4c8c6",
+		ProgressEnd:    "#26a269",
+	}
 
 	// Переопределяем значения из ldflags, если они заданы
 	if BuildCommandPrefix != "" {
@@ -79,6 +117,9 @@ func InitConfig() error {
 	}
 	if BuildPathImageFile != "" {
 		Env.PathImageFile = BuildPathImageFile
+	}
+	if BuildVersion != "" {
+		Env.Version = BuildVersion
 	}
 
 	// User's files

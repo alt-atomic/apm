@@ -17,6 +17,8 @@
 package main
 
 import (
+	"apm/internal/common/binding/apt"
+	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
@@ -25,10 +27,11 @@ import (
 	"apm/lib"
 	"context"
 	"fmt"
-	"github.com/godbus/dbus/v5"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/godbus/dbus/v5"
 
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
@@ -82,14 +85,29 @@ func main() {
 			})
 		}
 
+		aptLib.WaitIdle()
 		cleanup()
-		os.Exit(1)
+		code := 1
+		if s, ok := sig.(syscall.Signal); ok {
+			if s == syscall.SIGINT {
+				code = 130
+			} else if s == syscall.SIGTERM {
+				code = 143
+			} else {
+				code = 128 + int(s)
+			}
+		}
+		os.Exit(code)
 	}()
+
+	systemCommands := system.CommandList()
+	distroboxCommands := distrobox.CommandList()
 
 	// Основная команда приложения
 	rootCommand := &cli.Command{
 		Name:  "apm",
 		Usage: "Atomic Package Manager",
+		Version: lib.Env.Version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -114,8 +132,8 @@ func main() {
 				Usage:  lib.T_("Start system D-Bus service org.altlinux.APM"),
 				Action: systemDbus,
 			},
-			system.CommandList(),
-			distrobox.CommandList(),
+			systemCommands,
+			distroboxCommands,
 			{
 				Name:      "help",
 				Aliases:   []string{"h"},
@@ -126,14 +144,32 @@ func main() {
 		},
 	}
 
-	rootCommand.Suggest = true
+	applyCommandSetting(rootCommand)
+	applyCommandSetting(distroboxCommands)
+	applyCommandSetting(systemCommands)
+
 	if err := rootCommand.Run(ctx, os.Args); err != nil {
 		cleanup()
 		os.Exit(1)
 	}
 }
 
-func sessionDbus(ctx context.Context, _ *cli.Command) error {
+func applyCommandSetting(cliCommand *cli.Command) {
+	cliCommand.CommandNotFound = func(ctx context.Context, cmd *cli.Command, name string) {
+		lib.Env.Format = cmd.String("format")
+		msg := fmt.Sprintf(lib.T_("Unknown command: %s. See 'apm help'"), name)
+		_ = reply.CliResponse(ctx, reply.APIResponse{Data: map[string]interface{}{"message": msg}, Error: true})
+	}
+	cliCommand.EnableShellCompletion = true
+	cliCommand.Suggest = true
+
+	for _, sub := range cliCommand.Commands {
+		applyCommandSetting(sub)
+	}
+}
+
+func sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	lib.Env.Format = cmd.String("format")
 	if syscall.Geteuid() == 0 {
 		errPermission := lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
 		_ = reply.CliResponse(ctx, reply.APIResponse{
@@ -167,7 +203,7 @@ func sessionDbus(ctx context.Context, _ *cli.Command) error {
 	}
 
 	if err = lib.DBUSConn.Export(
-		introspect.Introspectable(helper.UserIntrospectXML),
+		introspect.Introspectable(helper.GetUserIntrospectXML()),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
@@ -188,7 +224,8 @@ func sessionDbus(ctx context.Context, _ *cli.Command) error {
 	select {}
 }
 
-func systemDbus(ctx context.Context, _ *cli.Command) error {
+func systemDbus(ctx context.Context, cmd *cli.Command) error {
+	lib.Env.Format = cmd.String("format")
 	if syscall.Geteuid() != 0 {
 		errPermission := lib.T_("Elevated rights are required to perform this action. Please use sudo or su")
 		_ = reply.CliResponse(ctx, reply.APIResponse{
@@ -227,7 +264,7 @@ func systemDbus(ctx context.Context, _ *cli.Command) error {
 	}
 
 	if err = lib.DBUSConn.Export(
-		introspect.Introspectable(helper.SystemIntrospectXML),
+		introspect.Introspectable(helper.GetSystemIntrospectXML()),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
@@ -243,6 +280,7 @@ func systemDbus(ctx context.Context, _ *cli.Command) error {
 func cleanup() {
 	lib.Log.Debugln(lib.T_("Terminating the application. Releasing resources…"))
 
+	defer apt.Close() // закрываем экземпляр APT system
 	defer globalCancel()
 	if dbKV := lib.CheckDBKv(); dbKV != nil {
 		if err := dbKV.Close(); err != nil {

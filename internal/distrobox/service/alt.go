@@ -180,21 +180,41 @@ func (p *AltProvider) InstallPackage(ctx context.Context, containerInfo Containe
 
 // GetPathByPackageName возвращает список путей для файла пакета, найденных через rpm -ql.
 func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
+	parseOutput := func(output string) []string {
+		lines := strings.Split(output, "\n")
+		var paths []string
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
+				paths = append(paths, trimmed)
+			}
+		}
+		return paths
+	}
+
 	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
 		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
-		return []string{}, err
 	}
 
-	lines := strings.Split(stdout, "\n")
-	var paths []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
-			paths = append(paths, trimmed)
+	paths := parseOutput(stdout)
+	if len(paths) == 0 {
+		fallbackCommand := fmt.Sprintf("%s distrobox enter %s -- rpm -qa | grep -E '^%s' | xargs rpm -ql | grep '%s' | sort",
+			lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
+		fallbackStdout, fallbackStderr, fallbackErr := helper.RunCommand(ctx, fallbackCommand)
+		if fallbackErr != nil {
+			lib.Log.Debugf(lib.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
+			return []string{}, nil
+		}
+
+		fallbackPaths := parseOutput(fallbackStdout)
+		if len(fallbackPaths) > 0 {
+			lib.Log.Debugf(lib.T_("Fallback search found %d files"), len(fallbackPaths))
+			return fallbackPaths, nil
 		}
 	}
+
 	return paths, nil
 }
 
