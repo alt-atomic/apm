@@ -45,7 +45,6 @@ type Colors struct {
 type Environment struct {
 	CommandPrefix   string `yaml:"commandPrefix"`
 	Environment     string `yaml:"environment"`
-	PathLogFile     string `yaml:"pathLogFile"`
 	PathDBSQLSystem string `yaml:"pathDBSQLSystem"`
 	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
 	PathDBKV        string `yaml:"pathDBKV"`
@@ -69,7 +68,6 @@ var (
 	BuildCommandPrefix string
 	BuildEnvironment   string
 	BuildPathLocales   string
-	BuildPathLogFile   string
 	// BuildPathDBSQLSystem BuildPathDBSQLUser   string
 	BuildPathDBSQLSystem string
 	// BuildPathImageFile BuildPathDBKV        string
@@ -109,9 +107,6 @@ func InitConfig() error {
 	if BuildPathLocales != "" {
 		Env.PathLocales = BuildPathLocales
 	}
-	if BuildPathLogFile != "" {
-		Env.PathLogFile = BuildPathLogFile
-	}
 	if BuildPathDBSQLSystem != "" {
 		Env.PathDBSQLSystem = BuildPathDBSQLSystem
 	}
@@ -144,10 +139,6 @@ func InitConfig() error {
 	Env.PathDBSQLUser = filepath.Clean(expandUser(Env.PathDBSQLUser))
 	Env.PathDBSQLSystem = filepath.Clean(expandUser(Env.PathDBSQLSystem))
 	Env.PathDBKV = filepath.Clean(expandUser(Env.PathDBKV))
-	Env.PathLogFile = filepath.Clean(expandUser(Env.PathLogFile))
-
-	// Проверяем и создаём путь для лог-файла
-	err = EnsurePath(Env.PathLogFile)
 
 	// Проверяем путь к базам данных, либо для юзера, либо системная директория
 	if syscall.Geteuid() != 0 {

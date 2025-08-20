@@ -42,8 +42,6 @@ var (
 )
 
 func main() {
-	lib.Log.Debugln("Starting apm…")
-
 	errInitial := lib.InitConfig()
 	if errInitial != nil {
 		_ = reply.CliResponse(ctx, reply.APIResponse{
@@ -58,6 +56,7 @@ func main() {
 	lib.InitLocales()
 	helper.SetupHelpTemplates()
 
+	lib.Log.Debugf("Starting apm…")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
@@ -105,8 +104,8 @@ func main() {
 
 	// Основная команда приложения
 	rootCommand := &cli.Command{
-		Name:  "apm",
-		Usage: "Atomic Package Manager",
+		Name:    "apm",
+		Usage:   "Atomic Package Manager",
 		Version: lib.Env.Version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{

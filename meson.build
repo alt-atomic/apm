@@ -25,7 +25,6 @@ SERVICE_ID = 'org.altlinux.APM'
 COMMAND_PREFIX = ''
 PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
-LOG_FILEPATH = get_option('localstatedir') / 'log' / meson.project_name() / meson.project_name() + '.log'
 DBSQL_FILEPATH = get_option('localstatedir') / 'lib' / meson.project_name() / meson.project_name() + '.db'
 IMAGE_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'image.yml'
 
@@ -33,7 +32,6 @@ constants = [
   ['apm/lib.BuildCommandPrefix', COMMAND_PREFIX],
   ['apm/lib.BuildEnvironment', PROFILE],
   ['apm/lib.BuildPathLocales', LOCALES_DIR],
-  ['apm/lib.BuildPathLogFile', LOG_FILEPATH],
   ['apm/lib.BuildPathDBSQLSystem', DBSQL_FILEPATH],
   ['apm/lib.BuildPathImageFile', IMAGE_FILEPATH],
   ['apm/lib.BuildVersion', version],
