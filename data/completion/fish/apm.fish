@@ -83,7 +83,7 @@ complete -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcom
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from image i; and __fish_seen_subcommand_from history; and not __fish_seen_subcommand_from help h' -a 'help' -d 'Shows a list of commands or help for one command'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and __fish_seen_subcommand_from image i; and not __fish_seen_subcommand_from apply status update history help h' -a 'help' -d 'Shows a list of commands or help for one command'
 complete -x -c apm -n '__fish_seen_subcommand_from system s; and not __fish_seen_subcommand_from install remove update upgrade info search list image i help h' -a 'help' -d 'Shows a list of commands or help for one command'
-complete -x -c apm -n '__fish_apm_no_subcommand' -a 'distrobox' -d 'Управление пакетами и контейнерами в distobox'
+complete -x -c apm -n '__fish_apm_no_subcommand' -a 'distrobox' -d 'Управление пакетами и контейнерами в distrobox'
 complete -c apm -n '__fish_seen_subcommand_from distrobox d' -f -l help -s h -d 'show help'
 complete -x -c apm -n '__fish_seen_subcommand_from distrobox d; and not __fish_seen_subcommand_from update info search list install remove container c help h' -a 'update' -d 'Обновить и синхронизировать список установленных пакетов с хостом'
 complete -c apm -n '__fish_seen_subcommand_from distrobox d; and __fish_seen_subcommand_from update' -f -l container -s c -r -d 'Имя контейнера. Обязательно'
