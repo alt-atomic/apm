@@ -45,13 +45,13 @@ func TN_(messageID string, pluralMessageID string, count int) string {
 	return gotext.GetN(messageID, pluralMessageID, count)
 }
 
-func TC_(messageID string, context string) string {
-	return gotext.GetC(messageID, context)
-}
-
-func TD_(domain string, messageID string) string {
-	return gotext.GetD(domain, messageID)
-}
+//func TC_(messageID string, context string) string {
+//	return gotext.GetC(messageID, context)
+//}
+//
+//func TD_(domain string, messageID string) string {
+//	return gotext.GetD(domain, messageID)
+//}
 
 // GetSystemLocale возвращает базовый язык системы в виде language.Tag.
 func GetSystemLocale() language.Tag {

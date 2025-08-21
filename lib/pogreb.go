@@ -38,7 +38,7 @@ func InitKeyValue() {
 		var err error
 		dbInstanceKv, err = pogreb.Open(dbFile, nil)
 		if err != nil {
-			Log.Fatal(T_("Error opening database: %v"), err)
+			Log.Error(T_("Error opening database: %v"), err)
 		}
 	})
 }

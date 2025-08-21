@@ -25,19 +25,38 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+type Colors struct {
+	Enumerator     string `yaml:"enumerator"`
+	Accent         string `yaml:"accent"`
+	ItemLight      string `yaml:"itemLight"`
+	ItemDark       string `yaml:"itemDark"`
+	Success        string `yaml:"success"`
+	Error          string `yaml:"error"`
+	Delete         string `yaml:"delete"`
+	Install        string `yaml:"install"`
+	Shortcut       string `yaml:"shortcut"`
+	ScrollBar      string `yaml:"scrollBar"`
+	DialogKeyLight string `yaml:"dialogKeyLight"`
+	DialogKeyDark  string `yaml:"dialogKeyDark"`
+	ProgressStart  string `yaml:"progressStart"`
+	ProgressEnd    string `yaml:"progressEnd"`
+}
+
 type Environment struct {
 	CommandPrefix   string `yaml:"commandPrefix"`
 	Environment     string `yaml:"environment"`
-	PathLogFile     string `yaml:"pathLogFile"`
 	PathDBSQLSystem string `yaml:"pathDBSQLSystem"`
 	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
 	PathDBKV        string `yaml:"pathDBKV"`
 	PathImageFile   string `yaml:"pathImageFile"`
+	Colors          Colors `yaml:"colors"`
 	// Internal variables
-	ExistAlr    bool
-	Format      string
-	IsAtomic    bool
-	PathLocales string
+	ExistStplr     bool
+	ExistDistrobox bool
+	Format         string
+	IsAtomic       bool
+	PathLocales    string
+	Version        string
 }
 
 var Env Environment
@@ -46,18 +65,37 @@ var DevMode bool
 // Глобальные переменные для возможности переопределения значений при сборке
 
 var (
-	BuildCommandPrefix   string
-	BuildEnvironment     string
-	BuildPathLocales     string
-	BuildPathLogFile     string
-	BuildPathDBSQLUser   string
+	BuildCommandPrefix string
+	BuildEnvironment   string
+	BuildPathLocales   string
+	// BuildPathDBSQLSystem BuildPathDBSQLUser   string
 	BuildPathDBSQLSystem string
-	BuildPathDBKV        string
-	BuildPathImageFile   string
+	// BuildPathImageFile BuildPathDBKV        string
+	BuildPathImageFile string
+	BuildVersion       string
 )
 
-func InitConfig() {
+func InitConfig() error {
 	var configPath string
+	var err error
+
+	// Устанавливаем значения цветов по умолчанию
+	Env.Colors = Colors{
+		Enumerator:     "#c4c8c6",
+		Accent:         "#a2734c",
+		ItemLight:      "#171717",
+		ItemDark:       "#c4c8c6",
+		Success:        "2",
+		Error:          "9",
+		Delete:         "#a81c1f",
+		Install:        "#2bb389",
+		Shortcut:       "#888888",
+		ScrollBar:      "#ff0000",
+		DialogKeyLight: "#234f55",
+		DialogKeyDark:  "#82a0a3",
+		ProgressStart:  "#c4c8c6",
+		ProgressEnd:    "#26a269",
+	}
 
 	// Переопределяем значения из ldflags, если они заданы
 	if BuildCommandPrefix != "" {
@@ -69,14 +107,14 @@ func InitConfig() {
 	if BuildPathLocales != "" {
 		Env.PathLocales = BuildPathLocales
 	}
-	if BuildPathLogFile != "" {
-		Env.PathLogFile = BuildPathLogFile
-	}
 	if BuildPathDBSQLSystem != "" {
 		Env.PathDBSQLSystem = BuildPathDBSQLSystem
 	}
 	if BuildPathImageFile != "" {
 		Env.PathImageFile = BuildPathImageFile
+	}
+	if BuildVersion != "" {
+		Env.Version = BuildVersion
 	}
 
 	// User's files
@@ -84,7 +122,7 @@ func InitConfig() {
 	Env.PathDBKV = "~/.cache/apm/pogreb"
 
 	// Ищем конфигурационный файл в текущей директории
-	if _, err := os.Stat("config.yml"); err == nil {
+	if _, err = os.Stat("config.yml"); err == nil {
 		configPath = "config.yml"
 	} else if _, err = os.Stat("/etc/apm/config.yml"); err == nil {
 		configPath = "/etc/apm/config.yml"
@@ -94,38 +132,27 @@ func InitConfig() {
 
 	// Если найден конфигурационный файл, читаем его
 	if configPath != "" {
-		err := cleanenv.ReadConfig(configPath, &Env)
-		if err != nil {
-			Log.Fatal(err)
-		}
+		err = cleanenv.ReadConfig(configPath, &Env)
 	}
 
 	// расширяем анализ строк, что бы парсить переменные в путях
 	Env.PathDBSQLUser = filepath.Clean(expandUser(Env.PathDBSQLUser))
 	Env.PathDBSQLSystem = filepath.Clean(expandUser(Env.PathDBSQLSystem))
 	Env.PathDBKV = filepath.Clean(expandUser(Env.PathDBKV))
-	Env.PathLogFile = filepath.Clean(expandUser(Env.PathLogFile))
-
-	// Проверяем и создаём путь для лог-файла
-	if err := EnsurePath(Env.PathLogFile); err != nil {
-		Log.Fatal(err)
-	}
 
 	// Проверяем путь к базам данных, либо для юзера, либо системная директория
 	if syscall.Geteuid() != 0 {
 		// Проверяем и создаём путь для db-директории key-value
-		if err := EnsureDir(Env.PathDBKV); err != nil {
-			Log.Fatal(err)
-		}
-
+		err = EnsureDir(Env.PathDBKV)
 		// Проверяем и создаём путь для db-директории SQL
-		if err := EnsurePath(Env.PathDBSQLUser); err != nil {
-			Log.Fatal(err)
-		}
+		err = EnsurePath(Env.PathDBSQLUser)
 	} else {
-		if err := EnsurePath(Env.PathDBSQLSystem); err != nil {
-			Log.Fatal(err)
-		}
+		err = EnsurePath(Env.PathDBSQLSystem)
+	}
+
+	if err != nil {
+		Log.Error(err)
+		return err
 	}
 
 	if _, errAtomic := os.Stat("/usr/bin/bootc"); os.IsNotExist(errAtomic) {
@@ -134,11 +161,19 @@ func InitConfig() {
 		Env.IsAtomic = true
 	}
 
-	if _, errAlr := os.Stat("/usr/bin/alr"); os.IsNotExist(errAlr) {
-		Env.ExistAlr = false
+	if _, errAlr := os.Stat("/usr/bin/stplr"); os.IsNotExist(errAlr) {
+		Env.ExistStplr = false
 	} else {
-		Env.ExistAlr = true
+		Env.ExistStplr = true
 	}
+
+	if _, errDistrobox := os.Stat("/usr/bin/distrobox"); os.IsNotExist(errDistrobox) {
+		Env.ExistDistrobox = false
+	} else {
+		Env.ExistDistrobox = true
+	}
+
+	return nil
 }
 
 // EnsurePath проверяет, существует ли файл и создает его при необходимости.

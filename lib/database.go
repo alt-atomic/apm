@@ -18,10 +18,9 @@ package lib
 
 import (
 	"database/sql"
+	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"sync"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -44,11 +43,11 @@ func InitDatabase(isSystemBD bool) {
 		var err error
 		dbInstance, err = sql.Open("sqlite3", dbFile)
 		if err != nil {
-			Log.Fatal(T_("Error opening database: %v"), err)
+			Log.Error(T_("Error opening database: %v"), err)
 		}
 
 		if err = dbInstance.Ping(); err != nil {
-			Log.Fatal(T_("Error connecting to database: %v"), err)
+			Log.Error(T_("Error connecting to database: %v"), err)
 		}
 	})
 }

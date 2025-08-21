@@ -16,10 +16,51 @@ apm -help
 ```
 
 ## Установка
-APM пока не добавлен в репозиторий ALT. Для установки текущей версии выполните в консоли:
-
+Рекомендуется установить пакет из репозитория
 ```
-curl -fsSL https://raw.githubusercontent.com/alt-atomic/apm/main/data/install.sh | sudo bash
+apt-get install apm
+```
+
+ручная сборка:
+```
+meson setup build --wipe --prefix /usr
+meson install -C build
+```
+
+## Переводы
+```
+sh ./po/update_pot.sh
+sh ./po/update_po.sh
+```
+
+## Настройки темы
+```
+/etc/apm/config.yml
+colors:
+    # Основные цвета для вывода
+    enumerator: "#c4c8c6"      # Цвет нумерации веток
+    accent: "#a2734c"          # Цвет акцентов и заголовков
+    itemLight: "#171717"       # Цвет текста для светлой темы
+    itemDark: "#c4c8c6"        # Цвет текста для тёмной темы
+    success: "2"               # Цвет успеха (зелёный)
+    error: "9"                 # Цвет ошибки (красный)
+
+    # Цвета из диалога
+    delete: "#a81c1f"          # Цвет для действий удаления
+    install: "#2bb389"         # Цвет для действий установки
+    shortcut: "#888888"        # Цвет для подсказок и состояния "Нет"
+    scrollBar: "#ff0000"       # Цвет индикатора прокрутки
+    dialogKeyLight: "#234f55"  # Цвет ключей диалога для светлой темы
+    dialogKeyDark: "#82a0a3"   # Цвет ключей диалога для тёмной темы
+
+    # Цвета прогресс-бара
+    progressStart: "#c4c8c6"   # Начальный цвет градиента прогресс-бара
+    progressEnd: "#26a269"     # Конечный цвет градиента прогресс-бара
+```
+
+## Тесты
+```
+sudo meson test -C build go-test
 ```
 
 Общая справка:

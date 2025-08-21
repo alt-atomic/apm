@@ -27,10 +27,11 @@ The config.conf file does not exist by default, but can be created using the /et
 * pathImageFile - path to the image configuration file
 
 ## Installation
-APM has not yet been added to the ALT repository. To install the current version, run in the console:
+It is recommended to install the package from the repository, manual build:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/alt-atomic/apm/main/data/install.sh | sudo bash
+meson setup build --wipe --prefix /usr
+meson install -C build
 ```
 
 General help:
