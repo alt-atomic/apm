@@ -47,20 +47,6 @@ configure_file(
   install_dir: systemd_system_unit_dir
 )
 
-# Create log directory and an empty log file at install time
-log_dir = get_option('localstatedir') / 'log' / meson.project_name()
-install_emptydir(log_dir,install_mode: ['rwxrwsr-x', 'root', 'users'])
-
-empty_log = custom_target(
-  'empty-log-file',
-  output: meson.project_name() + '.log',
-  command: ['sh', '-lc', ': > @OUTPUT@ && chmod 0664 @OUTPUT@'],
-  build_by_default: true,
-  install: true,
-  install_dir: log_dir,
-  install_mode: ['rw-rw-r--', 'root', 'users']
-)
-
 # --- Shell completions ---
 bash_comp_dep = dependency('bash-completion', required: false)
 bash_completion_dir = bash_comp_dep.found() ? bash_comp_dep.get_variable(pkgconfig: 'completionsdir') : (get_option('datadir') / 'bash-completion' / 'completions')
