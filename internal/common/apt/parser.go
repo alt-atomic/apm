@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -434,4 +435,22 @@ func CleanDependency(s string) string {
 	}
 
 	return s
+}
+
+func IsRegularFileAndIsPackage(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		return false
+	}
+	if !info.Mode().IsRegular() {
+		return false
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".rpm" {
+		return false
+	}
+	return true
 }

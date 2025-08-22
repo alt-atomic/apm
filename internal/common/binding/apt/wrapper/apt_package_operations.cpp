@@ -109,6 +109,53 @@ static AptResult resolve_virtual_package(AptCache* cache, const RequirementSpec&
     return make_result(APT_SUCCESS, nullptr);
 }
 
+// Shared function to resolve RPM file paths to package names
+static AptResult resolve_rpm_file_to_package(AptCache* cache, const std::string& input, std::string& resolved_name) {
+    if (!is_rpm_file(input)) {
+        // Not an RPM file, return as-is
+        resolved_name = input;
+        return make_result(APT_SUCCESS, nullptr);
+    }
+
+    try {
+        std::string package_name;
+        bool found_package = false;
+
+        for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
+            pkgDepCache::StateCache &state = (*cache->dep_cache)[iter];
+            if (state.CandidateVer != 0) {
+                pkgCache::VerIterator ver = state.CandidateVerIter(*cache->dep_cache);
+                if (!ver.end()) {
+                    for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
+                        pkgCache::PkgFileIterator file = vf.File();
+                        // Check if this file corresponds to our RPM file
+                        if (file.FileName() && input.find(file.FileName()) != std::string::npos) {
+                            package_name = iter.Name();
+                            found_package = true;
+                            goto found_rpm_package; // Break out of both loops
+                        }
+                    }
+                }
+            }
+        }
+        found_rpm_package:;
+
+        if (!found_package) {
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                              (std::string("Unable to find package from RPM file: ") + input).c_str());
+        }
+
+        resolved_name = package_name;
+        return make_result(APT_SUCCESS, nullptr);
+        //return make_result(APT_ERROR_UNKNOWN,
+        //                  (std::string("Found package from RPM: ") + package_name).c_str());
+
+    } catch (const std::exception& e) {
+        return make_result(APT_ERROR_UNKNOWN, 
+                          (std::string("Exception resolving RPM file: ") + e.what()).c_str());
+    }
+}
+
 AptResult process_package_installs(AptCache* cache, 
                                    const char** install_names, 
                                    size_t install_count,
@@ -124,7 +171,15 @@ AptResult process_package_installs(AptCache* cache,
         if (!install_names[i]) continue;
         
         std::string raw(install_names[i]);
-        RequirementSpec req = parse_requirement(raw);
+        
+        // Resolve RPM files to package names
+        std::string resolved_name;
+        AptResult resolve_result = resolve_rpm_file_to_package(cache, raw, resolved_name);
+        if (resolve_result.code != APT_SUCCESS) {
+            return resolve_result;
+        }
+        
+        RequirementSpec req = parse_requirement(resolved_name);
         requested_install.insert(req.name);
         
         pkgCache::PkgIterator pkg;
@@ -289,7 +344,15 @@ AptResult process_package_removals(AptCache* cache,
         if (!remove_names[i]) continue;
         
         std::string raw(remove_names[i]);
-        RequirementSpec req = parse_requirement(raw);
+        
+        // Resolve RPM files to package names  
+        std::string resolved_name;
+        AptResult resolve_result = resolve_rpm_file_to_package(cache, raw, resolved_name);
+        if (resolve_result.code != APT_SUCCESS) {
+            return resolve_result;
+        }
+
+        RequirementSpec req = parse_requirement(resolved_name);
         requested_remove.insert(req.name);
         
         pkgCache::PkgIterator pkg;

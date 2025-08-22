@@ -162,6 +162,13 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 					}
 				}
 			} else {
+				if aptParser.IsRegularFileAndIsPackage(original) {
+					err := a.SaveRpmPackageToDatabase(ctx, original)
+					if err != nil {
+						return err
+					}
+				}
+
 				// Для обычных пакетов - копируем как есть
 				*targetList = append(*targetList, original)
 			}
@@ -702,4 +709,106 @@ func extractLastMessage(changelog string) string {
 	}
 
 	return strings.Join(result, "\n")
+}
+
+// SaveRpmPackageToDatabase сохраняет информацию об одном RPM пакете в базу данных
+// Аналог функции Update, но работает с одним пакетом из файла
+func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath string) error {
+	// Получаем информацию о пакете из биндингов
+	ap, err := a.GetInfo(ctx, rpmFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to get package info: %w", err)
+	}
+
+	_, errFind := a.serviceAptDatabase.GetPackageByName(ctx, ap.Name)
+	if errFind == nil {
+		return nil
+	}
+
+	// Преобразуем зависимости
+	var depends []string
+	seen := make(map[string]bool)
+	if ap.Depends != "" {
+		depList := strings.Split(ap.Depends, ",")
+		for _, dep := range depList {
+			clean := strings.TrimSpace(dep)
+			if clean == "" {
+				continue
+			}
+			clean = aptParser.CleanDependency(clean)
+			if !seen[clean] {
+				seen[clean] = true
+				depends = append(depends, clean)
+			}
+		}
+	}
+
+	// Преобразуем provides
+	var provides []string
+	seen = make(map[string]bool)
+	if ap.Provides != "" {
+		provList := strings.Split(ap.Provides, ",")
+		for _, prov := range provList {
+			clean := strings.TrimSpace(prov)
+			if clean == "" {
+				continue
+			}
+			clean = aptParser.CleanDependency(clean)
+			if !seen[clean] {
+				seen[clean] = true
+				provides = append(provides, clean)
+			}
+		}
+	}
+
+	// Форматируем версию
+	formattedVersion := ap.Version
+	if v, errParse := helper.GetVersionFromAptCache(ap.Version); errParse == nil && v != "" {
+		formattedVersion = v
+	}
+
+	// Создаем структуру Package
+	p := Package{
+		Name:             ap.Name,
+		Architecture:     ap.Architecture,
+		Section:          ap.Section,
+		InstalledSize:    int(ap.InstalledSize),
+		Maintainer:       ap.Maintainer,
+		Version:          formattedVersion,
+		VersionInstalled: "",
+		Depends:          depends,
+		Aliases:          ap.Aliases,
+		Provides:         provides,
+		Size:             int(ap.DownloadSize),
+		Filename:         ap.Filename,
+		Description:      ap.Description,
+		AppStream:        nil,
+		Changelog:        ap.Changelog,
+		Installed:        false,
+		TypePackage:      int(PackageTypeSystem),
+	}
+
+	if p.Description == "" {
+		p.Description = ap.ShortDescription
+	}
+
+	// Извлекаем последнее сообщение из changelog
+	p.Changelog = extractLastMessage(p.Changelog)
+
+	// Создаем слайс с одним пакетом
+	packages := []Package{p}
+
+	// Обновляем информацию об установке
+	packages, err = a.updateInstalledInfo(ctx, packages)
+	if err != nil {
+		return fmt.Errorf("error updating installed info: %w", err)
+	}
+
+	// Сохраняем один пакет в базу данных (не очищая остальные)
+	err = a.serviceAptDatabase.SaveSinglePackage(ctx, packages[0])
+	if err != nil {
+		return fmt.Errorf("error saving package to database: %w", err)
+	}
+
+	return nil
 }

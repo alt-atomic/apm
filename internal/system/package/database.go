@@ -25,6 +25,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"log"
 	"os"
 	"strings"
@@ -445,6 +446,32 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 		}
 	}
 	return query, nil
+}
+
+// SaveSinglePackage сохраняет один пакет в базу данных без очистки таблицы
+// Использует UPSERT (обновляет если пакет существует, создает если нет)
+func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) error {
+	dbPkg := pkg.toDBModel()
+
+	// Используем OnConflict для UPSERT логики
+	// Primary key состоит из name + version, используем оба поля
+	err := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "name"}, {Name: "version"}},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"architecture", "section", "installed_size", "maintainer",
+				"versionInstalled", "depends", "provides",
+				"size", "filename", "description", "appStream", "changelog",
+				"installed", "typePackage", "aliases",
+			}),
+		}).
+		Create(&dbPkg).Error
+
+	if err != nil {
+		return fmt.Errorf("failed to save package %s: %w", pkg.Name, err)
+	}
+
+	return nil
 }
 
 // PackageDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.

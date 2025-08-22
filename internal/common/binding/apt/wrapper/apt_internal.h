@@ -15,6 +15,8 @@
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/algorithms.h>
 #include <apt-pkg/fileutl.h>
+#include <apt-pkg/indexfile.h>
+#include <sys/stat.h>
 
 #include <memory>
 #include <string>
@@ -63,6 +65,9 @@ extern std::string last_error_message;
 void emit_log(const std::string& msg);
 bool check_apt_errors();
 AptResult make_result(AptErrorCode code, const char* message = nullptr);
+
+// RPM file detection utility
+bool is_rpm_file(const std::string& path);
 
 // Stream used by APT components (e.g. CacheFile) to write informational messages.
 // Implemented to forward data into emit_log() so higher layers may capture them.

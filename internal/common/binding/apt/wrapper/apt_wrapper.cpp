@@ -24,6 +24,7 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <sys/stat.h>
 #include <algorithm>
 #include <cctype>
 #include <regex.h>
@@ -852,4 +853,51 @@ PackageManagerCallback_t create_common_progress_callback(CallbackBridge*) {
             global_callback(effective_name, our_type, amount, total, global_user_data);
         }
     };
+}
+
+// RPM file detection utility (shared implementation)
+bool is_rpm_file(const std::string& path) {
+    // Check if it's an absolute path and file exists
+    if (path.empty() || path[0] != '/') {
+        return false;
+    }
+    
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) {
+        return false;
+    }
+    
+    // Check if it has .rpm extension
+    if (path.length() > 4 && path.substr(path.length() - 4) == ".rpm") {
+        return true;
+    }
+    
+    return false;
+}
+
+// File installation support - preprocess arguments to detect and handle RPM files
+AptResult apt_preprocess_install_arguments(const char** install_names, size_t install_count) {
+    if (!install_names || install_count == 0) {
+        return make_result(APT_SUCCESS, nullptr);
+    }
+
+    try {
+        // Process arguments and add RPM files to APT::Arguments configuration
+        for (size_t i = 0; i < install_count; i++) {
+            if (!install_names[i]) continue;
+            
+            std::string arg(install_names[i]);
+            
+            // Use shared RPM file detection logic
+            if (is_rpm_file(arg)) {
+                // Add to APT::Arguments configuration
+                std::string key = "APT::Arguments::" + std::to_string(i);
+                _config->Set(key, arg);
+            }
+        }
+        
+        return make_result(APT_SUCCESS, nullptr);
+    } catch (const std::exception& e) {
+        return make_result(APT_ERROR_UNKNOWN, (std::string("Exception in preprocess: ") + e.what()).c_str());
+    }
 }
