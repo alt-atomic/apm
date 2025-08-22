@@ -144,6 +144,8 @@ const (
 	ErrCannotRemoveTryTogether
 	ErrSomeBrokenDependencies
 	ErrMultiInstallProvidersSelect
+	ErrRepositoryUpdateFailed
+	ErrPackageIndexUpdateFailed
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -407,6 +409,8 @@ var errorPatterns = []ErrorEntry{
 	{ErrMultiInstallProvidersSelect, "Virtual package %s is provided by:", func() string {
 		return lib.T_("Virtual package %s is provided by:\n%s \nYou should explicitly select one to install")
 	}, 2},
+	{ErrRepositoryUpdateFailed, "Repository update failed: %s", func() string { return lib.T_("Repository update failed: %s") }, 1},
+	{ErrPackageIndexUpdateFailed, "Package index update failed: %s", func() string { return lib.T_("Package index update failed: %s") }, 1},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.

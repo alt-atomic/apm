@@ -10,6 +10,7 @@
 #include <apt-pkg/error.h>
 #include <apt-pkg/pkgsystem.h>
 #include <apt-pkg/acquire.h>
+#include <apt-pkg/acquire-item.h>
 #include <apt-pkg/sourcelist.h>
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/algorithms.h>
@@ -393,7 +394,20 @@ AptResult apt_cache_update(AptCache* cache) {
 
         auto fetch_result = acquire.Run();
         if (fetch_result != pkgAcquire::Continue) {
-            return make_result(APT_ERROR_DOWNLOAD_FAILED, "Failed to download release files");
+            for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
+                if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
+                    std::string error_msg = "Repository update failed: " + (*I)->ErrorText;
+                    return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
+                }
+            }
+            return make_result(APT_ERROR_DOWNLOAD_FAILED, "Repository update failed: Unable to download release files");
+        }
+
+        for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
+            if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
+                std::string error_msg = "Repository update failed: " + (*I)->ErrorText;
+                return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
+            }
         }
 
         // Step 2: Update package indexes
@@ -403,7 +417,21 @@ AptResult apt_cache_update(AptCache* cache) {
 
         fetch_result = acquire.Run();
         if (fetch_result != pkgAcquire::Continue) {
-            return make_result(APT_ERROR_DOWNLOAD_FAILED, "Failed to download package lists");
+            for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
+                if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
+                    std::string error_msg = "Package index update failed: " + (*I)->ErrorText;
+                    return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
+                }
+            }
+            return make_result(APT_ERROR_DOWNLOAD_FAILED, "Package index update failed: Unable to download package lists");
+        }
+
+        // Check for failed items even if Run() returned Continue
+        for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
+            if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
+                std::string error_msg = "Package index update failed: " + (*I)->ErrorText;
+                return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
+            }
         }
 
         if (!cache->cache_file->BuildCaches()) {
