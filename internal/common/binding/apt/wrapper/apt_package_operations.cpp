@@ -219,58 +219,145 @@ static AptResult resolve_virtual_remove_package(AptCache* cache, const Requireme
     return make_result(APT_SUCCESS, nullptr);
 }
 
-static void mark_dependent_packages_for_removal(AptCache* cache, pkgCache::PkgIterator initial_pkg, bool purge) {
-    std::set<pkgCache::PkgIterator> to_remove;
-    std::set<pkgCache::PkgIterator> processed;
-    to_remove.insert(initial_pkg);
-
-    while (!to_remove.empty()) {
-        pkgCache::PkgIterator current = *to_remove.begin();
-        to_remove.erase(to_remove.begin());
+// Check if a package is needed by any installed packages (excluding packages marked for removal)
+static bool is_package_needed_by_others(AptCache* cache, pkgCache::PkgIterator candidate_pkg, 
+                                         const std::set<pkgCache::PkgIterator>& being_removed) {
+    for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+        pkgCache::VerIterator cur = it.CurrentVer();
+        if (cur.end()) continue;
         
-        if (processed.find(current) != processed.end()) continue;
-        processed.insert(current);
+        if (being_removed.find(it) != being_removed.end()) continue;
+        
+        pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
+        if (it_st.Delete()) continue;
 
-        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-            if (processed.find(it) != processed.end()) continue;
+        for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
+            if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
 
-            pkgCache::VerIterator cur = it.CurrentVer();
-            if (cur.end()) continue;
-
-            pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
-            if (it_st.Delete()) continue;
-
-            bool depends_on_current = false;
-            for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
-                if (dep->Type != pkgCache::Dep::Depends && 
-                    dep->Type != pkgCache::Dep::PreDepends) continue;
-
-                if (dep.TargetPkg() == current) {
-                    depends_on_current = true;
-                    break;
-                }
-
-                pkgCache::VerIterator cur_ver = current.CurrentVer();
-                if (!cur_ver.end()) {
-                    for (pkgCache::PrvIterator prv = cur_ver.ProvidesList(); !prv.end(); ++prv) {
-                        if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
-                            depends_on_current = true;
-                            break;
-                        }
-                    }
-                }
-                if (depends_on_current) break;
+            if (dep.TargetPkg() == candidate_pkg) {
+                return true;
             }
 
-            if (depends_on_current) {
-                if ((it->Flags & pkgCache::Flag::Essential) == 0) {
-                    cache->dep_cache->MarkDelete(it, purge);
-                    to_remove.insert(it);
+            pkgCache::VerIterator candidate_ver = candidate_pkg.CurrentVer();
+            if (!candidate_ver.end()) {
+                for (pkgCache::PrvIterator prv = candidate_ver.ProvidesList(); !prv.end(); ++prv) {
+                    if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
+                        return true;
+                    }
                 }
             }
         }
     }
+    return false;
 }
+
+// Check if any of the packages being removed depend on the candidate package
+static bool was_package_needed_by_removed(pkgCache::PkgIterator candidate_pkg, 
+                                          const std::set<pkgCache::PkgIterator>& being_removed) {
+    for (const auto& removed_pkg : being_removed) {
+        pkgCache::VerIterator removed_ver = removed_pkg.CurrentVer();
+        if (removed_ver.end()) continue;
+        
+        for (pkgCache::DepIterator dep = removed_ver.DependsList(); !dep.end(); ++dep) {
+            if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
+
+            if (dep.TargetPkg() == candidate_pkg) {
+                return true;
+            }
+
+            pkgCache::VerIterator candidate_ver = candidate_pkg.CurrentVer();
+            if (!candidate_ver.end()) {
+                for (pkgCache::PrvIterator prv = candidate_ver.ProvidesList(); !prv.end(); ++prv) {
+                    if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+static void mark_orphan_packages_for_removal(AptCache* cache, const std::set<pkgCache::PkgIterator>& being_removed, bool purge) {
+    std::set<pkgCache::PkgIterator> orphans_to_check;
+    
+    // Find all auto-installed packages that might become orphans
+    for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+        pkgCache::VerIterator cur = it.CurrentVer();
+        if (cur.end()) continue;
+        
+        if (being_removed.find(it) != being_removed.end()) continue;
+        
+        pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
+        if (it_st.Delete()) continue;
+        
+        if ((it->Flags & pkgCache::Flag::Essential) != 0) continue;
+        
+        if ((it->Flags & pkgCache::Flag::Auto) != 0 &&
+            was_package_needed_by_removed(it, being_removed)) {
+            orphans_to_check.insert(it);
+        }
+    }
+    
+    for (const auto& candidate : orphans_to_check) {
+        if (!is_package_needed_by_others(cache, candidate, being_removed)) {
+            cache->dep_cache->MarkDelete(candidate, purge);
+        }
+    }
+}
+
+//static void mark_dependent_packages_for_removal(AptCache* cache, pkgCache::PkgIterator initial_pkg, bool purge) {
+//    std::set<pkgCache::PkgIterator> to_remove;
+//    std::set<pkgCache::PkgIterator> processed;
+//    to_remove.insert(initial_pkg);
+//
+//    while (!to_remove.empty()) {
+//        pkgCache::PkgIterator current = *to_remove.begin();
+//        to_remove.erase(to_remove.begin());
+//
+//        if (processed.find(current) != processed.end()) continue;
+//        processed.insert(current);
+//
+//        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+//            if (processed.find(it) != processed.end()) continue;
+//
+//            pkgCache::VerIterator cur = it.CurrentVer();
+//            if (cur.end()) continue;
+//
+//            pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
+//            if (it_st.Delete()) continue;
+//
+//            bool depends_on_current = false;
+//            for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
+//                if (dep->Type != pkgCache::Dep::Depends &&
+//                    dep->Type != pkgCache::Dep::PreDepends) continue;
+//
+//                if (dep.TargetPkg() == current) {
+//                    depends_on_current = true;
+//                    break;
+//                }
+//
+//                pkgCache::VerIterator cur_ver = current.CurrentVer();
+//                if (!cur_ver.end()) {
+//                    for (pkgCache::PrvIterator prv = cur_ver.ProvidesList(); !prv.end(); ++prv) {
+//                        if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
+//                            depends_on_current = true;
+//                            break;
+//                        }
+//                    }
+//                }
+//                if (depends_on_current) break;
+//            }
+//
+//            if (depends_on_current) {
+//                if ((it->Flags & pkgCache::Flag::Essential) == 0) {
+//                    cache->dep_cache->MarkDelete(it, purge);
+//                    to_remove.insert(it);
+//                }
+//            }
+//        }
+//    }
+//}
 
 AptResult process_package_removals(AptCache* cache,
                                    const char** remove_names,
@@ -311,8 +398,16 @@ AptResult process_package_removals(AptCache* cache,
         cache->dep_cache->MarkDelete(pkg, purge);
         remove_targets.emplace_back(req.name, pkg);
 
-        mark_dependent_packages_for_removal(cache, pkg, purge);
+        // delete only one package
+//        mark_dependent_packages_for_removal(cache, pkg, purge);
     }
+
+    // delete all package direct depends TEST
+    std::set<pkgCache::PkgIterator> being_removed;
+    for (const auto& target : remove_targets) {
+        being_removed.insert(target.second);
+    }
+    mark_orphan_packages_for_removal(cache, being_removed, purge);
 
     return make_result(APT_SUCCESS, nullptr);
 }
