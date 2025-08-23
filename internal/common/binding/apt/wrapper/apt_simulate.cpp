@@ -36,12 +36,15 @@ static AptResult preprocess_rpm_files_if_needed(AptCache* cache,
         return make_result(APT_SUCCESS, nullptr);
     }
     
-    // Process RPM files and refresh cache
+    // Process RPM files and refresh cache ONLY ONCE
+    bool need_refresh = false;
+    
     if (install_names && install_count > 0) {
         AptResult preprocess_result = apt_preprocess_install_arguments(install_names, install_count);
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
+        need_refresh = true;
     }
     
     if (remove_names && remove_count > 0) {
@@ -49,11 +52,17 @@ static AptResult preprocess_rpm_files_if_needed(AptCache* cache,
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
+        need_refresh = true;
     }
     
-    AptResult refresh_result = apt_cache_refresh(cache);
-    if (refresh_result.code != APT_SUCCESS) {
-        return refresh_result;
+    // Only refresh cache once after all preprocessing
+    if (need_refresh) {
+        emit_log("Refreshing APT cache for RPM files - this may take time for large files");
+        AptResult refresh_result = apt_cache_refresh(cache);
+        if (refresh_result.code != APT_SUCCESS) {
+            return refresh_result;
+        }
+        emit_log("APT cache refresh completed");
     }
     
     return make_result(APT_SUCCESS, nullptr);
