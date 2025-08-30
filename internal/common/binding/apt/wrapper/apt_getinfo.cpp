@@ -101,41 +101,30 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
 
         info->section = strdup(pkg.Section() ? pkg.Section() : "unknown");
 
-        bool is_installed = (pkg->CurrentState == pkgCache::State::Installed) || (pkg.CurrentVer().end() == false);
-        if (!is_installed) {
-            for (pkgCache::PrvIterator prv_iter = pkg.ProvidesList(); prv_iter.end() == false; ++prv_iter) {
-                pkgCache::PkgIterator provider_pkg = prv_iter.OwnerPkg();
-                if (provider_pkg->CurrentState == pkgCache::State::Installed || provider_pkg.CurrentVer().end() == false) {
-                    is_installed = true;
-                    break;
-                }
-            }
-        }
-        if (!is_installed) {
-            for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); it.end() == false; ++it) {
-                if (it->CurrentState != pkgCache::State::Installed && it.CurrentVer().end() == true) {
-                    continue;
-                }
-                for (pkgCache::PrvIterator prv = it.CurrentVer().ProvidesList(); prv.end() == false; ++prv) {
-                    if (strcmp(prv.Name(), package_name) == 0) {
-                        is_installed = true;
-                        break;
-                    }
-                }
-                if (is_installed) break;
-            }
-        }
-        if (is_installed) {
-            info->state = APT_PKG_STATE_INSTALLED;
-        } else {
+        // Package state - check CurrentVer()
+        if (!pkg.CurrentVer().end()) {
             switch (pkg->CurrentState) {
+                case pkgCache::State::Installed:
+                    info->state = APT_PKG_STATE_INSTALLED;
+                    break;
                 case pkgCache::State::ConfigFiles:
                     info->state = APT_PKG_STATE_CONFIG_FILES;
                     break;
+                case pkgCache::State::UnPacked:
+                    info->state = APT_PKG_STATE_UNPACKED;
+                    break;
+                case pkgCache::State::HalfConfigured:
+                    info->state = APT_PKG_STATE_HALF_CONFIGURED;
+                    break;
+                case pkgCache::State::HalfInstalled:
+                    info->state = APT_PKG_STATE_HALF_INSTALLED;
+                    break;
                 default:
-                    info->state = APT_PKG_STATE_NOT_INSTALLED;
+                    info->state = APT_PKG_STATE_INSTALLED;
                     break;
             }
+        } else {
+            info->state = APT_PKG_STATE_NOT_INSTALLED;
         }
 
         pkgDepCache::Policy Plcy;

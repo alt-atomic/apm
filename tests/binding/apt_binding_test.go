@@ -63,7 +63,7 @@ func TestAptGetInfo_NotFound(t *testing.T) {
 	}
 	var ae *aptlib.AptError
 	if errors.As(err, &ae) {
-		assert.Equal(t, aptlib.APT_ERROR_PACKAGE_NOT_FOUND, ae.Code)
+		assert.Equal(t, aptlib.AptErrorPackageNotFound, ae.Code)
 		return
 	}
 	var me *aptErrors.MatchedError
@@ -185,7 +185,7 @@ func TestAptInvalidParameters(t *testing.T) {
 	if _, err := actions.SimulateChange(nil, nil, false); err == nil {
 		t.Fatalf("expected error for empty lists in SimulateChange")
 	} else if ae, ok := err.(*aptlib.AptError); ok {
-		if ae.Code != aptlib.APT_ERROR_INVALID_PARAMETERS {
+		if ae.Code != aptlib.AptErrorInvalidParameters {
 			t.Fatalf("unexpected error code: %d (%v)", ae.Code, ae)
 		}
 	}

@@ -58,6 +58,7 @@ type Package struct {
 	InstalledSize    int                  `json:"installedSize"`
 	Maintainer       string               `json:"maintainer"`
 	Version          string               `json:"version"`
+	VersionRaw       string               `json:"versionRaw"`
 	VersionInstalled string               `json:"versionInstalled"`
 	Depends          []string             `json:"depends"`
 	Aliases          []string             `json:"aliases"`
@@ -534,6 +535,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 			InstalledSize:    int(ap.InstalledSize),
 			Maintainer:       ap.Maintainer,
 			Version:          formattedVersion,
+			VersionRaw:       ap.Version,
 			VersionInstalled: "",
 			Depends:          depends,
 			Aliases:          ap.Aliases,

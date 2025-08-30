@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755965157
+// cgo-timestamp: 1756568678
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -193,7 +193,7 @@ func (c *Cache) SimulateAutoRemove() (*PackageChanges, error) {
 // SimulateInstall симулирует установку пакетов
 func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) {
 	if len(packageNames) == 0 {
-		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
+		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
 	}
 
 	var changes *PackageChanges
@@ -218,7 +218,7 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 // SimulateRemove симулирует удаление пакетов
 func (c *Cache) SimulateRemove(packageNames []string, purge bool) (*PackageChanges, error) {
 	if len(packageNames) == 0 {
-		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
+		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
 	}
 
 	var changes *PackageChanges
@@ -243,7 +243,7 @@ func (c *Cache) SimulateRemove(packageNames []string, purge bool) (*PackageChang
 // SimulateChange симулирует установку и удаление пакетов в одной транзакции
 func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool) (*PackageChanges, error) {
 	if len(installNames) == 0 && len(removeNames) == 0 {
-		return nil, CustomError(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
+		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
 	}
 
 	var changes *PackageChanges

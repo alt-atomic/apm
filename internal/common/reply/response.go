@@ -226,6 +226,20 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 			}
 			t.Child(listNode)
 
+		// СЛУЧАЙ: срез из map[string]interface{}
+		case []map[string]interface{}:
+			if len(vv) == 0 {
+				// Показываем пустой массив как []
+				t.Child(fmt.Sprintf("%s: []", TranslateKey(k)))
+				continue
+			}
+			listNode := tree.New().Root(TranslateKey(k))
+			for i, elem := range vv {
+				subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), elem)
+				listNode.Child(subTree)
+			}
+			t.Child(listNode)
+
 			//----------------------------------------------------------------------
 			// ДРУГИЕ СЛУЧАИ: структуры, срезы непонятных типов и т.д.
 		default:

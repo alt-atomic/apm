@@ -124,9 +124,10 @@ var withRootCheckWrapper = wrapperWithOptions(true)
 
 func CommandList() *cli.Command {
 	return &cli.Command{
-		Name:    "system",
-		Aliases: []string{"s"},
-		Usage:   lib.T_("System package management"),
+		Name:            "system",
+		Aliases:         []string{"s"},
+		Usage:           lib.T_("System package management"),
+		HideHelpCommand: true,
 		Commands: []*cli.Command{
 			{
 				Name:      "install",

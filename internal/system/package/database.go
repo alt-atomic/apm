@@ -103,6 +103,7 @@ type DBPackage struct {
 	InstalledSize    int                  `gorm:"column:installed_size"`
 	Maintainer       string               `gorm:"column:maintainer"`
 	Version          string               `gorm:"column:version;primaryKey"`
+	VersionRaw       string               `gorm:"column:versionRaw"` // Полная версия с buildtime
 	VersionInstalled string               `gorm:"column:versionInstalled"`
 	Depends          string               `gorm:"column:depends"`
 	Aliases          string               `gorm:"column:aliases"`
@@ -130,6 +131,7 @@ func (dbp DBPackage) fromDBModel() Package {
 		InstalledSize:    dbp.InstalledSize,
 		Maintainer:       dbp.Maintainer,
 		Version:          dbp.Version,
+		VersionRaw:       dbp.VersionRaw,
 		VersionInstalled: dbp.VersionInstalled,
 		Size:             dbp.Size,
 		Filename:         dbp.Filename,
@@ -160,6 +162,7 @@ func (p Package) toDBModel() DBPackage {
 		InstalledSize:    p.InstalledSize,
 		Maintainer:       p.Maintainer,
 		Version:          p.Version,
+		VersionRaw:       p.VersionRaw,
 		VersionInstalled: p.VersionInstalled,
 		Size:             p.Size,
 		Filename:         p.Filename,
@@ -460,7 +463,7 @@ func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) e
 			Columns: []clause.Column{{Name: "name"}, {Name: "version"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"architecture", "section", "installed_size", "maintainer",
-				"versionInstalled", "depends", "provides",
+				"versionRaw", "versionInstalled", "depends", "provides",
 				"size", "filename", "description", "appStream", "changelog",
 				"installed", "typePackage", "aliases",
 			}),
@@ -507,6 +510,7 @@ var allowedSortFields = []string{
 	"installedSize",
 	"maintainer",
 	"version",
+	"versionRaw",
 	"versionInstalled",
 	"depends",
 	"provides",
@@ -526,6 +530,7 @@ var AllowedFilterFields = []string{
 	"installedSize",
 	"maintainer",
 	"version",
+	"versionRaw",
 	"versionInstalled",
 	"depends",
 	"provides",

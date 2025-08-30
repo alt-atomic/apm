@@ -356,6 +356,10 @@ func (a *Actions) ContainerList(ctx context.Context) (*reply.APIResponse, error)
 		return nil, err
 	}
 
+	if len(containers) == 0 {
+		return nil, errors.New(lib.T_("No containers found"))
+	}
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"containers": containers,

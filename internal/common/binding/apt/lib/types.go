@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1755965157
+// cgo-timestamp: 1756568678
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -31,10 +31,14 @@ import (
 
 type PackageState int
 
+const (
+	AptPkgStateInstalled = 1
+)
+
 // APT error codes (must match apt_wrapper.h)
 const (
-	APT_ERROR_PACKAGE_NOT_FOUND  = 21
-	APT_ERROR_INVALID_PARAMETERS = 91
+	AptErrorPackageNotFound   = 21
+	AptErrorInvalidParameters = 91
 )
 
 type AptError struct {
