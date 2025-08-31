@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 )
 
 // Actions объединяет методы для выполнения системных действий.
@@ -115,35 +114,13 @@ func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, err
 	}, nil
 }
 
-// GetKernelInfo возвращает информацию о указанном ядре или текущем если не указано
-func (a *Actions) GetKernelInfo(ctx context.Context, version string) (*reply.APIResponse, error) {
-	if version == "" {
-		return a.GetCurrentKernel(ctx)
-	}
-
-	kernels, err := a.kernelManager.ListKernels("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list kernels: %w", err)
-	}
-
-	kernel := a.findKernelByVersion(version, kernels)
-	if kernel != nil {
-		data := map[string]interface{}{
-			"message": lib.T_("Kernel information"),
-			"kernel":  a.formatKernelOutput([]*service.Info{kernel}, true)[0],
-		}
-
-		return &reply.APIResponse{
-			Data:  data,
-			Error: false,
-		}, nil
-	}
-
-	return nil, fmt.Errorf("kernel %s not found", version)
+// GetKernelInfo возвращает информацию о текущем ядре
+func (a *Actions) GetKernelInfo(ctx context.Context) (*reply.APIResponse, error) {
+	return a.GetCurrentKernel(ctx)
 }
 
 // InstallKernel устанавливает ядро с указанным flavour
-func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool, force bool) (*reply.APIResponse, error) {
+func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*reply.APIResponse, error) {
 	if err := a.checkAtomicSystemRestriction("install", dryRun); err != nil {
 		return nil, err
 	}
@@ -187,44 +164,6 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 		}
 	}
 
-	if latest.IsInstalled && !force {
-		allModules, _ := a.kernelManager.FindAvailableModules(latest)
-		var installedModulesInfo []map[string]interface{}
-		for _, module := range allModules {
-			if module.IsInstalled {
-				installedModulesInfo = append(installedModulesInfo, map[string]interface{}{
-					"name":        module.Name,
-					"packageName": module.PackageName,
-				})
-			}
-		}
-
-		kernelInfo := map[string]interface{}{
-			"packageName":      latest.PackageName,
-			"flavour":          latest.Flavour,
-			"version":          latest.Version,
-			"release":          latest.Release,
-			"fullVersion":      latest.FullVersion,
-			"isInstalled":      latest.IsInstalled,
-			"isRunning":        latest.IsRunning,
-			"ageInDays":        latest.AgeInDays,
-			"buildTime":        latest.BuildTime.Format(time.RFC3339),
-			"InstalledModules": installedModulesInfo,
-		}
-
-		message := fmt.Sprintf(lib.T_("Kernel %s is already installed"), latest.FullVersion)
-		if !dryRun {
-			message += lib.T_(". Use --force to reinstall")
-		}
-		return &reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": message,
-				"kernel":  kernelInfo,
-			},
-			Error: false,
-		}, nil
-	}
-
 	preview, err := a.kernelManager.SimulateUpgrade(latest, modules, includeHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to simulate kernel installation: %w", err)
@@ -234,10 +173,21 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 		return nil, fmt.Errorf("some modules are not available: %s", strings.Join(preview.MissingModules, ", "))
 	}
 
+	if len(preview.Changes.NewInstalledPackages) == 0 && len(preview.Changes.UpgradedPackages) == 0 {
+		message := fmt.Sprintf(lib.T_("Kernel %s is already installed"), latest.FullVersion)
+		return &reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": message,
+				"kernel":  latest.ToMap(true, a.kernelManager),
+			},
+			Error: false,
+		}, nil
+	}
+
 	if dryRun {
 		data := map[string]interface{}{
 			"message": lib.T_("Installation preview"),
-			"kernel":  latest,
+			"kernel":  latest.ToMap(true, a.kernelManager),
 			"preview": preview,
 		}
 
@@ -333,17 +283,28 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 		return nil, fmt.Errorf("failed to get current kernel: %w", err)
 	}
 
-	if latest.FullVersion == current.FullVersion {
+	if latest.Version == current.Version && latest.Release == current.Release {
 		return &reply.APIResponse{
 			Data: map[string]interface{}{
 				"message": lib.T_("Kernel is already up to date"),
-				"kernel":  current,
+				"kernel":  current.ToMap(true, a.kernelManager),
 			},
 			Error: false,
 		}, nil
 	}
 
-	return a.InstallKernel(ctx, flavour, modules, includeHeaders, dryRun, true) // force=true для обновления
+	if len(modules) == 0 {
+		allModules, err := a.kernelManager.FindAvailableModules(current)
+		if err == nil {
+			for _, module := range allModules {
+				if module.IsInstalled {
+					modules = append(modules, module.Name)
+				}
+			}
+		}
+	}
+
+	return a.InstallKernel(ctx, flavour, modules, includeHeaders, dryRun)
 }
 
 // CheckKernelUpdate проверяет наличие обновлений ядра
@@ -368,7 +329,7 @@ func (a *Actions) CheckKernelUpdate(ctx context.Context, flavour string) (*reply
 		return nil, fmt.Errorf("failed to find latest kernel: %w", err)
 	}
 
-	updateAvailable := latest.FullVersion != current.FullVersion
+	updateAvailable := !(latest.Version == current.Version && latest.Release == current.Release)
 
 	data := map[string]interface{}{
 		"message":         lib.T_("Kernel update check"),
@@ -472,21 +433,9 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply
 		return nil, fmt.Errorf("failed to list modules: %w", err)
 	}
 
-	kernelInfo := map[string]interface{}{
-		"packageName": latest.PackageName,
-		"flavour":     latest.Flavour,
-		"version":     latest.Version,
-		"release":     latest.Release,
-		"fullVersion": latest.FullVersion,
-		"isInstalled": latest.IsInstalled,
-		"isRunning":   latest.IsRunning,
-		"ageInDays":   latest.AgeInDays,
-		"buildTime":   latest.BuildTime.Format(time.RFC3339),
-	}
-
 	data := map[string]interface{}{
 		"message": fmt.Sprintf(lib.TN_("%d module found", "%d modules found", len(modules)), len(modules)),
-		"kernel":  kernelInfo,
+		"kernel":  latest.ToMap(false, a.kernelManager),
 		"modules": modules,
 	}
 
@@ -561,41 +510,9 @@ func (a *Actions) formatKernelOutput(kernels []*service.Info, full bool) []inter
 
 	for _, kernel := range kernels {
 		if full {
-			allModules, _ := a.kernelManager.FindAvailableModules(kernel)
-
-			// Фильтруем только установленные модули
-			installedModules := make([]map[string]interface{}, 0)
-			for _, module := range allModules {
-				if module.IsInstalled {
-					installedModules = append(installedModules, map[string]interface{}{
-						"name":        module.Name,
-						"packageName": module.PackageName,
-					})
-				}
-			}
-
-			fullInfo := map[string]interface{}{
-				"packageName":      kernel.PackageName,
-				"flavour":          kernel.Flavour,
-				"version":          kernel.Version,
-				"release":          kernel.Release,
-				"fullVersion":      kernel.FullVersion,
-				"isInstalled":      kernel.IsInstalled,
-				"isRunning":        kernel.IsRunning,
-				"ageInDays":        kernel.AgeInDays,
-				"buildTime":        kernel.BuildTime.Format(time.RFC3339),
-				"InstalledModules": installedModules,
-			}
-			result = append(result, fullInfo)
+			result = append(result, kernel.ToMap(true, a.kernelManager))
 		} else {
-			shortInfo := map[string]interface{}{
-				"version":     kernel.Version,
-				"flavour":     kernel.Flavour,
-				"fullVersion": kernel.FullVersion,
-				"isInstalled": kernel.IsInstalled,
-				"isRunning":   kernel.IsRunning,
-			}
-			result = append(result, shortInfo)
+			result = append(result, kernel.ToMap(false, a.kernelManager))
 		}
 	}
 

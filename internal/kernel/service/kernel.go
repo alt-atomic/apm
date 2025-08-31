@@ -33,16 +33,60 @@ import (
 
 // Info KernelInfo представляет информацию о ядре
 type Info struct {
-	PackageName string       `json:"packageName"`
-	Flavour     string       `json:"flavour"`
-	Version     string       `json:"version"`
-	Release     string       `json:"release"`
-	BuildTime   time.Time    `json:"buildTime"`
-	IsInstalled bool         `json:"isInstalled"`
-	IsRunning   bool         `json:"isRunning"`
-	FullVersion string       `json:"fullVersion"`
-	AgeInDays   int          `json:"ageInDays"`
-	Modules     []ModuleInfo `json:"modules"`
+	PackageName      string       `json:"packageName"`
+	Flavour          string       `json:"flavour"`
+	Version          string       `json:"version"`
+	VersionInstalled string       `json:"versionInstalled"`
+	Release          string       `json:"release"`
+	BuildTime        time.Time    `json:"buildTime"`
+	IsInstalled      bool         `json:"isInstalled"`
+	IsRunning        bool         `json:"isRunning"`
+	FullVersion      string       `json:"fullVersion"`
+	AgeInDays        int          `json:"ageInDays"`
+	Modules          []ModuleInfo `json:"modules"`
+}
+
+// ToMap конвертирует Info в map[string]interface{} для JSON ответов
+func (info *Info) ToMap(full bool, manager *Manager) map[string]interface{} {
+	if full {
+		result := map[string]interface{}{
+			"packageName":      info.PackageName,
+			"flavour":          info.Flavour,
+			"version":          info.Version,
+			"versionInstalled": info.VersionInstalled,
+			"release":          info.Release,
+			"fullVersion":      info.FullVersion,
+			"isInstalled":      info.IsInstalled,
+			"isRunning":        info.IsRunning,
+			"ageInDays":        info.AgeInDays,
+			"buildTime":        info.BuildTime.Format(time.RFC3339),
+		}
+
+		if manager != nil {
+			allModules, _ := manager.FindAvailableModules(info)
+			var installedModules []map[string]interface{}
+			for _, module := range allModules {
+				if module.IsInstalled {
+					installedModules = append(installedModules, map[string]interface{}{
+						"name":        module.Name,
+						"packageName": module.PackageName,
+					})
+				}
+			}
+			result["InstalledModules"] = installedModules
+		}
+
+		return result
+	} else {
+		return map[string]interface{}{
+			"version":          info.Version,
+			"versionInstalled": info.VersionInstalled,
+			"flavour":          info.Flavour,
+			"fullVersion":      info.FullVersion,
+			"isInstalled":      info.IsInstalled,
+			"isRunning":        info.IsRunning,
+		}
+	}
 }
 
 // ModuleInfo информация о модуле ядра
@@ -105,15 +149,33 @@ func (km *Manager) GetCurrentKernel() (*Info, error) {
 	}
 
 	release := strings.TrimSpace(string(output))
-	kernel := parseKernelRelease(release)
-	if kernel == nil {
+
+	// Используем uname только для получения flavour
+	tempKernel := parseKernelRelease(release)
+	if tempKernel == nil {
 		return nil, fmt.Errorf("failed to parse kernel release: %s", release)
 	}
 
-	kernel.IsRunning = true
+	// Ищем соответствующий пакет в базе данных
+	ctx := context.Background()
+	filters := map[string]interface{}{
+		"typePackage": int(_package.PackageTypeSystem),
+		"name":        fmt.Sprintf("kernel-image-%s", tempKernel.Flavour),
+		"installed":   true,
+	}
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	if err != nil || len(packages) == 0 {
+		return nil, fmt.Errorf("failed to find current kernel package in database")
+	}
 
-	// Обогащаем данные из базы
-	km.enrichKernelInfoFromDB(kernel)
+	pkg := packages[0]
+	kernel := parseKernelPackageFromDB(pkg)
+	if kernel == nil {
+		return nil, fmt.Errorf("failed to parse kernel package from database")
+	}
+
+	kernel.IsRunning = true
+	kernel.IsInstalled = true
 
 	return kernel, nil
 }
@@ -140,7 +202,6 @@ func (km *Manager) GetDefaultKernel() (*Info, error) {
 func (km *Manager) ListKernels(flavour string) (kernels []*Info, err error) {
 	ctx := context.Background()
 
-	// Формируем фильтры для поиска kernel-image пакетов
 	filters := map[string]interface{}{
 		"typePackage": int(_package.PackageTypeSystem),
 	}
@@ -179,27 +240,35 @@ func (km *Manager) ListKernels(flavour string) (kernels []*Info, err error) {
 		// Проверяем статус установки
 		kernel.IsInstalled = km.checkInstallStatus(kernel, pkg.Installed)
 
-		// Проверяем является ли текущим
-		if currentKernel != nil && kernel.FullVersion == currentKernel.FullVersion {
+		// Проверяем является ли текущим - сравниваем по PackageName
+		if currentKernel != nil && kernel.PackageName == currentKernel.PackageName {
 			kernel.IsRunning = true
 			// Обновляем currentKernel реальными данными из базы
 			currentKernel.BuildTime = kernel.BuildTime
 			currentKernel.AgeInDays = kernel.AgeInDays
+			currentKernel.FullVersion = kernel.FullVersion
 		}
 
-		// Проверяем является ли по умолчанию
-		if defaultKernel != nil && kernel.FullVersion == defaultKernel.FullVersion {
+		// Проверяем является ли по умолчанию - сравниваем по PackageName
+		if defaultKernel != nil && kernel.PackageName == defaultKernel.PackageName {
 			// Обновляем defaultKernel реальными данными из базы
 			defaultKernel.BuildTime = kernel.BuildTime
 			defaultKernel.AgeInDays = kernel.AgeInDays
+			defaultKernel.FullVersion = kernel.FullVersion
 		}
 
 		kernels = append(kernels, kernel)
 	}
 
-	// Сортируем по версии (новые сначала)
+	// Сортируем по версии с учетом buildtime (новые сначала)
 	sort.Slice(kernels, func(i, j int) bool {
-		return compareVersions(kernels[i].Version, kernels[j].Version) > 0
+		// Сначала сравниваем основную версию
+		versionCmp := compareVersions(kernels[i].Version, kernels[j].Version)
+		if versionCmp != 0 {
+			return versionCmp > 0
+		}
+		// Если версии одинаковые, сравниваем по buildtime (новые первыми)
+		return kernels[i].BuildTime.After(kernels[j].BuildTime)
 	})
 
 	return kernels, nil
@@ -450,19 +519,20 @@ func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 	// Ищем пакет в базе по имени
 	pkg, err := km.dbService.GetPackageByName(ctx, kernel.PackageName)
 	if err != nil {
-		// Пробуем поиск по фильтру
+		// Пробуем поиск по фильтру для всех kernel-image пакетов с таким flavour
 		filters := map[string]interface{}{
 			"typePackage": int(_package.PackageTypeSystem),
 			"name":        fmt.Sprintf("kernel-image-%s", kernel.Flavour),
 		}
-		packages, searchErr := km.dbService.QueryHostImagePackages(ctx, filters, "", "", 0, 0)
+		packages, searchErr := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 		if searchErr != nil {
 			return
 		}
 
+		// Ищем пакет с подходящей версией
 		for _, p := range packages {
 			dbKernel := parseKernelPackageFromDB(p)
-			if dbKernel != nil && dbKernel.FullVersion == kernel.FullVersion {
+			if dbKernel != nil && dbKernel.Version == kernel.Version && dbKernel.Release == kernel.Release {
 				pkg = p
 				break
 			}
@@ -476,8 +546,9 @@ func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 	kernel.IsInstalled = km.checkInstallStatus(kernel, pkg.Installed)
 	kernel.PackageName = pkg.Name
 
-	// Вычисляем возраст и время сборки из VersionRaw
+	// Используем VersionRaw для полной версии APT
 	if pkg.VersionRaw != "" {
+		kernel.FullVersion = fmt.Sprintf("%s#%s", pkg.Name, pkg.VersionRaw)
 		kernel.AgeInDays, kernel.BuildTime = calculatePackageAgeAndTime(pkg.VersionRaw)
 	}
 
@@ -512,25 +583,33 @@ func (km *Manager) checkModuleInstallStatus(module, flavour string, aptInstalled
 	return aptInstalled
 }
 
-// buildPackageList формирует список пакетов для установки
+// buildPackageList формирует список пакетов для установки с полными версиями
 func (km *Manager) buildPackageList(kernel *Info, modules []string, includeHeaders bool) []string {
 	var installPackages []string
 
-	// Добавляем само ядро
-	installPackages = append(installPackages, kernel.PackageName)
+	// Добавляем само ядро - используем FullVersion если содержит #
+	if strings.Contains(kernel.FullVersion, "#") {
+		installPackages = append(installPackages, kernel.FullVersion)
+	} else {
+		installPackages = append(installPackages, kernel.PackageName)
+	}
 
-	// Добавляем модули
+	// Добавляем модули с полными версиями
 	for _, module := range modules {
 		modulePackage := fmt.Sprintf("kernel-modules-%s-%s", module, kernel.Flavour)
-		installPackages = append(installPackages, modulePackage)
+		fullModulePackage := km.getFullPackageNameForModule(modulePackage)
+		installPackages = append(installPackages, fullModulePackage)
 	}
 
 	// Добавляем headers если нужно
 	if includeHeaders {
-		installPackages = append(installPackages,
-			fmt.Sprintf("kernel-headers-%s", kernel.Flavour),
-			fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour),
-		)
+		headerPackage := fmt.Sprintf("kernel-headers-%s", kernel.Flavour)
+		moduleHeaderPackage := fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour)
+
+		fullHeaderPackage := km.getFullPackageNameForModule(headerPackage)
+		fullModuleHeaderPackage := km.getFullPackageNameForModule(moduleHeaderPackage)
+
+		installPackages = append(installPackages, fullHeaderPackage, fullModuleHeaderPackage)
 	}
 
 	return installPackages
@@ -589,7 +668,7 @@ func parseKernelRelease(release string) *Info {
 		Flavour:     flavour,
 		Release:     altRelease,
 		FullVersion: release,
-		PackageName: fmt.Sprintf("kernel-image-%s", release),
+		PackageName: fmt.Sprintf("kernel-image-%s", flavour),
 	}
 }
 
@@ -613,14 +692,22 @@ func parseKernelPackageFromDB(pkg _package.Package) *Info {
 	}
 
 	release := extractReleaseFromVersion(pkg.Version)
-	fullVersion := fmt.Sprintf("%s-%s-%s", cleanVersion, flavour, release)
+
+	// Если есть VersionRaw - используем его для полной версии APT, иначе формируем обычную
+	var fullVersion string
+	if pkg.VersionRaw != "" {
+		fullVersion = fmt.Sprintf("%s#%s", pkg.Name, pkg.VersionRaw)
+	} else {
+		fullVersion = fmt.Sprintf("%s-%s-%s", cleanVersion, flavour, release)
+	}
 
 	kernel := &Info{
-		PackageName: pkg.Name,
-		Flavour:     flavour,
-		Version:     cleanVersion,
-		Release:     release,
-		FullVersion: fullVersion,
+		PackageName:      pkg.Name,
+		Flavour:          flavour,
+		Version:          pkg.Version,
+		VersionInstalled: pkg.VersionInstalled,
+		Release:          release,
+		FullVersion:      fullVersion,
 	}
 
 	// Вычисляем возраст пакета и время сборки из buildtime в полной версии
@@ -733,4 +820,24 @@ func isModuleInstalledRPM(moduleName, flavour string) bool {
 	}
 
 	return false
+}
+
+// getFullPackageNameForModule получает полное имя пакета модуля с версией из базы
+func (km *Manager) getFullPackageNameForModule(packageName string) string {
+	ctx := context.Background()
+
+	// Ищем пакет в базе данных
+	pkg, err := km.dbService.GetPackageByName(ctx, packageName)
+	if err != nil {
+		// Fallback - возвращаем имя без версии
+		return packageName
+	}
+
+	// Если есть VersionRaw - формируем полное имя
+	if pkg.VersionRaw != "" {
+		return fmt.Sprintf("%s#%s", packageName, pkg.VersionRaw)
+	}
+
+	// Fallback - возвращаем имя без версии
+	return packageName
 }

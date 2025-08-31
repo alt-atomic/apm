@@ -91,12 +91,10 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:      "info",
-				Usage:     lib.T_("Show information about current or specified kernel"),
-				ArgsUsage: "[kernel-version]",
+				Name:  "info",
+				Usage: lib.T_("Show information about current"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					version := cmd.Args().First()
-					resp, err := actions.GetKernelInfo(ctx, version)
+					resp, err := actions.GetKernelInfo(ctx)
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -122,11 +120,6 @@ func CommandList() *cli.Command {
 						Usage: lib.T_("Show what would be installed without actually installing"),
 						Value: false,
 					},
-					&cli.BoolFlag{
-						Name:  "force",
-						Usage: lib.T_("Force reinstallation even if already installed"),
-						Value: false,
-					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					flavour := cmd.Args().First()
@@ -134,7 +127,7 @@ func CommandList() *cli.Command {
 						return reply.CliResponse(ctx, newErrorResponse(lib.T_("Kernel flavour must be specified")))
 					}
 
-					resp, err := actions.InstallKernel(ctx, flavour, cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("dry-run"), cmd.Bool("force"))
+					resp, err := actions.InstallKernel(ctx, flavour, cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("dry-run"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
