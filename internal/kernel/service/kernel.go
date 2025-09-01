@@ -19,10 +19,12 @@ package service
 import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/binding/apt"
-	"apm/internal/common/binding/apt/lib"
+	libApt "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/lib"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -99,11 +101,11 @@ type ModuleInfo struct {
 
 // UpgradePreview показывает что будет происходить при обновлении ядра
 type UpgradePreview struct {
-	Changes         *lib.PackageChanges `json:"changes"`
-	SelectedModules []string            `json:"selectedModules"`
-	MissingModules  []string            `json:"missingModules"`
-	DownloadSize    uint64              `json:"downloadSize"`
-	InstallSize     uint64              `json:"installSize"`
+	Changes         *libApt.PackageChanges `json:"changes"`
+	SelectedModules []string               `json:"selectedModules"`
+	MissingModules  []string               `json:"missingModules"`
+	DownloadSize    uint64                 `json:"downloadSize"`
+	InstallSize     uint64                 `json:"installSize"`
 }
 
 // Manager KernelManager управляет операциями с ядрами
@@ -149,7 +151,7 @@ func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
 	cmd := exec.Command("uname", "-r")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get current kernel: %s"), err.Error())
 	}
 
 	release := strings.TrimSpace(string(output))
@@ -157,7 +159,7 @@ func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
 	// Используем uname только для получения flavour
 	tempKernel := parseKernelRelease(release)
 	if tempKernel == nil {
-		return nil, fmt.Errorf("failed to parse kernel release: %s", release)
+		return nil, fmt.Errorf(lib.T_("failed to parse kernel release: %s"), release)
 	}
 
 	filters := map[string]interface{}{
@@ -167,13 +169,13 @@ func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
 	}
 	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil || len(packages) == 0 {
-		return nil, fmt.Errorf("failed to find current kernel package in database")
+		return nil, errors.New(lib.T_("failed to find current kernel package in database"))
 	}
 
 	pkg := packages[0]
 	kernel := parseKernelPackageFromDB(pkg)
 	if kernel == nil {
-		return nil, fmt.Errorf("failed to parse kernel package from database")
+		return nil, errors.New(lib.T_("failed to parse kernel package from database"))
 	}
 
 	kernel.IsRunning = true
@@ -187,7 +189,7 @@ func (km *Manager) GetDefaultKernel() (*Info, error) {
 	cmd := exec.Command("readlink", "/boot/vmlinuz")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get default kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get default kernel: %s"), err.Error())
 	}
 
 	vmlinuz := strings.TrimSpace(string(output))
@@ -218,7 +220,7 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 	// Ищем в базе данных с сортировкой по версии
 	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search kernel packages in database: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to search kernel packages in database: %s"), err.Error())
 	}
 
 	currentKernel, _ := km.GetCurrentKernel(ctx)
@@ -285,7 +287,7 @@ func (km *Manager) FindLatestKernel(ctx context.Context, flavour string) (*Info,
 	}
 
 	if len(kernels) == 0 {
-		return nil, fmt.Errorf("no kernels found for flavour: %s", flavour)
+		return nil, fmt.Errorf(lib.T_("no kernels found for flavour: %s"), flavour)
 	}
 
 	return kernels[0], nil
@@ -299,7 +301,7 @@ func (km *Manager) FindAvailableModules(kernel *Info) (modules []ModuleInfo, err
 	likePattern := fmt.Sprintf("kernel-modules-%%-%s", kernel.Flavour)
 	packages, err := km.dbService.SearchPackagesByNameLike(ctx, likePattern, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search kernel modules in database: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to search kernel modules in database: %s"), err.Error())
 	}
 
 	for _, pkg := range packages {
@@ -336,7 +338,7 @@ func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeader
 	// Симулируем установку через APT Actions
 	changes, err := km.aptActions.SimulateInstall(installPackages)
 	if err != nil {
-		return nil, fmt.Errorf("failed to simulate kernel upgrade: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to simulate kernel upgrade: %s"), err.Error())
 	}
 
 	// Проверяем какие модули недоступны
@@ -372,7 +374,7 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 }
 
 // InstallModules устанавливает или симулирует установку пакетов модулей
-func (km *Manager) InstallModules(ctx context.Context, installPackages []string, dryRun bool) (*lib.PackageChanges, error) {
+func (km *Manager) InstallModules(ctx context.Context, installPackages []string, dryRun bool) (*libApt.PackageChanges, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.installModules"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.installModules"))
 	if dryRun {
@@ -384,7 +386,7 @@ func (km *Manager) InstallModules(ctx context.Context, installPackages []string,
 }
 
 // RemoveModules удаляет или симулирует удаление пакетов модулей
-func (km *Manager) RemoveModules(ctx context.Context, removePackages []string, dryRun bool) (*lib.PackageChanges, error) {
+func (km *Manager) RemoveModules(ctx context.Context, removePackages []string, dryRun bool) (*libApt.PackageChanges, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.removeModules"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.removeModules"))
 
@@ -404,7 +406,7 @@ func (km *Manager) DetectCurrentFlavour(ctx context.Context) (string, error) {
 	}
 
 	if current == nil {
-		return "", fmt.Errorf("cannot detect current kernel")
+		return "", errors.New(lib.T_("cannot detect current kernel"))
 	}
 
 	return current.Flavour, nil
@@ -421,7 +423,7 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 	}
 	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search kernels in database: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to search kernels in database: %s"), err.Error())
 	}
 
 	flavourVersions := make(map[string]string)
@@ -462,7 +464,7 @@ func (km *Manager) InheritModulesFromKernel(targetKernel *Info, sourceKernel *In
 
 	sourceAvailableModules, err := km.FindAvailableModules(sourceKernel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available modules from source kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get available modules from source kernel: %s"), err.Error())
 	}
 
 	// Извлекаем только установленные модули из исходного ядра
@@ -480,7 +482,7 @@ func (km *Manager) InheritModulesFromKernel(targetKernel *Info, sourceKernel *In
 	// Проверяем какие из этих модулей доступны для целевого ядра
 	availableModules, err := km.FindAvailableModules(targetKernel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available modules for target kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get available modules for target kernel: %s"), err.Error())
 	}
 
 	var inheritedModules []string

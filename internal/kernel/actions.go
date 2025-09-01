@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"syscall"
 )
 
 // Actions объединяет методы для выполнения системных действий.
@@ -68,9 +69,13 @@ func NewActions() *Actions {
 
 // ListKernels возвращает список ядер
 func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly bool, full bool) (*reply.APIResponse, error) {
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
 	kernels, err := a.kernelManager.ListKernels(ctx, flavour)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list kernels: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to list kernels: %s"), err.Error())
 	}
 
 	if installedOnly {
@@ -100,9 +105,14 @@ func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly
 
 // GetCurrentKernel возвращает информацию о текущем ядре
 func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, error) {
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	kernel, err := a.kernelManager.GetCurrentKernel(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get current kernel: %s"), err.Error())
 	}
 
 	data := map[string]interface{}{
@@ -118,16 +128,25 @@ func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, err
 
 // GetKernelInfo возвращает информацию о текущем ядре
 func (a *Actions) GetKernelInfo(ctx context.Context) (*reply.APIResponse, error) {
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return a.GetCurrentKernel(ctx)
 }
 
 // InstallKernel устанавливает ядро с указанным flavour
 func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*reply.APIResponse, error) {
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if err := a.checkAtomicSystemRestriction("install"); err != nil {
 		return nil, err
 	}
 
-	err := a.serviceAptActions.AptUpdate(ctx)
+	err = a.serviceAptActions.AptUpdate(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +156,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 	}
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find latest kernel for flavour %s: %w", flavour, err)
+		return nil, fmt.Errorf(lib.T_("failed to find latest kernel for flavour %s: %s"), flavour, err.Error())
 	}
 
 	if len(modules) == 0 {
@@ -173,11 +192,11 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 
 	preview, err := a.kernelManager.SimulateUpgrade(latest, modules, includeHeaders)
 	if err != nil {
-		return nil, fmt.Errorf("failed to simulate kernel installation: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to simulate kernel installation: %s"), err.Error())
 	}
 
 	if len(preview.MissingModules) > 0 {
-		return nil, fmt.Errorf("some modules are not available: %s", strings.Join(preview.MissingModules, ", "))
+		return nil, fmt.Errorf(lib.T_("some modules are not available: %s"), strings.Join(preview.MissingModules, ", "))
 	}
 
 	if len(preview.Changes.NewInstalledPackages) == 0 && len(preview.Changes.UpgradedPackages) == 0 {
@@ -206,7 +225,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 
 	err = a.kernelManager.InstallKernel(ctx, latest, modules, includeHeaders, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to install kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to install kernel: %s"), err.Error())
 	}
 
 	err = a.updateAllPackagesDB(ctx)
@@ -229,6 +248,10 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 // UpdateKernel обновляет ядро до последней версии
 func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*reply.APIResponse, error) {
 	var err error
+	err = a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	if err = a.checkAtomicSystemRestriction("update"); err != nil {
 		return nil, err
@@ -241,12 +264,12 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 
 	flavour, err = a.detectFlavourOrDefault(ctx, flavour)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detect current flavour: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to detect current flavour: %s"), err.Error())
 	}
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find latest kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to find latest kernel: %s"), err.Error())
 	}
 
 	current, err := a.kernelManager.GetCurrentKernel(ctx)
@@ -281,6 +304,10 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 // CheckKernelUpdate проверяет наличие обновлений ядра
 func (a *Actions) CheckKernelUpdate(ctx context.Context, flavour string) (*reply.APIResponse, error) {
 	var err error
+	err = a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	if err = a.checkAtomicSystemRestriction("update"); err != nil {
 		return nil, err
@@ -293,7 +320,7 @@ func (a *Actions) CheckKernelUpdate(ctx context.Context, flavour string) (*reply
 
 	flavour, err = a.detectFlavourOrDefault(ctx, flavour)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detect current flavour: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to detect current flavour: %s"), err.Error())
 	}
 
 	current, err := a.kernelManager.GetCurrentKernel(ctx)
@@ -303,7 +330,7 @@ func (a *Actions) CheckKernelUpdate(ctx context.Context, flavour string) (*reply
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find latest kernel: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to find latest kernel: %s"), err.Error())
 	}
 
 	updateAvailable := !(latest.Version == current.Version && latest.Release == current.Release)
@@ -323,6 +350,11 @@ func (a *Actions) CheckKernelUpdate(ctx context.Context, flavour string) (*reply
 
 // CleanOldKernels удаляет старые ядра
 func (a *Actions) CleanOldKernels(ctx context.Context, keep int, dryRun bool) (*reply.APIResponse, error) {
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if keep < 1 {
 		return nil, errors.New(lib.T_("Keep count must be at least 1"))
 	}
@@ -374,7 +406,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, keep int, dryRun bool) (*
 	for _, kernel := range toRemove {
 		err = a.kernelManager.RemoveKernel(kernel, false)
 		if err != nil {
-			return nil, fmt.Errorf("failed to remove kernel %s: %w", kernel.FullVersion, err)
+			return nil, fmt.Errorf(lib.T_("failed to remove kernel %s: %s"), kernel.FullVersion, err.Error())
 		}
 		removed = append(removed, kernel)
 	}
@@ -395,9 +427,14 @@ func (a *Actions) CleanOldKernels(ctx context.Context, keep int, dryRun bool) (*
 // ListKernelModules возвращает список модулей для ядра
 func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply.APIResponse, error) {
 	var err error
+	err = a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	flavour, err = a.detectFlavourOrDefault(ctx, flavour)
 	if err != nil {
-		return nil, fmt.Errorf("failed to detect current flavour: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to detect current flavour: %s"), err.Error())
 	}
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
@@ -407,7 +444,7 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply
 
 	modules, err := a.kernelManager.FindAvailableModules(latest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list modules: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to list modules: %s"), err.Error())
 	}
 
 	data := map[string]interface{}{
@@ -424,6 +461,11 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply
 
 // InstallKernelModules устанавливает модули ядра
 func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modules []string, dryRun bool) (*reply.APIResponse, error) {
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := a.checkAtomicSystemRestriction("install"); err != nil {
 		return nil, err
 	}
@@ -434,7 +476,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 	if flavour == "" {
 		detected, err := a.kernelManager.DetectCurrentFlavour(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to detect current flavour: %w", err)
+			return nil, fmt.Errorf(lib.T_("failed to detect current flavour: %s"), err.Error())
 		}
 		flavour = detected
 	}
@@ -446,7 +488,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 
 	availableModules, err := a.kernelManager.FindAvailableModules(latest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available modules: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get available modules: %s"), err.Error())
 	}
 
 	var missingModules []string
@@ -468,11 +510,11 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 	}
 
 	if len(missingModules) > 0 {
-		return nil, fmt.Errorf("modules not available: %s", strings.Join(missingModules, ", "))
+		return nil, fmt.Errorf(lib.T_("modules not available: %s"), strings.Join(missingModules, ", "))
 	}
 
 	if len(alreadyInstalledModules) > 0 {
-		return nil, fmt.Errorf("modules already installed: %s", strings.Join(alreadyInstalledModules, ", "))
+		return nil, fmt.Errorf(lib.T_("modules already installed: %s"), strings.Join(alreadyInstalledModules, ", "))
 	}
 
 	// Подготавливаем список пакетов для установки
@@ -490,7 +532,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 	if dryRun {
 		preview, err := a.kernelManager.InstallModules(ctx, installPackages, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to simulate modules installation: %w", err)
+			return nil, fmt.Errorf(lib.T_("failed to simulate modules installation: %s"), err.Error())
 		}
 
 		data := map[string]interface{}{
@@ -507,7 +549,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 
 	_, err = a.kernelManager.InstallModules(ctx, installPackages, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to install modules: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to install modules: %s"), err.Error())
 	}
 
 	err = a.updateAllPackagesDB(ctx)
@@ -518,7 +560,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 	// Получаем обновлённую информацию о ядре после установки модулей
 	updatedKernel, err := a.kernelManager.GetCurrentKernel(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get updated kernel info: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get updated kernel info: %s"), err.Error())
 	}
 
 	data := map[string]interface{}{
@@ -534,6 +576,11 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 
 // RemoveKernelModules удаляет модули ядра
 func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modules []string, dryRun bool) (*reply.APIResponse, error) {
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := a.checkAtomicSystemRestriction("remove"); err != nil {
 		return nil, err
 	}
@@ -544,7 +591,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 	if flavour == "" {
 		detected, err := a.kernelManager.DetectCurrentFlavour(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to detect current flavour: %w", err)
+			return nil, fmt.Errorf(lib.T_("failed to detect current flavour: %s"), err.Error())
 		}
 		flavour = detected
 	}
@@ -556,7 +603,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 
 	availableModules, err := a.kernelManager.FindAvailableModules(latest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available modules: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get available modules: %s"), err.Error())
 	}
 
 	var notInstalledModules []string
@@ -575,12 +622,12 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("module not found: %s", module)
+			return nil, fmt.Errorf(lib.T_("module not found: %s"), module)
 		}
 	}
 
 	if len(notInstalledModules) > 0 {
-		return nil, fmt.Errorf("modules not installed: %s", strings.Join(notInstalledModules, ", "))
+		return nil, fmt.Errorf(lib.T_("modules not installed: %s"), strings.Join(notInstalledModules, ", "))
 	}
 
 	if len(modulesToRemove) == 0 {
@@ -608,7 +655,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 	if dryRun {
 		preview, err := a.kernelManager.RemoveModules(ctx, removePackages, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to simulate modules removal: %w", err)
+			return nil, fmt.Errorf(lib.T_("failed to simulate modules removal: %s"), err.Error())
 		}
 
 		data := map[string]interface{}{
@@ -625,7 +672,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 
 	_, err = a.kernelManager.RemoveModules(ctx, removePackages, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to remove modules: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to remove modules: %s"), err.Error())
 	}
 
 	err = a.updateAllPackagesDB(ctx)
@@ -636,7 +683,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 	// Получаем обновлённую информацию о ядре после удаления модулей
 	updatedKernel, err := a.kernelManager.GetCurrentKernel(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get updated kernel info: %w", err)
+		return nil, fmt.Errorf(lib.T_("failed to get updated kernel info: %s"), err.Error())
 	}
 
 	data := map[string]interface{}{
@@ -713,6 +760,22 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 	err = a.serviceAptDatabase.SyncPackageInstallationInfo(ctx, installedPackages)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// validateDB проверяет, существует ли база данных
+func (a *Actions) validateDB(ctx context.Context) error {
+	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
+		if syscall.Geteuid() != 0 {
+			return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+		}
+
+		_, err = a.serviceAptActions.Update(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
