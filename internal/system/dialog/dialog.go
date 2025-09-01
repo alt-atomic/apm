@@ -14,9 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package _package
+package dialog
 
 import (
+	_package "apm/internal/common/apt/package"
 	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
@@ -43,7 +44,7 @@ const (
 var choices []string
 
 type model struct {
-	pkg        []Package
+	pkg        []_package.Package
 	pckChange  aptLib.PackageChanges
 	cursor     int
 	choice     string
@@ -53,7 +54,7 @@ type model struct {
 }
 
 // NewDialog запускает диалог отображения информации о пакете с выбором действия.
-func NewDialog(packageInfo []Package, packageChange aptLib.PackageChanges, action DialogAction) (bool, error) {
+func NewDialog(packageInfo []_package.Package, packageChange aptLib.PackageChanges, action DialogAction) (bool, error) {
 	if lib.Env.Format != "text" || !reply.IsTTY() {
 		return true, nil
 	}
@@ -378,7 +379,7 @@ func (m model) buildContent() string {
 	return sb.String()
 }
 
-func (m model) statusPackage(pkg Package) string {
+func (m model) statusPackage(pkg _package.Package) string {
 	// Создаём список возможных имён пакета для поиска в изменениях
 	possibleNames := []string{pkg.Name}
 

@@ -39,14 +39,12 @@ var syncAptMutex sync.Mutex
 type Actions struct {
 	appStream          *appstream.SwCatService
 	serviceAptDatabase *PackageDBService
-	serviceStplr       *StplrService
 }
 
-func NewActions(serviceAptDatabase *PackageDBService, serviceStplr *StplrService) *Actions {
+func NewActions(serviceAptDatabase *PackageDBService) *Actions {
 	return &Actions{
 		appStream:          appstream.NewSwCatService("/usr/share/swcatalog/xml"),
 		serviceAptDatabase: serviceAptDatabase,
-		serviceStplr:       serviceStplr,
 	}
 }
 

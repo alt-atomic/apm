@@ -17,10 +17,10 @@
 package service
 
 import (
+	_package "apm/internal/common/apt/package"
 	"apm/internal/common/binding/apt"
 	"apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
-	_package "apm/internal/system/package"
 	"context"
 	"fmt"
 	"os/exec"
@@ -365,16 +365,24 @@ func (km *Manager) InstallKernel(kernel *Info, modules []string, includeHeaders 
 	return km.aptActions.InstallPackages(installPackages, nil)
 }
 
-// InstallModules устанавливает модули ядра
-func (km *Manager) InstallModules(kernel *Info, modules []string) error {
-	var installPackages []string
-	for _, module := range modules {
-		modulePackage := fmt.Sprintf("kernel-modules-%s-%s", module, kernel.Flavour)
-		installPackages = append(installPackages, modulePackage)
+// InstallModules устанавливает или симулирует установку пакетов модулей
+func (km *Manager) InstallModules(installPackages []string, dryRun bool) (*lib.PackageChanges, error) {
+	if dryRun {
+		return km.aptActions.SimulateInstall(installPackages)
 	}
 
-	// Используем APT Actions для установки
-	return km.aptActions.InstallPackages(installPackages, nil)
+	err := km.aptActions.InstallPackages(installPackages, nil)
+	return nil, err
+}
+
+// RemoveModules удаляет или симулирует удаление пакетов модулей
+func (km *Manager) RemoveModules(removePackages []string, dryRun bool) (*lib.PackageChanges, error) {
+	if dryRun {
+		return km.aptActions.SimulateRemove(removePackages, false)
+	}
+
+	err := km.aptActions.RemovePackages(removePackages, false, nil)
+	return nil, err
 }
 
 // DetectCurrentFlavour определяет flavour текущего ядра
@@ -597,7 +605,7 @@ func (km *Manager) buildPackageList(kernel *Info, modules []string, includeHeade
 	// Добавляем модули с полными версиями
 	for _, module := range modules {
 		modulePackage := fmt.Sprintf("kernel-modules-%s-%s", module, kernel.Flavour)
-		fullModulePackage := km.getFullPackageNameForModule(modulePackage)
+		fullModulePackage := km.GetFullPackageNameForModule(modulePackage)
 		installPackages = append(installPackages, fullModulePackage)
 	}
 
@@ -606,8 +614,8 @@ func (km *Manager) buildPackageList(kernel *Info, modules []string, includeHeade
 		headerPackage := fmt.Sprintf("kernel-headers-%s", kernel.Flavour)
 		moduleHeaderPackage := fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour)
 
-		fullHeaderPackage := km.getFullPackageNameForModule(headerPackage)
-		fullModuleHeaderPackage := km.getFullPackageNameForModule(moduleHeaderPackage)
+		fullHeaderPackage := km.GetFullPackageNameForModule(headerPackage)
+		fullModuleHeaderPackage := km.GetFullPackageNameForModule(moduleHeaderPackage)
 
 		installPackages = append(installPackages, fullHeaderPackage, fullModuleHeaderPackage)
 	}
@@ -822,8 +830,8 @@ func isModuleInstalledRPM(moduleName, flavour string) bool {
 	return false
 }
 
-// getFullPackageNameForModule получает полное имя пакета модуля с версией из базы
-func (km *Manager) getFullPackageNameForModule(packageName string) string {
+// GetFullPackageNameForModule получает полное имя пакета модуля с версией из базы
+func (km *Manager) GetFullPackageNameForModule(packageName string) string {
 	ctx := context.Background()
 
 	// Ищем пакет в базе данных

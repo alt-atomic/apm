@@ -135,23 +135,6 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:      "remove",
-				Usage:     lib.T_("Remove specified kernel"),
-				ArgsUsage: "kernel-version",
-				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					version := cmd.Args().First()
-					if version == "" {
-						return reply.CliResponse(ctx, newErrorResponse(lib.T_("Kernel version must be specified")))
-					}
-
-					resp, err := actions.RemoveKernel(ctx, version)
-					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-					}
-					return reply.CliResponse(ctx, *resp)
-				}),
-			},
-			{
 				Name:  "update",
 				Usage: lib.T_("Update kernel to latest version"),
 				Flags: []cli.Flag{
@@ -248,6 +231,11 @@ func CommandList() *cli.Command {
 								Name:  "flavour",
 								Usage: lib.T_("Install for specific kernel flavour"),
 							},
+							&cli.BoolFlag{
+								Name:  "dry-run",
+								Usage: lib.T_("Show what would be installed without actually installing"),
+								Value: false,
+							},
 						},
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							modules := cmd.Args().Slice()
@@ -255,7 +243,35 @@ func CommandList() *cli.Command {
 								return reply.CliResponse(ctx, newErrorResponse(lib.T_("At least one module must be specified")))
 							}
 
-							resp, err := actions.InstallKernelModules(ctx, cmd.String("flavour"), modules)
+							resp, err := actions.InstallKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("dry-run"))
+							if err != nil {
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							}
+							return reply.CliResponse(ctx, *resp)
+						}),
+					},
+					{
+						Name:      "remove",
+						Usage:     lib.T_("Remove kernel modules"),
+						ArgsUsage: "module-name [module-name...]",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "flavour",
+								Usage: lib.T_("Remove from specific kernel flavour"),
+							},
+							&cli.BoolFlag{
+								Name:  "dry-run",
+								Usage: lib.T_("Show what would be removed without actually removing"),
+								Value: false,
+							},
+						},
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							modules := cmd.Args().Slice()
+							if len(modules) == 0 {
+								return reply.CliResponse(ctx, newErrorResponse(lib.T_("At least one module must be specified")))
+							}
+
+							resp, err := actions.RemoveKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("dry-run"))
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
