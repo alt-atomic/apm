@@ -79,6 +79,9 @@ func formatField(key string, value interface{}) string {
 		return getAccentStyle().Render(valStr)
 	}
 
+	if key == "packageName" {
+		return getAccentStyle().Render(valStr)
+	}
 	return valStr
 }
 

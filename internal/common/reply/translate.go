@@ -145,6 +145,34 @@ func TranslateKey(key string) string {
 		return lib.T_("Pinned")
 	case "list":
 		return lib.T_("List")
+	case "kernel":
+		return lib.T_("Kernel")
+	case "currentKernel":
+		return lib.T_("Current Kernel")
+	case "latestKernel":
+		return lib.T_("Latest Kernel")
+	case "preview":
+		return lib.T_("Preview")
+	case "ageInDays":
+		return lib.T_("Age in Days")
+	case "buildTime":
+		return lib.T_("Build Time")
+	case "flavour":
+		return lib.T_("Flavour")
+	case "fullVersion":
+		return lib.T_("Full Version")
+	case "isInstalled":
+		return lib.T_("Is Installed")
+	case "isRunning":
+		return lib.T_("Is Running")
+	case "release":
+		return lib.T_("Release")
+	case "InstalledModules":
+		return lib.T_("Installed Modules")
+	case "selectedModules":
+		return lib.T_("Selected Modules")
+	case "missingModules":
+		return lib.T_("Missing Modules")
 	default:
 		return lib.T_(key)
 	}

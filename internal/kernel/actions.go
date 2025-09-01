@@ -229,6 +229,11 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 // UpdateKernel обновляет ядро до последней версии
 func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*reply.APIResponse, error) {
 	var err error
+
+	if err = a.checkAtomicSystemRestriction("update", dryRun); err != nil {
+		return nil, err
+	}
+
 	_, err = a.serviceAptActions.Update(ctx)
 	if err != nil {
 		return nil, err
@@ -419,6 +424,9 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply
 
 // InstallKernelModules устанавливает модули ядра
 func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modules []string, dryRun bool) (*reply.APIResponse, error) {
+	if err := a.checkAtomicSystemRestriction("install", dryRun); err != nil {
+		return nil, err
+	}
 	if len(modules) == 0 {
 		return nil, errors.New(lib.T_("At least one module must be specified"))
 	}
@@ -526,6 +534,9 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 
 // RemoveKernelModules удаляет модули ядра
 func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modules []string, dryRun bool) (*reply.APIResponse, error) {
+	if err := a.checkAtomicSystemRestriction("remove", dryRun); err != nil {
+		return nil, err
+	}
 	if len(modules) == 0 {
 		return nil, errors.New(lib.T_("At least one module must be specified"))
 	}
@@ -664,9 +675,10 @@ func (a *Actions) detectFlavourOrDefault(flavour string) (string, error) {
 
 // checkAtomicSystemRestriction проверяет ограничения для atomic систем
 func (a *Actions) checkAtomicSystemRestriction(operation string, dryRun bool) error {
-	if !lib.Env.IsAtomic || dryRun {
+	if !lib.Env.IsAtomic {
 		return nil
 	}
+
 	switch operation {
 	case "install":
 		return errors.New(lib.T_("Direct kernel installation is not supported on atomic systems. Use system image updates instead"))

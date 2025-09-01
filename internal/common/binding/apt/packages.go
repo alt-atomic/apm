@@ -28,6 +28,7 @@ var (
 	aptSystem     *lib.System
 	aptSystemOnce sync.Once
 	aptSystemErr  error
+	aptMutex      sync.Mutex
 )
 
 type Actions struct{}
@@ -54,6 +55,9 @@ func Close() {
 
 // operationWrapper обёртка для всех операций с APT
 func (a *Actions) operationWrapper(fn func() error) error {
+	aptMutex.Lock()
+	defer aptMutex.Unlock()
+
 	lib.StartOperation()
 	defer lib.EndOperation()
 
