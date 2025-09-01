@@ -216,6 +216,16 @@ func getTaskText(task string) string {
 		return lib.T_("Synchronizing database")
 	case "system.UpdateAppStream":
 		return lib.T_("Update information about applications")
+	case "kernel.currentKernel":
+		return lib.T_("Get current kernel")
+	case "kernel.listKernels":
+		return lib.T_("Get list kernels")
+	case "kernel.installKernel":
+		return lib.T_("Install kernel")
+	case "kernel.installModules":
+		return lib.T_("Install kernel modules")
+	case "kernel.removeModules":
+		return lib.T_("Remove kernel modules")
 	default:
 		return task
 	}

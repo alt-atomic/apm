@@ -21,6 +21,7 @@ import (
 	"apm/internal/common/binding/apt"
 	"apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
+	"apm/internal/common/reply"
 	"context"
 	"fmt"
 	"os/exec"
@@ -141,7 +142,10 @@ func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 }
 
 // GetCurrentKernel возвращает информацию о текущем запущенном ядре
-func (km *Manager) GetCurrentKernel() (*Info, error) {
+func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.currentKernel"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.currentKernel"))
+
 	cmd := exec.Command("uname", "-r")
 	output, err := cmd.Output()
 	if err != nil {
@@ -156,8 +160,6 @@ func (km *Manager) GetCurrentKernel() (*Info, error) {
 		return nil, fmt.Errorf("failed to parse kernel release: %s", release)
 	}
 
-	// Ищем соответствующий пакет в базе данных
-	ctx := context.Background()
 	filters := map[string]interface{}{
 		"typePackage": int(_package.PackageTypeSystem),
 		"name":        fmt.Sprintf("kernel-image-%s", tempKernel.Flavour),
@@ -199,8 +201,9 @@ func (km *Manager) GetDefaultKernel() (*Info, error) {
 }
 
 // ListKernels возвращает список доступных ядер для указанного flavour
-func (km *Manager) ListKernels(flavour string) (kernels []*Info, err error) {
-	ctx := context.Background()
+func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*Info, err error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.listKernels"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.listKernels"))
 
 	filters := map[string]interface{}{
 		"typePackage": int(_package.PackageTypeSystem),
@@ -218,7 +221,7 @@ func (km *Manager) ListKernels(flavour string) (kernels []*Info, err error) {
 		return nil, fmt.Errorf("failed to search kernel packages in database: %w", err)
 	}
 
-	currentKernel, _ := km.GetCurrentKernel()
+	currentKernel, _ := km.GetCurrentKernel(ctx)
 	defaultKernel, _ := km.GetDefaultKernel()
 
 	for _, pkg := range packages {
@@ -275,8 +278,8 @@ func (km *Manager) ListKernels(flavour string) (kernels []*Info, err error) {
 }
 
 // FindLatestKernel возвращает самое новое ядро для указанного flavour
-func (km *Manager) FindLatestKernel(flavour string) (*Info, error) {
-	kernels, err := km.ListKernels(flavour)
+func (km *Manager) FindLatestKernel(ctx context.Context, flavour string) (*Info, error) {
+	kernels, err := km.ListKernels(ctx, flavour)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +354,10 @@ func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeader
 }
 
 // InstallKernel устанавливает ядро с модулями
-func (km *Manager) InstallKernel(kernel *Info, modules []string, includeHeaders bool, dryRun bool) error {
+func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []string, includeHeaders bool, dryRun bool) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.installKernel"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.installKernel"))
+
 	// Формируем список пакетов для установки
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
 
@@ -366,7 +372,9 @@ func (km *Manager) InstallKernel(kernel *Info, modules []string, includeHeaders 
 }
 
 // InstallModules устанавливает или симулирует установку пакетов модулей
-func (km *Manager) InstallModules(installPackages []string, dryRun bool) (*lib.PackageChanges, error) {
+func (km *Manager) InstallModules(ctx context.Context, installPackages []string, dryRun bool) (*lib.PackageChanges, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.installModules"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.installModules"))
 	if dryRun {
 		return km.aptActions.SimulateInstall(installPackages)
 	}
@@ -376,7 +384,10 @@ func (km *Manager) InstallModules(installPackages []string, dryRun bool) (*lib.P
 }
 
 // RemoveModules удаляет или симулирует удаление пакетов модулей
-func (km *Manager) RemoveModules(removePackages []string, dryRun bool) (*lib.PackageChanges, error) {
+func (km *Manager) RemoveModules(ctx context.Context, removePackages []string, dryRun bool) (*lib.PackageChanges, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.removeModules"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.removeModules"))
+
 	if dryRun {
 		return km.aptActions.SimulateRemove(removePackages, false)
 	}
@@ -386,8 +397,8 @@ func (km *Manager) RemoveModules(removePackages []string, dryRun bool) (*lib.Pac
 }
 
 // DetectCurrentFlavour определяет flavour текущего ядра
-func (km *Manager) DetectCurrentFlavour() (string, error) {
-	current, err := km.GetCurrentKernel()
+func (km *Manager) DetectCurrentFlavour(ctx context.Context) (string, error) {
+	current, err := km.GetCurrentKernel(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -486,7 +497,7 @@ func (km *Manager) InheritModulesFromKernel(targetKernel *Info, sourceKernel *In
 }
 
 // AutoSelectHeadersAndFirmware автоматически добавляет headers и модули от текущего ядра
-func (km *Manager) AutoSelectHeadersAndFirmware(kernel *Info, includeHeaders bool) ([]string, error) {
+func (km *Manager) AutoSelectHeadersAndFirmware(ctx context.Context, kernel *Info, includeHeaders bool) ([]string, error) {
 	var additionalPackages []string
 
 	// Добавляем headers если запрошены или уже установлены
@@ -506,7 +517,7 @@ func (km *Manager) AutoSelectHeadersAndFirmware(kernel *Info, includeHeaders boo
 	}
 
 	// Автоматически добавляем модули на основе установленных модулей текущего ядра (как в bash скрипте)
-	currentKernel, err := km.GetCurrentKernel()
+	currentKernel, err := km.GetCurrentKernel(ctx)
 	if err == nil && currentKernel != nil {
 		inheritedModules, err := km.InheritModulesFromKernel(kernel, currentKernel)
 		if err == nil && len(inheritedModules) > 0 {
