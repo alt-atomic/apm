@@ -210,11 +210,19 @@ func CommandList() *cli.Command {
 				Usage: lib.T_("Kernel modules management"),
 				Commands: []*cli.Command{
 					{
-						Name:      "list",
-						Usage:     lib.T_("List available modules for kernel"),
-						ArgsUsage: "[kernel-flavour]",
+						Name:  "list",
+						Usage: lib.T_("List available modules for kernel"),
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:  "flavour",
+								Usage: lib.T_("List modules for specific kernel flavour (default: current flavour)"),
+							},
+						},
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							flavour := cmd.Args().First()
+							flavour := cmd.String("flavour")
+							if flavour == "" {
+								flavour = cmd.Args().First()
+							}
 							resp, err := actions.ListKernelModules(ctx, flavour)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
