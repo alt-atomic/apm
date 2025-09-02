@@ -94,7 +94,7 @@ func CommandList() *cli.Command {
 				Name:  "info",
 				Usage: lib.T_("Show information about current"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.GetKernelInfo(ctx)
+					resp, err := actions.GetCurrentKernel(ctx)
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

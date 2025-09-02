@@ -19,6 +19,7 @@ package kernel
 import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/binding/apt"
+	libApt "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/reply"
 	"apm/internal/kernel/service"
 	"apm/lib"
@@ -127,16 +128,6 @@ func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, err
 	}, nil
 }
 
-// GetKernelInfo возвращает информацию о текущем ядре
-func (a *Actions) GetKernelInfo(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.validateDB(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return a.GetCurrentKernel(ctx)
-}
-
 // InstallKernel устанавливает ядро с указанным flavour
 func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*reply.APIResponse, error) {
 	err := a.validateDB(ctx)
@@ -206,6 +197,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 			Data: map[string]interface{}{
 				"message": message,
 				"kernel":  latest.ToMap(true, a.kernelManager),
+				"preview": nil,
 			},
 			Error: false,
 		}, nil
@@ -237,7 +229,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 	data := map[string]interface{}{
 		"message": fmt.Sprintf(lib.T_("Kernel %s installed successfully"), latest.FullVersion),
 		"kernel":  latest,
-		"changes": preview.Changes,
+		"preview": preview,
 	}
 
 	return &reply.APIResponse{
@@ -283,6 +275,7 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 			Data: map[string]interface{}{
 				"message": lib.T_("Kernel is already up to date"),
 				"kernel":  current.ToMap(true, a.kernelManager),
+				"preview": nil,
 			},
 			Error: false,
 		}, nil
@@ -370,47 +363,58 @@ func (a *Actions) CleanOldKernels(ctx context.Context, keep int, dryRun bool) (*
 		return nil, fmt.Errorf(lib.T_("failed to get current kernel: %s"), err.Error())
 	}
 
-	var installedKernels []*service.Info
+	var nonRunningInstalled []*service.Info
 	for _, kernel := range kernels {
-		if kernel.IsInstalled {
-			installedKernels = append(installedKernels, kernel)
+		if kernel.IsInstalled && !kernel.IsRunning && kernel.FullVersion != current.FullVersion {
+			nonRunningInstalled = append(nonRunningInstalled, kernel)
 		}
 	}
 
-	sort.Slice(installedKernels, func(i, j int) bool {
-		return installedKernels[i].BuildTime.After(installedKernels[j].BuildTime)
+	sort.Slice(nonRunningInstalled, func(i, j int) bool {
+		return nonRunningInstalled[i].BuildTime.After(nonRunningInstalled[j].BuildTime)
 	})
 
-	var nonRunningKernels []*service.Info
-	for _, kernel := range installedKernels {
-		if !kernel.IsRunning {
-			nonRunningKernels = append(nonRunningKernels, kernel)
+	var totalInstalled int
+	for _, kernel := range kernels {
+		if kernel.IsInstalled {
+			totalInstalled++
 		}
 	}
 
-	totalInstalled := len(installedKernels)
 	if totalInstalled <= keep {
 		return &reply.APIResponse{
 			Data: map[string]interface{}{
-				"message":       lib.T_("No old kernels to clean"),
-				"currentKernel": current,
-				"kept":          totalInstalled,
+				"message": lib.T_("No old kernels to clean"),
+				"preview": nil,
 			},
 			Error: false,
 		}, nil
 	}
 
-	toRemoveCount := totalInstalled - keep
-	var toRemove []*service.Info
-	for i := len(nonRunningKernels) - 1; i >= 0 && len(toRemove) < toRemoveCount; i-- {
-		toRemove = append(toRemove, nonRunningKernels[i])
+	maxToRemove := totalInstalled - keep
+	if len(nonRunningInstalled) < maxToRemove {
+		maxToRemove = len(nonRunningInstalled)
 	}
 
+	toRemove := nonRunningInstalled[maxToRemove:]
+
 	if dryRun {
+		var combinedPreview *libApt.PackageChanges
+		for _, kernel := range toRemove {
+			preview, err := a.kernelManager.SimulateRemoveKernel(kernel)
+			if err != nil {
+				return nil, fmt.Errorf(lib.T_("failed to simulate kernel removal %s: %s"), kernel.FullVersion, err.Error())
+			}
+			if combinedPreview == nil {
+				combinedPreview = preview
+			} else {
+				combinedPreview.RemovedPackages = append(combinedPreview.RemovedPackages, preview.RemovedPackages...)
+			}
+		}
+
 		data := map[string]interface{}{
-			"message":     lib.T_("Kernels that would be removed"),
-			"toRemove":    a.formatKernelOutput(toRemove, false),
-			"removeCount": len(toRemove),
+			"message": lib.T_("Kernels that would be removed"),
+			"preview": combinedPreview,
 		}
 
 		return &reply.APIResponse{
@@ -429,10 +433,8 @@ func (a *Actions) CleanOldKernels(ctx context.Context, keep int, dryRun bool) (*
 	}
 
 	data := map[string]interface{}{
-		"message":        fmt.Sprintf(lib.T_("Successfully removed %d old kernels"), len(removed)),
-		"currentKernel":  current,
-		"removedKernels": a.formatKernelOutput(removed, false),
-		"kept":           len(installedKernels) - len(removed),
+		"message": fmt.Sprintf(lib.T_("Successfully removed %d old kernels"), len(removed)),
+		"preview": nil,
 	}
 
 	return &reply.APIResponse{
@@ -593,6 +595,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 	data := map[string]interface{}{
 		"message": fmt.Sprintf(lib.TN_("%d module installed successfully for kernel %s", "%d modules installed successfully for kernel %s", len(modules)), len(modules), latest.FullVersion),
 		"kernel":  updatedKernel.ToMap(true, a.kernelManager),
+		"preview": nil,
 	}
 
 	return &reply.APIResponse{
@@ -608,7 +611,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 		return nil, err
 	}
 
-	if err := a.checkAtomicSystemRestriction("remove"); err != nil {
+	if err = a.checkAtomicSystemRestriction("remove"); err != nil {
 		return nil, err
 	}
 	if len(modules) == 0 {
@@ -662,6 +665,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 			Data: map[string]interface{}{
 				"message": lib.T_("No modules to remove"),
 				"kernel":  latest.ToMap(true, a.kernelManager),
+				"preview": nil,
 			},
 			Error: false,
 		}, nil
@@ -716,6 +720,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 	data := map[string]interface{}{
 		"message": fmt.Sprintf(lib.TN_("%d module removed successfully from kernel %s", "%d modules removed successfully from kernel %s", len(modulesToRemove)), len(modulesToRemove), latest.FullVersion),
 		"kernel":  updatedKernel.ToMap(true, a.kernelManager),
+		"preview": nil,
 	}
 
 	return &reply.APIResponse{

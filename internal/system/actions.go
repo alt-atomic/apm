@@ -959,3 +959,8 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 		return nil
 	}
 }
+
+// GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
+func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
+	return startDocServer(ctx)
+}

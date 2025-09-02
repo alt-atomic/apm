@@ -104,8 +104,6 @@ type UpgradePreview struct {
 	Changes         *libApt.PackageChanges `json:"changes"`
 	SelectedModules []string               `json:"selectedModules"`
 	MissingModules  []string               `json:"missingModules"`
-	DownloadSize    uint64                 `json:"downloadSize"`
-	InstallSize     uint64                 `json:"installSize"`
 }
 
 // Manager KernelManager управляет операциями с ядрами
@@ -120,6 +118,27 @@ func NewKernelManager(dbService *_package.PackageDBService, aptActions *apt.Acti
 		dbService:  dbService,
 		aptActions: aptActions,
 	}
+}
+
+// SimulateRemoveKernel симулирует удаление указанного ядра
+func (km *Manager) SimulateRemoveKernel(kernel *Info) (*libApt.PackageChanges, error) {
+	var packagesToRemove []string
+
+	// Добавляем само ядро
+	packagesToRemove = append(packagesToRemove, kernel.PackageName)
+
+	// Находим все установленные модули для данного ядра
+	availableModules, err := km.FindAvailableModules(kernel)
+	if err == nil {
+		for _, moduleInfo := range availableModules {
+			if moduleInfo.IsInstalled {
+				packagesToRemove = append(packagesToRemove, moduleInfo.PackageName)
+			}
+		}
+	}
+
+	// Используем APT Actions для симуляции удаления
+	return km.aptActions.SimulateRemove(packagesToRemove, false)
 }
 
 // RemoveKernel удаляет указанное ядро
@@ -348,8 +367,6 @@ func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeader
 		Changes:         changes,
 		SelectedModules: modules,
 		MissingModules:  missingModules,
-		DownloadSize:    changes.DownloadSize,
-		InstallSize:     changes.InstallSize,
 	}
 
 	return preview, nil

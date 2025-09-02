@@ -300,6 +300,14 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
+				Name:  "dbus-doc",
+				Usage: lib.T_("Show dbus online documentation"),
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					reply.StopSpinner()
+					return actions.GenerateOnlineDoc(ctx)
+				}),
+			},
+			{
 				Name:    "image",
 				Usage:   lib.T_("Module for working with the image"),
 				Aliases: []string{"i"},

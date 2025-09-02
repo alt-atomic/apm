@@ -167,12 +167,18 @@ func TranslateKey(key string) string {
 		return lib.T_("Is Running")
 	case "release":
 		return lib.T_("Release")
+	case "modules":
+		return lib.T_("Modules")
+	case "kept":
+		return lib.T_("Kept")
 	case "InstalledModules":
 		return lib.T_("Installed Modules")
 	case "selectedModules":
 		return lib.T_("Selected Modules")
 	case "missingModules":
 		return lib.T_("Missing Modules")
+	case "updateAvailable":
+		return lib.T_("Available Update")
 	default:
 		return lib.T_(key)
 	}
