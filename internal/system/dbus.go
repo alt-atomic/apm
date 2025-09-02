@@ -48,7 +48,6 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // Install – Установка пакетов
-// doc_response: InstallResponse
 func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -66,7 +65,6 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 }
 
 // Remove – Удаление пакетов
-// doc_response: InstallResponse
 func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -84,7 +82,6 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 }
 
 // GetFilterFields - Список полей фильтрации для метода list, помогает динамически строить фильтры в интерфейсе
-// doc_response: GetFilterFieldsResponse
 func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx)
@@ -101,7 +98,6 @@ func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) 
 }
 
 // Update – Обновление системы
-// doc_response: UpdateResponse
 func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -119,7 +115,6 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *d
 }
 
 // List – Продвинутый поиск пакетов по фильтру из paramsJSON (json)
-// doc_response: ListResponse
 func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	params := ListParams{
@@ -143,7 +138,6 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 }
 
 // Info – Получить информацию о пакете
-// doc_response: InfoResponse
 func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, packageName, true)
@@ -158,7 +152,6 @@ func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbu
 }
 
 // CheckUpgrade – Проверь обновление
-// doc_response: CheckResponse
 func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -176,7 +169,6 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string) (stri
 }
 
 // Upgrade – Обновить систему
-// doc_response: ImageUpdateResponse
 func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -200,7 +192,6 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string) (string, *
 }
 
 // CheckInstall – Проверить установку пакетов
-// doc_response: CheckResponse
 func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -218,7 +209,6 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 }
 
 // CheckRemove – Проверить удаление пакетов
-// doc_response: CheckResponse
 func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -236,7 +226,6 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transac
 }
 
 // Search – Простой! Поиск пакетов
-// doc_response: ListResponse
 func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction string, installed bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -254,7 +243,6 @@ func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction
 }
 
 // ImageApply – Декларативно применить настройки image.yml к образу хост-системы
-// doc_response: ImageApplyResponse
 func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -272,7 +260,6 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string) (string
 }
 
 // ImageHistory – История обновлений
-// doc_response: ImageHistoryResponse
 func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, imageName string, limit int, offset int) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -290,7 +277,6 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 }
 
 // ImageUpdate – Обновить образ системы
-// doc_response: ImageUpdateResponse
 func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -308,7 +294,6 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string) (strin
 }
 
 // ImageStatus – Проверить статус образа
-// doc_response: ImageStatusResponse
 func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -326,7 +311,6 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 }
 
 // ImageGetConfig - Получить текущий конфиг image.yml
-// doc_response: ImageConfigResponse
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig()
 	if err != nil {
@@ -340,7 +324,6 @@ func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 }
 
 // ImageSaveConfig - Проверить и сохранить новый конфиг image.yml
-// doc_response: ImageConfigResponse
 func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
 	configObject := service.Config{}
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {

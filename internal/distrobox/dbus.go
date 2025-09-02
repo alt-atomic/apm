@@ -49,6 +49,7 @@ func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]
 }
 
 // GetFilterFields обёртка над actions.GetFilterFields
+// doc_response: GetFilterFieldsResponse
 func (w *DBusWrapper) GetFilterFields(container string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx, container)
@@ -65,6 +66,7 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 }
 
 // Update обёртка над actions.Update
+// doc_response: UpdateResponse
 func (w *DBusWrapper) Update(container string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Update(ctx, container)
@@ -79,6 +81,7 @@ func (w *DBusWrapper) Update(container string, transaction string) (string, *dbu
 }
 
 // Info обёртка над actions.Info
+// doc_response: InfoResponse
 func (w *DBusWrapper) Info(container string, packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, container, packageName)
@@ -93,6 +96,7 @@ func (w *DBusWrapper) Info(container string, packageName string, transaction str
 }
 
 // Search обёртка над actions.Search
+// doc_response: SearchResponse
 func (w *DBusWrapper) Search(container string, packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, container, packageName)
@@ -107,6 +111,7 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 }
 
 // List принимает JSON‑строку с параметрами ListParams, а возвращает JSON с reply.APIResponse.
+// doc_response: ListResponse
 func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	var params ListParams
@@ -126,6 +131,7 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 }
 
 // Install обёртка над actions.Install
+// doc_response: InstallResponse
 func (w *DBusWrapper) Install(container string, packageName string, export bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
@@ -140,6 +146,7 @@ func (w *DBusWrapper) Install(container string, packageName string, export bool,
 }
 
 // Remove обёртка над actions.Remove
+// doc_response: RemoveResponse
 func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.Remove(ctx, container, packageName, onlyExport)
@@ -154,6 +161,7 @@ func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bo
 }
 
 // ContainerList обёртка над actions.ContainerList
+// doc_response: ContainerListResponse
 func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerList(ctx)
@@ -168,6 +176,7 @@ func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 }
 
 // ContainerAdd обёртка над actions.ContainerAdd
+// doc_response: ContainerAddResponse
 func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
@@ -182,6 +191,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 }
 
 // ContainerRemove обёртка над actions.ContainerRemove
+// doc_response: ContainerRemoveResponse
 func (w *DBusWrapper) ContainerRemove(name string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerRemove(ctx, name)
