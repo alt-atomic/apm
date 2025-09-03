@@ -415,7 +415,9 @@ func (g *Generator) StartDocServer(ctx context.Context) error {
 		html := g.GenerateDBusDocHTML()
 		_, err := fmt.Fprint(w, html)
 		if err != nil {
-			lib.Log.Fatal(err.Error())
+			if !strings.Contains(err.Error(), "broken pipe") {
+				lib.Log.Error("HTTP write error: " + err.Error())
+			}
 			return
 		}
 	})
