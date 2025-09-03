@@ -341,7 +341,19 @@ func (g *Generator) generateJSONExample(responseType string) string {
 	}
 
 	if example == nil {
-		return `{"message": "Example response", "data": "See ` + responseType + ` structure above"}`
+		example = map[string]interface{}{
+			"message": "Example response",
+			"data":    "See " + responseType + " structure above",
+		}
+	}
+
+	// Обёртываем в APIResponse структуру если она доступна
+	if _, exists := g.config.ResponseTypes["APIResponse"]; exists {
+		wrappedResponse := map[string]interface{}{
+			"data":  example,
+			"error": false,
+		}
+		example = wrappedResponse
 	}
 
 	jsonBytes, err := json.MarshalIndent(example, "", "  ")

@@ -18,6 +18,7 @@ package distrobox
 
 import (
 	"apm/internal/common/doc"
+	"apm/internal/common/reply"
 	"apm/internal/distrobox/service"
 	"context"
 	_ "embed"
@@ -103,16 +104,17 @@ func getDocConfig() doc.Config {
 		SourceCode:    dbusSource,
 		DBusSession:   "session",
 		ResponseTypes: map[string]reflect.Type{
-			"UpdateResponse":           reflect.TypeOf(UpdateResponse{}),
-			"InfoResponse":             reflect.TypeOf(InfoResponse{}),
-			"SearchResponse":           reflect.TypeOf(SearchResponse{}),
-			"ListResponse":             reflect.TypeOf(ListResponse{}),
-			"InstallResponse":          reflect.TypeOf(InstallResponse{}),
-			"RemoveResponse":           reflect.TypeOf(RemoveResponse{}),
-			"ContainerListResponse":    reflect.TypeOf(ContainerListResponse{}),
-			"ContainerAddResponse":     reflect.TypeOf(ContainerAddResponse{}),
-			"ContainerRemoveResponse":  reflect.TypeOf(ContainerRemoveResponse{}),
-			"GetFilterFieldsResponse":  reflect.TypeOf(GetFilterFieldsResponse{}),
+			"APIResponse":             reflect.TypeOf(reply.APIResponse{}),
+			"UpdateResponse":          reflect.TypeOf(UpdateResponse{}),
+			"InfoResponse":            reflect.TypeOf(InfoResponse{}),
+			"SearchResponse":          reflect.TypeOf(SearchResponse{}),
+			"ListResponse":            reflect.TypeOf(ListResponse{}),
+			"InstallResponse":         reflect.TypeOf(InstallResponse{}),
+			"RemoveResponse":          reflect.TypeOf(RemoveResponse{}),
+			"ContainerListResponse":   reflect.TypeOf(ContainerListResponse{}),
+			"ContainerAddResponse":    reflect.TypeOf(ContainerAddResponse{}),
+			"ContainerRemoveResponse": reflect.TypeOf(ContainerRemoveResponse{}),
+			"GetFilterFieldsResponse": reflect.TypeOf(GetFilterFieldsResponse{}),
 		},
 	}
 }

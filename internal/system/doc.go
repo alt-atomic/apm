@@ -20,6 +20,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/doc"
+	"apm/internal/common/reply"
 	"apm/internal/system/service"
 	"context"
 	_ "embed"
@@ -111,6 +112,7 @@ func getDocConfig() doc.Config {
 		SourceCode:    dbusSource,
 		DBusSession:   "system",
 		ResponseTypes: map[string]reflect.Type{
+			"APIResponse":             reflect.TypeOf(reply.APIResponse{}),
 			"InstallResponse":         reflect.TypeOf(InstallResponse{}),
 			"GetFilterFieldsResponse": reflect.TypeOf(GetFilterFieldsResponse{}),
 			"UpdateResponse":          reflect.TypeOf(UpdateResponse{}),
