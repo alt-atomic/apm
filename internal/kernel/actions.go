@@ -359,9 +359,8 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 		return &reply.APIResponse{
 			Data: map[string]interface{}{
 				"message": lib.T_("No kernels found"),
-				"preview": nil,
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -435,11 +434,9 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	if len(toRemove) == 0 {
 		return &reply.APIResponse{
 			Data: map[string]interface{}{
-				"message":     lib.T_("No old kernels to clean"),
-				"preview":     nil,
-				"keptKernels": keptKernels,
+				"message": lib.T_("No old kernels to clean"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -456,9 +453,9 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 
 		data := map[string]interface{}{
 			"message":        fmt.Sprintf(lib.T_("Would remove %d old kernels"), len(toRemove)),
-			"preview":        combinedPreview,
 			"removedKernels": toRemove,
 			"keptKernels":    keptKernels,
+			"preview":        combinedPreview,
 		}
 
 		return &reply.APIResponse{
@@ -472,16 +469,16 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 		removePackages = append(removePackages, kernel.FullVersion)
 	}
 
-	_, err = a.kernelManager.RemoveModules(ctx, removePackages, false)
+	combinedPreview, err := a.kernelManager.RemoveModules(ctx, removePackages, false)
 	if err != nil {
 		return nil, fmt.Errorf(lib.T_("failed to remove kernels: %s"), err.Error())
 	}
 
 	data := map[string]interface{}{
 		"message":        fmt.Sprintf(lib.T_("Successfully removed %d old kernels"), len(toRemove)),
-		"preview":        nil,
 		"removedKernels": toRemove,
 		"keptKernels":    keptKernels,
+		"preview":        combinedPreview,
 	}
 
 	return &reply.APIResponse{
