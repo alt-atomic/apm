@@ -22,8 +22,12 @@ import (
 	"apm/internal/common/doc"
 	"apm/internal/system/service"
 	"context"
+	_ "embed"
 	"reflect"
 )
+
+//go:embed dbus.go
+var dbusSource string
 
 // FilterField структура поля для фильтрации
 type FilterField struct {
@@ -104,24 +108,20 @@ func getDocConfig() doc.Config {
 		DBusInterface: "org.altlinux.APM.system",
 		ServerPort:    "8081",
 		DBusWrapper:   (*DBusWrapper)(nil),
-		DBusMethods: map[string]reflect.Type{
-			"Install":         reflect.TypeOf(InstallResponse{}),
-			"Remove":          reflect.TypeOf(InstallResponse{}),
-			"GetFilterFields": reflect.TypeOf(GetFilterFieldsResponse{}),
-			"Update":          reflect.TypeOf(UpdateResponse{}),
-			"List":            reflect.TypeOf(ListResponse{}),
-			"Info":            reflect.TypeOf(InfoResponse{}),
-			"CheckUpgrade":    reflect.TypeOf(CheckResponse{}),
-			"Upgrade":         reflect.TypeOf(InstallResponse{}),
-			"CheckInstall":    reflect.TypeOf(CheckResponse{}),
-			"CheckRemove":     reflect.TypeOf(CheckResponse{}),
-			"Search":          reflect.TypeOf(ListResponse{}),
-			"ImageApply":      reflect.TypeOf(ImageApplyResponse{}),
-			"ImageHistory":    reflect.TypeOf(ImageHistoryResponse{}),
-			"ImageUpdate":     reflect.TypeOf(ImageUpdateResponse{}),
-			"ImageStatus":     reflect.TypeOf(ImageStatusResponse{}),
-			"ImageGetConfig":  reflect.TypeOf(ImageConfigResponse{}),
-			"ImageSaveConfig": reflect.TypeOf(ImageConfigResponse{}),
+		SourceCode:    dbusSource,
+		DBusSession:   "system",
+		ResponseTypes: map[string]reflect.Type{
+			"InstallResponse":         reflect.TypeOf(InstallResponse{}),
+			"GetFilterFieldsResponse": reflect.TypeOf(GetFilterFieldsResponse{}),
+			"UpdateResponse":          reflect.TypeOf(UpdateResponse{}),
+			"ListResponse":            reflect.TypeOf(ListResponse{}),
+			"InfoResponse":            reflect.TypeOf(InfoResponse{}),
+			"CheckResponse":           reflect.TypeOf(CheckResponse{}),
+			"ImageApplyResponse":      reflect.TypeOf(ImageApplyResponse{}),
+			"ImageHistoryResponse":    reflect.TypeOf(ImageHistoryResponse{}),
+			"ImageUpdateResponse":     reflect.TypeOf(ImageUpdateResponse{}),
+			"ImageStatusResponse":     reflect.TypeOf(ImageStatusResponse{}),
+			"ImageConfigResponse":     reflect.TypeOf(ImageConfigResponse{}),
 		},
 	}
 }

@@ -22,8 +22,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"net/http"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -32,6 +36,7 @@ import (
 // DBusMethodInfo содержит информацию о DBus методе
 type DBusMethodInfo struct {
 	Name         string
+	Description  string
 	ResponseType string
 	Parameters   []DBusParameter
 }
@@ -42,13 +47,15 @@ type DBusParameter struct {
 	Type string
 }
 
-// Config конфигурация для генерации документации
+// Config конфигурация для генерации
 type Config struct {
 	ModuleName    string
 	DBusInterface string
 	ServerPort    string
 	DBusWrapper   interface{}
-	DBusMethods   map[string]reflect.Type
+	ResponseTypes map[string]reflect.Type
+	SourceCode    string
+	DBusSession   string
 }
 
 // Generator генератор документации
@@ -92,6 +99,7 @@ func (g *Generator) GenerateDBusDocHTML() string {
 		html += fmt.Sprintf(`
     <div class="method">
         <div class="method-name">%s</div>
+        <div class="description">%s</div>
         <div class="parameters">
             <strong>Parameters:</strong>
             %s
@@ -107,6 +115,7 @@ func (g *Generator) GenerateDBusDocHTML() string {
         </div>
     </div>
 `, method.Name,
+			method.Description,
 			g.formatParameters(method.Parameters),
 			method.ResponseType,
 			g.generateDBusCommand(method),
@@ -120,62 +129,152 @@ func (g *Generator) GenerateDBusDocHTML() string {
 	return html
 }
 
-// reflectDBusMethods использует рефлексию для получения методов DBusWrapper
+// reflectDBusMethods парсит исходный код и извлекает информацию о методах
 func (g *Generator) reflectDBusMethods() []DBusMethodInfo {
+	return g.parseSourceMethods()
+}
+
+// parseSourceMethods парсит исходный код для извлечения методов
+func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 	var methods []DBusMethodInfo
 
-	if g.config.DBusWrapper == nil {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, "", g.config.SourceCode, parser.ParseComments)
+	if err != nil {
 		return methods
 	}
 
-	wrapperType := reflect.TypeOf(g.config.DBusWrapper)
+	// Карты для хранения информации из комментариев
+	responseTypes := make(map[string]string)
+	descriptions := make(map[string]string)
 
-	// Сортируем имена методов для стабильного порядка
-	var methodNames []string
-	for methodName := range g.config.DBusMethods {
-		methodNames = append(methodNames, methodName)
+	// Извлекаем информацию из комментариев
+	for _, comment := range node.Comments {
+		text := comment.Text()
+
+		var nextFunc *ast.FuncDecl
+		for _, decl := range node.Decls {
+			if funcDecl, ok := decl.(*ast.FuncDecl); ok {
+				if int(funcDecl.Pos()) > int(comment.End()) {
+					if funcDecl.Recv != nil && len(funcDecl.Recv.List) > 0 {
+						nextFunc = funcDecl
+						break
+					}
+				}
+			}
+		}
+
+		if nextFunc == nil {
+			continue
+		}
+
+		if match := regexp.MustCompile(`doc_response:\s*(\w+)`).FindStringSubmatch(text); match != nil {
+			responseTypes[nextFunc.Name.Name] = match[1]
+		}
+
+		lines := strings.Split(text, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" && !strings.Contains(line, "doc_response:") {
+				if strings.Contains(line, "–") {
+					parts := strings.SplitN(line, "–", 2)
+					if len(parts) == 2 {
+						descriptions[nextFunc.Name.Name] = strings.TrimSpace(parts[1])
+					}
+				} else {
+					descriptions[nextFunc.Name.Name] = line
+				}
+				break
+			}
+		}
 	}
-	sort.Strings(methodNames)
 
-	for _, methodName := range methodNames {
-		responseType := g.config.DBusMethods[methodName]
-		method, exists := wrapperType.MethodByName(methodName)
-		if !exists {
+	// Извлекаем информацию о функциях
+	for _, decl := range node.Decls {
+		funcDecl, ok := decl.(*ast.FuncDecl)
+		if !ok {
 			continue
 		}
 
-		methodType := method.Type
-
-		if methodType.NumOut() != 2 {
+		if funcDecl.Recv == nil || len(funcDecl.Recv.List) == 0 {
 			continue
 		}
 
-		// Извлекаем параметры метода
+		revType := funcDecl.Recv.List[0].Type
+		if starExpr, ok := revType.(*ast.StarExpr); ok {
+			if ident, ok := starExpr.X.(*ast.Ident); ok {
+				if ident.Name != "DBusWrapper" {
+					continue
+				}
+			}
+		}
+
+		methodName := funcDecl.Name.Name
+		responseType, hasResponse := responseTypes[methodName]
+		if !hasResponse {
+			continue
+		}
+
+		// Извлекаем параметры
 		var params []DBusParameter
-		paramIndex := 1
-		for j := 1; j < methodType.NumIn(); j++ { // Пропускаем receiver
-			paramType := methodType.In(j)
+		for _, param := range funcDecl.Type.Params.List {
+			paramType := g.getASTTypeString(param.Type)
 
-			// Пропускаем dbus.Sender и transaction
-			if strings.Contains(paramType.String(), "dbus.Sender") {
+			if strings.Contains(paramType, "dbus.Sender") {
 				continue
 			}
 
-			params = append(params, DBusParameter{
-				Name: fmt.Sprintf("param%d", paramIndex),
-				Type: g.getTypeString(paramType),
-			})
-			paramIndex++
+			// Добавляем параметры с реальными именами
+			for _, name := range param.Names {
+				params = append(params, DBusParameter{
+					Name: name.Name,
+					Type: paramType,
+				})
+			}
+		}
+
+		description := descriptions[methodName]
+		if description == "" {
+			description = methodName
 		}
 
 		methods = append(methods, DBusMethodInfo{
 			Name:         methodName,
-			ResponseType: responseType.Name(),
+			Description:  description,
+			ResponseType: responseType,
 			Parameters:   params,
 		})
 	}
 
+	// Сортируем
+	sort.Slice(methods, func(i, j int) bool {
+		return methods[i].Name < methods[j].Name
+	})
+
 	return methods
+}
+
+// getASTTypeString преобразует AST тип в строку
+func (g *Generator) getASTTypeString(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		switch t.Name {
+		case "string":
+			return "string"
+		case "bool":
+			return "bool"
+		case "int", "int32", "int64":
+			return "int"
+		default:
+			return t.Name
+		}
+	case *ast.ArrayType:
+		return "[]" + g.getASTTypeString(t.Elt)
+	case *ast.SelectorExpr:
+		return g.getASTTypeString(t.X) + "." + t.Sel.Name
+	default:
+		return "unknown"
+	}
 }
 
 // getTypeString возвращает строковое представление типа
@@ -209,14 +308,18 @@ func (g *Generator) formatParameters(params []DBusParameter) string {
 
 // generateDBusCommand генерирует пример dbus-send команды
 func (g *Generator) generateDBusCommand(method DBusMethodInfo) string {
-	cmd := fmt.Sprintf("dbus-send --system --print-reply --dest=org.altlinux.APM /org/altlinux/APM %s.%s", g.config.DBusInterface, method.Name)
+	sessionType := g.config.DBusSession
+	if sessionType == "" {
+		sessionType = "system"
+	}
+	cmd := fmt.Sprintf("dbus-send --%s --print-reply --dest=org.altlinux.APM /org/altlinux/APM %s.%s", sessionType, g.config.DBusInterface, method.Name)
 
 	for _, param := range method.Parameters {
 		switch param.Type {
 		case "string":
 			cmd += " string:\"example\""
 		case "[]string":
-			cmd += " array:string:\"package1\",\"package2\""
+			cmd += " array:string:\"example1\",\"example2\""
 		case "bool":
 			cmd += " boolean:true"
 		case "int":
@@ -233,12 +336,8 @@ func (g *Generator) generateDBusCommand(method DBusMethodInfo) string {
 func (g *Generator) generateJSONExample(responseType string) string {
 	var example interface{}
 
-	// Ищем тип в карте методов
-	for _, typ := range g.config.DBusMethods {
-		if typ.Name() == responseType {
-			example = g.createExampleStruct(typ)
-			break
-		}
+	if typ, exists := g.config.ResponseTypes[responseType]; exists {
+		example = g.createExampleStruct(typ)
 	}
 
 	if example == nil {
@@ -292,7 +391,12 @@ func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 		case reflect.Bool:
 			fieldValue.SetBool(true)
 		case reflect.Slice:
-			slice := reflect.MakeSlice(field.Type, 0, 0)
+			slice := reflect.MakeSlice(field.Type, 1, 1)
+			elem := slice.Index(0)
+			if elem.CanSet() {
+				exampleElem := g.createExampleStruct(field.Type.Elem())
+				elem.Set(reflect.ValueOf(exampleElem))
+			}
 			fieldValue.Set(slice)
 		case reflect.Struct:
 			fieldValue.Set(reflect.ValueOf(g.createExampleStruct(field.Type)))

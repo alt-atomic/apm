@@ -20,8 +20,12 @@ import (
 	"apm/internal/common/doc"
 	"apm/internal/distrobox/service"
 	"context"
+	_ "embed"
 	"reflect"
 )
+
+//go:embed dbus.go
+var dbusSource string
 
 // UpdateResponse структура ответа для Update метода
 type UpdateResponse struct {
@@ -96,17 +100,19 @@ func getDocConfig() doc.Config {
 		DBusInterface: "org.altlinux.APM.distrobox",
 		ServerPort:    "8082",
 		DBusWrapper:   (*DBusWrapper)(nil),
-		DBusMethods: map[string]reflect.Type{
-			"GetFilterFields": reflect.TypeOf(GetFilterFieldsResponse{}),
-			"Update":          reflect.TypeOf(UpdateResponse{}),
-			"Info":            reflect.TypeOf(InfoResponse{}),
-			"Search":          reflect.TypeOf(SearchResponse{}),
-			"List":            reflect.TypeOf(ListResponse{}),
-			"Install":         reflect.TypeOf(InstallResponse{}),
-			"Remove":          reflect.TypeOf(RemoveResponse{}),
-			"ContainerList":   reflect.TypeOf(ContainerListResponse{}),
-			"ContainerAdd":    reflect.TypeOf(ContainerAddResponse{}),
-			"ContainerRemove": reflect.TypeOf(ContainerRemoveResponse{}),
+		SourceCode:    dbusSource,
+		DBusSession:   "session",
+		ResponseTypes: map[string]reflect.Type{
+			"UpdateResponse":           reflect.TypeOf(UpdateResponse{}),
+			"InfoResponse":             reflect.TypeOf(InfoResponse{}),
+			"SearchResponse":           reflect.TypeOf(SearchResponse{}),
+			"ListResponse":             reflect.TypeOf(ListResponse{}),
+			"InstallResponse":          reflect.TypeOf(InstallResponse{}),
+			"RemoveResponse":           reflect.TypeOf(RemoveResponse{}),
+			"ContainerListResponse":    reflect.TypeOf(ContainerListResponse{}),
+			"ContainerAddResponse":     reflect.TypeOf(ContainerAddResponse{}),
+			"ContainerRemoveResponse":  reflect.TypeOf(ContainerRemoveResponse{}),
+			"GetFilterFieldsResponse":  reflect.TypeOf(GetFilterFieldsResponse{}),
 		},
 	}
 }
