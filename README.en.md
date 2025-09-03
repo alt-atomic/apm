@@ -64,7 +64,7 @@ To view all methods, for example, install D-SPY and then find the APM service th
 
 ```
 apm dbus-session - run
-apm distrobox dbus-doc - online documantation
+apm distrobox dbus-doc - online documentation
 ```
 
 ## System DBUS Session
@@ -72,7 +72,7 @@ To view all methods, for example, install D-SPY and then find the APM service th
 
 ```
 sudo apm dbus-system - run
-sudo apm system dbus-doc - online documantation
+sudo apm system dbus-doc - online documentation
 ```
 
 ## Example of working with system packages
