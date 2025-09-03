@@ -267,6 +267,11 @@ func CommandList() *cli.Command {
 								Usage:    lib.T_("Container. Must be specified, options: alt, ubuntu, arch"),
 								Required: true,
 							},
+							&cli.StringFlag{
+								Name:     "name",
+								Usage:    lib.T_("Container name"),
+								Required: false,
+							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							imageVal := cmd.String("image")
@@ -293,7 +298,12 @@ func CommandList() *cli.Command {
 								imageLink = "registry.altlinux.org/sisyphus/base:latest"
 							}
 
-							resp, err := actions.ContainerAdd(ctx, imageLink, "atomic-"+imageVal, "zsh mc nano", "")
+							name := "atomic-" + imageVal
+							if cmd.String("name") != "" {
+								name = cmd.String("name")
+							}
+
+							resp, err := actions.ContainerAdd(ctx, imageLink, name, "zsh mc nano", "")
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
