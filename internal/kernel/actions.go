@@ -356,12 +356,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	}
 
 	if len(allKernels) == 0 {
-		return &reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": lib.T_("No kernels found"),
-			},
-			Error: true,
-		}, nil
+		return nil, errors.New(lib.T_("No kernels found"))
 	}
 
 	// Определяем текущее ядро
@@ -432,12 +427,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	}
 
 	if len(toRemove) == 0 {
-		return &reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": lib.T_("No old kernels to clean"),
-			},
-			Error: true,
-		}, nil
+		return nil, errors.New(lib.T_("No old kernels to clean"))
 	}
 
 	if dryRun {
