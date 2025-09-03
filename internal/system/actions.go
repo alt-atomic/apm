@@ -26,6 +26,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -71,7 +73,7 @@ func NewActions() *Actions {
 	}
 
 	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
-	hostTemporarySvc := service.NewTemporaryConfigService("/tmp/apm.tmp")
+	hostTemporarySvc := service.NewTemporaryConfigService(filepath.Join(os.TempDir(), "apm.tmp"))
 	hostImageSvc := service.NewHostImageService(hostConfigSvc)
 	hostAptSvc := _package.NewActions(hostPackageDBSvc)
 

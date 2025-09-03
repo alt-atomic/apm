@@ -147,6 +147,8 @@ func TranslateKey(key string) string {
 		return lib.T_("List")
 	case "kernel":
 		return lib.T_("Kernel")
+	case "kernels":
+		return lib.T_("Kernels")
 	case "currentKernel":
 		return lib.T_("Current Kernel")
 	case "latestKernel":
@@ -171,6 +173,10 @@ func TranslateKey(key string) string {
 		return lib.T_("Modules")
 	case "kept":
 		return lib.T_("Kept")
+	case "keptKernels":
+		return lib.T_("Kept Kernels")
+	case "removedKernels":
+		return lib.T_("Removed kernels")
 	case "InstalledModules":
 		return lib.T_("Installed Modules")
 	case "selectedModules":

@@ -164,8 +164,8 @@ func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 
 // GetCurrentKernel возвращает информацию о текущем запущенном ядре
 func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.currentKernel"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.currentKernel"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.CurrentKernel"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.CurrentKernel"))
 
 	cmd := exec.Command("uname", "-r")
 	output, err := cmd.Output()
@@ -223,8 +223,8 @@ func (km *Manager) GetDefaultKernel() (*Info, error) {
 
 // ListKernels возвращает список доступных ядер для указанного flavour
 func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*Info, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.listKernels"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.listKernels"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.ListKernels"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.ListKernels"))
 
 	filters := map[string]interface{}{
 		"typePackage": int(_package.PackageTypeSystem),
@@ -374,8 +374,8 @@ func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeader
 
 // InstallKernel устанавливает ядро с модулями
 func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []string, includeHeaders bool, dryRun bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.installKernel"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.installKernel"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.InstallKernel"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.InstallKernel"))
 
 	// Формируем список пакетов для установки
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
@@ -392,8 +392,8 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 
 // InstallModules устанавливает или симулирует установку пакетов модулей
 func (km *Manager) InstallModules(ctx context.Context, installPackages []string, dryRun bool) (*libApt.PackageChanges, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.installModules"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.installModules"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.InstallModules"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.InstallModules"))
 	if dryRun {
 		return km.aptActions.SimulateInstall(installPackages)
 	}
@@ -402,10 +402,15 @@ func (km *Manager) InstallModules(ctx context.Context, installPackages []string,
 	return nil, err
 }
 
-// RemoveModules удаляет или симулирует удаление пакетов модулей
-func (km *Manager) RemoveModules(ctx context.Context, removePackages []string, dryRun bool) (*libApt.PackageChanges, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.removeModules"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.removeModules"))
+// RemovePackages удаляет или симулирует удаление пакетов модулей/ядер
+func (km *Manager) RemovePackages(ctx context.Context, removePackages []string, dryRun bool) (*libApt.PackageChanges, error) {
+	event := "kernel.RemovePackage"
+	if dryRun {
+		event = "kernel.CheckRemovePackage"
+	}
+
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
 
 	if dryRun {
 		return km.aptActions.SimulateRemove(removePackages, false)

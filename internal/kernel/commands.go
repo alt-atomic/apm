@@ -92,7 +92,7 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "info",
-				Usage: lib.T_("Show information about current"),
+				Usage: lib.T_("Show information about current kernel"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetCurrentKernel(ctx)
 					if err != nil {

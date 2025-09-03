@@ -356,7 +356,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	}
 
 	if len(allKernels) == 0 {
-		return nil, errors.New(lib.T_("No kernels found"))
+		return nil, errors.New(lib.T_("no kernels found"))
 	}
 
 	// Определяем текущее ядро
@@ -427,7 +427,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	}
 
 	if len(toRemove) == 0 {
-		return nil, errors.New(lib.T_("No old kernels to clean"))
+		return nil, errors.New(lib.T_("no old kernels to clean"))
 	}
 
 	if dryRun {
@@ -436,13 +436,13 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 			removePackages = append(removePackages, kernel.FullVersion)
 		}
 
-		combinedPreview, err := a.kernelManager.RemoveModules(ctx, removePackages, true)
-		if err != nil {
-			return nil, fmt.Errorf(lib.T_("failed to simulate kernels removal: %s"), err.Error())
+		combinedPreview, errRemove := a.kernelManager.RemovePackages(ctx, removePackages, true)
+		if errRemove != nil {
+			return nil, fmt.Errorf(lib.T_("failed to simulate kernels removal: %s"), errRemove.Error())
 		}
 
 		data := map[string]interface{}{
-			"message":        fmt.Sprintf(lib.T_("Would remove %d old kernels"), len(toRemove)),
+			"message":        fmt.Sprintf(lib.TN_("Would remove %d old kernel", "Would remove %d old kernels", len(toRemove)), len(toRemove)),
 			"removedKernels": toRemove,
 			"keptKernels":    keptKernels,
 			"preview":        combinedPreview,
@@ -459,13 +459,13 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 		removePackages = append(removePackages, kernel.FullVersion)
 	}
 
-	combinedPreview, err := a.kernelManager.RemoveModules(ctx, removePackages, false)
+	combinedPreview, err := a.kernelManager.RemovePackages(ctx, removePackages, false)
 	if err != nil {
 		return nil, fmt.Errorf(lib.T_("failed to remove kernels: %s"), err.Error())
 	}
 
 	data := map[string]interface{}{
-		"message":        fmt.Sprintf(lib.T_("Successfully removed %d old kernels"), len(toRemove)),
+		"message":        fmt.Sprintf(lib.TN_("Successfully removed %d old kernel", "Successfully removed %d old kernels", len(toRemove)), len(toRemove)),
 		"removedKernels": toRemove,
 		"keptKernels":    keptKernels,
 		"preview":        combinedPreview,
@@ -718,7 +718,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 	}
 
 	if dryRun {
-		preview, err := a.kernelManager.RemoveModules(ctx, removePackages, true)
+		preview, err := a.kernelManager.RemovePackages(ctx, removePackages, true)
 		if err != nil {
 			return nil, fmt.Errorf(lib.T_("failed to simulate modules removal: %s"), err.Error())
 		}
@@ -735,7 +735,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 		}, nil
 	}
 
-	_, err = a.kernelManager.RemoveModules(ctx, removePackages, false)
+	_, err = a.kernelManager.RemovePackages(ctx, removePackages, false)
 	if err != nil {
 		return nil, fmt.Errorf(lib.T_("failed to remove modules: %s"), err.Error())
 	}
