@@ -28,6 +28,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -601,7 +602,16 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 		if strings.HasPrefix(name, "i586-") && (currentArch == "i586" || currentArch == "i386") {
 			name = strings.TrimPrefix(name, "i586-")
 		}
-		installed[name] = currentVersion
+
+		// Если пакет уже есть, выбираем более новую версию
+		if existingVersion, exists := installed[name]; exists {
+			if compareVersions(currentVersion, existingVersion) > 0 {
+				installed[name] = currentVersion
+			}
+		} else {
+			installed[name] = currentVersion
+		}
+
 		currentName, currentVersion, currentArch = "", "", ""
 	}
 
@@ -788,4 +798,41 @@ func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath stri
 	}
 
 	return nil
+}
+
+// compareVersions сравнивает две версии (returns: 1 if a > b, -1 if a < b, 0 if equal)
+func compareVersions(a, b string) int {
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+
+	maxLen := len(aParts)
+	if len(bParts) > maxLen {
+		maxLen = len(bParts)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		aVal := 0
+		bVal := 0
+
+		if i < len(aParts) {
+			if val, err := strconv.Atoi(aParts[i]); err == nil {
+				aVal = val
+			}
+		}
+
+		if i < len(bParts) {
+			if val, err := strconv.Atoi(bParts[i]); err == nil {
+				bVal = val
+			}
+		}
+
+		if aVal > bVal {
+			return 1
+		}
+		if aVal < bVal {
+			return -1
+		}
+	}
+
+	return 0
 }

@@ -270,7 +270,8 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 		return nil, fmt.Errorf(lib.T_("failed to get current kernel: %s"), err.Error())
 	}
 
-	if latest.Version == current.Version && latest.Release == current.Release {
+	// Сравниваем установленную версию с доступной версией
+	if latest.Version == current.VersionInstalled && latest.Release == current.Release {
 		return &reply.APIResponse{
 			Data: map[string]interface{}{
 				"message": lib.T_("Kernel is already up to date"),
@@ -327,7 +328,8 @@ func (a *Actions) CheckKernelUpdate(ctx context.Context, flavour string) (*reply
 		return nil, fmt.Errorf(lib.T_("failed to find latest kernel: %s"), err.Error())
 	}
 
-	updateAvailable := !(latest.Version == current.Version && latest.Release == current.Release)
+	// Сравниваем установленную версию с доступной версией
+	updateAvailable := !(latest.Version == current.VersionInstalled && latest.Release == current.Release)
 
 	data := map[string]interface{}{
 		"message":         lib.T_("Kernel update check"),
