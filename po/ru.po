@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-04 04:30+0600\n"
-"PO-Revision-Date: 2025-09-04 04:12+0600\n"
+"POT-Creation-Date: 2025-09-04 04:41+0600\n"
+"PO-Revision-Date: 2025-09-04 04:36+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
@@ -1373,27 +1373,30 @@ msgid "Kept"
 msgstr "Сохранённый"
 
 #: internal/common/reply/translate.go:177
+msgid "Reasons"
+msgstr "Причины"
+
+#: internal/common/reply/translate.go:179
 msgid "Kept Kernels"
 msgstr "Сохранённые ядра"
 
-#: internal/common/reply/translate.go:179
-#, fuzzy
-msgid "Removed kernels"
+#: internal/common/reply/translate.go:181
+msgid "Remove kernels"
 msgstr "Удаляемые ядра"
 
-#: internal/common/reply/translate.go:181
+#: internal/common/reply/translate.go:183
 msgid "Installed Modules"
 msgstr "Установленные модули"
 
-#: internal/common/reply/translate.go:183
+#: internal/common/reply/translate.go:185
 msgid "Selected Modules"
 msgstr "Выбранные модули"
 
-#: internal/common/reply/translate.go:185
+#: internal/common/reply/translate.go:187
 msgid "Missing Modules"
 msgstr "Отсутствующие модули"
 
-#: internal/common/reply/translate.go:187
+#: internal/common/reply/translate.go:189
 msgid "Available Update"
 msgstr "Доступно обновление"
 
@@ -1922,6 +1925,11 @@ msgstr "Не удалось установить ядра: %s"
 msgid "no kernels found"
 msgstr "Ядра не найдены"
 
+#: internal/kernel/actions.go:402
+#, c-format
+msgid "latest for %s"
+msgstr "Последний для %s"
+
 #: internal/kernel/actions.go:407
 msgid "Currently booted"
 msgstr "В настоящее время загружен"
@@ -2114,7 +2122,6 @@ msgid "Show full information"
 msgstr "Показать полную информацию"
 
 #: internal/kernel/commands.go:95
-#, fuzzy
 msgid "Show information about current kernel"
 msgstr "Показать информацию о текущем ядре"
 

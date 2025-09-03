@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-04 04:30+0600\n"
+"POT-Creation-Date: 2025-09-04 04:41+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1343,26 +1343,30 @@ msgid "Kept"
 msgstr ""
 
 #: internal/common/reply/translate.go:177
-msgid "Kept Kernels"
+msgid "Reasons"
 msgstr ""
 
 #: internal/common/reply/translate.go:179
-msgid "Removed kernels"
+msgid "Kept Kernels"
 msgstr ""
 
 #: internal/common/reply/translate.go:181
-msgid "Installed Modules"
+msgid "Remove kernels"
 msgstr ""
 
 #: internal/common/reply/translate.go:183
-msgid "Selected Modules"
+msgid "Installed Modules"
 msgstr ""
 
 #: internal/common/reply/translate.go:185
-msgid "Missing Modules"
+msgid "Selected Modules"
 msgstr ""
 
 #: internal/common/reply/translate.go:187
+msgid "Missing Modules"
+msgstr ""
+
+#: internal/common/reply/translate.go:189
 msgid "Available Update"
 msgstr ""
 
@@ -1878,6 +1882,11 @@ msgstr ""
 
 #: internal/kernel/actions.go:359
 msgid "no kernels found"
+msgstr ""
+
+#: internal/kernel/actions.go:402
+#, c-format
+msgid "latest for %s"
 msgstr ""
 
 #: internal/kernel/actions.go:407

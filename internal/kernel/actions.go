@@ -399,7 +399,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 
 			// 1. Сохраняем новейшее ядро flavour'а
 			if kernel.FullVersion == newestKernel.FullVersion {
-				reasons = append(reasons, lib.T_(fmt.Sprintf("latest for %s", fl)))
+				reasons = append(reasons, fmt.Sprintf(lib.T_("latest for %s"), fl))
 			}
 
 			// 2. Сохраняем текущее запущенное ядро
@@ -442,10 +442,10 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 		}
 
 		data := map[string]interface{}{
-			"message":        fmt.Sprintf(lib.TN_("Would remove %d old kernel", "Would remove %d old kernels", len(toRemove)), len(toRemove)),
-			"removedKernels": toRemove,
-			"keptKernels":    keptKernels,
-			"preview":        combinedPreview,
+			"message":       fmt.Sprintf(lib.TN_("Would remove %d old kernel", "Would remove %d old kernels", len(toRemove)), len(toRemove)),
+			"removeKernels": toRemove,
+			"keptKernels":   keptKernels,
+			"preview":       combinedPreview,
 		}
 
 		return &reply.APIResponse{
@@ -465,10 +465,10 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	}
 
 	data := map[string]interface{}{
-		"message":        fmt.Sprintf(lib.TN_("Successfully removed %d old kernel", "Successfully removed %d old kernels", len(toRemove)), len(toRemove)),
-		"removedKernels": toRemove,
-		"keptKernels":    keptKernels,
-		"preview":        combinedPreview,
+		"message":       fmt.Sprintf(lib.TN_("Successfully removed %d old kernel", "Successfully removed %d old kernels", len(toRemove)), len(toRemove)),
+		"removeKernels": toRemove,
+		"keptKernels":   keptKernels,
+		"preview":       combinedPreview,
 	}
 
 	return &reply.APIResponse{
