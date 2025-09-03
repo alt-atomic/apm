@@ -605,7 +605,7 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 
 		// Если пакет уже есть, выбираем более новую версию
 		if existingVersion, exists := installed[name]; exists {
-			if compareVersions(currentVersion, existingVersion) > 0 {
+			if CompareVersions(currentVersion, existingVersion) > 0 {
 				installed[name] = currentVersion
 			}
 		} else {
@@ -801,7 +801,7 @@ func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath stri
 }
 
 // compareVersions сравнивает две версии (returns: 1 if a > b, -1 if a < b, 0 if equal)
-func compareVersions(a, b string) int {
+func CompareVersions(a, b string) int {
 	aParts := strings.Split(a, ".")
 	bParts := strings.Split(b, ".")
 

@@ -23,6 +23,7 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -36,17 +37,16 @@ import (
 
 // Info KernelInfo представляет информацию о ядре
 type Info struct {
-	PackageName      string       `json:"packageName"`
-	Flavour          string       `json:"flavour"`
-	Version          string       `json:"version"`
-	VersionInstalled string       `json:"versionInstalled"`
-	Release          string       `json:"release"`
-	BuildTime        time.Time    `json:"buildTime"`
-	IsInstalled      bool         `json:"isInstalled"`
-	IsRunning        bool         `json:"isRunning"`
-	FullVersion      string       `json:"fullVersion"`
-	AgeInDays        int          `json:"ageInDays"`
-	Modules          []ModuleInfo `json:"modules"`
+	PackageName      string    `json:"packageName"`
+	Flavour          string    `json:"flavour"`
+	Version          string    `json:"version"`
+	VersionInstalled string    `json:"versionInstalled"`
+	Release          string    `json:"release"`
+	BuildTime        time.Time `json:"buildTime"`
+	IsInstalled      bool      `json:"isInstalled"`
+	IsRunning        bool      `json:"isRunning"`
+	FullVersion      string    `json:"fullVersion"`
+	AgeInDays        int       `json:"ageInDays"`
 }
 
 // ToMap конвертирует Info в map[string]interface{} для JSON ответов
@@ -287,7 +287,7 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 	// Сортируем по версии с учетом buildtime (новые сначала)
 	sort.Slice(kernels, func(i, j int) bool {
 		// Сначала сравниваем основную версию
-		versionCmp := compareVersions(kernels[i].Version, kernels[j].Version)
+		versionCmp := _package.CompareVersions(kernels[i].Version, kernels[j].Version)
 		if versionCmp != 0 {
 			return versionCmp > 0
 		}
@@ -452,8 +452,8 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 		}
 
 		// Проверяем что версия больше минимальной
-		if compareVersions(kernel.Version, minVersion) > 0 {
-			if currentVer, exists := flavourVersions[kernel.Flavour]; !exists || compareVersions(kernel.Version, currentVer) > 0 {
+		if _package.CompareVersions(kernel.Version, minVersion) > 0 {
+			if currentVer, exists := flavourVersions[kernel.Flavour]; !exists || _package.CompareVersions(kernel.Version, currentVer) > 0 {
 				flavourVersions[kernel.Flavour] = kernel.Version
 			}
 		}
@@ -799,41 +799,70 @@ func calculatePackageAgeAndTime(version string) (int, time.Time) {
 	return 0, time.Time{}
 }
 
-// compareVersions сравнивает две версии (returns: 1 if a > b, -1 if a < b, 0 if equal)
-func compareVersions(a, b string) int {
-	aParts := strings.Split(a, ".")
-	bParts := strings.Split(b, ".")
+// ListInstalledKernelsFromRPM возвращает все установленные ядра через прямой RPM запрос
+func (km *Manager) ListInstalledKernelsFromRPM(ctx context.Context) ([]*Info, error) {
+	cmd := exec.CommandContext(ctx, "rpm", "-qa", "--queryformat", "%{NAME}\t%{VERSION}\t%{RELEASE}\t%{BUILDTIME}\n", "kernel-image-*")
+	cmd.Env = []string{"LC_ALL=C"}
 
-	maxLen := len(aParts)
-	if len(bParts) > maxLen {
-		maxLen = len(bParts)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf(lib.T_("failed to query installed kernels: %s"), err.Error())
 	}
 
-	for i := 0; i < maxLen; i++ {
-		aVal := 0
-		bVal := 0
+	var kernels []*Info
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))
 
-		if i < len(aParts) {
-			if val, err := strconv.Atoi(aParts[i]); err == nil {
-				aVal = val
-			}
-		}
-
-		if i < len(bParts) {
-			if val, err := strconv.Atoi(bParts[i]); err == nil {
-				bVal = val
-			}
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
 		}
 
-		if aVal > bVal {
-			return 1
+		parts := strings.Split(line, "\t")
+		if len(parts) != 4 {
+			continue
 		}
-		if aVal < bVal {
-			return -1
+
+		name := strings.TrimSpace(parts[0])
+		version := strings.TrimSpace(parts[1])
+		release := strings.TrimSpace(parts[2])
+		buildTimeStr := strings.TrimSpace(parts[3])
+
+		if strings.Contains(name, "debuginfo") {
+			continue
 		}
+
+		flavour := strings.TrimPrefix(name, "kernel-image-")
+		if flavour == name {
+			continue
+		}
+
+		buildTime := time.Unix(0, 0)
+		if buildTimeInt, err := strconv.ParseInt(buildTimeStr, 10, 64); err == nil {
+			buildTime = time.Unix(buildTimeInt, 0)
+		}
+
+		kernel := &Info{
+			PackageName:      name,
+			Flavour:          flavour,
+			Version:          version,
+			VersionInstalled: version,
+			Release:          release,
+			BuildTime:        buildTime,
+			AgeInDays:        int(time.Since(buildTime).Hours() / 24),
+			IsInstalled:      true,
+			IsRunning:        false,
+			FullVersion:      fmt.Sprintf("%s=%s-%s", name, version, release),
+		}
+
+		kernels = append(kernels, kernel)
 	}
 
-	return 0
+	if err = scanner.Err(); err != nil {
+		return nil, fmt.Errorf(lib.T_("error scanning RPM output: %s"), err.Error())
+	}
+
+	return kernels, nil
 }
 
 func isKernelInstalledRPM(kernel *Info) bool {
@@ -876,6 +905,61 @@ func (km *Manager) GetFullPackageNameForModule(packageName string) string {
 		return fmt.Sprintf("%s#%s", packageName, pkg.VersionRaw)
 	}
 
-	// Fallback - возвращаем имя без версии
 	return packageName
+}
+
+// GetBackupKernel определяет backup ядро (с uptime >= 1 день) из /var/log/wtmp
+func (km *Manager) GetBackupKernel(ctx context.Context) (*Info, error) {
+	cmd := exec.CommandContext(ctx, "last", "-a", "reboot")
+	cmd.Env = []string{"LC_ALL=C"}
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf(lib.T_("failed to get reboot history: %s"), err.Error())
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "system boot") && strings.Contains(line, "+") {
+			fields := strings.Fields(line)
+			for i, field := range fields {
+				if i >= 2 && strings.Contains(field, "-") && strings.Contains(field, ".") {
+					kernelRelease := field
+					if strings.Contains(line, "+") {
+						// Есть uptime >= 1 день
+						backupKernel := parseKernelRelease(kernelRelease)
+						if backupKernel != nil {
+							km.enrichKernelInfoFromDB(backupKernel)
+							return backupKernel, nil
+						}
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+// GroupKernelsByFlavour группирует ядра по flavour и сортирует по версии
+func (km *Manager) GroupKernelsByFlavour(kernels []*Info) map[string][]*Info {
+	flavourGroups := make(map[string][]*Info)
+
+	for _, kernel := range kernels {
+		flavourGroups[kernel.Flavour] = append(flavourGroups[kernel.Flavour], kernel)
+	}
+
+	// Сортируем ядра внутри каждого flavour по версии (новые сначала)
+	for flavour := range flavourGroups {
+		sort.Slice(flavourGroups[flavour], func(i, j int) bool {
+			versionCmp := _package.CompareVersions(flavourGroups[flavour][i].Version, flavourGroups[flavour][j].Version)
+			if versionCmp != 0 {
+				return versionCmp > 0
+			}
+			return flavourGroups[flavour][i].BuildTime.After(flavourGroups[flavour][j].BuildTime)
+		})
+	}
+
+	return flavourGroups
 }

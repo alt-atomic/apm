@@ -186,10 +186,10 @@ func CommandList() *cli.Command {
 				Name:  "clean",
 				Usage: lib.T_("Remove old kernel versions"),
 				Flags: []cli.Flag{
-					&cli.IntFlag{
-						Name:  "keep",
-						Usage: lib.T_("Number of kernel versions to keep"),
-						Value: 2,
+					&cli.BoolFlag{
+						Name:  "no-backup",
+						Usage: lib.T_("Delete kernels even if it is in 'backup' state"),
+						Value: false,
 					},
 					&cli.BoolFlag{
 						Name:  "dry-run",
@@ -198,7 +198,7 @@ func CommandList() *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.CleanOldKernels(ctx, cmd.Int("keep"), cmd.Bool("dry-run"))
+					resp, err := actions.CleanOldKernels(ctx, cmd.Bool("no-backup"), cmd.Bool("dry-run"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
