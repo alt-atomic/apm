@@ -637,11 +637,11 @@ func (km *Manager) buildPackageList(kernel *Info, modules []string, includeHeade
 		installPackages = append(installPackages, kernel.PackageName)
 	}
 
-	// Добавляем модули с полными версиями
+	// Добавляем модули с простыми версиями
 	for _, module := range modules {
 		modulePackage := fmt.Sprintf("kernel-modules-%s-%s", module, kernel.Flavour)
-		fullModulePackage := km.GetFullPackageNameForModule(modulePackage)
-		installPackages = append(installPackages, fullModulePackage)
+		simpleModulePackage := km.GetSimplePackageNameForModule(modulePackage)
+		installPackages = append(installPackages, simpleModulePackage)
 	}
 
 	// Добавляем headers если нужно
@@ -649,10 +649,10 @@ func (km *Manager) buildPackageList(kernel *Info, modules []string, includeHeade
 		headerPackage := fmt.Sprintf("kernel-headers-%s", kernel.Flavour)
 		moduleHeaderPackage := fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour)
 
-		fullHeaderPackage := km.GetFullPackageNameForModule(headerPackage)
-		fullModuleHeaderPackage := km.GetFullPackageNameForModule(moduleHeaderPackage)
+		simpleHeaderPackage := km.GetSimplePackageNameForModule(headerPackage)
+		simpleModuleHeaderPackage := km.GetSimplePackageNameForModule(moduleHeaderPackage)
 
-		installPackages = append(installPackages, fullHeaderPackage, fullModuleHeaderPackage)
+		installPackages = append(installPackages, simpleHeaderPackage, simpleModuleHeaderPackage)
 	}
 
 	return installPackages
@@ -895,22 +895,44 @@ func isModuleInstalledRPM(moduleName, flavour string) bool {
 }
 
 // GetFullPackageNameForModule получает полное имя пакета модуля с версией из базы
-func (km *Manager) GetFullPackageNameForModule(packageName string) string {
+//func (km *Manager) GetFullPackageNameForModule(packageName string) string {
+//	ctx := context.Background()
+//
+//	// Ищем пакет в базе данных
+//	pkg, err := km.dbService.GetPackageByName(ctx, packageName)
+//	if err != nil {
+//		// Fallback - возвращаем имя без версии
+//		return packageName
+//	}
+//
+//	// Если есть VersionRaw - формируем полное имя
+//	if pkg.VersionRaw != "" {
+//		return fmt.Sprintf("%s#%s", packageName, pkg.VersionRaw)
+//	}
+//
+//	return packageName
+//}
+
+// GetSimplePackageNameForModule получает простое имя пакета для удаления без таймстемпов
+func (km *Manager) GetSimplePackageNameForModule(packageName string) string {
 	ctx := context.Background()
 
-	// Ищем пакет в базе данных
 	pkg, err := km.dbService.GetPackageByName(ctx, packageName)
 	if err != nil {
-		// Fallback - возвращаем имя без версии
 		return packageName
 	}
 
-	// Если есть VersionRaw - формируем полное имя
-	if pkg.VersionRaw != "" {
-		return fmt.Sprintf("%s#%s", packageName, pkg.VersionRaw)
+	cleanVersion, err := helper.GetVersionFromAptCache(pkg.Version)
+	if err != nil {
+		versionParts := strings.Split(pkg.Version, "-")
+		if len(versionParts) >= 1 {
+			cleanVersion = versionParts[0]
+		} else {
+			cleanVersion = pkg.Version
+		}
 	}
 
-	return packageName
+	return fmt.Sprintf("%s=%s", packageName, cleanVersion)
 }
 
 // GetBackupKernel определяет backup ядро (с uptime >= 1 день) из /var/log/wtmp

@@ -157,7 +157,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 		}
 	}
 
-	// Автоматическое добавление headers и модулей как в bash скрипте
+	// Автоматическое добавление headers и модулей
 	additionalPackages, _ := a.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, includeHeaders)
 
 	// Добавляем дополнительные пакеты к модулям
@@ -281,13 +281,9 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 	}
 
 	if len(modules) == 0 {
-		allModules, err := a.kernelManager.FindAvailableModules(current)
-		if err == nil {
-			for _, module := range allModules {
-				if module.IsInstalled {
-					modules = append(modules, module.Name)
-				}
-			}
+		inheritedModules, err := a.kernelManager.InheritModulesFromKernel(latest, current)
+		if err == nil && len(inheritedModules) > 0 {
+			modules = inheritedModules
 		}
 	}
 
@@ -586,8 +582,8 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 	for _, module := range modules {
 		for _, available := range availableModules {
 			if module == available.Name {
-				fullPackageName := a.kernelManager.GetFullPackageNameForModule(available.PackageName)
-				installPackages = append(installPackages, fullPackageName)
+				simplePackageName := a.kernelManager.GetSimplePackageNameForModule(available.PackageName)
+				installPackages = append(installPackages, simplePackageName)
 				break
 			}
 		}
@@ -705,13 +701,12 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string, modul
 		}, nil
 	}
 
-	// Подготавливаем список пакетов для удаления
 	var removePackages []string
 	for _, module := range modulesToRemove {
 		for _, available := range availableModules {
 			if module == available.Name && available.IsInstalled {
-				fullPackageName := a.kernelManager.GetFullPackageNameForModule(available.PackageName)
-				removePackages = append(removePackages, fullPackageName)
+				simplePackageName := a.kernelManager.GetSimplePackageNameForModule(available.PackageName)
+				removePackages = append(removePackages, simplePackageName)
 				break
 			}
 		}
