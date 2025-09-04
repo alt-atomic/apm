@@ -62,6 +62,18 @@ func getAccentStyle() lipgloss.Style {
 		Foreground(lipgloss.Color(lib.Env.Colors.Accent))
 }
 
+// getMessageStyle возвращает стиль для message
+func getMessageStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Bold(true).
+		MarginBottom(1)
+}
+
+// getErrorMessageStyle возвращает стиль для message в случае ошибки
+func getErrorMessageStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Error))
+}
+
 // getItemStyle возвращает стиль для узлов дерева.
 func getItemStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
@@ -86,7 +98,7 @@ func formatField(key string, value interface{}) string {
 }
 
 // buildTreeFromMap рекурсивно строит дерево (tree.Tree) из map[string]interface{}.
-func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
+func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) *tree.Tree {
 	// Создаем корень дерева
 	t := tree.New().Root(prefix)
 
@@ -94,11 +106,19 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 	if msgVal, haveMsg := data["message"]; haveMsg {
 		switch vv := msgVal.(type) {
 		case string:
-			t.Child(vv)
+			if isError {
+				t.Child(getErrorMessageStyle().Render(vv))
+			} else {
+				t.Child(getMessageStyle().Render(vv))
+			}
 		case int, float64, bool:
-			t.Child(fmt.Sprintf("%v", vv))
+			if isError {
+				t.Child(getErrorMessageStyle().Render(fmt.Sprintf("%v", vv)))
+			} else {
+				t.Child(getMessageStyle().Render(fmt.Sprintf("%v", vv)))
+			}
 		case map[string]interface{}:
-			subTree := buildTreeFromMap("message", vv)
+			subTree := buildTreeFromMap("message", vv, isError)
 			t.Child(subTree)
 		case []interface{}:
 			listNode := tree.New().Root("message")
@@ -114,7 +134,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 				if err == nil {
 					var mm map[string]interface{}
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := buildTreeFromMap("message", mm)
+						subTree := buildTreeFromMap("message", mm, isError)
 						t.Child(subTree)
 					} else {
 						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
@@ -128,7 +148,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 						listNode := tree.New().Root("message")
 						for i, elem := range arr {
 							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm)
+								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 								listNode.Child(subTree)
 							} else {
 								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -208,7 +228,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: вложенная map
 		case map[string]interface{}:
-			subTree := buildTreeFromMap(TranslateKey(k), vv)
+			subTree := buildTreeFromMap(TranslateKey(k), vv, isError)
 			t.Child(subTree)
 
 		//----------------------------------------------------------------------
@@ -221,7 +241,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 			listNode := tree.New().Root(TranslateKey(k))
 			for i, elem := range vv {
 				if mm, ok := elem.(map[string]interface{}); ok {
-					subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm)
+					subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 					listNode.Child(subTree)
 				} else {
 					listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -238,7 +258,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 			}
 			listNode := tree.New().Root(TranslateKey(k))
 			for i, elem := range vv {
-				subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), elem)
+				subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), elem, isError)
 				listNode.Child(subTree)
 			}
 			t.Child(listNode)
@@ -256,7 +276,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 				if err == nil {
 					var mm map[string]interface{}
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := buildTreeFromMap(TranslateKey(k), mm)
+						subTree := buildTreeFromMap(TranslateKey(k), mm, isError)
 						t.Child(subTree)
 						continue
 					}
@@ -269,7 +289,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 				if err == nil {
 					var mm map[string]interface{}
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := buildTreeFromMap(TranslateKey(k), mm)
+						subTree := buildTreeFromMap(TranslateKey(k), mm, isError)
 						t.Child(subTree)
 						continue
 					}
@@ -278,7 +298,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 						listNode := tree.New().Root(TranslateKey(k))
 						for i, elem := range arr {
 							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm)
+								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 								listNode.Child(subTree)
 							} else {
 								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -300,7 +320,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}) *tree.Tree {
 						listNode := tree.New().Root(TranslateKey(k))
 						for i, elem := range arr {
 							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm)
+								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 								listNode.Child(subTree)
 							} else {
 								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -367,9 +387,9 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 
 			var t *tree.Tree
 			if resp.Error {
-				t = buildTreeFromMap("", data)
+				t = buildTreeFromMap("", data, resp.Error)
 			} else {
-				t = buildTreeFromMap("", data)
+				t = buildTreeFromMap("", data, resp.Error)
 			}
 
 			var rootColor lipgloss.Style

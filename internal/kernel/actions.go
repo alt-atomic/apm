@@ -351,7 +351,8 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 			}
 
 			// 2. Сохраняем текущее запущенное ядро
-			if currentKernel != nil && kernel.FullVersion == currentKernel.FullVersion {
+			if currentKernel != nil && kernel.Version == currentKernel.Version && 
+				kernel.Release == currentKernel.Release && kernel.Flavour == currentKernel.Flavour {
 				reasons = append(reasons, lib.T_("Currently booted"))
 				kernel.IsRunning = true
 			}
