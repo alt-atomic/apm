@@ -166,23 +166,6 @@ func CommandList() *cli.Command {
 				}),
 			},
 			{
-				Name:  "check-update",
-				Usage: lib.T_("Check for kernel updates"),
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "flavour",
-						Usage: lib.T_("Check updates for specific flavour"),
-					},
-				},
-				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.CheckKernelUpdate(ctx, cmd.String("flavour"))
-					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-					}
-					return reply.CliResponse(ctx, *resp)
-				}),
-			},
-			{
 				Name:  "clean",
 				Usage: lib.T_("Remove old kernel versions"),
 				Flags: []cli.Flag{

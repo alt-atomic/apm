@@ -290,54 +290,6 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 	return a.InstallKernel(ctx, flavour, modules, includeHeaders, dryRun)
 }
 
-// CheckKernelUpdate проверяет наличие обновлений ядра
-func (a *Actions) CheckKernelUpdate(ctx context.Context, flavour string) (*reply.APIResponse, error) {
-	var err error
-	err = a.validateDB(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = a.checkAtomicSystemRestriction("update"); err != nil {
-		return nil, err
-	}
-
-	_, err = a.serviceAptActions.Update(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	flavour, err = a.detectFlavourOrDefault(ctx, flavour)
-	if err != nil {
-		return nil, fmt.Errorf(lib.T_("failed to detect current flavour: %s"), err.Error())
-	}
-
-	current, err := a.kernelManager.GetCurrentKernel(ctx)
-	if err != nil {
-		return nil, fmt.Errorf(lib.T_("failed to get current kernel: %s"), err.Error())
-	}
-
-	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
-	if err != nil {
-		return nil, fmt.Errorf(lib.T_("failed to find latest kernel: %s"), err.Error())
-	}
-
-	// Сравниваем установленную версию с доступной версией
-	updateAvailable := !(latest.Version == current.VersionInstalled && latest.Release == current.Release)
-
-	data := map[string]interface{}{
-		"message":         lib.T_("Kernel update check"),
-		"currentKernel":   current,
-		"latestKernel":    latest,
-		"updateAvailable": updateAvailable,
-	}
-
-	return &reply.APIResponse{
-		Data:  data,
-		Error: false,
-	}, nil
-}
-
 // CleanOldKernels удаляет старые ядра
 func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun bool) (*reply.APIResponse, error) {
 	err := a.validateDB(ctx)
@@ -393,8 +345,8 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 		for _, kernel := range kernelsInFlavour {
 			var reasons []string
 
-			// 1. Сохраняем новейшее ядро flavour'а
-			if kernel.FullVersion == newestKernel.FullVersion {
+			// 1. Сохраняем новейшее ядро только для текущего загруженного flavour'а
+			if kernel.FullVersion == newestKernel.FullVersion && currentKernel != nil && fl == currentKernel.Flavour {
 				reasons = append(reasons, fmt.Sprintf(lib.T_("latest for %s"), fl))
 			}
 
