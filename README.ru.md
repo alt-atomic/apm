@@ -21,8 +21,9 @@ apm -help
 apt-get install apm
 ```
 
-ручная сборка:
+Для ручной сборки:
 ```
+apt-get install systemd-devel libapt-devel gettext-tools meson
 meson setup build --wipe --prefix /usr
 meson install -C build
 ```
