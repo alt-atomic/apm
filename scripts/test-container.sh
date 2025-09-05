@@ -91,8 +91,7 @@ print_info "🔨 Building project in container..."
 
 # Setup build directory and compile
 if ! podman exec "${CONTAINER_NAME}" bash -c "
-    # Copy source to tmp and build there to avoid permission issues
-    cp -r /workspace /tmp/apm-src && \
+    rsync -av --exclude='.cache' /workspace/ /tmp/apm-src/ && \
     cd /tmp/apm-src && \
     # Set Go environment for build
     export GOCACHE=/tmp/go-cache && \
@@ -146,6 +145,16 @@ case "${TEST_SUITE}" in
         ;;
     "system")
         print_info "Running system tests only..."
+        podman exec --user root "${CONTAINER_NAME}" bash -c "
+            cd /tmp/apm-src && \
+            export GOCACHE=/tmp/go-cache && \
+            export GOMODCACHE=/tmp/go-mod && \
+            export GO111MODULE=on && \
+            meson test -C builddir --suite system --verbose
+        "
+        ;;
+    "integration")
+        print_info "Running system tests only..."
         podman exec "${CONTAINER_NAME}" bash -c "
             cd /tmp/apm-src && \
             export GOCACHE=/tmp/go-cache && \
@@ -156,24 +165,12 @@ case "${TEST_SUITE}" in
         ;;
     "apt")
         print_info "Running APT binding tests only..."
-        podman exec "${CONTAINER_NAME}" bash -c "
+        podman exec --user root "${CONTAINER_NAME}" bash -c "
             cd /tmp/apm-src && \
             export GOCACHE=/tmp/go-cache && \
             export GOMODCACHE=/tmp/go-mod && \
             export GO111MODULE=on && \
             meson test -C builddir --suite apt --verbose
-        "
-        ;;
-    "safe")
-        print_info "Running safe tests (unit + apt + system, excluding distrobox and integration)..."
-        podman exec "${CONTAINER_NAME}" bash -c "
-            cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
-            export GO111MODULE=on && \
-            meson test -C builddir --suite unit --verbose && \
-            meson test -C builddir --suite apt --verbose && \
-            meson test -C builddir --suite integration --verbose
         "
         ;;
     "all")

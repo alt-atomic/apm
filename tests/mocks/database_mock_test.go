@@ -23,27 +23,26 @@ import (
 	"errors"
 	"testing"
 
-	"apm/internal/system/package"
-
+	"apm/internal/common/apt/package"
 	"github.com/stretchr/testify/assert"
 )
 
 // MockPackageDBService простой мок для тестирования
 type MockPackageDBService struct {
-	packages map[string]dialog.Package
+	packages map[string]_package.Package
 	failNext bool
 }
 
 // NewMockPackageDBService создает новый простой мок
 func NewMockPackageDBService() *MockPackageDBService {
 	return &MockPackageDBService{
-		packages: make(map[string]dialog.Package),
+		packages: make(map[string]_package.Package),
 		failNext: false,
 	}
 }
 
 // SetPackage добавляет пакет в мок
-func (m *MockPackageDBService) SetPackage(name string, pkg dialog.Package) {
+func (m *MockPackageDBService) SetPackage(name string, pkg _package.Package) {
 	m.packages[name] = pkg
 }
 
@@ -53,17 +52,17 @@ func (m *MockPackageDBService) SetFailNext() {
 }
 
 // GetPackageByName реализация для мока
-func (m *MockPackageDBService) GetPackageByName(ctx context.Context, name string) (dialog.Package, error) {
+func (m *MockPackageDBService) GetPackageByName(ctx context.Context, name string) (_package.Package, error) {
 	if m.failNext {
 		m.failNext = false
-		return dialog.Package{}, errors.New("mock database error")
+		return _package.Package{}, errors.New("mock database error")
 	}
 
 	if pkg, exists := m.packages[name]; exists {
 		return pkg, nil
 	}
 
-	return dialog.Package{}, errors.New("record not found")
+	return _package.Package{}, errors.New("record not found")
 }
 
 // PackageDatabaseExist реализация для мока
@@ -82,14 +81,14 @@ func (m *MockPackageDBService) PackageDatabaseExist(ctx context.Context) error {
 
 // QueryHostImagePackages реализация для мока
 func (m *MockPackageDBService) QueryHostImagePackages(ctx context.Context,
-	filters map[string]interface{}, orderBy, groupBy string, limit, offset int) ([]dialog.Package, error) {
+	filters map[string]interface{}, orderBy, groupBy string, limit, offset int) ([]_package.Package, error) {
 
 	if m.failNext {
 		m.failNext = false
 		return nil, errors.New("mock database error")
 	}
 
-	var result []dialog.Package
+	var result []_package.Package
 	for _, pkg := range m.packages {
 		result = append(result, pkg)
 		if len(result) >= limit && limit > 0 {
@@ -126,7 +125,7 @@ func TestMockPackageDBService_GetPackageByName(t *testing.T) {
 	mock := NewMockPackageDBService()
 
 	// Добавляем тестовый пакет
-	testPkg := dialog.Package{
+	testPkg := _package.Package{
 		Name:        "vim",
 		Version:     "8.2.0",
 		Description: "Vi Improved text editor",
@@ -171,7 +170,7 @@ func TestMockPackageDBService_PackageDatabaseExist(t *testing.T) {
 		mock := NewMockPackageDBService()
 
 		// Добавляем пакет
-		testPkg := dialog.Package{Name: "test", Version: "1.0.0"}
+		testPkg := _package.Package{Name: "test", Version: "1.0.0"}
 		mock.SetPackage("test", testPkg)
 
 		ctx := context.Background()
@@ -186,8 +185,8 @@ func TestMockPackageDBService_QueryHostImagePackages(t *testing.T) {
 	mock := NewMockPackageDBService()
 
 	// Добавляем тестовые пакеты
-	pkg1 := dialog.Package{Name: "vim", Version: "8.2.0", Description: "Vi Improved", Installed: true, Section: "editors"}
-	pkg2 := dialog.Package{Name: "nano", Version: "5.0", Description: "Simple text editor", Installed: false, Section: "editors"}
+	pkg1 := _package.Package{Name: "vim", Version: "8.2.0", Description: "Vi Improved", Installed: true, Section: "editors"}
+	pkg2 := _package.Package{Name: "nano", Version: "5.0", Description: "Simple text editor", Installed: false, Section: "editors"}
 
 	mock.SetPackage("vim", pkg1)
 	mock.SetPackage("nano", pkg2)
@@ -209,8 +208,8 @@ func TestMockPackageDBService_SyncPackageInstallationInfo(t *testing.T) {
 	mock := NewMockPackageDBService()
 
 	// Добавляем пакеты
-	pkg1 := dialog.Package{Name: "vim", Version: "8.1.0", Installed: false}
-	pkg2 := dialog.Package{Name: "nano", Version: "4.0", Installed: false}
+	pkg1 := _package.Package{Name: "vim", Version: "8.1.0", Installed: false}
+	pkg2 := _package.Package{Name: "nano", Version: "4.0", Installed: false}
 
 	mock.SetPackage("vim", pkg1)
 	mock.SetPackage("nano", pkg2)
@@ -253,7 +252,7 @@ func TestMockPackageDBService_Performance(t *testing.T) {
 
 	// Добавляем много пакетов
 	for i := 0; i < 1000; i++ {
-		pkg := dialog.Package{
+		pkg := _package.Package{
 			Name:    "package" + string(rune('0'+i%10)),
 			Version: "1.0.0",
 		}

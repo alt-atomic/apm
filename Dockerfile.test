@@ -17,6 +17,7 @@ RUN apt-get update && \
     apt-get install -y \
         # Build tools
         build-essential \
+        appstream-data-desktop \
         meson \
         ninja-build \
         cmake \
@@ -25,17 +26,12 @@ RUN apt-get update && \
         systemd-devel \
         # Go language
         golang \
-        # APT development libraries
         libapt-devel \
-        # C++ development
         gcc-c++ \
         libstdc++-devel \
-        # Git for source management
         git \
-        # Test utilities
         curl \
         wget \
-        # Common test packages
         hello \
     && apt-get clean \
     && rm -rf /tmp/* /var/tmp/*

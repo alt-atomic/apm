@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//go:build unit
+//go:build system
 
 package system
 
 import (
+	_package "apm/internal/common/apt/package"
 	"apm/internal/system"
-	_package "apm/internal/system/package"
 	"apm/internal/system/service"
 	"testing"
 
@@ -35,6 +35,7 @@ func TestUnitActionsCreation(t *testing.T) {
 		&service.HostImageService{},
 		&service.HostDBService{},
 		&service.HostConfigService{},
+		&service.TemporaryConfigService{},
 	)
 
 	assert.NotNil(t, actions)
@@ -50,12 +51,6 @@ func TestUnitPackageDBServiceCreation(t *testing.T) {
 
 	actions := system.NewActions()
 	assert.NotNil(t, actions)
-}
-
-// TestUnitStplrService тестирует создание STPLR сервиса
-func TestUnitStplrService(t *testing.T) {
-	stplrSvc := &_package.StplrService{}
-	assert.NotNil(t, stplrSvc)
 }
 
 // TestUnitHostConfigService тестирует создание конфигурационного сервиса
@@ -125,7 +120,7 @@ func TestUnitConfigStruct(t *testing.T) {
 // TestUnitFormatPackageOutput тестирует форматирование вывода пакетов без зависимостей
 func TestUnitFormatPackageOutput(t *testing.T) {
 	actions := system.NewActionsWithDeps(
-		nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil,
 	)
 
 	testNewPackage := _package.Package{
@@ -160,7 +155,7 @@ func TestUnitFormatPackageOutput(t *testing.T) {
 // TestUnitFormatPackageOutputInvalidData тестирует форматирование с некорректными данными
 func TestUnitFormatPackageOutputInvalidData(t *testing.T) {
 	actions := system.NewActionsWithDeps(
-		nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil,
 	)
 
 	testData := map[string]interface{}{

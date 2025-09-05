@@ -24,7 +24,7 @@ import (
 	"syscall"
 	"testing"
 
-	_package "apm/internal/system/package"
+	_package "apm/internal/common/apt/package"
 	"apm/lib"
 
 	"github.com/stretchr/testify/assert"
@@ -47,8 +47,7 @@ func TestNonAtomicInstall(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -77,8 +76,7 @@ func TestNonAtomicRemove(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -110,8 +108,7 @@ func TestNonAtomicUpdate(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -138,8 +135,7 @@ func TestNonAtomicUpgrade(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -148,33 +144,5 @@ func TestNonAtomicUpgrade(t *testing.T) {
 		t.Logf("Upgrade error (may be expected): %v", err)
 	} else {
 		t.Log("Upgrade successful")
-	}
-}
-
-// TestNonAtomicUpdateKernel проверяет UpdateKernel
-func TestNonAtomicUpdateKernel(t *testing.T) {
-	if lib.Env.IsAtomic {
-		t.Skip("This test is available only for non-atomic systems")
-	}
-
-	if syscall.Geteuid() != 0 {
-		t.Skip("This test requires root privileges. Run with sudo.")
-	}
-
-	pkgDBService, err := _package.NewPackageDBService(lib.GetDB(true))
-	if err != nil {
-		t.Skip("Database not available, skipping test")
-	}
-
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
-
-	ctx := context.Background()
-
-	errs := actions.UpdateKernel(ctx)
-	if len(errs) > 0 {
-		t.Logf("UpdateKernel errors (may be expected): %v", errs)
-	} else {
-		t.Log("UpdateKernel successful")
 	}
 }

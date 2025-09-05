@@ -19,12 +19,13 @@
 package package_test
 
 import (
+	"apm/internal/common/helper"
 	"context"
 	"strings"
 	"syscall"
 	"testing"
 
-	_package "apm/internal/system/package"
+	_package "apm/internal/common/apt/package"
 	"apm/lib"
 
 	"github.com/stretchr/testify/assert"
@@ -41,8 +42,7 @@ func TestNewActions(t *testing.T) {
 	}
 	assert.NotNil(t, pkgDBService)
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 	assert.NotNil(t, actions)
 }
 
@@ -53,8 +53,7 @@ func TestInstall(t *testing.T) {
 	}
 
 	pkgDBService, err := _package.NewPackageDBService(lib.GetDB(true))
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -77,8 +76,7 @@ func TestRemoveRequiresRoot(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -106,8 +104,7 @@ func TestCheckInstall(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -130,12 +127,11 @@ func TestCheckRemove(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
-	_, err = actions.CheckRemove(ctx, []string{"nonexistent-package"})
+	_, err = actions.CheckRemove(ctx, []string{"nonexistent-package"}, false)
 	if err != nil {
 		t.Logf("Check remove error (expected): %v", err)
 	} else {
@@ -154,8 +150,7 @@ func TestUpdateRequiresRoot(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -179,8 +174,7 @@ func TestUpgradeRequiresRoot(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -203,8 +197,7 @@ func TestGetInstalledPackagesBasic(t *testing.T) {
 		t.Skip("Database not available, skipping test")
 	}
 
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
+	actions := _package.NewActions(pkgDBService)
 
 	ctx := context.Background()
 
@@ -224,14 +217,6 @@ func TestCleanPackageNameBasic(t *testing.T) {
 		t.Skip("This test should be run without root privileges")
 	}
 
-	pkgDBService, err := _package.NewPackageDBService(lib.GetDB(true))
-	if err != nil {
-		t.Skip("Database not available, skipping test")
-	}
-
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
-
 	testCases := []struct {
 		input    string
 		expected string
@@ -243,59 +228,8 @@ func TestCleanPackageNameBasic(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result := actions.CleanPackageName(tc.input, []string{})
+		result := helper.CleanPackageName(tc.input)
 		assert.NotNil(t, result)
 		t.Logf("CleanPackageName('%s') = '%s'", tc.input, result)
-	}
-}
-
-// TestUpdateKernelRequiresRoot проверяет UpdateKernel
-func TestUpdateKernel(t *testing.T) {
-	if syscall.Geteuid() != 0 {
-		t.Skip("This test requires root privileges. Run with sudo.")
-	}
-
-	pkgDBService, err := _package.NewPackageDBService(lib.GetDB(true))
-	if err != nil {
-		t.Skip("Database not available, skipping test")
-	}
-
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
-
-	ctx := context.Background()
-
-	errs := actions.UpdateKernel(ctx)
-	if len(errs) > 0 {
-		t.Logf("UpdateKernel errors (may be expected): %v", errs)
-	} else {
-		t.Log("UpdateKernel successful")
-	}
-}
-
-// TestCheckUpdateKernelBasic проверяет функцию CheckUpdateKernel
-func TestCheckUpdateKernelBasic(t *testing.T) {
-	if syscall.Geteuid() == 0 {
-		t.Skip("This test should be run without root privileges")
-	}
-
-	pkgDBService, err := _package.NewPackageDBService(lib.GetDB(true))
-	if err != nil {
-		t.Skip("Database not available, skipping test")
-	}
-
-	stplrService := _package.NewSTPLRService()
-	actions := _package.NewActions(pkgDBService, stplrService)
-
-	ctx := context.Background()
-
-	_, errs := actions.CheckUpdateKernel(ctx)
-	if len(errs) > 0 {
-		t.Logf("CheckUpdateKernel errors (may be expected): %v", errs)
-		for _, err := range errs {
-			assert.NotContains(t, err.Error(), "Elevated rights are required")
-		}
-	} else {
-		t.Log("CheckUpdateKernel successful")
 	}
 }

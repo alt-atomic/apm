@@ -9,7 +9,6 @@ APM располагает комплексной системой тестир�
 ```bash
 ./scripts/test-container.sh exec # запуск контейнера для ручных тестов, софт внутри ./builddir/apm
 ./scripts/test-container.sh all
-./scripts/test-container.sh safe
 ./scripts/test-container.sh unit
 ./scripts/test-container.sh system
 ./scripts/test-container.sh apt
@@ -21,8 +20,8 @@ APM располагает комплексной системой тестир�
 ./scripts/test-local.sh all
 ./scripts/test-local.sh unit
 ./scripts/test-local.sh system
-./scripts/test-local.sh apt
 ./scripts/test-local.sh integration
+./scripts/test-local.sh apt
 ./scripts/test-local.sh distrobox
 ```
 
