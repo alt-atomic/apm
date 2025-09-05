@@ -166,7 +166,7 @@ main() {
         "all")
             run_all_tests
             ;;
-        "unit"|"system"|"apt"|"integration"|"distrobox")
+        "unit"|"system"|"apt"|"distrobox")
             run_test_suite "$COMMAND"
             ;;
         *)

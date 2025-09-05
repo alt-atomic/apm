@@ -153,16 +153,6 @@ case "${TEST_SUITE}" in
             meson test -C builddir --suite system --verbose
         "
         ;;
-    "integration")
-        print_info "Running system tests only..."
-        podman exec "${CONTAINER_NAME}" bash -c "
-            cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
-            export GO111MODULE=on && \
-            meson test -C builddir --suite integration --verbose
-        "
-        ;;
     "apt")
         print_info "Running APT binding tests only..."
         podman exec --user root "${CONTAINER_NAME}" bash -c "

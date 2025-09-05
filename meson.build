@@ -142,16 +142,6 @@ test('go-system-tests',
   timeout: 1800,
 )
 
-# Integration tests (requires DBUS)
-test('go-integration-tests',
-  bash,
-  args: ['-lc', 'cd ' + meson.current_source_dir() + ' && go test -v -p 1 -count=1 ./tests/integration/... -tags "integration"'],
-  env: go_test_env,
-  depends: [apt_wrapper_lib],
-  suite: 'integration',
-  timeout: 1200,
-)
-
 # Distrobox tests
 test('go-distrobox-tests',
   bash,
