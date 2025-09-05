@@ -61,7 +61,7 @@ func CommandList() *cli.Command {
 		Name:    "kernel",
 		Aliases: []string{"k"},
 		Hidden:  lib.Env.IsAtomic,
-		Usage:   lib.T_("Kernel management"),
+		Usage:   lib.T_("Kernel Management. WARNING - experimental module"),
 		Commands: []*cli.Command{
 			{
 				Name:  "list",

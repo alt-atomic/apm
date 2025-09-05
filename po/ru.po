@@ -9,16 +9,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-04 04:41+0600\n"
-"PO-Revision-Date: 2025-09-04 04:36+0600\n"
+"POT-Creation-Date: 2025-09-05 17:48+0600\n"
+"PO-Revision-Date: 2025-09-05 17:50+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 48.0\n"
 
 #: internal/common/appstream/swcat.go:123
@@ -730,44 +730,52 @@ msgstr "версия не найдена"
 msgid "%.2f MB"
 msgstr "%.2f МБ"
 
-#: internal/common/helper/translate.go:47
-#: internal/common/helper/translate.go:74
-#: internal/common/helper/translate.go:102
+#: internal/common/helper/translate.go:33
+msgid "show help"
+msgstr "Показать помощь"
+
+#: internal/common/helper/translate.go:41
+msgid "print the version"
+msgstr "Показать версию"
+
+#: internal/common/helper/translate.go:64
+#: internal/common/helper/translate.go:91
+#: internal/common/helper/translate.go:119
 msgid "Module:"
 msgstr "Модуль:"
 
-#: internal/common/helper/translate.go:48
-#: internal/common/helper/translate.go:75
-#: internal/common/helper/translate.go:103
+#: internal/common/helper/translate.go:65
+#: internal/common/helper/translate.go:92
+#: internal/common/helper/translate.go:120
 msgid "Usage:"
 msgstr "Применение:"
 
-#: internal/common/helper/translate.go:49
-#: internal/common/helper/translate.go:77
-#: internal/common/helper/translate.go:105
+#: internal/common/helper/translate.go:66
+#: internal/common/helper/translate.go:94
+#: internal/common/helper/translate.go:122
 msgid "Description:"
 msgstr "Описание:"
 
-#: internal/common/helper/translate.go:50
-#: internal/common/helper/translate.go:106
+#: internal/common/helper/translate.go:67
+#: internal/common/helper/translate.go:123
 msgid "Commands:"
 msgstr "Команды:"
 
-#: internal/common/helper/translate.go:51
-#: internal/common/helper/translate.go:52
-#: internal/common/helper/translate.go:78
-#: internal/common/helper/translate.go:79
-#: internal/common/helper/translate.go:107
-#: internal/common/helper/translate.go:108
+#: internal/common/helper/translate.go:68
+#: internal/common/helper/translate.go:69
+#: internal/common/helper/translate.go:95
+#: internal/common/helper/translate.go:96
+#: internal/common/helper/translate.go:124
+#: internal/common/helper/translate.go:125
 msgid "Options:"
 msgstr "Параметры:"
 
-#: internal/common/helper/translate.go:76
-#: internal/common/helper/translate.go:104
+#: internal/common/helper/translate.go:93
+#: internal/common/helper/translate.go:121
 msgid "Category:"
 msgstr "Категория:"
 
-#: internal/common/helper/translate.go:80
+#: internal/common/helper/translate.go:97
 msgid "Global options:"
 msgstr "Глобальные параметры:"
 
@@ -992,7 +1000,7 @@ msgstr "Получить список ядер"
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:226 internal/kernel/commands.go:235
+#: internal/common/reply/event.go:226 internal/kernel/commands.go:219
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
@@ -1018,26 +1026,26 @@ msgstr "Прогресс завершён"
 msgid "Progress: %s completed"
 msgstr "Прогресс: %s завершён"
 
-#: internal/common/reply/response.go:120 internal/common/reply/response.go:143
-#: internal/common/reply/response.go:264 internal/common/reply/response.go:291
-#: internal/common/reply/response.go:317
+#: internal/common/reply/response.go:140 internal/common/reply/response.go:163
+#: internal/common/reply/response.go:284 internal/common/reply/response.go:311
+#: internal/common/reply/response.go:337
 msgid "%T (unknown type)"
 msgstr "%T (неизвестный тип)"
 
-#: internal/common/reply/response.go:139 internal/common/reply/response.go:313
+#: internal/common/reply/response.go:159 internal/common/reply/response.go:333
 msgid "%T (slice of unknown type)"
 msgstr "%T (фрагмент неизвестного типа)"
 
-#: internal/common/reply/response.go:166 internal/common/reply/response.go:173
+#: internal/common/reply/response.go:186 internal/common/reply/response.go:193
 #, c-format
 msgid "%s: no"
 msgstr "%s: нет"
 
-#: internal/common/reply/response.go:183
+#: internal/common/reply/response.go:203
 msgid "yes"
 msgstr "да"
 
-#: internal/common/reply/response.go:185
+#: internal/common/reply/response.go:205
 msgid "no"
 msgstr "нет"
 
@@ -1830,11 +1838,6 @@ msgstr "Не удалось выполнить apt search: %v, ошибка: %s"
 msgid "Failed to retrieve installed packages: "
 msgstr "Не удалось извлечь установленные пакеты: "
 
-#: internal/kernel/actions.go:78
-#, c-format
-msgid "failed to list kernels: %s"
-msgstr "Не удалось перечислить ядра: %s"
-
 #: internal/kernel/actions.go:92
 msgid "No kernels found"
 msgstr "Ядра не найдены"
@@ -1847,30 +1850,13 @@ msgstr[0] "%d ядро найдено"
 msgstr[1] "%d ядра найдено"
 msgstr[2] "%d ядер найдено"
 
-#: internal/kernel/actions.go:115 internal/kernel/actions.go:268
-#: internal/kernel/actions.go:321 internal/kernel/actions.go:365
-#: internal/kernel/service/kernel.go:173
-#, c-format
-msgid "failed to get current kernel: %s"
-msgstr "Не удалось получить текущее ядро: %s"
-
 #: internal/kernel/actions.go:119
 msgid "Current kernel information"
 msgstr "Информация об актуальном ядре"
 
-#: internal/kernel/actions.go:145 internal/kernel/commands.go:127
+#: internal/kernel/actions.go:145 internal/kernel/commands.go:128
 msgid "Kernel flavour must be specified"
 msgstr "Необходимо указать разновидность ядра"
-
-#: internal/kernel/actions.go:149
-#, c-format
-msgid "failed to find latest kernel for flavour %s: %s"
-msgstr "Не удалось найти последнюю версию ядра для варианта %s: %s"
-
-#: internal/kernel/actions.go:185
-#, c-format
-msgid "failed to simulate kernel installation: %s"
-msgstr "Не удалось смоделировать установку ядра: %s"
 
 #: internal/kernel/actions.go:189
 #, c-format
@@ -1896,58 +1882,37 @@ msgstr "Не удалось установить ядро: %s"
 msgid "Kernel %s installed successfully"
 msgstr "Ядро %s успешно установлено"
 
-#: internal/kernel/actions.go:258 internal/kernel/actions.go:316
-#: internal/kernel/actions.go:491 internal/kernel/actions.go:535
-#: internal/kernel/actions.go:658
-#, c-format
-msgid "failed to detect current flavour: %s"
-msgstr "Не удалось определить текущую разновидность: %s"
-
-#: internal/kernel/actions.go:263 internal/kernel/actions.go:326
-#, c-format
-msgid "failed to find latest kernel: %s"
-msgstr "Не удалось найти последнюю версию ядра: %s"
-
 #: internal/kernel/actions.go:275
 msgid "Kernel is already up to date"
 msgstr "Ядро уже обновлено"
 
-#: internal/kernel/actions.go:333
-msgid "Kernel update check"
-msgstr "Проверка обновлений ядра"
-
-#: internal/kernel/actions.go:355
-#, c-format
-msgid "failed to get installed kernels: %s"
-msgstr "Не удалось установить ядра: %s"
-
-#: internal/kernel/actions.go:359
+#: internal/kernel/actions.go:307
 msgid "no kernels found"
 msgstr "Ядра не найдены"
 
-#: internal/kernel/actions.go:402
+#: internal/kernel/actions.go:350
 #, c-format
 msgid "latest for %s"
 msgstr "Последний для %s"
 
-#: internal/kernel/actions.go:407
+#: internal/kernel/actions.go:356
 msgid "Currently booted"
 msgstr "В настоящее время загружен"
 
-#: internal/kernel/actions.go:413
+#: internal/kernel/actions.go:362
 msgid "backup kernel"
 msgstr "Резервное ядро"
 
-#: internal/kernel/actions.go:430
+#: internal/kernel/actions.go:379
 msgid "no old kernels to clean"
 msgstr "Нет старых ядер для очистки"
 
-#: internal/kernel/actions.go:441
+#: internal/kernel/actions.go:390
 #, c-format
 msgid "failed to simulate kernels removal: %s"
 msgstr "Не удалось смоделировать удаление ядер: %s"
 
-#: internal/kernel/actions.go:445
+#: internal/kernel/actions.go:394
 #, c-format
 msgid "Would remove %d old kernel"
 msgid_plural "Would remove %d old kernels"
@@ -1955,12 +1920,12 @@ msgstr[0] "Удалит %d старое ядро"
 msgstr[1] "Удалит %d старых ядра"
 msgstr[2] "Удалит %d старых ядер"
 
-#: internal/kernel/actions.go:464
+#: internal/kernel/actions.go:413
 #, c-format
 msgid "failed to remove kernels: %s"
 msgstr "Не удалось удалить ядра: %s"
 
-#: internal/kernel/actions.go:468
+#: internal/kernel/actions.go:417
 #, c-format
 msgid "Successfully removed %d old kernel"
 msgid_plural "Successfully removed %d old kernels"
@@ -1968,18 +1933,7 @@ msgstr[0] "Удалено %d старое ядро"
 msgstr[1] "Удалено %d старых ядра"
 msgstr[2] "Удалено %d старых ядер"
 
-#: internal/kernel/actions.go:498 internal/kernel/actions.go:542
-#: internal/kernel/actions.go:665
-#, c-format
-msgid "failed to find kernel for flavour %s: %s"
-msgstr "Не удалось найти ядро для разновидности %s: %s"
-
-#: internal/kernel/actions.go:503
-#, c-format
-msgid "failed to list modules: %s"
-msgstr "Не удалось перечислить модули: %s"
-
-#: internal/kernel/actions.go:507
+#: internal/kernel/actions.go:456
 #, c-format
 msgid "%d module found"
 msgid_plural "%d modules found"
@@ -1987,46 +1941,36 @@ msgstr[0] "%d модулей найдено"
 msgstr[1] "%d модуль найден"
 msgstr[2] "%d модулей найдено"
 
-#: internal/kernel/actions.go:529 internal/kernel/actions.go:652
-#: internal/kernel/commands.go:251 internal/kernel/commands.go:279
+#: internal/kernel/actions.go:478 internal/kernel/actions.go:601
+#: internal/kernel/commands.go:235 internal/kernel/commands.go:263
 msgid "At least one module must be specified"
 msgstr "Должен быть указан хотя бы один модуль"
 
-#: internal/kernel/actions.go:547 internal/kernel/actions.go:670
-#, c-format
-msgid "failed to get available modules: %s"
-msgstr "Не удалось получить доступные модули: %s"
-
-#: internal/kernel/actions.go:565
+#: internal/kernel/actions.go:514
 #, c-format
 msgid "modules not available: %s"
 msgstr "модули недоступны: %s"
 
-#: internal/kernel/actions.go:581
+#: internal/kernel/actions.go:530
 #, c-format
 msgid "modules already installed: %s"
 msgstr "уже установленные модули: %s"
 
-#: internal/kernel/actions.go:599
+#: internal/kernel/actions.go:548
 #, c-format
 msgid "failed to simulate modules installation: %s"
 msgstr "не удалось смоделировать установку модулей: %s"
 
-#: internal/kernel/actions.go:603
+#: internal/kernel/actions.go:552
 msgid "Modules installation preview"
 msgstr "Предварительный просмотр установки модулей"
 
-#: internal/kernel/actions.go:616
+#: internal/kernel/actions.go:565
 #, c-format
 msgid "failed to install modules: %s"
 msgstr "не удалось установить модули: %s"
 
-#: internal/kernel/actions.go:626 internal/kernel/actions.go:751
-#, c-format
-msgid "failed to get updated kernel info: %s"
-msgstr "не удалось получить обновленную информацию о ядре: %s"
-
-#: internal/kernel/actions.go:630
+#: internal/kernel/actions.go:579
 #, c-format
 msgid "%d module installed successfully for kernel %s"
 msgid_plural "%d modules installed successfully for kernel %s"
@@ -2034,35 +1978,35 @@ msgstr[0] "%d модуль успешно установлен для ядра %
 msgstr[1] "%d модуля успешно установлено для ядра %s"
 msgstr[2] "%d модулей успешно установлено для ядра %s"
 
-#: internal/kernel/actions.go:689
+#: internal/kernel/actions.go:638
 #, c-format
 msgid "module not found: %s"
 msgstr "Модуль не найден: %s"
 
-#: internal/kernel/actions.go:694
+#: internal/kernel/actions.go:643
 #, c-format
 msgid "modules not installed: %s"
 msgstr "неустановленные модули: %s"
 
-#: internal/kernel/actions.go:700
+#: internal/kernel/actions.go:649
 msgid "No modules to remove"
 msgstr "Нет модулей для удаления"
 
-#: internal/kernel/actions.go:723
+#: internal/kernel/actions.go:671
 #, c-format
 msgid "failed to simulate modules removal: %s"
 msgstr "не удалось смоделировать удаление модулей: %s"
 
-#: internal/kernel/actions.go:727
+#: internal/kernel/actions.go:675
 msgid "Modules removal preview"
 msgstr "Предварительный просмотр удаления модулей"
 
-#: internal/kernel/actions.go:740
+#: internal/kernel/actions.go:688
 #, c-format
 msgid "failed to remove modules: %s"
 msgstr "не удалось удалить модули: %s"
 
-#: internal/kernel/actions.go:755
+#: internal/kernel/actions.go:703
 #, c-format
 msgid "%d module removed successfully from kernel %s"
 msgid_plural "%d modules removed successfully from kernel %s"
@@ -2070,7 +2014,7 @@ msgstr[0] "%d модуль успешно удален из ядра %s"
 msgstr[1] "%d модуля успешно удалено из ядра %s"
 msgstr[2] "%d модулей успешно удалено из ядра %s"
 
-#: internal/kernel/actions.go:797
+#: internal/kernel/actions.go:745
 msgid ""
 "Direct kernel installation is not supported on atomic systems. Use system "
 "image updates instead"
@@ -2078,7 +2022,7 @@ msgstr ""
 "Прямая установка ядра не поддерживается в атомарных системах. Вместо этого "
 "используйте обновления образа системы."
 
-#: internal/kernel/actions.go:799
+#: internal/kernel/actions.go:747
 msgid ""
 "Direct kernel removal is not supported on atomic systems. Use system image "
 "management instead"
@@ -2086,14 +2030,14 @@ msgstr ""
 "Прямое удаление ядра не поддерживается в атомарных системах. Вместо этого "
 "используйте управление образами системы."
 
-#: internal/kernel/actions.go:801
+#: internal/kernel/actions.go:749
 msgid ""
 "Kernel updates are managed through system image updates on atomic systems"
 msgstr ""
 "Обновления ядра управляются через обновления системного образа в атомарных "
 "системах."
 
-#: internal/kernel/actions.go:838 internal/kernel/commands.go:46
+#: internal/kernel/actions.go:786 internal/kernel/commands.go:46
 #: internal/system/actions.go:878 internal/system/commands.go:111 main.go:231
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
@@ -2101,105 +2045,102 @@ msgstr ""
 "Для выполнения этого действия необходимо повышенные прав. Пожалуйста, "
 "используйте sudo или su"
 
-#: internal/kernel/commands.go:63
-msgid "Kernel management"
-msgstr "Управление ядром"
+#: internal/kernel/commands.go:64
+msgid "Kernel Management. WARNING - experimental module"
+msgstr "Управление ядром. ВНИМАНИЕ - экспериментальный модуль"
 
-#: internal/kernel/commands.go:67
+#: internal/kernel/commands.go:68
 msgid "List available kernels"
 msgstr "Список доступных ядер"
 
-#: internal/kernel/commands.go:71
+#: internal/kernel/commands.go:72
 msgid "Filter by kernel flavour (e.g., std-def, un-def)"
 msgstr "Фильтр по типу ядра (например, std-def, un-def)"
 
-#: internal/kernel/commands.go:75
+#: internal/kernel/commands.go:76
 msgid "Show only installed kernels"
 msgstr "Показать только установленные ядра"
 
-#: internal/kernel/commands.go:81
+#: internal/kernel/commands.go:82
 msgid "Show full information"
 msgstr "Показать полную информацию"
 
-#: internal/kernel/commands.go:95
+#: internal/kernel/commands.go:96
 msgid "Show information about current kernel"
 msgstr "Показать информацию о текущем ядре"
 
-#: internal/kernel/commands.go:106
+#: internal/kernel/commands.go:107
 msgid "Install kernel with specified flavour"
 msgstr "Установить ядро с указанной разновидностью"
 
-#: internal/kernel/commands.go:111 internal/kernel/commands.go:147
+#: internal/kernel/commands.go:112 internal/kernel/commands.go:148
 msgid "Install additional kernel modules"
 msgstr "Установите дополнительные модули ядра"
 
-#: internal/kernel/commands.go:115 internal/kernel/commands.go:151
+#: internal/kernel/commands.go:116 internal/kernel/commands.go:152
 msgid "Install kernel headers"
 msgstr "Установить заголовки ядра"
 
-#: internal/kernel/commands.go:120 internal/kernel/commands.go:244
+#: internal/kernel/commands.go:121 internal/kernel/commands.go:228
 msgid "Show what would be installed without actually installing"
 msgstr "Показать, что будет установлено, без фактической установки"
 
-#: internal/kernel/commands.go:139
+#: internal/kernel/commands.go:140
 msgid "Update kernel to latest version"
 msgstr "Обновите ядро до последней версии"
 
-#: internal/kernel/commands.go:143
+#: internal/kernel/commands.go:144
 msgid "Update to specific flavour (default: current flavour)"
 msgstr ""
 "Обновление до определенного версии (по умолчанию: текущая разновидность)"
 
-#: internal/kernel/commands.go:156
+#: internal/kernel/commands.go:157
 msgid "Show what would be updated without actually updating"
 msgstr "Показать, что будет обновлено, без фактического обновления"
 
-#: internal/kernel/commands.go:170
-msgid "Check for kernel updates"
-msgstr "Проверка обновлений ядра"
-
-#: internal/kernel/commands.go:174
-msgid "Check updates for specific flavour"
-msgstr "Проверить обновление для конкретной разновидности"
-
-#: internal/kernel/commands.go:187
+#: internal/kernel/commands.go:171
 msgid "Remove old kernel versions"
 msgstr "Удалите старые версии ядра"
 
-#: internal/kernel/commands.go:191
+#: internal/kernel/commands.go:175
 msgid "Delete kernels even if it is in 'backup' state"
 msgstr ""
 "Удалять ядра, даже если они находятся в состоянии «резервного копирования»"
 
-#: internal/kernel/commands.go:196 internal/kernel/commands.go:272
+#: internal/kernel/commands.go:180 internal/kernel/commands.go:256
 msgid "Show what would be removed without actually removing"
 msgstr "Показать, что будет удалено, без фактического удаления"
 
-#: internal/kernel/commands.go:210
+#: internal/kernel/commands.go:194
 msgid "Kernel modules management"
 msgstr "Управление модулями ядра"
 
-#: internal/kernel/commands.go:214
+#: internal/kernel/commands.go:198
 msgid "List available modules for kernel"
 msgstr "Список доступных модулей для ядра"
 
-#: internal/kernel/commands.go:218
+#: internal/kernel/commands.go:202
 msgid "List modules for specific kernel flavour (default: current flavour)"
 msgstr ""
 "Список модулей для конкретной версии ядра (по умолчанию: текущая "
 "разновидность)"
 
-#: internal/kernel/commands.go:240
+#: internal/kernel/commands.go:224
 msgid "Install for specific kernel flavour"
 msgstr "Установить для конкретной разновидности ядра"
 
-#: internal/kernel/commands.go:263
+#: internal/kernel/commands.go:247
 msgid "Remove kernel modules"
 msgstr "Удалить модули ядра"
 
-#: internal/kernel/commands.go:268
+#: internal/kernel/commands.go:252
 msgid "Remove from specific kernel flavour"
 msgstr "Удалить из конкретной разновидности ядра"
+
+#: internal/kernel/service/kernel.go:173
+#, c-format
+msgid "failed to get current kernel: %s"
+msgstr "Не удалось получить текущее ядро: %s"
 
 #: internal/kernel/service/kernel.go:181
 #, c-format
@@ -2268,7 +2209,7 @@ msgstr "не удалось запросить установленные ядр
 msgid "error scanning RPM output: %s"
 msgstr "ошибка сканирования вывода RPM: %s"
 
-#: internal/kernel/service/kernel.go:923
+#: internal/kernel/service/kernel.go:945
 #, c-format
 msgid "failed to get reboot history: %s"
 msgstr "не удалось получить историю перезагрузок: %s"
@@ -2854,6 +2795,58 @@ msgstr "Ошибка закрытия базы данных KV: "
 #: main.go:294
 msgid "Error closing SQL database: "
 msgstr "Ошибка закрытия базы данных SQL: "
+
+#, c-format
+#~ msgid "failed to list kernels: %s"
+#~ msgstr "Не удалось перечислить ядра: %s"
+
+#, c-format
+#~ msgid "failed to find latest kernel for flavour %s: %s"
+#~ msgstr "Не удалось найти последнюю версию ядра для варианта %s: %s"
+
+#, c-format
+#~ msgid "failed to simulate kernel installation: %s"
+#~ msgstr "Не удалось смоделировать установку ядра: %s"
+
+#, c-format
+#~ msgid "failed to detect current flavour: %s"
+#~ msgstr "Не удалось определить текущую разновидность: %s"
+
+#, c-format
+#~ msgid "failed to find latest kernel: %s"
+#~ msgstr "Не удалось найти последнюю версию ядра: %s"
+
+#~ msgid "Kernel update check"
+#~ msgstr "Проверка обновлений ядра"
+
+#, c-format
+#~ msgid "failed to get installed kernels: %s"
+#~ msgstr "Не удалось установить ядра: %s"
+
+#, c-format
+#~ msgid "failed to find kernel for flavour %s: %s"
+#~ msgstr "Не удалось найти ядро для разновидности %s: %s"
+
+#, c-format
+#~ msgid "failed to list modules: %s"
+#~ msgstr "Не удалось перечислить модули: %s"
+
+#, c-format
+#~ msgid "failed to get available modules: %s"
+#~ msgstr "Не удалось получить доступные модули: %s"
+
+#, c-format
+#~ msgid "failed to get updated kernel info: %s"
+#~ msgstr "не удалось получить обновленную информацию о ядре: %s"
+
+#~ msgid "Kernel management"
+#~ msgstr "Управление ядром"
+
+#~ msgid "Check for kernel updates"
+#~ msgstr "Проверка обновлений ядра"
+
+#~ msgid "Check updates for specific flavour"
+#~ msgstr "Проверить обновление для конкретной разновидности"
 
 #~ msgid "Removal"
 #~ msgstr "Удаление"
