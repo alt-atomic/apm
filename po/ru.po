@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-05 17:48+0600\n"
-"PO-Revision-Date: 2025-09-05 17:50+0600\n"
+"POT-Creation-Date: 2025-09-06 06:08+0600\n"
+"PO-Revision-Date: 2025-09-06 06:08+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
@@ -730,54 +730,58 @@ msgstr "версия не найдена"
 msgid "%.2f MB"
 msgstr "%.2f МБ"
 
-#: internal/common/helper/translate.go:33
+#: internal/common/helper/translate.go:34
 msgid "show help"
 msgstr "Показать помощь"
 
-#: internal/common/helper/translate.go:41
+#: internal/common/helper/translate.go:42
 msgid "print the version"
 msgstr "Показать версию"
-
-#: internal/common/helper/translate.go:64
-#: internal/common/helper/translate.go:91
-#: internal/common/helper/translate.go:119
-msgid "Module:"
-msgstr "Модуль:"
 
 #: internal/common/helper/translate.go:65
 #: internal/common/helper/translate.go:92
 #: internal/common/helper/translate.go:120
+msgid "Module:"
+msgstr "Модуль:"
+
+#: internal/common/helper/translate.go:66
+#: internal/common/helper/translate.go:93
+#: internal/common/helper/translate.go:121
 msgid "Usage:"
 msgstr "Применение:"
 
-#: internal/common/helper/translate.go:66
-#: internal/common/helper/translate.go:94
-#: internal/common/helper/translate.go:122
+#: internal/common/helper/translate.go:67
+#: internal/common/helper/translate.go:95
+#: internal/common/helper/translate.go:123
 msgid "Description:"
 msgstr "Описание:"
 
-#: internal/common/helper/translate.go:67
-#: internal/common/helper/translate.go:123
+#: internal/common/helper/translate.go:68
+#: internal/common/helper/translate.go:124
 msgid "Commands:"
 msgstr "Команды:"
 
-#: internal/common/helper/translate.go:68
 #: internal/common/helper/translate.go:69
-#: internal/common/helper/translate.go:95
+#: internal/common/helper/translate.go:70
 #: internal/common/helper/translate.go:96
-#: internal/common/helper/translate.go:124
+#: internal/common/helper/translate.go:97
 #: internal/common/helper/translate.go:125
+#: internal/common/helper/translate.go:126
 msgid "Options:"
 msgstr "Параметры:"
 
-#: internal/common/helper/translate.go:93
-#: internal/common/helper/translate.go:121
+#: internal/common/helper/translate.go:94
+#: internal/common/helper/translate.go:122
 msgid "Category:"
 msgstr "Категория:"
 
-#: internal/common/helper/translate.go:97
+#: internal/common/helper/translate.go:98
 msgid "Global options:"
 msgstr "Глобальные параметры:"
+
+#: internal/common/helper/translate.go:146
+msgid "default"
+msgstr "по умолчанию"
 
 #: internal/common/icon/service.go:61
 msgid "Icon for package %s not found: %v"
@@ -2381,11 +2385,11 @@ msgstr "Полный вывод информации"
 
 #: internal/system/commands.go:248
 msgid "Building a query to get a list of packages"
-msgstr "Создание очереди для получения списка пакетов"
+msgstr "Создание запроса для получения списка пакетов"
 
 #: internal/system/commands.go:252
-msgid "Building query to fetch package list"
-msgstr "Сборка запроса для извлечения списка пакетов"
+msgid "Sort packages by field, example fields: name, section"
+msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
 #: internal/system/commands.go:275
 msgid "Force update all packages before query"
@@ -2795,6 +2799,9 @@ msgstr "Ошибка закрытия базы данных KV: "
 #: main.go:294
 msgid "Error closing SQL database: "
 msgstr "Ошибка закрытия базы данных SQL: "
+
+#~ msgid "Building query to fetch package list"
+#~ msgstr "Сборка запроса для извлечения списка пакетов"
 
 #, c-format
 #~ msgid "failed to list kernels: %s"

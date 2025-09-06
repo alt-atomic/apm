@@ -249,7 +249,7 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: lib.T_("Building query to fetch package list"),
+						Usage: lib.T_("Sort packages by field, example fields: name, section"),
 					},
 					&cli.StringFlag{
 						Name:  "order",

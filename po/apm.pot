@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-05 17:48+0600\n"
+"POT-Creation-Date: 2025-09-06 06:08+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -700,53 +700,57 @@ msgstr ""
 msgid "%.2f MB"
 msgstr ""
 
-#: internal/common/helper/translate.go:33
+#: internal/common/helper/translate.go:34
 msgid "show help"
 msgstr ""
 
-#: internal/common/helper/translate.go:41
+#: internal/common/helper/translate.go:42
 msgid "print the version"
-msgstr ""
-
-#: internal/common/helper/translate.go:64
-#: internal/common/helper/translate.go:91
-#: internal/common/helper/translate.go:119
-msgid "Module:"
 msgstr ""
 
 #: internal/common/helper/translate.go:65
 #: internal/common/helper/translate.go:92
 #: internal/common/helper/translate.go:120
-msgid "Usage:"
+msgid "Module:"
 msgstr ""
 
 #: internal/common/helper/translate.go:66
-#: internal/common/helper/translate.go:94
-#: internal/common/helper/translate.go:122
-msgid "Description:"
+#: internal/common/helper/translate.go:93
+#: internal/common/helper/translate.go:121
+msgid "Usage:"
 msgstr ""
 
 #: internal/common/helper/translate.go:67
+#: internal/common/helper/translate.go:95
 #: internal/common/helper/translate.go:123
-msgid "Commands:"
+msgid "Description:"
 msgstr ""
 
 #: internal/common/helper/translate.go:68
-#: internal/common/helper/translate.go:69
-#: internal/common/helper/translate.go:95
-#: internal/common/helper/translate.go:96
 #: internal/common/helper/translate.go:124
+msgid "Commands:"
+msgstr ""
+
+#: internal/common/helper/translate.go:69
+#: internal/common/helper/translate.go:70
+#: internal/common/helper/translate.go:96
+#: internal/common/helper/translate.go:97
 #: internal/common/helper/translate.go:125
+#: internal/common/helper/translate.go:126
 msgid "Options:"
 msgstr ""
 
-#: internal/common/helper/translate.go:93
-#: internal/common/helper/translate.go:121
+#: internal/common/helper/translate.go:94
+#: internal/common/helper/translate.go:122
 msgid "Category:"
 msgstr ""
 
-#: internal/common/helper/translate.go:97
+#: internal/common/helper/translate.go:98
 msgid "Global options:"
+msgstr ""
+
+#: internal/common/helper/translate.go:146
+msgid "default"
 msgstr ""
 
 #: internal/common/icon/service.go:61
@@ -2318,7 +2322,7 @@ msgid "Building a query to get a list of packages"
 msgstr ""
 
 #: internal/system/commands.go:252
-msgid "Building query to fetch package list"
+msgid "Sort packages by field, example fields: name, section"
 msgstr ""
 
 #: internal/system/commands.go:275
