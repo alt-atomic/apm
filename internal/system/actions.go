@@ -933,10 +933,10 @@ func (a *Actions) getImageStatus(_ context.Context) (ImageStatus, error) {
 
 // ShortPackageResponse Определяем структуру для короткого представления пакета
 type ShortPackageResponse struct {
-	Name        string `json:"name"`
-	Installed   bool   `json:"installed"`
-	Version     string `json:"version"`
-	Description string `json:"description"`
+	Name       string `json:"name"`
+	Installed  bool   `json:"installed"`
+	Version    string `json:"version"`
+	Maintainer string `json:"maintainer"`
 }
 
 // FormatPackageOutput принимает данные (один пакет или срез пакетов) и флаг full.
@@ -949,10 +949,10 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 			return v
 		}
 		return ShortPackageResponse{
-			Name:        v.Name,
-			Version:     v.Version,
-			Installed:   v.Installed,
-			Description: v.Description,
+			Name:       v.Name,
+			Version:    v.Version,
+			Installed:  v.Installed,
+			Maintainer: v.Maintainer,
 		}
 	// Если передан срез пакетов
 	case []_package.Package:
@@ -962,10 +962,10 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 		shortList := make([]ShortPackageResponse, 0, len(v))
 		for _, pkg := range v {
 			shortList = append(shortList, ShortPackageResponse{
-				Name:        pkg.Name,
-				Version:     pkg.Version,
-				Installed:   pkg.Installed,
-				Description: pkg.Description,
+				Name:       pkg.Name,
+				Version:    pkg.Version,
+				Installed:  pkg.Installed,
+				Maintainer: pkg.Maintainer,
 			})
 		}
 		return shortList
