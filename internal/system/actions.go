@@ -338,30 +338,18 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	packages1, err := a.serviceAptActions.CheckAutoRemove(ctx)
+	packages, err := a.serviceAptActions.Update(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": lib.T_("Package list updated successfully"),
-			"count":   packages1,
+			"count":   len(packages),
 		},
 		Error: false,
 	}
-	return &resp, nil
-	//packages, err := a.serviceAptActions.Update(ctx)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//resp := reply.APIResponse{
-	//	Data: map[string]interface{}{
-	//		"message": lib.T_("Package list updated successfully"),
-	//		"count":   len(packages),
-	//	},
-	//	Error: false,
-	//}
 
 	return &resp, nil
 }
