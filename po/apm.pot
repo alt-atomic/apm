@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-09 01:02+0600\n"
+"POT-Creation-Date: 2025-09-09 01:09+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -676,71 +676,6 @@ msgstr ""
 #: internal/common/apt/package/database.go:490
 #, c-format
 msgid "Table %s exists but contains no records"
-msgstr ""
-
-#: internal/common/config/app.go:124
-msgid "failed to close DBus: %w"
-msgstr ""
-
-#: internal/common/config/app.go:131
-msgid "failed to close databases: %w"
-msgstr ""
-
-#: internal/common/config/database.go:64
-msgid "failed to init system DB: %w"
-msgstr ""
-
-#: internal/common/config/database.go:68
-msgid "failed to init user DB: %w"
-msgstr ""
-
-#: internal/common/config/database.go:72
-msgid "failed to init key-value DB: %w"
-msgstr ""
-
-#: internal/common/config/database.go:86
-msgid "error opening system database: %w"
-msgstr ""
-
-#: internal/common/config/database.go:91
-msgid "error connecting to system database: %w"
-msgstr ""
-
-#: internal/common/config/database.go:106
-msgid "error opening user database: %w"
-msgstr ""
-
-#: internal/common/config/database.go:111
-msgid "error connecting to user database: %w"
-msgstr ""
-
-#: internal/common/config/database.go:126
-msgid "error opening key-value database: %w"
-msgstr ""
-
-#: internal/common/config/database.go:176 main.go:288
-msgid "Error closing KV database: "
-msgstr ""
-
-#: internal/common/config/database.go:183
-#: internal/common/config/database.go:190 main.go:294
-msgid "Error closing SQL database: "
-msgstr ""
-
-#: internal/common/config/dbus.go:76
-msgid "failed to connect to DBus: %w"
-msgstr ""
-
-#: internal/common/config/dbus.go:84
-msgid "failed to request DBus name: %w"
-msgstr ""
-
-#: internal/common/config/dbus.go:90 lib/dbus.go:46
-msgid "Interface org.altlinux.APM is already in use"
-msgstr ""
-
-#: internal/common/config/dbus.go:106
-msgid "failed to close DBus connection: %w"
 msgstr ""
 
 #: internal/common/helper/polkit.go:100
@@ -2727,6 +2662,10 @@ msgstr ""
 msgid "Error connecting to database: %v"
 msgstr ""
 
+#: lib/dbus.go:46
+msgid "Interface org.altlinux.APM is already in use"
+msgstr ""
+
 #: lib/i18n.go:32
 #, c-format
 msgid "Translations folder not found at path: %s"
@@ -2778,4 +2717,12 @@ msgstr ""
 
 #: main.go:282
 msgid "Terminating the application. Releasing resources…"
+msgstr ""
+
+#: main.go:288
+msgid "Error closing KV database: "
+msgstr ""
+
+#: main.go:294
+msgid "Error closing SQL database: "
 msgstr ""

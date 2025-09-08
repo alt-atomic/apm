@@ -2,11 +2,6 @@ internal/common/appstream/swcat.go
 internal/common/apt/errors.go
 internal/common/apt/package/actions.go
 internal/common/apt/package/database.go
-internal/common/config/app.go
-internal/common/config/database.go
-internal/common/config/dbus.go
-internal/common/config/example.go
-internal/common/config/translator.go
 internal/common/helper/polkit.go
 internal/common/helper/text.go
 internal/common/helper/translate.go

@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-09 01:02+0600\n"
+"POT-Creation-Date: 2025-09-09 01:09+0600\n"
 "PO-Revision-Date: 2025-09-09 01:02+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
@@ -17,8 +17,8 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 48.0\n"
 
 #: internal/common/appstream/swcat.go:123
@@ -707,84 +707,6 @@ msgstr "Некорректное поле фильтра: %s. Доступные
 #, c-format
 msgid "Table %s exists but contains no records"
 msgstr "Таблица %s существует, но не содержит записей"
-
-#: internal/common/config/app.go:124
-#, fuzzy
-msgid "failed to close DBus: %w"
-msgstr "Не удалось перечислить модули: %s"
-
-#: internal/common/config/app.go:131
-#, fuzzy
-msgid "failed to close databases: %w"
-msgstr "Не удалось найти ядра в базе данных: %s"
-
-#: internal/common/config/database.go:64
-#, fuzzy
-msgid "failed to init system DB: %w"
-msgstr "Не удалось инициализировать систему APT"
-
-#: internal/common/config/database.go:68
-#, fuzzy
-msgid "failed to init user DB: %w"
-msgstr "Не удалось установить ядро: %s"
-
-#: internal/common/config/database.go:72
-#, fuzzy
-msgid "failed to init key-value DB: %w"
-msgstr "Не удалось установить ядро: %s"
-
-#: internal/common/config/database.go:86
-#, fuzzy
-msgid "error opening system database: %w"
-msgstr "Ошибка открытия базы данных: %v"
-
-#: internal/common/config/database.go:91
-#, fuzzy
-msgid "error connecting to system database: %w"
-msgstr "Ошибка подключения к базе данных: %v"
-
-#: internal/common/config/database.go:106
-#, fuzzy
-msgid "error opening user database: %w"
-msgstr "Ошибка открытия базы данных: %v"
-
-#: internal/common/config/database.go:111
-#, fuzzy
-msgid "error connecting to user database: %w"
-msgstr "Ошибка подключения к базе данных: %v"
-
-#: internal/common/config/database.go:126
-#, fuzzy
-msgid "error opening key-value database: %w"
-msgstr "Ошибка открытия базы данных: %v"
-
-#: internal/common/config/database.go:176 main.go:288
-msgid "Error closing KV database: "
-msgstr "Ошибка закрытия базы данных KV: "
-
-#: internal/common/config/database.go:183
-#: internal/common/config/database.go:190 main.go:294
-msgid "Error closing SQL database: "
-msgstr "Ошибка закрытия базы данных SQL: "
-
-#: internal/common/config/dbus.go:76
-#, fuzzy
-msgid "failed to connect to DBus: %w"
-msgstr "не удалось удалить модули: %s"
-
-#: internal/common/config/dbus.go:84
-#, fuzzy
-msgid "failed to request DBus name: %w"
-msgstr "Не удалось удалить ядра: %s"
-
-#: internal/common/config/dbus.go:90 lib/dbus.go:46
-msgid "Interface org.altlinux.APM is already in use"
-msgstr "Интерфейс org.altlinux.APM уже используется"
-
-#: internal/common/config/dbus.go:106
-#, fuzzy
-msgid "failed to close DBus connection: %w"
-msgstr "Не удалось закрыть /proc/mounts: %v"
 
 #: internal/common/helper/polkit.go:100
 msgid "polkit dbus failure: %w"
@@ -2817,6 +2739,10 @@ msgstr "Ошибка открытия базы данных: %v"
 msgid "Error connecting to database: %v"
 msgstr "Ошибка подключения к базе данных: %v"
 
+#: lib/dbus.go:46
+msgid "Interface org.altlinux.APM is already in use"
+msgstr "Интерфейс org.altlinux.APM уже используется"
+
 #: lib/i18n.go:32
 #, c-format
 msgid "Translations folder not found at path: %s"
@@ -2870,188 +2796,10 @@ msgstr "Требуются привилегии администратора д�
 msgid "Terminating the application. Releasing resources…"
 msgstr "Завершение работы приложения. Высвобождение ресурсов…"
 
-#~ msgid "Building query to fetch package list"
-#~ msgstr "Сборка запроса для извлечения списка пакетов"
+#: main.go:288
+msgid "Error closing KV database: "
+msgstr "Ошибка закрытия базы данных KV: "
 
-#, c-format
-#~ msgid "failed to list kernels: %s"
-#~ msgstr "Не удалось перечислить ядра: %s"
-
-#, c-format
-#~ msgid "failed to find latest kernel for flavour %s: %s"
-#~ msgstr "Не удалось найти последнюю версию ядра для варианта %s: %s"
-
-#, c-format
-#~ msgid "failed to simulate kernel installation: %s"
-#~ msgstr "Не удалось смоделировать установку ядра: %s"
-
-#, c-format
-#~ msgid "failed to detect current flavour: %s"
-#~ msgstr "Не удалось определить текущую разновидность: %s"
-
-#, c-format
-#~ msgid "failed to find latest kernel: %s"
-#~ msgstr "Не удалось найти последнюю версию ядра: %s"
-
-#~ msgid "Kernel update check"
-#~ msgstr "Проверка обновлений ядра"
-
-#, c-format
-#~ msgid "failed to get installed kernels: %s"
-#~ msgstr "Не удалось установить ядра: %s"
-
-#, c-format
-#~ msgid "failed to find kernel for flavour %s: %s"
-#~ msgstr "Не удалось найти ядро для разновидности %s: %s"
-
-#, c-format
-#~ msgid "failed to get available modules: %s"
-#~ msgstr "Не удалось получить доступные модули: %s"
-
-#, c-format
-#~ msgid "failed to get updated kernel info: %s"
-#~ msgstr "не удалось получить обновленную информацию о ядре: %s"
-
-#~ msgid "Kernel management"
-#~ msgstr "Управление ядром"
-
-#~ msgid "Check for kernel updates"
-#~ msgstr "Проверка обновлений ядра"
-
-#~ msgid "Check updates for specific flavour"
-#~ msgstr "Проверить обновление для конкретной разновидности"
-
-#~ msgid "Removal"
-#~ msgstr "Удаление"
-
-#~ msgid "Change"
-#~ msgstr "Изменение"
-
-#, c-format
-#~ msgid "Downloading: %s"
-#~ msgstr "Загружается: %s"
-
-#~ msgid "Installation error: %v"
-#~ msgstr "Ошибка установки: %v"
-
-#~ msgid "Error updating packages: %v, output: %s"
-#~ msgstr "Ошибка обновления пакетов: %v, вывод: %s"
-
-#~ msgid "This option is available only for a non-atomic system"
-#~ msgstr "Эта опция доступна только на не-атомарной системе"
-
-#~ msgid "Package verification error: %v"
-#~ msgstr "Ошибка верификации пакета: %v"
-
-#, c-format
-#~ msgid "update-kernel exited with code %d"
-#~ msgstr "update-kernel завершён с кодом %d"
-
-#~ msgid "Error searching for old RPMs %w"
-#~ msgstr "Ошибка поиска старых RPMs %s: %w"
-
-#, c-format
-#~ msgid "Build STPLR package %s"
-#~ msgstr "Сборка STPLR пакета %s"
-
-#~ msgid "Error stplr command '%s': %s: %w"
-#~ msgstr "Ошибка команды stplr `%s`: %s: %w"
-
-#, c-format
-#~ msgid "Not found rpm file %s"
-#~ msgstr "Не найден rpm файл %s"
-
-#, c-format
-#~ msgid "Unable to find built RPM for package %s in %s"
-#~ msgstr "Невозможно найти собранный RPM для пакета %s в %s"
-
-#, c-format
-#~ msgid "Error stplr command '%s': %s"
-#~ msgstr "Ошибка команды stplr '%s': %s"
-
-#~ msgid "Error stplr command '%s': %w"
-#~ msgstr "Ошибка выполнения stplr команды %s: %v"
-
-#, fuzzy
-#~ msgid ""
-#~ ". The system image has not been changed. To apply the changes, run: apm s "
-#~ "image apply1"
-#~ msgstr ""
-#~ ". Образ системы не был изменён! Для применения изменений выполните: apm s "
-#~ "image apply"
-
-#~ msgid "Command execution error: %v, stderr: %s"
-#~ msgstr "Ошибка исполнения команды: %v, ошибка: %s"
-
-#~ msgid "Version:"
-#~ msgstr "Версия:"
-
-#~ msgid "Failed to retrieve call information"
-#~ msgstr "Не удалось извлечь информацию вызова"
-
-#~ msgid "FuncForPC returned nil"
-#~ msgstr "FuncForPC вернуло nil"
-
-#~ msgid ". The system image has been modified"
-#~ msgstr ". Образ системы был модифицирован"
-
-#~ msgid ""
-#~ ". The system image has not been modified! To apply changes, run with the -"
-#~ "a flag"
-#~ msgstr ""
-#~ ". Образ системы не был модифицирован! Чтобы применить изменения, "
-#~ "запустите с флагом -a"
-
-#~ msgid "You must specify at least one package, for example, remove package"
-#~ msgstr "Необходимо указать хотя бы один пакет, к примеру, remove package"
-
-#~ msgid ". The system image has been changed."
-#~ msgstr ". Образ системы был изменён."
-
-#~ msgid "Apply to image"
-#~ msgstr "Применить к образу"
-
-#, c-format
-#~ msgid "Downloading %s"
-#~ msgstr "Загрузка: %s"
-
-#, c-format
-#~ msgid "Cannot remove %s kept by dependency resolution"
-#~ msgstr "Нельзя удалить %s удерживается разрешением зависимостей"
-
-#~ msgid ""
-#~ ".\n"
-#~ "A difference in the package list was found in the local configuration, "
-#~ "the image has been updated"
-#~ msgstr ""
-#~ ".\n"
-#~ "Была найдена разница в списке пакетов локальной конфигурации, образ будет "
-#~ "обновлён"
-
-#~ msgid ""
-#~ "A communication error with the repository occurred. The package list has "
-#~ "been updated, please try running the command again"
-#~ msgstr ""
-#~ "Произошла ошибка связи с репозиторием. Список пакетов обновлён, "
-#~ "пожалуйста, попробуйте запустить команду ещё раз"
-
-#~ msgid "The operation will not make any changes. Reasons: \n"
-#~ msgstr "Операция не будет нести изменений. Причины:\n"
-
-#~ msgid ""
-#~ "Found a discrepancy in the package list in the local configuration, the "
-#~ "image has been updated"
-#~ msgstr ""
-#~ "Обнаружено несоответствие в списке пакетов локальной конфигурации, образ "
-#~ "был обновлён"
-
-#, c-format
-#~ msgid "Package verification error: %s"
-#~ msgstr "Ошибка верификации пакета: %s"
-
-#~ msgid "Package from ALR"
-#~ msgstr "Пакет из ALR"
-
-#, c-format
-#~ msgid "Unable to extract RPM path from output: %s"
-#~ msgstr "Невозможно извлечь путь RPM из выходных данных"
+#: main.go:294
+msgid "Error closing SQL database: "
+msgstr "Ошибка закрытия базы данных SQL: "
