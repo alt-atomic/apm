@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-06 06:08+0600\n"
+"POT-Creation-Date: 2025-09-09 01:02+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -676,6 +676,71 @@ msgstr ""
 #: internal/common/apt/package/database.go:490
 #, c-format
 msgid "Table %s exists but contains no records"
+msgstr ""
+
+#: internal/common/config/app.go:124
+msgid "failed to close DBus: %w"
+msgstr ""
+
+#: internal/common/config/app.go:131
+msgid "failed to close databases: %w"
+msgstr ""
+
+#: internal/common/config/database.go:64
+msgid "failed to init system DB: %w"
+msgstr ""
+
+#: internal/common/config/database.go:68
+msgid "failed to init user DB: %w"
+msgstr ""
+
+#: internal/common/config/database.go:72
+msgid "failed to init key-value DB: %w"
+msgstr ""
+
+#: internal/common/config/database.go:86
+msgid "error opening system database: %w"
+msgstr ""
+
+#: internal/common/config/database.go:91
+msgid "error connecting to system database: %w"
+msgstr ""
+
+#: internal/common/config/database.go:106
+msgid "error opening user database: %w"
+msgstr ""
+
+#: internal/common/config/database.go:111
+msgid "error connecting to user database: %w"
+msgstr ""
+
+#: internal/common/config/database.go:126
+msgid "error opening key-value database: %w"
+msgstr ""
+
+#: internal/common/config/database.go:176 main.go:288
+msgid "Error closing KV database: "
+msgstr ""
+
+#: internal/common/config/database.go:183
+#: internal/common/config/database.go:190 main.go:294
+msgid "Error closing SQL database: "
+msgstr ""
+
+#: internal/common/config/dbus.go:76
+msgid "failed to connect to DBus: %w"
+msgstr ""
+
+#: internal/common/config/dbus.go:84
+msgid "failed to request DBus name: %w"
+msgstr ""
+
+#: internal/common/config/dbus.go:90 lib/dbus.go:46
+msgid "Interface org.altlinux.APM is already in use"
+msgstr ""
+
+#: internal/common/config/dbus.go:106
+msgid "failed to close DBus connection: %w"
 msgstr ""
 
 #: internal/common/helper/polkit.go:100
@@ -1359,26 +1424,30 @@ msgid "Reasons"
 msgstr ""
 
 #: internal/common/reply/translate.go:179
-msgid "Kept Kernels"
+msgid "Version Raw"
 msgstr ""
 
 #: internal/common/reply/translate.go:181
-msgid "Remove kernels"
+msgid "Kept Kernels"
 msgstr ""
 
 #: internal/common/reply/translate.go:183
-msgid "Installed Modules"
+msgid "Remove kernels"
 msgstr ""
 
 #: internal/common/reply/translate.go:185
-msgid "Selected Modules"
+msgid "Installed Modules"
 msgstr ""
 
 #: internal/common/reply/translate.go:187
-msgid "Missing Modules"
+msgid "Selected Modules"
 msgstr ""
 
 #: internal/common/reply/translate.go:189
+msgid "Missing Modules"
+msgstr ""
+
+#: internal/common/reply/translate.go:191
 msgid "Available Update"
 msgstr ""
 
@@ -1388,18 +1457,18 @@ msgstr ""
 
 #: internal/distrobox/actions.go:94 internal/distrobox/actions.go:129
 #: internal/distrobox/actions.go:235 internal/distrobox/actions.go:283
-#: internal/system/actions.go:617
+#: internal/system/actions.go:605
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr ""
 
-#: internal/distrobox/actions.go:103 internal/system/actions.go:482
+#: internal/distrobox/actions.go:103 internal/system/actions.go:470
 msgid "Package found"
 msgstr ""
 
 #: internal/distrobox/actions.go:138 internal/distrobox/actions.go:214
-#: internal/system/actions.go:545 internal/system/actions.go:630
-#: internal/system/actions.go:772
+#: internal/system/actions.go:533 internal/system/actions.go:618
+#: internal/system/actions.go:760
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -1990,7 +2059,7 @@ msgid ""
 msgstr ""
 
 #: internal/kernel/actions.go:786 internal/kernel/commands.go:46
-#: internal/system/actions.go:878 internal/system/commands.go:111 main.go:231
+#: internal/system/actions.go:866 internal/system/commands.go:111 main.go:231
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -2174,7 +2243,7 @@ msgid "No candidates for removal found"
 msgstr ""
 
 #: internal/system/actions.go:185 internal/system/actions.go:268
-#: internal/system/actions.go:408 internal/system/actions.go:713
+#: internal/system/actions.go:396 internal/system/actions.go:701
 msgid "Cancel dialog"
 msgstr ""
 
@@ -2195,7 +2264,7 @@ msgstr ""
 msgid "You must specify at least one package"
 msgstr ""
 
-#: internal/system/actions.go:251 internal/system/actions.go:394
+#: internal/system/actions.go:251 internal/system/actions.go:382
 msgid "The operation will not make any changes"
 msgstr ""
 
@@ -2205,78 +2274,78 @@ msgid ""
 "please try running the command again"
 msgstr ""
 
-#: internal/system/actions.go:305 internal/system/actions.go:422
+#: internal/system/actions.go:305 internal/system/actions.go:410
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/actions.go:306 internal/system/actions.go:423
+#: internal/system/actions.go:306 internal/system/actions.go:411
 msgid "and"
 msgstr ""
 
-#: internal/system/actions.go:307 internal/system/actions.go:424
+#: internal/system/actions.go:307 internal/system/actions.go:412
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/actions.go:347
+#: internal/system/actions.go:348
 msgid "Package list updated successfully"
 msgstr ""
 
-#: internal/system/actions.go:429
+#: internal/system/actions.go:417
 msgid "The system has been upgrade successfully"
 msgstr ""
 
-#: internal/system/actions.go:443
+#: internal/system/actions.go:431
 msgid "Package name must be specified, for example info package"
 msgstr ""
 
-#: internal/system/actions.go:464
+#: internal/system/actions.go:452
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr ""
 
-#: internal/system/actions.go:473
+#: internal/system/actions.go:461
 msgid ". Maybe you were looking for: "
 msgstr ""
 
-#: internal/system/actions.go:542 internal/system/actions.go:627
+#: internal/system/actions.go:530 internal/system/actions.go:615
 msgid "Nothing found"
 msgstr ""
 
-#: internal/system/actions.go:594
+#: internal/system/actions.go:582
 msgid "System package"
 msgstr ""
 
-#: internal/system/actions.go:595
+#: internal/system/actions.go:583
 msgid "Stplr package"
 msgstr ""
 
-#: internal/system/actions.go:652 internal/system/commands.go:330
+#: internal/system/actions.go:640 internal/system/commands.go:330
 msgid "Image status"
 msgstr ""
 
-#: internal/system/actions.go:680
+#: internal/system/actions.go:668
 msgid "Command executed successfully"
 msgstr ""
 
-#: internal/system/actions.go:751
+#: internal/system/actions.go:739
 msgid "Changes applied successfully. A reboot is required"
 msgstr ""
 
-#: internal/system/actions.go:842
+#: internal/system/actions.go:830
 msgid "This option is only available for an atomic system"
 msgstr ""
 
-#: internal/system/actions.go:921
+#: internal/system/actions.go:909
 msgid "Modified image. Configuration file: "
 msgstr ""
 
-#: internal/system/actions.go:928
+#: internal/system/actions.go:916
 msgid "Cloud image without changes"
 msgstr ""
 
@@ -2658,10 +2727,6 @@ msgstr ""
 msgid "Error connecting to database: %v"
 msgstr ""
 
-#: lib/dbus.go:46
-msgid "Interface org.altlinux.APM is already in use"
-msgstr ""
-
 #: lib/i18n.go:32
 #, c-format
 msgid "Translations folder not found at path: %s"
@@ -2713,12 +2778,4 @@ msgstr ""
 
 #: main.go:282
 msgid "Terminating the application. Releasing resources…"
-msgstr ""
-
-#: main.go:288
-msgid "Error closing KV database: "
-msgstr ""
-
-#: main.go:294
-msgid "Error closing SQL database: "
 msgstr ""

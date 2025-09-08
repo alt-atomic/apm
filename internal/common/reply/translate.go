@@ -175,6 +175,8 @@ func TranslateKey(key string) string {
 		return lib.T_("Kept")
 	case "reasons":
 		return lib.T_("Reasons")
+	case "versionRaw":
+		return lib.T_("Version Raw")
 	case "keptKernels":
 		return lib.T_("Kept Kernels")
 	case "removeKernels":
