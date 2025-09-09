@@ -20,7 +20,6 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/system/service"
-	"apm/lib"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -128,7 +127,7 @@ func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus
 		ForceUpdate: false,
 	}
 	if err := json.Unmarshal([]byte(paramsJSON), &params); err != nil {
-		return "", dbus.MakeFailedError(fmt.Errorf(lib.T_("Failed to parse JSON: %w"), err))
+		return "", dbus.MakeFailedError(fmt.Errorf(w.actions.appConfig.Translator.T_("Failed to parse JSON: %w"), err))
 	}
 
 	resp, err := w.actions.List(ctx, params, true)
@@ -184,7 +183,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string) (string, *
 	ctx := context.WithValue(context.Background(), helper.TransactionKey, transaction)
 	var resp *reply.APIResponse
 	var err error
-	if lib.Env.IsAtomic {
+	if w.actions.appConfig.ConfigManager.GetConfig().IsAtomic {
 		resp, err = w.actions.ImageUpdate(ctx)
 	} else {
 		resp, err = w.actions.Upgrade(ctx)
@@ -344,7 +343,7 @@ func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
 	configObject := service.Config{}
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
-		return "", dbus.MakeFailedError(fmt.Errorf(lib.T_("Failed to parse JSON: %w"), err))
+		return "", dbus.MakeFailedError(fmt.Errorf(w.actions.appConfig.Translator.T_("Failed to parse JSON: %w"), err))
 	}
 	resp, err := w.actions.ImageSaveConfig(configObject)
 	if err != nil {

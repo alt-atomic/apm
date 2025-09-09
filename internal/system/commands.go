@@ -17,9 +17,9 @@
 package system
 
 import (
+	"apm/internal/common/config"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"context"
 	"fmt"
 	"strings"
@@ -29,8 +29,9 @@ import (
 )
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
-func newErrorResponse(message string) reply.APIResponse {
-	lib.Log.Error(message)
+func newErrorResponse(ctx context.Context, message string) reply.APIResponse {
+	appConfig := config.GetAppConfig(ctx)
+	appConfig.Logger.Error(message)
 
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
@@ -40,6 +41,7 @@ func newErrorResponse(message string) reply.APIResponse {
 
 func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
+		appConfig := config.GetAppConfig(ctx)
 		args := cmd.Args().Slice()
 
 		// Текущий токен — последний позиционный аргумент (если есть)
@@ -65,7 +67,7 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 		}
 
 		like := base + "%"
-		svc := NewActions().serviceAptDatabase
+		svc := NewActions(appConfig).serviceAptDatabase
 		if svc == nil {
 			return
 		}
@@ -104,14 +106,15 @@ func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 		return func(ctx context.Context, cmd *cli.Command) error {
-			lib.Env.Format = cmd.String("format")
+			appConfig := config.GetAppConfig(ctx)
+			appConfig.ConfigManager.SetFormat(cmd.String("format"))
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
 			if requireRoot && syscall.Geteuid() != 0 {
-				return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+				return reply.CliResponse(ctx, newErrorResponse(ctx, appConfig.Translator.T_("Elevated rights are required to perform this action. Please use sudo or su")))
 			}
 
-			actions := NewActions()
+			actions := NewActions(appConfig)
 
 			reply.CreateSpinner()
 			return actionFunc(ctx, cmd, actions)
@@ -122,21 +125,23 @@ func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Comman
 var withGlobalWrapper = wrapperWithOptions(false)
 var withRootCheckWrapper = wrapperWithOptions(true)
 
-func CommandList() *cli.Command {
+func CommandList(ctx context.Context) *cli.Command {
+	appConfig := config.GetAppConfig(ctx)
+
 	return &cli.Command{
 		Name:            "system",
 		Aliases:         []string{"s"},
-		Usage:           lib.T_("System package management"),
+		Usage:           appConfig.Translator.T_("System package management"),
 		HideHelpCommand: true,
 		Commands: []*cli.Command{
 			{
 				Name:      "install",
-				Usage:     lib.T_("Package list for installation. The format package- package+ is supported."),
+				Usage:     appConfig.Translator.T_("Package list for installation. The format package- package+ is supported."),
 				ArgsUsage: "packages",
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Install(ctx, cmd.Args().Slice())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -145,12 +150,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "remove",
-				Usage:     lib.T_("List of packages to remove"),
+				Usage:     appConfig.Translator.T_("List of packages to remove"),
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "purge",
-						Usage:   lib.T_("Delete all files"),
+						Usage:   appConfig.Translator.T_("Delete all files"),
 						Aliases: []string{"p"},
 						Value:   false,
 					},
@@ -158,7 +163,7 @@ func CommandList() *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -167,11 +172,11 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "update",
-				Usage: lib.T_("Updating package database"),
+				Usage: appConfig.Translator.T_("Updating package database"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Update(ctx)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -179,18 +184,18 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "upgrade",
-				Usage: lib.T_("General system upgrade"),
+				Usage: appConfig.Translator.T_("General system upgrade"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					var resp *reply.APIResponse
 					var err error
-					if lib.Env.IsAtomic {
+					if appConfig.ConfigManager.GetConfig().IsAtomic {
 						resp, err = actions.ImageUpdate(ctx)
 					} else {
 						resp, err = actions.Upgrade(ctx)
 					}
 
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -198,19 +203,19 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "info",
-				Usage:     lib.T_("Package information"),
+				Usage:     appConfig.Translator.T_("Package information"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: lib.T_("Full output of information"),
+						Usage: appConfig.Translator.T_("Full output of information"),
 						Value: false,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Info(ctx, cmd.Args().First(), cmd.Bool("full"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -219,25 +224,25 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "search",
-				Usage:     lib.T_("Quick package search by name"),
+				Usage:     appConfig.Translator.T_("Quick package search by name"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "installed",
-						Usage:   lib.T_("Only installed"),
+						Usage:   appConfig.Translator.T_("Only installed"),
 						Aliases: []string{"i"},
 						Value:   false,
 					},
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: lib.T_("Full information output"),
+						Usage: appConfig.Translator.T_("Full information output"),
 						Value: false,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Search(ctx, cmd.Args().First(), cmd.Bool("installed"), cmd.Bool("full"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -245,39 +250,39 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "list",
-				Usage: lib.T_("Building a query to get a list of packages"),
+				Usage: appConfig.Translator.T_("Building a query to get a list of packages"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: lib.T_("Sort packages by field, example fields: name, section"),
+						Usage: appConfig.Translator.T_("Sort packages by field, example fields: name, section"),
 					},
 					&cli.StringFlag{
 						Name:  "order",
-						Usage: lib.T_("Sorting order: ASC or DESC"),
+						Usage: appConfig.Translator.T_("Sorting order: ASC or DESC"),
 						Value: "ASC",
 					},
 					&cli.IntFlag{
 						Name:  "limit",
-						Usage: lib.T_("Maximum number of records to return"),
+						Usage: appConfig.Translator.T_("Maximum number of records to return"),
 						Value: 10,
 					},
 					&cli.IntFlag{
 						Name:  "offset",
-						Usage: lib.T_("Starting position (offset) for the result set"),
+						Usage: appConfig.Translator.T_("Starting position (offset) for the result set"),
 						Value: 0,
 					},
 					&cli.StringSliceFlag{
 						Name:  "filter",
-						Usage: lib.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
+						Usage: appConfig.Translator.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
-						Usage: lib.T_("Force update all packages before query"),
+						Usage: appConfig.Translator.T_("Force update all packages before query"),
 						Value: false,
 					},
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: lib.T_("Full information output"),
+						Usage: appConfig.Translator.T_("Full information output"),
 						Value: false,
 					},
 				},
@@ -293,7 +298,7 @@ func CommandList() *cli.Command {
 
 					resp, err := actions.List(ctx, params, cmd.Bool("full"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -301,7 +306,7 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "dbus-doc",
-				Usage: lib.T_("Show dbus online documentation"),
+				Usage: appConfig.Translator.T_("Show dbus online documentation"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					reply.StopSpinner()
 					return actions.GenerateOnlineDoc(ctx)
@@ -309,17 +314,17 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:    "image",
-				Usage:   lib.T_("Module for working with the image"),
+				Usage:   appConfig.Translator.T_("Module for working with the image"),
 				Aliases: []string{"i"},
-				Hidden:  !lib.Env.IsAtomic,
+				Hidden:  !appConfig.ConfigManager.GetConfig().IsAtomic,
 				Commands: []*cli.Command{
 					{
 						Name:  "apply",
-						Usage: lib.T_("Apply changes to the host"),
+						Usage: appConfig.Translator.T_("Apply changes to the host"),
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							resp, err := NewActions().ImageApply(ctx)
+							resp, err := actions.ImageApply(ctx)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 							}
 
 							return reply.CliResponse(ctx, *resp)
@@ -327,11 +332,11 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "status",
-						Usage: lib.T_("Image status"),
+						Usage: appConfig.Translator.T_("Image status"),
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ImageStatus(ctx)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 							}
 
 							return reply.CliResponse(ctx, *resp)
@@ -339,11 +344,11 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "update",
-						Usage: lib.T_("Image update"),
+						Usage: appConfig.Translator.T_("Image update"),
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ImageUpdate(ctx)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 							}
 
 							return reply.CliResponse(ctx, *resp)
@@ -351,27 +356,27 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "history",
-						Usage: lib.T_("Image changes history"),
+						Usage: appConfig.Translator.T_("Image changes history"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "image",
-								Usage: lib.T_("Filter by image name"),
+								Usage: appConfig.Translator.T_("Filter by image name"),
 							},
 							&cli.IntFlag{
 								Name:  "limit",
-								Usage: lib.T_("Maximum number of records to return"),
+								Usage: appConfig.Translator.T_("Maximum number of records to return"),
 								Value: 10,
 							},
 							&cli.IntFlag{
 								Name:  "offset",
-								Usage: lib.T_("Starting position (offset) for the result set"),
+								Usage: appConfig.Translator.T_("Starting position (offset) for the result set"),
 								Value: 0,
 							},
 						},
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponse(ctx, err.Error()))
 							}
 
 							return reply.CliResponse(ctx, *resp)

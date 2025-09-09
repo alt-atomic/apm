@@ -17,8 +17,8 @@
 package service
 
 import (
+	"apm/internal/common/config"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"bufio"
 	"bytes"
 	"context"
@@ -35,6 +35,8 @@ import (
 )
 
 func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
+	// Получаем конфиг из контекста для переводов
+	appConfig := config.GetAppConfig(ctx)
 	allBlobs := make(map[string]bool)
 
 	parts := strings.Fields(cmdLine)
@@ -82,7 +84,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 
 	if err != nil {
 		// Возвращаем вывод вместе с ошибкой для более подробной диагностики
-		return outputBuffer.String(), fmt.Errorf(lib.T_("Command failed with error: %v, output: %s"), err, outputBuffer.String())
+		return outputBuffer.String(), fmt.Errorf(appConfig.Translator.T_("Command failed with error: %v, output: %s"), err, outputBuffer.String())
 	}
 
 	for blobKey := range allBlobs {
@@ -155,7 +157,9 @@ func parseSize(sizeStr string) (float64, error) {
 	re := regexp.MustCompile(`^([0-9.]+)([KMG]?i?B)$`)
 	matches := re.FindStringSubmatch(sizeStr)
 	if len(matches) != 3 {
-		return 0, fmt.Errorf(lib.T_("Cannot parse size: %s"), sizeStr)
+		// Получаем конфиг из глобального контекста для переводов
+		// TODO: передавать appConfig как параметр для лучшей архитектуры
+		return 0, fmt.Errorf("Cannot parse size: %s", sizeStr)
 	}
 
 	valueStr := matches[1]
@@ -175,7 +179,7 @@ func parseSize(sizeStr string) (float64, error) {
 	case "GiB":
 		value *= 1024 * 1024 * 1024
 	default:
-		return 0, fmt.Errorf(lib.T_("Unknown suffix: %s"), unit)
+		return 0, fmt.Errorf("Unknown suffix: %s", unit)
 	}
 
 	return value, nil
@@ -183,20 +187,22 @@ func parseSize(sizeStr string) (float64, error) {
 
 // pruneOldImages удаляет старые образы Podman.
 func pruneOldImages(ctx context.Context) error {
+	// Получаем конфиг из контекста
+	appConfig := config.GetAppConfig(ctx)
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.pruneOldImages"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.pruneOldImages"))
 
-	command := fmt.Sprintf("%s podman image prune -f", lib.Env.CommandPrefix)
+	command := fmt.Sprintf("%s podman image prune -f", appConfig.ConfigManager.GetConfig().CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(lib.T_("Error deleting old images: %v, output: %s"), err, string(output))
+		return fmt.Errorf(appConfig.Translator.T_("Error deleting old images: %v, output: %s"), err, string(output))
 	}
 
-	command = fmt.Sprintf("%s podman images --noheading", lib.Env.CommandPrefix)
+	command = fmt.Sprintf("%s podman images --noheading", appConfig.ConfigManager.GetConfig().CommandPrefix)
 	cmd = exec.Command("sh", "-c", command)
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf(lib.T_("Error retrieving podman image: %v"), err)
+		return fmt.Errorf(appConfig.Translator.T_("Error retrieving podman image: %v"), err)
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(output))
@@ -208,10 +214,10 @@ func pruneOldImages(ctx context.Context) error {
 		}
 		if fields[0] == "<none>" {
 			imageID := fields[2]
-			command = fmt.Sprintf("%s podman rmi -f %s", lib.Env.CommandPrefix, imageID)
+			command = fmt.Sprintf("%s podman rmi -f %s", appConfig.ConfigManager.GetConfig().CommandPrefix, imageID)
 			cmd = exec.Command("sh", "-c", command)
 			if out, err := cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf(lib.T_("Error deleting image %s: %v, output: %s\n"), imageID, err, string(out))
+				return fmt.Errorf(appConfig.Translator.T_("Error deleting image %s: %v, output: %s\n"), imageID, err, string(out))
 			}
 		}
 	}

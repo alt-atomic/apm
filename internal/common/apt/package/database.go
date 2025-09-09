@@ -18,18 +18,19 @@ package _package
 
 import (
 	"apm/internal/common/appstream"
+	"apm/internal/common/config"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/lib"
 	"context"
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"gorm.io/gorm/clause"
 	"log"
 	"os"
 	"strings"
 	"sync"
+
+	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm/logger"
 
@@ -39,14 +40,15 @@ import (
 
 // PackageDBService — сервис для операций с базой данных пакетов
 type PackageDBService struct {
-	db *gorm.DB
+	db        *gorm.DB
+	appConfig *config.AppConfig
 }
 
 // syncDBMutex защищает операции синхронизации базы пакетов.
 var syncDBMutex sync.Mutex
 
 // NewPackageDBService  — конструктор сервиса
-func NewPackageDBService(db *sql.DB) (*PackageDBService, error) {
+func NewPackageDBService(appConfig *config.AppConfig) (*PackageDBService, error) {
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
@@ -55,7 +57,7 @@ func NewPackageDBService(db *sql.DB) (*PackageDBService, error) {
 	)
 
 	gormDB, err := gorm.Open(sqlite.Dialector{
-		Conn:       db,
+		Conn:       appConfig.DatabaseManager.GetSystemDB(),
 		DriverName: "sqlite3",
 	}, &gorm.Config{
 		Logger: gormLogger,
@@ -71,7 +73,8 @@ func NewPackageDBService(db *sql.DB) (*PackageDBService, error) {
 	}
 
 	return &PackageDBService{
-		db: gormDB,
+		db:        gormDB,
+		appConfig: appConfig,
 	}, nil
 }
 

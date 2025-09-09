@@ -14,13 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package lib
+package config
 
-/*
-// cgo-timestamp: 1757375441
-#cgo CPPFLAGS: -I${SRCDIR}/../wrapper
-#cgo LDFLAGS: -lapt_wrapper -lapt-pkg -lstdc++
+// Build-time переменные (заполняются через -ldflags при сборке)
+var (
+	BuildCommandPrefix   string
+	BuildEnvironment     string
+	BuildPathLocales     string
+	BuildPathDBSQLSystem string
+	BuildPathImageFile   string
+	BuildVersion         string
+)
 
-#include "apt_wrapper.h"
-*/
-import "C"
+func GetBuildInfo() BuildInfo {
+	return BuildInfo{
+		CommandPrefix:   BuildCommandPrefix,
+		Environment:     BuildEnvironment,
+		PathLocales:     BuildPathLocales,
+		PathDBSQLSystem: BuildPathDBSQLSystem,
+		PathImageFile:   BuildPathImageFile,
+		Version:         BuildVersion,
+	}
+}

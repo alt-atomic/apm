@@ -19,8 +19,9 @@ package helper
 import (
 	"apm/lib"
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/urfave/cli/v3"
 )

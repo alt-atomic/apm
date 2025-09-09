@@ -14,13 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package lib
+package config
 
-/*
-// cgo-timestamp: 1757375441
-#cgo CPPFLAGS: -I${SRCDIR}/../wrapper
-#cgo LDFLAGS: -lapt_wrapper -lapt-pkg -lstdc++
+// Пустой импорт для примеров
+// import "fmt"
 
-#include "apt_wrapper.h"
-*/
-import "C"
+// Пример использования:
+//
+// func main() {
+//     app, err := InitializeAppDefault()
+//     if err != nil {
+//         log.Fatal(err)
+//     }
+//     defer CleanupApp(app)
+//
+//     // Использование приложения
+//     app.Logger.Info("Application started")
+//
+//     systemDB := app.DatabaseManager.GetSystemDB()
+//     // работа с системной БД
+//
+//     userDB := app.DatabaseManager.GetUserDB()
+//     // работа с пользовательской БД
+//
+//     // Переводы
+//     message := app.Translator.T_("Hello, world!")
+//     app.Logger.Info(message)
+// }

@@ -17,7 +17,7 @@
 package service
 
 import (
-	"apm/lib"
+	"apm/internal/common/config"
 	"context"
 	"errors"
 	"fmt"
@@ -42,14 +42,14 @@ type Config struct {
 // HostConfigService — сервис для работы с конфигурацией хоста.
 type HostConfigService struct {
 	Config              *Config
-	configPath          string
 	serviceHostDatabase *HostDBService
+	appConfig           *config.AppConfig
 }
 
-func NewHostConfigService(configPath string, hostDBService *HostDBService) *HostConfigService {
+func NewHostConfigService(appConfig *config.AppConfig, hostDBService *HostDBService) *HostConfigService {
 	return &HostConfigService{
-		configPath:          configPath,
 		serviceHostDatabase: hostDBService,
+		appConfig:           appConfig,
 	}
 }
 
@@ -58,7 +58,7 @@ var syncYamlMutex sync.Mutex
 
 // LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
 func (s *HostConfigService) LoadConfig() error {
-	data, err := os.ReadFile(s.configPath)
+	data, err := os.ReadFile(s.appConfig.ConfigManager.GetConfig().PathImageFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			cfg, err := s.generateDefaultConfig()
@@ -77,7 +77,7 @@ func (s *HostConfigService) LoadConfig() error {
 	}
 
 	if cfg.Image == "" {
-		return errors.New(lib.T_("Image must be specified in the configuration file"))
+		return errors.New(s.appConfig.Translator.T_("Image must be specified in the configuration file"))
 	}
 	s.Config = &cfg
 
@@ -87,7 +87,7 @@ func (s *HostConfigService) LoadConfig() error {
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
 func (s *HostConfigService) SaveConfig() error {
 	if s.Config == nil {
-		return errors.New(lib.T_("Configuration not loaded"))
+		return errors.New(s.appConfig.Translator.T_("Configuration not loaded"))
 	}
 
 	syncYamlMutex.Lock()
@@ -97,13 +97,13 @@ func (s *HostConfigService) SaveConfig() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.configPath, data, 0644)
+	return os.WriteFile(s.appConfig.ConfigManager.GetConfig().PathImageFile, data, 0644)
 }
 
 // generateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
 func (s *HostConfigService) generateDefaultConfig() (Config, error) {
 	var cfg Config
-	hostImageService := NewHostImageService(s)
+	hostImageService := NewHostImageService(s.appConfig, s)
 	imageName, err := hostImageService.GetImageFromDocker()
 	if err != nil {
 		return cfg, err
@@ -119,7 +119,7 @@ func (s *HostConfigService) generateDefaultConfig() (Config, error) {
 		return cfg, err
 	}
 
-	if err = os.WriteFile(s.configPath, data, 0644); err != nil {
+	if err = os.WriteFile(s.appConfig.ConfigManager.GetConfig().PathImageFile, data, 0644); err != nil {
 		return cfg, err
 	}
 
@@ -176,7 +176,7 @@ func (s *HostConfigService) GenerateDockerfile() error {
 
 func (s *HostConfigService) CheckCommands() error {
 	if len(s.Config.Packages.Install) == 0 && len(s.Config.Packages.Remove) == 0 && len(s.Config.Commands) == 0 {
-		return errors.New(lib.T_("Local image configuration file has no changes"))
+		return errors.New(s.appConfig.Translator.T_("Local image configuration file has no changes"))
 	}
 	return nil
 }
