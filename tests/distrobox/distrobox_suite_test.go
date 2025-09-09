@@ -14,12 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//go:build distrobox
+
 package distrobox_test
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/distrobox"
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"syscall"
 	"testing"
@@ -43,8 +47,14 @@ func (s *DistroboxTestSuite) SetupSuite() {
 		s.T().Skip("Distrobox tests should be run without root privileges")
 	}
 
-	s.actions = distrobox.NewActions()
+	appConfig, errInitial := app.InitializeAppDefault()
+	if errInitial != nil {
+		log.Fatalf("Error initializing app: %v", errInitial)
+	}
+
+	s.actions = distrobox.NewActions(appConfig)
 	s.ctx = context.Background()
+	s.ctx = context.WithValue(s.ctx, app.AppConfigKey, appConfig)
 	s.containerName = "apm-test-suite"
 	s.image = "registry.altlinux.org/sisyphus/base:latest"
 
@@ -101,7 +111,7 @@ func (s *DistroboxTestSuite) TestContainerList() {
 	// Simple approach: check if our container name appears in the string representation
 	responseStr := fmt.Sprintf("%+v", resp.Data)
 	s.T().Logf("ContainerList response: %s", responseStr)
-	
+
 	// Check if our container name appears in the response
 	found := strings.Contains(responseStr, s.containerName)
 

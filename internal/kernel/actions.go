@@ -64,6 +64,7 @@ func NewActions(appConfig *app.Config) *Actions {
 	kernelManager := service.NewKernelManager(hostPackageDBSvc, aptActions)
 
 	return &Actions{
+		appConfig:          appConfig,
 		serviceAptDatabase: hostPackageDBSvc,
 		serviceAptActions:  aptPackageActions,
 		kernelManager:      kernelManager,
@@ -538,8 +539,8 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 	for _, module := range modules {
 		for _, available := range availableModules {
 			if module == available.Name {
-				simplePackageName := a.kernelManager.GetSimplePackageNameForModule(available.PackageName)
-				installPackages = append(installPackages, simplePackageName)
+				fullPackageName := a.kernelManager.GetFullPackageNameForModule(available.PackageName)
+				installPackages = append(installPackages, fullPackageName)
 				break
 			}
 		}

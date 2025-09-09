@@ -33,8 +33,7 @@ func TestTemporaryConfigService_generateDefaultConfig(t *testing.T) {
 		t.Error("Remove packages should be empty by default")
 	}
 
-	// Проверяем, что файл создался
-	if _, err := os.Stat(tempFile); os.IsNotExist(err) {
+	if _, err = os.Stat(tempFile); os.IsNotExist(err) {
 		t.Error("Config file should be created")
 	}
 }
