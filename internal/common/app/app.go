@@ -31,6 +31,36 @@ var (
 	TN_ func(string, string, int) string
 )
 
+// Инициализируем функции переводов и логирования автоматически при импорте модуля для тестов
+func init() {
+	if T_ == nil {
+		T_ = func(s string) string { return s }
+	}
+	if TN_ == nil {
+		TN_ = func(single string, plural string, count int) string {
+			if count == 1 {
+				return single
+			}
+			return plural
+		}
+	}
+	if Log == nil {
+		Log = &testLogger{}
+	}
+}
+
+// testLogger простая реализация LoggerImpl для тестов
+type testLogger struct{}
+
+func (l *testLogger) Debug(...interface{})          {}
+func (l *testLogger) Debugf(string, ...interface{}) {}
+func (l *testLogger) Info(...interface{})           {}
+func (l *testLogger) Warn(...interface{})           {}
+func (l *testLogger) Error(...interface{})          {}
+func (l *testLogger) Errorf(string, ...interface{}) {}
+func (l *testLogger) Fatal(...interface{})          {}
+func (l *testLogger) Warning(...interface{})        {}
+
 // LoggerImpl интерфейс для логирования
 type LoggerImpl interface {
 	Debug(args ...interface{})

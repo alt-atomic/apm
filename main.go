@@ -29,7 +29,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -122,15 +121,17 @@ func setupSignalHandling() {
 		case syscall.SIGINT, syscall.SIGTERM:
 			infoText := fmt.Sprintf(app.T_("Recieved correct signal %s. Stopping application…"), sig)
 			app.Log.Info(infoText)
+
+			cleanup()
 			cliError(errors.New(infoText))
 
 		default:
 			infoText := fmt.Sprintf(app.T_("Unexpected signal %s received. Terminating the application with an error."), sig)
 			app.Log.Error(infoText)
+
+			cleanup()
 			cliError(errors.New(infoText))
 		}
-
-		cleanup()
 		code := 1
 		if s, ok := sig.(syscall.Signal); ok {
 			if s == syscall.SIGINT {
@@ -253,15 +254,12 @@ func cliError(err error) {
 		return
 	}
 
-	errCli := reply.CliResponse(ctx, reply.APIResponse{
+	_ = reply.CliResponse(ctx, reply.APIResponse{
 		Data: map[string]interface{}{
 			"message": err.Error(),
 		},
 		Error: true,
 	})
-	if errCli != nil {
-		log.Fatal(errCli)
-	}
 }
 
 func cleanup() {

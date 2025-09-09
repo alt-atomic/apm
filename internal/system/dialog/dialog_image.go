@@ -187,14 +187,16 @@ func (m selectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.canceled = true
 				return m, tea.Quit
 			case "a":
-				// Выбрать все в текущей панели
 				m.selectAllInCurrentPanel(true)
 				return m, nil
 			case "n":
-				// Снять выбор со всех в текущей панели
 				m.selectAllInCurrentPanel(false)
 				return m, nil
 			}
+
+		default:
+			// Игнорируем неизвестные клавиши
+			return m, nil
 		}
 	}
 	return m, nil
@@ -211,9 +213,8 @@ func (m selectionModel) View() string {
 	// Заголовок
 	s.WriteString(titleStyle.Render(app.T_("Select packages to apply")) + "\n\n")
 
-	separatorWidth := 1 // Ширина для диагонального разделителя
-	panelWidth := (m.width - separatorWidth) / 2
-	contentHeight := m.height - 8 // Резервируем место для заголовка, подсказок и кнопок
+	panelWidth := (m.width - 1) / 2
+	contentHeight := m.height - 8
 
 	// Создаем панели
 	installPanel := m.buildPackagePanel(app.T_("Install"), m.installPackages, 0, panelWidth, contentHeight, installStyle)
@@ -322,8 +323,8 @@ func (m selectionModel) buildActionButtons() string {
 	return s.String()
 }
 
+// buildDiagonalSeparator вертикальный разделитель
 func (m selectionModel) buildDiagonalSeparator(height int) string {
-	// Создаем настоящий вертикальный разделитель используя lipgloss Border
 	return lipgloss.NewStyle().
 		Width(0).
 		Height(height).
@@ -334,7 +335,7 @@ func (m selectionModel) buildDiagonalSeparator(height int) string {
 }
 
 // Кастомный enumerator для панели установки
-func (m selectionModel) installPackageEnumerator(items list.Items, index int) string {
+func (m selectionModel) installPackageEnumerator(_ list.Items, index int) string {
 	if index < 0 || index >= len(m.installPackages) {
 		return ""
 	}
@@ -358,7 +359,7 @@ func (m selectionModel) installPackageEnumerator(items list.Items, index int) st
 }
 
 // Кастомный enumerator для панели удаления
-func (m selectionModel) removePackageEnumerator(items list.Items, index int) string {
+func (m selectionModel) removePackageEnumerator(_ list.Items, index int) string {
 	if index < 0 || index >= len(m.removePackages) {
 		return ""
 	}
@@ -382,7 +383,7 @@ func (m selectionModel) removePackageEnumerator(items list.Items, index int) str
 
 // Вспомогательные методы
 
-func (m *selectionModel) moveCursorUp() {
+func (m selectionModel) moveCursorUp() {
 	if m.isInActionArea() {
 		actionCursor := m.getActionCursor()
 		if actionCursor > 0 {
@@ -407,7 +408,7 @@ func (m *selectionModel) moveCursorUp() {
 	}
 }
 
-func (m *selectionModel) moveCursorDown() {
+func (m selectionModel) moveCursorDown() {
 	if m.isInActionArea() {
 		actionCursor := m.getActionCursor()
 		if actionCursor < len(m.choices)-1 {
@@ -427,7 +428,7 @@ func (m *selectionModel) moveCursorDown() {
 	}
 }
 
-func (m *selectionModel) switchPanel() {
+func (m selectionModel) switchPanel() {
 	if m.currentPanel == 0 && len(m.removePackages) > 0 {
 		m.currentPanel = 1
 	} else if m.currentPanel == 1 && len(m.installPackages) > 0 {
@@ -436,7 +437,7 @@ func (m *selectionModel) switchPanel() {
 	m.cursor = 0
 }
 
-func (m *selectionModel) toggleCurrentPackage() {
+func (m selectionModel) toggleCurrentPackage() {
 	if m.currentPanel == 0 && m.cursor < len(m.installPackages) {
 		m.installPackages[m.cursor].selected = !m.installPackages[m.cursor].selected
 	} else if m.currentPanel == 1 && m.cursor < len(m.removePackages) {
@@ -444,7 +445,7 @@ func (m *selectionModel) toggleCurrentPackage() {
 	}
 }
 
-func (m *selectionModel) selectAllInCurrentPanel(selected bool) {
+func (m selectionModel) selectAllInCurrentPanel(selected bool) {
 	if m.currentPanel == 0 {
 		for i := range m.installPackages {
 			m.installPackages[i].selected = selected
@@ -473,27 +474,4 @@ func (m selectionModel) isInActionArea() bool {
 
 func (m selectionModel) getActionCursor() int {
 	return m.cursor - m.getTotalPackages()
-}
-
-func (m selectionModel) getVisibleRange(packages []packageItem, maxVisible int) (int, int) {
-	if len(packages) <= maxVisible {
-		return 0, len(packages)
-	}
-
-	// Центрируем курсор в видимой области
-	start := m.cursor - maxVisible/2
-	if start < 0 {
-		start = 0
-	}
-
-	end := start + maxVisible
-	if end > len(packages) {
-		end = len(packages)
-		start = end - maxVisible
-		if start < 0 {
-			start = 0
-		}
-	}
-
-	return start, end
 }
