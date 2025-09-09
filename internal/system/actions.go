@@ -186,7 +186,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 		return nil, errors.New(messageNothingDo)
 	}
 
-	reply.StopSpinnerForDialog()
+	reply.StopSpinnerForDialog(a.appConfig)
 	dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 		return nil, errDialog
 	}
 
-	reply.CreateSpinner()
+	reply.CreateSpinner(a.appConfig)
 	err = a.serviceAptActions.Remove(ctx, packageNames, purge)
 	if err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 	}
 
 	if len(packagesInfo) > 0 {
-		reply.StopSpinnerForDialog()
+		reply.StopSpinnerForDialog(a.appConfig)
 
 		action := dialog.ActionInstall
 		if packageParse.RemovedCount > 0 {
@@ -281,7 +281,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 			return nil, errDialog
 		}
 
-		reply.CreateSpinner()
+		reply.CreateSpinner(a.appConfig)
 	}
 
 	err = a.serviceAptActions.AptUpdate(ctx)
@@ -396,7 +396,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 		}, nil
 	}
 
-	reply.StopSpinnerForDialog()
+	reply.StopSpinnerForDialog(a.appConfig)
 
 	dialogStatus, err := dialog.NewDialog(a.appConfig, []_package.Package{}, *packageParse, dialog.ActionUpgrade)
 	if err != nil {
@@ -409,7 +409,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, errDialog
 	}
 
-	reply.CreateSpinner()
+	reply.CreateSpinner(a.appConfig)
 
 	errUpgrade := a.serviceAptActions.Upgrade(ctx)
 	if errUpgrade != nil {
@@ -698,7 +698,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
-		reply.StopSpinnerForDialog()
+		reply.StopSpinnerForDialog(a.appConfig)
 		// Показываем диалог выбора пакетов
 		result, errDialog := dialog.NewPackageSelectionDialog(
 			a.appConfig,
@@ -714,7 +714,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 			return nil, errDialog
 		}
 
-		reply.CreateSpinner()
+		reply.CreateSpinner(a.appConfig)
 		for _, pkg := range result.InstallPackages {
 			err = a.serviceHostConfig.AddInstallPackage(pkg)
 			if err != nil {

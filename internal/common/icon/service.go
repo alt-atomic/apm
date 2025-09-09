@@ -35,6 +35,7 @@ import (
 type Service struct {
 	serviceDistroAPI *service.DistroAPIService
 	dbConnKv         *pogreb.DB
+	commandPrefix    string
 }
 
 // NewIconService — конструктор сервиса
@@ -43,6 +44,7 @@ func NewIconService(db *pogreb.DB, commandPrefix string) *Service {
 	return &Service{
 		serviceDistroAPI: distroAPISvc,
 		dbConnKv:         db,
+		commandPrefix:    commandPrefix,
 	}
 }
 
@@ -119,7 +121,7 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 // getPackages получает иконки из SWCatalog для указанного контейнера.
 func (s *Service) getPackages(ctx context.Context, container string) ([]PackageIcon, error) {
 	var packageIcons []PackageIcon
-	systemSwCatService := NewSwCatIconService("/usr/share/swcatalog/xml", container)
+	systemSwCatService := NewSwCatIconService("/usr/share/swcatalog/xml", container, s.commandPrefix)
 
 	packageSwCatIcons, err := systemSwCatService.LoadSWCatalogs(ctx)
 	if err != nil {

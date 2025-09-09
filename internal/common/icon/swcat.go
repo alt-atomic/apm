@@ -17,6 +17,7 @@
 package icon
 
 import (
+	"apm/internal/common/app"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -29,20 +30,21 @@ import (
 	"strings"
 
 	"apm/internal/common/helper"
-	"apm/lib"
 )
 
 // SwCatIconService — сервис для работы с XML-файлами SWCatalog.
 type SwCatIconService struct {
 	path          string
 	containerName string
+	commandPrefix string
 }
 
 // NewSwCatIconService — конструктор сервиса.
-func NewSwCatIconService(path string, containerName string) *SwCatIconService {
+func NewSwCatIconService(path string, containerName string, commandPrefix string) *SwCatIconService {
 	return &SwCatIconService{
 		path:          path,
 		containerName: containerName,
+		commandPrefix: commandPrefix,
 	}
 }
 
@@ -80,7 +82,7 @@ func (s *SwCatIconService) copyDirFromContainer(ctx context.Context, src, dst st
 		return err
 	}
 	// Команда копирования из контейнера.
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- cp -r %s/. %s", lib.Env.CommandPrefix, s.containerName, src, dst)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- cp -r %s/. %s", s.commandPrefix, s.containerName, src, dst)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
 		return fmt.Errorf(app.T_("Error copying from container: %v, stderr: %s"), err, stderr)
@@ -134,7 +136,6 @@ func (s *SwCatIconService) prepareTempIconDirs(ctx context.Context, cachedSource
 }
 
 // listSubdirs возвращает список поддиректорий в заданном каталоге.
-// Так как во временной директории на хосте мы уже работаем локально, используется os.ReadDir.
 func (s *SwCatIconService) listSubdirs(base string) ([]string, error) {
 	entries, err := os.ReadDir(base)
 	if err != nil {
@@ -270,7 +271,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 		}
 	} else {
 		// Для контейнера используем команду find для файлов 1-го уровня.
-		cmdStr := fmt.Sprintf("%s distrobox enter %s -- find %s -maxdepth 1 -type f", lib.Env.CommandPrefix, s.containerName, s.path)
+		cmdStr := fmt.Sprintf("%s distrobox enter %s -- find %s -maxdepth 1 -type f", s.commandPrefix, s.containerName, s.path)
 		stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 		if err != nil {
 			return nil, fmt.Errorf(app.T_("Error retrieving files in %s: %v, stderr: %s"), s.path, err, stderr)
@@ -297,7 +298,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 				return nil, fmt.Errorf(app.T_("Failed to read file %s: %w"), fullPath, err)
 			}
 		} else {
-			cmdStr := fmt.Sprintf("%s distrobox enter %s -- cat %s", lib.Env.CommandPrefix, s.containerName, fullPath)
+			cmdStr := fmt.Sprintf("%s distrobox enter %s -- cat %s", s.commandPrefix, s.containerName, fullPath)
 			stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 			if err != nil {
 				return nil, fmt.Errorf(app.T_("Error executing command for file %s: %v, stderr: %s"), fullPath, err, stderr)

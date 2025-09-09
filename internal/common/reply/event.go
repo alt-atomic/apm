@@ -115,6 +115,7 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 
 // SendFuncNameDBUS отправляет уведомление через DBUS.
 func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
+	appConfig := app.GetAppConfig(ctx)
 	txVal := ctx.Value(helper.TransactionKey)
 	txStr, ok := txVal.(string)
 	if ok {
@@ -126,22 +127,22 @@ func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 		eventType = "TASK"
 	}
 
-	UpdateTask(eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
-	SendNotificationResponse(eventData)
+	UpdateTask(appConfig, eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
+	if appConfig.ConfigManager.GetConfig().Format != "dbus" {
+		return
+	}
+
+	SendNotificationResponse(eventData, appConfig.DBusManager.GetConnection())
 }
 
 // SendNotificationResponse отправляет ответы через DBus.
-func SendNotificationResponse(eventData *EventData) {
+func SendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
 	message, err := json.MarshalIndent(eventData, "", "  ")
 	if err != nil {
 		app.Log.Debug(err.Error())
 	}
 
-	if lib.Env.Format != "dbus" {
-		return
-	}
-
-	if lib.DBUSConn == nil {
+	if dbusConn == nil {
 		app.Log.Error(app.T_("DBus connection is not initialized"))
 		return
 	}
@@ -149,7 +150,7 @@ func SendNotificationResponse(eventData *EventData) {
 	objPath := dbus.ObjectPath("/org/altlinux/APM")
 	signalName := "org.altlinux.APM.Notification"
 
-	err = lib.DBUSConn.Emit(objPath, signalName, message)
+	err = dbusConn.Emit(objPath, signalName, message)
 	if err != nil {
 		app.Log.Error(app.T_("Error sending notification: %v"), err)
 	}

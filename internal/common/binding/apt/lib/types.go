@@ -17,7 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1757433572
+// cgo-timestamp: 1757440002
 #include "apt_wrapper.h"
 #include <stdlib.h>
 */
@@ -30,10 +30,6 @@ import (
 // Public Go types and error codes
 
 type PackageState int
-
-const (
-	AptPkgStateInstalled = 1
-)
 
 // APT error codes (must match apt_wrapper.h)
 const (

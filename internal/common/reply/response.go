@@ -40,44 +40,62 @@ type APIResponse struct {
 	Transaction string      `json:"transaction,omitempty"`
 }
 
-// getEnumeratorStyle возвращает стиль нумерации (веток).
-func getEnumeratorStyle() lipgloss.Style {
-	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color(lib.Env.Colors.Enumerator)).
-		MarginRight(1)
+// ResponseRenderer структура для рендеринга ответов с общим конфигом
+type ResponseRenderer struct {
+	appConfig *app.Config
 }
 
-// getAdaptiveItemColor возвращает адаптивный цвет для пунктов.
-func getAdaptiveItemColor() lipgloss.AdaptiveColor {
-	return lipgloss.AdaptiveColor{
-		Light: lib.Env.Colors.ItemLight, // для светлой темы
-		Dark:  lib.Env.Colors.ItemDark,  // для тёмной темы
+// NewResponseRenderer создает новый рендер с конфигом
+func NewResponseRenderer(appConfig *app.Config) *ResponseRenderer {
+	return &ResponseRenderer{
+		appConfig: appConfig,
 	}
 }
 
-// getAccentStyle возвращает стиль акцента.
-func getAccentStyle() lipgloss.Style {
+// GetColors получить цвета из конфига
+func (r *ResponseRenderer) GetColors() app.Colors {
+	return r.appConfig.ConfigManager.GetColors()
+}
+
+// getEnumeratorStyle возвращает стиль нумерации (веток)
+func (r *ResponseRenderer) getEnumeratorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color(r.GetColors().Enumerator)).
+		MarginRight(1)
+}
+
+// getAdaptiveItemColor возвращает адаптивный цвет для пунктов
+func (r *ResponseRenderer) getAdaptiveItemColor() lipgloss.AdaptiveColor {
+	colors := r.GetColors()
+	return lipgloss.AdaptiveColor{
+		Light: colors.ItemLight,
+		Dark:  colors.ItemDark,
+	}
+}
+
+// getAccentStyle возвращает стиль акцента
+func (r *ResponseRenderer) getAccentStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color(lib.Env.Colors.Accent))
+		Foreground(lipgloss.Color(r.GetColors().Accent))
 }
 
 // getMessageStyle возвращает стиль для message
-func getMessageStyle() lipgloss.Style {
+func (r *ResponseRenderer) getMessageStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Bold(true).
 		MarginBottom(1)
 }
 
 // getErrorMessageStyle возвращает стиль для message в случае ошибки
-func getErrorMessageStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Error))
+func (r *ResponseRenderer) getErrorMessageStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(r.GetColors().Error))
 }
 
-// getItemStyle возвращает стиль для узлов дерева.
-func getItemStyle() lipgloss.Style {
+// getItemStyle возвращает стиль для узлов дерева
+func (r *ResponseRenderer) getItemStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(getAdaptiveItemColor())
+		Foreground(r.getAdaptiveItemColor())
 }
 
 // IsTTY пользователь запустил приложение в интерактивной консоли
@@ -85,20 +103,17 @@ func IsTTY() bool {
 	return terminal.IsTerminal(int(os.Stdout.Fd()))
 }
 
-func formatField(key string, value interface{}) string {
+// formatField форматирует поле с учетом стилей
+func (r *ResponseRenderer) formatField(key string, value interface{}) string {
 	valStr := fmt.Sprintf("%v", value)
-	if key == "name" {
-		return getAccentStyle().Render(valStr)
-	}
-
-	if key == "packageName" {
-		return getAccentStyle().Render(valStr)
+	if key == "name" || key == "packageName" {
+		return r.getAccentStyle().Render(valStr)
 	}
 	return valStr
 }
 
 // buildTreeFromMap рекурсивно строит дерево (tree.Tree) из map[string]interface{}.
-func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) *tree.Tree {
+func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) *tree.Tree {
 	// Создаем корень дерева
 	t := tree.New().Root(prefix)
 
@@ -107,18 +122,18 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 		switch vv := msgVal.(type) {
 		case string:
 			if isError {
-				t.Child(getErrorMessageStyle().Render(vv))
+				t.Child(r.getErrorMessageStyle().Render(vv))
 			} else {
-				t.Child(getMessageStyle().Render(vv))
+				t.Child(r.getMessageStyle().Render(vv))
 			}
 		case int, float64, bool:
 			if isError {
-				t.Child(getErrorMessageStyle().Render(fmt.Sprintf("%v", vv)))
+				t.Child(r.getErrorMessageStyle().Render(fmt.Sprintf("%v", vv)))
 			} else {
-				t.Child(getMessageStyle().Render(fmt.Sprintf("%v", vv)))
+				t.Child(r.getMessageStyle().Render(fmt.Sprintf("%v", vv)))
 			}
 		case map[string]interface{}:
-			subTree := buildTreeFromMap("message", vv, isError)
+			subTree := r.buildTreeFromMap("message", vv, isError)
 			t.Child(subTree)
 		case []interface{}:
 			listNode := tree.New().Root("message")
@@ -134,7 +149,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 				if err == nil {
 					var mm map[string]interface{}
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := buildTreeFromMap("message", mm, isError)
+						subTree := r.buildTreeFromMap("message", mm, isError)
 						t.Child(subTree)
 					} else {
 						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
@@ -148,7 +163,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						listNode := tree.New().Root("message")
 						for i, elem := range arr {
 							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
+								subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 								listNode.Child(subTree)
 							} else {
 								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -192,7 +207,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 			if vv == "" {
 				t.Child(fmt.Sprintf(app.T_("%s: no"), TranslateKey(k)))
 			} else {
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), formatField(k, vv)))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), r.formatField(k, vv)))
 			}
 
 		//----------------------------------------------------------------------
@@ -228,7 +243,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: вложенная map
 		case map[string]interface{}:
-			subTree := buildTreeFromMap(TranslateKey(k), vv, isError)
+			subTree := r.buildTreeFromMap(TranslateKey(k), vv, isError)
 			t.Child(subTree)
 
 		//----------------------------------------------------------------------
@@ -241,7 +256,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 			listNode := tree.New().Root(TranslateKey(k))
 			for i, elem := range vv {
 				if mm, ok := elem.(map[string]interface{}); ok {
-					subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
+					subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 					listNode.Child(subTree)
 				} else {
 					listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -258,7 +273,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 			}
 			listNode := tree.New().Root(TranslateKey(k))
 			for i, elem := range vv {
-				subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), elem, isError)
+				subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), elem, isError)
 				listNode.Child(subTree)
 			}
 			t.Child(listNode)
@@ -276,7 +291,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 				if err == nil {
 					var mm map[string]interface{}
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := buildTreeFromMap(TranslateKey(k), mm, isError)
+						subTree := r.buildTreeFromMap(TranslateKey(k), mm, isError)
 						t.Child(subTree)
 						continue
 					}
@@ -289,7 +304,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 				if err == nil {
 					var mm map[string]interface{}
 					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := buildTreeFromMap(TranslateKey(k), mm, isError)
+						subTree := r.buildTreeFromMap(TranslateKey(k), mm, isError)
 						t.Child(subTree)
 						continue
 					}
@@ -298,7 +313,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						listNode := tree.New().Root(TranslateKey(k))
 						for i, elem := range arr {
 							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
+								subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 								listNode.Child(subTree)
 							} else {
 								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -320,7 +335,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						listNode := tree.New().Root(TranslateKey(k))
 						for i, elem := range arr {
 							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
+								subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
 								listNode.Child(subTree)
 							} else {
 								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
@@ -342,10 +357,15 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 	return t
 }
 
-// CliResponse рендерит ответ в зависимости от формата (dbus/json/text).
+// CliResponse рендерит ответ (обертка для обратной совместимости)
 func CliResponse(ctx context.Context, resp APIResponse) error {
-	StopSpinner()
-	format := lib.Env.Format
+	return NewResponseRenderer(app.GetAppConfig(ctx)).CliResponse(ctx, resp)
+}
+
+// CliResponse рендерит ответ в зависимости от формата (dbus/json/text).
+func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) error {
+	StopSpinner(r.appConfig)
+	format := r.appConfig.ConfigManager.GetConfig().Format
 	txVal := ctx.Value(helper.TransactionKey)
 	txStr, ok := txVal.(string)
 	if ok {
@@ -386,27 +406,23 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 			}
 
 			var t *tree.Tree
-			if resp.Error {
-				t = buildTreeFromMap("", data, resp.Error)
-			} else {
-				t = buildTreeFromMap("", data, resp.Error)
-			}
+			t = r.buildTreeFromMap("", data, resp.Error)
 
 			var rootColor lipgloss.Style
 			if resp.Error {
 				rootColor = lipgloss.NewStyle().
 					Bold(true).
-					Foreground(lipgloss.Color(lib.Env.Colors.Error)) // красный
+					Foreground(lipgloss.Color(r.GetColors().Error))
 			} else {
 				rootColor = lipgloss.NewStyle().
 					Bold(true).
-					Foreground(lipgloss.Color(lib.Env.Colors.Success)) // зелёный
+					Foreground(lipgloss.Color(r.GetColors().Success))
 			}
 
 			t.Enumerator(tree.RoundedEnumerator).
-				EnumeratorStyle(getEnumeratorStyle()).
+				EnumeratorStyle(r.getEnumeratorStyle()).
 				RootStyle(rootColor).
-				ItemStyle(getItemStyle())
+				ItemStyle(r.getItemStyle())
 
 			fmt.Println(t.String())
 

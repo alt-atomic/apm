@@ -59,14 +59,15 @@ type task struct {
 }
 
 type model struct {
+	appConfig    *app.Config
 	spinner      spinner.Model
 	tasksSpinner spinner.Model
 	tasks        []task
 }
 
 // CreateSpinner Создание и запуск Bubble Tea
-func CreateSpinner() {
-	if lib.Env.Format != "text" || !IsTTY() {
+func CreateSpinner(appConfig *app.Config) {
+	if appConfig.ConfigManager.GetConfig().Format != "text" || !IsTTY() {
 		return
 	}
 
@@ -80,7 +81,7 @@ func CreateSpinner() {
 	tasksDoneChan = make(chan struct{})
 
 	p = tea.NewProgram(
-		newModel(),
+		newModel(appConfig),
 		tea.WithOutput(os.Stdout),
 		tea.WithInput(nil),
 	)
@@ -95,13 +96,13 @@ func CreateSpinner() {
 }
 
 // StopSpinner Остановка и очистка вывода
-func StopSpinner() {
-	StopSpinnerWithKeepTasks(true)
+func StopSpinner(appConfig *app.Config) {
+	StopSpinnerWithKeepTasks(appConfig, true)
 }
 
 // StopSpinnerWithKeepTasks Остановка с возможностью сохранения задач
-func StopSpinnerWithKeepTasks(keepTasks bool) {
-	if lib.Env.Format != "text" || !IsTTY() {
+func StopSpinnerWithKeepTasks(appConfig *app.Config, keepTasks bool) {
+	if appConfig.ConfigManager.GetConfig().Format != "text" || !IsTTY() {
 		return
 	}
 
@@ -154,11 +155,11 @@ func StopSpinnerWithKeepTasks(keepTasks bool) {
 }
 
 // StopSpinnerForDialog останавливает спиннер и полностью очищает экран перед диалогом
-func StopSpinnerForDialog() {
-	StopSpinnerWithKeepTasks(false)
+func StopSpinnerForDialog(appConfig *app.Config) {
+	StopSpinnerWithKeepTasks(appConfig, false)
 }
 
-// UpdateTask  Функция для внешнего вызова: отправить задачу/прогресс в модель ===
+// UpdateTask  Функция для внешнего вызова: отправить задачу/прогресс в модель
 // Пример:
 //
 //	// Начать прогресс (0%)
@@ -173,8 +174,8 @@ func StopSpinnerForDialog() {
 //	// Обычная задача
 //	UpdateTask("TASK", "install", "Установка пакетов", "BEFORE", "")
 //	UpdateTask("TASK", "install", "Установка пакетов", "AFTER", "")
-func UpdateTask(eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
-	if lib.Env.Format != "text" || !IsTTY() {
+func UpdateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
+	if appConfig.ConfigManager.GetConfig().Format != "text" || !IsTTY() {
 		return
 	}
 
@@ -193,8 +194,8 @@ func UpdateTask(eventType string, taskName string, viewName string, state string
 	}
 }
 
-// === Инициализация модели ===
-func newModel() model {
+// newModel Инициализация модели
+func newModel(appConfig *app.Config) model {
 	// «Общий» спиннер
 	s := spinner.New()
 	s.Spinner = spinner.Points
@@ -204,6 +205,7 @@ func newModel() model {
 	ts.Spinner = spinner.Jump
 
 	return model{
+		appConfig:    appConfig,
 		spinner:      s,
 		tasksSpinner: ts,
 		tasks:        []task{},
@@ -214,14 +216,14 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick, m.tasksSpinner.Tick)
 }
 
-// Update === Bubble Tea: Update() ===
+// Update Bubble Tea: Update()
 //
 // Здесь мы:
 //   - Обрабатываем spinner.TickMsg
 //   - Перехватываем progress.FrameMsg для анимации прогресса
 //   - Обновляем задачу при TaskUpdateMsg
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := teaMsg.(type) {
 
 	case spinner.TickMsg:
 		var cmd1, cmd2 tea.Cmd
@@ -281,7 +283,8 @@ func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
 				m.tasks[i].progressDoneText = msg.progressDoneText
 				// Инициализируем progressModel, если впервые
 				if m.tasks[i].progressModel == nil {
-					pm := progress.New(progress.WithGradient(lib.Env.Colors.ProgressStart, lib.Env.Colors.ProgressEnd))
+					pm := progress.New(progress.WithGradient(m.appConfig.ConfigManager.GetColors().ProgressStart,
+						m.appConfig.ConfigManager.GetColors().ProgressEnd))
 					pm.Width = 40
 					m.tasks[i].progressModel = &pm
 				}
@@ -307,7 +310,9 @@ func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
 
 		if msg.eventType == "PROGRESS" {
 			// Создаём прогресс-бар
-			pm := progress.New(progress.WithGradient(lib.Env.Colors.ProgressStart, lib.Env.Colors.ProgressEnd))
+			pm := progress.New(progress.WithGradient(
+				m.appConfig.ConfigManager.GetColors().ProgressStart,
+				m.appConfig.ConfigManager.GetColors().ProgressEnd))
 			pm.Width = 40
 			newT.progressModel = &pm
 
