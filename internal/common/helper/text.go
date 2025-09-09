@@ -17,7 +17,7 @@
 package helper
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -64,7 +64,7 @@ func GetVersionFromAptCache(s string) (string, error) {
 	}
 
 	if candidate == "" {
-		return "", fmt.Errorf(lib.T_("version not found"))
+		return "", fmt.Errorf(app.T_("version not found"))
 	}
 	return candidate, nil
 }
@@ -72,7 +72,7 @@ func GetVersionFromAptCache(s string) (string, error) {
 // AutoSize возвращает размер данных для int
 func AutoSize(value int) string {
 	mb := float64(value) / (1024 * 1024)
-	return fmt.Sprintf(lib.T_("%.2f MB"), mb)
+	return fmt.Sprintf(app.T_("%.2f MB"), mb)
 }
 
 // ParseBool пытается преобразовать значение к bool.

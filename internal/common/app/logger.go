@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package config
+package app
 
 import (
 	"fmt"
@@ -29,8 +29,8 @@ type loggerImpl struct {
 	*logrus.Logger
 }
 
-// NewLogger создает новый логгер
-func NewLogger(devMode bool) Logger {
+// NewLogger создает новый logger
+func NewLogger(devMode bool) LoggerImpl {
 	log := logrus.New()
 
 	log.SetFormatter(&logrus.TextFormatter{
@@ -61,9 +61,19 @@ func NewLogger(devMode bool) Logger {
 	return &loggerImpl{Logger: log}
 }
 
-// Warning алиас для Warn
+// Warning Warn
 func (l *loggerImpl) Warning(args ...interface{}) {
 	l.Warn(args...)
+}
+
+// Debugf форматированный debug
+func (l *loggerImpl) Debugf(format string, args ...interface{}) {
+	l.Logger.Debugf(format, args...)
+}
+
+// Errorf форматированная ошибка
+func (l *loggerImpl) Errorf(format string, args ...interface{}) {
+	l.Logger.Errorf(format, args...)
 }
 
 // JournalHook для записи в systemd journal

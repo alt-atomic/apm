@@ -17,9 +17,10 @@
 package service
 
 import (
-	"apm/internal/common/config"
+	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,12 +49,11 @@ type DBHistory struct {
 }
 
 type HostDBService struct {
-	db        *gorm.DB
-	appConfig *config.AppConfig
+	db *gorm.DB
 }
 
 // NewHostDBService — конструктор сервиса
-func NewHostDBService(appConfig *config.AppConfig) (*HostDBService, error) {
+func NewHostDBService(db *sql.DB) (*HostDBService, error) {
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
@@ -62,7 +62,7 @@ func NewHostDBService(appConfig *config.AppConfig) (*HostDBService, error) {
 	)
 
 	gormDB, err := gorm.Open(sqlite.Dialector{
-		Conn:       appConfig.DatabaseManager.GetSystemDB(),
+		Conn:       db,
 		DriverName: "sqlite3",
 	}, &gorm.Config{
 		Logger: gormLogger,
@@ -77,8 +77,7 @@ func NewHostDBService(appConfig *config.AppConfig) (*HostDBService, error) {
 	}
 
 	return &HostDBService{
-		db:        gormDB,
-		appConfig: appConfig,
+		db: gormDB,
 	}, nil
 }
 
@@ -88,10 +87,10 @@ func (DBHistory) TableName() string {
 }
 
 // fromDBModel — превращает DBHistory (структура БД) в бизнес-структуру ImageHistory
-func (dbh DBHistory) fromDBModel(appConfig *config.AppConfig) (ImageHistory, error) {
+func (dbh DBHistory) fromDBModel() (ImageHistory, error) {
 	var cfg Config
 	if err := json.Unmarshal([]byte(dbh.ConfigJSON), &cfg); err != nil {
-		return ImageHistory{}, fmt.Errorf(appConfig.Translator.T_("Config conversion error: %v"), err)
+		return ImageHistory{}, fmt.Errorf(app.T_("Config conversion error: %v"), err)
 	}
 
 	return ImageHistory{
@@ -102,15 +101,15 @@ func (dbh DBHistory) fromDBModel(appConfig *config.AppConfig) (ImageHistory, err
 }
 
 // toDBModel — превращает бизнес-структуру ImageHistory в DBHistory (для сохранения в БД)
-func (ih ImageHistory) toDBModel(appConfig *config.AppConfig) (DBHistory, error) {
+func (ih ImageHistory) toDBModel() (DBHistory, error) {
 	parsedDate, err := time.Parse(time.RFC3339, ih.ImageDate)
 	if err != nil {
-		return DBHistory{}, fmt.Errorf(appConfig.Translator.T_("Error parsing date %s: %v"), ih.ImageDate, err)
+		return DBHistory{}, fmt.Errorf(app.T_("Error parsing date %s: %v"), ih.ImageDate, err)
 	}
 
 	cfgBytes, err := json.Marshal(ih.Config)
 	if err != nil {
-		return DBHistory{}, fmt.Errorf(appConfig.Translator.T_("Error serializing config: %v"), err)
+		return DBHistory{}, fmt.Errorf(app.T_("Error serializing config: %v"), err)
 	}
 
 	return DBHistory{
@@ -126,14 +125,14 @@ func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHis
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SaveImageToDB"))
 
 	// Преобразуем в модель БД
-	dbHist, err := imageHistory.toDBModel(h.appConfig)
+	dbHist, err := imageHistory.toDBModel()
 	if err != nil {
 		return err
 	}
 
 	err = h.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if errCreate := tx.Create(&dbHist).Error; errCreate != nil {
-			return fmt.Errorf(h.appConfig.Translator.T_("Error inserting data: %v"), errCreate)
+			return fmt.Errorf(app.T_("Error inserting data: %v"), errCreate)
 		}
 		return nil
 	})
@@ -156,14 +155,14 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 	var dbHistories []DBHistory
 	if err := query.Find(&dbHistories).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
-			return nil, errors.New(h.appConfig.Translator.T_("History not found"))
+			return nil, errors.New(app.T_("History not found"))
 		}
-		return nil, fmt.Errorf(h.appConfig.Translator.T_("Query execution error: %v"), err)
+		return nil, fmt.Errorf(app.T_("Query execution error: %v"), err)
 	}
 
 	var histories []ImageHistory
 	for _, dbh := range dbHistories {
-		ih, err := dbh.fromDBModel(h.appConfig)
+		ih, err := dbh.fromDBModel()
 		if err != nil {
 			return nil, err
 		}
@@ -184,9 +183,9 @@ func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNa
 	var count int64
 	if err := query.Count(&count).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
-			return 0, errors.New(h.appConfig.Translator.T_("History not found"))
+			return 0, errors.New(app.T_("History not found"))
 		}
-		return 0, fmt.Errorf(h.appConfig.Translator.T_("Query execution error: %v"), err)
+		return 0, fmt.Errorf(app.T_("Query execution error: %v"), err)
 	}
 
 	return int(count), nil
@@ -206,12 +205,12 @@ func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config
 		if strings.Contains(err.Error(), "record not found") {
 			return false, nil
 		}
-		return false, fmt.Errorf(h.appConfig.Translator.T_("Query execution error: %v"), err)
+		return false, fmt.Errorf(app.T_("Query execution error: %v"), err)
 	}
 
 	var latestConfig Config
 	if err = json.Unmarshal([]byte(dbHist.ConfigJSON), &latestConfig); err != nil {
-		return false, fmt.Errorf(h.appConfig.Translator.T_("History config conversion error: %v"), err)
+		return false, fmt.Errorf(app.T_("History config conversion error: %v"), err)
 	}
 
 	return reflect.DeepEqual(newConfig, latestConfig), nil

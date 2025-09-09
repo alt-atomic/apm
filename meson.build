@@ -35,12 +35,12 @@ constants = [
   ['apm/lib.BuildPathDBSQLSystem', DBSQL_FILEPATH],
   ['apm/lib.BuildPathImageFile', IMAGE_FILEPATH],
   ['apm/lib.BuildVersion', version],
-  ['apm/internal/common/config.BuildCommandPrefix', COMMAND_PREFIX],
-  ['apm/internal/common/config.BuildEnvironment', PROFILE],
-  ['apm/internal/common/config.BuildPathLocales', LOCALES_DIR],
-  ['apm/internal/common/config.BuildPathDBSQLSystem', DBSQL_FILEPATH],
-  ['apm/internal/common/config.BuildPathImageFile', IMAGE_FILEPATH],
-  ['apm/internal/common/config.BuildVersion', version],
+  ['apm/internal/common/app.BuildCommandPrefix', COMMAND_PREFIX],
+  ['apm/internal/common/app.BuildEnvironment', PROFILE],
+  ['apm/internal/common/app.BuildPathLocales', LOCALES_DIR],
+  ['apm/internal/common/app.BuildPathDBSQLSystem', DBSQL_FILEPATH],
+  ['apm/internal/common/app.BuildPathImageFile', IMAGE_FILEPATH],
+  ['apm/internal/common/app.BuildVersion', version],
 ]
 
 ldflags = []

@@ -17,8 +17,8 @@
 package service
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"context"
 	"errors"
 	"fmt"
@@ -30,11 +30,15 @@ import (
 
 type PackageService struct {
 	serviceDistroDatabase *DistroDBService
+	commandPrefix         string
 }
 
 // NewPackageService — конструктор сервиса.
-func NewPackageService(serviceDistroDatabase *DistroDBService) *PackageService {
-	return &PackageService{serviceDistroDatabase: serviceDistroDatabase}
+func NewPackageService(serviceDistroDatabase *DistroDBService, commandPrefix string) *PackageService {
+	return &PackageService{
+		serviceDistroDatabase: serviceDistroDatabase,
+		commandPrefix:         commandPrefix,
+	}
 }
 
 // PackageInfo описывает информацию о пакете.
@@ -81,17 +85,16 @@ type PackageProvider interface {
 }
 
 // getProvider возвращает подходящий провайдер в зависимости от имени ОС контейнера.
-func getProvider(servicePackage *PackageService, osName string) (PackageProvider, error) {
-
+func (p *PackageService) getProvider(osName string) (PackageProvider, error) {
 	lowerName := strings.ToLower(osName)
 	if strings.Contains(lowerName, "ubuntu") || strings.Contains(lowerName, "debian") {
-		return NewUbuntuProvider(servicePackage), nil
+		return NewUbuntuProvider(p, p.commandPrefix), nil
 	} else if strings.Contains(lowerName, "arch") {
-		return NewArchProvider(servicePackage), nil
+		return NewArchProvider(p, p.commandPrefix), nil
 	} else if strings.Contains(lowerName, "alt") {
-		return NewAltProvider(servicePackage), nil
+		return NewAltProvider(p, p.commandPrefix), nil
 	} else {
-		return nil, errors.New(lib.T_("This container is not supported: ") + osName)
+		return nil, errors.New(app.T_("This container is not supported: ") + osName)
 	}
 }
 
@@ -99,7 +102,7 @@ func getProvider(servicePackage *PackageService, osName string) (PackageProvider
 func (p *PackageService) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.InstallPackage"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.InstallPackage"))
-	provider, err := getProvider(p, containerInfo.OS)
+	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return err
 	}
@@ -111,7 +114,7 @@ func (p *PackageService) InstallPackage(ctx context.Context, containerInfo Conta
 func (p *PackageService) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.RemovePackage"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.RemovePackage"))
-	provider, err := getProvider(p, containerInfo.OS)
+	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return err
 	}
@@ -123,7 +126,7 @@ func (p *PackageService) RemovePackage(ctx context.Context, containerInfo Contai
 func (p *PackageService) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPackages"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPackages"))
-	provider, err := getProvider(p, containerInfo.OS)
+	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +138,7 @@ func (p *PackageService) GetPackages(ctx context.Context, containerInfo Containe
 func (p *PackageService) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, fileName string) (string, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPackageOwner"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPackageOwner"))
-	provider, err := getProvider(p, containerInfo.OS)
+	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return "", err
 	}
@@ -147,7 +150,7 @@ func (p *PackageService) GetPackageOwner(ctx context.Context, containerInfo Cont
 func (p *PackageService) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPathByPackageName"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPathByPackageName"))
-	provider, err := getProvider(p, containerInfo.OS)
+	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
 	}
@@ -162,20 +165,20 @@ func (p *PackageService) GetInfoPackage(ctx context.Context, containerInfo Conta
 	// Получаем информацию о пакете из базы данных
 	info, err := p.serviceDistroDatabase.GetPackageInfoByName(containerInfo.ContainerName, packageName)
 	if err != nil {
-		return InfoPackageAnswer{}, fmt.Errorf(lib.T_("Failed to retrieve package information: %s"), packageName)
+		return InfoPackageAnswer{}, fmt.Errorf(app.T_("Failed to retrieve package information: %s"), packageName)
 	}
 
 	// Получаем пути для GUI-приложений
 	desktopPaths, err := p.GetPathByPackageName(ctx, containerInfo, packageName, "/usr/share/applications/")
 	if err != nil {
-		lib.Log.Debugf(fmt.Sprintf(lib.T_("Error retrieving desktop file path: %v"), err))
+		app.Log.Debugf(fmt.Sprintf(app.T_("Error retrieving desktop file path: %v"), err))
 		desktopPaths = []string{}
 	}
 
 	// Получаем пути для консольных приложений
 	consolePaths, err := p.GetPathByPackageName(ctx, containerInfo, packageName, "/usr/bin/")
 	if err != nil {
-		lib.Log.Debugf(fmt.Sprintf(lib.T_("Error retrieving console path: %v"), err))
+		app.Log.Debugf(fmt.Sprintf(app.T_("Error retrieving console path: %v"), err))
 		consolePaths = []string{}
 	}
 
@@ -196,13 +199,13 @@ func (p *PackageService) UpdatePackages(ctx context.Context, containerInfo Conta
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.UpdatePackages"))
 	packages, err := p.GetPackages(ctx, containerInfo)
 	if err != nil {
-		lib.Log.Error(err)
+		app.Log.Error(err)
 		return []PackageInfo{}, err
 	}
 
 	errorSave := p.serviceDistroDatabase.SavePackagesToDB(ctx, containerInfo.ContainerName, packages)
 	if errorSave != nil {
-		lib.Log.Error(errorSave)
+		app.Log.Error(errorSave)
 		return []PackageInfo{}, errorSave
 	}
 
@@ -215,11 +218,11 @@ func (p *PackageService) GetPackagesQuery(ctx context.Context, containerInfo Con
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPackagesQuery"))
 	if builder.ForceUpdate {
 		if len(containerInfo.ContainerName) == 0 {
-			return PackageQueryResult{}, errors.New(lib.T_("A container must be specified for the forced update operation"))
+			return PackageQueryResult{}, errors.New(app.T_("A container must be specified for the forced update operation"))
 		}
 		_, err := p.UpdatePackages(ctx, containerInfo)
 		if err != nil {
-			lib.Log.Error(err)
+			app.Log.Error(err)
 			return PackageQueryResult{}, err
 		}
 	}
@@ -272,23 +275,23 @@ func (p *PackageService) GetAllApplicationsByContainer(ctx context.Context, cont
 	wg.Wait()
 
 	if errDesktop != nil {
-		lib.Log.Error(fmt.Sprintf(lib.T_("Error retrieving desktop applications for container %s: %v"), containerInfo.ContainerName, errDesktop))
+		app.Log.Error(fmt.Sprintf(app.T_("Error retrieving desktop applications for container %s: %v"), containerInfo.ContainerName, errDesktop))
 	}
 	if errConsole != nil {
-		lib.Log.Error(fmt.Sprintf(lib.T_("Error retrieving console applications for container %s: %v"), containerInfo.ContainerName, errConsole))
+		app.Log.Error(fmt.Sprintf(app.T_("Error retrieving console applications for container %s: %v"), containerInfo.ContainerName, errConsole))
 	}
 
 	// Объединяем оба массива и удаляем дубли
 	appsSet := make(map[string]struct{})
-	for _, app := range desktopApps {
-		appsSet[app] = struct{}{}
+	for _, deskApp := range desktopApps {
+		appsSet[deskApp] = struct{}{}
 	}
-	for _, app := range consoleApps {
-		appsSet[app] = struct{}{}
+	for _, deskApp := range consoleApps {
+		appsSet[deskApp] = struct{}{}
 	}
 	var allApps []string
-	for app := range appsSet {
-		allApps = append(allApps, app)
+	for deskApp := range appsSet {
+		allApps = append(allApps, deskApp)
 	}
 
 	return allApps, nil
@@ -300,13 +303,13 @@ func (p *PackageService) GetAllApplicationsByContainer(ctx context.Context, cont
 func (p *PackageService) GetDesktopApplicationsByContainer(ctx context.Context, containerInfo ContainerInfo) ([]string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Failed to retrieve home directory: %v"), err)
+		return nil, fmt.Errorf(app.T_("Failed to retrieve home directory: %v"), err)
 	}
 
 	localShareApps := filepath.Join(homeDir, ".local", "share", "applications")
 	entries, err := os.ReadDir(localShareApps)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error reading directory %s: %v"), localShareApps, err)
+		return nil, fmt.Errorf(app.T_("Error reading directory %s: %v"), localShareApps, err)
 	}
 
 	prefix := containerInfo.ContainerName + "-"
@@ -321,7 +324,7 @@ func (p *PackageService) GetDesktopApplicationsByContainer(ctx context.Context, 
 				packagePath := filepath.Join("/usr/share/applications", trimmedFileName)
 				ownerPackage, err := p.GetPackageOwner(ctx, containerInfo, packagePath)
 				if err != nil {
-					lib.Log.Error(fmt.Sprintf(lib.T_("Error retrieving owner for file %s: %v"), fileName, err))
+					app.Log.Error(fmt.Sprintf(app.T_("Error retrieving owner for file %s: %v"), fileName, err))
 					continue
 				}
 				if ownerPackage != "" {
@@ -344,13 +347,13 @@ func (p *PackageService) GetDesktopApplicationsByContainer(ctx context.Context, 
 func (p *PackageService) GetConsoleApplicationsByContainer(ctx context.Context, containerInfo ContainerInfo) ([]string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Failed to retrieve home directory: %v"), err)
+		return nil, fmt.Errorf(app.T_("Failed to retrieve home directory: %v"), err)
 	}
 
 	localBinApps := filepath.Join(homeDir, ".local", "bin")
 	entries, err := os.ReadDir(localBinApps)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error reading directory %s: %v"), localBinApps, err)
+		return nil, fmt.Errorf(app.T_("Error reading directory %s: %v"), localBinApps, err)
 	}
 
 	packageNamesSet := make(map[string]struct{})
@@ -362,14 +365,14 @@ func (p *PackageService) GetConsoleApplicationsByContainer(ctx context.Context, 
 			fullPath := filepath.Join(localBinApps, fileName)
 			contentBytes, err := os.ReadFile(fullPath)
 			if err != nil {
-				lib.Log.Error(fmt.Sprintf(lib.T_("Error processing file %s: %v"), fileName, err))
+				app.Log.Error(fmt.Sprintf(app.T_("Error processing file %s: %v"), fileName, err))
 				continue
 			}
 			content := string(contentBytes)
 			if strings.Contains(content, marker) {
 				ownerPackage, err := p.GetPackageOwner(ctx, containerInfo, filepath.Join("/usr/bin", fileName))
 				if err != nil {
-					lib.Log.Error(fmt.Sprintf(lib.T_("Error retrieving owner for file %s: %v"), fileName, err))
+					app.Log.Error(fmt.Sprintf(app.T_("Error retrieving owner for file %s: %v"), fileName, err))
 					continue
 				}
 				if ownerPackage != "" {

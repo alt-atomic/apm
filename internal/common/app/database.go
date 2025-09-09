@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package config
+package app
 
 import (
 	"database/sql"
@@ -36,9 +36,7 @@ type databaseManagerImpl struct {
 	userPath   string
 	kvPath     string
 
-	mutex      sync.RWMutex
-	logger     Logger
-	translator Translator
+	mutex sync.RWMutex
 
 	systemOnce sync.Once
 	userOnce   sync.Once
@@ -46,13 +44,11 @@ type databaseManagerImpl struct {
 }
 
 // NewDatabaseManager создает новый менеджер баз данных
-func NewDatabaseManager(systemPath, userPath, kvPath string, logger Logger, translator Translator) DatabaseManager {
+func NewDatabaseManager(systemPath, userPath, kvPath string) DatabaseManager {
 	return &databaseManagerImpl{
 		systemPath: systemPath,
 		userPath:   userPath,
 		kvPath:     kvPath,
-		logger:     logger,
-		translator: translator,
 	}
 }
 
@@ -60,7 +56,7 @@ func NewDatabaseManager(systemPath, userPath, kvPath string, logger Logger, tran
 func (dm *databaseManagerImpl) GetSystemDB() *sql.DB {
 	dm.systemOnce.Do(func() {
 		if err := dm.initSystemDB(); err != nil {
-			dm.logger.Fatal("Failed to initialize system DB: ", err)
+			Log.Fatal("Failed to initialize system DB: ", err)
 		}
 	})
 	dm.mutex.RLock()
@@ -72,7 +68,7 @@ func (dm *databaseManagerImpl) GetSystemDB() *sql.DB {
 func (dm *databaseManagerImpl) GetUserDB() *sql.DB {
 	dm.userOnce.Do(func() {
 		if err := dm.initUserDB(); err != nil {
-			dm.logger.Fatal("Failed to initialize user DB: ", err)
+			Log.Fatal("Failed to initialize user DB: ", err)
 		}
 	})
 	dm.mutex.RLock()
@@ -84,7 +80,7 @@ func (dm *databaseManagerImpl) GetUserDB() *sql.DB {
 func (dm *databaseManagerImpl) GetKeyValueDB() *pogreb.DB {
 	dm.kvOnce.Do(func() {
 		if err := dm.initKeyValueDB(); err != nil {
-			dm.logger.Fatal("Failed to initialize key-value DB: ", err)
+			Log.Fatal("Failed to initialize key-value DB: ", err)
 		}
 	})
 	dm.mutex.RLock()
@@ -95,17 +91,17 @@ func (dm *databaseManagerImpl) GetKeyValueDB() *pogreb.DB {
 // initSystemDB инициализирует системную базу данных
 func (dm *databaseManagerImpl) initSystemDB() error {
 	if _, err := os.Stat(dm.systemPath); os.IsNotExist(err) {
-		dm.logger.Warning("System database file not found. It will be created automatically.")
+		Log.Warning("System database file not found. It will be created automatically.")
 	}
 
 	db, err := sql.Open("sqlite3", dm.systemPath)
 	if err != nil {
-		return fmt.Errorf(dm.translator.T_("error opening system database: %w"), err)
+		return fmt.Errorf(T_("error opening system database: %w"), err)
 	}
 
 	if err = db.Ping(); err != nil {
 		db.Close()
-		return fmt.Errorf(dm.translator.T_("error connecting to system database: %w"), err)
+		return fmt.Errorf(T_("error connecting to system database: %w"), err)
 	}
 
 	dm.systemDB = db
@@ -115,17 +111,17 @@ func (dm *databaseManagerImpl) initSystemDB() error {
 // initUserDB инициализирует пользовательскую базу данных
 func (dm *databaseManagerImpl) initUserDB() error {
 	if _, err := os.Stat(dm.userPath); os.IsNotExist(err) {
-		dm.logger.Warning("User database file not found. It will be created automatically.")
+		Log.Warning("User database file not found. It will be created automatically.")
 	}
 
 	db, err := sql.Open("sqlite3", dm.userPath)
 	if err != nil {
-		return fmt.Errorf(dm.translator.T_("error opening user database: %w"), err)
+		return fmt.Errorf(T_("error opening user database: %w"), err)
 	}
 
 	if err := db.Ping(); err != nil {
 		db.Close()
-		return fmt.Errorf(dm.translator.T_("error connecting to user database: %w"), err)
+		return fmt.Errorf(T_("error connecting to user database: %w"), err)
 	}
 
 	dm.userDB = db
@@ -135,12 +131,12 @@ func (dm *databaseManagerImpl) initUserDB() error {
 // initKeyValueDB инициализирует ключ-значение базу данных
 func (dm *databaseManagerImpl) initKeyValueDB() error {
 	if _, err := os.Stat(dm.kvPath); os.IsNotExist(err) {
-		dm.logger.Warning("Key-value database file not found. It will be created automatically.")
+		Log.Warning("Key-value database file not found. It will be created automatically.")
 	}
 
 	db, err := pogreb.Open(dm.kvPath, nil)
 	if err != nil {
-		return fmt.Errorf(dm.translator.T_("error opening key-value database: %w"), err)
+		return fmt.Errorf(T_("error opening key-value database: %w"), err)
 	}
 
 	dm.keyValueDB = db
@@ -154,21 +150,21 @@ func (dm *databaseManagerImpl) Close() error {
 
 	if dm.keyValueDB != nil {
 		if err := dm.keyValueDB.Close(); err != nil {
-			dm.logger.Error(dm.translator.T_("Error closing KV database: "), err)
+			Log.Error(T_("Error closing KV database: "), err)
 		}
 		dm.keyValueDB = nil
 	}
 
 	if dm.systemDB != nil {
 		if err := dm.systemDB.Close(); err != nil {
-			dm.logger.Error(dm.translator.T_("Error closing SQL database: "), err)
+			Log.Error(T_("Error closing SQL database: "), err)
 		}
 		dm.systemDB = nil
 	}
 
 	if dm.userDB != nil {
 		if err := dm.userDB.Close(); err != nil {
-			dm.logger.Error(dm.translator.T_("Error closing SQL database: "), err)
+			Log.Error(T_("Error closing SQL database: "), err)
 		}
 		dm.userDB = nil
 	}

@@ -17,7 +17,7 @@
 package service
 
 import (
-	"apm/internal/common/config"
+	"apm/internal/common/app"
 	"errors"
 	"os"
 	"sync"
@@ -35,13 +35,13 @@ type TemporaryConfig struct {
 
 // TemporaryConfigService HostConfigService — сервис для работы с временным конфигурационным файлом
 type TemporaryConfigService struct {
-	Config    *TemporaryConfig
-	appConfig *config.AppConfig
+	Config             *TemporaryConfig
+	temporaryImageFile string
 }
 
-func NewTemporaryConfigService(appConfig *config.AppConfig) *TemporaryConfigService {
+func NewTemporaryConfigService(temporaryImageFile string) *TemporaryConfigService {
 	return &TemporaryConfigService{
-		appConfig: appConfig,
+		temporaryImageFile: temporaryImageFile,
 	}
 }
 
@@ -50,7 +50,7 @@ var syncYamlTemporaryMutex sync.Mutex
 
 // LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
 func (s *TemporaryConfigService) LoadConfig() error {
-	data, err := os.ReadFile(s.appConfig.ConfigManager.GetTemporaryImageFile())
+	data, err := os.ReadFile(s.temporaryImageFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			cfg, err := s.generateDefaultConfig()
@@ -76,7 +76,7 @@ func (s *TemporaryConfigService) LoadConfig() error {
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
 func (s *TemporaryConfigService) SaveConfig() error {
 	if s.Config == nil {
-		return errors.New(s.appConfig.Translator.T_("Configuration not loaded"))
+		return errors.New(app.T_("Configuration not loaded"))
 	}
 
 	syncYamlTemporaryMutex.Lock()
@@ -86,7 +86,7 @@ func (s *TemporaryConfigService) SaveConfig() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.appConfig.ConfigManager.GetTemporaryImageFile(), data, 0644)
+	return os.WriteFile(s.temporaryImageFile, data, 0644)
 }
 
 // generateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
@@ -100,7 +100,7 @@ func (s *TemporaryConfigService) generateDefaultConfig() (TemporaryConfig, error
 		return cfg, err
 	}
 
-	if err = os.WriteFile(s.appConfig.ConfigManager.GetTemporaryImageFile(), data, 0644); err != nil {
+	if err = os.WriteFile(s.temporaryImageFile, data, 0644); err != nil {
 		return cfg, err
 	}
 
@@ -146,9 +146,9 @@ func (s *TemporaryConfigService) DeleteFile() error {
 	syncYamlTemporaryMutex.Lock()
 	defer syncYamlTemporaryMutex.Unlock()
 
-	if _, err := os.Stat(s.appConfig.ConfigManager.GetTemporaryImageFile()); os.IsNotExist(err) {
+	if _, err := os.Stat(s.temporaryImageFile); os.IsNotExist(err) {
 		return nil
 	}
 
-	return os.Remove(s.appConfig.ConfigManager.GetTemporaryImageFile())
+	return os.Remove(s.temporaryImageFile)
 }

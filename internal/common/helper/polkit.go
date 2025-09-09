@@ -17,7 +17,7 @@
 package helper
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 	"fmt"
 	"os"
 	"strconv"
@@ -97,10 +97,10 @@ func PolkitCheck(conn *dbus.Conn, sender dbus.Sender, actionID string) error {
 			"",
 		)
 		if c.Err != nil {
-			return false, fmt.Errorf(lib.T_("polkit dbus failure: %w"), c.Err)
+			return false, fmt.Errorf(app.T_("polkit dbus failure: %w"), c.Err)
 		}
 		if err := c.Store(&reply); err != nil {
-			return false, fmt.Errorf(lib.T_("polkit unpack failure: %w"), err)
+			return false, fmt.Errorf(app.T_("polkit unpack failure: %w"), err)
 		}
 		return reply.Granted, nil
 	}
@@ -120,7 +120,7 @@ func PolkitCheck(conn *dbus.Conn, sender dbus.Sender, actionID string) error {
 	}
 
 	if !granted {
-		return fmt.Errorf(lib.T_("not authorized by polkit (action=%s)"), actionID)
+		return fmt.Errorf(app.T_("not authorized by polkit (action=%s)"), actionID)
 	}
 
 	return nil

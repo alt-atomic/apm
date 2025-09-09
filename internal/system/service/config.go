@@ -17,12 +17,10 @@
 package service
 
 import (
-	"apm/internal/common/config"
+	"apm/internal/common/app"
 	"context"
 	"errors"
-	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -43,13 +41,15 @@ type Config struct {
 type HostConfigService struct {
 	Config              *Config
 	serviceHostDatabase *HostDBService
-	appConfig           *config.AppConfig
+	pathImageFile       string
+	hostImageService    *HostImageService
 }
 
-func NewHostConfigService(appConfig *config.AppConfig, hostDBService *HostDBService) *HostConfigService {
+func NewHostConfigService(pathImageFile string, hostDBService *HostDBService, hostImageService *HostImageService) *HostConfigService {
 	return &HostConfigService{
 		serviceHostDatabase: hostDBService,
-		appConfig:           appConfig,
+		pathImageFile:       pathImageFile,
+		hostImageService:    hostImageService,
 	}
 }
 
@@ -58,10 +58,10 @@ var syncYamlMutex sync.Mutex
 
 // LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
 func (s *HostConfigService) LoadConfig() error {
-	data, err := os.ReadFile(s.appConfig.ConfigManager.GetConfig().PathImageFile)
+	data, err := os.ReadFile(s.pathImageFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			cfg, err := s.generateDefaultConfig()
+			cfg, err := s.hostImageService.GenerateDefaultConfig()
 			if err != nil {
 				return err
 			}
@@ -77,7 +77,7 @@ func (s *HostConfigService) LoadConfig() error {
 	}
 
 	if cfg.Image == "" {
-		return errors.New(s.appConfig.Translator.T_("Image must be specified in the configuration file"))
+		return errors.New(app.T_("Image must be specified in the configuration file"))
 	}
 	s.Config = &cfg
 
@@ -87,7 +87,7 @@ func (s *HostConfigService) LoadConfig() error {
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
 func (s *HostConfigService) SaveConfig() error {
 	if s.Config == nil {
-		return errors.New(s.appConfig.Translator.T_("Configuration not loaded"))
+		return errors.New(app.T_("Configuration not loaded"))
 	}
 
 	syncYamlMutex.Lock()
@@ -97,86 +97,17 @@ func (s *HostConfigService) SaveConfig() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.appConfig.ConfigManager.GetConfig().PathImageFile, data, 0644)
+	return os.WriteFile(s.pathImageFile, data, 0644)
 }
 
-// generateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
-func (s *HostConfigService) generateDefaultConfig() (Config, error) {
-	var cfg Config
-	hostImageService := NewHostImageService(s.appConfig, s)
-	imageName, err := hostImageService.GetImageFromDocker()
-	if err != nil {
-		return cfg, err
-	}
-
-	cfg.Image = imageName
-	cfg.Packages.Install = []string{}
-	cfg.Packages.Remove = []string{}
-	cfg.Commands = []string{}
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return cfg, err
-	}
-
-	if err = os.WriteFile(s.appConfig.ConfigManager.GetConfig().PathImageFile, data, 0644); err != nil {
-		return cfg, err
-	}
-
-	return cfg, nil
-}
-
-// GenerateDockerfile генерирует содержимое Dockerfile, формируя apt-get команды с модификаторами для пакетов.
+// GenerateDockerfile делегирует генерацию Dockerfile к HostImageService
 func (s *HostConfigService) GenerateDockerfile() error {
-	if err := s.CheckCommands(); err != nil {
-		return err
-	}
-
-	var aptCmd string
-
-	// Формирование списка пакетов с суффиксами: + для установки и - для удаления.
-	var pkgs []string
-	uniqueInstall := uniqueStrings(s.Config.Packages.Install)
-	uniqueRemove := uniqueStrings(s.Config.Packages.Remove)
-
-	for _, pkg := range uniqueInstall {
-		pkgs = append(pkgs, pkg+"+")
-	}
-	for _, pkg := range uniqueRemove {
-		pkgs = append(pkgs, pkg+"-")
-	}
-	if len(pkgs) > 0 {
-		aptCmd = "apm s install " + strings.Join(pkgs, " ")
-	}
-
-	// Формирование Dockerfile.
-	var dockerfileLines []string
-	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", s.Config.Image))
-	// Разбиваем apt-get команду по строкам.
-	if aptCmd != "" {
-		aptLines := splitCommand("RUN ", aptCmd)
-		dockerfileLines = append(dockerfileLines, strings.Join(aptLines, "\n"))
-	}
-
-	// Формирование RUN блока для пользовательских команд, если они заданы.
-	if len(s.Config.Commands) > 0 {
-		cmdCombined := strings.Join(s.Config.Commands, " && ")
-		cmdLines := splitCommand("RUN ", cmdCombined)
-		dockerfileLines = append(dockerfileLines, strings.Join(cmdLines, "\n"))
-	}
-
-	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
-	err := os.WriteFile(ContainerFile, []byte(dockerStr), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.hostImageService.GenerateDockerfile(*s.Config)
 }
 
 func (s *HostConfigService) CheckCommands() error {
 	if len(s.Config.Packages.Install) == 0 && len(s.Config.Packages.Remove) == 0 && len(s.Config.Commands) == 0 {
-		return errors.New(s.appConfig.Translator.T_("Local image configuration file has no changes"))
+		return errors.New(app.T_("Local image configuration file has no changes"))
 	}
 	return nil
 }
@@ -272,45 +203,4 @@ func contains(slice []string, s string) bool {
 		}
 	}
 	return false
-}
-
-// uniqueStrings возвращает новый срез, содержащий только уникальные элементы исходного среза.
-func uniqueStrings(input []string) []string {
-	seen := make(map[string]bool)
-	var result []string
-	for _, s := range input {
-		if !seen[s] {
-			seen[s] = true
-			result = append(result, s)
-		}
-	}
-	return result
-}
-
-// splitCommand разбивает команду на строки длиной не более 80 символов с отступом.
-func splitCommand(prefix, cmd string) []string {
-	if strings.TrimSpace(cmd) == "" {
-		return nil
-	}
-
-	const maxLineLength = 80
-	words := strings.Fields(cmd)
-	var lines []string
-	currentLine := prefix
-	for _, word := range words {
-		if len(currentLine)+len(word)+1 > maxLineLength {
-			lines = append(lines, currentLine+" \\")
-			currentLine = "    " + word
-		} else {
-			if currentLine == prefix {
-				currentLine += word
-			} else {
-				currentLine += " " + word
-			}
-		}
-	}
-	if currentLine != "" {
-		lines = append(lines, currentLine)
-	}
-	return lines
 }

@@ -17,6 +17,7 @@
 package appstream
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"bytes"
 	"compress/gzip"
@@ -29,8 +30,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"apm/lib"
 )
 
 type LocalizedText struct {
@@ -120,7 +119,7 @@ func (s *SwCatService) Load(ctx context.Context) ([]Component, error) {
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.UpdateAppStream"))
 	files, err := os.ReadDir(s.path)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Cannot read dir %s: %w"), s.path, err)
+		return nil, fmt.Errorf(app.T_("Cannot read dir %s: %w"), s.path, err)
 	}
 
 	pkgMap := make(map[string]Component)
@@ -133,17 +132,17 @@ func (s *SwCatService) Load(ctx context.Context) ([]Component, error) {
 		full := filepath.Join(s.path, f.Name())
 		data, err := os.ReadFile(full)
 		if err != nil {
-			return nil, fmt.Errorf(lib.T_("Read file %s failed: %w"), full, err)
+			return nil, fmt.Errorf(app.T_("Read file %s failed: %w"), full, err)
 		}
 		if strings.HasSuffix(f.Name(), ".gz") {
 			if data, err = decompressGzip(data); err != nil {
-				return nil, fmt.Errorf(lib.T_("Unpack %s failed: %w"), full, err)
+				return nil, fmt.Errorf(app.T_("Unpack %s failed: %w"), full, err)
 			}
 		}
 
 		var cat SWCatalog
 		if err = xml.Unmarshal(data, &cat); err != nil {
-			return nil, fmt.Errorf(lib.T_("Parse %s failed: %w"), full, err)
+			return nil, fmt.Errorf(app.T_("Parse %s failed: %w"), full, err)
 		}
 
 		for _, c := range cat.Components {
@@ -259,7 +258,7 @@ func decompressGzip(data []byte) ([]byte, error) {
 	defer func(r *gzip.Reader) {
 		err = r.Close()
 		if err != nil {
-			lib.Log.Error("decompressGzip", err)
+			app.Log.Error("decompressGzip", err)
 		}
 	}(r)
 	return io.ReadAll(r)

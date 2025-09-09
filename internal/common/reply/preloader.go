@@ -17,7 +17,7 @@
 package reply
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 	"fmt"
 	"os"
 	"strings"
@@ -88,7 +88,7 @@ func CreateSpinner() {
 	go func() {
 		_, err := p.Run()
 		if err != nil {
-			lib.Log.Error(err.Error())
+			app.Log.Error(err.Error())
 		}
 		close(doneChan)
 	}()
@@ -340,7 +340,7 @@ func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
 // View общее отображение
 func (m model) View() string {
 	// Общий спиннер + фраза
-	s := fmt.Sprintf("\r\033[K%s \033[33m%s\033[0m", m.spinner.View(), lib.T_("Executing tasks"))
+	s := fmt.Sprintf("\r\033[K%s \033[33m%s\033[0m", m.spinner.View(), app.T_("Executing tasks"))
 
 	// Перебираем все задачи
 	for _, t := range m.tasks {
@@ -357,9 +357,9 @@ func (m model) View() string {
 		// Прогресс-бар
 		case "PROGRESS":
 			if t.state == "AFTER" {
-				text := fmt.Sprintf("\n[✓] %s", lib.T_("Progress completed"))
+				text := fmt.Sprintf("\n[✓] %s", app.T_("Progress completed"))
 				if len(t.progressDoneText) > 0 {
-					text = fmt.Sprintf("\n[✓] %s", fmt.Sprintf(lib.T_("Progress: %s completed"), t.progressDoneText))
+					text = fmt.Sprintf("\n[✓] %s", fmt.Sprintf(app.T_("Progress: %s completed"), t.progressDoneText))
 				}
 				s += text
 			} else {

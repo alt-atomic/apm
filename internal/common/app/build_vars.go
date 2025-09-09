@@ -14,30 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package config
+package app
 
-// Пустой импорт для примеров
-// import "fmt"
+// Build-time переменные (заполняются через -ldflags при сборке)
+var (
+	BuildCommandPrefix   string
+	BuildEnvironment     string
+	BuildPathLocales     string
+	BuildPathDBSQLSystem string
+	BuildPathImageFile   string
+	BuildVersion         string
+)
 
-// Пример использования:
-//
-// func main() {
-//     app, err := InitializeAppDefault()
-//     if err != nil {
-//         log.Fatal(err)
-//     }
-//     defer CleanupApp(app)
-//
-//     // Использование приложения
-//     app.Logger.Info("Application started")
-//
-//     systemDB := app.DatabaseManager.GetSystemDB()
-//     // работа с системной БД
-//
-//     userDB := app.DatabaseManager.GetUserDB()
-//     // работа с пользовательской БД
-//
-//     // Переводы
-//     message := app.Translator.T_("Hello, world!")
-//     app.Logger.Info(message)
-// }
+func GetBuildInfo() BuildInfo {
+	return BuildInfo{
+		CommandPrefix:   BuildCommandPrefix,
+		Environment:     BuildEnvironment,
+		PathLocales:     BuildPathLocales,
+		PathDBSQLSystem: BuildPathDBSQLSystem,
+		PathImageFile:   BuildPathImageFile,
+		Version:         BuildVersion,
+	}
+}

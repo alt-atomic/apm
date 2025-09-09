@@ -17,13 +17,13 @@
 package _package
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/appstream"
 	aptParser "apm/internal/common/apt"
 	aptBinding "apm/internal/common/binding/apt"
 	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"bufio"
 	"context"
 	"fmt"
@@ -35,13 +35,15 @@ import (
 )
 
 type Actions struct {
+	appConfig          *app.Config
 	appStream          *appstream.SwCatService
 	serviceAptDatabase *PackageDBService
 	serviceAptBinding  *aptBinding.Actions
 }
 
-func NewActions(serviceAptDatabase *PackageDBService) *Actions {
+func NewActions(serviceAptDatabase *PackageDBService, appConfig *app.Config) *Actions {
 	return &Actions{
+		appConfig:          appConfig,
 		appStream:          appstream.NewSwCatService("/usr/share/swcatalog/xml"),
 		serviceAptDatabase: serviceAptDatabase,
 		serviceAptBinding:  aptBinding.NewActions(),
@@ -265,7 +267,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 						reply.WithEventName("system.downloadProgress"),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf(lib.T_("Downloading packages"))),
+						reply.WithEventView(fmt.Sprintf(app.T_("Downloading packages"))),
 					)
 				}
 			}
@@ -274,7 +276,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 				reply.WithEventName("system.downloadProgress"),
 				reply.WithProgress(true),
 				reply.WithProgressPercent(100),
-				reply.WithProgressDoneText(lib.T_("All packages downloaded")),
+				reply.WithProgressDoneText(app.T_("All packages downloaded")),
 			)
 		case aptLib.CallbackInstallProgress:
 			if pkg == "" || total == 0 {
@@ -332,14 +334,14 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 						reply.WithEventName(ev),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf(lib.T_("Installing progress: %s"), pkg)),
+						reply.WithEventView(fmt.Sprintf(app.T_("Installing progress: %s"), pkg)),
 					)
 				} else {
 					reply.CreateEventNotification(ctx, reply.StateAfter,
 						reply.WithEventName(ev),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(100),
-						reply.WithProgressDoneText(fmt.Sprintf(lib.T_("Installing %s"), pkg)),
+						reply.WithProgressDoneText(fmt.Sprintf(app.T_("Installing %s"), pkg)),
 					)
 
 					// Удаляем из отслеживания
@@ -451,7 +453,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 
 	asComponents, errAS := a.appStream.Load(ctx)
 	if errAS != nil {
-		lib.Log.Warnf(lib.T_("AppStream load failed: %v"), errAS)
+		app.Log.Debugf(app.T_("AppStream load failed: %v"), errAS)
 	}
 
 	asMap := make(map[string]*appstream.Component, len(asComponents))
@@ -544,14 +546,14 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	//if lib.Env.ExistStplr {
 	//	packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
 	//	if err != nil {
-	//		lib.Log.Errorf(err.Error())
+	//		app.Log.Errorf(err.Error())
 	//	}
 	//}
 
 	// @TODO Обновляем информацию о том, установлены ли пакеты локально, на самом деле об этом можно узнать из биндингов
 	packages, err = a.updateInstalledInfo(ctx, packages)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error updating information about installed packages: %w"), err)
+		return nil, fmt.Errorf(app.T_("Error updating information about installed packages: %w"), err)
 	}
 
 	err = a.serviceAptDatabase.SavePackagesToDB(ctx, packages)
@@ -581,13 +583,13 @@ func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) (
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
 func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, error) {
-	command := fmt.Sprintf("%s rpm -qia", lib.Env.CommandPrefix)
+	command := fmt.Sprintf("%s rpm -qia", a.appConfig.ConfigManager.GetConfig().CommandPrefix)
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error executing the rpm -qia command: %w"), err)
+		return nil, fmt.Errorf(app.T_("Error executing the rpm -qia command: %w"), err)
 	}
 
 	installed := make(map[string]string)
@@ -654,7 +656,7 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 	flushCurrent()
 
 	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Error scanning rpm output: %w"), err)
+		return nil, fmt.Errorf(app.T_("Error scanning rpm output: %w"), err)
 	}
 
 	return installed, nil

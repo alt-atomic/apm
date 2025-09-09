@@ -17,9 +17,9 @@
 package service
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"bytes"
 	"context"
 	"errors"
@@ -30,11 +30,15 @@ import (
 )
 
 // DistroAPIService реализует методы для работы с пакетами в Arch
-type DistroAPIService struct{}
+type DistroAPIService struct {
+	commandPrefix string
+}
 
 // NewDistroAPIService возвращает новый экземпляр DistroAPIService.
-func NewDistroAPIService() *DistroAPIService {
-	return &DistroAPIService{}
+func NewDistroAPIService(commandPrefix string) *DistroAPIService {
+	return &DistroAPIService{
+		commandPrefix: commandPrefix,
+	}
 }
 
 type ContainerInfo struct {
@@ -49,10 +53,10 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetContainerList"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetContainerList"))
 
-	command := fmt.Sprintf("%s distrobox ls", lib.Env.CommandPrefix)
+	command := fmt.Sprintf("%s distrobox ls", d.commandPrefix)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		return nil, errors.New(lib.T_("Failed to retrieve the list of containers: ") + stderr)
+		return nil, errors.New(app.T_("Failed to retrieve the list of containers: ") + stderr)
 	}
 
 	output := strings.TrimSpace(stdout)
@@ -88,7 +92,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 				defer wg.Done()
 				info, err := d.fetchOsInfo(n)
 				if err != nil {
-					lib.Log.Error(err)
+					app.Log.Error(err)
 					info = ContainerInfo{ContainerName: n, OS: "", Active: false}
 				}
 				mu.Lock()
@@ -126,14 +130,14 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 	// Обрабатываем desktop приложения
 	for _, path := range desktopPaths {
 		appCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export --app %s %s",
-			lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
+			d.commandPrefix, containerInfo.ContainerName, path, suffix)
 		commands = append(commands, appCommand)
 	}
 
 	// Обрабатываем консольные приложения
 	for _, path := range consolePaths {
 		pathCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export -b %s %s",
-			lib.Env.CommandPrefix, containerInfo.ContainerName, path, suffix)
+			d.commandPrefix, containerInfo.ContainerName, path, suffix)
 		commands = append(commands, pathCommand)
 	}
 
@@ -151,7 +155,7 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 			cmd.Stderr = &stderr
 
 			if err := cmd.Run(); err != nil {
-				errChan <- fmt.Errorf(lib.T_("Error executing command %q: %v"), command, err)
+				errChan <- fmt.Errorf(app.T_("Error executing command %q: %v"), command, err)
 			}
 		}(cmdStr)
 	}
@@ -168,7 +172,7 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 // fetchOsInfo выполняет команду для получения информации об ОС контейнера
 // и возвращает объект ContainerInfo.
 func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, error) {
-	command := fmt.Sprintf("%s distrobox enter %s -- cat /etc/os-release", lib.Env.CommandPrefix, containerName)
+	command := fmt.Sprintf("%s distrobox enter %s -- cat /etc/os-release", d.commandPrefix, containerName)
 	cmd := exec.Command("sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer
@@ -176,7 +180,7 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		lib.Log.Errorf(lib.T_("Error getting OS information for container %s: %v, stderr: %s"), containerName, err, stderr.String())
+		app.Log.Errorf(app.T_("Error getting OS information for container %s: %v, stderr: %s"), containerName, err, stderr.String())
 		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, err
 	}
 
@@ -227,7 +231,7 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 	// Получаем список контейнеров
 	containers, err := d.GetContainerList(ctx, false)
 	if err != nil {
-		return ContainerInfo{}, fmt.Errorf(lib.T_("Failed to get the list of containers: %v"), err)
+		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to get the list of containers: %v"), err)
 	}
 
 	var found bool
@@ -239,7 +243,7 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 	}
 
 	if !found {
-		return ContainerInfo{}, fmt.Errorf(lib.T_("Container %s not found"), containerName)
+		return ContainerInfo{}, fmt.Errorf(app.T_("Container %s not found"), containerName)
 	}
 
 	return d.fetchOsInfo(containerName)
@@ -252,7 +256,7 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 
 	containers, errContainerList := d.GetContainerList(ctx, false)
 	if errContainerList != nil {
-		lib.Log.Error(errContainerList.Error())
+		app.Log.Error(errContainerList.Error())
 		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, errContainerList
 	}
 
@@ -260,13 +264,13 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 	for _, c := range containers {
 		if c.ContainerName == containerName {
 			return ContainerInfo{ContainerName: containerName, OS: "", Active: false},
-				fmt.Errorf(lib.T_("Container already exists: %s"), containerName)
+				fmt.Errorf(app.T_("Container already exists: %s"), containerName)
 		}
 	}
 
 	// Формирование базовой части команды
 	cmdParts := []string{
-		lib.Env.CommandPrefix,
+		d.commandPrefix,
 		"distrobox",
 		"create",
 		"-i", image,
@@ -286,7 +290,7 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 
 	command := strings.Join(cmdParts, " ")
 
-	lib.Log.Debug(command)
+	app.Log.Debug(command)
 	cmd := exec.Command("sh", "-c", command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -294,8 +298,8 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 
 	// Выполнение команды создания контейнера
 	if err := cmd.Run(); err != nil {
-		lib.Log.Errorf(lib.T_("Failed to create container %s: %v, stderr: %s"), containerName, err, stderr.String())
-		return ContainerInfo{}, fmt.Errorf(lib.T_("Failed to create container %s: %v"), containerName, err)
+		app.Log.Errorf(app.T_("Failed to create container %s: %v, stderr: %s"), containerName, err, stderr.String())
+		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to create container %s: %v"), containerName, err)
 	}
 
 	return d.GetContainerOsInfo(ctx, containerName)
@@ -305,7 +309,7 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.RemoveContainer"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.RemoveContainer"))
-	command := fmt.Sprintf("%s distrobox rm --yes --force %s", lib.Env.CommandPrefix, containerName)
+	command := fmt.Sprintf("%s distrobox rm --yes --force %s", d.commandPrefix, containerName)
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer
@@ -318,7 +322,7 @@ func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName st
 	}
 
 	if err = cmd.Run(); err != nil {
-		return ContainerInfo{}, fmt.Errorf(lib.T_("Failed to delete container %s: %v, stderr: %s"), containerName, err, stderr.String())
+		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to delete container %s: %v, stderr: %s"), containerName, err, stderr.String())
 	}
 
 	return osInfo, nil

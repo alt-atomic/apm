@@ -17,10 +17,11 @@
 package reply
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
-	"apm/lib"
 	"context"
 	"encoding/json"
+
 	"github.com/godbus/dbus/v5"
 )
 
@@ -133,7 +134,7 @@ func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 func SendNotificationResponse(eventData *EventData) {
 	message, err := json.MarshalIndent(eventData, "", "  ")
 	if err != nil {
-		lib.Log.Debug(err.Error())
+		app.Log.Debug(err.Error())
 	}
 
 	if lib.Env.Format != "dbus" {
@@ -141,7 +142,7 @@ func SendNotificationResponse(eventData *EventData) {
 	}
 
 	if lib.DBUSConn == nil {
-		lib.Log.Error(lib.T_("DBus connection is not initialized"))
+		app.Log.Error(app.T_("DBus connection is not initialized"))
 		return
 	}
 
@@ -150,84 +151,84 @@ func SendNotificationResponse(eventData *EventData) {
 
 	err = lib.DBUSConn.Emit(objPath, signalName, message)
 	if err != nil {
-		lib.Log.Error(lib.T_("Error sending notification: %v"), err)
+		app.Log.Error(app.T_("Error sending notification: %v"), err)
 	}
 }
 
 func getTaskText(task string) string {
 	switch task {
 	case "distro.SavePackagesToDB":
-		return lib.T_("Saving packages to the database")
+		return app.T_("Saving packages to the database")
 	case "distro.GetContainerList":
-		return lib.T_("Requesting list of containers")
+		return app.T_("Requesting list of containers")
 	case "distro.ExportingApp":
-		return lib.T_("Exporting package")
+		return app.T_("Exporting package")
 	case "distro.GetContainerOsInfo":
-		return lib.T_("Requesting container information")
+		return app.T_("Requesting container information")
 	case "distro.CreateContainer":
-		return lib.T_("Creating container")
+		return app.T_("Creating container")
 	case "distro.RemoveContainer":
-		return lib.T_("Deleting container")
+		return app.T_("Deleting container")
 	case "distro.InstallPackage":
-		return lib.T_("Installing package")
+		return app.T_("Installing package")
 	case "distro.RemovePackage":
-		return lib.T_("Removing package")
+		return app.T_("Removing package")
 	case "distro.GetPackages":
-		return lib.T_("Retrieving list of packages")
+		return app.T_("Retrieving list of packages")
 	case "distro.GetPackageOwner":
-		return lib.T_("Determining file owner")
+		return app.T_("Determining file owner")
 	case "distro.GetPathByPackageName":
-		return lib.T_("Searching package paths")
+		return app.T_("Searching package paths")
 	case "distro.GetInfoPackage":
-		return lib.T_("Retrieving package information")
+		return app.T_("Retrieving package information")
 	case "distro.UpdatePackages":
-		return lib.T_("Updating packages")
+		return app.T_("Updating packages")
 	case "distro.GetPackagesQuery":
-		return lib.T_("Filtering packages")
+		return app.T_("Filtering packages")
 	case "system.Working":
-		return lib.T_("Working with packages")
+		return app.T_("Working with packages")
 	case "system.Upgrade":
-		return lib.T_("System update")
+		return app.T_("System update")
 	case "system.Check":
-		return lib.T_("Analyzing packages")
+		return app.T_("Analyzing packages")
 	case "system.Update":
-		return lib.T_("General update process")
+		return app.T_("General update process")
 	case "system.UpdateKernel":
-		return lib.T_("General update kernel")
+		return app.T_("General update kernel")
 	case "system.UpdateSTPLR":
-		return lib.T_("Loading package list from STPLR repository")
+		return app.T_("Loading package list from STPLR repository")
 	case "system.AptUpdate":
-		return lib.T_("Loading package list from ALT repository")
+		return app.T_("Loading package list from ALT repository")
 	case "system.SavePackagesToDB":
-		return lib.T_("Saving packages to the database")
+		return app.T_("Saving packages to the database")
 	case "system.SaveImageToDB":
-		return lib.T_("Saving image history to the database")
+		return app.T_("Saving image history to the database")
 	case "system.BuildImage":
-		return lib.T_("Building local image")
+		return app.T_("Building local image")
 	case "system.SwitchImage":
-		return lib.T_("Switching to local image")
+		return app.T_("Switching to local image")
 	case "system.CheckAndUpdateBaseImage":
-		return lib.T_("General Image Update Process")
+		return app.T_("General Image Update Process")
 	case "system.bootcUpgrade":
-		return lib.T_("Downloading base image update")
+		return app.T_("Downloading base image update")
 	case "system.pruneOldImages":
-		return lib.T_("Cleaning up old images")
+		return app.T_("Cleaning up old images")
 	case "system.updateAllPackagesDB":
-		return lib.T_("Synchronizing database")
+		return app.T_("Synchronizing database")
 	case "system.UpdateAppStream":
-		return lib.T_("Update information about applications")
+		return app.T_("Update information about applications")
 	case "kernel.CurrentKernel":
-		return lib.T_("Get current kernel")
+		return app.T_("Get current kernel")
 	case "kernel.ListKernels":
-		return lib.T_("Get list kernels")
+		return app.T_("Get list kernels")
 	case "kernel.InstallKernel":
-		return lib.T_("Install kernel")
+		return app.T_("Install kernel")
 	case "kernel.InstallModules":
-		return lib.T_("Install kernel modules")
+		return app.T_("Install kernel modules")
 	case "kernel.RemovePackage":
-		return lib.T_("Remove packages")
+		return app.T_("Remove packages")
 	case "kernel.CheckRemovePackage":
-		return lib.T_("Simulate Remove packages")
+		return app.T_("Simulate Remove packages")
 	default:
 		return task
 	}

@@ -17,8 +17,8 @@
 package service
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
-	"apm/lib"
 	"bufio"
 	"context"
 	"errors"
@@ -30,37 +30,39 @@ import (
 // AltProvider реализует методы для работы с пакетами в ALT linux
 type AltProvider struct {
 	servicePackage *PackageService
+	commandPrefix  string
 }
 
 // NewAltProvider возвращает новый экземпляр AltProvider.
-func NewAltProvider(servicePackage *PackageService) *AltProvider {
+func NewAltProvider(servicePackage *PackageService, commandPrefix string) *AltProvider {
 	return &AltProvider{
 		servicePackage: servicePackage,
+		commandPrefix:  commandPrefix,
 	}
 }
 
 // GetPackages обновляет базу пакетов, выполняет поиск и отмечает установленные пакеты.
 func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
-	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", lib.Env.CommandPrefix, containerInfo.ContainerName)
+	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", p.commandPrefix, containerInfo.ContainerName)
 	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
-		return nil, fmt.Errorf(lib.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
+		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
-	command := fmt.Sprintf("%s distrobox enter %s -- apt-cache dumpavail", lib.Env.CommandPrefix, containerInfo.ContainerName)
+	command := fmt.Sprintf("%s distrobox enter %s -- apt-cache dumpavail", p.commandPrefix, containerInfo.ContainerName)
 	cmd := exec.Command("sh", "-c", command)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error opening stdout pipe: %w"), err)
+		return nil, fmt.Errorf(app.T_("Error opening stdout pipe: %w"), err)
 	}
 	if err = cmd.Start(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Error executing command: %w"), err)
+		return nil, fmt.Errorf(app.T_("Error executing command: %w"), err)
 	}
 
 	// Получаем список экспортированных пакетов.
 	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
-		lib.Log.Error(lib.T_("Error retrieving installed packages: "), err)
+		app.Log.Error(app.T_("Error retrieving installed packages: "), err)
 		exportingPackages = []string{}
 	}
 
@@ -135,13 +137,13 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 
 	if err = scanner.Err(); err != nil {
 		if errors.Is(err, bufio.ErrTooLong) {
-			return nil, fmt.Errorf(lib.T_("String too large: (over %dMB) - "), maxCapacity/(1024*1024))
+			return nil, fmt.Errorf(app.T_("String too large: (over %dMB) - "), maxCapacity/(1024*1024))
 		}
-		return nil, fmt.Errorf(lib.T_("Scanner error: %w"), err)
+		return nil, fmt.Errorf(app.T_("Scanner error: %w"), err)
 	}
 
 	if err = cmd.Wait(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Command execution error: %w"), err)
+		return nil, fmt.Errorf(app.T_("Command execution error: %w"), err)
 	}
 
 	for i := range packages {
@@ -160,20 +162,20 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 
 // RemovePackage удаляет указанный пакет с помощью pacman -R.
 func (p *AltProvider) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", p.commandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf(lib.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
+		return fmt.Errorf(app.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
 
 // InstallPackage устанавливает указанный пакет с помощью pacman -S.
 func (p *AltProvider) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", p.commandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf(lib.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
+		return fmt.Errorf(app.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
@@ -192,25 +194,25 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 		return paths
 	}
 
-	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
+	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
+		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
 
 	paths := parseOutput(stdout)
 	if len(paths) == 0 {
 		fallbackCommand := fmt.Sprintf("%s distrobox enter %s -- rpm -qa | grep -E '^%s' | xargs rpm -ql | grep '%s' | sort",
-			lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
+			p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
 		fallbackStdout, fallbackStderr, fallbackErr := helper.RunCommand(ctx, fallbackCommand)
 		if fallbackErr != nil {
-			lib.Log.Debugf(lib.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
+			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
 			return []string{}, nil
 		}
 
 		fallbackPaths := parseOutput(fallbackStdout)
 		if len(fallbackPaths) > 0 {
-			lib.Log.Debugf(lib.T_("Fallback search found %d files"), len(fallbackPaths))
+			app.Log.Debugf(app.T_("Fallback search found %d files"), len(fallbackPaths))
 			return fallbackPaths, nil
 		}
 	}
@@ -220,10 +222,10 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 
 // GetPackageOwner определяет пакет-владельца файла через rpm -qf.
 func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
-	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qf --queryformat '%%{NAME}' %s", lib.Env.CommandPrefix, containerInfo.ContainerName, filePath)
+	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qf --queryformat '%%{NAME}' %s", p.commandPrefix, containerInfo.ContainerName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
 	if err != nil {
-		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
+		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 		return "", err
 	}
 	return strings.TrimSpace(stdout), nil
@@ -231,13 +233,13 @@ func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo Contain
 
 // getInstalledPackages возвращает карту установленных пакетов
 func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]string, error) {
-	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qia", lib.Env.CommandPrefix, containerInfo.ContainerName)
+	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qia", p.commandPrefix, containerInfo.ContainerName)
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Env = []string{"LC_ALL=C"}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error executing command rpm -qia: %w"), err)
+		return nil, fmt.Errorf(app.T_("Error executing command rpm -qia: %w"), err)
 	}
 
 	var packages []string
@@ -253,7 +255,7 @@ func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]strin
 		}
 	}
 	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf(lib.T_("Error scanning rpm output: %w"), err)
+		return nil, fmt.Errorf(app.T_("Error scanning rpm output: %w"), err)
 	}
 	return packages, nil
 }

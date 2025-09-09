@@ -17,8 +17,8 @@
 package reply
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
-	"apm/lib"
 	"context"
 	"encoding/json"
 	"errors"
@@ -137,7 +137,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						subTree := buildTreeFromMap("message", mm, isError)
 						t.Child(subTree)
 					} else {
-						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
+						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 					}
 				}
 			case reflect.Slice:
@@ -156,11 +156,11 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						}
 						t.Child(listNode)
 					} else {
-						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(lib.T_("%T (slice of unknown type)"), vv)))
+						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(app.T_("%T (slice of unknown type)"), vv)))
 					}
 				}
 			default:
-				t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
+				t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 			}
 		}
 	}
@@ -183,14 +183,14 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: значение == nil
 		case nil:
-			t.Child(fmt.Sprintf(lib.T_("%s: no"), TranslateKey(k)))
+			t.Child(fmt.Sprintf(app.T_("%s: no"), TranslateKey(k)))
 			//t.Child(fmt.Sprintf("%s: []", translateKey(k)))
 
 		//----------------------------------------------------------------------
 		// СЛУЧАЙ: строка
 		case string:
 			if vv == "" {
-				t.Child(fmt.Sprintf(lib.T_("%s: no"), TranslateKey(k)))
+				t.Child(fmt.Sprintf(app.T_("%s: no"), TranslateKey(k)))
 			} else {
 				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), formatField(k, vv)))
 			}
@@ -200,9 +200,9 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 		case bool:
 			var boolStr string
 			if vv {
-				boolStr = lib.T_("yes")
+				boolStr = app.T_("yes")
 			} else {
-				boolStr = lib.T_("no")
+				boolStr = app.T_("no")
 			}
 			t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), boolStr))
 
@@ -281,7 +281,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						continue
 					}
 				}
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 
 			// СЛУЧАЙ: указатель (попробуем развернуть через JSON как структуру/срез)
 			case reflect.Ptr:
@@ -308,7 +308,7 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						continue
 					}
 				}
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 
 			//------------------------------------------------------------------
 			// СЛУЧАЙ: срез (slice) непонятного типа
@@ -330,11 +330,11 @@ func buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) 
 						continue
 					}
 				}
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (slice of unknown type)"), vv)))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (slice of unknown type)"), vv)))
 
 			//------------------------------------------------------------------
 			default:
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(lib.T_("%T (unknown type)"), vv)))
+				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 			}
 		}
 	}

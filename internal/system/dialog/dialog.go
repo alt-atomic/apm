@@ -17,9 +17,9 @@
 package dialog
 
 import (
+	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/config"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"errors"
@@ -51,24 +51,24 @@ type model struct {
 	vp         viewport.Model
 	canceled   bool
 	choiceType DialogAction
-	appConfig  *config.AppConfig
+	appConfig  *app.Config
 }
 
 // NewDialog запускает диалог отображения информации о пакете с выбором действия.
-func NewDialog(appConfig *config.AppConfig, packageInfo []_package.Package, packageChange aptLib.PackageChanges, action DialogAction) (bool, error) {
+func NewDialog(appConfig *app.Config, packageInfo []_package.Package, packageChange aptLib.PackageChanges, action DialogAction) (bool, error) {
 	if appConfig.ConfigManager.GetConfig().Format != "text" || !reply.IsTTY() {
 		return true, nil
 	}
 
 	switch action {
 	case ActionMultiInstall:
-		choices = []string{appConfig.Translator.T_("Edit"), appConfig.Translator.T_("Abort")}
+		choices = []string{app.T_("Edit"), app.T_("Abort")}
 	case ActionInstall:
-		choices = []string{appConfig.Translator.T_("Install"), appConfig.Translator.T_("Abort")}
+		choices = []string{app.T_("Install"), app.T_("Abort")}
 	case ActionRemove:
-		choices = []string{appConfig.Translator.T_("Remove"), appConfig.Translator.T_("Abort")}
+		choices = []string{app.T_("Remove"), app.T_("Abort")}
 	case ActionUpgrade:
-		choices = []string{appConfig.Translator.T_("Upgrade"), appConfig.Translator.T_("Abort")}
+		choices = []string{app.T_("Upgrade"), app.T_("Abort")}
 	}
 
 	m := model{
@@ -85,19 +85,19 @@ func NewDialog(appConfig *config.AppConfig, packageInfo []_package.Package, pack
 		tea.WithoutSignalHandler())
 	finalModel, err := p.Run()
 	if err != nil {
-		appConfig.Logger.Errorf(appConfig.Translator.T_("Error starting TEA: %v"), err)
+		app.Log.Errorf(app.T_("Error starting TEA: %v"), err)
 		return false, err
 	}
 
 	if m, ok := finalModel.(model); ok {
 		if m.canceled || m.choice == "" {
-			return false, errors.New(appConfig.Translator.T_("Operation cancelled"))
+			return false, errors.New(app.T_("Operation cancelled"))
 		}
 
-		return m.choice == appConfig.Translator.T_("Install") || m.choice == appConfig.Translator.T_("Remove") || m.choice == appConfig.Translator.T_("Edit") || m.choice == appConfig.Translator.T_("Upgrade"), nil
+		return m.choice == app.T_("Install") || m.choice == app.T_("Remove") || m.choice == app.T_("Edit") || m.choice == app.T_("Upgrade"), nil
 	}
 
-	return false, errors.New(appConfig.Translator.T_("Operation cancelled"))
+	return false, errors.New(app.T_("Operation cancelled"))
 }
 
 func (m model) Init() tea.Cmd {
@@ -228,11 +228,11 @@ func (m model) View() string {
 	}
 
 	// Формируем строку с подсказками по клавишам
-	keyboardShortcuts := m.getShortcutStyle().Render(m.appConfig.Translator.T_("Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/bottom, Enter - choose, Esc/q - cancel"))
+	keyboardShortcuts := m.getShortcutStyle().Render(app.T_("Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/bottom, Enter - choose, Esc/q - cancel"))
 
 	// Формируем футер с выбором действия
 	var footer strings.Builder
-	footer.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", m.appConfig.Translator.T_("Select an action:"))))
+	footer.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", app.T_("Select an action:"))))
 	for i, choice := range choices {
 		prefix := "  "
 		if i == m.cursor {
@@ -293,7 +293,7 @@ func (m model) buildContent() string {
 	const keyWidth = 21
 
 	if m.choiceType != ActionUpgrade {
-		infoPackage := fmt.Sprintf("\n%s\n", m.appConfig.Translator.TN_("Package information:", "Packages information:", len(m.pkg)))
+		infoPackage := fmt.Sprintf("\n%s\n", app.TN_("Package information:", "Packages information:", len(m.pkg)))
 		sb.WriteString(titleStyle.Render(infoPackage))
 	}
 
@@ -301,13 +301,13 @@ func (m model) buildContent() string {
 	if len(m.pkg) > 200 {
 		for i, pkg := range m.pkg {
 			if i == 0 && len(m.pkg) > 1 {
-				sb.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", m.appConfig.Translator.T_("Package list:"))))
+				sb.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", app.T_("Package list:"))))
 			}
 
 			statusText := m.statusPackage(pkg)
 			installedText := ""
 			if pkg.Installed {
-				installedText = " " + m.getInstallStyle().Render(m.appConfig.Translator.T_("[Installed]"))
+				installedText = " " + m.getInstallStyle().Render(app.T_("[Installed]"))
 			}
 
 			line := fmt.Sprintf("• %s%s - %s", pkg.Name, installedText, statusText)
@@ -318,22 +318,22 @@ func (m model) buildContent() string {
 		for i, pkg := range m.pkg {
 			if len(m.pkg) > 1 {
 				sb.WriteString(titleStyle.Render("\n"))
-				sb.WriteString(titleStyle.Render(fmt.Sprintf(m.appConfig.Translator.T_("\nPackage %d:"), i+1)))
+				sb.WriteString(titleStyle.Render(fmt.Sprintf(app.T_("\nPackage %d:"), i+1)))
 			}
-			installedText := m.getShortcutStyle().Render(m.appConfig.Translator.T_("No"))
+			installedText := m.getShortcutStyle().Render(app.T_("No"))
 			if pkg.Installed {
-				installedText = m.getInstallStyle().Render(m.appConfig.Translator.T_("Yes"))
+				installedText = m.getInstallStyle().Render(app.T_("Yes"))
 			}
 
-			sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
-			sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Action"), m.statusPackage(pkg), keyWidth, keyStyle, valueStyle))
-			sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Category"), pkg.Section, keyWidth, keyStyle, valueStyle))
-			sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Maintainer"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
-			sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Installed"), installedText, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(app.T_("Name"), pkg.Name, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(app.T_("Action"), m.statusPackage(pkg), keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(app.T_("Category"), pkg.Section, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(app.T_("Maintainer"), pkg.Maintainer, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(app.T_("Installed"), installedText, keyWidth, keyStyle, valueStyle))
 
 			if pkg.Installed {
 				// Выводим "Версия в облаке" обычным стилем
-				sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
+				sb.WriteString("\n" + formatLine(app.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
 				// Сравниваем версию в системе и облаке
 				var systemVersionColored string
 				if pkg.VersionInstalled == pkg.Version {
@@ -342,40 +342,40 @@ func (m model) buildContent() string {
 					systemVersionColored = m.getDeleteStyle().Render(pkg.VersionInstalled)
 				}
 				// Выводим "Версия в системе", уже с раскрашенным текстом
-				sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("System version"), systemVersionColored, keyWidth, keyStyle, valueStyle))
+				sb.WriteString("\n" + formatLine(app.T_("System version"), systemVersionColored, keyWidth, keyStyle, valueStyle))
 			} else {
-				sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
+				sb.WriteString("\n" + formatLine(app.T_("Repository version"), pkg.Version, keyWidth, keyStyle, valueStyle))
 			}
-			sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Size"), helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(app.T_("Size"), helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
 
 			dependsStr := m.formatDependencies(pkg.Depends)
-			sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
+			sb.WriteString("\n" + formatLine(app.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
 		}
 	}
 
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", m.appConfig.Translator.T_("Affected changes:"))))
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", app.T_("Affected changes:"))))
 	extraStr := m.formatDependencies(m.pckChange.ExtraInstalled)
 	upgradeStr := m.formatDependencies(m.pckChange.UpgradedPackages)
 	installStr := m.formatDependencies(m.pckChange.NewInstalledPackages)
 	removeStr := m.formatDependencies(m.pckChange.RemovedPackages)
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Extra packages"), extraStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Will be updated"), upgradeStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Will be installed"), installStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Will be removed"), removeStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Extra packages"), extraStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be updated"), upgradeStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be installed"), installStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be removed"), removeStr, keyWidth, keyStyle, valueStyle))
 
-	packageUpgradedCount := fmt.Sprintf(m.appConfig.Translator.TN_("%d package", "%d packages", m.pckChange.UpgradedCount), m.pckChange.UpgradedCount)
-	packageNewInstalledCount := fmt.Sprintf(m.appConfig.Translator.TN_("%d package", "%d packages", m.pckChange.NewInstalledCount), m.pckChange.NewInstalledCount)
-	packageRemovedCount := fmt.Sprintf(m.appConfig.Translator.TN_("%d package", "%d packages", m.pckChange.RemovedCount), m.pckChange.RemovedCount)
-	packageNotUpgradedCount := fmt.Sprintf(m.appConfig.Translator.TN_("%d package", "%d packages", m.pckChange.NotUpgradedCount), m.pckChange.NotUpgradedCount)
+	packageUpgradedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.UpgradedCount), m.pckChange.UpgradedCount)
+	packageNewInstalledCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.NewInstalledCount), m.pckChange.NewInstalledCount)
+	packageRemovedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.RemovedCount), m.pckChange.RemovedCount)
+	packageNotUpgradedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.NotUpgradedCount), m.pckChange.NotUpgradedCount)
 
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", m.appConfig.Translator.T_("Total:"))))
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Will be updated"), packageUpgradedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Will be installed"), packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Not affected"), packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", app.T_("Total:"))))
+	sb.WriteString("\n" + formatLine(app.T_("Will be updated"), packageUpgradedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be installed"), packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Not affected"), packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
 	if m.choiceType == ActionUpgrade || m.choiceType == ActionInstall {
-		sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Downloaded Size"), helper.AutoSize(int(m.pckChange.DownloadSize)), keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(m.appConfig.Translator.T_("Installed Size"), helper.AutoSize(int(m.pckChange.InstallSize)), keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(app.T_("Downloaded Size"), helper.AutoSize(int(m.pckChange.DownloadSize)), keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(app.T_("Installed Size"), helper.AutoSize(int(m.pckChange.InstallSize)), keyWidth, keyStyle, valueStyle))
 	}
 
 	return sb.String()
@@ -399,19 +399,19 @@ func (m model) statusPackage(pkg _package.Package) string {
 	// Проверяем все возможные имена во всех списках изменений
 	for _, name := range possibleNames {
 		if contains(m.pckChange.ExtraInstalled, name) || contains(m.pckChange.NewInstalledPackages, name) {
-			return m.getInstallStyle().Render(m.appConfig.Translator.T_("Will be installed"))
+			return m.getInstallStyle().Render(app.T_("Will be installed"))
 		}
 
 		if contains(m.pckChange.UpgradedPackages, name) {
-			return m.getInstallStyle().Render(m.appConfig.Translator.T_("Will be updated"))
+			return m.getInstallStyle().Render(app.T_("Will be updated"))
 		}
 
 		if contains(m.pckChange.RemovedPackages, name) {
-			return m.getDeleteStyle().Render(m.appConfig.Translator.T_("Will be removed"))
+			return m.getDeleteStyle().Render(app.T_("Will be removed"))
 		}
 	}
 
-	return m.getShortcutStyle().Render(m.appConfig.Translator.T_("No"))
+	return m.getShortcutStyle().Render(app.T_("No"))
 }
 
 func contains(slice []string, pkg string) bool {
@@ -432,10 +432,10 @@ func (m model) formatDependencies(depends []string) string {
 		filtered = append(filtered, dep)
 	}
 	if len(filtered) == 0 {
-		return m.appConfig.Translator.T_("No")
+		return app.T_("No")
 	}
 	if len(filtered) > 500 {
-		filtered = append(filtered[:500], m.appConfig.Translator.T_("and others"))
+		filtered = append(filtered[:500], app.T_("and others"))
 	}
 	maxLen := 0
 	for _, dep := range filtered {

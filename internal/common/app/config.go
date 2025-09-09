@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package config
+package app
 
 import (
 	"os"
@@ -29,11 +29,11 @@ import (
 type Manager interface {
 	GetConfig() *Configuration
 	GetColors() Colors
-	GetLogger() Logger
 	IsDevMode() bool
-	IsRoot() bool
 	SetFormat(format string)
 	GetTemporaryImageFile() string
+	GetPathImageContainerFile() string
+	GetPathImageFile() string
 }
 
 // BuildInfo информация интегрированная через сборку meson
@@ -87,7 +87,6 @@ type Configuration struct {
 // configManagerImpl реализация Manager
 type configManagerImpl struct {
 	config *Configuration
-	logger Logger
 }
 
 // NewConfigManager создает новый менеджер конфигурации
@@ -96,13 +95,8 @@ func NewConfigManager(buildInfo BuildInfo) (Manager, error) {
 		Colors: getDefaultColors(),
 	}
 
-	// Определяем режим разработки из buildInfo для логгера
-	devMode := buildInfo.Environment != "prod"
-	logger := NewLogger(devMode)
-
 	cm := &configManagerImpl{
 		config: cfg,
-		logger: logger,
 	}
 
 	if err := cm.loadConfiguration(buildInfo); err != nil {
@@ -171,7 +165,7 @@ func (cm *configManagerImpl) loadConfigFile() error {
 
 	if configPath != "" {
 		if err := cleanenv.ReadConfig(configPath, cm.config); err != nil {
-			cm.logger.Warning("Failed to read config file: ", err)
+			Log.Warning("Failed to read config file: ", err)
 		}
 	}
 
@@ -230,14 +224,14 @@ func (cm *configManagerImpl) GetTemporaryImageFile() string {
 	return filepath.Join(os.TempDir(), "apm.tmp")
 }
 
-// IsRoot проверяет, запущено ли приложение от root
-func (cm *configManagerImpl) IsRoot() bool {
-	return syscall.Geteuid() == 0
+// GetPathImageFile возвращает путь к файлу конфигурации образа
+func (cm *configManagerImpl) GetPathImageFile() string {
+	return cm.config.PathImageFile
 }
 
-// GetLogger возвращает логгер
-func (cm *configManagerImpl) GetLogger() Logger {
-	return cm.logger
+// GetPathImageContainerFile возвращает путь к файлу для сборки контейнера
+func (cm *configManagerImpl) GetPathImageContainerFile() string {
+	return "/var/Containerfile"
 }
 
 // SetFormat устанавливает формат вывода

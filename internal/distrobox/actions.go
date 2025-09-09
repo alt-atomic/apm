@@ -17,9 +17,9 @@
 package distrobox
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"apm/internal/distrobox/service"
-	"apm/lib"
 	"context"
 	"errors"
 	"fmt"
@@ -45,14 +45,14 @@ func NewActionsWithDeps(
 	}
 }
 
-func NewActions() *Actions {
-	distroDBSvc, err := service.NewDistroDBService(lib.GetDB(false))
+func NewActions(appConfig *app.Config) *Actions {
+	distroDBSvc, err := service.NewDistroDBService(appConfig.DatabaseManager.GetUserDB())
 	if err != nil {
-		lib.Log.Error(err)
+		app.Log.Error(err)
 	}
 
-	distroPackageSvc := service.NewPackageService(distroDBSvc)
-	distroAPISvc := service.NewDistroAPIService()
+	distroPackageSvc := service.NewPackageService(distroDBSvc, appConfig.ConfigManager.GetConfig().CommandPrefix)
+	distroAPISvc := service.NewDistroAPIService(appConfig.ConfigManager.GetConfig().CommandPrefix)
 
 	return &Actions{
 		servicePackage:        distroPackageSvc,
@@ -74,7 +74,7 @@ func (a *Actions) Update(ctx context.Context, container string) (*reply.APIRespo
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":   lib.T_("Package list successfully updated"),
+			"message":   app.T_("Package list successfully updated"),
 			"container": osInfo,
 			"count":     len(packages),
 		},
@@ -91,7 +91,7 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "info")
+		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "info")
 		return nil, errors.New(errMsg)
 	}
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
@@ -100,7 +100,7 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	}
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     lib.T_("Package found"),
+			"message":     app.T_("Package found"),
 			"packageInfo": packageInfo,
 		},
 		Error: false,
@@ -126,7 +126,7 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "search")
+		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "search")
 		return nil, errors.New(errMsg)
 	}
 
@@ -135,7 +135,7 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 		return nil, err
 	}
 	msg := fmt.Sprintf(
-		lib.TN_("%d record found", "%d records found", len(queryResult.Packages)),
+		app.TN_("%d record found", "%d records found", len(queryResult.Packages)),
 		len(queryResult.Packages),
 	)
 	resp := reply.APIResponse{
@@ -211,7 +211,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*reply.APIRespon
 		return nil, err
 	}
 	msg := fmt.Sprintf(
-		lib.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages))
+		app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages))
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
@@ -232,7 +232,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "install")
+		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "install")
 		return nil, errors.New(errMsg)
 	}
 
@@ -262,7 +262,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     fmt.Sprintf(lib.T_("Package %s installed"), packageName),
+			"message":     fmt.Sprintf(app.T_("Package %s installed"), packageName),
 			"packageInfo": packageInfo,
 		},
 		Error: false,
@@ -280,7 +280,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "remove")
+		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "remove")
 		return nil, errors.New(errMsg)
 	}
 
@@ -306,7 +306,7 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     fmt.Sprintf(lib.T_("Package %s removed"), packageName),
+			"message":     fmt.Sprintf(app.T_("Package %s removed"), packageName),
 			"packageInfo": packageInfo,
 		},
 		Error: false,
@@ -323,7 +323,7 @@ func (a *Actions) ContainerList(ctx context.Context) (*reply.APIResponse, error)
 	}
 
 	if len(containers) == 0 {
-		return nil, errors.New(lib.T_("No containers found"))
+		return nil, errors.New(app.T_("No containers found"))
 	}
 
 	resp := reply.APIResponse{
@@ -341,12 +341,12 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 	image = strings.TrimSpace(image)
 	name = strings.TrimSpace(name)
 	if image == "" {
-		errMsg := lib.T_("You must specify the image link (--image)")
+		errMsg := app.T_("You must specify the image link (--image)")
 		return nil, errors.New(errMsg)
 	}
 
 	if name == "" {
-		errMsg := lib.T_("You must specify the container name (--name)")
+		errMsg := app.T_("You must specify the container name (--name)")
 		return nil, errors.New(errMsg)
 	}
 
@@ -362,7 +362,7 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":       fmt.Sprintf(lib.T_("Container %s successfully created"), name),
+			"message":       fmt.Sprintf(app.T_("Container %s successfully created"), name),
 			"containerInfo": osInfo,
 		},
 		Error: false,
@@ -375,7 +375,7 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIResponse, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		errMsg := lib.T_("You must specify the container name (--name)")
+		errMsg := app.T_("You must specify the container name (--name)")
 		return nil, errors.New(errMsg)
 	}
 
@@ -386,7 +386,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIR
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":       fmt.Sprintf(lib.T_("Container %s successfully deleted"), name),
+			"message":       fmt.Sprintf(app.T_("Container %s successfully deleted"), name),
 			"containerInfo": result,
 		},
 		Error: false,
@@ -394,7 +394,7 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIR
 
 	err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, name)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Error deleting container: %v"), err)
+		return nil, fmt.Errorf(app.T_("Error deleting container: %v"), err)
 	}
 
 	return &resp, nil
@@ -467,7 +467,7 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 func (a *Actions) validateContainer(ctx context.Context, container string) (service.ContainerInfo, error) {
 	container = strings.TrimSpace(container)
 	if container == "" {
-		return service.ContainerInfo{}, errors.New(lib.T_("You must specify the container name"))
+		return service.ContainerInfo{}, errors.New(app.T_("You must specify the container name"))
 	}
 
 	// Если контейнер не найден через API, проверяем наличие записей в базе данных
@@ -475,7 +475,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 	if errInfo != nil {
 		if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err == nil {
 			if err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, container); err != nil {
-				return service.ContainerInfo{}, fmt.Errorf(lib.T_("Failed to delete container records: %w"), err)
+				return service.ContainerInfo{}, fmt.Errorf(app.T_("Failed to delete container records: %w"), err)
 			}
 		}
 

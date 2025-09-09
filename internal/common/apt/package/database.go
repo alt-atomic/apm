@@ -17,12 +17,12 @@
 package _package
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/appstream"
-	"apm/internal/common/config"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"log"
@@ -40,15 +40,14 @@ import (
 
 // PackageDBService — сервис для операций с базой данных пакетов
 type PackageDBService struct {
-	db        *gorm.DB
-	appConfig *config.AppConfig
+	db *gorm.DB
 }
 
 // syncDBMutex защищает операции синхронизации базы пакетов.
 var syncDBMutex sync.Mutex
 
 // NewPackageDBService  — конструктор сервиса
-func NewPackageDBService(appConfig *config.AppConfig) (*PackageDBService, error) {
+func NewPackageDBService(db *sql.DB) (*PackageDBService, error) {
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
@@ -57,7 +56,7 @@ func NewPackageDBService(appConfig *config.AppConfig) (*PackageDBService, error)
 	)
 
 	gormDB, err := gorm.Open(sqlite.Dialector{
-		Conn:       appConfig.DatabaseManager.GetSystemDB(),
+		Conn:       db,
 		DriverName: "sqlite3",
 	}, &gorm.Config{
 		Logger: gormLogger,
@@ -73,8 +72,7 @@ func NewPackageDBService(appConfig *config.AppConfig) (*PackageDBService, error)
 	}
 
 	return &PackageDBService{
-		db:        gormDB,
-		appConfig: appConfig,
+		db: gormDB,
 	}, nil
 }
 
@@ -106,7 +104,7 @@ type DBPackage struct {
 	InstalledSize    int                  `gorm:"column:installed_size"`
 	Maintainer       string               `gorm:"column:maintainer"`
 	Version          string               `gorm:"column:version;primaryKey"`
-	VersionRaw       string               `gorm:"column:versionRaw"` // Полная версия с buildtime
+	VersionRaw       string               `gorm:"column:versionRaw"`
 	VersionInstalled string               `gorm:"column:versionInstalled"`
 	Depends          string               `gorm:"column:depends"`
 	Aliases          string               `gorm:"column:aliases"`
@@ -198,7 +196,7 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		// Очищаем таблицу
 		if errDel := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&DBPackage{}).Error; errDel != nil {
-			return fmt.Errorf(lib.T_("Table cleanup error: %w"), errDel)
+			return fmt.Errorf(app.T_("Table cleanup error: %w"), errDel)
 		}
 
 		batchSize := 1000
@@ -217,7 +215,7 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 			}
 
 			if errCreate := tx.Create(&dbPackages).Error; errCreate != nil {
-				return fmt.Errorf(lib.T_("Batch insert error: %w"), errCreate)
+				return fmt.Errorf(app.T_("Batch insert error: %w"), errCreate)
 			}
 		}
 		return nil
@@ -233,7 +231,7 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 		Where("name = ? OR (',' || aliases || ',') LIKE ?", packageName, "%,"+packageName+",%").
 		First(&dbPkg).Error
 	if err != nil {
-		return Package{}, fmt.Errorf(lib.T_("Failed to get information about the package %s"), packageName)
+		return Package{}, fmt.Errorf(app.T_("Failed to get information about the package %s"), packageName)
 	}
 
 	return dbPkg.fromDBModel(), nil
@@ -246,11 +244,11 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec("DROP TABLE IF EXISTS tmp_installed").Error; err != nil {
-			return fmt.Errorf(lib.T_("Temporary table drop error: %w"), err)
+			return fmt.Errorf(app.T_("Temporary table drop error: %w"), err)
 		}
 
 		if err := tx.Exec("CREATE TEMPORARY TABLE tmp_installed (name TEXT PRIMARY KEY, version TEXT)").Error; err != nil {
-			return fmt.Errorf(lib.T_("Temporary table creation error: %w"), err)
+			return fmt.Errorf(app.T_("Temporary table creation error: %w"), err)
 		}
 
 		var rows []map[string]interface{}
@@ -262,7 +260,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 		}
 		if len(rows) > 0 {
 			if err := tx.Table("tmp_installed").Create(rows).Error; err != nil {
-				return fmt.Errorf(lib.T_("Batch insert into temporary table error: %w"), err)
+				return fmt.Errorf(app.T_("Batch insert into temporary table error: %w"), err)
 			}
 		}
 
@@ -281,7 +279,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 				)
 		`
 		if err := tx.Exec(updateSQL).Error; err != nil {
-			return fmt.Errorf(lib.T_("Batch update error: %w"), err)
+			return fmt.Errorf(app.T_("Batch update error: %w"), err)
 		}
 
 		return nil
@@ -300,7 +298,7 @@ func (s *PackageDBService) SearchPackagesByNameLike(ctx context.Context, likePat
 
 	var dbPkgs []DBPackage
 	if err := query.Find(&dbPkgs).Error; err != nil {
-		return nil, fmt.Errorf(lib.T_("Query execution error: %w"), err)
+		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
 	}
 
 	result := make([]Package, 0, len(dbPkgs))
@@ -327,7 +325,7 @@ func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePat
 
 	var dbPkgs []DBPackage
 	if err := query.Find(&dbPkgs).Error; err != nil {
-		return nil, fmt.Errorf(lib.T_("Query execution error: %w"), err)
+		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
 	}
 
 	res := make([]Package, 0, len(dbPkgs))
@@ -356,7 +354,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 
 	if sortField != "" {
 		if !isAllowedField(sortField, allowedSortFields) {
-			return nil, fmt.Errorf(lib.T_("Invalid sort field: %s. Available fields: %s"), sortField, strings.Join(allowedSortFields, ", "))
+			return nil, fmt.Errorf(app.T_("Invalid sort field: %s. Available fields: %s"), sortField, strings.Join(allowedSortFields, ", "))
 		}
 		order := strings.ToUpper(sortOrder)
 		if order != "ASC" && order != "DESC" {
@@ -374,7 +372,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 
 	var dbPkgs []DBPackage
 	if err = query.Find(&dbPkgs).Error; err != nil {
-		return nil, fmt.Errorf(lib.T_("Query execution error: %w"), err)
+		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
 	}
 
 	// Преобразование к бизнес-структурам
@@ -398,7 +396,7 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 
 	var totalCount int64
 	if err = query.Count(&totalCount).Error; err != nil {
-		return 0, fmt.Errorf(lib.T_("Package count error: %w"), err)
+		return 0, fmt.Errorf(app.T_("Package count error: %w"), err)
 	}
 
 	return totalCount, nil
@@ -409,7 +407,7 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]interface{}) (*gorm.DB, error) {
 	for field, value := range filters {
 		if !isAllowedField(field, AllowedFilterFields) {
-			return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s"), field, strings.Join(AllowedFilterFields, ", "))
+			return nil, fmt.Errorf(app.T_("Invalid filter field: %s. Available fields: %s"), field, strings.Join(AllowedFilterFields, ", "))
 		}
 
 		switch field {
@@ -455,7 +453,6 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 }
 
 // SaveSinglePackage сохраняет один пакет в базу данных без очистки таблицы
-// Использует UPSERT (обновляет если пакет существует, создает если нет)
 func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) error {
 	dbPkg := pkg.toDBModel()
 
@@ -490,7 +487,7 @@ func (s *PackageDBService) PackageDatabaseExist(ctx context.Context) error {
 	}
 
 	if count == 0 {
-		return fmt.Errorf(lib.T_("Table %s exists but contains no records"), DBPackage{}.TableName())
+		return fmt.Errorf(app.T_("Table %s exists but contains no records"), DBPackage{}.TableName())
 	}
 
 	return nil

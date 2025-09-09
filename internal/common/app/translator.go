@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package config
+package app
 
 import (
 	"os"
@@ -29,14 +29,12 @@ import (
 type translatorImpl struct {
 	localesPath string
 	initialized bool
-	logger      Logger
 }
 
 // NewTranslator создает новый переводчик
-func NewTranslator(localesPath string, logger Logger) Translator {
+func NewTranslator(localesPath string) Translator {
 	return &translatorImpl{
 		localesPath: localesPath,
-		logger:      logger,
 	}
 }
 
@@ -47,7 +45,7 @@ func (t *translatorImpl) initLocales() {
 	}
 
 	if _, err := os.Stat(t.localesPath); os.IsNotExist(err) {
-		t.logger.Warning("Translations folder not found at path: " + t.localesPath)
+		Log.Warning("Translations folder not found at path: " + t.localesPath)
 	}
 
 	gotext.Configure(t.localesPath, GetSystemLocale().String(), "apm")

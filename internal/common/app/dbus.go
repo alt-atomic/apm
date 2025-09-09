@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package config
+package app
 
 import (
 	"fmt"
@@ -33,18 +33,13 @@ type DBusManager interface {
 
 // dbusManagerImpl реализация DBusManager
 type dbusManagerImpl struct {
-	conn       *dbus.Conn
-	logger     Logger
-	translator Translator
-	connected  bool
+	conn      *dbus.Conn
+	connected bool
 }
 
 // NewDBusManager создает новый менеджер DBus
-func NewDBusManager(logger Logger, translator Translator) DBusManager {
-	return &dbusManagerImpl{
-		logger:     logger,
-		translator: translator,
-	}
+func NewDBusManager() DBusManager {
+	return &dbusManagerImpl{}
 }
 
 // GetConnection возвращает текущее соединение
@@ -62,7 +57,7 @@ func (dm *dbusManagerImpl) ConnectSessionBus() error {
 	return dm.connect(false)
 }
 
-// connect внутренний метод для подключения
+// Connect внутренний метод для подключения
 func (dm *dbusManagerImpl) connect(isSystem bool) error {
 	var err error
 
@@ -73,7 +68,7 @@ func (dm *dbusManagerImpl) connect(isSystem bool) error {
 		dm.conn, err = dbus.ConnectSessionBus()
 	}
 	if err != nil {
-		return fmt.Errorf(dm.translator.T_("failed to connect to DBus: %w"), err)
+		return fmt.Errorf(T_("failed to connect to DBus: %w"), err)
 	}
 
 	// Регистрируем имя сервиса
@@ -81,17 +76,17 @@ func (dm *dbusManagerImpl) connect(isSystem bool) error {
 	if err != nil {
 		_ = dm.conn.Close()
 		dm.conn = nil
-		return fmt.Errorf(dm.translator.T_("failed to request DBus name: %w"), err)
+		return fmt.Errorf(T_("failed to request DBus name: %w"), err)
 	}
 
 	if reply != dbus.RequestNameReplyPrimaryOwner {
 		_ = dm.conn.Close()
 		dm.conn = nil
-		return fmt.Errorf(dm.translator.T_("Interface org.altlinux.APM is already in use"))
+		return fmt.Errorf(T_("Interface org.altlinux.APM is already in use"))
 	}
 
 	dm.connected = true
-	dm.logger.Debug("DBus connection established")
+	Log.Debug("DBus connection established")
 
 	return nil
 }
@@ -103,9 +98,9 @@ func (dm *dbusManagerImpl) Close() error {
 		dm.conn = nil
 		dm.connected = false
 		if err != nil {
-			return fmt.Errorf(dm.translator.T_("failed to close DBus connection: %w"), err)
+			return fmt.Errorf(T_("failed to close DBus connection: %w"), err)
 		}
-		dm.logger.Debug("DBus connection closed")
+		Log.Debug("DBus connection closed")
 	}
 	return nil
 }

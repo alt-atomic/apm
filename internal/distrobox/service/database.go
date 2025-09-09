@@ -17,9 +17,9 @@
 package service
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"context"
 	"database/sql"
 	"errors"
@@ -117,7 +117,7 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.SavePackagesToDB"))
 
 	if len(containerName) == 0 {
-		return errors.New(lib.T_("The 'container' field cannot be empty when saving packages to the database"))
+		return errors.New(app.T_("The 'container' field cannot be empty when saving packages to the database"))
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -153,13 +153,13 @@ func (s *DistroDBService) DatabaseExist(ctx context.Context) error {
 	var count int64
 	if err := s.db.WithContext(ctx).Model(&DBDistroPackage{}).Count(&count).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
-			return errors.New(lib.T_("The database does not have any records, it is necessary to create or update any container"))
+			return errors.New(app.T_("The database does not have any records, it is necessary to create or update any container"))
 		}
 		return err
 	}
 
 	if count == 0 {
-		return errors.New(lib.T_("The database contains no records, you need to create or update any container"))
+		return errors.New(app.T_("The database contains no records, you need to create or update any container"))
 	}
 	return nil
 }
@@ -175,7 +175,7 @@ func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerN
 	}
 
 	if count == 0 {
-		return fmt.Errorf(lib.T_("No records found for container %s"), containerName)
+		return fmt.Errorf(app.T_("No records found for container %s"), containerName)
 	}
 	return nil
 }
@@ -215,7 +215,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 
 	if sortField != "" {
 		if !s.isAllowedField(sortField, allowedSortFields) {
-			return nil, fmt.Errorf(lib.T_("Invalid sort field: %s. Available fields: %s."), sortField, strings.Join(allowedSortFields, ", "))
+			return nil, fmt.Errorf(app.T_("Invalid sort field: %s. Available fields: %s."), sortField, strings.Join(allowedSortFields, ", "))
 		}
 		upperOrder := strings.ToUpper(sortOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
@@ -274,7 +274,7 @@ func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName,
 	}
 
 	if !allowedFields[fieldName] {
-		lib.Log.Errorf(lib.T_("The field %s cannot be updated."), fieldName)
+		app.Log.Errorf(app.T_("The field %s cannot be updated."), fieldName)
 		return
 	}
 
@@ -286,7 +286,7 @@ func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName,
 		Model(&DBDistroPackage{}).
 		Where("container = ? AND name = ?", containerName, name).
 		Updates(updateMap).Error; err != nil {
-		lib.Log.Error(err)
+		app.Log.Error(err)
 	}
 }
 
@@ -306,7 +306,7 @@ func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, conta
 	if err := s.db.WithContext(ctx).
 		Where("container = ?", containerName).
 		Delete(&DBDistroPackage{}).Error; err != nil {
-		return fmt.Errorf(lib.T_("Error deleting container records %s: %v"), containerName, err)
+		return fmt.Errorf(app.T_("Error deleting container records %s: %v"), containerName, err)
 	}
 	return nil
 }
@@ -315,7 +315,7 @@ func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, conta
 func (s *DistroDBService) applyFilters(db *gorm.DB, filters map[string]interface{}) (*gorm.DB, error) {
 	for field, value := range filters {
 		if !s.isAllowedField(field, AllowedFilterFields) {
-			return nil, fmt.Errorf(lib.T_("Invalid filter field: %s. Available fields: %s."), field, strings.Join(AllowedFilterFields, ", "))
+			return nil, fmt.Errorf(app.T_("Invalid filter field: %s. Available fields: %s."), field, strings.Join(AllowedFilterFields, ", "))
 		}
 		switch field {
 		case "installed", "exporting":
