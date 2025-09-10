@@ -555,7 +555,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	return &resp, nil
 }
 
-// GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
+// GetFilterFields возвращает список свойств для фильтрации. Метод для DBUS
 func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, error) {
 	if err := a.validateDB(ctx); err != nil {
 		return nil, err

@@ -137,7 +137,6 @@ func (km *Manager) SimulateRemoveKernel(kernel *Info) (*libApt.PackageChanges, e
 		}
 	}
 
-	// Используем APT Actions для симуляции удаления
 	return km.aptActions.SimulateRemove(packagesToRemove, false)
 }
 
@@ -158,7 +157,6 @@ func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 		}
 	}
 
-	// Используем APT Actions для удаления
 	return km.aptActions.RemovePackages(packagesToRemove, purge, nil)
 }
 
@@ -275,7 +273,6 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 
 		// Проверяем является ли по умолчанию - сравниваем по PackageName
 		if defaultKernel != nil && kernel.PackageName == defaultKernel.PackageName {
-			// Обновляем defaultKernel реальными данными из базы
 			defaultKernel.BuildTime = kernel.BuildTime
 			defaultKernel.AgeInDays = kernel.AgeInDays
 			defaultKernel.FullVersion = kernel.FullVersion
@@ -386,7 +383,6 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 		return err
 	}
 
-	// Используем APT Actions для установки
 	return km.aptActions.InstallPackages(installPackages, nil)
 }
 

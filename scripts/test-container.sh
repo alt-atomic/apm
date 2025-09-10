@@ -133,16 +133,6 @@ fi
 
 # Run different test suites based on parameter
 case "${TEST_SUITE}" in
-    "unit")
-        print_info "Running unit tests only..."
-        podman exec "${CONTAINER_NAME}" bash -c "
-            cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
-            export GO111MODULE=on && \
-            meson test -C builddir --suite unit --verbose
-        "
-        ;;
     "system")
         print_info "Running system tests only..."
         podman exec --user root "${CONTAINER_NAME}" bash -c "
@@ -163,19 +153,9 @@ case "${TEST_SUITE}" in
             meson test -C builddir --suite apt --verbose
         "
         ;;
-    "all")
-        print_warning "Running ALL tests including distrobox (may fail in container)..."
-        podman exec "${CONTAINER_NAME}" bash -c "
-            cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
-            export GO111MODULE=on && \
-            meson test -C builddir --verbose
-        "
-        ;;
     *)
         print_error "Unknown test suite: ${TEST_SUITE}"
-        print_info "Available test suites: unit, system, apt, safe, all, exec"
+        print_info "Available test suites: system, apt, exec"
         exit 1
         ;;
 esac

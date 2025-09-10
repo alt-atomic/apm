@@ -113,6 +113,11 @@ func (cm *configManagerImpl) loadConfiguration(buildInfo BuildInfo) error {
 	cm.config.PathDBSQLUser = "~/.cache/apm/apm.db"
 	cm.config.PathDBKV = "~/.cache/apm/pogreb"
 
+	// Устанавливаем дефолт для системной БД если не задан через build, тесты будут использовать этот путь
+	if cm.config.PathDBSQLSystem == "" {
+		cm.config.PathDBSQLSystem = filepath.Join(os.TempDir(), "apm-system.db")
+	}
+
 	if err := cm.loadConfigFile(); err != nil {
 		return err
 	}

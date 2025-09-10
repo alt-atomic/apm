@@ -12,18 +12,15 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-//go:build distrobox
+// along with this program.  If not, see <http://www.gnu.org/licenses/>. //go:build distrobox
 
 package distrobox_test
 
 import (
-	"apm/internal/common/app"
 	"apm/internal/distrobox"
+	"apm/tests/integration/common"
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"syscall"
 	"testing"
@@ -32,7 +29,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// DistroboxTestSuite manages a single container for all tests
+// DistroboxTestSuite управляет одним контейнером для всех тестов
 type DistroboxTestSuite struct {
 	suite.Suite
 	actions       *distrobox.Actions
@@ -41,24 +38,19 @@ type DistroboxTestSuite struct {
 	image         string
 }
 
-// SetupSuite creates container once for all tests
+// SetupSuite создает контейнер один раз для всех тестов
 func (s *DistroboxTestSuite) SetupSuite() {
 	if syscall.Geteuid() == 0 {
 		s.T().Skip("Distrobox tests should be run without root privileges")
 	}
 
-	appConfig, errInitial := app.InitializeAppDefault()
-	if errInitial != nil {
-		log.Fatalf("Error initializing app: %v", errInitial)
-	}
+	appConfig, ctx := common.GetTestAppConfig(s.T())
 
 	s.actions = distrobox.NewActions(appConfig)
-	s.ctx = context.Background()
-	s.ctx = context.WithValue(s.ctx, app.AppConfigKey, appConfig)
+	s.ctx = ctx
 	s.containerName = "apm-test-suite"
 	s.image = "registry.altlinux.org/sisyphus/base:latest"
 
-	// First try to remove existing container (if any)
 	s.T().Logf("Removing existing container %s if it exists...", s.containerName)
 	_, err := s.actions.ContainerRemove(s.ctx, s.containerName)
 	if err != nil {
@@ -67,7 +59,6 @@ func (s *DistroboxTestSuite) SetupSuite() {
 		s.T().Logf("Existing container %s removed", s.containerName)
 	}
 
-	// Create container for all tests
 	s.T().Logf("Creating new container %s...", s.containerName)
 	resp, err := s.actions.ContainerAdd(s.ctx, s.image, s.containerName, "", "")
 	if err != nil {
@@ -79,7 +70,7 @@ func (s *DistroboxTestSuite) SetupSuite() {
 	s.T().Logf("Test container created: %s", s.containerName)
 }
 
-// TearDownSuite removes container after all tests
+// TearDownSuite удаляет контейнер после всех тестов
 func (s *DistroboxTestSuite) TearDownSuite() {
 	if s.actions != nil {
 		resp, err := s.actions.ContainerRemove(s.ctx, s.containerName)
@@ -91,12 +82,12 @@ func (s *DistroboxTestSuite) TearDownSuite() {
 	}
 }
 
-// TestActionsCreation tests basic actions creation
+// TestActionsCreation тестирует базовое создание actions
 func (s *DistroboxTestSuite) TestActionsCreation() {
 	assert.NotNil(s.T(), s.actions)
 }
 
-// TestContainerList tests listing containers
+// TestContainerList тестирует получение списка контейнеров
 func (s *DistroboxTestSuite) TestContainerList() {
 	resp, err := s.actions.ContainerList(s.ctx)
 
@@ -108,11 +99,8 @@ func (s *DistroboxTestSuite) TestContainerList() {
 	assert.NotNil(s.T(), resp)
 	assert.False(s.T(), resp.Error)
 
-	// Simple approach: check if our container name appears in the string representation
 	responseStr := fmt.Sprintf("%+v", resp.Data)
 	s.T().Logf("ContainerList response: %s", responseStr)
-
-	// Check if our container name appears in the response
 	found := strings.Contains(responseStr, s.containerName)
 
 	if found {
@@ -124,7 +112,7 @@ func (s *DistroboxTestSuite) TestContainerList() {
 	assert.True(s.T(), found, "Test container should be found in container list")
 }
 
-// TestPackageInstall tests installing a package
+// TestPackageInstall тестирует установку пакета
 func (s *DistroboxTestSuite) TestPackageInstall() {
 	resp, err := s.actions.Install(s.ctx, s.containerName, "hello", false)
 
@@ -139,7 +127,7 @@ func (s *DistroboxTestSuite) TestPackageInstall() {
 	s.T().Logf("Package installed successfully")
 }
 
-// TestPackageSearch tests searching for packages
+// TestPackageSearch тестирует поиск пакетов
 func (s *DistroboxTestSuite) TestPackageSearch() {
 	resp, err := s.actions.Search(s.ctx, s.containerName, "vim")
 
@@ -153,7 +141,7 @@ func (s *DistroboxTestSuite) TestPackageSearch() {
 	s.T().Logf("Search completed successfully")
 }
 
-// TestPackageInfo tests getting package info
+// TestPackageInfo тестирует получение информации о пакете
 func (s *DistroboxTestSuite) TestPackageInfo() {
 	resp, err := s.actions.Info(s.ctx, s.containerName, "hello")
 
@@ -167,7 +155,7 @@ func (s *DistroboxTestSuite) TestPackageInfo() {
 	s.T().Logf("Package info retrieved successfully")
 }
 
-// TestPackageList tests listing installed packages
+// TestPackageList тестирует получение списка установленных пакетов
 func (s *DistroboxTestSuite) TestPackageList() {
 	params := distrobox.ListParams{
 		Container: s.containerName,
@@ -186,7 +174,7 @@ func (s *DistroboxTestSuite) TestPackageList() {
 	s.T().Logf("Package list retrieved successfully")
 }
 
-// TestPackageUpdate tests updating packages
+// TestPackageUpdate тестирует обновление пакетов
 func (s *DistroboxTestSuite) TestPackageUpdate() {
 	resp, err := s.actions.Update(s.ctx, s.containerName)
 
@@ -200,7 +188,7 @@ func (s *DistroboxTestSuite) TestPackageUpdate() {
 	s.T().Logf("Update completed successfully")
 }
 
-// TestPackageRemove tests removing a package (run last)
+// TestPackageRemove тестирует удаление пакета (выполняется последним)
 func (s *DistroboxTestSuite) TestPackageRemove() {
 	resp, err := s.actions.Remove(s.ctx, s.containerName, "hello", false)
 
@@ -214,7 +202,7 @@ func (s *DistroboxTestSuite) TestPackageRemove() {
 	s.T().Logf("Package removed successfully")
 }
 
-// Run the test suite
+// Запуск набора тестов
 func TestDistroboxSuite(t *testing.T) {
 	suite.Run(t, new(DistroboxTestSuite))
 }
