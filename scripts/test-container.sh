@@ -2,7 +2,7 @@
 # Test runner script for containerized testing using pre-built container
 # Builds and installs APM inside container, then runs go test directly (no meson)
 # Usage: ./scripts/test-container.sh [test-suite]
-# Test suites: unit, system, distrobox, all, exec
+# Test suites: integration, all, exec
 # Usage: ./scripts/test-container.sh exec - to enter container interactively
 
 set -euo pipefail
@@ -18,7 +18,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 print_status() {
     local color=$1

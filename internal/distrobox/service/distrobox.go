@@ -299,7 +299,7 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 	// Выполнение команды создания контейнера
 	if err := cmd.Run(); err != nil {
 		app.Log.Errorf(app.T_("Failed to create container %s: %v, stderr: %s"), containerName, err, stderr.String())
-		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to create container %s: %v"), containerName, err)
+		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to create container %s: %v"), containerName, stderr.String())
 	}
 
 	return d.GetContainerOsInfo(ctx, containerName)
