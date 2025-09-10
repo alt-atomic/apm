@@ -135,29 +135,3 @@ func (c *Cache) simulateOperation(
 	})
 	return result, err
 }
-
-// markPackages помечает пакеты для установки или удаления
-func (c *Cache) markPackages(installNames, removeNames []string, purge bool) error {
-	return withMutex(func() error {
-		for _, name := range removeNames {
-			cname := C.CString(name)
-			res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge))
-			C.free(unsafe.Pointer(cname))
-			if res.code != C.APT_SUCCESS {
-				return ErrorFromResult(res)
-			}
-		}
-
-		// Затем помечаем для установки
-		for _, name := range installNames {
-			cname := C.CString(name)
-			res := C.apt_mark_install(c.Ptr, cname)
-			C.free(unsafe.Pointer(cname))
-			if res.code != C.APT_SUCCESS {
-				return ErrorFromResult(res)
-			}
-		}
-
-		return nil
-	})
-}

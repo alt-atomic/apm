@@ -118,7 +118,7 @@ func (a *Actions) checkPackageExists(ctx context.Context, packageName string) bo
 	return true
 }
 
-func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
+func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 	var packagesInfo []Package
@@ -189,7 +189,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 
 	var aptError error
 	var packageChanges *aptLib.PackageChanges
-	packageChanges, aptError = a.serviceAptBinding.SimulateChange(expandedInstall, expandedRemove, purge)
+	packageChanges, aptError = a.serviceAptBinding.SimulateChange(expandedInstall, expandedRemove, purge, depends)
 	if aptError != nil {
 		return nil, nil, nil, nil, aptError
 	}
@@ -376,11 +376,11 @@ func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInst
 	return nil
 }
 
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) error {
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	err := a.serviceAptBinding.RemovePackages(packages, purge, a.getHandler(ctx))
+	err := a.serviceAptBinding.RemovePackages(packages, purge, depends, a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -408,11 +408,11 @@ func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packa
 	return
 }
 
-func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge bool) (packageChanges *aptLib.PackageChanges, err error) {
+func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge bool, depends bool) (packageChanges *aptLib.PackageChanges, err error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	packageChanges, err = a.serviceAptBinding.SimulateRemove(packageName, purge)
+	packageChanges, err = a.serviceAptBinding.SimulateRemove(packageName, purge, depends)
 	return
 }
 

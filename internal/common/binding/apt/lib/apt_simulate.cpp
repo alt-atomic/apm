@@ -180,12 +180,12 @@ AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes)
 
 AptResult apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes) {
     // Delegate to unified change simulator
-    return apt_simulate_change(cache, package_names, count, nullptr, 0, false, changes);
+    return apt_simulate_change(cache, package_names, count, nullptr, 0, false, false, changes);
 }
 
-AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, bool purge, AptPackageChanges* changes) {
+AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, bool purge, bool remove_depends, AptPackageChanges* changes) {
     // Delegate to unified change simulator
-    return apt_simulate_change(cache, nullptr, 0, package_names, count, purge, changes);
+    return apt_simulate_change(cache, nullptr, 0, package_names, count, purge, remove_depends, changes);
 }
 
 AptResult plan_change_internal(
@@ -193,6 +193,7 @@ AptResult plan_change_internal(
      const char** install_names, size_t install_count,
      const char** remove_names, size_t remove_count,
      bool purge,
+     bool remove_depends,
      bool apply,
      AptPackageChanges* changes) {
 
@@ -235,7 +236,7 @@ AptResult plan_change_internal(
          }
 
          // Step 3: Resolve dependencies AFTER marking
-         result = resolve_dependencies(cache);
+         result = resolve_dependencies(cache, remove_depends);
          if (result.code != APT_SUCCESS) {
              return result;
          }
@@ -283,8 +284,9 @@ AptResult apt_simulate_change(AptCache* cache,
                               const char** install_names, size_t install_count,
                               const char** remove_names, size_t remove_count,
                               bool purge,
+                              bool remove_depends,
                               AptPackageChanges* changes) {
-    return plan_change_internal(cache, install_names, install_count, remove_names, remove_count, purge, false, changes);
+    return plan_change_internal(cache, install_names, install_count, remove_names, remove_count, purge, remove_depends, false, changes);
 }
 
 AptResult apt_simulate_autoremove(AptCache* cache, AptPackageChanges* changes) {

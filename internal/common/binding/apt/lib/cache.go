@@ -100,11 +100,11 @@ func (c *Cache) MarkInstall(packageName string) error {
 	})
 }
 
-func (c *Cache) MarkRemove(packageName string, purge bool) error {
+func (c *Cache) MarkRemove(packageName string, purge bool, depends bool) error {
 	return withMutex(func() error {
 		cname := C.CString(packageName)
 		defer C.free(unsafe.Pointer(cname))
-		if res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge)); res.code != C.APT_SUCCESS {
+		if res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge), C.bool(depends)); res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}
 		return nil
@@ -216,7 +216,7 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 }
 
 // SimulateRemove симулирует удаление пакетов
-func (c *Cache) SimulateRemove(packageNames []string, purge bool) (*PackageChanges, error) {
+func (c *Cache) SimulateRemove(packageNames []string, purge bool, depends bool) (*PackageChanges, error) {
 	if len(packageNames) == 0 {
 		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
 	}
@@ -227,7 +227,7 @@ func (c *Cache) SimulateRemove(packageNames []string, purge bool) (*PackageChang
 		defer freeCStringArray(cNames)
 
 		var cc C.AptPackageChanges
-		res := C.apt_simulate_remove(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), C.bool(purge), &cc)
+		res := C.apt_simulate_remove(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), C.bool(purge), C.bool(depends), &cc)
 		defer C.apt_free_package_changes(&cc)
 
 		if res.code != C.APT_SUCCESS {
@@ -241,7 +241,7 @@ func (c *Cache) SimulateRemove(packageNames []string, purge bool) (*PackageChang
 }
 
 // SimulateChange симулирует установку и удаление пакетов в одной транзакции
-func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool) (*PackageChanges, error) {
+func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool, depends bool) (*PackageChanges, error) {
 	if len(installNames) == 0 && len(removeNames) == 0 {
 		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
 	}
@@ -271,7 +271,7 @@ func (c *Cache) SimulateChange(installNames []string, removeNames []string, purg
 		}
 
 		var cc C.AptPackageChanges
-		res := C.apt_simulate_change(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), &cc)
+		res := C.apt_simulate_change(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), C.bool(depends), &cc)
 		defer C.apt_free_package_changes(&cc)
 
 		if res.code != C.APT_SUCCESS {

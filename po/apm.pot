@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-10 23:11+0600\n"
+"POT-Creation-Date: 2025-09-11 05:08+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -46,7 +46,7 @@ msgstr ""
 msgid "failed to request DBus name: %w"
 msgstr ""
 
-#: internal/common/app/dbus.go:85 lib/dbus.go:46
+#: internal/common/app/dbus.go:85
 msgid "Interface org.altlinux.APM is already in use"
 msgstr ""
 
@@ -1509,11 +1509,11 @@ msgstr ""
 msgid "Container name. Required"
 msgstr ""
 
-#: internal/distrobox/commands.go:91 internal/system/commands.go:205
+#: internal/distrobox/commands.go:91 internal/system/commands.go:211
 msgid "Package information"
 msgstr ""
 
-#: internal/distrobox/commands.go:112 internal/system/commands.go:226
+#: internal/distrobox/commands.go:112 internal/system/commands.go:232
 msgid "Quick package search by name"
 msgstr ""
 
@@ -1529,21 +1529,21 @@ msgstr ""
 msgid "Field for sorting, for example: name, version"
 msgstr ""
 
-#: internal/distrobox/commands.go:145 internal/system/commands.go:260
+#: internal/distrobox/commands.go:145 internal/system/commands.go:266
 msgid "Sorting order: ASC or DESC"
 msgstr ""
 
-#: internal/distrobox/commands.go:150 internal/system/commands.go:265
-#: internal/system/commands.go:366
+#: internal/distrobox/commands.go:150 internal/system/commands.go:271
+#: internal/system/commands.go:372
 msgid "Maximum number of records to return"
 msgstr ""
 
-#: internal/distrobox/commands.go:155 internal/system/commands.go:270
-#: internal/system/commands.go:371
+#: internal/distrobox/commands.go:155 internal/system/commands.go:276
+#: internal/system/commands.go:377
 msgid "Starting position (offset) for the result set"
 msgstr ""
 
-#: internal/distrobox/commands.go:160 internal/system/commands.go:275
+#: internal/distrobox/commands.go:160 internal/system/commands.go:281
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1569,7 +1569,7 @@ msgstr ""
 msgid "Remove only from host, leave package in container"
 msgstr ""
 
-#: internal/distrobox/commands.go:241 internal/system/commands.go:308
+#: internal/distrobox/commands.go:241 internal/system/commands.go:314
 msgid "Show dbus online documentation"
 msgstr ""
 
@@ -2295,7 +2295,7 @@ msgstr ""
 msgid "Stplr package"
 msgstr ""
 
-#: internal/system/actions.go:651 internal/system/commands.go:334
+#: internal/system/actions.go:651 internal/system/commands.go:340
 msgid "Image status"
 msgstr ""
 
@@ -2333,58 +2333,62 @@ msgid "List of packages to remove"
 msgstr ""
 
 #: internal/system/commands.go:157
-msgid "Delete all files"
+msgid "Attempt to remove all files"
 msgstr ""
 
-#: internal/system/commands.go:174
+#: internal/system/commands.go:163
+msgid "Attempt to remove depends"
+msgstr ""
+
+#: internal/system/commands.go:180
 msgid "Updating package database"
 msgstr ""
 
-#: internal/system/commands.go:186
+#: internal/system/commands.go:192
 msgid "General system upgrade"
 msgstr ""
 
-#: internal/system/commands.go:210
+#: internal/system/commands.go:216
 msgid "Full output of information"
 msgstr ""
 
-#: internal/system/commands.go:231
+#: internal/system/commands.go:237
 msgid "Only installed"
 msgstr ""
 
-#: internal/system/commands.go:237 internal/system/commands.go:284
+#: internal/system/commands.go:243 internal/system/commands.go:290
 msgid "Full information output"
 msgstr ""
 
-#: internal/system/commands.go:252
+#: internal/system/commands.go:258
 msgid "Building a query to get a list of packages"
 msgstr ""
 
-#: internal/system/commands.go:256
+#: internal/system/commands.go:262
 msgid "Sort packages by field, example fields: name, section"
 msgstr ""
 
-#: internal/system/commands.go:279
+#: internal/system/commands.go:285
 msgid "Force update all packages before query"
 msgstr ""
 
-#: internal/system/commands.go:316
+#: internal/system/commands.go:322
 msgid "Module for working with the image"
 msgstr ""
 
-#: internal/system/commands.go:322
+#: internal/system/commands.go:328
 msgid "Apply changes to the host"
 msgstr ""
 
-#: internal/system/commands.go:346
+#: internal/system/commands.go:352
 msgid "Image update"
 msgstr ""
 
-#: internal/system/commands.go:358
+#: internal/system/commands.go:364
 msgid "Image changes history"
 msgstr ""
 
-#: internal/system/commands.go:362
+#: internal/system/commands.go:368
 msgid "Filter by image name"
 msgstr ""
 
@@ -2675,23 +2679,6 @@ msgstr ""
 msgid "Error deleting image %s: %v, output: %s\n"
 msgstr ""
 
-#: lib/database.go:40 lib/pogreb.go:35
-msgid "Database file not found. It will be created automatically."
-msgstr ""
-
-#: lib/database.go:46 lib/pogreb.go:41
-msgid "Error opening database: %v"
-msgstr ""
-
-#: lib/database.go:50
-msgid "Error connecting to database: %v"
-msgstr ""
-
-#: lib/i18n.go:32
-#, c-format
-msgid "Translations folder not found at path: %s"
-msgstr ""
-
 #: main.go:70
 msgid "Output format: json, text"
 msgstr ""
@@ -2740,10 +2727,10 @@ msgstr ""
 msgid "Terminating the application. Releasing resources…"
 msgstr ""
 
-#: main.go:290
+#: main.go:287
 msgid "failed to close DBus: %w"
 msgstr ""
 
-#: main.go:297
+#: main.go:294
 msgid "failed to close databases: %w"
 msgstr ""

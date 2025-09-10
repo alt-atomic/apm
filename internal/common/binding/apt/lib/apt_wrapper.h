@@ -143,7 +143,7 @@ void apt_package_manager_destroy(AptPackageManager* pm);
 
 // Package operations
 AptResult apt_mark_install(AptCache* cache, const char* package_name);
-AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge);
+AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge, bool remove_depends);
 
 // Package execution
 AptResult apt_install_packages(AptPackageManager* pm,
@@ -201,7 +201,7 @@ void apt_free_package_list(AptPackageList* list);
 
 // Simulation functions (support multiple packages)
 AptResult apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
-AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, bool purge, AptPackageChanges* changes);
+AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, bool purge, bool remove_depends, AptPackageChanges* changes);
 AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes);
 AptResult apt_simulate_autoremove(AptCache* cache, AptPackageChanges* changes);
 
@@ -210,6 +210,7 @@ AptResult apt_simulate_change(AptCache* cache,
                               const char** install_names, size_t install_count,
                               const char** remove_names, size_t remove_count,
                               bool purge,
+                              bool remove_depends,
                               AptPackageChanges* changes);
 
 void apt_free_package_changes(AptPackageChanges* changes);

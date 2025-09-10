@@ -68,12 +68,12 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 
 // Remove – Удаление пакетов
 // doc_response: InstallResponse
-func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, depends bool, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, packages, purge)
+	resp, err := w.actions.Remove(ctx, packages, purge, depends)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -220,12 +220,12 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 
 // CheckRemove – Проверить удаление пакетов
 // doc_response: CheckResponse
-func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends bool, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.CheckRemove(ctx, packages, false)
+	resp, err := w.actions.CheckRemove(ctx, packages, false, depends)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

@@ -165,6 +165,7 @@ func GetSystemIntrospectXML(isAtomic bool) string {
     <method name="Remove">
       <arg direction="in" type="as" name="packages"/>
       <arg direction="in" type="b" name="purge"/>
+ 	  <arg direction="in" type="b" name="depends"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
@@ -194,6 +195,7 @@ func GetSystemIntrospectXML(isAtomic bool) string {
 
     <method name="CheckRemove">
       <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="b" name="depends"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>

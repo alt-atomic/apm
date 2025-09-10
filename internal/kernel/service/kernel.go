@@ -137,7 +137,7 @@ func (km *Manager) SimulateRemoveKernel(kernel *Info) (*libApt.PackageChanges, e
 		}
 	}
 
-	return km.aptActions.SimulateRemove(packagesToRemove, false)
+	return km.aptActions.SimulateRemove(packagesToRemove, false, false)
 }
 
 // RemoveKernel удаляет указанное ядро
@@ -157,7 +157,7 @@ func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 		}
 	}
 
-	return km.aptActions.RemovePackages(packagesToRemove, purge, nil)
+	return km.aptActions.RemovePackages(packagesToRemove, purge, false, nil)
 }
 
 // GetCurrentKernel возвращает информацию о текущем запущенном ядре
@@ -409,10 +409,10 @@ func (km *Manager) RemovePackages(ctx context.Context, removePackages []string, 
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
 
 	if dryRun {
-		return km.aptActions.SimulateRemove(removePackages, false)
+		return km.aptActions.SimulateRemove(removePackages, false, false)
 	}
 
-	err := km.aptActions.RemovePackages(removePackages, false, nil)
+	err := km.aptActions.RemovePackages(removePackages, false, false, nil)
 	return nil, err
 }
 

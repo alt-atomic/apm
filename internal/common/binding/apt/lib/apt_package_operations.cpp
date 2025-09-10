@@ -138,7 +138,7 @@ AptResult process_package_installs(AptCache* cache,
             return result;
         }
 
-        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, true);
+        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
     }
 
     return make_result(APT_SUCCESS, nullptr);
@@ -399,34 +399,54 @@ AptResult process_package_removals(AptCache* cache,
         remove_targets.emplace_back(req.name, pkg);
 
         // delete only one package
-//        mark_dependent_packages_for_removal(cache, pkg, purge);
+        // mark_dependent_packages_for_removal(cache, pkg, purge);
     }
 
-    // delete all package direct depends TEST
-    std::set<pkgCache::PkgIterator> being_removed;
-    for (const auto& target : remove_targets) {
-        being_removed.insert(target.second);
-    }
-    mark_orphan_packages_for_removal(cache, being_removed, purge);
+//    Save for history TODO DELETE COMMENT AFTER TEST
+//    std::set<pkgCache::PkgIterator> being_removed;
+//    for (const auto& target : remove_targets) {
+//        being_removed.insert(target.second);
+//    }
+//    mark_orphan_packages_for_removal(cache, being_removed, purge);
 
     return make_result(APT_SUCCESS, nullptr);
 }
 
-AptResult resolve_dependencies(AptCache* cache) {
+AptResult resolve_dependencies(AptCache* cache, bool remove_depends) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
     }
 
-    // Check if we have broken packages that need resolution
     if (cache->dep_cache->BrokenCount() > 0) {
-        // Create resolver after packages are marked
-        pkgProblemResolver Fix(cache->dep_cache);
-        Fix.InstallProtect();
-        
-        // Let the resolver try to fix the problems
-        if (!Fix.Resolve(true)) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to resolve dependencies");
+        if (pkgFixBroken(*cache->dep_cache)) {
+            if (cache->dep_cache->BrokenCount() == 0) {
+                return make_result(APT_SUCCESS, nullptr);
+            }
         }
+    }
+
+    pkgProblemResolver Fix(cache->dep_cache);
+    Fix.InstallProtect();
+
+    if (_system) {
+        _system->ProcessCache(*cache->dep_cache, Fix);
+    }
+
+    if (_config && !_config->FindB("APT::Ignore-Hold", false)) {
+        for (pkgCache::PkgIterator I = cache->dep_cache->PkgBegin(); !I.end(); ++I) {
+            if (I->SelectedState == pkgCache::State::Hold) {
+                Fix.Protect(I);
+                cache->dep_cache->MarkKeep(I);
+            }
+        }
+    }
+
+    if (remove_depends || (_config && _config->FindB("APT::Remove-Depends", false))) {
+        Fix.RemoveDepends();
+    }
+
+    if (!Fix.Resolve(true)) {
+        return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to resolve dependencies");
     }
     
     // Final check for any remaining broken packages

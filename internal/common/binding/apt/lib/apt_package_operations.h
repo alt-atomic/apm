@@ -28,7 +28,7 @@ AptResult process_package_removals(AptCache* cache,
                                    std::set<std::string>& requested_remove,
                                    std::vector<std::pair<std::string, pkgCache::PkgIterator>>& remove_targets);
 
-AptResult resolve_dependencies(AptCache* cache);
+AptResult resolve_dependencies(AptCache* cache, bool remove_depends = false);
 
 void collect_package_changes(AptCache* cache,
                             const std::set<std::string>& requested_install,

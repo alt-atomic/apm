@@ -37,8 +37,4 @@ internal/system/service/database.go
 internal/system/service/host.go
 internal/system/service/podman.go
 internal/system/service/temporary.go
-lib/database.go
-lib/dbus.go
-lib/i18n.go
-lib/pogreb.go
 main.go

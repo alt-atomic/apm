@@ -9,16 +9,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-10 23:11+0600\n"
-"PO-Revision-Date: 2025-09-10 23:10+0600\n"
+"POT-Creation-Date: 2025-09-11 05:08+0600\n"
+"PO-Revision-Date: 2025-09-11 05:08+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 48.0\n"
 
 #: internal/common/app/database.go:99
@@ -49,7 +49,7 @@ msgstr "Ошибка подключения к DBus: %w"
 msgid "failed to request DBus name: %w"
 msgstr "Не удалось запросить имя DBus: %s"
 
-#: internal/common/app/dbus.go:85 lib/dbus.go:46
+#: internal/common/app/dbus.go:85
 msgid "Interface org.altlinux.APM is already in use"
 msgstr "Интерфейс org.altlinux.APM уже используется"
 
@@ -1542,11 +1542,11 @@ msgstr "Обновить и синхронизировать список уст
 msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
-#: internal/distrobox/commands.go:91 internal/system/commands.go:205
+#: internal/distrobox/commands.go:91 internal/system/commands.go:211
 msgid "Package information"
 msgstr "Информация о пакете"
 
-#: internal/distrobox/commands.go:112 internal/system/commands.go:226
+#: internal/distrobox/commands.go:112 internal/system/commands.go:232
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
@@ -1562,21 +1562,21 @@ msgstr "Построение запроса для извлечения спис
 msgid "Field for sorting, for example: name, version"
 msgstr "Поле для сортировки, к примеру: name, version"
 
-#: internal/distrobox/commands.go:145 internal/system/commands.go:260
+#: internal/distrobox/commands.go:145 internal/system/commands.go:266
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
-#: internal/distrobox/commands.go:150 internal/system/commands.go:265
-#: internal/system/commands.go:366
+#: internal/distrobox/commands.go:150 internal/system/commands.go:271
+#: internal/system/commands.go:372
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
-#: internal/distrobox/commands.go:155 internal/system/commands.go:270
-#: internal/system/commands.go:371
+#: internal/distrobox/commands.go:155 internal/system/commands.go:276
+#: internal/system/commands.go:377
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
-#: internal/distrobox/commands.go:160 internal/system/commands.go:275
+#: internal/distrobox/commands.go:160 internal/system/commands.go:281
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1604,7 +1604,7 @@ msgstr "Удаление пакета"
 msgid "Remove only from host, leave package in container"
 msgstr "Удалить только с хоста, оставить пакет в контейнере"
 
-#: internal/distrobox/commands.go:241 internal/system/commands.go:308
+#: internal/distrobox/commands.go:241 internal/system/commands.go:314
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
@@ -2360,7 +2360,7 @@ msgstr "Системный пакет"
 msgid "Stplr package"
 msgstr "Пакет Stplr"
 
-#: internal/system/actions.go:651 internal/system/commands.go:334
+#: internal/system/actions.go:651 internal/system/commands.go:340
 msgid "Image status"
 msgstr "Статус образа"
 
@@ -2399,58 +2399,62 @@ msgid "List of packages to remove"
 msgstr "Список пакетов на удаление"
 
 #: internal/system/commands.go:157
-msgid "Delete all files"
-msgstr "Удалить все файлы"
+msgid "Attempt to remove all files"
+msgstr "Попытка удалить все файлы"
 
-#: internal/system/commands.go:174
+#: internal/system/commands.go:163
+msgid "Attempt to remove depends"
+msgstr "Попытка удалить зависимости"
+
+#: internal/system/commands.go:180
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/system/commands.go:186
+#: internal/system/commands.go:192
 msgid "General system upgrade"
 msgstr "Общее обновление системы"
 
-#: internal/system/commands.go:210
+#: internal/system/commands.go:216
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:231
+#: internal/system/commands.go:237
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/system/commands.go:237 internal/system/commands.go:284
+#: internal/system/commands.go:243 internal/system/commands.go:290
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:252
+#: internal/system/commands.go:258
 msgid "Building a query to get a list of packages"
 msgstr "Создание запроса для получения списка пакетов"
 
-#: internal/system/commands.go:256
+#: internal/system/commands.go:262
 msgid "Sort packages by field, example fields: name, section"
 msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
-#: internal/system/commands.go:279
+#: internal/system/commands.go:285
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/system/commands.go:316
+#: internal/system/commands.go:322
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/system/commands.go:322
+#: internal/system/commands.go:328
 msgid "Apply changes to the host"
 msgstr "Применить изменения на хосте"
 
-#: internal/system/commands.go:346
+#: internal/system/commands.go:352
 msgid "Image update"
 msgstr "Обновление образа"
 
-#: internal/system/commands.go:358
+#: internal/system/commands.go:364
 msgid "Image changes history"
 msgstr "История изменения образа"
 
-#: internal/system/commands.go:362
+#: internal/system/commands.go:368
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
@@ -2752,23 +2756,6 @@ msgstr "Ошибка извлечения образа podman: %v"
 msgid "Error deleting image %s: %v, output: %s\n"
 msgstr "Ошибка удаления образа %s: %v, вывод: %s\n"
 
-#: lib/database.go:40 lib/pogreb.go:35
-msgid "Database file not found. It will be created automatically."
-msgstr "Файл базы данных не найден. Он будет автоматически создан."
-
-#: lib/database.go:46 lib/pogreb.go:41
-msgid "Error opening database: %v"
-msgstr "Ошибка открытия базы данных: %v"
-
-#: lib/database.go:50
-msgid "Error connecting to database: %v"
-msgstr "Ошибка подключения к базе данных: %v"
-
-#: lib/i18n.go:32
-#, c-format
-msgid "Translations folder not found at path: %s"
-msgstr "Папка перевода не найдена по пути: %s"
-
 #: main.go:70
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
@@ -2817,11 +2804,26 @@ msgstr "Требуются привилегии администратора д�
 msgid "Terminating the application. Releasing resources…"
 msgstr "Завершение работы приложения. Высвобождение ресурсов…"
 
-#: main.go:290
+#: main.go:287
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:297
+#: main.go:294
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 
+#~ msgid "Delete all files"
+#~ msgstr "Удалить все файлы"
+
+#~ msgid "Database file not found. It will be created automatically."
+#~ msgstr "Файл базы данных не найден. Он будет автоматически создан."
+
+#~ msgid "Error opening database: %v"
+#~ msgstr "Ошибка открытия базы данных: %v"
+
+#~ msgid "Error connecting to database: %v"
+#~ msgstr "Ошибка подключения к базе данных: %v"
+
+#, c-format
+#~ msgid "Translations folder not found at path: %s"
+#~ msgstr "Папка перевода не найдена по пути: %s"

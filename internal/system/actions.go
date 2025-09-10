@@ -105,8 +105,8 @@ type ImageStatus struct {
 }
 
 // CheckRemove проверяем пакеты перед удалением
-func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool) (*reply.APIResponse, error) {
-	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge)
+func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool, depends bool) (*reply.APIResponse, error) {
+	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge, depends)
 	if aptError != nil {
 		return nil, aptError
 	}
@@ -159,7 +159,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 		return nil, errPackageNotFound
 	}
 
-	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge)
+	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge, depends)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -199,7 +199,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 	}
 
 	reply.CreateSpinner(a.appConfig)
-	err = a.serviceAptActions.Remove(ctx, packageNames, purge)
+	err = a.serviceAptActions.Remove(ctx, packageNames, purge, depends)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 		return nil, errPrepare
 	}
 
-	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false)
+	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false, false)
 	if errFind != nil {
 		return nil, errFind
 	}
