@@ -1,4 +1,8 @@
+internal/common/app/app.go
+internal/common/app/database.go
+internal/common/app/dbus.go
 internal/common/appstream/swcat.go
+internal/common/app/translator.go
 internal/common/apt/errors.go
 internal/common/apt/package/actions.go
 internal/common/apt/package/database.go

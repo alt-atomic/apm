@@ -266,19 +266,16 @@ func cleanup() {
 	if appConfig != nil {
 		app.Log.Debug(app.T_("Terminating the application. Releasing resources…"))
 		defer func(appConfig *app.Config) {
-			err := closeApp(appConfig)
-			if err != nil {
-				app.Log.Error(err)
-			}
+			closeApp(appConfig)
 		}(appConfig)
 	}
 
 	defer globalCancel()
 }
 
-func closeApp(appConfig *app.Config) error {
+func closeApp(appConfig *app.Config) {
 	if appConfig == nil {
-		return nil
+		return
 	}
 
 	aptLib.WaitIdle()
@@ -287,16 +284,14 @@ func closeApp(appConfig *app.Config) error {
 	// Закрываем DBus соединение
 	if appConfig.DBusManager != nil {
 		if err := appConfig.DBusManager.Close(); err != nil {
-			return fmt.Errorf(app.T_("failed to close DBus: %w"), err)
+			app.Log.Errorf(app.T_("failed to close DBus: %w"), err)
 		}
 	}
 
 	// Закрываем базы данных
 	if appConfig.DatabaseManager != nil {
 		if err := appConfig.DatabaseManager.Close(); err != nil {
-			return fmt.Errorf(app.T_("failed to close databases: %w"), err)
+			app.Log.Errorf(app.T_("failed to close databases: %w"), err)
 		}
 	}
-
-	return nil
 }

@@ -150,21 +150,21 @@ func (dm *databaseManagerImpl) Close() error {
 
 	if dm.keyValueDB != nil {
 		if err := dm.keyValueDB.Close(); err != nil {
-			Log.Error(T_("Error closing KV database: "), err)
+			Log.Errorf("Error closing KV database: %v", err)
 		}
 		dm.keyValueDB = nil
 	}
 
 	if dm.systemDB != nil {
 		if err := dm.systemDB.Close(); err != nil {
-			Log.Error(T_("Error closing SQL database: "), err)
+			Log.Errorf("Error closing SQL database: %v", err)
 		}
 		dm.systemDB = nil
 	}
 
 	if dm.userDB != nil {
 		if err := dm.userDB.Close(); err != nil {
-			Log.Error(T_("Error closing SQL database: "), err)
+			Log.Errorf("Error closing SQL database: %v", err)
 		}
 		dm.userDB = nil
 	}
