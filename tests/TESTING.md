@@ -5,16 +5,10 @@
 ### В контейнере
 
 ```bash
+Просто войти в контейнер
 ./scripts/test-container.sh exec
-./scripts/test-container.sh system
-./scripts/test-container.sh apt
-```
-
-### На машине
-
-```bash
-./scripts/test-local.sh all
-./scripts/test-local.sh system
-./scripts/test-local.sh apt
-./scripts/test-local.sh distrobox
+Запустить интеграционные тесты
+./scripts/test-container.sh integration 
+Запустить все тесты
+./scripts/test-container.sh all
 ```

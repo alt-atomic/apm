@@ -164,7 +164,7 @@ func (cm *configManagerImpl) loadConfigFile() error {
 
 	if _, err := os.Stat("config.yml"); err == nil {
 		configPath = "config.yml"
-	} else if _, err := os.Stat("/etc/apm/config.yml"); err == nil {
+	} else if _, err = os.Stat("/etc/apm/config.yml"); err == nil {
 		configPath = "/etc/apm/config.yml"
 	}
 

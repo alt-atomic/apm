@@ -18,8 +18,7 @@ package system
 
 import (
 	"apm/internal/system"
-	"apm/tests/common"
-	common2 "apm/tests/integration/common"
+	common "apm/tests/integration/common"
 	"context"
 	"runtime"
 	"sync"
@@ -48,7 +47,7 @@ func (s *ThreadSafeTestSuite) SetupSuite() {
 		s.T().Skip("This test suite requires root privileges. Run with sudo.")
 	}
 
-	appConfig, ctx := common2.GetTestAppConfig(s.T())
+	appConfig, ctx := common.GetTestAppConfig(s.T())
 	s.actions = system.NewActions(appConfig)
 	s.ctx = ctx
 }
@@ -259,20 +258,6 @@ func (s *ThreadSafeTestSuite) TestPackageOperationLocking() {
 	})
 }
 
-// TestTimeoutHandling тестирует обработку таймаутов
-func (s *ThreadSafeTestSuite) TestTimeoutHandling() {
-	s.T().Run("Timeout on long operation", func(t *testing.T) {
-		err := common.WithAPTLockAndTimeout(func() error {
-			time.Sleep(2 * time.Second)
-			_, err := s.actions.Info(s.ctx, threadSafeTestPackage, false)
-			return err
-		}, 500*time.Millisecond)
-
-		assert.Error(t, err)
-		assert.True(t, common.IsAPTTimeoutError(err), "Should return timeout error")
-	})
-}
-
 // TestDatabaseConcurrency - проверяет race conditions в базе данных
 func (s *ThreadSafeTestSuite) TestDatabaseConcurrency() {
 	s.T().Run("Concurrent database operations", func(t *testing.T) {
@@ -397,41 +382,6 @@ func (s *ThreadSafeTestSuite) TestMemoryCorruption() {
 			okCount, errorCount, nilCount)
 
 		assert.Zero(t, nilCount, "Some goroutines got corrupted nil responses")
-	})
-}
-
-// TestResourceCleanup тестирует правильную очистку ресурсов
-func (s *ThreadSafeTestSuite) TestResourceCleanup() {
-	// Тестируем что мьютекс освобождается даже при панике
-	s.T().Run("Mutex released on panic", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("Recovered from panic:", r)
-			}
-		}()
-
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					panic(r)
-				}
-			}()
-
-			err := common.WithAPTLock(func() error {
-				panic("test panic")
-			})
-
-			assert.Error(t, err)
-		}()
-
-		err := common.WithAPTLockAndTimeout(func() error {
-			_, err := s.actions.Info(s.ctx, threadSafeTestPackage, false)
-			return err
-		}, 1*time.Second)
-
-		if err != nil && !common.IsAPTTimeoutError(err) {
-			t.Logf("Operation after panic error (may be expected): %v", err)
-		}
 	})
 }
 

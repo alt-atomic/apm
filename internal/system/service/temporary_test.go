@@ -206,7 +206,7 @@ func TestTemporaryConfigService_DeleteFile(t *testing.T) {
 	}
 
 	// Проверяем, что файл существует
-	if _, err := os.Stat(tempFile); os.IsNotExist(err) {
+	if _, err = os.Stat(tempFile); os.IsNotExist(err) {
 		t.Error("Config file should exist")
 	}
 
@@ -217,7 +217,7 @@ func TestTemporaryConfigService_DeleteFile(t *testing.T) {
 	}
 
 	// Проверяем, что файл удален
-	if _, err := os.Stat(tempFile); !os.IsNotExist(err) {
+	if _, err = os.Stat(tempFile); !os.IsNotExist(err) {
 		t.Error("Config file should be deleted")
 	}
 

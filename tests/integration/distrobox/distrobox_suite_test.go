@@ -188,7 +188,7 @@ func (s *DistroboxTestSuite) TestPackageUpdate() {
 	s.T().Logf("Update completed successfully")
 }
 
-// TestPackageRemove тестирует удаление пакета (выполняется последним)
+// TestPackageRemove тестирует удаление пакета
 func (s *DistroboxTestSuite) TestPackageRemove() {
 	resp, err := s.actions.Remove(s.ctx, s.containerName, "hello", false)
 

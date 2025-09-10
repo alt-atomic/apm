@@ -119,7 +119,7 @@ func (dm *databaseManagerImpl) initUserDB() error {
 		return fmt.Errorf(T_("error opening user database: %w"), err)
 	}
 
-	if err := db.Ping(); err != nil {
+	if err = db.Ping(); err != nil {
 		db.Close()
 		return fmt.Errorf(T_("error connecting to user database: %w"), err)
 	}
