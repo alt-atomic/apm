@@ -473,7 +473,7 @@ AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& 
     return make_result(APT_SUCCESS, nullptr);
 }
 
-AptResult preprocess_dependencies(AptCache *cache, const std::set<std::string> &requested_install) {
+AptResult preprocess_installs(AptCache *cache, const std::set<std::string> &requested_install) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
     }
@@ -532,16 +532,48 @@ AptResult preprocess_removals(AptCache *cache, const std::set<std::string> &requ
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
     }
 
-    // Only process if there are packages to remove
     if (requested_remove.empty()) {
         return make_result(APT_SUCCESS, nullptr);
     }
 
+    for (const auto &name: requested_remove) {
+        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(name.c_str());
+        if (pkg.end()) continue;
+
+        pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[pkg];
+        if (!pkg_state.Delete()) continue;
+
+        if ((pkg->Flags & pkgCache::Flag::Essential) != 0) {
+            return make_result(APT_ERROR_OPERATION_INCOMPLETE,
+                               (std::string("Cannot remove essential package: ") + pkg.Name()).c_str());
+        }
+    }
+
+    return make_result(APT_SUCCESS, nullptr);
+}
+
+AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::string> &requested_install, const std::set<std::string> &requested_remove, bool remove_depends) {
+    if (!cache || !cache->dep_cache) {
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
+    }
+
     pkgProblemResolver Fix(cache->dep_cache);
-    
-    Fix.InstallProtect();
-    
-    // For each package we want to remove, use Fix.Remove() FIRST like apt-get does
+
+    if (remove_depends || (_config && _config->FindB("APT::Remove-Depends", false))) {
+        Fix.RemoveDepends();
+    }
+
+    for (const auto &name: requested_install) {
+        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(name.c_str());
+        if (pkg.end()) continue;
+
+        pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[pkg];
+        if (!pkg_state.Install()) continue;
+
+        Fix.Clear(pkg);
+        Fix.Protect(pkg);
+    }
+
     for (const auto &name: requested_remove) {
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(name.c_str());
         if (pkg.end()) continue;
@@ -552,26 +584,6 @@ AptResult preprocess_removals(AptCache *cache, const std::set<std::string> &requ
         Fix.Clear(pkg);
         Fix.Protect(pkg);
         Fix.Remove(pkg);
-    }
-    
-    bool ResolveResult = Fix.Resolve(true);
-    if (!ResolveResult) {
-        return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to resolve removal dependencies");
-    }
-
-    return make_result(APT_SUCCESS, nullptr);
-}
-
-AptResult resolve_dependencies(AptCache *cache, bool remove_depends) {
-    if (!cache || !cache->dep_cache) {
-        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
-    }
-
-    // Create problem resolver
-    pkgProblemResolver Fix(cache->dep_cache);
-
-    if (remove_depends || (_config && _config->FindB("APT::Remove-Depends", false))) {
-        Fix.RemoveDepends();
     }
 
     Fix.InstallProtect();
@@ -630,169 +642,6 @@ void collect_package_changes(AptCache *cache,
             if (st.InstallVer != 0) install_size -= st.InstallVer->InstalledSize;
         }
     }
-}
-
-//AptResult validate_install_requests(AptCache* cache, const std::set<std::string>& requested_install,
-//                                    const std::vector<std::string>& new_installed,
-//                                    const std::vector<std::string>& upgraded) {
-//    if (!cache || !cache->dep_cache) {
-//        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
-//    }
-//
-//    if (!requested_install.empty() && new_installed.empty() && upgraded.empty()) {
-//
-//        for (const auto &name : requested_install) {
-//            pkgCache::PkgIterator p = cache->dep_cache->FindPkg(name.c_str());
-//            if (p.end()) {
-//                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-//                    (std::string("Package not found: ") + name).c_str());
-//            }
-//
-//            // Check if package is directly installed
-//            if (!p.CurrentVer().end()) {
-//                // Package is directly installed
-//                continue;
-//            }
-//
-//            // Check if this is a virtual package with installed providers
-//            bool has_installed_provider = false;
-//            if (p->ProvidesList != 0) {
-//                for (pkgCache::PrvIterator prv = p.ProvidesList(); !prv.end(); ++prv) {
-//                    pkgCache::PkgIterator prov = prv.OwnerPkg();
-//                    if (!prov.CurrentVer().end()) {
-//                        // Found an installed provider
-//                        has_installed_provider = true;
-//                        break;
-//                    }
-//                }
-//            }
-//
-//            if (!has_installed_provider) {
-//                // Neither the package itself nor any of its providers are installed
-//                // Check if the package exists but has broken dependencies
-//                pkgDepCache::StateCache &State = (*cache->dep_cache)[p];
-//                if (State.CandidateVer != 0) {
-//                    // Package exists but wasn't installed - check dependencies
-//                    bool has_broken_deps = false;
-//                    pkgCache::VerIterator ver = State.CandidateVerIter(*cache->dep_cache);
-//                    if (!ver.end()) {
-//                        for (pkgCache::DepIterator dep = ver.DependsList(); !dep.end(); ++dep) {
-//                            if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) {
-//                                continue;
-//                            }
-//
-//                            // Check if this dependency is satisfied
-//                            bool dep_satisfied = false;
-//                            pkgCache::PkgIterator target_pkg = dep.TargetPkg();
-//                            if (!target_pkg.end()) {
-//                                // Check if target package is installed or installable
-//                                if (!target_pkg.CurrentVer().end()) {
-//                                    dep_satisfied = true;
-//                                } else {
-//                                    pkgDepCache::StateCache &target_state = (*cache->dep_cache)[target_pkg];
-//                                    if (target_state.CandidateVer != 0) {
-//                                        dep_satisfied = true;
-//                                    }
-//                                }
-//                            }
-//
-//                            if (!dep_satisfied) {
-//                                has_broken_deps = true;
-//                                break;
-//                            }
-//
-//                            // Skip OR groups
-//                            while (!dep.end() && dep->CompareOp == pkgCache::Dep::Or) {
-//                                ++dep;
-//                            }
-//                        }
-//                    }
-//
-//                    if (has_broken_deps) {
-//                        return make_result(APT_ERROR_DEPENDENCY_BROKEN,
-//                            (std::string("Some broken packages were found while trying to process build-dependencies for ") + name).c_str());
-//                    } else {
-//                        // Package exists and dependencies look OK, but still wasn't marked
-//                        // This is unexpected
-//                        return make_result(APT_ERROR_DEPENDENCY_BROKEN,
-//                            (std::string("Package ") + name + " is not installed and was not marked for installation").c_str());
-//                    }
-//                } else {
-//                    // Package doesn't exist or is not installable
-//                    return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-//                        (std::string("Package ") + name + " is not available for installation").c_str());
-//                }
-//            }
-//        }
-//
-//        // All requested packages are already installed - this is actually success
-//        return make_result(APT_SUCCESS, nullptr);
-//    }
-//
-//    return make_result(APT_SUCCESS, nullptr);
-//}
-
-AptResult validate_remove_requests(AptCache *cache,
-                                   const std::vector<std::pair<std::string, pkgCache::PkgIterator> > &remove_targets,
-                                   const std::vector<std::string> &removed) {
-    if (!remove_targets.empty()) {
-        std::vector<std::string> blocked_packages;
-        std::set<std::string> blocking_packages;
-
-        for (const auto &entry: remove_targets) {
-            const std::string &rawName = entry.first;
-            pkgCache::PkgIterator pkg = entry.second;
-            if (pkg.end()) continue;
-
-            pkgDepCache::StateCache &st = (*cache->dep_cache)[pkg];
-            if (!st.Delete()) {
-                blocked_packages.push_back(rawName);
-
-                for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-                    if (it == pkg) continue;
-
-                    pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
-                    if (it_st.Delete()) continue;
-
-                    pkgCache::VerIterator cur = it.CurrentVer();
-                    if (cur.end()) continue;
-
-                    for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
-                        if (dep->Type != pkgCache::Dep::Depends &&
-                            dep->Type != pkgCache::Dep::PreDepends)
-                            continue;
-
-                        if (dep.TargetPkg() == pkg) {
-                            blocking_packages.insert(it.Name());
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!blocked_packages.empty() && removed.empty()) {
-            std::string msg = "Cannot remove ";
-            for (size_t i = 0; i < blocked_packages.size(); ++i) {
-                if (i > 0) msg += ", ";
-                msg += blocked_packages[i];
-            }
-
-            if (!blocking_packages.empty()) {
-                msg += ". Try removing together: ";
-                blocking_packages.insert(blocked_packages.begin(), blocked_packages.end());
-                bool first = true;
-                for (const auto &name: blocking_packages) {
-                    if (!first) msg += " ";
-                    first = false;
-                    msg += name;
-                }
-            }
-
-            return make_result(APT_ERROR_OPERATION_INCOMPLETE, msg.c_str());
-        }
-    }
-    return make_result(APT_SUCCESS, nullptr);
 }
 
 void populate_changes_structure(AptPackageChanges *changes,

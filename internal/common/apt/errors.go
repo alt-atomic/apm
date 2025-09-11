@@ -146,6 +146,7 @@ const (
 	ErrRepositoryUpdateFailed
 	ErrPackageIndexUpdateFailed
 	ErrConflictingPackages
+	ErrPackagesCouldNotBeInstalled
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -412,6 +413,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrRepositoryUpdateFailed, "Repository update failed: %s", func() string { return app.T_("Repository update failed: %s") }, 1},
 	{ErrPackageIndexUpdateFailed, "Package index update failed: %s", func() string { return app.T_("Package index update failed: %s") }, 1},
 	{ErrConflictingPackages, "Conflicting packages: %s and %s", func() string { return app.T_("Conflicting packages: %s and %s") }, 2},
+	{ErrPackagesCouldNotBeInstalled, "Some packages could not be installed. This may mean that you have requested an impossible situation", func() string {
+		return app.T_("Some packages could not be installed. This may mean that you have requested an impossible situation")
+	}, 0},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.

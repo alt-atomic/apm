@@ -230,20 +230,20 @@ AptResult plan_change_internal(
             return result;
         }
 
-        // Step 3b: Preprocess dependencies like apt-get does
-        result = preprocess_dependencies(cache, requested_install);
+        // Step 3b: Preprocess additional install dependencies
+        result = preprocess_installs(cache, requested_install);
         if (result.code != APT_SUCCESS) {
             return result;
         }
 
-        // Step 3c: Preprocess removals like apt-get does
+        // Step 3c: Preprocess removal validations
         result = preprocess_removals(cache, requested_remove);
         if (result.code != APT_SUCCESS) {
             return result;
         }
 
-        // Step 3d: Resolve dependencies AFTER preprocessing
-        result = resolve_dependencies(cache, remove_depends);
+        // Step 3d: Finalize all dependency resolution (single Fix.Resolve for everything)
+        result = finalize_dependency_resolution(cache, requested_install, requested_remove, remove_depends);
         if (result.code != APT_SUCCESS) {
             return result;
         }
@@ -260,18 +260,6 @@ AptResult plan_change_internal(
          collect_package_changes(cache, requested_install, requested_remove,
                                extra_installed, extra_removed, upgraded, 
                                new_installed, removed, download_size, install_size);
-
-         // Validate install requests
-//         result = validate_install_requests(cache, requested_install, new_installed, upgraded);
-//         if (result.code != APT_SUCCESS) {
-//             return result;
-//         }
-
-         // Validate remove requests
-         result = validate_remove_requests(cache, remove_targets, removed);
-         if (result.code != APT_SUCCESS) {
-             return result;
-         }
 
          // Populate changes structure
          populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed, download_size, install_size);

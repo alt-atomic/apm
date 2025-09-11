@@ -30,11 +30,11 @@ AptResult process_package_removals(AptCache *cache,
 
 AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& requested_install);
 
-AptResult preprocess_dependencies(AptCache *cache, const std::set<std::string> &requested_install);
+AptResult preprocess_installs(AptCache *cache, const std::set<std::string> &requested_install);
 
 AptResult preprocess_removals(AptCache *cache, const std::set<std::string> &requested_remove);
 
-AptResult resolve_dependencies(AptCache *cache, bool remove_depends = false);
+AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::string> &requested_install, const std::set<std::string> &requested_remove, bool remove_depends = false);
 
 void collect_package_changes(AptCache *cache,
                              const std::set<std::string> &requested_install,
@@ -46,15 +46,6 @@ void collect_package_changes(AptCache *cache,
                              std::vector<std::string> &removed,
                              uint64_t &download_size,
                              uint64_t &install_size);
-
-//AptResult validate_install_requests(AptCache* cache,
-//                                    const std::set<std::string>& requested_install,
-//                                    const std::vector<std::string>& new_installed,
-//                                    const std::vector<std::string>& upgraded);
-
-AptResult validate_remove_requests(AptCache *cache,
-                                   const std::vector<std::pair<std::string, pkgCache::PkgIterator> > &remove_targets,
-                                   const std::vector<std::string> &removed);
 
 void populate_changes_structure(AptPackageChanges *changes,
                                 const std::vector<std::string> &extra_installed,
