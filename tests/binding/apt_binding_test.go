@@ -123,7 +123,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	}
 
 	// Now simulate removing the package (should work since we ensured it's installed)
-	changes, err := actions.SimulateRemove([]string{testPackage}, true)
+	changes, err := actions.SimulateRemove([]string{testPackage}, true, true)
 	if err != nil {
 		t.Fatalf("SimulateRemove failed: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 	}
 
 	if installedFirst {
-		if err := actions.RemovePackages([]string{testPackage}, false, nil); err != nil {
+		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
 		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
@@ -170,7 +170,7 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
-		if err := actions.RemovePackages([]string{testPackage}, false, nil); err != nil {
+		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
 	}
@@ -189,11 +189,11 @@ func TestAptInvalidParameters(t *testing.T) {
 		t.Fatalf("expected error for empty package list in SimulateInstall")
 	}
 
-	if _, err := actions.SimulateRemove([]string{}, true); err == nil {
+	if _, err := actions.SimulateRemove([]string{}, true, true); err == nil {
 		t.Fatalf("expected error for empty package list in SimulateRemove")
 	}
 
-	if _, err := actions.SimulateChange(nil, nil, false); err == nil {
+	if _, err := actions.SimulateChange(nil, nil, false, true); err == nil {
 		t.Fatalf("expected error for empty lists in SimulateChange")
 	} else if ae, ok := err.(*aptlib.AptError); ok {
 		if ae.Code != aptlib.AptErrorInvalidParameters {

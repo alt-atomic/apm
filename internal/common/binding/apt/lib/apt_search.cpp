@@ -1,6 +1,6 @@
 #include "apt_internal.h"
 
-AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageList* result) {
+AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageList *result) {
     if (!cache || !cache->dep_cache || !pattern || !result) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for search");
     }
@@ -9,7 +9,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
     result->count = 0;
 
     try {
-        pkgCache& Cache = cache->dep_cache->GetCache();
+        pkgCache &Cache = cache->dep_cache->GetCache();
 
         pkgDepCache::Policy Plcy;
 
@@ -59,8 +59,8 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
         }
 
         auto LocalityCompare = [](const void *a, const void *b) -> int {
-            const ExVerFile *A = (const ExVerFile *)a;
-            const ExVerFile *B = (const ExVerFile *)b;
+            const ExVerFile *A = (const ExVerFile *) a;
+            const ExVerFile *B = (const ExVerFile *) b;
             if (A->Vf == nullptr && B->Vf == nullptr) return 0;
             if (A->Vf == nullptr) return 1;
             if (B->Vf == nullptr) return -1;
@@ -74,7 +74,6 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
 
         // Iterate over all the version records and check them (like in apt-cache)
         for (ExVerFile *J = VFList; J->Vf != nullptr; J++) {
-
             bool Match = true;
             pkgCache::VerFileIterator VF(Cache, J->Vf);
 
@@ -150,8 +149,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                         std::string record(rec_start, rec_stop - rec_start);
 
                         // Version
-                        std::string record_version;
-                        {
+                        std::string record_version; {
                             size_t pos = record.find("Version: ");
                             if (pos != std::string::npos) {
                                 size_t start = pos + 9;
@@ -161,8 +159,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                             }
                         }
                         // Architecture
-                        std::string record_arch;
-                        {
+                        std::string record_arch; {
                             size_t pos = record.find("Architecture: ");
                             if (pos != std::string::npos) {
                                 size_t start = pos + 14;
@@ -173,8 +170,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                         }
 
                         // Provides
-                        std::string record_provides;
-                        {
+                        std::string record_provides; {
                             size_t pos = record.find("Provides: ");
                             if (pos != std::string::npos) {
                                 size_t start = pos + 10;
@@ -243,7 +239,8 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                                 if (Ver.Arch() != nullptr && *Ver.Arch() != '\0') {
                                     info.architecture = strdup(Ver.Arch());
                                 }
-                                if (pkgCache::Priority(Ver->Priority) != nullptr && *pkgCache::Priority(Ver->Priority) != '\0') {
+                                if (pkgCache::Priority(Ver->Priority) != nullptr && *pkgCache::Priority(Ver->Priority)
+                                    != '\0') {
                                     info.priority = strdup(pkgCache::Priority(Ver->Priority));
                                 }
                                 info.installed_size = Ver->InstalledSize;
@@ -252,7 +249,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                                 {
                                     std::set<std::string> prov_names;
                                     for (pkgCache::PrvIterator prv = Ver.ProvidesList(); !prv.end(); ++prv) {
-                                        const char* n = prv.Name();
+                                        const char *n = prv.Name();
                                         if (n && *n) prov_names.insert(n);
                                     }
                                     if (!prov_names.empty()) {
@@ -268,7 +265,8 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                                 {
                                     std::set<std::string> dep_names;
                                     for (pkgCache::DepIterator dep = Ver.DependsList(); !dep.end(); ++dep) {
-                                        if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
+                                        if (dep->Type != pkgCache::Dep::Depends && dep->Type !=
+                                            pkgCache::Dep::PreDepends) continue;
                                         pkgCache::PkgIterator tpkg = dep.TargetPkg();
                                         if (!tpkg.end() && tpkg.Name() != nullptr) {
                                             dep_names.insert(tpkg.Name());
@@ -333,7 +331,8 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                         }
 
                         // Finalize auxiliary fields (use record-provides if nothing collected from cache)
-                        if (info.provides == nullptr && !record_provides.empty()) info.provides = strdup(record_provides.c_str());
+                        if (info.provides == nullptr && !record_provides.empty())
+                            info.provides = strdup(record_provides.c_str());
 
                         // Build aliases list for biarch naming (ALT): i586-<name>, <name>.32bit, i586-<name>.32bit
                         {
@@ -361,7 +360,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                                 if (!Pkg.end()) {
                                     pkgCache::VerIterator cand = Plcy.GetCandidateVer(Pkg);
                                     if (!cand.end() && cand.Arch() != nullptr) {
-                                        const char* a = cand.Arch();
+                                        const char *a = cand.Arch();
                                         if (strcmp(a, "i586") == 0 || strcmp(a, "i386") == 0) {
                                             is_32bit_arch = true;
                                         }
@@ -376,7 +375,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
 
                             if (!aliases.empty()) {
                                 info.alias_count = aliases.size();
-                                info.aliases = (char**)calloc(info.alias_count, sizeof(char*));
+                                info.aliases = (char **) calloc(info.alias_count, sizeof(char *));
                                 for (size_t ai = 0; ai < aliases.size(); ++ai) {
                                     info.aliases[ai] = strdup(aliases[ai].c_str());
                                 }
@@ -407,7 +406,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
 
         // Allocate result array
         result->count = matched_packages.size();
-        result->packages = (AptPackageInfo*)calloc(result->count, sizeof(AptPackageInfo));
+        result->packages = (AptPackageInfo *) calloc(result->count, sizeof(AptPackageInfo));
         if (!result->packages) {
             result->count = 0;
             return make_result(APT_ERROR_UNKNOWN, "Failed to allocate memory for search results");
@@ -419,8 +418,7 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
         }
 
         return make_result(APT_SUCCESS);
-
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         if (result->packages) {
             for (size_t i = 0; i < result->count; ++i) {
                 apt_free_package_info(&result->packages[i]);
@@ -442,5 +440,3 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
         return make_result(APT_ERROR_UNKNOWN, "Unknown exception in search");
     }
 }
-
-

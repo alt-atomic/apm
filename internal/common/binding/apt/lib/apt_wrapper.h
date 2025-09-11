@@ -62,14 +62,14 @@ typedef enum {
     APT_CALLBACK_DOWNLOAD_COMPLETE = 23
 } AptCallbackType;
 
-typedef void (*AptProgressCallback)(const char* package_name,
-                                   AptCallbackType callback_type,
-                                   uint64_t current,
-                                   uint64_t total,
-                                   void* user_data);
+typedef void (*AptProgressCallback)(const char *package_name,
+                                    AptCallbackType callback_type,
+                                    uint64_t current,
+                                    uint64_t total,
+                                    void *user_data);
 
 // Optional log callback to route error/info messages instead of stderr
-typedef void (*AptLogCallback)(const char* message, void* user_data);
+typedef void (*AptLogCallback)(const char *message, void *user_data);
 
 // Package states
 typedef enum {
@@ -85,26 +85,26 @@ typedef enum {
 
 // Package info structure
 typedef struct {
-    char* name;
-    char* version;
-    char* description;
-    char* short_description;
-    char* section;
-    char* architecture;
-    char* maintainer;
-    char* homepage;
-    char* priority;
-    char* md5_hash;
-    char* blake2b_hash;
-    char* source_package;
-    char* changelog;
-    char* filename;
-    char* depends;
-    char* provides;
-    char* conflicts;
-    char* obsoletes;
-    char* recommends;
-    char* suggests;
+    char *name;
+    char *version;
+    char *description;
+    char *short_description;
+    char *section;
+    char *architecture;
+    char *maintainer;
+    char *homepage;
+    char *priority;
+    char *md5_hash;
+    char *blake2b_hash;
+    char *source_package;
+    char *changelog;
+    char *filename;
+    char *depends;
+    char *provides;
+    char *conflicts;
+    char *obsoletes;
+    char *recommends;
+    char *suggests;
     AptPackageState state;
     bool auto_installed;
     bool essential;
@@ -112,79 +112,89 @@ typedef struct {
     uint64_t download_size;
     uint32_t package_id;
     // Aliases for this package (e.g., i586-<name>, i586-<name>.32bit)
-    char** aliases;
+    char **aliases;
     size_t alias_count;
 } AptPackageInfo;
 
 // Structured result for operations: code + optional message (malloc'ed; caller must free)
 typedef struct {
     AptErrorCode code;
-    char* message;
+    char *message;
 } AptResult;
 
 // System initialization
 AptResult apt_init_config();
-AptResult apt_init_system(AptSystem** system);
-void apt_cleanup_system(AptSystem* system);
+
+AptResult apt_init_system(AptSystem **system);
+
+void apt_cleanup_system(AptSystem *system);
 
 // Cache management
-AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock);
-void apt_cache_close(AptCache* cache);
-AptResult apt_cache_refresh(AptCache* cache);
-AptResult apt_cache_update(AptCache* cache);
-AptResult apt_cache_dist_upgrade(AptCache* cache);
+AptResult apt_cache_open(AptSystem *system, AptCache **cache, bool with_lock);
+
+void apt_cache_close(AptCache *cache);
+
+AptResult apt_cache_refresh(AptCache *cache);
+
+AptResult apt_cache_update(AptCache *cache);
+
+AptResult apt_cache_dist_upgrade(AptCache *cache);
 
 // File installation support - preprocess arguments to detect and handle RPM files
-AptResult apt_preprocess_install_arguments(const char** install_names, size_t install_count);
+AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count);
 
 // Package manager
-AptResult apt_package_manager_create(AptCache* cache, AptPackageManager** pm);
-void apt_package_manager_destroy(AptPackageManager* pm);
+AptResult apt_package_manager_create(AptCache *cache, AptPackageManager **pm);
+
+void apt_package_manager_destroy(AptPackageManager *pm);
 
 // Package operations
-AptResult apt_mark_install(AptCache* cache, const char* package_name);
-AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge, bool remove_depends);
+AptResult apt_mark_install(AptCache *cache, const char *package_name);
+
+AptResult apt_mark_remove(AptCache *cache, const char *package_name, bool purge, bool remove_depends);
 
 // Package execution
-AptResult apt_install_packages(AptPackageManager* pm,
+AptResult apt_install_packages(AptPackageManager *pm,
                                AptProgressCallback callback,
-                               void* user_data);
+                               void *user_data);
 
 // Full dist-upgrade execution with progress callbacks (mark + download + install)
-AptResult apt_dist_upgrade_with_progress(AptCache* cache,
+AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                                          AptProgressCallback callback,
-                                         void* user_data);
+                                         void *user_data);
 
 // Register a default/global progress callback that will be used if the
 // per-call callback is NULL. Useful for language bindings.
-void apt_register_progress_callback(AptProgressCallback callback, void* user_data);
+void apt_register_progress_callback(AptProgressCallback callback, void *user_data);
 
 // Register a log callback to receive error/info messages instead of writing to stderr
-void apt_set_log_callback(AptLogCallback callback, void* user_data);
+void apt_set_log_callback(AptLogCallback callback, void *user_data);
 
 // Helpers to enable Go-exported callbacks without exposing them as C symbols in Go code
-void apt_use_go_progress_callback(void* user_data);
-void apt_enable_go_log_callback(void* user_data);
+void apt_use_go_progress_callback(void *user_data);
+
+void apt_enable_go_log_callback(void *user_data);
 
 // Enable/disable capturing of std::cout/std::cerr into the registered log callback
 void apt_capture_stdio(int enable);
 
 // Package information (cleaned up - removed unsafe iterator-based functions)
-AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPackageInfo* info);
-void apt_free_package_info(AptPackageInfo* info);
+AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPackageInfo *info);
+
+void apt_free_package_info(AptPackageInfo *info);
 
 // Package searching
 typedef struct {
-    AptPackageInfo* packages;
+    AptPackageInfo *packages;
     size_t count;
 } AptPackageList;
 
 // Package changes structure for simulation
 typedef struct {
-    char** extra_installed;        // Additional packages that will be installed
-    char** upgraded_packages;      // Packages that will be upgraded
-    char** new_installed_packages; // New packages that will be installed
-    char** removed_packages;       // Packages that will be removed
+    char **extra_installed; // Additional packages that will be installed
+    char **upgraded_packages; // Packages that will be upgraded
+    char **new_installed_packages; // New packages that will be installed
+    char **removed_packages; // Packages that will be removed
 
     size_t extra_installed_count;
     size_t upgraded_count;
@@ -192,40 +202,48 @@ typedef struct {
     size_t removed_count;
     size_t not_upgraded_count;
 
-    uint64_t download_size;        // Size in bytes to download
-    uint64_t install_size;         // Size in bytes after installation
+    uint64_t download_size; // Size in bytes to download
+    uint64_t install_size; // Size in bytes after installation
 } AptPackageChanges;
 
-AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageList* result);
-void apt_free_package_list(AptPackageList* list);
+AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageList *result);
+
+void apt_free_package_list(AptPackageList *list);
 
 // Simulation functions (support multiple packages)
-AptResult apt_simulate_install(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes);
-AptResult apt_simulate_remove(AptCache* cache, const char** package_names, size_t count, bool purge, bool remove_depends, AptPackageChanges* changes);
-AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes);
-AptResult apt_simulate_autoremove(AptCache* cache, AptPackageChanges* changes);
+AptResult apt_simulate_install(AptCache *cache, const char **package_names, size_t count, AptPackageChanges *changes);
+
+AptResult apt_simulate_remove(AptCache *cache, const char **package_names, size_t count, bool purge,
+                              bool remove_depends, AptPackageChanges *changes);
+
+AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes);
+
+AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes);
 
 // Combined simulation: install and remove in a single transaction
-AptResult apt_simulate_change(AptCache* cache,
-                              const char** install_names, size_t install_count,
-                              const char** remove_names, size_t remove_count,
+AptResult apt_simulate_change(AptCache *cache,
+                              const char **install_names, size_t install_count,
+                              const char **remove_names, size_t remove_count,
                               bool purge,
                               bool remove_depends,
-                              AptPackageChanges* changes);
+                              AptPackageChanges *changes);
 
-void apt_free_package_changes(AptPackageChanges* changes);
+void apt_free_package_changes(AptPackageChanges *changes);
 
 // Utility functions
-const char* apt_error_string(AptErrorCode error);
-bool apt_has_broken_packages(AptCache* cache);
-uint32_t apt_get_broken_count(AptCache* cache);
+const char *apt_error_string(AptErrorCode error);
+
+bool apt_has_broken_packages(AptCache *cache);
+
+uint32_t apt_get_broken_count(AptCache *cache);
 
 // Debug/testing functions
-bool apt_test_findpkg(AptCache* cache, const char* package_name);
+bool apt_test_findpkg(AptCache *cache, const char *package_name);
 
 // Configuration
-AptErrorCode apt_set_config(const char* key, const char* value);
-const char* apt_get_config(const char* key, const char* default_value);
+AptErrorCode apt_set_config(const char *key, const char *value);
+
+const char *apt_get_config(const char *key, const char *default_value);
 
 // Force cleanup functions
 void apt_force_unlock();

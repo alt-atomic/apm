@@ -69,7 +69,7 @@ func (s *SystemTestSuite) TestInstall() {
 
 // TestRemove тестирует удаление пакетов
 func (s *SystemTestSuite) TestRemove() {
-	resp, err := s.actions.Remove(s.ctx, []string{testPackage}, false)
+	resp, err := s.actions.Remove(s.ctx, []string{testPackage}, false, false)
 	if err != nil {
 		s.T().Logf("Remove error (expected for nonexistent package): %v", err)
 		assert.True(s.T(),
@@ -86,7 +86,7 @@ func (s *SystemTestSuite) TestRemove() {
 
 // TestRemove тестирует удаление несуществующего пакета
 func (s *SystemTestSuite) TestRemoveNotExistentPackage() {
-	resp, err := s.actions.Remove(s.ctx, []string{"nonexistent-package"}, false)
+	resp, err := s.actions.Remove(s.ctx, []string{"nonexistent-package"}, false, false)
 	if err != nil {
 		s.T().Logf("Remove error (expected for nonexistent package): %v", err)
 		assert.True(s.T(),
@@ -176,7 +176,7 @@ func (s *SystemTestSuite) TestCheckInstall() {
 
 // TestCheckRemove тестирует CheckRemove
 func (s *SystemTestSuite) TestCheckRemove() {
-	_, err := s.actions.CheckRemove(s.ctx, []string{"nonexistent-package"}, false)
+	_, err := s.actions.CheckRemove(s.ctx, []string{"nonexistent-package"}, false, false)
 	if err != nil {
 		s.T().Logf("CheckRemove error (may be expected): %v", err)
 	}

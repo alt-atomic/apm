@@ -1,6 +1,6 @@
 #include "apt_internal.h"
 
-AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPackageInfo* info) {
+AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPackageInfo *info) {
     if (!cache || !cache->dep_cache || !package_name || !info) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for get_package_info");
     }
@@ -12,11 +12,10 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
 
         std::string input(package_name);
         std::string requested;
-        
+
         // Check if this is an RPM file path
         if (is_rpm_file(input)) {
-            // This is an RPM file - we need to preprocess it and find the corresponding package
-            const char* rpm_path = input.c_str();
+            const char *rpm_path = input.c_str();
             AptResult preprocess_result = apt_preprocess_install_arguments(&rpm_path, 1);
             if (preprocess_result.code != APT_SUCCESS) {
                 return preprocess_result;
@@ -37,9 +36,7 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
                     if (!ver.end()) {
                         for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
                             pkgCache::PkgFileIterator file = vf.File();
-                            // Check if this file corresponds to our RPM file
                             if (file.FileName() && input.find(file.FileName()) != std::string::npos) {
-                                // This package comes from our RPM file
                                 requested = iter.Name();
                                 found_package = true;
                                 goto found_rpm_package;
@@ -48,11 +45,11 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
                     }
                 }
             }
-            found_rpm_package:
-            
+        found_rpm_package:
+
             if (!found_package) {
-                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, 
-                                  (std::string("Unable to find package from RPM file: ") + input).c_str());
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                                   (std::string("Unable to find package from RPM file: ") + input).c_str());
             }
         } else {
             // Regular package name - normalize: strip .32bit alias suffix
@@ -75,8 +72,9 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
                 pkgCache::VerIterator cand = Plcy.GetCandidateVer(it);
                 if (cand.end()) continue;
                 for (pkgCache::PrvIterator prv = cand.ProvidesList(); !prv.end(); ++prv) {
-                    const char* prov_name = prv.Name();
-                    if (prov_name && (requested == prov_name || (package_name && std::string(package_name) == prov_name))) {
+                    const char *prov_name = prv.Name();
+                    if (prov_name && (requested == prov_name || (
+                                          package_name && std::string(package_name) == prov_name))) {
                         pkg = it;
                         break;
                     }
@@ -145,7 +143,7 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
 
             pkgRecords records(*cache->dep_cache);
             for (pkgCache::VerFileIterator vf = candidate_ver.FileList(); !vf.end(); ++vf) {
-                pkgRecords::Parser& parser = records.Lookup(vf);
+                pkgRecords::Parser &parser = records.Lookup(vf);
 
                 std::string desc = parser.LongDesc();
                 std::string short_desc = parser.ShortDesc();
@@ -167,32 +165,32 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
                 if (!source_pkg.empty()) {
                     info->source_package = strdup(source_pkg.c_str());
                 }
-                
+
                 std::string md5_hash = parser.MD5Hash();
                 if (!md5_hash.empty()) {
                     info->md5_hash = strdup(md5_hash.c_str());
                 }
-                
+
                 std::string blake2b_hash = parser.BLAKE2b();
                 if (!blake2b_hash.empty()) {
                     info->blake2b_hash = strdup(blake2b_hash.c_str());
                 }
-                
+
                 std::string filename = parser.FileName();
                 if (!filename.empty()) {
                     info->filename = strdup(filename.c_str());
                 }
-                
+
                 std::string changelog = parser.Changelog();
                 if (!changelog.empty()) {
                     info->changelog = strdup(changelog.c_str());
                 }
-                
+
                 // Get Homepage from full record like in apt_search_packages
                 const char *rec_start, *rec_stop;
                 parser.GetRec(rec_start, rec_stop);
                 std::string record(rec_start, rec_stop - rec_start);
-                
+
                 size_t homepage_pos = record.find("Homepage: ");
                 if (homepage_pos != std::string::npos) {
                     size_t start = homepage_pos + 10;
@@ -201,7 +199,7 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
                     std::string homepage = record.substr(start, end - start);
                     info->homepage = strdup(homepage.c_str());
                 }
-                
+
                 // Get Provides field
                 size_t provides_pos = record.find("Provides: ");
                 if (provides_pos != std::string::npos) {
@@ -224,9 +222,7 @@ AptResult apt_get_package_info(AptCache* cache, const char* package_name, AptPac
         info->priority = strdup("normal");
 
         return make_result(APT_SUCCESS, nullptr);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
-
-

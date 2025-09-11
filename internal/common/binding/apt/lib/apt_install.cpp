@@ -1,6 +1,6 @@
 #include "apt_internal.h"
 
-AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callback, void* user_data) {
+AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, void *user_data) {
     if (!pm || !pm->pm) return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
 
     try {
@@ -9,7 +9,9 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
             for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 pkgDepCache::StateCache &st = (*pm->cache->dep_cache)[it];
                 if (st.InstBroken() || st.NowBroken()) {
-                    std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + it.Name();
+                    std::string out = std::string(
+                                          "Some broken packages were found while trying to process build-dependencies for ")
+                                      + it.Name();
                     return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
                 }
             }
@@ -42,12 +44,12 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
         }
 
         auto acquire_result = acquire.Run();
-        
+
         // Send final download complete event
         if (global_callback != nullptr) {
             global_callback("", APT_CALLBACK_DOWNLOAD_STOP, 100, 100, global_user_data);
         }
-        
+
         if (acquire_result != pkgAcquire::Continue) {
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages");
         }
@@ -97,7 +99,7 @@ AptResult apt_install_packages(AptPackageManager* pm, AptProgressCallback callba
         global_user_data = nullptr;
 
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         global_callback = nullptr;
         global_user_data = nullptr;
         if (_system) {

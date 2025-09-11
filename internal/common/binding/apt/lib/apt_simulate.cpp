@@ -3,9 +3,7 @@
 #include <apt-pkg/version.h>
 #include <set>
 #include <memory>
-
-// Forward declaration for file preprocessing
-AptResult apt_preprocess_install_arguments(const char** install_names, size_t install_count);
+#include <iostream>
 
 // Helper function to preprocess RPM files from both install and remove arguments
 static AptResult preprocess_rpm_files_if_needed(AptCache* cache,
@@ -37,14 +35,11 @@ static AptResult preprocess_rpm_files_if_needed(AptCache* cache,
     }
     
     // Process RPM files and refresh cache ONLY ONCE
-    bool need_refresh = false;
-    
     if (install_names && install_count > 0) {
         AptResult preprocess_result = apt_preprocess_install_arguments(install_names, install_count);
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
-        need_refresh = true;
     }
     
     if (remove_names && remove_count > 0) {
@@ -52,17 +47,11 @@ static AptResult preprocess_rpm_files_if_needed(AptCache* cache,
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
-        need_refresh = true;
     }
     
-    // Only refresh cache once after all preprocessing
-    if (need_refresh) {
-        emit_log("Refreshing APT cache for RPM files - this may take time for large files");
-        AptResult refresh_result = apt_cache_refresh(cache);
-        if (refresh_result.code != APT_SUCCESS) {
-            return refresh_result;
-        }
-        emit_log("APT cache refresh completed");
+    AptResult refresh_result = apt_cache_refresh(cache);
+    if (refresh_result.code != APT_SUCCESS) {
+        return refresh_result;
     }
     
     return make_result(APT_SUCCESS, nullptr);
@@ -235,11 +224,23 @@ AptResult plan_change_internal(
              return result;
          }
 
-         // Step 3: Resolve dependencies AFTER marking
-         result = resolve_dependencies(cache, remove_depends);
-         if (result.code != APT_SUCCESS) {
-             return result;
-         }
+        // Step 3a: Check for package conflicts FIRST
+        result = check_package_conflicts(cache, requested_install);
+        if (result.code != APT_SUCCESS) {
+            return result;
+        }
+
+        // Step 3b: Preprocess dependencies like apt-get does
+        result = preprocess_dependencies(cache, requested_install);
+        if (result.code != APT_SUCCESS) {
+            return result;
+        }
+
+        // Step 3c: Resolve dependencies AFTER preprocessing
+        result = resolve_dependencies(cache, remove_depends);
+        if (result.code != APT_SUCCESS) {
+            return result;
+        }
 
          // Collect changes
          std::vector<std::string> extra_installed;
@@ -255,10 +256,10 @@ AptResult plan_change_internal(
                                new_installed, removed, download_size, install_size);
 
          // Validate install requests
-         result = validate_install_requests(cache, requested_install, new_installed, upgraded);
-         if (result.code != APT_SUCCESS) {
-             return result;
-         }
+//         result = validate_install_requests(cache, requested_install, new_installed, upgraded);
+//         if (result.code != APT_SUCCESS) {
+//             return result;
+//         }
 
          // Validate remove requests
          result = validate_remove_requests(cache, remove_targets, removed);

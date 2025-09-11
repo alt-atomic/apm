@@ -40,9 +40,9 @@ std::string last_error_message;
 
 // Optional logging callback (bridge to Go/Rust callers)
 AptLogCallback g_log_callback = nullptr;
-void* g_log_user_data = nullptr;
+void *g_log_user_data = nullptr;
 
-void emit_log(const std::string& msg) {
+void emit_log(const std::string &msg) {
     if (g_log_callback) {
         g_log_callback(msg.c_str(), g_log_user_data);
     } else {
@@ -87,14 +87,14 @@ private:
 static EmitLogBuf g_emit_buf;
 static std::ostream g_emit_stream(&g_emit_buf);
 
-std::ostream& apt_log_stream() {
+std::ostream &apt_log_stream() {
     return g_emit_stream;
 }
 
 static bool g_stdio_captured = false;
-static std::streambuf* g_prev_cout = nullptr;
-static std::streambuf* g_prev_cerr = nullptr;
-static std::streambuf* g_prev_clog = nullptr;
+static std::streambuf *g_prev_cout = nullptr;
+static std::streambuf *g_prev_cerr = nullptr;
+static std::streambuf *g_prev_clog = nullptr;
 
 extern "C" void apt_capture_stdio(int enable) {
     if (enable) {
@@ -175,7 +175,7 @@ static std::string collect_pending_errors() {
     return all_errors;
 }
 
-static const char* find_first_broken_pkg(pkgDepCache* dep) {
+static const char *find_first_broken_pkg(pkgDepCache *dep) {
     if (dep == nullptr) return nullptr;
     for (pkgCache::PkgIterator it = dep->PkgBegin(); !it.end(); ++it) {
         pkgDepCache::StateCache &st = (*dep)[it];
@@ -186,15 +186,15 @@ static const char* find_first_broken_pkg(pkgDepCache* dep) {
     return nullptr;
 }
 
-static char* dup_cstr(const std::string& s) {
+static char *dup_cstr(const std::string &s) {
     if (s.empty()) return nullptr;
-    char* p = (char*)malloc(s.size() + 1);
+    char *p = (char *) malloc(s.size() + 1);
     if (!p) return nullptr;
     memcpy(p, s.c_str(), s.size() + 1);
     return p;
 }
 
-AptResult make_result(AptErrorCode code, const char* explicit_msg) {
+AptResult make_result(AptErrorCode code, const char *explicit_msg) {
     AptResult r{};
     r.code = code;
     if (code == APT_SUCCESS) {
@@ -222,12 +222,12 @@ AptResult apt_init_config() {
             return make_result(APT_ERROR_INIT_FAILED, "Failed to initialize APT configuration");
         }
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         return make_result(APT_ERROR_INIT_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
-AptResult apt_init_system(AptSystem** system) {
+AptResult apt_init_system(AptSystem **system) {
     if (!system) return make_result(APT_ERROR_INIT_FAILED, "Invalid system pointer");
 
     try {
@@ -240,7 +240,7 @@ AptResult apt_init_system(AptSystem** system) {
         (*system)->system = _system;
 
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         if (*system) {
             delete *system;
             *system = nullptr;
@@ -249,7 +249,7 @@ AptResult apt_init_system(AptSystem** system) {
     }
 }
 
-void apt_cleanup_system(AptSystem* system) {
+void apt_cleanup_system(AptSystem *system) {
     if (system) {
         if (system->system) {
             system->system->UnLock(true);
@@ -259,7 +259,7 @@ void apt_cleanup_system(AptSystem* system) {
 }
 
 // Cache management
-AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
+AptResult apt_cache_open(AptSystem *system, AptCache **cache, bool with_lock) {
     if (!system || !cache) return make_result(APT_ERROR_INIT_FAILED, "Invalid arguments for cache_open");
 
     if (!system->system) {
@@ -280,7 +280,8 @@ AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
                 }
                 return make_result(APT_ERROR_LOCK_FAILED, all_errors.c_str());
             } else {
-                return make_result(APT_ERROR_LOCK_FAILED, "Unable to acquire APT system lock - another process may be using APT");
+                return make_result(APT_ERROR_LOCK_FAILED,
+                                   "Unable to acquire APT system lock - another process may be using APT");
             }
         }
         system->system->UnLock(true);
@@ -299,10 +300,11 @@ AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
         }
 
         if (!(*cache)->cache_file->CheckDeps()) {
-            const char* broken = find_first_broken_pkg((*cache)->cache_file->operator->());
+            const char *broken = find_first_broken_pkg((*cache)->cache_file->operator->());
             std::string out;
             if (broken && *broken) {
-                out = std::string("Some broken packages were found while trying to process build-dependencies for ") + broken;
+                out = std::string("Some broken packages were found while trying to process build-dependencies for ") +
+                      broken;
             } else {
                 out = "Broken dependencies";
             }
@@ -317,9 +319,9 @@ AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
             *cache = nullptr;
             return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Failed to get dependency cache");
         }
-        
+
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         if (*cache) {
             delete *cache;
             *cache = nullptr;
@@ -328,7 +330,7 @@ AptResult apt_cache_open(AptSystem* system, AptCache** cache, bool with_lock) {
     }
 }
 
-void apt_cache_close(AptCache* cache) {
+void apt_cache_close(AptCache *cache) {
     if (cache) {
         if (cache->cache_file) {
             cache->cache_file.reset();
@@ -337,7 +339,7 @@ void apt_cache_close(AptCache* cache) {
     }
 }
 
-AptResult apt_cache_refresh(AptCache* cache) {
+AptResult apt_cache_refresh(AptCache *cache) {
     if (!cache) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED);
     }
@@ -353,9 +355,11 @@ AptResult apt_cache_refresh(AptCache* cache) {
         }
 
         if (!cache->cache_file->CheckDeps()) {
-            const char* broken = find_first_broken_pkg(cache->cache_file->operator->());
+            const char *broken = find_first_broken_pkg(cache->cache_file->operator->());
             if (broken && *broken) {
-                std::string out = std::string("Some broken packages were found while trying to process build-dependencies for ") + broken + ".";
+                std::string out = std::string(
+                                      "Some broken packages were found while trying to process build-dependencies for ")
+                                  + broken + ".";
                 return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
             }
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
@@ -367,12 +371,13 @@ AptResult apt_cache_refresh(AptCache* cache) {
         }
 
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
-    } catch (const std::exception& e) {
-        return make_result(APT_ERROR_CACHE_REFRESH_FAILED, (std::string("Exception during cache refresh: ") + e.what()).c_str());
+    } catch (const std::exception &e) {
+        return make_result(APT_ERROR_CACHE_REFRESH_FAILED,
+                           (std::string("Exception during cache refresh: ") + e.what()).c_str());
     }
 }
 
-AptResult apt_cache_update(AptCache* cache) {
+AptResult apt_cache_update(AptCache *cache) {
     if (!cache || !cache->cache_file) return make_result(APT_ERROR_CACHE_OPEN_FAILED);
 
     try {
@@ -424,7 +429,8 @@ AptResult apt_cache_update(AptCache* cache) {
                     return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
                 }
             }
-            return make_result(APT_ERROR_DOWNLOAD_FAILED, "Package index update failed: Unable to download package lists");
+            return make_result(APT_ERROR_DOWNLOAD_FAILED,
+                               "Package index update failed: Unable to download package lists");
         }
 
         // Check for failed items even if Run() returned Continue
@@ -438,16 +444,17 @@ AptResult apt_cache_update(AptCache* cache) {
         if (!cache->cache_file->BuildCaches()) {
             return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to rebuild caches");
         }
-        
+
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
 // Package manager
-AptResult apt_package_manager_create(AptCache* cache, AptPackageManager** pm) {
-    if (!cache || !cache->dep_cache || !pm) return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid cache or output pointer for pm create");
+AptResult apt_package_manager_create(AptCache *cache, AptPackageManager **pm) {
+    if (!cache || !cache->dep_cache || !pm) return make_result(APT_ERROR_CACHE_OPEN_FAILED,
+                                                               "Invalid cache or output pointer for pm create");
 
     try {
         *pm = new AptPackageManager(cache);
@@ -461,7 +468,7 @@ AptResult apt_package_manager_create(AptCache* cache, AptPackageManager** pm) {
         }
 
         return make_result(APT_SUCCESS, nullptr);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         if (*pm) {
             delete *pm;
             *pm = nullptr;
@@ -470,64 +477,64 @@ AptResult apt_package_manager_create(AptCache* cache, AptPackageManager** pm) {
     }
 }
 
-void apt_package_manager_destroy(AptPackageManager* pm) {
+void apt_package_manager_destroy(AptPackageManager *pm) {
     delete pm;
 }
 
-AptResult apt_mark_install(AptCache* cache, const char* package_name) {
+AptResult apt_mark_install(AptCache *cache, const char *package_name) {
     if (!cache || !cache->dep_cache || !package_name) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_install");
     }
 
     try {
         // Delegate to unified planner to guarantee parity with simulation
-        const char* install_names[1] = { package_name };
+        const char *install_names[1] = {package_name};
         AptPackageChanges dummy{};
         AptResult r = plan_change_internal(cache, install_names, 1, nullptr, 0, false, false, true, &dummy);
         apt_free_package_changes(&dummy);
         return r;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
-AptResult apt_mark_remove(AptCache* cache, const char* package_name, bool purge, bool remove_depends) {
+AptResult apt_mark_remove(AptCache *cache, const char *package_name, bool purge, bool remove_depends) {
     if (!cache || !cache->dep_cache || !package_name) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid arguments for mark_remove");
     }
 
     try {
         // Delegate to unified planner to guarantee parity with simulation
-        const char* remove_names[1] = { package_name };
+        const char *remove_names[1] = {package_name};
         AptPackageChanges dummy{};
         AptResult r = plan_change_internal(cache, nullptr, 0, remove_names, 1, purge, remove_depends, true, &dummy);
         apt_free_package_changes(&dummy);
         return r;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
 
 // Progress callback implementation
 AptProgressCallback global_callback = nullptr;
-void* global_user_data = nullptr;
+void *global_user_data = nullptr;
 
 // Simple progress callback that handles package manager operations
 class SimpleProgressCallback {
 public:
-    static void InstallProgress(const char* package, int current, int total) {
+    static void InstallProgress(const char *package, int current, int total) {
         if (global_callback && package) {
             global_callback(package, APT_CALLBACK_INST_PROGRESS, current, total, global_user_data);
         }
     }
 
-    static void InstallStart(const char* package) {
+    static void InstallStart(const char *package) {
         if (global_callback && package) {
             global_callback(package, APT_CALLBACK_INST_START, 0, 0, global_user_data);
         }
     }
 
-    static void InstallStop(const char* package) {
+    static void InstallStop(const char *package) {
         if (global_callback && package) {
             global_callback(package, APT_CALLBACK_INST_STOP, 0, 0, global_user_data);
         }
@@ -581,7 +588,7 @@ void ProgressStatus::Stop() {
     pkgAcquireStatus::Stop();
 }
 
-void apt_free_package_info(AptPackageInfo* info) {
+void apt_free_package_info(AptPackageInfo *info) {
     if (!info) return;
 
     free(info->name);
@@ -614,7 +621,7 @@ void apt_free_package_info(AptPackageInfo* info) {
     memset(info, 0, sizeof(AptPackageInfo));
 }
 
-void apt_free_package_list(AptPackageList* list) {
+void apt_free_package_list(AptPackageList *list) {
     if (!list || !list->packages) return;
 
     for (size_t i = 0; i < list->count; ++i) {
@@ -627,7 +634,7 @@ void apt_free_package_list(AptPackageList* list) {
 }
 
 // Utility functions
-const char* apt_error_string(AptErrorCode error) {
+const char *apt_error_string(AptErrorCode error) {
     // Prefer the last detailed message captured via set_error if it matches the code
     if (last_error == error && !last_error_message.empty()) {
         return last_error_message.c_str();
@@ -657,18 +664,18 @@ const char* apt_error_string(AptErrorCode error) {
     }
 }
 
-bool apt_has_broken_packages(AptCache* cache) {
+bool apt_has_broken_packages(AptCache *cache) {
     if (!cache || !cache->dep_cache) return false;
     return cache->dep_cache->BrokenCount() > 0;
 }
 
-uint32_t apt_get_broken_count(AptCache* cache) {
+uint32_t apt_get_broken_count(AptCache *cache) {
     if (!cache || !cache->dep_cache) return 0;
     return cache->dep_cache->BrokenCount();
 }
 
 // Debug function to test FindPkg logic like in original apt-get
-bool apt_test_findpkg(AptCache* cache, const char* package_name) {
+bool apt_test_findpkg(AptCache *cache, const char *package_name) {
     if (!cache || !cache->dep_cache || !package_name) return false;
 
     try {
@@ -682,7 +689,7 @@ bool apt_test_findpkg(AptCache* cache, const char* package_name) {
             emit_log(std::string("Name: ") + pkg.Name());
             emit_log(std::string("ID: ") + std::to_string(pkg->ID));
 
-            pkgDepCache::StateCache& state = (*cache->dep_cache)[pkg];
+            pkgDepCache::StateCache &state = (*cache->dep_cache)[pkg];
             pkgCache::VerIterator candidate = state.CandidateVerIter(*cache->dep_cache);
             emit_log(std::string("CandidateVer.end(): ") + (candidate.end() ? "true" : "false"));
 
@@ -709,64 +716,63 @@ bool apt_test_findpkg(AptCache* cache, const char* package_name) {
             emit_log("Package NOT found in cache.");
             return false;
         }
-
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         emit_log(std::string("Exception: ") + e.what());
         return false;
     }
 }
 
-extern "C" void apt_set_log_callback(AptLogCallback callback, void* user_data) {
+extern "C" void apt_set_log_callback(AptLogCallback callback, void *user_data) {
     g_log_callback = callback;
     g_log_user_data = user_data;
 }
 
 // Global/default progress callback registration
-extern "C" void apt_register_progress_callback(AptProgressCallback callback, void* user_data) {
+extern "C" void apt_register_progress_callback(AptProgressCallback callback, void *user_data) {
     global_callback = callback;
     global_user_data = user_data;
 }
 
 extern "C" void goAptProgressCallback(const char *package_name,
-                                       int callback_type,
-                                       uint64_t current,
-                                       uint64_t total,
-                                       void *user_data);
+                                      int callback_type,
+                                      uint64_t current,
+                                      uint64_t total,
+                                      void *user_data);
 
 extern "C" void goAptLogCallback(const char *message, void *user_data);
 
 
-extern "C" void apt_use_go_progress_callback(void* user_data) {
-    global_callback = (AptProgressCallback)goAptProgressCallback;
+extern "C" void apt_use_go_progress_callback(void *user_data) {
+    global_callback = (AptProgressCallback) goAptProgressCallback;
     global_user_data = user_data;
 }
 
-extern "C" void apt_enable_go_log_callback(void* user_data) {
-    g_log_callback = (AptLogCallback)goAptLogCallback;
+extern "C" void apt_enable_go_log_callback(void *user_data) {
+    g_log_callback = (AptLogCallback) goAptLogCallback;
     g_log_user_data = user_data;
 }
 
 // Configuration
-AptErrorCode apt_set_config(const char* key, const char* value) {
+AptErrorCode apt_set_config(const char *key, const char *value) {
     if (!key || !value) return APT_ERROR_INIT_FAILED;
 
     try {
         _config->Set(key, value);
         return APT_SUCCESS;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         emit_log(std::string("Exception: ") + e.what());
         return APT_ERROR_UNKNOWN;
     }
 }
 
-const char* apt_get_config(const char* key, const char* default_value) {
+const char *apt_get_config(const char *key, const char *default_value) {
     if (!key) return default_value;
 
     try {
         static std::string result;
         result = _config->Find(key, default_value ? default_value : "");
         return result.c_str();
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         return default_value;
     }
 }
@@ -774,7 +780,7 @@ const char* apt_get_config(const char* key, const char* default_value) {
 // Force unlock function to clean up hanging locks
 void apt_force_unlock() {
     try {
-        pkgSystem* system = _system;
+        pkgSystem *system = _system;
         if (system) {
             system->UnLock(true);
         }
@@ -783,7 +789,7 @@ void apt_force_unlock() {
     }
 }
 
-void apt_free_package_changes(AptPackageChanges* changes) {
+void apt_free_package_changes(AptPackageChanges *changes) {
     if (!changes) return;
 
     if (changes->extra_installed) {
@@ -818,19 +824,22 @@ void apt_free_package_changes(AptPackageChanges* changes) {
 }
 
 // Optimized progress callback implementation - simplified for performance
-PackageManagerCallback_t create_common_progress_callback(CallbackBridge*) {
+PackageManagerCallback_t create_common_progress_callback(CallbackBridge *) {
     return [](const char *nevra, aptCallbackType what, uint64_t amount, uint64_t total, void *callbackData) {
         // Fast path - only handle the callbacks we care about
         AptCallbackType our_type;
         switch (what) {
-            case APTCALLBACK_INST_PROGRESS: our_type = APT_CALLBACK_INST_PROGRESS; break;
-            case APTCALLBACK_INST_START: our_type = APT_CALLBACK_INST_START; break;
-            case APTCALLBACK_INST_STOP: our_type = APT_CALLBACK_INST_STOP; break;
+            case APTCALLBACK_INST_PROGRESS: our_type = APT_CALLBACK_INST_PROGRESS;
+                break;
+            case APTCALLBACK_INST_START: our_type = APT_CALLBACK_INST_START;
+                break;
+            case APTCALLBACK_INST_STOP: our_type = APT_CALLBACK_INST_STOP;
+                break;
             default: return; // Skip unknown callbacks immediately
         }
 
-        CallbackBridge* bd = static_cast<CallbackBridge*>(callbackData);
-        const char* effective_name = "";
+        CallbackBridge *bd = static_cast<CallbackBridge *>(callbackData);
+        const char *effective_name = "";
 
         // Simple logic to get package name
         if (nevra && nevra[0]) {
@@ -847,7 +856,7 @@ PackageManagerCallback_t create_common_progress_callback(CallbackBridge*) {
                 bd->current_idx++;
             }
         }
-        
+
         // Direct callback without additional processing
         if (global_callback) {
             global_callback(effective_name, our_type, amount, total, global_user_data);
@@ -856,27 +865,27 @@ PackageManagerCallback_t create_common_progress_callback(CallbackBridge*) {
 }
 
 // RPM file detection utility (shared implementation)
-bool is_rpm_file(const std::string& path) {
+bool is_rpm_file(const std::string &path) {
     // Check if it's an absolute path and file exists
     if (path.empty() || path[0] != '/') {
         return false;
     }
-    
+
     struct stat st;
     if (stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) {
         return false;
     }
-    
+
     // Check if it has .rpm extension
     if (path.length() > 4 && path.substr(path.length() - 4) == ".rpm") {
         return true;
     }
-    
+
     return false;
 }
 
 // File installation support - preprocess arguments to detect and handle RPM files
-AptResult apt_preprocess_install_arguments(const char** install_names, size_t install_count) {
+AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count) {
     if (!install_names || install_count == 0) {
         return make_result(APT_SUCCESS, nullptr);
     }
@@ -885,9 +894,9 @@ AptResult apt_preprocess_install_arguments(const char** install_names, size_t in
         // Process arguments and add RPM files to APT::Arguments configuration
         for (size_t i = 0; i < install_count; i++) {
             if (!install_names[i]) continue;
-            
+
             std::string arg(install_names[i]);
-            
+
             // Use shared RPM file detection logic
             if (is_rpm_file(arg)) {
                 // Add to APT::Arguments configuration
@@ -895,9 +904,9 @@ AptResult apt_preprocess_install_arguments(const char** install_names, size_t in
                 _config->Set(key, arg);
             }
         }
-        
+
         return make_result(APT_SUCCESS, nullptr);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception in preprocess: ") + e.what()).c_str());
     }
 }

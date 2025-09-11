@@ -233,7 +233,7 @@ func (s *ThreadSafeTestSuite) TestPackageOperationLocking() {
 				atomic.StoreInt64(&operation2Done, time.Since(startTime).Nanoseconds())
 			}()
 
-			_, err := s.actions.CheckRemove(s.ctx, []string{threadSafeTestPackage}, false)
+			_, err := s.actions.CheckRemove(s.ctx, []string{threadSafeTestPackage}, false, false)
 			if err != nil {
 				t.Logf("CheckRemove error (may be expected): %v", err)
 			}
