@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-11 19:42+0600\n"
-"PO-Revision-Date: 2025-09-11 19:44+0600\n"
+"POT-Creation-Date: 2025-09-12 02:36+0600\n"
+"PO-Revision-Date: 2025-09-12 02:36+0600\n"
 "Last-Translator: Dmitry Udalov <>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
@@ -1053,7 +1053,7 @@ msgstr "Получить список ядер"
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:228 internal/kernel/commands.go:222
+#: internal/common/reply/event.go:228 internal/kernel/commands.go:225
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
@@ -1555,11 +1555,11 @@ msgstr "Обновить и синхронизировать список уст
 msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
-#: internal/distrobox/commands.go:91 internal/system/commands.go:211
+#: internal/distrobox/commands.go:91 internal/system/commands.go:237
 msgid "Package information"
 msgstr "Информация о пакете"
 
-#: internal/distrobox/commands.go:112 internal/system/commands.go:232
+#: internal/distrobox/commands.go:112 internal/system/commands.go:258
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
@@ -1575,21 +1575,21 @@ msgstr "Построение запроса для извлечения спис
 msgid "Field for sorting, for example: name, version"
 msgstr "Поле для сортировки, к примеру: name, version"
 
-#: internal/distrobox/commands.go:145 internal/system/commands.go:266
+#: internal/distrobox/commands.go:145 internal/system/commands.go:292
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
-#: internal/distrobox/commands.go:150 internal/system/commands.go:271
-#: internal/system/commands.go:372
+#: internal/distrobox/commands.go:150 internal/system/commands.go:297
+#: internal/system/commands.go:398
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
-#: internal/distrobox/commands.go:155 internal/system/commands.go:276
-#: internal/system/commands.go:377
+#: internal/distrobox/commands.go:155 internal/system/commands.go:302
+#: internal/system/commands.go:403
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
-#: internal/distrobox/commands.go:160 internal/system/commands.go:281
+#: internal/distrobox/commands.go:160 internal/system/commands.go:307
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1617,7 +1617,7 @@ msgstr "Удаление пакета"
 msgid "Remove only from host, leave package in container"
 msgstr "Удалить только с хоста, оставить пакет в контейнере"
 
-#: internal/distrobox/commands.go:241 internal/system/commands.go:314
+#: internal/distrobox/commands.go:241 internal/system/commands.go:340
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
@@ -1910,7 +1910,7 @@ msgstr[2] "%d ядер найдено"
 msgid "Current kernel information"
 msgstr "Информация об актуальном ядре"
 
-#: internal/kernel/actions.go:149 internal/kernel/commands.go:131
+#: internal/kernel/actions.go:149 internal/kernel/commands.go:132
 msgid "Kernel flavour must be specified"
 msgstr "Необходимо указать разновидность ядра"
 
@@ -1998,7 +1998,7 @@ msgstr[1] "%d модуль найден"
 msgstr[2] "%d модулей найдено"
 
 #: internal/kernel/actions.go:482 internal/kernel/actions.go:605
-#: internal/kernel/commands.go:238 internal/kernel/commands.go:266
+#: internal/kernel/commands.go:242 internal/kernel/commands.go:271
 msgid "At least one module must be specified"
 msgstr "Должен быть указан хотя бы один модуль"
 
@@ -2129,67 +2129,71 @@ msgstr "Показать информацию о текущем ядре"
 msgid "Install kernel with specified flavour"
 msgstr "Установить ядро с указанной разновидностью"
 
-#: internal/kernel/commands.go:115 internal/kernel/commands.go:151
+#: internal/kernel/commands.go:115 internal/kernel/commands.go:152
 msgid "Install additional kernel modules"
 msgstr "Установите дополнительные модули ядра"
 
-#: internal/kernel/commands.go:119 internal/kernel/commands.go:155
+#: internal/kernel/commands.go:119 internal/kernel/commands.go:156
 msgid "Install kernel headers"
 msgstr "Установить заголовки ядра"
 
-#: internal/kernel/commands.go:124 internal/kernel/commands.go:231
-msgid "Show what would be installed without actually installing"
-msgstr "Показать, что будет установлено, без фактической установки"
+#: internal/kernel/commands.go:124 internal/system/commands.go:143
+msgid "Simulate installation"
+msgstr "Симуляция установки"
 
-#: internal/kernel/commands.go:143
+#: internal/kernel/commands.go:144
 msgid "Update kernel to latest version"
 msgstr "Обновите ядро до последней версии"
 
-#: internal/kernel/commands.go:147
+#: internal/kernel/commands.go:148
 msgid "Update to specific flavour (default: current flavour)"
 msgstr ""
 "Обновление до определенного версии (по умолчанию: текущая разновидность)"
 
-#: internal/kernel/commands.go:160
-msgid "Show what would be updated without actually updating"
-msgstr "Показать, что будет обновлено, без фактического обновления"
+#: internal/kernel/commands.go:161
+msgid "Simulate update"
+msgstr "Симуляция обновления"
 
-#: internal/kernel/commands.go:174
+#: internal/kernel/commands.go:176
 msgid "Remove old kernel versions"
 msgstr "Удалите старые версии ядра"
 
-#: internal/kernel/commands.go:178
+#: internal/kernel/commands.go:180
 msgid "Delete kernels even if it is in 'backup' state"
 msgstr ""
 "Удалять ядра, даже если они находятся в состоянии «резервного копирования»"
 
-#: internal/kernel/commands.go:183 internal/kernel/commands.go:259
+#: internal/kernel/commands.go:185 internal/kernel/commands.go:263
 msgid "Show what would be removed without actually removing"
 msgstr "Показать, что будет удалено, без фактического удаления"
 
-#: internal/kernel/commands.go:197
+#: internal/kernel/commands.go:200
 msgid "Kernel modules management"
 msgstr "Управление модулями ядра"
 
-#: internal/kernel/commands.go:201
+#: internal/kernel/commands.go:204
 msgid "List available modules for kernel"
 msgstr "Список доступных модулей для ядра"
 
-#: internal/kernel/commands.go:205
+#: internal/kernel/commands.go:208
 msgid "List modules for specific kernel flavour (default: current flavour)"
 msgstr ""
 "Список модулей для конкретной версии ядра (по умолчанию: текущая "
 "разновидность)"
 
-#: internal/kernel/commands.go:227
+#: internal/kernel/commands.go:230
 msgid "Install for specific kernel flavour"
 msgstr "Установить для конкретной разновидности ядра"
 
-#: internal/kernel/commands.go:250
+#: internal/kernel/commands.go:234
+msgid "Show what would be installed without actually installing"
+msgstr "Показать, что будет установлено, без фактической установки"
+
+#: internal/kernel/commands.go:254
 msgid "Remove kernel modules"
 msgstr "Удалить модули ядра"
 
-#: internal/kernel/commands.go:255
+#: internal/kernel/commands.go:259
 msgid "Remove from specific kernel flavour"
 msgstr "Удалить из конкретной разновидности ядра"
 
@@ -2373,7 +2377,7 @@ msgstr "Системный пакет"
 msgid "Stplr package"
 msgstr "Пакет Stplr"
 
-#: internal/system/actions.go:651 internal/system/commands.go:340
+#: internal/system/actions.go:651 internal/system/commands.go:366
 msgid "Image status"
 msgstr "Статус образа"
 
@@ -2407,67 +2411,71 @@ msgid ""
 msgstr ""
 "Список пакетов для установки. Формат package- и package+ поддерживается."
 
-#: internal/system/commands.go:152
+#: internal/system/commands.go:166
 msgid "List of packages to remove"
 msgstr "Список пакетов на удаление"
 
-#: internal/system/commands.go:157
+#: internal/system/commands.go:171
 msgid "Attempt to remove all files"
 msgstr "Попытка удалить все файлы"
 
-#: internal/system/commands.go:163
+#: internal/system/commands.go:177
 msgid "Attempt to remove depends"
 msgstr "Попытка удалить зависимости"
 
-#: internal/system/commands.go:180
+#: internal/system/commands.go:183
+msgid "Simulate removal"
+msgstr "Симуляция удаления"
+
+#: internal/system/commands.go:206
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/system/commands.go:192
+#: internal/system/commands.go:218
 msgid "General system upgrade"
 msgstr "Общее обновление системы"
 
-#: internal/system/commands.go:216
+#: internal/system/commands.go:242
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:237
+#: internal/system/commands.go:263
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/system/commands.go:243 internal/system/commands.go:290
+#: internal/system/commands.go:269 internal/system/commands.go:316
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:258
+#: internal/system/commands.go:284
 msgid "Building a query to get a list of packages"
 msgstr "Создание запроса для получения списка пакетов"
 
-#: internal/system/commands.go:262
+#: internal/system/commands.go:288
 msgid "Sort packages by field, example fields: name, section"
 msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
-#: internal/system/commands.go:285
+#: internal/system/commands.go:311
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/system/commands.go:322
+#: internal/system/commands.go:348
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/system/commands.go:328
+#: internal/system/commands.go:354
 msgid "Apply changes to the host"
 msgstr "Применить изменения на хосте"
 
-#: internal/system/commands.go:352
+#: internal/system/commands.go:378
 msgid "Image update"
 msgstr "Обновление образа"
 
-#: internal/system/commands.go:364
+#: internal/system/commands.go:390
 msgid "Image changes history"
 msgstr "История изменения образа"
 
-#: internal/system/commands.go:368
+#: internal/system/commands.go:394
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
@@ -2769,27 +2777,27 @@ msgstr "Ошибка извлечения образа podman: %v"
 msgid "Error deleting image %s: %v, output: %s\n"
 msgstr "Ошибка удаления образа %s: %v, вывод: %s\n"
 
-#: main.go:70
+#: main.go:71
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
 
-#: main.go:76
+#: main.go:77
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:83
+#: main.go:84
 msgid "Start session D-Bus service org.altlinux.APM"
 msgstr "Запустить сессионный сервис D-Bus org.altlinux.APM"
 
-#: main.go:88
+#: main.go:89
 msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
-#: main.go:97
+#: main.go:98
 msgid "Show the list of commands or help for each command"
 msgstr "Показать список команд или справку по каждой команде"
 
-#: main.go:98
+#: main.go:99
 msgid "[command]"
 msgstr "[команда]"
 
@@ -2813,17 +2821,19 @@ msgstr "Неизвестная команда: %s. Посмотрите 'apm hel
 msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
-#: main.go:267
-msgid "Terminating the application. Releasing resources…"
-msgstr "Завершение работы приложения. Высвобождение ресурсов…"
-
-#: main.go:287
+#: main.go:286
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:294
+#: main.go:293
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
+
+#~ msgid "Show what would be updated without actually updating"
+#~ msgstr "Показать, что будет обновлено, без фактического обновления"
+
+#~ msgid "Terminating the application. Releasing resources…"
+#~ msgstr "Завершение работы приложения. Высвобождение ресурсов…"
 
 #~ msgid "Delete all files"
 #~ msgstr "Удалить все файлы"

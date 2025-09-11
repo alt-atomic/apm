@@ -137,8 +137,22 @@ func CommandList(ctx context.Context) *cli.Command {
 				Name:      "install",
 				Usage:     app.T_("Package list for installation. The format package- package+ is supported."),
 				ArgsUsage: "packages",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "simulate",
+						Usage:   app.T_("Simulate installation"),
+						Aliases: []string{"s"},
+						Value:   false,
+					},
+				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Install(ctx, cmd.Args().Slice())
+					var resp *reply.APIResponse
+					var err error
+					if cmd.Bool("simulate") {
+						resp, err = actions.CheckInstall(ctx, cmd.Args().Slice())
+					} else {
+						resp, err = actions.Install(ctx, cmd.Args().Slice())
+					}
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -164,9 +178,21 @@ func CommandList(ctx context.Context) *cli.Command {
 						Aliases: []string{"d"},
 						Value:   false,
 					},
+					&cli.BoolFlag{
+						Name:    "simulate",
+						Usage:   app.T_("Simulate removal"),
+						Aliases: []string{"s"},
+						Value:   false,
+					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
+					var resp *reply.APIResponse
+					var err error
+					if cmd.Bool("simulate") {
+						resp, err = actions.CheckRemove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
+					} else {
+						resp, err = actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
+					}
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
