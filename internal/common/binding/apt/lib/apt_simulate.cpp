@@ -236,7 +236,13 @@ AptResult plan_change_internal(
             return result;
         }
 
-        // Step 3c: Resolve dependencies AFTER preprocessing
+        // Step 3c: Preprocess removals like apt-get does
+        result = preprocess_removals(cache, requested_remove);
+        if (result.code != APT_SUCCESS) {
+            return result;
+        }
+
+        // Step 3d: Resolve dependencies AFTER preprocessing
         result = resolve_dependencies(cache, remove_depends);
         if (result.code != APT_SUCCESS) {
             return result;

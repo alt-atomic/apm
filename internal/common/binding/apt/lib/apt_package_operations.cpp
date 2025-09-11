@@ -527,6 +527,41 @@ AptResult preprocess_dependencies(AptCache *cache, const std::set<std::string> &
     return make_result(APT_SUCCESS, nullptr);
 }
 
+AptResult preprocess_removals(AptCache *cache, const std::set<std::string> &requested_remove) {
+    if (!cache || !cache->dep_cache) {
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
+    }
+
+    // Only process if there are packages to remove
+    if (requested_remove.empty()) {
+        return make_result(APT_SUCCESS, nullptr);
+    }
+
+    pkgProblemResolver Fix(cache->dep_cache);
+    
+    Fix.InstallProtect();
+    
+    // For each package we want to remove, use Fix.Remove() FIRST like apt-get does
+    for (const auto &name: requested_remove) {
+        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(name.c_str());
+        if (pkg.end()) continue;
+
+        pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[pkg];
+        if (!pkg_state.Delete()) continue;
+
+        Fix.Clear(pkg);
+        Fix.Protect(pkg);
+        Fix.Remove(pkg);
+    }
+    
+    bool ResolveResult = Fix.Resolve(true);
+    if (!ResolveResult) {
+        return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to resolve removal dependencies");
+    }
+
+    return make_result(APT_SUCCESS, nullptr);
+}
+
 AptResult resolve_dependencies(AptCache *cache, bool remove_depends) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");

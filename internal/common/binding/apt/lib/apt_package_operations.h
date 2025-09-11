@@ -32,6 +32,8 @@ AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& 
 
 AptResult preprocess_dependencies(AptCache *cache, const std::set<std::string> &requested_install);
 
+AptResult preprocess_removals(AptCache *cache, const std::set<std::string> &requested_remove);
+
 AptResult resolve_dependencies(AptCache *cache, bool remove_depends = false);
 
 void collect_package_changes(AptCache *cache,
