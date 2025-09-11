@@ -48,6 +48,7 @@ func main() {
 	var errInitial error
 	appConfig, errInitial = app.InitializeAppDefault()
 	cliError(errInitial)
+	defer cleanup()
 
 	helper.SetupHelpTemplates()
 	app.Log.Debug("Starting apm…")
@@ -104,7 +105,6 @@ func main() {
 	applyCommandSetting(rootCommand)
 
 	if err := rootCommand.Run(ctx, os.Args); err != nil {
-		cleanup()
 		os.Exit(1)
 	}
 }
@@ -264,7 +264,6 @@ func cliError(err error) {
 
 func cleanup() {
 	if appConfig != nil {
-		app.Log.Debug(app.T_("Terminating the application. Releasing resources…"))
 		defer func(appConfig *app.Config) {
 			closeApp(appConfig)
 		}(appConfig)
