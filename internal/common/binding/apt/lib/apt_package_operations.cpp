@@ -70,42 +70,97 @@ static AptResult find_install_package(AptCache *cache, const RequirementSpec &re
 
 static AptResult resolve_virtual_package(AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &pkg) {
     pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg];
-    if (State.CandidateVer == 0 && pkg->ProvidesList != 0) {
-        std::vector<std::pair<std::string, std::string> > provider_info;
-        std::vector<pkgCache::Package *> provider_pkgs;
-
+    
+    if (pkg->VersionList == 0 && pkg->ProvidesList != 0) {
+        std::vector<pkgCache::Package *> GoodSolutions;
+        unsigned long Size = 0;
+        
+        // Count providers
         for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
-            pkgCache::PkgIterator prov = Prv.OwnerPkg();
-            pkgCache::VerIterator prov_ver = (*cache->dep_cache)[prov].CandidateVerIter(*cache->dep_cache);
-
-            if (!prov_ver.end()) {
-                if (req.has_version) {
-                    const char *prvVer = Prv.ProvideVersion();
-                    if (prvVer == nullptr) continue;
-                    if (cache->dep_cache->VS().CheckDep(prvVer, req.op, req.version.c_str()) == false) continue;
+            Size++;
+        }
+        
+        // Create array for sorting
+        std::vector<pkgCache::Package *> PList(Size);
+        pkgCache::Package **PEnd = PList.data();
+        for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
+            *PEnd++ = Prv.OwnerPkg();
+        }
+        
+        pkgProblemResolver TempFix(cache->dep_cache);
+        TempFix.MakeScores();
+        qsort(PList.data(), PList.size(), sizeof(PList[0]), &(TempFix.ScoreSort));
+        
+        bool instVirtual = _config->FindB("APT::Install::Virtual", false);
+        
+        for (unsigned int p = 0; p < Size; ++p) {
+            pkgCache::PkgIterator PrvPkg = pkgCache::PkgIterator(*pkg.Cache(), PList[p]);
+            pkgCache::PrvIterator Prv = pkg.ProvidesList();
+            
+            // Find the provide that matches this package
+            for (; Prv.end() == false && Prv.OwnerPkg() != PrvPkg; Prv++)
+               ;
+            if (Prv.end()) continue;
+            
+            bool AlreadySeen = false;
+            for (unsigned int i = 0; i != GoodSolutions.size(); i++) {
+                pkgCache::PkgIterator GoodPkg(*pkg.Cache(), GoodSolutions[i]);
+                if (PrvPkg == GoodPkg) {
+                    AlreadySeen = true;
+                    break;
                 }
-                provider_pkgs.push_back(prov);
-
-                std::string status = prov.CurrentVer().end() ? "" : "[Installed]";
-                provider_info.push_back(std::make_pair(prov.Name(), status));
             }
+            if (AlreadySeen) continue;
+            
+            if (PrvPkg.CurrentVer() == Prv.OwnerVer()) {
+                GoodSolutions.push_back(PrvPkg);
+                if (instVirtual) break;
+                continue;
+            }
+            
+            pkgCache::VerIterator PrvPkgCandVer = (*cache->dep_cache)[PrvPkg].CandidateVerIter(*cache->dep_cache);
+            if (PrvPkgCandVer.end()) {
+                continue;
+            }
+            
+            if (req.has_version) {
+                const char *prvVer = Prv.ProvideVersion();
+                if (prvVer == nullptr) continue;
+                if (cache->dep_cache->VS().CheckDep(prvVer, req.op, req.version.c_str()) == false) continue;
+            }
+            
+            // Check if provides points to any candidate version
+            bool good = false;
+            for (; PrvPkgCandVer.end() == false; ++PrvPkgCandVer) {
+                if (PrvPkgCandVer == Prv.OwnerVer()) {
+                    good = true;
+                    GoodSolutions.push_back(PrvPkg);
+                }
+            }
+            
+            if (good && instVirtual) break;
         }
-
-        if (provider_pkgs.empty()) {
+        
+        if (GoodSolutions.size() == 1) {
+            pkg = pkgCache::PkgIterator(*pkg.Cache(), GoodSolutions[0]);
+        }
+        else if (GoodSolutions.size() == 0) {
             return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                               (std::string("Virtual package ") + req.name + " has no installable providers").c_str());
+                             (std::string("Virtual package ") + req.name + " has no installable providers").c_str());
         }
-
-        if (provider_pkgs.size() > 1) {
+        else {
             std::string msg = "Virtual package " + req.name + " is provided by:\n";
-            for (const auto &info: provider_info) {
-                msg += "  " + info.first + " " + info.second + "\n";
+            for (unsigned int i = 0; i != GoodSolutions.size(); i++) {
+                pkgCache::PkgIterator GoodPkg(*pkg.Cache(), GoodSolutions[i]);
+                std::string status = GoodPkg.CurrentVer().end() ? "" : " [Installed]";
+                pkgCache::VerIterator CandVer = (*cache->dep_cache)[GoodPkg].CandidateVerIter(*cache->dep_cache);
+                std::string version = CandVer.end() ? "" : CandVer.VerStr();
+                msg += "  " + std::string(GoodPkg.Name()) + " " + version + status + "\n";
             }
             return make_result(APT_ERROR_PACKAGE_NOT_FOUND, msg.c_str());
         }
-
-        pkg = pkgCache::PkgIterator(*cache->dep_cache, provider_pkgs.front());
     }
+    
     return make_result(APT_SUCCESS, nullptr);
 }
 

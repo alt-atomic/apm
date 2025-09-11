@@ -5,6 +5,15 @@
 #include <memory>
 #include <iostream>
 
+// RAII guard for cache state management
+class CacheStateGuard {
+    std::unique_ptr<pkgDepCache::State> saved_state;
+public:
+    CacheStateGuard(pkgDepCache* cache) : saved_state(std::make_unique<pkgDepCache::State>(cache)) {}
+    ~CacheStateGuard() { if (saved_state) saved_state->Restore(); }
+    void commit() { saved_state.reset(); }
+};
+
 // Helper function to preprocess RPM files from both install and remove arguments
 static AptResult preprocess_rpm_files_if_needed(AptCache* cache,
                                                 const char** install_names, size_t install_count,
@@ -68,6 +77,8 @@ AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes)
 
     try {
         memset(changes, 0, sizeof(AptPackageChanges));
+
+        CacheStateGuard stateGuard(cache->dep_cache);
 
         pkgDistUpgrade(*cache->dep_cache);
 
@@ -206,10 +217,10 @@ AptResult plan_change_internal(
              return preprocess_result;
          }
 
-         // Save cache state for simulation rollback AFTER RPM preprocessing
-         std::unique_ptr<pkgDepCache::State> savedState;
+        // RAII guard for automatic cache state restoration
+         std::unique_ptr<CacheStateGuard> stateGuard;
          if (!apply) {
-             savedState = std::make_unique<pkgDepCache::State>(cache->dep_cache);
+             stateGuard = std::make_unique<CacheStateGuard>(cache->dep_cache);
          }
 
          // Step 1: Process package installations (marks packages)
@@ -261,12 +272,10 @@ AptResult plan_change_internal(
                                extra_installed, extra_removed, upgraded, 
                                new_installed, removed, download_size, install_size);
 
-         // Populate changes structure
          populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed, download_size, install_size);
 
-         // Restore package states for simulation
-         if (!apply && savedState) {
-             savedState->Restore();
+         if (apply && stateGuard) {
+             stateGuard->commit();
          }
 
          return make_result(APT_SUCCESS, nullptr);
@@ -296,12 +305,13 @@ AptResult apt_simulate_autoremove(AptCache* cache, AptPackageChanges* changes) {
     try {
         memset(changes, 0, sizeof(AptPackageChanges));
 
-        // Check if cache is broken
+        // RAII guard for automatic cache state restoration
+        CacheStateGuard stateGuard(cache->dep_cache);
+
         if (cache->dep_cache->BrokenCount() != 0) {
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Cache has broken packages");
         }
 
-        // Use the existing pkgAutoremoveGetKeptAndUnneededPackages function
         std::set<std::string> kept_packages;
         std::set<std::string> unneeded_packages;
         
@@ -392,14 +402,6 @@ AptResult apt_simulate_autoremove(AptCache* cache, AptPackageChanges* changes) {
             changes->new_installed_packages = (char**)malloc(changes->new_installed_count * sizeof(char*));
             for (size_t i = 0; i < changes->new_installed_count; i++) {
                 changes->new_installed_packages[i] = strdup(new_installed[i].c_str());
-            }
-        }
-
-        // Restore package states (undo the marking for simulation)
-        for (const std::string& pkg_name : unneeded_packages) {
-            pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
-            if (!pkg.end()) {
-                cache->dep_cache->MarkKeep(pkg, false);
             }
         }
 
