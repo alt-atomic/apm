@@ -116,6 +116,7 @@ github.com/sirupsen/logrus
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/require
+github.com/stretchr/testify/suite
 # github.com/urfave/cli/v3 v3.3.8
 ## explicit; go 1.22
 github.com/urfave/cli/v3
