@@ -208,29 +208,30 @@ AptResult apt_search_packages(AptCache* cache, const char* pattern, AptPackageLi
                             info.essential = (Pkg->Flags & pkgCache::Flag::Essential) != 0;
                             info.auto_installed = (Pkg->Flags & pkgCache::Flag::Auto) != 0;
 
-                            // Package state
-                            switch (Pkg->CurrentState) {
-                                case pkgCache::State::NotInstalled:
-                                    info.state = APT_PKG_STATE_NOT_INSTALLED;
-                                    break;
-                                case pkgCache::State::Installed:
-                                    info.state = APT_PKG_STATE_INSTALLED;
-                                    break;
-                                case pkgCache::State::ConfigFiles:
-                                    info.state = APT_PKG_STATE_CONFIG_FILES;
-                                    break;
-                                case pkgCache::State::UnPacked:
-                                    info.state = APT_PKG_STATE_UNPACKED;
-                                    break;
-                                case pkgCache::State::HalfConfigured:
-                                    info.state = APT_PKG_STATE_HALF_CONFIGURED;
-                                    break;
-                                case pkgCache::State::HalfInstalled:
-                                    info.state = APT_PKG_STATE_HALF_INSTALLED;
-                                    break;
-                                default:
-                                    info.state = APT_PKG_STATE_NOT_INSTALLED;
-                                    break;
+                            // Package state - check CurrentVer()
+                            if (!Pkg.CurrentVer().end()) {
+                                switch (Pkg->CurrentState) {
+                                    case pkgCache::State::Installed:
+                                        info.state = APT_PKG_STATE_INSTALLED;
+                                        break;
+                                    case pkgCache::State::ConfigFiles:
+                                        info.state = APT_PKG_STATE_CONFIG_FILES;
+                                        break;
+                                    case pkgCache::State::UnPacked:
+                                        info.state = APT_PKG_STATE_UNPACKED;
+                                        break;
+                                    case pkgCache::State::HalfConfigured:
+                                        info.state = APT_PKG_STATE_HALF_CONFIGURED;
+                                        break;
+                                    case pkgCache::State::HalfInstalled:
+                                        info.state = APT_PKG_STATE_HALF_INSTALLED;
+                                        break;
+                                    default:
+                                        info.state = APT_PKG_STATE_INSTALLED;
+                                        break;
+                                }
+                            } else {
+                                info.state = APT_PKG_STATE_NOT_INSTALLED;
                             }
 
                             // Resolve version: candidate; else fallback to record Version field

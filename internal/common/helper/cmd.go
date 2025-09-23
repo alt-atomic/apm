@@ -22,8 +22,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 // contextKey is a custom type for context keys to avoid collisions
@@ -56,24 +54,6 @@ func IsRunningInContainer() bool {
 	}
 
 	return false
-}
-
-func IsRegularFileAndIsPackage(path string) (bool, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	if !info.Mode().IsRegular() {
-		return false, nil
-	}
-	ext := strings.ToLower(filepath.Ext(path))
-	if ext != ".rpm" && ext != ".deb" {
-		return false, nil
-	}
-	return true, nil
 }
 
 func Abs(x int) int {

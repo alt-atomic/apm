@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"syscall"
 )
 
 type Actions struct {
@@ -64,11 +63,6 @@ func NewActions() *Actions {
 
 // Update обновляет и синхронизирует список пакетов в контейнере.
 func (a *Actions) Update(ctx context.Context, container string) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -91,11 +85,6 @@ func (a *Actions) Update(ctx context.Context, container string) (*reply.APIRespo
 
 // Info возвращает информацию о пакете.
 func (a *Actions) Info(ctx context.Context, container string, packageName string) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -121,13 +110,8 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 
 // Search выполняет поиск пакета по названию.
 func (a *Actions) Search(ctx context.Context, container string, packageName string) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	var osInfo service.ContainerInfo
-
+	var err error
 	if len(container) > 0 {
 		osInfo, err = a.validateContainer(ctx, container)
 		if err != nil {
@@ -178,12 +162,9 @@ type ListParams struct {
 
 // List возвращает список пакетов согласно заданным параметрам.
 func (a *Actions) List(ctx context.Context, params ListParams) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	var osInfo service.ContainerInfo
+	var err error
+
 	if len(params.Container) > 0 {
 		osInfo, err = a.validateContainer(ctx, params.Container)
 		if err != nil {
@@ -245,11 +226,6 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*reply.APIRespon
 
 // Install устанавливает указанный пакет и опционально экспортирует его.
 func (a *Actions) Install(ctx context.Context, container string, packageName string, export bool) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -297,11 +273,6 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 
 // Remove удаляет указанный пакет. Если onlyExport равен true, удаляется только экспорт.
 func (a *Actions) Remove(ctx context.Context, container string, packageName string, onlyExport bool) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -346,14 +317,13 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 // ContainerList возвращает список контейнеров.
 func (a *Actions) ContainerList(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkRoot()
+	containers, err := a.serviceDistroAPI.GetContainerList(ctx, true)
 	if err != nil {
 		return nil, err
 	}
 
-	containers, err := a.serviceDistroAPI.GetContainerList(ctx, true)
-	if err != nil {
-		return nil, err
+	if len(containers) == 0 {
+		return nil, errors.New(lib.T_("No containers found"))
 	}
 
 	resp := reply.APIResponse{
@@ -368,11 +338,6 @@ func (a *Actions) ContainerList(ctx context.Context) (*reply.APIResponse, error)
 
 // ContainerAdd создаёт новый контейнер.
 func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, additionalPackages, initHooks string) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	image = strings.TrimSpace(image)
 	name = strings.TrimSpace(name)
 	if image == "" {
@@ -408,11 +373,6 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 
 // ContainerRemove удаляет контейнер по имени.
 func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	name = strings.TrimSpace(name)
 	if name == "" {
 		errMsg := lib.T_("You must specify the container name (--name)")
@@ -442,11 +402,6 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIR
 
 // GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
 func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply.APIResponse, error) {
-	err := a.checkRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -541,11 +496,7 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 	return osInfo, nil
 }
 
-// checkRoot проверяет, запущен ли apm от имени root
-func (a *Actions) checkRoot() error {
-	if syscall.Geteuid() == 0 {
-		return errors.New(lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su"))
-	}
-
-	return nil
+// GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
+func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
+	return startDocServer(ctx)
 }

@@ -48,7 +48,7 @@ func TestThreadSafePackageOperations(t *testing.T) {
 			_, err := actions.Info(ctx, threadSafeTestPackage, false)
 			return err
 		})
-		
+
 		if err != nil {
 			t.Logf("First operation error (may be expected): %v", err)
 		}
@@ -57,7 +57,7 @@ func TestThreadSafePackageOperations(t *testing.T) {
 			_, err := actions.CheckInstall(ctx, []string{threadSafeTestPackage})
 			return err
 		})
-		
+
 		if err != nil {
 			t.Logf("Second operation error (may be expected): %v", err)
 		}
@@ -94,7 +94,7 @@ func TestConcurrentReadOperations(t *testing.T) {
 	// Только read операции могут выполняться параллельно без блокировки APT
 	t.Run("Concurrent info operations", func(t *testing.T) {
 		done := make(chan bool, 2)
-		
+
 		// Первая горутина
 		go func() {
 			defer func() { done <- true }()
@@ -103,7 +103,7 @@ func TestConcurrentReadOperations(t *testing.T) {
 				t.Logf("Concurrent info 1 error (may be expected): %v", err)
 			}
 		}()
-		
+
 		// Вторая горутина
 		go func() {
 			defer func() { done <- true }()
@@ -112,7 +112,7 @@ func TestConcurrentReadOperations(t *testing.T) {
 				t.Logf("Concurrent info 2 error (may be expected): %v", err)
 			}
 		}()
-		
+
 		// Ждем завершения обеих горутин
 		<-done
 		<-done
@@ -133,25 +133,25 @@ func TestPackageOperationLocking(t *testing.T) {
 	// Тестируем что операции с записью блокируются
 	t.Run("Write operations blocking", func(t *testing.T) {
 		startTime := time.Now()
-		
+
 		// Первая операция удерживает блокировку
 		err1 := common.WithAPTLock(func() error {
 			time.Sleep(1 * time.Second) // Имитируем долгую операцию
 			_, err := actions.CheckInstall(ctx, []string{threadSafeTestPackage})
 			return err
 		})
-		
+
 		// Вторая операция должна ждать
 		err2 := common.WithAPTLock(func() error {
-			_, err := actions.CheckRemove(ctx, []string{threadSafeTestPackage})
+			_, err := actions.CheckRemove(ctx, []string{threadSafeTestPackage}, false)
 			return err
 		})
-		
+
 		duration := time.Since(startTime)
-		
+
 		// Проверяем что операции выполнились последовательно
 		assert.GreaterOrEqual(t, duration, 1*time.Second, "Operations should be sequential")
-		
+
 		if err1 != nil {
 			t.Logf("First operation error (may be expected): %v", err1)
 		}
@@ -210,7 +210,7 @@ func TestResourceCleanup(t *testing.T) {
 			err := common.WithAPTLock(func() error {
 				panic("test panic")
 			})
-			
+
 			assert.Error(t, err) // This should not be reached
 		}()
 

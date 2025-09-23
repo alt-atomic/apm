@@ -18,13 +18,16 @@ package system
 
 import (
 	"apm/internal/common/apt"
+	_package "apm/internal/common/apt/package"
 	"apm/internal/common/reply"
-	_package "apm/internal/system/package"
+	"apm/internal/system/dialog"
 	"apm/internal/system/service"
 	"apm/lib"
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -37,7 +40,6 @@ type Actions struct {
 	serviceHostDatabase    *service.HostDBService
 	serviceHostConfig      *service.HostConfigService
 	serviceTemporaryConfig *service.TemporaryConfigService
-	serviceStplr           *_package.StplrService
 }
 
 // NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
@@ -71,10 +73,9 @@ func NewActions() *Actions {
 	}
 
 	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
-	hostTemporarySvc := service.NewTemporaryConfigService("/tmp/apm.tmp")
+	hostTemporarySvc := service.NewTemporaryConfigService(filepath.Join(os.TempDir(), "apm.tmp"))
 	hostImageSvc := service.NewHostImageService(hostConfigSvc)
-	hostALRSvc := _package.NewSTPLRService()
-	hostAptSvc := _package.NewActions(hostPackageDBSvc, hostALRSvc)
+	hostAptSvc := _package.NewActions(hostPackageDBSvc)
 
 	return &Actions{
 		serviceHostImage:       hostImageSvc,
@@ -82,7 +83,6 @@ func NewActions() *Actions {
 		serviceAptDatabase:     hostPackageDBSvc,
 		serviceHostDatabase:    hostDBSvc,
 		serviceHostConfig:      hostConfigSvc,
-		serviceStplr:           hostALRSvc,
 		serviceTemporaryConfig: hostTemporarySvc,
 	}
 }
@@ -98,62 +98,6 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool
 	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge)
 	if aptError != nil {
 		return nil, aptError
-	}
-
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": lib.T_("Inspection information"),
-			"info":    packageParse,
-		},
-		Error: false,
-	}
-
-	return &resp, nil
-}
-
-// UpdateKernel обновление ядра
-func (a *Actions) UpdateKernel(ctx context.Context) (*reply.APIResponse, error) {
-	if lib.Env.IsAtomic {
-		return nil, errors.New(lib.T_("This option is available only for a non-atomic system"))
-	}
-
-	_, err := a.serviceAptActions.Update(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	packageParse, checkErrs := a.serviceAptActions.CheckUpdateKernel(ctx)
-	criticalError := apt.FindCriticalError(checkErrs)
-	if criticalError != nil {
-		return nil, criticalError
-	}
-
-	runErrs := a.serviceAptActions.UpdateKernel(ctx)
-	if critical := apt.FindCriticalError(runErrs); critical != nil {
-		return nil, critical
-	}
-
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": lib.T_("Kernel update finished"),
-			"info":    packageParse,
-		},
-		Error: false,
-	}
-
-	return &resp, nil
-}
-
-// CheckUpdateKernel проверяем обновление ядра
-func (a *Actions) CheckUpdateKernel(ctx context.Context) (*reply.APIResponse, error) {
-	if lib.Env.IsAtomic {
-		return nil, errors.New(lib.T_("This option is available only for a non-atomic system"))
-	}
-
-	packageParse, aptErrors := a.serviceAptActions.CheckUpdateKernel(ctx)
-	criticalError := apt.FindCriticalError(aptErrors)
-	if criticalError != nil {
-		return nil, criticalError
 	}
 
 	resp := reply.APIResponse{
@@ -232,7 +176,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 	}
 
 	reply.StopSpinnerForDialog()
-	dialogStatus, err := _package.NewDialog(packagesInfo, *packageParse, _package.ActionRemove)
+	dialogStatus, err := dialog.NewDialog(packagesInfo, *packageParse, dialog.ActionRemove)
 	if err != nil {
 		return nil, err
 	}
@@ -310,12 +254,12 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 	if len(packagesInfo) > 0 {
 		reply.StopSpinnerForDialog()
 
-		action := _package.ActionInstall
+		action := dialog.ActionInstall
 		if packageParse.RemovedCount > 0 {
-			action = _package.ActionMultiInstall
+			action = dialog.ActionMultiInstall
 		}
 
-		dialogStatus, errDialog := _package.NewDialog(packagesInfo, *packageParse, action)
+		dialogStatus, errDialog := dialog.NewDialog(packagesInfo, *packageParse, action)
 		if errDialog != nil {
 			return nil, errDialog
 		}
@@ -443,7 +387,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 
 	reply.StopSpinnerForDialog()
 
-	dialogStatus, err := _package.NewDialog([]_package.Package{}, *packageParse, _package.ActionUpgrade)
+	dialogStatus, err := dialog.NewDialog([]_package.Package{}, *packageParse, dialog.ActionUpgrade)
 	if err != nil {
 		return nil, err
 	}
@@ -745,7 +689,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
 		reply.StopSpinnerForDialog()
 		// Показываем диалог выбора пакетов
-		result, errDialog := _package.NewPackageSelectionDialog(
+		result, errDialog := dialog.NewPackageSelectionDialog(
 			a.serviceTemporaryConfig.Config.Packages.Install,
 			a.serviceTemporaryConfig.Config.Packages.Remove,
 		)
@@ -977,10 +921,10 @@ func (a *Actions) getImageStatus(_ context.Context) (ImageStatus, error) {
 
 // ShortPackageResponse Определяем структуру для короткого представления пакета
 type ShortPackageResponse struct {
-	Name        string `json:"name"`
-	Installed   bool   `json:"installed"`
-	Version     string `json:"version"`
-	Description string `json:"description"`
+	Name       string `json:"name"`
+	Installed  bool   `json:"installed"`
+	Version    string `json:"version"`
+	Maintainer string `json:"maintainer"`
 }
 
 // FormatPackageOutput принимает данные (один пакет или срез пакетов) и флаг full.
@@ -993,10 +937,10 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 			return v
 		}
 		return ShortPackageResponse{
-			Name:        v.Name,
-			Version:     v.Version,
-			Installed:   v.Installed,
-			Description: v.Description,
+			Name:       v.Name,
+			Version:    v.Version,
+			Installed:  v.Installed,
+			Maintainer: v.Maintainer,
 		}
 	// Если передан срез пакетов
 	case []_package.Package:
@@ -1006,14 +950,19 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 		shortList := make([]ShortPackageResponse, 0, len(v))
 		for _, pkg := range v {
 			shortList = append(shortList, ShortPackageResponse{
-				Name:        pkg.Name,
-				Version:     pkg.Version,
-				Installed:   pkg.Installed,
-				Description: pkg.Description,
+				Name:       pkg.Name,
+				Version:    pkg.Version,
+				Installed:  pkg.Installed,
+				Maintainer: pkg.Maintainer,
 			})
 		}
 		return shortList
 	default:
 		return nil
 	}
+}
+
+// GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
+func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
+	return startDocServer(ctx)
 }

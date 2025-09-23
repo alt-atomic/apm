@@ -20,12 +20,30 @@ import (
 	"apm/lib"
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
+	"strings"
 
 	"github.com/urfave/cli/v3"
 )
 
-// SetupHelpTemplates overrides the templates for the root command, commands, and subcommands
+// SetupHelpTemplates задаёт общий шаблон для отображения
 func SetupHelpTemplates() {
+	// Переопределяем HelpFlag для перевода
+	cli.HelpFlag = &cli.BoolFlag{
+		Name:        "help",
+		Aliases:     []string{"h"},
+		Usage:       lib.T_("show help"),
+		HideDefault: true,
+		Local:       true,
+	}
+
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:        "version",
+		Aliases:     []string{"v"},
+		Usage:       lib.T_("print the version"),
+		HideDefault: true,
+		Local:       true,
+	}
+
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
 
 	// Overriding the "root" template (the equivalent of AppHelpTemplate)
@@ -107,4 +125,78 @@ func SetupHelpTemplates() {
 		titleStyle.Render(lib.T_("Options:")),
 		titleStyle.Render(lib.T_("Options:")),
 	)
+
+	cli.FlagStringer = func(fl cli.Flag) string {
+		df, ok := fl.(cli.DocGenerationFlag)
+		if !ok {
+			return ""
+		}
+
+		placeholder, usage := unquoteUsage(df.GetUsage())
+		needsPlaceholder := df.TakesValue()
+
+		if needsPlaceholder && placeholder == "" {
+			placeholder = ""
+		}
+
+		defaultValueString := ""
+		if rf, ok := fl.(cli.RequiredFlag); !ok || !rf.IsRequired() {
+			isVisible := df.IsDefaultVisible()
+			if s := df.GetDefaultText(); isVisible && s != "" {
+				defaultValueString = fmt.Sprintf(" (%s: %s)", lib.T_("default"), s)
+			}
+		}
+
+		usageWithDefault := strings.TrimSpace(usage + defaultValueString)
+
+		var prefixed string
+		names := fl.Names()
+		for i, name := range names {
+			if name == "" {
+				continue
+			}
+
+			if len(name) == 1 {
+				prefixed += "-" + name
+			} else {
+				prefixed += "--" + name
+			}
+
+			if placeholder != "" {
+				prefixed += " " + placeholder
+			}
+			if i < len(names)-1 {
+				prefixed += ", "
+			}
+		}
+
+		if sliceFlag, ok := fl.(cli.DocGenerationMultiValueFlag); ok && sliceFlag.IsMultiValueFlag() {
+			prefixed = prefixed + " [ " + prefixed + " ]"
+		}
+
+		envVars := df.GetEnvVars()
+		envHint := ""
+		if len(envVars) > 0 {
+			envHint = fmt.Sprintf(" [%s]", strings.Join(envVars, ", "))
+		}
+
+		return fmt.Sprintf("   %s\t%s%s", prefixed, usageWithDefault, envHint)
+	}
+}
+
+// unquoteUsage извлекает placeholder
+func unquoteUsage(usage string) (string, string) {
+	for i := 0; i < len(usage); i++ {
+		if usage[i] == '`' {
+			for j := i + 1; j < len(usage); j++ {
+				if usage[j] == '`' {
+					name := usage[i+1 : j]
+					usage = usage[:i] + name + usage[j+1:]
+					return name, usage
+				}
+			}
+			break
+		}
+	}
+	return "", usage
 }

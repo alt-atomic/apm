@@ -39,7 +39,7 @@ func TestRootInstall(t *testing.T) {
 
 	ctx := context.Background()
 
-	resp, err := actions.Install(ctx, []string{"hello"}, false)
+	resp, err := actions.Install(ctx, []string{"hello"})
 	if err != nil {
 		t.Logf("Install error (may be expected if already installed): %v", err)
 		assert.NotContains(t, err.Error(), "Elevated rights are required")
@@ -67,7 +67,7 @@ func TestRootRemove(t *testing.T) {
 
 	ctx := context.Background()
 
-	resp, err := actions.Remove(ctx, []string{"nonexistent-package"}, false, false)
+	resp, err := actions.Remove(ctx, []string{"nonexistent-package"}, false)
 	if err != nil {
 		t.Logf("Remove error (expected for nonexistent package): %v", err)
 		assert.NotContains(t, err.Error(), "Elevated rights are required")

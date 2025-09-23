@@ -28,25 +28,23 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-// syncAptMutex защищает операции apt-get от дублированного вызова
-var syncAptMutex sync.Mutex
-
 type Actions struct {
 	appStream          *appstream.SwCatService
 	serviceAptDatabase *PackageDBService
-	serviceStplr       *StplrService
+	serviceAptBinding  *aptBinding.Actions
 }
 
-func NewActions(serviceAptDatabase *PackageDBService, serviceStplr *StplrService) *Actions {
+func NewActions(serviceAptDatabase *PackageDBService) *Actions {
 	return &Actions{
 		appStream:          appstream.NewSwCatService("/usr/share/swcatalog/xml"),
 		serviceAptDatabase: serviceAptDatabase,
-		serviceStplr:       serviceStplr,
+		serviceAptBinding:  aptBinding.NewActions(),
 	}
 }
 
@@ -58,6 +56,7 @@ type Package struct {
 	InstalledSize    int                  `json:"installedSize"`
 	Maintainer       string               `json:"maintainer"`
 	Version          string               `json:"version"`
+	VersionRaw       string               `json:"versionRaw"`
 	VersionInstalled string               `json:"versionInstalled"`
 	Depends          []string             `json:"depends"`
 	Aliases          []string             `json:"aliases"`
@@ -162,6 +161,13 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 					}
 				}
 			} else {
+				if aptParser.IsRegularFileAndIsPackage(original) {
+					err := a.SaveRpmPackageToDatabase(ctx, original)
+					if err != nil {
+						return err
+					}
+				}
+
 				// Для обычных пакетов - копируем как есть
 				*targetList = append(*targetList, original)
 			}
@@ -181,8 +187,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 
 	var aptError error
 	var packageChanges *aptLib.PackageChanges
-	aptService := aptBinding.NewActions()
-	packageChanges, aptError = aptService.SimulateChange(expandedInstall, expandedRemove, purge)
+	packageChanges, aptError = a.serviceAptBinding.SimulateChange(expandedInstall, expandedRemove, purge)
 	if aptError != nil {
 		return nil, nil, nil, nil, aptError
 	}
@@ -346,13 +351,10 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 }
 
 func (a *Actions) Install(ctx context.Context, packages []string) error {
-	syncAptMutex.Lock()
-	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	aptService := aptBinding.NewActions()
-	err := aptService.InstallPackages(packages, a.getHandler(ctx))
+	err := a.serviceAptBinding.InstallPackages(packages, a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -361,13 +363,10 @@ func (a *Actions) Install(ctx context.Context, packages []string) error {
 }
 
 func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string, packagesRemove []string) error {
-	syncAptMutex.Lock()
-	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	aptService := aptBinding.NewActions()
-	err := aptService.CombineInstallRemovePackages(packagesInstall, packagesRemove, a.getHandler(ctx))
+	err := a.serviceAptBinding.CombineInstallRemovePackages(packagesInstall, packagesRemove, a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -376,13 +375,10 @@ func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInst
 }
 
 func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) error {
-	syncAptMutex.Lock()
-	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	aptService := aptBinding.NewActions()
-	err := aptService.RemovePackages(packages, purge, a.getHandler(ctx))
+	err := a.serviceAptBinding.RemovePackages(packages, purge, a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -391,13 +387,10 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) err
 }
 
 func (a *Actions) Upgrade(ctx context.Context) error {
-	syncAptMutex.Lock()
-	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Upgrade"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Upgrade"))
 
-	aptService := aptBinding.NewActions()
-	err := aptService.DistUpgrade(a.getHandler(ctx))
+	err := a.serviceAptBinding.DistUpgrade(a.getHandler(ctx))
 	if err != nil {
 		return err
 	}
@@ -409,8 +402,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packa
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	aptService := aptBinding.NewActions()
-	packageChanges, err = aptService.SimulateInstall(packageName)
+	packageChanges, err = a.serviceAptBinding.SimulateInstall(packageName)
 	return
 }
 
@@ -418,8 +410,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge b
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	aptService := aptBinding.NewActions()
-	packageChanges, err = aptService.SimulateRemove(packageName, purge)
+	packageChanges, err = a.serviceAptBinding.SimulateRemove(packageName, purge)
 	return
 }
 
@@ -427,8 +418,7 @@ func (a *Actions) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.P
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	aptService := aptBinding.NewActions()
-	packageChanges, err = aptService.SimulateAutoRemove()
+	packageChanges, err = a.serviceAptBinding.SimulateAutoRemove()
 	return
 }
 
@@ -436,8 +426,7 @@ func (a *Actions) GetInfo(ctx context.Context, packageName string) (packageChang
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	aptService := aptBinding.NewActions()
-	packageChanges, err = aptService.GetInfo(packageName)
+	packageChanges, err = a.serviceAptBinding.GetInfo(packageName)
 	return
 }
 
@@ -445,8 +434,7 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.Pack
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
 
-	aptService := aptBinding.NewActions()
-	packageChanges, err = aptService.SimulateDistUpgrade()
+	packageChanges, err = a.serviceAptBinding.SimulateDistUpgrade()
 	return
 }
 
@@ -472,8 +460,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		asMap[c.PkgName] = c
 	}
 
-	aptService := aptBinding.NewActions()
-	aptPackages, err := aptService.Search("")
+	aptPackages, err := a.serviceAptBinding.Search("")
 	if err != nil {
 		return nil, err
 	}
@@ -527,6 +514,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 			InstalledSize:    int(ap.InstalledSize),
 			Maintainer:       ap.Maintainer,
 			Version:          formattedVersion,
+			VersionRaw:       ap.Version,
 			VersionInstalled: "",
 			Depends:          depends,
 			Aliases:          ap.Aliases,
@@ -614,7 +602,16 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 		if strings.HasPrefix(name, "i586-") && (currentArch == "i586" || currentArch == "i386") {
 			name = strings.TrimPrefix(name, "i586-")
 		}
-		installed[name] = currentVersion
+
+		// Если пакет уже есть, выбираем более новую версию
+		if existingVersion, exists := installed[name]; exists {
+			if CompareVersions(currentVersion, existingVersion) > 0 {
+				installed[name] = currentVersion
+			}
+		} else {
+			installed[name] = currentVersion
+		}
+
 		currentName, currentVersion, currentArch = "", "", ""
 	}
 
@@ -664,13 +661,10 @@ func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, 
 }
 
 func (a *Actions) AptUpdate(ctx context.Context) error {
-	syncAptMutex.Lock()
-	defer syncAptMutex.Unlock()
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.AptUpdate"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.AptUpdate"))
 
-	aptService := aptBinding.NewActions()
-	err := aptService.Update()
+	err := a.serviceAptBinding.Update()
 	if err != nil {
 		return err
 	}
@@ -702,4 +696,143 @@ func extractLastMessage(changelog string) string {
 	}
 
 	return strings.Join(result, "\n")
+}
+
+// SaveRpmPackageToDatabase сохраняет информацию об одном RPM пакете в базу данных
+// Аналог функции Update, но работает с одним пакетом из файла
+func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath string) error {
+	// Получаем информацию о пакете из биндингов
+	ap, err := a.GetInfo(ctx, rpmFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to get package info: %w", err)
+	}
+
+	_, errFind := a.serviceAptDatabase.GetPackageByName(ctx, ap.Name)
+	if errFind == nil {
+		return nil
+	}
+
+	// Преобразуем зависимости
+	var depends []string
+	seen := make(map[string]bool)
+	if ap.Depends != "" {
+		depList := strings.Split(ap.Depends, ",")
+		for _, dep := range depList {
+			clean := strings.TrimSpace(dep)
+			if clean == "" {
+				continue
+			}
+			clean = aptParser.CleanDependency(clean)
+			if !seen[clean] {
+				seen[clean] = true
+				depends = append(depends, clean)
+			}
+		}
+	}
+
+	// Преобразуем provides
+	var provides []string
+	seen = make(map[string]bool)
+	if ap.Provides != "" {
+		provList := strings.Split(ap.Provides, ",")
+		for _, prov := range provList {
+			clean := strings.TrimSpace(prov)
+			if clean == "" {
+				continue
+			}
+			clean = aptParser.CleanDependency(clean)
+			if !seen[clean] {
+				seen[clean] = true
+				provides = append(provides, clean)
+			}
+		}
+	}
+
+	// Форматируем версию
+	formattedVersion := ap.Version
+	if v, errParse := helper.GetVersionFromAptCache(ap.Version); errParse == nil && v != "" {
+		formattedVersion = v
+	}
+
+	// Создаем структуру Package
+	p := Package{
+		Name:             ap.Name,
+		Architecture:     ap.Architecture,
+		Section:          ap.Section,
+		InstalledSize:    int(ap.InstalledSize),
+		Maintainer:       ap.Maintainer,
+		Version:          formattedVersion,
+		VersionInstalled: "",
+		Depends:          depends,
+		Aliases:          ap.Aliases,
+		Provides:         provides,
+		Size:             int(ap.DownloadSize),
+		Filename:         ap.Filename,
+		Description:      ap.Description,
+		AppStream:        nil,
+		Changelog:        ap.Changelog,
+		Installed:        false,
+		TypePackage:      int(PackageTypeSystem),
+	}
+
+	if p.Description == "" {
+		p.Description = ap.ShortDescription
+	}
+
+	// Извлекаем последнее сообщение из changelog
+	p.Changelog = extractLastMessage(p.Changelog)
+
+	// Создаем слайс с одним пакетом
+	packages := []Package{p}
+
+	// Обновляем информацию об установке
+	packages, err = a.updateInstalledInfo(ctx, packages)
+	if err != nil {
+		return fmt.Errorf("error updating installed info: %w", err)
+	}
+
+	// Сохраняем один пакет в базу данных (не очищая остальные)
+	err = a.serviceAptDatabase.SaveSinglePackage(ctx, packages[0])
+	if err != nil {
+		return fmt.Errorf("error saving package to database: %w", err)
+	}
+
+	return nil
+}
+
+// compareVersions сравнивает две версии (returns: 1 if a > b, -1 if a < b, 0 if equal)
+func CompareVersions(a, b string) int {
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+
+	maxLen := len(aParts)
+	if len(bParts) > maxLen {
+		maxLen = len(bParts)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		aVal := 0
+		bVal := 0
+
+		if i < len(aParts) {
+			if val, err := strconv.Atoi(aParts[i]); err == nil {
+				aVal = val
+			}
+		}
+
+		if i < len(bParts) {
+			if val, err := strconv.Atoi(bParts[i]); err == nil {
+				bVal = val
+			}
+		}
+
+		if aVal > bVal {
+			return 1
+		}
+		if aVal < bVal {
+			return -1
+		}
+	}
+
+	return 0
 }

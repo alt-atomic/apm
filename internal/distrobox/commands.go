@@ -21,6 +21,7 @@ import (
 	"apm/internal/common/reply"
 	"apm/lib"
 	"context"
+	"syscall"
 
 	"github.com/urfave/cli/v3"
 )
@@ -35,15 +36,25 @@ func newErrorResponse(message string) reply.APIResponse {
 	}
 }
 
-func withGlobalWrapper(action cli.ActionFunc) cli.ActionFunc {
-	return func(ctx context.Context, cmd *cli.Command) error {
-		lib.Env.Format = cmd.String("format")
-		ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
+func wrapperWithOptions() func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
+	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
+		return func(ctx context.Context, cmd *cli.Command) error {
+			lib.Env.Format = cmd.String("format")
+			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
-		reply.CreateSpinner()
-		return action(ctx, cmd)
+			if syscall.Geteuid() == 0 {
+				return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")))
+			}
+
+			actions := NewActions()
+
+			reply.CreateSpinner()
+			return actionFunc(ctx, cmd, actions)
+		}
 	}
 }
+
+var withGlobalWrapper = wrapperWithOptions()
 
 func CommandList() *cli.Command {
 	return &cli.Command{
@@ -63,8 +74,8 @@ func CommandList() *cli.Command {
 						Required: true,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Update(ctx, cmd.String("container"))
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Update(ctx, cmd.String("container"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -84,8 +95,8 @@ func CommandList() *cli.Command {
 						Required: true,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Info(ctx, cmd.String("container"), cmd.Args().First())
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Info(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -104,8 +115,8 @@ func CommandList() *cli.Command {
 						Aliases: []string{"c"},
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Search(ctx, cmd.String("container"), cmd.Args().First())
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Search(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -151,7 +162,7 @@ func CommandList() *cli.Command {
 						Value: false,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					params := ListParams{
 						Container:   cmd.String("container"),
 						Sort:        cmd.String("sort"),
@@ -162,7 +173,7 @@ func CommandList() *cli.Command {
 						ForceUpdate: cmd.Bool("force-update"),
 					}
 
-					resp, err := NewActions().List(ctx, params)
+					resp, err := actions.List(ctx, params)
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -187,8 +198,8 @@ func CommandList() *cli.Command {
 						Value: true,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Install(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("export"))
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Install(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("export"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -213,13 +224,21 @@ func CommandList() *cli.Command {
 						Value: false,
 					},
 				},
-				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-					resp, err := NewActions().Remove(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("only-host"))
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.Remove(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("only-host"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
 
 					return reply.CliResponse(ctx, *resp)
+				}),
+			},
+			{
+				Name:  "dbus-doc",
+				Usage: lib.T_("Show dbus online documentation"),
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					reply.StopSpinner()
+					return actions.GenerateOnlineDoc(ctx)
 				}),
 			},
 			{
@@ -230,8 +249,8 @@ func CommandList() *cli.Command {
 					{
 						Name:  "list",
 						Usage: lib.T_("List of containers"),
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ContainerList(ctx)
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ContainerList(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -248,8 +267,13 @@ func CommandList() *cli.Command {
 								Usage:    lib.T_("Container. Must be specified, options: alt, ubuntu, arch"),
 								Required: true,
 							},
+							&cli.StringFlag{
+								Name:     "name",
+								Usage:    lib.T_("Container name"),
+								Required: false,
+							},
 						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							imageVal := cmd.String("image")
 							allowedImages := []string{"alt", "ubuntu", "arch"}
 							valid := false
@@ -274,7 +298,12 @@ func CommandList() *cli.Command {
 								imageLink = "registry.altlinux.org/sisyphus/base:latest"
 							}
 
-							resp, err := NewActions().ContainerAdd(ctx, imageLink, "atomic-"+imageVal, "zsh mc nano", "")
+							name := "atomic-" + imageVal
+							if cmd.String("name") != "" {
+								name = cmd.String("name")
+							}
+
+							resp, err := actions.ContainerAdd(ctx, imageLink, name, "zsh mc nano", "")
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -306,13 +335,13 @@ func CommandList() *cli.Command {
 								Usage: lib.T_("Calling hook to execute commands"),
 							},
 						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							imageVal := cmd.String("image")
 							nameVal := cmd.String("name")
 							addPkgVal := cmd.String("additional-packages")
 							hookVal := cmd.String("init-hooks")
 
-							resp, err := NewActions().ContainerAdd(ctx, imageVal, nameVal, addPkgVal, hookVal)
+							resp, err := actions.ContainerAdd(ctx, imageVal, nameVal, addPkgVal, hookVal)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -331,8 +360,8 @@ func CommandList() *cli.Command {
 								Required: true,
 							},
 						},
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command) error {
-							resp, err := NewActions().ContainerRemove(ctx, cmd.String("name"))
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ContainerRemove(ctx, cmd.String("name"))
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}

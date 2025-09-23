@@ -21,8 +21,9 @@ apm -help
 apt-get install apm
 ```
 
-ручная сборка:
+Для ручной сборки:
 ```
+apt-get install systemd-devel libapt-devel gettext-tools meson
 meson setup build --wipe --prefix /usr
 meson install -C build
 ```
@@ -97,21 +98,21 @@ GLOBAL OPTIONS:
 * pathDBKV - путь к базе данных значков приложений
 * pathImageFile - путь к конфигурационному файлу образа
 
-## Пользовательская сессия DBUS
+## Пользовательская сессия _DBUS_
 При запуске в пользовательской сессии сервис регистрируется в сессионной шине DBUS, что не требует дополнительных привилегий.
 В этом режиме APM работает с контейнерами distrobox, для просмотра всех методов установите, например, D-SPY и найдите там сервис APM
 
 ```
-apm dbus-session
+apm dbus-session - запуск
+apm distrobox dbus-doc - онлайн документация
 ```
 
 ## Системная сессия DBUS
-Для корректной работы необходимо применить политику доступа путём копирования файла apm.conf.
 В этом режиме APM работает с системными пакетами, для просмотра всех методов установите, например, D-SPY и найдите там сервис APM
 ```
-sudo cp data/dbus-config/apm.conf /etc/dbus-1/system.d/
 
-sudo apm dbus-system
+sudo apm dbus-system - запуск
+sudo apm system dbus-doc - онлайн документация
 ```
 
 ## Пример работы с системными пакетами

@@ -28,6 +28,7 @@ var (
 	aptSystem     *lib.System
 	aptSystemOnce sync.Once
 	aptSystemErr  error
+	aptMutex      sync.Mutex
 )
 
 type Actions struct{}
@@ -54,6 +55,9 @@ func Close() {
 
 // operationWrapper обёртка для всех операций с APT
 func (a *Actions) operationWrapper(fn func() error) error {
+	aptMutex.Lock()
+	defer aptMutex.Unlock()
+
 	lib.StartOperation()
 	defer lib.EndOperation()
 
@@ -113,7 +117,7 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 // InstallPackages установка пакетов
 func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHandler) error {
 	if len(packageNames) == 0 {
-		return lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
+		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
 	return a.operationWrapper(func() error {
@@ -150,7 +154,7 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 // RemovePackages удаление пакетов
 func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.ProgressHandler) error {
 	if len(packageNames) == 0 {
-		return lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
+		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
 	return a.operationWrapper(func() error {
@@ -266,7 +270,7 @@ func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err
 // SimulateInstall симуляция установки
 func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.PackageChanges, err error) {
 	if len(packageNames) == 0 {
-		return nil, lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
+		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
 	err = a.operationWrapper(func() error {
@@ -290,7 +294,7 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 // SimulateRemove симуляция удаления
 func (a *Actions) SimulateRemove(packageNames []string, purge bool) (packageInfo *lib.PackageChanges, err error) {
 	if len(packageNames) == 0 {
-		return nil, lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "no packages specified")
+		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
 	err = a.operationWrapper(func() error {
@@ -354,7 +358,7 @@ func (a *Actions) SimulateAutoRemove() (packageChanges *lib.PackageChanges, err 
 // SimulateChange комбинированная симуляция установки и удаления
 func (a *Actions) SimulateChange(installNames []string, removeNames []string, purge bool) (packageChanges *lib.PackageChanges, err error) {
 	if len(installNames) == 0 && len(removeNames) == 0 {
-		return nil, lib.CustomError(lib.APT_ERROR_INVALID_PARAMETERS, "Invalid parameters")
+		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "Invalid parameters")
 	}
 
 	err = a.operationWrapper(func() error {

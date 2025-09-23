@@ -23,6 +23,7 @@ import (
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
 	"apm/internal/distrobox"
+	"apm/internal/kernel"
 	"apm/internal/system"
 	"apm/lib"
 	"context"
@@ -101,6 +102,7 @@ func main() {
 
 	systemCommands := system.CommandList()
 	distroboxCommands := distrobox.CommandList()
+	kernelCommands := kernel.CommandList()
 
 	// Основная команда приложения
 	rootCommand := &cli.Command{
@@ -133,6 +135,7 @@ func main() {
 			},
 			systemCommands,
 			distroboxCommands,
+			kernelCommands,
 			{
 				Name:      "help",
 				Aliases:   []string{"h"},
@@ -144,8 +147,6 @@ func main() {
 	}
 
 	applyCommandSetting(rootCommand)
-	applyCommandSetting(distroboxCommands)
-	applyCommandSetting(systemCommands)
 
 	if err := rootCommand.Run(ctx, os.Args); err != nil {
 		cleanup()
@@ -159,6 +160,7 @@ func applyCommandSetting(cliCommand *cli.Command) {
 		msg := fmt.Sprintf(lib.T_("Unknown command: %s. See 'apm help'"), name)
 		_ = reply.CliResponse(ctx, reply.APIResponse{Data: map[string]interface{}{"message": msg}, Error: true})
 	}
+	cliCommand.HideHelpCommand = true
 	cliCommand.EnableShellCompletion = true
 	cliCommand.Suggest = true
 

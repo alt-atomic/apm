@@ -19,6 +19,7 @@
 package common_test
 
 import (
+	"apm/internal/common/apt"
 	"apm/internal/common/helper"
 	"context"
 	"os"
@@ -112,11 +113,11 @@ func TestAutoSize(t *testing.T) {
 		input    int
 		expected string
 	}{
-		{1048576, "1.00 MB"},      // 1 MB
-		{2097152, "2.00 MB"},      // 2 MB
-		{512000, "0.49 MB"},       // ~0.5 MB
-		{0, "0.00 MB"},            // 0 bytes
-		{1024, "0.00 MB"},         // 1 KB
+		{1048576, "1.00 MB"}, // 1 MB
+		{2097152, "2.00 MB"}, // 2 MB
+		{512000, "0.49 MB"},  // ~0.5 MB
+		{0, "0.00 MB"},       // 0 bytes
+		{1024, "0.00 MB"},    // 1 KB
 	}
 
 	for _, tc := range testCases {
@@ -193,7 +194,7 @@ func TestRunCommand(t *testing.T) {
 			defer cancel()
 
 			stdout, stderr, err := helper.RunCommand(ctx, tt.command)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
@@ -217,7 +218,7 @@ func TestRunCommandTimeout(t *testing.T) {
 	assert.Error(t, err)
 	// Проверяем что получили ошибку таймаута или kill сигнал
 	errStr := err.Error()
-	isTimeoutError := strings.Contains(errStr, "context deadline exceeded") || 
+	isTimeoutError := strings.Contains(errStr, "context deadline exceeded") ||
 		strings.Contains(errStr, "signal: killed") ||
 		strings.Contains(errStr, "exit status")
 	assert.True(t, isTimeoutError, "Expected timeout/kill error, got: %v", err)
@@ -232,14 +233,14 @@ func TestIsRunningInContainer(t *testing.T) {
 	// Тест без переменной окружения
 	os.Unsetenv("container")
 	result1 := helper.IsRunningInContainer()
-	
+
 	// Тест с переменной окружения
 	os.Setenv("container", "podman")
 	result2 := helper.IsRunningInContainer()
-	
+
 	// Второй результат должен быть true
 	assert.True(t, result2)
-	
+
 	// Первый результат зависит от того, есть ли файлы контейнера
 	// но функция должна работать без ошибок
 	assert.IsType(t, true, result1)
@@ -252,37 +253,28 @@ func TestIsRegularFileAndIsPackage(t *testing.T) {
 
 	// Создаем тестовые файлы
 	rpmFile := filepath.Join(tmpDir, "test.rpm")
-	debFile := filepath.Join(tmpDir, "test.deb")
 	txtFile := filepath.Join(tmpDir, "test.txt")
 	nonExistentFile := filepath.Join(tmpDir, "nonexistent.rpm")
 
 	// Записываем содержимое в файлы
 	require.NoError(t, os.WriteFile(rpmFile, []byte("fake rpm"), 0644))
-	require.NoError(t, os.WriteFile(debFile, []byte("fake deb"), 0644))
 	require.NoError(t, os.WriteFile(txtFile, []byte("text file"), 0644))
 
 	testCases := []struct {
 		name     string
 		path     string
 		expected bool
-		hasError bool
 	}{
-		{"RPM file", rpmFile, true, false},
-		{"DEB file", debFile, true, false},
-		{"Text file", txtFile, false, false},
-		{"Non-existent file", nonExistentFile, false, false},
-		{"Directory", tmpDir, false, false},
+		{"RPM file", rpmFile, true},
+		{"Text file", txtFile, false},
+		{"Non-existent file", nonExistentFile, false},
+		{"Directory", tmpDir, false},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := helper.IsRegularFileAndIsPackage(tc.path)
-			if tc.hasError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.expected, result)
-			}
+			result := apt.IsRegularFileAndIsPackage(tc.path)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
@@ -290,17 +282,15 @@ func TestIsRegularFileAndIsPackage(t *testing.T) {
 // TestIsRegularFileAndIsPackageEdgeCases тестирует граничные случаи
 func TestIsRegularFileAndIsPackageEdgeCases(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Файл с заглавным расширением
 	rpmUpperFile := filepath.Join(tmpDir, "test.RPM")
 	require.NoError(t, os.WriteFile(rpmUpperFile, []byte("fake rpm"), 0644))
-	
-	result, err := helper.IsRegularFileAndIsPackage(rpmUpperFile)
-	assert.NoError(t, err)
+
+	result := apt.IsRegularFileAndIsPackage(rpmUpperFile)
 	assert.True(t, result, "Should handle uppercase extensions")
-	
+
 	// Пустой путь
-	result, err = helper.IsRegularFileAndIsPackage("")
-	assert.NoError(t, err)
+	result = apt.IsRegularFileAndIsPackage("")
 	assert.False(t, result)
 }

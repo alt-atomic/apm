@@ -129,7 +129,7 @@ func TestNonRootCheckRemove(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err := actions.CheckRemove(ctx, []string{"nonexistent-package"})
+	_, err := actions.CheckRemove(ctx, []string{"nonexistent-package"}, false)
 	if err != nil {
 		t.Logf("CheckRemove error (may be expected): %v", err)
 		assert.NotContains(t, err.Error(), "Elevated rights are required")

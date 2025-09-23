@@ -25,6 +25,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"log"
 	"os"
 	"strings"
@@ -102,6 +103,7 @@ type DBPackage struct {
 	InstalledSize    int                  `gorm:"column:installed_size"`
 	Maintainer       string               `gorm:"column:maintainer"`
 	Version          string               `gorm:"column:version;primaryKey"`
+	VersionRaw       string               `gorm:"column:versionRaw"` // Полная версия с buildtime
 	VersionInstalled string               `gorm:"column:versionInstalled"`
 	Depends          string               `gorm:"column:depends"`
 	Aliases          string               `gorm:"column:aliases"`
@@ -129,6 +131,7 @@ func (dbp DBPackage) fromDBModel() Package {
 		InstalledSize:    dbp.InstalledSize,
 		Maintainer:       dbp.Maintainer,
 		Version:          dbp.Version,
+		VersionRaw:       dbp.VersionRaw,
 		VersionInstalled: dbp.VersionInstalled,
 		Size:             dbp.Size,
 		Filename:         dbp.Filename,
@@ -159,6 +162,7 @@ func (p Package) toDBModel() DBPackage {
 		InstalledSize:    p.InstalledSize,
 		Maintainer:       p.Maintainer,
 		Version:          p.Version,
+		VersionRaw:       p.VersionRaw,
 		VersionInstalled: p.VersionInstalled,
 		Size:             p.Size,
 		Filename:         p.Filename,
@@ -447,6 +451,32 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 	return query, nil
 }
 
+// SaveSinglePackage сохраняет один пакет в базу данных без очистки таблицы
+// Использует UPSERT (обновляет если пакет существует, создает если нет)
+func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) error {
+	dbPkg := pkg.toDBModel()
+
+	// Используем OnConflict для UPSERT логики
+	// Primary key состоит из name + version, используем оба поля
+	err := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "name"}, {Name: "version"}},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"architecture", "section", "installed_size", "maintainer",
+				"versionRaw", "versionInstalled", "depends", "provides",
+				"size", "filename", "description", "appStream", "changelog",
+				"installed", "typePackage", "aliases",
+			}),
+		}).
+		Create(&dbPkg).Error
+
+	if err != nil {
+		return fmt.Errorf("failed to save package %s: %w", pkg.Name, err)
+	}
+
+	return nil
+}
+
 // PackageDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.
 func (s *PackageDBService) PackageDatabaseExist(ctx context.Context) error {
 	var count int64
@@ -480,6 +510,7 @@ var allowedSortFields = []string{
 	"installedSize",
 	"maintainer",
 	"version",
+	"versionRaw",
 	"versionInstalled",
 	"depends",
 	"provides",
@@ -499,6 +530,7 @@ var AllowedFilterFields = []string{
 	"installedSize",
 	"maintainer",
 	"version",
+	"versionRaw",
 	"versionInstalled",
 	"depends",
 	"provides",

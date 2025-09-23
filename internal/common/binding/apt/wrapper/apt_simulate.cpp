@@ -4,6 +4,70 @@
 #include <set>
 #include <memory>
 
+// Forward declaration for file preprocessing
+AptResult apt_preprocess_install_arguments(const char** install_names, size_t install_count);
+
+// Helper function to preprocess RPM files from both install and remove arguments
+static AptResult preprocess_rpm_files_if_needed(AptCache* cache,
+                                                const char** install_names, size_t install_count,
+                                                const char** remove_names, size_t remove_count) {
+    // Check if we have any RPM files
+    bool has_rpm_files = false;
+    
+    if (install_names && install_count > 0) {
+        for (size_t i = 0; i < install_count; i++) {
+            if (install_names[i] && is_rpm_file(std::string(install_names[i]))) {
+                has_rpm_files = true;
+                break;
+            }
+        }
+    }
+    
+    if (!has_rpm_files && remove_names && remove_count > 0) {
+        for (size_t i = 0; i < remove_count; i++) {
+            if (remove_names[i] && is_rpm_file(std::string(remove_names[i]))) {
+                has_rpm_files = true;
+                break;
+            }
+        }
+    }
+    
+    if (!has_rpm_files) {
+        return make_result(APT_SUCCESS, nullptr);
+    }
+    
+    // Process RPM files and refresh cache ONLY ONCE
+    bool need_refresh = false;
+    
+    if (install_names && install_count > 0) {
+        AptResult preprocess_result = apt_preprocess_install_arguments(install_names, install_count);
+        if (preprocess_result.code != APT_SUCCESS) {
+            return preprocess_result;
+        }
+        need_refresh = true;
+    }
+    
+    if (remove_names && remove_count > 0) {
+        AptResult preprocess_result = apt_preprocess_install_arguments(remove_names, remove_count);
+        if (preprocess_result.code != APT_SUCCESS) {
+            return preprocess_result;
+        }
+        need_refresh = true;
+    }
+    
+    // Only refresh cache once after all preprocessing
+    if (need_refresh) {
+        emit_log("Refreshing APT cache for RPM files - this may take time for large files");
+        AptResult refresh_result = apt_cache_refresh(cache);
+        if (refresh_result.code != APT_SUCCESS) {
+            return refresh_result;
+        }
+        emit_log("APT cache refresh completed");
+    }
+    
+    return make_result(APT_SUCCESS, nullptr);
+}
+
 AptResult apt_simulate_dist_upgrade(AptCache* cache, AptPackageChanges* changes) {
     if (!cache || !changes) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for simulation");
@@ -146,7 +210,13 @@ AptResult plan_change_internal(
          std::set<std::string> requested_remove;
          std::vector<std::pair<std::string, pkgCache::PkgIterator>> remove_targets;
 
-         // Save cache state for simulation rollback
+         // Step 0: Preprocess RPM files BEFORE saving cache state
+         AptResult preprocess_result = preprocess_rpm_files_if_needed(cache, install_names, install_count, remove_names, remove_count);
+         if (preprocess_result.code != APT_SUCCESS) {
+             return preprocess_result;
+         }
+
+         // Save cache state for simulation rollback AFTER RPM preprocessing
          std::unique_ptr<pkgDepCache::State> savedState;
          if (!apply) {
              savedState = std::make_unique<pkgDepCache::State>(cache->dep_cache);

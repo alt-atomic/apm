@@ -69,7 +69,6 @@ func TestEnvironmentStruct(t *testing.T) {
 	env := lib.Environment{
 		CommandPrefix:   "test-prefix",
 		Environment:     "test",
-		PathLogFile:     "/tmp/test.log",
 		PathDBSQLSystem: "/tmp/test.db",
 		PathDBSQLUser:   "/tmp/user.db",
 		PathDBKV:        "/tmp/kv.db",
@@ -80,11 +79,10 @@ func TestEnvironmentStruct(t *testing.T) {
 		IsAtomic:        true,
 		PathLocales:     "/usr/share/locale",
 	}
-	
+
 	// Проверяем что все поля устанавливаются корректно
 	assert.Equal(t, "test-prefix", env.CommandPrefix)
 	assert.Equal(t, "test", env.Environment)
-	assert.Equal(t, "/tmp/test.log", env.PathLogFile)
 	assert.Equal(t, "/tmp/test.db", env.PathDBSQLSystem)
 	assert.Equal(t, "/tmp/user.db", env.PathDBSQLUser)
 	assert.Equal(t, "/tmp/kv.db", env.PathDBKV)
@@ -94,9 +92,7 @@ func TestEnvironmentStruct(t *testing.T) {
 	assert.Equal(t, "json", env.Format)
 	assert.True(t, env.IsAtomic)
 	assert.Equal(t, "/usr/share/locale", env.PathLocales)
-	
-	// Проверяем что пути валидны
-	assert.True(t, filepath.IsAbs(env.PathLogFile), "Log file path should be absolute")
+
 	assert.True(t, filepath.IsAbs(env.PathDBSQLSystem), "DB path should be absolute")
 }
 
@@ -145,9 +141,9 @@ environment:
 func TestEnvironmentVariableOverrides(t *testing.T) {
 	// Сохраняем оригинальные значения
 	originalValues := map[string]string{
-		"APM_LOG_FILE":      os.Getenv("APM_LOG_FILE"),
-		"APM_DB_FILE":       os.Getenv("APM_DB_FILE"),
-		"APM_ENVIRONMENT":   os.Getenv("APM_ENVIRONMENT"),
+		"APM_LOG_FILE":    os.Getenv("APM_LOG_FILE"),
+		"APM_DB_FILE":     os.Getenv("APM_DB_FILE"),
+		"APM_ENVIRONMENT": os.Getenv("APM_ENVIRONMENT"),
 	}
 
 	// Восстанавливаем оригинальные значения после теста
@@ -203,19 +199,19 @@ func TestPathValidation(t *testing.T) {
 // TestFilePermissions тестирует работу с правами доступа
 func TestFilePermissions(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Создаем файлы с разными правами
 	files := map[string]os.FileMode{
-		"readable.txt":     0644,
-		"executable.txt":   0755,
-		"restricted.txt":   0600,
+		"readable.txt":       0644,
+		"executable.txt":     0755,
+		"restricted.txt":     0600,
 		"world_readable.txt": 0644,
 	}
 
 	for filename, mode := range files {
 		path := filepath.Join(tmpDir, filename)
 		require.NoError(t, os.WriteFile(path, []byte("test"), mode))
-		
+
 		// Проверяем что права установлены корректно
 		info, err := os.Stat(path)
 		require.NoError(t, err)
@@ -226,7 +222,7 @@ func TestFilePermissions(t *testing.T) {
 // TestConfigErrorHandling тестирует обработку ошибок конфигурации
 func TestConfigErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Тест с невалидным YAML
 	invalidConfigFile := filepath.Join(tmpDir, "invalid.yaml")
 	invalidYAML := `
@@ -238,7 +234,7 @@ invalid: yaml: content
 
 	// Тест с несуществующим файлом
 	nonExistentFile := filepath.Join(tmpDir, "nonexistent.yaml")
-	
+
 	_, err := os.Stat(nonExistentFile)
 	assert.True(t, os.IsNotExist(err), "File should not exist")
 
@@ -246,7 +242,7 @@ invalid: yaml: content
 	if os.Getuid() != 0 {
 		restrictedFile := filepath.Join(tmpDir, "restricted.yaml")
 		require.NoError(t, os.WriteFile(restrictedFile, []byte("test"), 0000))
-		
+
 		_, err = os.ReadFile(restrictedFile)
 		assert.Error(t, err, "Should not be able to read restricted file")
 	}
@@ -256,16 +252,16 @@ invalid: yaml: content
 func TestDefaultColors(t *testing.T) {
 	// Создаем экземпляр с дефолтными значениями
 	colors := lib.Colors{}
-	
+
 	// Все поля должны иметь нулевые значения до инициализации
 	assert.Empty(t, colors.Enumerator)
 	assert.Empty(t, colors.Accent)
 	assert.Empty(t, colors.Success)
 	assert.Empty(t, colors.Error)
-	
+
 	// Проверяем что структура может быть заполнена
 	colors.Enumerator = "#FF0000"
-	colors.Accent = "#00FF00" 
+	colors.Accent = "#00FF00"
 	assert.Equal(t, "#FF0000", colors.Enumerator)
 	assert.Equal(t, "#00FF00", colors.Accent)
 }

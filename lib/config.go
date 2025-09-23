@@ -88,7 +88,7 @@ func InitConfig() error {
 		Success:        "2",
 		Error:          "9",
 		Delete:         "#a81c1f",
-		Install:        "#2bb389",
+		Install:        "#26a269",
 		Shortcut:       "#888888",
 		ScrollBar:      "#ff0000",
 		DialogKeyLight: "#234f55",

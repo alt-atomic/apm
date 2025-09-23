@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	_package "apm/internal/system/package"
+	_package "apm/internal/common/apt/package"
 	"apm/lib"
 
 	"github.com/stretchr/testify/assert"

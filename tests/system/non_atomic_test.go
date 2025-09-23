@@ -50,26 +50,26 @@ func TestNonAtomicInstallRemoveHello(t *testing.T) {
 	assert.NotNil(t, actions)
 
 	if isInstalled(nonAtomicTestPackage) {
-		_, err := actions.Remove(ctx, []string{nonAtomicTestPackage}, false, false)
+		_, err := actions.Remove(ctx, []string{nonAtomicTestPackage}, false)
 		if err != nil {
 			t.Fatalf("Remove failed: %v", err)
 		}
 	}
 	t.Cleanup(func() {
 		if isInstalled(nonAtomicTestPackage) {
-			_, err := actions.Remove(ctx, []string{nonAtomicTestPackage}, false, false)
+			_, err := actions.Remove(ctx, []string{nonAtomicTestPackage}, false)
 			if err != nil {
 				t.Fatalf("Remove failed: %v", err)
 			}
 		}
 	})
 
-	resp, err := actions.Install(ctx, []string{nonAtomicTestPackage}, false)
+	resp, err := actions.Install(ctx, []string{nonAtomicTestPackage})
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.False(t, resp.Error)
 
-	resp, err = actions.Remove(ctx, []string{nonAtomicTestPackage}, false, false)
+	resp, err = actions.Remove(ctx, []string{nonAtomicTestPackage}, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.False(t, resp.Error)
@@ -124,31 +124,5 @@ func TestNonAtomicUpgrade(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.False(t, resp.Error)
 		t.Logf("Upgrade successful")
-	}
-}
-
-// TestNonAtomicUpdateKernel тестирует обновление ядра в неатомарной системе
-func TestNonAtomicUpdateKernel(t *testing.T) {
-	if lib.Env.IsAtomic {
-		t.Skip("This test is available only for non-atomic systems")
-	}
-
-	if syscall.Geteuid() != 0 {
-		t.Skip("This test requires root privileges. Run with sudo.")
-	}
-
-	actions := system.NewActions()
-	assert.NotNil(t, actions)
-
-	ctx := context.Background()
-
-	resp, err := actions.UpdateKernel(ctx)
-	if err != nil {
-		t.Logf("UpdateKernel error (may be expected): %v", err)
-		assert.NotContains(t, err.Error(), "Elevated rights are required")
-	} else {
-		assert.NotNil(t, resp)
-		assert.False(t, resp.Error)
-		t.Logf("UpdateKernel successful")
 	}
 }

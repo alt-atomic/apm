@@ -124,9 +124,10 @@ var withRootCheckWrapper = wrapperWithOptions(true)
 
 func CommandList() *cli.Command {
 	return &cli.Command{
-		Name:    "system",
-		Aliases: []string{"s"},
-		Usage:   lib.T_("System package management"),
+		Name:            "system",
+		Aliases:         []string{"s"},
+		Usage:           lib.T_("System package management"),
+		HideHelpCommand: true,
 		Commands: []*cli.Command{
 			{
 				Name:      "install",
@@ -248,7 +249,7 @@ func CommandList() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: lib.T_("Building query to fetch package list"),
+						Usage: lib.T_("Sort packages by field, example fields: name, section"),
 					},
 					&cli.StringFlag{
 						Name:  "order",
@@ -296,6 +297,14 @@ func CommandList() *cli.Command {
 					}
 
 					return reply.CliResponse(ctx, *resp)
+				}),
+			},
+			{
+				Name:  "dbus-doc",
+				Usage: lib.T_("Show dbus online documentation"),
+				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					reply.StopSpinner()
+					return actions.GenerateOnlineDoc(ctx)
 				}),
 			},
 			{

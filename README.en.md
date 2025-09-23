@@ -30,6 +30,7 @@ The config.conf file does not exist by default, but can be created using the /et
 It is recommended to install the package from the repository, manual build:
 
 ```
+apt-get install systemd-devel libapt-devel gettext-tools meson
 meson setup build --wipe --prefix /usr
 meson install -C build
 ```
@@ -60,21 +61,19 @@ Options:
 
 
 ## User DBUS Session
-When running in a user session, the service is registered on the session bus, which does not require additional privileges. In this mode, APM works with distrobox containers. 
 To view all methods, for example, install D-SPY and then find the APM service there
 
 ```
-apm dbus-session
+apm dbus-session - run
+apm distrobox dbus-doc - online documentation
 ```
 
 ## System DBUS Session
-For proper operation, you need to apply the access policy by copying the file apm.conf. In this mode, APM works with system packages. 
 To view all methods, for example, install D-SPY and then find the APM service there
 
 ```
-sudo cp data/dbus-config/apm.conf /etc/dbus-1/system.d/
-
-sudo apm dbus-system
+sudo apm dbus-system - run
+sudo apm system dbus-doc - online documentation
 ```
 
 ## Example of working with system packages

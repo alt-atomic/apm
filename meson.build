@@ -132,13 +132,13 @@ test('go-apt-tests',
   timeout: 1200,
 )
 
-# System integration tests (requires root and system access)
+# System tests (requires system access)
 test('go-system-tests',
   bash,
   args: ['-lc', 'cd ' + meson.current_source_dir() + ' && go test -v -p 1 -count=1 ./tests/system/... ./tests/mocks/... -tags "system,apt_binding"'],
   env: go_test_env,
   depends: [apt_wrapper_lib],
-  suite: 'integration',
+  suite: 'system',
   timeout: 1800,
 )
 
