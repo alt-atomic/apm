@@ -46,8 +46,8 @@ type Module struct {
 
 type Body struct {
 	// Types: git, shell
-	// Commands to execute
-	Commands []string `yaml:"commands" json:"commands"`
+	// Commands to execute as script
+	Commands string `yaml:"commands" json:"commands"`
 
 	// Types: [git]
 	// Deps for module. They will be removed at the module end
