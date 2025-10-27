@@ -43,16 +43,16 @@ type Config struct {
 	Image string `yaml:"image" json:"image"`
 
 	// Repos to need put as sources.list. If empty, will be used repos from Image
-	Repos []string `yaml:"repos" json:"repos"`
+	Repos []string `yaml:"repos,omitempty" json:"repos,omitempty"`
 
 	// Tasks to connect as repos
-	Tasks []string `yaml:"tasks" json:"tasks"`
+	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 
 	// Kernel to use in image. If empty, will be used kernel from Image
-	Kernel string `yaml:"kernel" json:"kernel"`
+	Kernel string `yaml:"kernel,omitempty" json:"kernel,omitempty"`
 
 	// Modules list
-	Modules []Module `yaml:"modules" json:"modules"`
+	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
 func (cfg *Config) getTotalInstall() []string {
@@ -161,7 +161,7 @@ func (cfg *Config) finalize() {
 
 type Module struct {
 	// Name of module for logging
-	Name string `yaml:"name" json:"name"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Type of body
 	Type string `yaml:"type" json:"type"`
@@ -173,44 +173,44 @@ type Module struct {
 type Body struct {
 	// Types: git, shell
 	// Commands to execute as script
-	Commands string `yaml:"commands" json:"commands"`
+	Commands string `yaml:"commands,omitempty" json:"commands,omitempty"`
 
 	// Types: [git]
 	// Deps for module. They will be removed at the module end
-	Deps []string `yaml:"deps" json:"deps"`
+	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
 	// Types: merge, include, copy, move, remove, systemd
 	// Target what use in type
 	// Relative path to /var/apm/resources in merge, include, copy
 	// Absolute path in move, remove
 	// Service name in systemd
-	Target string `yaml:"target" json:"target"`
+	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
 	// Types: include, copy, move, remove
 	// Targets what use in type
 	// Relative paths to /var/apm/resources in include, copy
 	// Absolute paths in move, remove
-	Targets []string `yaml:"targets" json:"targets"`
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 
 	// Types: copy, move, merge
 	// Directory to use as destination
-	Destination string `yaml:"destination" json:"destination"`
+	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
 
 	// Types: packages
 	// Packages to install from repos/tasks
-	Install []string `yaml:"install" json:"install"`
+	Install []string `yaml:"install,omitempty" json:"install,omitempty"`
 
 	// Types: packages
 	// Packages to remove from image
-	Remove []string `yaml:"remove" json:"remove"`
+	Remove []string `yaml:"remove,omitempty" json:"remove,omitempty"`
 
 	// Types: [copy], [move]
 	// Replace destination if it exists
-	Replace bool `yaml:"replace" json:"replace"`
+	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
 
 	// Types: [move]
 	// Make link from targets parent dir to destination
-	CreateLink bool `yaml:"create-link" json:"create-link"`
+	CreateLink bool `yaml:"create-link,omitempty" json:"create-link,omitempty"`
 }
 
 // Includes will be extended
