@@ -18,6 +18,7 @@ package service
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/build"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"bufio"
@@ -217,7 +218,7 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 }
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
-func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
+func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config build.Config) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.CheckAndUpdateBaseImage"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.CheckAndUpdateBaseImage"))
 	image, err := h.GetHostImage()
@@ -306,74 +307,63 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 }
 
 // GenerateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
-func (h *HostImageService) GenerateDefaultConfig() (Config, error) {
-	var cfg Config
+func (h *HostImageService) GenerateDefaultConfig() (build.Config, error) {
+	var cfg build.Config
 	imageName, err := h.GetImageFromDocker()
 	if err != nil {
 		return cfg, err
 	}
 
 	cfg.Image = imageName
-	cfg.Packages.Install = []string{}
-	cfg.Packages.Remove = []string{}
-	cfg.Commands = []string{}
 
 	return cfg, nil
 }
 
 // GenerateDockerfile генерирует содержимое Dockerfile, формируя apm команды с модификаторами для пакетов.
-func (h *HostImageService) GenerateDockerfile(config Config) error {
-	if err := h.checkCommands(config); err != nil {
-		return err
-	}
+func (h *HostImageService) GenerateDockerfile(config build.Config) error {
+	// if err := h.checkCommands(config); err != nil {
+	// 	return err
+	// }
 
-	var aptCmd string
+	// var aptCmd string
 
-	// Формирование списка пакетов с суффиксами: + для установки и - для удаления.
-	var pkgs []string
-	uniqueInstall := uniqueStrings(config.Packages.Install)
-	uniqueRemove := uniqueStrings(config.Packages.Remove)
+	// // Формирование списка пакетов с суффиксами: + для установки и - для удаления.
+	// var pkgs []string
+	// uniqueInstall := uniqueStrings(config.Packages.Install)
+	// uniqueRemove := uniqueStrings(config.Packages.Remove)
 
-	for _, pkg := range uniqueInstall {
-		pkgs = append(pkgs, pkg+"+")
-	}
-	for _, pkg := range uniqueRemove {
-		pkgs = append(pkgs, pkg+"-")
-	}
-	if len(pkgs) > 0 {
-		aptCmd = "apm s install " + strings.Join(pkgs, " ")
-	}
+	// for _, pkg := range uniqueInstall {
+	// 	pkgs = append(pkgs, pkg+"+")
+	// }
+	// for _, pkg := range uniqueRemove {
+	// 	pkgs = append(pkgs, pkg+"-")
+	// }
+	// if len(pkgs) > 0 {
+	// 	aptCmd = "apm s install " + strings.Join(pkgs, " ")
+	// }
 
-	// Формирование Dockerfile.
-	var dockerfileLines []string
-	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", config.Image))
-	// Разбиваем команду по строкам.
-	if aptCmd != "" {
-		aptLines := splitCommand("RUN ", aptCmd)
-		dockerfileLines = append(dockerfileLines, strings.Join(aptLines, "\n"))
-	}
+	// // Формирование Dockerfile.
+	// var dockerfileLines []string
+	// dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", config.Image))
+	// // Разбиваем команду по строкам.
+	// if aptCmd != "" {
+	// 	aptLines := splitCommand("RUN ", aptCmd)
+	// 	dockerfileLines = append(dockerfileLines, strings.Join(aptLines, "\n"))
+	// }
 
-	// Формирование RUN блока для пользовательских команд, если они заданы.
-	if len(config.Commands) > 0 {
-		cmdCombined := strings.Join(config.Commands, " && ")
-		cmdLines := splitCommand("RUN ", cmdCombined)
-		dockerfileLines = append(dockerfileLines, strings.Join(cmdLines, "\n"))
-	}
+	// // Формирование RUN блока для пользовательских команд, если они заданы.
+	// if len(config.Commands) > 0 {
+	// 	cmdCombined := strings.Join(config.Commands, " && ")
+	// 	cmdLines := splitCommand("RUN ", cmdCombined)
+	// 	dockerfileLines = append(dockerfileLines, strings.Join(cmdLines, "\n"))
+	// }
 
-	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
-	err := os.WriteFile(h.containerPath, []byte(dockerStr), 0644)
-	if err != nil {
-		return err
-	}
+	// dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
+	// err := os.WriteFile(h.containerPath, []byte(dockerStr), 0644)
+	// if err != nil {
+	// 	return err
+	// }
 
-	return nil
-}
-
-// checkCommands проверяет, есть ли изменения в конфигурации
-func (h *HostImageService) checkCommands(config Config) error {
-	if len(config.Packages.Install) == 0 && len(config.Packages.Remove) == 0 && len(config.Commands) == 0 {
-		return errors.New(app.T_("Local image configuration file has no changes"))
-	}
 	return nil
 }
 

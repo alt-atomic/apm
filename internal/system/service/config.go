@@ -18,6 +18,7 @@ package service
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/build"
 	"context"
 	"errors"
 	"os"
@@ -27,19 +28,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config описывает структуру конфигурационного файла.
-type Config struct {
-	Image    string `yaml:"image" json:"image"`
-	Packages struct {
-		Install []string `yaml:"install" json:"install"`
-		Remove  []string `yaml:"remove" json:"remove"`
-	} `yaml:"packages" json:"packages"`
-	Commands []string `yaml:"commands" json:"commands"`
-}
-
 // HostConfigService — сервис для работы с конфигурацией хоста.
 type HostConfigService struct {
-	Config              *Config
+	Config              *build.Config
 	serviceHostDatabase *HostDBService
 	pathImageFile       string
 	hostImageService    *HostImageService
@@ -58,30 +49,23 @@ var syncYamlMutex sync.Mutex
 
 // LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
 func (s *HostConfigService) LoadConfig() error {
-	data, err := os.ReadFile(s.pathImageFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			cfg, err := s.hostImageService.GenerateDefaultConfig()
-			if err != nil {
-				return err
-			}
-			s.Config = &cfg
-			return s.SaveConfig()
+	var cfg build.Config
+	var err error
+
+	_, err = os.Stat(s.pathImageFile)
+	if os.IsNotExist(err) {
+		if cfg, err = s.hostImageService.GenerateDefaultConfig(); err != nil {
+			return err
 		}
-		return err
+		s.Config = &cfg
+		return s.SaveConfig()
+	} else {
+		if cfg, err = build.ReadAndParseYamlFile(s.pathImageFile); err != nil {
+			return err
+		}
+		s.Config = &cfg
+		return nil
 	}
-
-	var cfg Config
-	if err = yaml.Unmarshal(data, &cfg); err != nil {
-		return err
-	}
-
-	if cfg.Image == "" {
-		return errors.New(app.T_("Image must be specified in the configuration file"))
-	}
-	s.Config = &cfg
-
-	return nil
 }
 
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
@@ -103,13 +87,6 @@ func (s *HostConfigService) SaveConfig() error {
 // GenerateDockerfile делегирует генерацию Dockerfile к HostImageService
 func (s *HostConfigService) GenerateDockerfile() error {
 	return s.hostImageService.GenerateDockerfile(*s.Config)
-}
-
-func (s *HostConfigService) CheckCommands() error {
-	if len(s.Config.Packages.Install) == 0 && len(s.Config.Packages.Remove) == 0 && len(s.Config.Commands) == 0 {
-		return errors.New(app.T_("Local image configuration file has no changes"))
-	}
-	return nil
 }
 
 // ConfigIsChanged проверяет, изменился ли новый конфиг, используя сервис для работы с базой.
@@ -141,46 +118,25 @@ func (s *HostConfigService) SaveConfigToDB(ctx context.Context) error {
 	return s.serviceHostDatabase.SaveImageToDB(ctx, history)
 }
 
-// AddCommand добавляет команду в список Commands и сохраняет изменения в файл.
-func (s *HostConfigService) AddCommand(cmd string) error {
-	if contains(s.Config.Commands, cmd) {
-		return nil
-	}
-	s.Config.Commands = append(s.Config.Commands, cmd)
-	return s.SaveConfig()
-}
-
 // IsInstalled проверяет наличие пакета в списке для установки.
 func (s *HostConfigService) IsInstalled(pkg string) bool {
-	return contains(s.Config.Packages.Install, pkg)
+	return s.Config.IsInstalled(pkg)
 }
 
 // IsRemoved проверяет наличие пакета в списке для удаления.
 func (s *HostConfigService) IsRemoved(pkg string) bool {
-	return contains(s.Config.Packages.Remove, pkg)
+	return s.Config.IsRemoved(pkg)
 }
 
 // AddInstallPackage добавляет пакет в список для установки и сохраняет изменения в файл.
 func (s *HostConfigService) AddInstallPackage(pkg string) error {
-	if contains(s.Config.Packages.Install, pkg) {
-		return nil
-	}
-	if contains(s.Config.Packages.Remove, pkg) {
-		s.Config.Packages.Remove = removeElement(s.Config.Packages.Remove, pkg)
-	}
-	s.Config.Packages.Install = append(s.Config.Packages.Install, pkg)
+	s.Config.AddInstallPackage(pkg)
 	return s.SaveConfig()
 }
 
 // AddRemovePackage добавляет пакет в список для удаления и сохраняет изменения в файл.
 func (s *HostConfigService) AddRemovePackage(pkg string) error {
-	if contains(s.Config.Packages.Remove, pkg) {
-		return nil
-	}
-	if contains(s.Config.Packages.Install, pkg) {
-		s.Config.Packages.Install = removeElement(s.Config.Packages.Install, pkg)
-	}
-	s.Config.Packages.Remove = append(s.Config.Packages.Remove, pkg)
+	s.Config.AddRemovePackage(pkg)
 	return s.SaveConfig()
 }
 

@@ -18,9 +18,9 @@ package system
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/build"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/internal/system/service"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -343,7 +343,7 @@ func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 // ImageSaveConfig - Проверить и сохранить новый конфиг image.yml
 // doc_response: ImageConfigResponse
 func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
-	configObject := service.Config{}
+	configObject := build.Config{}
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
 		return "", dbus.MakeFailedError(fmt.Errorf(app.T_("Failed to parse JSON: %w"), err))
 	}

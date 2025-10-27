@@ -18,6 +18,7 @@ package service
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/build"
 	"apm/internal/common/reply"
 	"context"
 	"database/sql"
@@ -37,9 +38,9 @@ import (
 )
 
 type ImageHistory struct {
-	ImageName string  `json:"image"`
-	Config    *Config `json:"config"`
-	ImageDate string  `json:"date"`
+	ImageName string        `json:"image"`
+	Config    *build.Config `json:"config"`
+	ImageDate string        `json:"date"`
 }
 
 type DBHistory struct {
@@ -88,8 +89,9 @@ func (DBHistory) TableName() string {
 
 // fromDBModel — превращает DBHistory (структура БД) в бизнес-структуру ImageHistory
 func (dbh DBHistory) fromDBModel() (ImageHistory, error) {
-	var cfg Config
-	if err := json.Unmarshal([]byte(dbh.ConfigJSON), &cfg); err != nil {
+	var err error
+	var cfg build.Config
+	if cfg, err = build.ParseJsonData([]byte(dbh.ConfigJSON)); err != nil {
 		return ImageHistory{}, fmt.Errorf(app.T_("Config conversion error: %v"), err)
 	}
 
@@ -192,7 +194,7 @@ func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNa
 }
 
 // IsLatestConfigSame сравнивает newConfig с последним сохранённым в БД.
-func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config) (bool, error) {
+func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig build.Config) (bool, error) {
 	var dbHist DBHistory
 	err := h.db.WithContext(ctx).Model(&DBHistory{}).
 		Order("imagedate DESC").
@@ -208,8 +210,8 @@ func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config
 		return false, fmt.Errorf(app.T_("Query execution error: %v"), err)
 	}
 
-	var latestConfig Config
-	if err = json.Unmarshal([]byte(dbHist.ConfigJSON), &latestConfig); err != nil {
+	var latestConfig build.Config
+	if latestConfig, err = build.ParseJsonData([]byte(dbHist.ConfigJSON)); err != nil {
 		return false, fmt.Errorf(app.T_("History config conversion error: %v"), err)
 	}
 

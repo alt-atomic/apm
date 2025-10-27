@@ -19,6 +19,7 @@ package system
 import (
 	_package "apm/internal/common/apt/package"
 	aptlib "apm/internal/common/binding/apt/lib"
+	"apm/internal/common/build"
 	"apm/internal/common/doc"
 	"apm/internal/common/reply"
 	"apm/internal/system/service"
@@ -96,7 +97,7 @@ type ImageHistoryResponse struct {
 
 // ImageConfigResponse структура ответа для ImageGetConfig/ImageSaveConfig методов
 type ImageConfigResponse struct {
-	Config service.Config `json:"config"`
+	Config build.Config `json:"config"`
 }
 
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода

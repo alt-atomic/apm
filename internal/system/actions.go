@@ -20,6 +20,7 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/build"
 	"apm/internal/common/reply"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
@@ -101,7 +102,7 @@ func NewActions(appConfig *app.Config) *Actions {
 type ImageStatus struct {
 	Image  service.HostImage `json:"image"`
 	Status string            `json:"status"`
-	Config service.Config    `json:"config"`
+	Config build.Config      `json:"config"`
 }
 
 // CheckRemove проверяем пакеты перед удалением
@@ -801,7 +802,7 @@ func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
 }
 
 // ImageSaveConfig сохранить конфиг
-func (a *Actions) ImageSaveConfig(config service.Config) (*reply.APIResponse, error) {
+func (a *Actions) ImageSaveConfig(config build.Config) (*reply.APIResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
