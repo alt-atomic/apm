@@ -144,6 +144,17 @@ func (cfg *Config) AddRemovePackage(pkg string) {
 }
 
 // Check and extend includes
+func (cfg *Config) HasInclude() bool {
+	for _, module := range cfg.Modules {
+		if module.Type == TypeInclude {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Check and extend includes
 func (cfg *Config) finalize() {
 
 }

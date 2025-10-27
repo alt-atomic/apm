@@ -73,6 +73,9 @@ func (s *HostConfigService) SaveConfig() error {
 	if s.Config == nil {
 		return errors.New(app.T_("Configuration not loaded"))
 	}
+	if s.Config.HasInclude() {
+		return errors.New(app.T_("Saving config with 'include module type not supported'"))
+	}
 
 	syncYamlMutex.Lock()
 	defer syncYamlMutex.Unlock()
