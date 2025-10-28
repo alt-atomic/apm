@@ -24,8 +24,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
 // HostConfigService — сервис для работы с конфигурацией хоста.
@@ -73,18 +71,14 @@ func (s *HostConfigService) SaveConfig() error {
 	if s.Config == nil {
 		return errors.New(app.T_("Configuration not loaded"))
 	}
-	if s.Config.HasInclude() {
-		return errors.New(app.T_("Saving config with 'include module type not supported'"))
+	if s.Config.GetHasInclude() {
+		return errors.New(app.T_("Saving config with 'include' module type not supported"))
 	}
 
 	syncYamlMutex.Lock()
 	defer syncYamlMutex.Unlock()
 
-	data, err := yaml.Marshal(s.Config)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.pathImageFile, data, 0644)
+	return s.Config.Save(s.pathImageFile)
 }
 
 // GenerateDockerfile делегирует генерацию Dockerfile к HostImageService

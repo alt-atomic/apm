@@ -28,7 +28,7 @@ func TestHostConfigService_SaveAndLoadConfig(t *testing.T) {
 			build.Module{
 				Type: build.TypeShell,
 				Body: build.Body{
-					Commands: "echo hello\napt update",
+					Commands: []string{"echo hello", "apt update"},
 				},
 			},
 		},

@@ -17,7 +17,10 @@
 package build
 
 import (
+	"apm/internal/common/app"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"slices"
 
@@ -53,6 +56,8 @@ type Config struct {
 
 	// Modules list
 	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
+
+	hasInclude bool
 }
 
 func (cfg *Config) getTotalInstall() []string {
@@ -87,6 +92,10 @@ func (cfg *Config) getTotalRemove() []string {
 	return totalRemove
 }
 
+func (cfg *Config) GetHasInclude() bool {
+	return cfg.hasInclude
+}
+
 func (cfg *Config) IsInstalled(pkg string) bool {
 	return slices.Contains(cfg.getTotalInstall(), pkg)
 }
@@ -101,21 +110,23 @@ func (cfg *Config) AddInstallPackage(pkg string) {
 	if slices.Contains(totalInstall, pkg) {
 		return
 	} else {
-		var packagesModule Module
-		if cfg.Modules[len(cfg.Modules)-1].Type == TypePackages && cfg.Modules[len(cfg.Modules)-1].Name == imageApplyModuleName {
-			packagesModule = cfg.Modules[len(cfg.Modules)-1]
-		} else {
-			packagesModule = Module{
+		var packagesModule *Module
+		if cfg.Modules[len(cfg.Modules)-1].Type != TypePackages || cfg.Modules[len(cfg.Modules)-1].Name != imageApplyModuleName {
+			cfg.Modules = append(cfg.Modules, Module{
 				Name: imageApplyModuleName,
 				Type: TypePackages,
 				Body: Body{
 					Install: []string{},
 					Remove:  []string{},
 				},
-			}
-			cfg.Modules = append(cfg.Modules, packagesModule)
+			})
 		}
-		packagesModule.Body.Install = append(packagesModule.Body.Install, pkg)
+		packagesModule = &cfg.Modules[len(cfg.Modules)-1]
+		if slices.Contains(packagesModule.Body.Remove, pkg) {
+			packagesModule.Body.Remove = removeByValue(packagesModule.Body.Remove, pkg)
+		} else {
+			packagesModule.Body.Install = append(packagesModule.Body.Install, pkg)
+		}
 	}
 }
 
@@ -125,38 +136,149 @@ func (cfg *Config) AddRemovePackage(pkg string) {
 	if slices.Contains(totalRemove, pkg) {
 		return
 	} else {
-		var packagesModule Module
-		if cfg.Modules[len(cfg.Modules)-1].Type == TypePackages && cfg.Modules[len(cfg.Modules)-1].Name == imageApplyModuleName {
-			packagesModule = cfg.Modules[len(cfg.Modules)-1]
-		} else {
-			packagesModule = Module{
+		var packagesModule *Module
+		if cfg.Modules[len(cfg.Modules)-1].Type != TypePackages || cfg.Modules[len(cfg.Modules)-1].Name != imageApplyModuleName {
+			cfg.Modules = append(cfg.Modules, Module{
 				Name: imageApplyModuleName,
 				Type: TypePackages,
 				Body: Body{
 					Install: []string{},
 					Remove:  []string{},
 				},
-			}
-			cfg.Modules = append(cfg.Modules, packagesModule)
+			})
 		}
-		packagesModule.Body.Remove = append(packagesModule.Body.Remove, pkg)
+		packagesModule = &cfg.Modules[len(cfg.Modules)-1]
+		if slices.Contains(packagesModule.Body.Install, pkg) {
+			packagesModule.Body.Install = removeByValue(packagesModule.Body.Install, pkg)
+		} else {
+			packagesModule.Body.Remove = append(packagesModule.Body.Remove, pkg)
+		}
 	}
 }
 
-// Check and extend includes
-func (cfg *Config) HasInclude() bool {
+// Extend includes
+func (cfg *Config) extendIncludes() error {
+	var newModules = []Module{}
+	cfg.hasInclude = false
+
 	for _, module := range cfg.Modules {
 		if module.Type == TypeInclude {
-			return true
+			cfg.hasInclude = true
+			for _, include := range module.Body.GetTargets() {
+				data, err := os.ReadFile(include)
+				if err != nil {
+					return err
+				}
+				include_cfg, err := parseData(data, true, false)
+				if err != nil {
+					return err
+				}
+				err = include_cfg.extendIncludes()
+				if err != nil {
+					return err
+				}
+
+				newModules = append(newModules, include_cfg.Modules...)
+			}
+		} else {
+			newModules = append(newModules, module)
 		}
 	}
 
-	return false
+	cfg.Modules = newModules
+
+	return nil
+}
+
+// Extend includes
+func (cfg *Config) fix() error {
+	if sE(cfg.Image) {
+		return errors.New(app.T_("Image can not be empty"))
+	}
+
+	var reqiredText = app.T_("Module '%s' required '%s'")
+	var reqiredTextOr = fmt.Sprintf(reqiredText, "%s", app.T_("%s or %s"))
+
+	for _, module := range cfg.Modules {
+		if sE(module.Type) {
+			return errors.New(app.T_("Module type can not be empty"))
+		}
+
+		var b = module.Body
+
+		switch module.Type {
+		case TypeGit:
+			if aE(b.Commands) {
+				return fmt.Errorf(reqiredText, "git", "commands")
+			}
+		case TypeShell:
+			if aE(b.Commands) {
+				return fmt.Errorf(reqiredText, "shell", "commands")
+			}
+		case TypeMerge:
+			if sE(b.Target) {
+				return fmt.Errorf(reqiredText, "merge", "target")
+			}
+			if sE(b.Destination) {
+				return fmt.Errorf(reqiredText, "merge", "destination")
+			}
+		case TypeCopy:
+			if aE(b.GetTargets()) {
+				return fmt.Errorf(reqiredText, "copy", "targets")
+			}
+			if sE(b.Destination) {
+				return fmt.Errorf(reqiredText, "copy", "destination")
+			}
+		case TypeMove:
+			if aE(b.GetTargets()) {
+				return fmt.Errorf(reqiredTextOr, "move", "target", "targets")
+			}
+			if sE(b.Destination) {
+				return fmt.Errorf(reqiredText, "move", "destination")
+			}
+		case TypeRemove:
+			if aE(b.GetTargets()) {
+				return fmt.Errorf(reqiredTextOr, "remove", "target", "targets")
+			}
+		case TypeSystemd:
+			if aE(b.GetTargets()) {
+				return fmt.Errorf(reqiredTextOr, "systemd", "target", "targets")
+			}
+		case TypePackages:
+		case TypeInclude:
+			return errors.New(app.T_("Include should be extended"))
+		default:
+			return errors.New(app.T_("Unknown type: " + module.Type))
+		}
+	}
+
+	return nil
 }
 
 // Check and extend includes
-func (cfg *Config) finalize() {
+func (cfg *Config) CheckAndFix() error {
+	if err := cfg.extendIncludes(); err != nil {
+		return err
+	}
+	if err := cfg.fix(); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+// Check and extend includes
+func (cfg *Config) Save(filename string) error {
+	var err error
+	if err = cfg.CheckAndFix(); err != nil {
+		return err
+	}
+
+	var data []byte
+	if data, err = yaml.Marshal(cfg); err != nil {
+		return err
+	}
+	return os.WriteFile(filename, data, 0644)
 }
 
 type Module struct {
@@ -172,8 +294,8 @@ type Module struct {
 
 type Body struct {
 	// Types: git, shell
-	// Commands to execute as script
-	Commands string `yaml:"commands,omitempty" json:"commands,omitempty"`
+	// Commands to execute relative to resorces dir
+	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty"`
 
 	// Types: [git]
 	// Deps for module. They will be removed at the module end
@@ -186,10 +308,11 @@ type Body struct {
 	// Service name in systemd
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-	// Types: include, copy, move, remove
+	// Types: include, copy, move, remove, systemd
 	// Targets what use in type
 	// Relative paths to /var/apm/resources in include, copy
 	// Absolute paths in move, remove
+	// Service names in systemd
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 
 	// Types: copy, move, merge
@@ -211,6 +334,24 @@ type Body struct {
 	// Types: [move]
 	// Make link from targets parent dir to destination
 	CreateLink bool `yaml:"create-link,omitempty" json:"create-link,omitempty"`
+
+	// Types: systemd
+	// Enable or disable systemd service
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+}
+
+// Check and extend includes
+func (b *Body) GetTargets() []string {
+	var targets = []string{}
+
+	if !sE(b.Target) {
+		targets = append(targets, b.Target)
+	}
+	if !aE(b.Targets) {
+		targets = append(targets, b.Targets...)
+	}
+
+	return targets
 }
 
 // Includes will be extended
@@ -224,15 +365,15 @@ func ReadAndParseYamlFile(name string) (cfg Config, err error) {
 
 // Includes will be extended
 func ParseYamlData(data []byte) (cfg Config, err error) {
-	return parseData(data, true)
+	return parseData(data, true, true)
 }
 
 // Includes will return error
 func ParseJsonData(data []byte) (cfg Config, err error) {
-	return parseData(data, false)
+	return parseData(data, false, true)
 }
 
-func parseData(data []byte, is_yaml bool) (cfg Config, err error) {
+func parseData(data []byte, is_yaml bool, fix bool) (cfg Config, err error) {
 	if is_yaml {
 		err = yaml.Unmarshal(data, &cfg)
 	} else {
@@ -242,8 +383,12 @@ func parseData(data []byte, is_yaml bool) (cfg Config, err error) {
 	if err != nil {
 		return cfg, err
 	}
-
-	cfg.finalize()
+	if fix {
+		err = cfg.CheckAndFix()
+		if err != nil {
+			return cfg, err
+		}
+	}
 
 	return cfg, nil
 }
@@ -252,4 +397,14 @@ func removeByValue(arr []string, value string) []string {
 	return slices.DeleteFunc(arr, func(s string) bool {
 		return s == value
 	})
+}
+
+// string is empty
+func sE(s string) bool {
+	return s == ""
+}
+
+// array is empty
+func aE(a []string) bool {
+	return len(a) == 0
 }
