@@ -39,6 +39,7 @@ const (
 	TypeRemove   = "remove"
 	TypeSystemd  = "systemd"
 	TypePackages = "packages"
+	TypeLink     = "link"
 )
 
 type Config struct {
@@ -209,40 +210,47 @@ func (cfg *Config) fix() error {
 		switch module.Type {
 		case TypeGit:
 			if aE(b.Commands) {
-				return fmt.Errorf(reqiredText, "git", "commands")
+				return fmt.Errorf(reqiredText, TypeGit, "commands")
 			}
 		case TypeShell:
 			if aE(b.Commands) {
-				return fmt.Errorf(reqiredText, "shell", "commands")
+				return fmt.Errorf(reqiredText, TypeShell, "commands")
 			}
 		case TypeMerge:
 			if sE(b.Target) {
-				return fmt.Errorf(reqiredText, "merge", "target")
+				return fmt.Errorf(reqiredText, TypeMerge, "target")
 			}
 			if sE(b.Destination) {
-				return fmt.Errorf(reqiredText, "merge", "destination")
+				return fmt.Errorf(reqiredText, TypeMerge, "destination")
 			}
 		case TypeCopy:
 			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredText, "copy", "targets")
+				return fmt.Errorf(reqiredText, TypeCopy, "targets")
 			}
 			if sE(b.Destination) {
-				return fmt.Errorf(reqiredText, "copy", "destination")
+				return fmt.Errorf(reqiredText, TypeCopy, "destination")
 			}
 		case TypeMove:
 			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredTextOr, "move", "target", "targets")
+				return fmt.Errorf(reqiredTextOr, TypeMove, "target", "targets")
 			}
 			if sE(b.Destination) {
-				return fmt.Errorf(reqiredText, "move", "destination")
+				return fmt.Errorf(reqiredText, TypeMove, "destination")
 			}
 		case TypeRemove:
 			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredTextOr, "remove", "target", "targets")
+				return fmt.Errorf(reqiredTextOr, TypeRemove, "target", "targets")
 			}
 		case TypeSystemd:
 			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredTextOr, "systemd", "target", "targets")
+				return fmt.Errorf(reqiredTextOr, TypeSystemd, "target", "targets")
+			}
+		case TypeLink:
+			if aE(b.GetTargets()) {
+				return fmt.Errorf(reqiredTextOr, TypeLink, "target", "targets")
+			}
+			if sE(b.Destination) {
+				return fmt.Errorf(reqiredText, TypeLink, "destination")
 			}
 		case TypePackages:
 		case TypeInclude:
@@ -301,21 +309,21 @@ type Body struct {
 	// Deps for module. They will be removed at the module end
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
-	// Types: merge, include, copy, move, remove, systemd
+	// Types: merge, include, copy, move, remove, systemd, link
 	// Target what use in type
 	// Relative path to /var/apm/resources in merge, include, copy
 	// Absolute path in move, remove
 	// Service name in systemd
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-	// Types: include, copy, move, remove, systemd
+	// Types: include, copy, move, remove, systemd, link
 	// Targets what use in type
 	// Relative paths to /var/apm/resources in include, copy
 	// Absolute paths in move, remove
 	// Service names in systemd
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 
-	// Types: copy, move, merge
+	// Types: copy, move, merge, link
 	// Directory to use as destination
 	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
 
