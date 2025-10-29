@@ -93,7 +93,7 @@ func (cfg *Config) getTotalRemove() []string {
 	return totalRemove
 }
 
-func (cfg *Config) GetHasInclude() bool {
+func (cfg *Config) HasInclude() bool {
 	return cfg.hasInclude
 }
 
