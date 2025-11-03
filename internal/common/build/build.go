@@ -242,16 +242,19 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 	}
 
-	err = os.RemoveAll(cfgService.appConfig.ConfigManager.GetPathImageFile())
-	if err != nil {
-		return err
-	}
-	err = os.RemoveAll(cfgService.appConfig.ConfigManager.GetResourcesDir())
-	if err != nil {
-		return err
+	cleanup := func(paths ...string) error {
+		for _, path := range paths {
+			if err = os.RemoveAll(path); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
-	return nil
+	return cleanup(
+		cfgService.appConfig.ConfigManager.GetPathImageFile(),
+		cfgService.appConfig.ConfigManager.GetResourcesDir(),
+	)
 }
 
 func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool) error {
