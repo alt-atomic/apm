@@ -27,6 +27,7 @@ PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
 DBSQL_FILEPATH = get_option('localstatedir') / 'lib' / meson.project_name() / meson.project_name() + '.db'
 IMAGE_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'image.yml'
+RESOURCES_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'resources'
 
 constants = [
   ['apm/internal/common/app.BuildCommandPrefix', COMMAND_PREFIX],
@@ -34,6 +35,7 @@ constants = [
   ['apm/internal/common/app.BuildPathLocales', LOCALES_DIR],
   ['apm/internal/common/app.BuildPathDBSQLSystem', DBSQL_FILEPATH],
   ['apm/internal/common/app.BuildPathImageFile', IMAGE_FILEPATH],
+  ['apm/internal/common/app.BuildPathResourcesDir', RESOURCES_FILEPATH],
   ['apm/internal/common/app.BuildVersion', version],
 ]
 

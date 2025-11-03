@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
+	"runtime"
 	"slices"
 
 	"gopkg.in/yaml.v3"
@@ -30,16 +32,16 @@ import (
 var imageApplyModuleName = "Image apply result"
 
 const (
-	TypeGit      = "git"
-	TypeShell    = "shell"
-	TypeMerge    = "merge"
-	TypeInclude  = "include"
 	TypeCopy     = "copy"
-	TypeMove     = "move"
-	TypeRemove   = "remove"
-	TypeSystemd  = "systemd"
-	TypePackages = "packages"
+	TypeGit      = "git"
+	TypeInclude  = "include"
 	TypeLink     = "link"
+	TypeMerge    = "merge"
+	TypeMove     = "move"
+	TypePackages = "packages"
+	TypeRemove   = "remove"
+	TypeShell    = "shell"
+	TypeSystemd  = "systemd"
 )
 
 type Config struct {
@@ -59,6 +61,37 @@ type Config struct {
 	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 
 	hasInclude bool
+}
+
+func (cfg *Config) TasksRepos() []string {
+	var repos = []string{}
+
+	var templates = []string{}
+	switch runtime.GOARCH {
+	case "amd64":
+		templates = append(
+			templates,
+			"rpm http://git.altlinux.org repo/%s/x86_64 task",
+			"rpm http://git.altlinux.org repo/%s/x86_64-i586 task",
+		)
+	case "arm64", "aarch64":
+		templates = append(
+			templates,
+			"rpm http://git.altlinux.org repo/%s/aarch64 task",
+		)
+	default:
+		return []string{}
+	}
+
+	if !aE(templates) {
+		for _, task := range cfg.Tasks {
+			for _, template := range templates {
+				repos = append(repos, fmt.Sprintf(template, task))
+			}
+		}
+	}
+
+	return repos
 }
 
 func (cfg *Config) getTotalInstall() []string {
@@ -212,6 +245,9 @@ func (cfg *Config) fix() error {
 			if aE(b.Commands) {
 				return fmt.Errorf(reqiredText, TypeGit, "commands")
 			}
+			if sE(b.Url) {
+				return fmt.Errorf(reqiredText, TypeGit, "url")
+			}
 		case TypeShell:
 			if aE(b.Commands) {
 				return fmt.Errorf(reqiredText, TypeShell, "commands")
@@ -224,15 +260,15 @@ func (cfg *Config) fix() error {
 				return fmt.Errorf(reqiredText, TypeMerge, "destination")
 			}
 		case TypeCopy:
-			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredText, TypeCopy, "targets")
+			if sE(b.Target) {
+				return fmt.Errorf(reqiredText, TypeCopy, "target")
 			}
 			if sE(b.Destination) {
 				return fmt.Errorf(reqiredText, TypeCopy, "destination")
 			}
 		case TypeMove:
-			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredTextOr, TypeMove, "target", "targets")
+			if sE(b.Target) {
+				return fmt.Errorf(reqiredText, TypeMove, "target")
 			}
 			if sE(b.Destination) {
 				return fmt.Errorf(reqiredText, TypeMove, "destination")
@@ -246,8 +282,8 @@ func (cfg *Config) fix() error {
 				return fmt.Errorf(reqiredTextOr, TypeSystemd, "target", "targets")
 			}
 		case TypeLink:
-			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredTextOr, TypeLink, "target", "targets")
+			if sE(b.Target) {
+				return fmt.Errorf(reqiredText, TypeLink, "target")
 			}
 			if sE(b.Destination) {
 				return fmt.Errorf(reqiredText, TypeLink, "destination")
@@ -257,6 +293,12 @@ func (cfg *Config) fix() error {
 			return errors.New(app.T_("Include should be extended"))
 		default:
 			return errors.New(app.T_("Unknown type: " + module.Type))
+		}
+
+		if !sE(b.Destination) {
+			if !path.IsAbs(b.Destination) {
+				return errors.New(app.T_(""))
+			}
 		}
 	}
 
@@ -312,14 +354,14 @@ type Body struct {
 	// Types: merge, include, copy, move, remove, systemd, link
 	// Target what use in type
 	// Relative path to /var/apm/resources in merge, include, copy
-	// Absolute path in move, remove
+	// Absolute path in remove
 	// Service name in systemd
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-	// Types: include, copy, move, remove, systemd, link
+	// Types: include, remove, systemd
 	// Targets what use in type
-	// Relative paths to /var/apm/resources in include, copy
-	// Absolute paths in move, remove
+	// Relative paths to /var/apm/resources in include
+	// Absolute paths in remove
 	// Service names in systemd
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 
@@ -346,6 +388,10 @@ type Body struct {
 	// Types: systemd
 	// Enable or disable systemd service
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Types: git
+	// Url to git reposotiry
+	Url string `yaml:"url,omitempty" json:"url,omitempty"`
 }
 
 // Check and extend includes

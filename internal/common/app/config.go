@@ -34,16 +34,18 @@ type Manager interface {
 	GetTemporaryImageFile() string
 	GetPathImageContainerFile() string
 	GetPathImageFile() string
+	GetResourcesDir() string
 }
 
 // BuildInfo информация интегрированная через сборку meson
 type BuildInfo struct {
-	CommandPrefix   string
-	Environment     string
-	PathLocales     string
-	PathDBSQLSystem string
-	PathImageFile   string
-	Version         string
+	CommandPrefix    string
+	Environment      string
+	PathLocales      string
+	PathDBSQLSystem  string
+	PathImageFile    string
+	PathResourcesDir string
+	Version          string
 }
 
 // Colors конфигурация цветовой схемы
@@ -66,15 +68,16 @@ type Colors struct {
 
 // Configuration основная конфигурация приложения
 type Configuration struct {
-	CommandPrefix   string `yaml:"commandPrefix"`
-	Environment     string `yaml:"environment"`
-	PathDBSQLSystem string `yaml:"pathDBSQLSystem"`
-	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
-	PathDBKV        string `yaml:"pathDBKV"`
-	PathImageFile   string `yaml:"pathImageFile"`
-	PathLocales     string `yaml:"pathLocales"`
-	Version         string `yaml:"version"`
-	Colors          Colors `yaml:"colors"`
+	CommandPrefix    string `yaml:"commandPrefix"`
+	Environment      string `yaml:"environment"`
+	PathDBSQLSystem  string `yaml:"pathDBSQLSystem"`
+	PathDBSQLUser    string `yaml:"pathDBSQLUser"`
+	PathDBKV         string `yaml:"pathDBKV"`
+	PathImageFile    string `yaml:"pathImageFile"`
+	PathResourcesDir string `yaml:"pathResourcesDir"`
+	PathLocales      string `yaml:"pathLocales"`
+	Version          string `yaml:"version"`
+	Colors           Colors `yaml:"colors"`
 
 	// Runtime flags
 	ExistStplr     bool   `yaml:"-"`
@@ -152,6 +155,9 @@ func (cm *configManagerImpl) applyBuildInfo(buildInfo BuildInfo) {
 	}
 	if buildInfo.PathImageFile != "" {
 		cm.config.PathImageFile = buildInfo.PathImageFile
+	}
+	if buildInfo.PathResourcesDir != "" {
+		cm.config.PathResourcesDir = buildInfo.PathResourcesDir
 	}
 	if buildInfo.Version != "" {
 		cm.config.Version = buildInfo.Version
@@ -232,6 +238,11 @@ func (cm *configManagerImpl) GetTemporaryImageFile() string {
 // GetPathImageFile возвращает путь к файлу конфигурации образа
 func (cm *configManagerImpl) GetPathImageFile() string {
 	return cm.config.PathImageFile
+}
+
+// GetPathImageFile возвращает путь к файлу конфигурации образа
+func (cm *configManagerImpl) GetResourcesDir() string {
+	return cm.config.PathResourcesDir
 }
 
 // GetPathImageContainerFile возвращает путь к файлу для сборки контейнера

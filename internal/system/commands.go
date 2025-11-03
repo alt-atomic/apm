@@ -350,6 +350,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				Hidden:  !appConfig.ConfigManager.GetConfig().IsAtomic,
 				Commands: []*cli.Command{
 					{
+						Name:  "build",
+						Usage: app.T_("Build image"),
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ImageBuild(ctx)
+							if err != nil {
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							}
+
+							return reply.CliResponse(ctx, *resp)
+						}),
+					},
+					{
 						Name:  "apply",
 						Usage: app.T_("Apply changes to the host"),
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
