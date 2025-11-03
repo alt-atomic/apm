@@ -49,8 +49,7 @@ func NewLogger(devMode bool) LoggerImpl {
 		log.AddHook(hook)
 	}
 
-	// Добавляем hook для вывода Fatal в stdout
-	stdoutHook := &StdoutHook{levels: []logrus.Level{logrus.FatalLevel, logrus.PanicLevel}}
+	stdoutHook := &StdoutHook{enableAll: false}
 	log.AddHook(stdoutHook)
 
 	if devMode {
@@ -82,7 +81,7 @@ func (l *loggerImpl) Errorf(format string, args ...interface{}) {
 
 // EnableStdoutLogging включает вывод всех логов в stdout
 func (l *loggerImpl) EnableStdoutLogging() {
-	l.stdoutHook.levels = logrus.AllLevels
+	l.stdoutHook.enableAll = true
 }
 
 // JournalHook для записи в systemd journal
@@ -123,10 +122,15 @@ func (hook *JournalHook) Levels() []logrus.Level {
 
 // StdoutHook для вывода логов в stdout
 type StdoutHook struct {
-	levels []logrus.Level
+	enableAll bool
 }
 
 func (hook *StdoutHook) Fire(entry *logrus.Entry) error {
+	// Если не включен режим всех уровней, проверяем только Fatal/Panic
+	if !hook.enableAll && entry.Level != logrus.FatalLevel && entry.Level != logrus.PanicLevel {
+		return nil
+	}
+
 	line, err := entry.String()
 	if err != nil {
 		return err
@@ -137,5 +141,5 @@ func (hook *StdoutHook) Fire(entry *logrus.Entry) error {
 }
 
 func (hook *StdoutHook) Levels() []logrus.Level {
-	return hook.levels
+	return logrus.AllLevels
 }

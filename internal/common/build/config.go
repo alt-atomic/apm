@@ -1,5 +1,5 @@
 // Atomic Package Manager
-// Copyright (C) 2025 Vladimir Romanov <rirusha@altlinux.org>
+// Copyright (C) 2025 Дмитрий Удалов dmitry@udalov.online
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ package build
 
 import (
 	"apm/internal/common/app"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,48 +26,48 @@ import (
 	"path"
 	"runtime"
 	"slices"
+	"sync"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
+// HostConfigService — сервис для работы с конфигурацией хоста.
+type HostConfigService struct {
+	Config              *Config
+	serviceHostDatabase *HostDBService
+	pathImageFile       string
+	hostImageService    *HostImageService
+}
+
+func NewHostConfigService(pathImageFile string, hostDBService *HostDBService, hostImageService *HostImageService) *HostConfigService {
+	return &HostConfigService{
+		serviceHostDatabase: hostDBService,
+		pathImageFile:       pathImageFile,
+		hostImageService:    hostImageService,
+	}
+}
+
 var imageApplyModuleName = "Image apply result"
 
-const (
-	TypeCopy     = "copy"
-	TypeGit      = "git"
-	TypeInclude  = "include"
-	TypeLink     = "link"
-	TypeMerge    = "merge"
-	TypeMove     = "move"
-	TypePackages = "packages"
-	TypeRemove   = "remove"
-	TypeShell    = "shell"
-	TypeSystemd  = "systemd"
-)
-
 type Config struct {
-	// Image to use as base
+	// Базовый образ для использования
 	Image string `yaml:"image" json:"image"`
-
-	// Repos to need put as sources.list. If empty, will be used repos from Image
+	// Репозитории для sources.list. Если пусто, используются репозитории из образа
 	Repos []string `yaml:"repos,omitempty" json:"repos,omitempty"`
-
-	// Tasks to connect as repos
+	// Задачи для подключения в качестве репозиториев
 	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
-
-	// Kernel to use in image. If empty, will be used kernel from Image
+	// Ядро для использования в образе. Если пусто, используется ядро из образа
 	Kernel string `yaml:"kernel,omitempty" json:"kernel,omitempty"`
-
-	// Modules list
-	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
-
+	// Список модулей
+	Modules    []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 	hasInclude bool
 }
 
 func (cfg *Config) TasksRepos() []string {
-	var repos = []string{}
+	var repos []string
 
-	var templates = []string{}
+	var templates []string
 	switch runtime.GOARCH {
 	case "amd64":
 		templates = append(
@@ -95,7 +96,7 @@ func (cfg *Config) TasksRepos() []string {
 }
 
 func (cfg *Config) getTotalInstall() []string {
-	var totalInstall = []string{}
+	var totalInstall []string
 
 	for _, module := range cfg.Modules {
 		if module.Type == TypePackages {
@@ -111,7 +112,7 @@ func (cfg *Config) getTotalInstall() []string {
 }
 
 func (cfg *Config) getTotalRemove() []string {
-	var totalRemove = []string{}
+	var totalRemove []string
 
 	for _, module := range cfg.Modules {
 		if module.Type == TypePackages {
@@ -190,9 +191,8 @@ func (cfg *Config) AddRemovePackage(pkg string) {
 	}
 }
 
-// Extend includes
 func (cfg *Config) extendIncludes() error {
-	var newModules = []Module{}
+	var newModules []Module
 	cfg.hasInclude = false
 
 	for _, module := range cfg.Modules {
@@ -203,16 +203,16 @@ func (cfg *Config) extendIncludes() error {
 				if err != nil {
 					return err
 				}
-				include_cfg, err := parseData(data, true, false)
+				includeCfg, err := parseData(data, true, false)
 				if err != nil {
 					return err
 				}
-				err = include_cfg.extendIncludes()
+				err = includeCfg.extendIncludes()
 				if err != nil {
 					return err
 				}
 
-				newModules = append(newModules, include_cfg.Modules...)
+				newModules = append(newModules, includeCfg.Modules...)
 			}
 		} else {
 			newModules = append(newModules, module)
@@ -224,14 +224,13 @@ func (cfg *Config) extendIncludes() error {
 	return nil
 }
 
-// Extend includes
 func (cfg *Config) fix() error {
 	if sE(cfg.Image) {
 		return errors.New(app.T_("Image can not be empty"))
 	}
 
-	var reqiredText = app.T_("Module '%s' required '%s'")
-	var reqiredTextOr = fmt.Sprintf(reqiredText, "%s", app.T_("%s or %s"))
+	var requiredText = app.T_("Module '%s' required '%s'")
+	var requiredTextOr = fmt.Sprintf(requiredText, "%s", app.T_("%s or %s"))
 
 	for _, module := range cfg.Modules {
 		if sE(module.Type) {
@@ -243,50 +242,50 @@ func (cfg *Config) fix() error {
 		switch module.Type {
 		case TypeGit:
 			if aE(b.Commands) {
-				return fmt.Errorf(reqiredText, TypeGit, "commands")
+				return fmt.Errorf(requiredText, TypeGit, "commands")
 			}
 			if sE(b.Url) {
-				return fmt.Errorf(reqiredText, TypeGit, "url")
+				return fmt.Errorf(requiredText, TypeGit, "url")
 			}
 		case TypeShell:
 			if aE(b.Commands) {
-				return fmt.Errorf(reqiredText, TypeShell, "commands")
+				return fmt.Errorf(requiredText, TypeShell, "commands")
 			}
 		case TypeMerge:
 			if sE(b.Target) {
-				return fmt.Errorf(reqiredText, TypeMerge, "target")
+				return fmt.Errorf(requiredText, TypeMerge, "target")
 			}
 			if sE(b.Destination) {
-				return fmt.Errorf(reqiredText, TypeMerge, "destination")
+				return fmt.Errorf(requiredText, TypeMerge, "destination")
 			}
 		case TypeCopy:
 			if sE(b.Target) {
-				return fmt.Errorf(reqiredText, TypeCopy, "target")
+				return fmt.Errorf(requiredText, TypeCopy, "target")
 			}
 			if sE(b.Destination) {
-				return fmt.Errorf(reqiredText, TypeCopy, "destination")
+				return fmt.Errorf(requiredText, TypeCopy, "destination")
 			}
 		case TypeMove:
 			if sE(b.Target) {
-				return fmt.Errorf(reqiredText, TypeMove, "target")
+				return fmt.Errorf(requiredText, TypeMove, "target")
 			}
 			if sE(b.Destination) {
-				return fmt.Errorf(reqiredText, TypeMove, "destination")
+				return fmt.Errorf(requiredText, TypeMove, "destination")
 			}
 		case TypeRemove:
 			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredTextOr, TypeRemove, "target", "targets")
+				return fmt.Errorf(requiredTextOr, TypeRemove, "target", "targets")
 			}
 		case TypeSystemd:
 			if aE(b.GetTargets()) {
-				return fmt.Errorf(reqiredTextOr, TypeSystemd, "target", "targets")
+				return fmt.Errorf(requiredTextOr, TypeSystemd, "target", "targets")
 			}
 		case TypeLink:
 			if sE(b.Target) {
-				return fmt.Errorf(reqiredText, TypeLink, "target")
+				return fmt.Errorf(requiredText, TypeLink, "target")
 			}
 			if sE(b.Destination) {
-				return fmt.Errorf(reqiredText, TypeLink, "destination")
+				return fmt.Errorf(requiredText, TypeLink, "destination")
 			}
 		case TypePackages:
 		case TypeInclude:
@@ -305,7 +304,7 @@ func (cfg *Config) fix() error {
 	return nil
 }
 
-// Check and extend includes
+// CheckAndFix проверяет и разворачивает include'ы
 func (cfg *Config) CheckAndFix() error {
 	if err := cfg.extendIncludes(); err != nil {
 		return err
@@ -317,7 +316,7 @@ func (cfg *Config) CheckAndFix() error {
 	return nil
 }
 
-// Check and extend includes
+// Save проверяет и разворачивает include'ы, затем сохраняет конфигурацию
 func (cfg *Config) Save(filename string) error {
 	var err error
 	if err = cfg.CheckAndFix(); err != nil {
@@ -332,71 +331,71 @@ func (cfg *Config) Save(filename string) error {
 }
 
 type Module struct {
-	// Name of module for logging
+	// Имя модуля для логирования
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// Type of body
+	// Тип тела модуля
 	Type string `yaml:"type" json:"type"`
 
-	// Body of module
+	// Тело модуля
 	Body Body `yaml:"body" json:"body"`
 }
 
 type Body struct {
-	// Types: git, shell
-	// Commands to execute relative to resorces dir
+	// Типы: git, shell
+	// Команды для выполнения относительно директории ресурсов
 	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty"`
 
-	// Types: [git]
-	// Deps for module. They will be removed at the module end
+	// Типы: [git]
+	// Зависимости для модуля. Они будут удалены после завершения модуля
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
-	// Types: merge, include, copy, move, remove, systemd, link
-	// Target what use in type
-	// Relative path to /var/apm/resources in merge, include, copy
-	// Absolute path in remove
-	// Service name in systemd
+	// Типы: merge, include, copy, move, remove, systemd, link
+	// Цель для использования в типе
+	// Относительный путь к /var/apm/resources в merge, include, copy
+	// Абсолютный путь в remove
+	// Имя сервиса в systemd
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-	// Types: include, remove, systemd
-	// Targets what use in type
-	// Relative paths to /var/apm/resources in include
-	// Absolute paths in remove
-	// Service names in systemd
+	// Типы: include, remove, systemd
+	// Цели для использования в типе
+	// Относительные пути к /var/apm/resources в include
+	// Абсолютные пути в remove
+	// Имена сервисов в systemd
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 
-	// Types: copy, move, merge, link
-	// Directory to use as destination
+	// Типы: copy, move, merge, link
+	// Директория назначения
 	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
 
-	// Types: packages
-	// Packages to install from repos/tasks
+	// Типы: packages
+	// Пакеты для установки из repos/tasks
 	Install []string `yaml:"install,omitempty" json:"install,omitempty"`
 
-	// Types: packages
-	// Packages to remove from image
+	// Типы: packages
+	// Пакеты для удаления из образа
 	Remove []string `yaml:"remove,omitempty" json:"remove,omitempty"`
 
-	// Types: [copy], [move]
-	// Replace destination if it exists
+	// Типы: [copy], [move]
+	// Заменить назначение, если оно существует
 	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
 
-	// Types: [move]
-	// Make link from targets parent dir to destination
+	// Типы: [move]
+	// Создать ссылку из родительской директории цели на назначение
 	CreateLink bool `yaml:"create-link,omitempty" json:"create-link,omitempty"`
 
-	// Types: systemd
-	// Enable or disable systemd service
+	// Типы: systemd
+	// Включить или отключить systemd сервис
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
-	// Types: git
-	// Url to git reposotiry
+	// Типы: git
+	// URL git-репозитория
 	Url string `yaml:"url,omitempty" json:"url,omitempty"`
 }
 
-// Check and extend includes
+// GetTargets возвращает все цели (target и targets)
 func (b *Body) GetTargets() []string {
-	var targets = []string{}
+	var targets []string
 
 	if !sE(b.Target) {
 		targets = append(targets, b.Target)
@@ -408,7 +407,7 @@ func (b *Body) GetTargets() []string {
 	return targets
 }
 
-// Includes will be extended
+// ReadAndParseYamlFile читает и парсит YAML файл, include'ы будут развернуты
 func ReadAndParseYamlFile(name string) (cfg Config, err error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
@@ -417,18 +416,18 @@ func ReadAndParseYamlFile(name string) (cfg Config, err error) {
 	return ParseYamlData(data)
 }
 
-// Includes will be extended
+// ParseYamlData парсит YAML данные, include'ы будут развернуты
 func ParseYamlData(data []byte) (cfg Config, err error) {
 	return parseData(data, true, true)
 }
 
-// Includes will return error
+// ParseJsonData парсит JSON данные, include'ы вернут ошибку
 func ParseJsonData(data []byte) (cfg Config, err error) {
 	return parseData(data, false, true)
 }
 
-func parseData(data []byte, is_yaml bool, fix bool) (cfg Config, err error) {
-	if is_yaml {
+func parseData(data []byte, isYaml bool, fix bool) (cfg Config, err error) {
+	if isYaml {
 		err = yaml.Unmarshal(data, &cfg)
 	} else {
 		err = json.Unmarshal(data, &cfg)
@@ -453,12 +452,107 @@ func removeByValue(arr []string, value string) []string {
 	})
 }
 
-// string is empty
+// sE проверяет, пуста ли строка
 func sE(s string) bool {
 	return s == ""
 }
 
-// array is empty
+// aE проверяет, пуст ли массив
 func aE(a []string) bool {
 	return len(a) == 0
+}
+
+// syncYamlMutex защищает операции работы с файлом.
+var syncYamlMutex sync.Mutex
+
+// LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
+func (s *HostConfigService) LoadConfig() error {
+	var cfg Config
+	var err error
+
+	_, err = os.Stat(s.pathImageFile)
+	if os.IsNotExist(err) {
+		if cfg, err = s.hostImageService.GenerateDefaultConfig(); err != nil {
+			return err
+		}
+		s.Config = &cfg
+		return s.SaveConfig()
+	} else {
+		if cfg, err = ReadAndParseYamlFile(s.pathImageFile); err != nil {
+			return err
+		}
+		s.Config = &cfg
+		return nil
+	}
+}
+
+// SaveConfig сохраняет текущую конфигурацию сервиса в файл.
+func (s *HostConfigService) SaveConfig() error {
+	if s.Config == nil {
+		return errors.New(app.T_("Configuration not loaded"))
+	}
+	if s.Config.HasInclude() {
+		return errors.New(app.T_("Saving config with 'include' module type not supported"))
+	}
+
+	syncYamlMutex.Lock()
+	defer syncYamlMutex.Unlock()
+
+	return s.Config.Save(s.pathImageFile)
+}
+
+// GenerateDockerfile делегирует генерацию Dockerfile к HostImageService
+func (s *HostConfigService) GenerateDockerfile() error {
+	return s.hostImageService.GenerateDockerfile(*s.Config)
+}
+
+// ConfigIsChanged проверяет, изменился ли новый конфиг, используя сервис для работы с базой.
+func (s *HostConfigService) ConfigIsChanged(ctx context.Context) (bool, error) {
+	statusSame, err := s.serviceHostDatabase.IsLatestConfigSame(ctx, *s.Config)
+	if err != nil {
+		return false, err
+	}
+
+	// Если конфиг не совпадает с последним сохранённым, значит он изменился.
+	return !statusSame, nil
+}
+
+// SaveConfigToDB сохраняет историю конфигурации в базу, если конфиг изменился.
+func (s *HostConfigService) SaveConfigToDB(ctx context.Context) error {
+	changed, err := s.ConfigIsChanged(ctx)
+	if err != nil {
+		return err
+	}
+	if !changed {
+		return nil
+	}
+
+	history := ImageHistory{
+		ImageName: s.Config.Image,
+		Config:    s.Config,
+		ImageDate: time.Now().Format(time.RFC3339),
+	}
+	return s.serviceHostDatabase.SaveImageToDB(ctx, history)
+}
+
+// IsInstalled проверяет наличие пакета в списке для установки.
+func (s *HostConfigService) IsInstalled(pkg string) bool {
+	return s.Config.IsInstalled(pkg)
+}
+
+// IsRemoved проверяет наличие пакета в списке для удаления.
+func (s *HostConfigService) IsRemoved(pkg string) bool {
+	return s.Config.IsRemoved(pkg)
+}
+
+// AddInstallPackage добавляет пакет в список для установки и сохраняет изменения в файл.
+func (s *HostConfigService) AddInstallPackage(pkg string) error {
+	s.Config.AddInstallPackage(pkg)
+	return s.SaveConfig()
+}
+
+// AddRemovePackage добавляет пакет в список для удаления и сохраняет изменения в файл.
+func (s *HostConfigService) AddRemovePackage(pkg string) error {
+	s.Config.AddRemovePackage(pkg)
+	return s.SaveConfig()
 }

@@ -22,15 +22,12 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build"
 	"apm/internal/common/helper"
-	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"syscall"
 )
@@ -38,11 +35,11 @@ import (
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	appConfig              *app.Config
-	serviceHostImage       *service.HostImageService
+	serviceHostImage       *build.HostImageService
 	serviceAptActions      *_package.Actions
 	serviceAptDatabase     *_package.PackageDBService
-	serviceHostDatabase    *service.HostDBService
-	serviceHostConfig      *service.HostConfigService
+	serviceHostDatabase    *build.HostDBService
+	serviceHostConfig      *build.HostConfigService
 	serviceTemporaryConfig *service.TemporaryConfigService
 }
 
@@ -51,9 +48,9 @@ func NewActionsWithDeps(
 	appConfig *app.Config,
 	aptDB *_package.PackageDBService,
 	aptActions *_package.Actions,
-	hostImage *service.HostImageService,
-	hostDB *service.HostDBService,
-	hostConfig *service.HostConfigService,
+	hostImage *build.HostImageService,
+	hostDB *build.HostDBService,
+	hostConfig *build.HostConfigService,
 	temporaryConfig *service.TemporaryConfigService,
 ) *Actions {
 	return &Actions{
@@ -73,16 +70,16 @@ func NewActions(appConfig *app.Config) *Actions {
 	if err != nil {
 		app.Log.Fatal(err)
 	}
-	hostDBSvc, err := service.NewHostDBService(appConfig.DatabaseManager.GetSystemDB())
+	hostDBSvc, err := build.NewHostDBService(appConfig.DatabaseManager.GetSystemDB())
 	if err != nil {
 		app.Log.Fatal(err)
 	}
 
-	hostImageSvc := service.NewHostImageService(
+	hostImageSvc := build.NewHostImageService(
 		appConfig.ConfigManager.GetConfig().CommandPrefix,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 	)
-	hostConfigSvc := service.NewHostConfigService(
+	hostConfigSvc := build.NewHostConfigService(
 		appConfig.ConfigManager.GetPathImageFile(),
 		hostDBSvc,
 		hostImageSvc,
@@ -104,9 +101,9 @@ func NewActions(appConfig *app.Config) *Actions {
 }
 
 type ImageStatus struct {
-	Image  service.HostImage `json:"image"`
-	Status string            `json:"status"`
-	Config build.Config      `json:"config"`
+	Image  build.HostImage `json:"image"`
+	Status string          `json:"status"`
+	Config build.Config    `json:"config"`
 }
 
 // CheckRemove проверяем пакеты перед удалением
@@ -370,7 +367,7 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 	return &resp, nil
 }
 
-// Update обновляет информацию или базу данных пакетов.
+// ImageBuild Update Сборка образа
 func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 	if !helper.IsRunningInContainer() {
 		return nil, errors.New(app.T_("Running build not in container not supported"))
@@ -390,182 +387,11 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	// Repos and Tasks
-	var repos = []string{}
-	repos = append(repos, a.serviceHostConfig.Config.Repos...)
-	repos = append(repos, a.serviceHostConfig.Config.TasksRepos()...)
-	if len(repos) != 0 {
-		app.Log.Info("Setting repo")
-		err := a.serviceAptActions.Install(ctx, []string{"ca-certificates"})
-		if err != nil {
-			return nil, err
-		}
-		os.RemoveAll("/etc/apt/sources.list.d")
-		os.WriteFile("/etc/apt/sources.list", []byte(strings.Join(repos, "\n")+"\n"), 0644)
-
-		app.Log.Info("Updating package cache")
-		_, err = a.serviceAptActions.Update(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Upgrade packages
-	app.Log.Info("Upgrading packages")
-	err = a.serviceAptActions.Upgrade(ctx)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceHostConfig)
+	err = buildService.Build(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	// Kernel
-	var kernel = a.serviceHostConfig.Config.Kernel
-	if kernel != "" {
-		app.Log.Info(fmt.Sprintf("Installing kernel %s", kernel))
-		// TODO: Add Kernel support
-	}
-
-	err = os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	err = os.Chdir(a.appConfig.ConfigManager.GetResourcesDir())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, module := range a.serviceHostConfig.Config.Modules {
-		if module.Name != "" {
-			app.Log.Info(fmt.Sprintf("-: %s", module.Name))
-		}
-		var b = &module.Body
-		switch module.Type {
-		case build.TypeCopy:
-			var withReplaceText = ""
-			if b.Replace {
-				withReplaceText = " with replacing"
-			}
-			app.Log.Info(fmt.Sprintf("Copying %s to %s%s", b.Target, b.Destination, withReplaceText))
-			err = osutils.Copy(b.Target, b.Destination, b.Replace)
-			if err != nil {
-				return nil, err
-			}
-		case build.TypeGit:
-			if len(b.Deps) != 0 {
-				var _, err = a.Install(ctx, b.Deps)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			tempDir, err := os.MkdirTemp(os.TempDir(), "git-*")
-			if err != nil {
-				return nil, err
-			}
-
-			cmd := exec.Command("git", "clone", b.Url, tempDir)
-			_, err = cmd.Output()
-			if err != nil {
-				return nil, err
-			}
-
-			for _, cmdsh := range b.Commands {
-				app.Log.Info(fmt.Sprintf("Executing `%s`", cmdsh))
-				osutils.ExecSh(cmdsh, tempDir)
-			}
-
-			if len(b.Deps) != 0 {
-				_, err = a.Remove(ctx, b.Deps, true, true)
-				if err != nil {
-					return nil, err
-				}
-			}
-		case build.TypeLink:
-			app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
-			err = os.Symlink(b.Target, b.Destination)
-			if err != nil {
-				return nil, err
-			}
-		case build.TypeMerge:
-			app.Log.Info(fmt.Sprintf("Merging %s with %s", b.Target, b.Destination))
-			err = osutils.AppendFile(b.Target, b.Destination)
-			if err != nil {
-				return nil, err
-			}
-		case build.TypeMove:
-			var withText = []string{}
-			if b.CreateLink {
-				withText = append(withText, "with linking")
-			}
-			if b.Replace {
-				withText = append(withText, "with replacing")
-			}
-			app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
-			err = osutils.Move(b.Target, b.Destination, b.Replace)
-			if err != nil {
-				return nil, err
-			}
-
-			if b.CreateLink {
-
-				err = os.Symlink(b.Destination, b.Target)
-				if err != nil {
-					return nil, err
-				}
-			}
-		case build.TypePackages:
-			var text = []string{}
-			if len(b.Install) != 0 {
-				text = append(text, fmt.Sprintf("installing %s", strings.Join(b.Install, ", ")))
-			}
-			if b.Replace {
-				text = append(text, fmt.Sprintf("removing %s", strings.Join(b.Remove, ", ")))
-			}
-			app.Log.Info(osutils.Capitalize(strings.Join(text, " and ")))
-			var do = []string{}
-			for _, p := range b.Install {
-				do = append(do, p+"+")
-			}
-			for _, p := range b.Remove {
-				do = append(do, p+"-")
-			}
-			var _, err = a.Install(ctx, do)
-			if err != nil {
-				return nil, err
-			}
-		case build.TypeRemove:
-			app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.GetTargets(), ", ")))
-			for _, path := range b.GetTargets() {
-				err = os.RemoveAll(path)
-				if err != nil {
-					return nil, err
-				}
-			}
-		case build.TypeShell:
-			for _, cmdsh := range b.Commands {
-				app.Log.Info(fmt.Sprintf("Executing `%s`", cmdsh))
-				osutils.ExecSh(cmdsh, a.appConfig.ConfigManager.GetResourcesDir())
-			}
-		case build.TypeSystemd:
-			for _, target := range b.GetTargets() {
-				var text = fmt.Sprintf("Disabling %s", target)
-				var action = "disable"
-				if b.Enabled {
-					text = fmt.Sprintf("Enabling %s", target)
-					action = "enable"
-				}
-				app.Log.Info(text)
-				cmd := exec.Command("systemctl", action, target)
-				_, err = cmd.Output()
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-
-	os.RemoveAll(a.appConfig.ConfigManager.GetPathImageFile())
-	os.RemoveAll(a.appConfig.ConfigManager.GetResourcesDir())
 
 	resp := reply.APIResponse{
 		Data: map[string]any{

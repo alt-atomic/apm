@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package build
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/build"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"bufio"
@@ -218,7 +217,7 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 }
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
-func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config build.Config) error {
+func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.CheckAndUpdateBaseImage"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.CheckAndUpdateBaseImage"))
 	image, err := h.GetHostImage()
@@ -307,8 +306,8 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 }
 
 // GenerateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
-func (h *HostImageService) GenerateDefaultConfig() (build.Config, error) {
-	var cfg build.Config
+func (h *HostImageService) GenerateDefaultConfig() (Config, error) {
+	var cfg Config
 	imageName, err := h.GetImageFromDocker()
 	if err != nil {
 		return cfg, err
@@ -320,7 +319,7 @@ func (h *HostImageService) GenerateDefaultConfig() (build.Config, error) {
 }
 
 // GenerateDockerfile генерирует содержимое Dockerfile, формируя apm команды с модификаторами для пакетов.
-func (h *HostImageService) GenerateDockerfile(config build.Config) error {
+func (h *HostImageService) GenerateDockerfile(config Config) error {
 	// if err := h.checkCommands(config); err != nil {
 	// 	return err
 	// }
