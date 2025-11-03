@@ -401,7 +401,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 			return nil, err
 		}
 		os.RemoveAll("/etc/apt/sources.list.d")
-		os.WriteFile("/etc/apt/sources.list", []byte(strings.Join(repos, "\n")), 0644)
+		os.WriteFile("/etc/apt/sources.list", []byte(strings.Join(repos, "\n")+"\n"), 0644)
 
 		app.Log.Info("Updating package cache")
 		_, err = a.serviceAptActions.Update(ctx)
