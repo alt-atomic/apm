@@ -25,6 +25,7 @@
 package osutils
 
 import (
+	"context"
 	"io"
 	"os"
 	"os/exec"
@@ -67,8 +68,8 @@ func AppendFile(sourcePath, destPath string) error {
 	return nil
 }
 
-func ExecSh(command string, chDir string) error {
-	cmd := exec.Command("bash", "-c", command)
+func ExecSh(ctx context.Context, command string, chDir string) error {
+	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	cmd.Dir = chDir
 	_, err := cmd.Output()
 	if err != nil {

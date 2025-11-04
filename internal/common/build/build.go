@@ -212,14 +212,14 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Mo
 		return errDir
 	}
 
-	cmd := exec.Command("git", "clone", b.Url, tempDir)
+	cmd := exec.CommandContext(ctx, "git", "clone", b.Url, tempDir)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
 
 	for _, cmdSh := range b.Commands {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
-		errExec := osutils.ExecSh(cmdSh, tempDir)
+		errExec := osutils.ExecSh(ctx, cmdSh, tempDir)
 		if errExec != nil {
 			return errExec
 		}
@@ -302,16 +302,16 @@ func executeRemoveModule(_ context.Context, _ *ConfigService, module *Module) er
 	return nil
 }
 
-func executeShellModule(_ context.Context, cfgService *ConfigService, module *Module) error {
+func executeShellModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
 	b := &module.Body
 	for _, cmdSh := range b.Commands {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
-		osutils.ExecSh(cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir())
+		osutils.ExecSh(ctx, cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir())
 	}
 	return nil
 }
 
-func executeSystemdModule(_ context.Context, _ *ConfigService, module *Module) error {
+func executeSystemdModule(ctx context.Context, _ *ConfigService, module *Module) error {
 	b := &module.Body
 	for _, target := range b.GetTargets() {
 		var text = fmt.Sprintf("Disabling %s", target)
@@ -321,7 +321,7 @@ func executeSystemdModule(_ context.Context, _ *ConfigService, module *Module) e
 			action = "enable"
 		}
 		app.Log.Info(text)
-		cmd := exec.Command("systemctl", action, target)
+		cmd := exec.CommandContext(ctx, "systemctl", action, target)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
