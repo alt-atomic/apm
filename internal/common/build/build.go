@@ -65,6 +65,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 
 	var sourcesListD = "/etc/apt/sources.list.d"
 	if cfgService.serviceHostConfig.Config.CleanRepos {
+		app.Log.Info(fmt.Sprintf("Cleaining repos in %s", sourcesListD))
 		err := filepath.Walk(sourcesListD, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -108,17 +109,17 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+	}
 
-		app.Log.Info("Updating package cache")
-		_, err = cfgService.serviceAptActions.Update(ctx)
-		if err != nil {
-			return err
-		}
+	app.Log.Info("Updating package cache")
+	_, err := cfgService.serviceAptActions.Update(ctx)
+	if err != nil {
+		return err
 	}
 
 	// Upgrade packages
 	app.Log.Info("Upgrading packages")
-	err := cfgService.serviceAptActions.Upgrade(ctx)
+	err = cfgService.serviceAptActions.Upgrade(ctx)
 	if err != nil {
 		return err
 	}
@@ -200,8 +201,14 @@ func executeCopyModule(_ context.Context, _ *ConfigService, module *Module) erro
 
 func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
 	b := &module.Body
+
 	if len(b.Deps) != 0 {
-		errInstall := cfgService.CombineInstallRemovePackages(ctx, b.Deps, false, false)
+		var doInstall []string
+		for _, p := range b.Deps {
+			doInstall = append(doInstall, p+"+")
+		}
+		app.Log.Info(fmt.Sprintf("Installing %s", strings.Join(b.Deps, ", ")))
+		errInstall := cfgService.CombineInstallRemovePackages(ctx, doInstall, false, false)
 		if errInstall != nil {
 			return errInstall
 		}
@@ -212,21 +219,29 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Mo
 		return errDir
 	}
 
+	app.Log.Info(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
 	cmd := exec.CommandContext(ctx, "git", "clone", b.Url, tempDir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return err
 	}
 
 	for _, cmdSh := range b.Commands {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
-		errExec := osutils.ExecSh(ctx, cmdSh, tempDir)
+		errExec := osutils.ExecSh(ctx, cmdSh, tempDir, true)
 		if errExec != nil {
 			return errExec
 		}
 	}
 
 	if len(b.Deps) != 0 {
-		err := cfgService.CombineInstallRemovePackages(ctx, b.Deps, true, true)
+		var doRemove []string
+		for _, p := range b.Deps {
+			doRemove = append(doRemove, p+"-")
+		}
+		app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.Deps, ", ")))
+		err := cfgService.CombineInstallRemovePackages(ctx, doRemove, true, true)
 		if err != nil {
 			return err
 		}
@@ -276,7 +291,7 @@ func executePackagesModule(ctx context.Context, cfgService *ConfigService, modul
 	if len(b.Install) != 0 {
 		text = append(text, fmt.Sprintf("installing %s", strings.Join(b.Install, ", ")))
 	}
-	if b.Replace {
+	if len(b.Remove) != 0 {
 		text = append(text, fmt.Sprintf("removing %s", strings.Join(b.Remove, ", ")))
 	}
 	app.Log.Info(osutils.Capitalize(strings.Join(text, " and ")))
@@ -306,7 +321,7 @@ func executeShellModule(ctx context.Context, cfgService *ConfigService, module *
 	b := &module.Body
 	for _, cmdSh := range b.Commands {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
-		osutils.ExecSh(ctx, cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir())
+		osutils.ExecSh(ctx, cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir(), true)
 	}
 	return nil
 }
@@ -322,6 +337,8 @@ func executeSystemdModule(ctx context.Context, _ *ConfigService, module *Module)
 		}
 		app.Log.Info(text)
 		cmd := exec.CommandContext(ctx, "systemctl", action, target)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return err
 		}

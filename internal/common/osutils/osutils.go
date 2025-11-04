@@ -68,10 +68,14 @@ func AppendFile(sourcePath, destPath string) error {
 	return nil
 }
 
-func ExecSh(ctx context.Context, command string, chDir string) error {
+func ExecSh(ctx context.Context, command string, chDir string, std bool) error {
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	cmd.Dir = chDir
-	_, err := cmd.Output()
+	if std {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	err := cmd.Run()
 	if err != nil {
 		return err
 	}

@@ -376,13 +376,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 	app.Log.EnableStdoutLogging()
 	reply.StopSpinner(a.appConfig)
 
-	app.Log.Info("Updating package cache")
-	_, err := a.serviceAptActions.Update(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	err = a.serviceHostConfig.LoadConfig()
+	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
