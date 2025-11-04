@@ -77,7 +77,6 @@ func (cfg *Config) TasksRepos() []string {
 		templates = append(
 			templates,
 			"rpm http://git.altlinux.org repo/%s/x86_64 task",
-			"rpm http://git.altlinux.org repo/%s/x86_64-i586 task",
 		)
 	case "arm64", "aarch64":
 		templates = append(
