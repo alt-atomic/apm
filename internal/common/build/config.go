@@ -53,6 +53,10 @@ var imageApplyModuleName = "Image apply result"
 type Config struct {
 	// Базовый образ для использования
 	Image string `yaml:"image" json:"image"`
+	// Имя образа. Используется в именах некоторых созданных файлов
+	Name string `yaml:"name" json:"name"`
+	// Осистить старые репозитории
+	CleanRepos bool `yaml:"clean-repos,omitempty" json:"clean-repos,omitempty"`
 	// Репозитории для sources.list. Если пусто, используются репозитории из образа
 	Repos []string `yaml:"repos,omitempty" json:"repos,omitempty"`
 	// Задачи для подключения в качестве репозиториев
@@ -227,6 +231,9 @@ func (cfg *Config) extendIncludes() error {
 func (cfg *Config) fix() error {
 	if sE(cfg.Image) {
 		return errors.New(app.T_("Image can not be empty"))
+	}
+	if sE(cfg.Name) {
+		return errors.New(app.T_("Name can not be empty"))
 	}
 
 	var requiredText = app.T_("Module '%s' required '%s'")

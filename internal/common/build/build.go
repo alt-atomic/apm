@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -61,20 +63,48 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
+	var sourcesListD = "/etc/apt/sources.list.d"
+	if cfgService.serviceHostConfig.Config.CleanRepos {
+		err := filepath.Walk(sourcesListD, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if path != sourcesListD {
+				err = os.RemoveAll(path)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+	}
+
 	var repos []string
 	repos = append(repos, cfgService.serviceHostConfig.Config.Repos...)
-	repos = append(repos, cfgService.serviceHostConfig.Config.TasksRepos()...)
+	// Empty line divider
+	if len(cfgService.serviceHostConfig.Config.TasksRepos()) != 0 {
+		repos = append(repos, "")
+		repos = append(repos, cfgService.serviceHostConfig.Config.TasksRepos()...)
+	}
+
 	if len(repos) != 0 {
-		app.Log.Info("Setting repo")
+		var sourcesPath = path.Join(
+			sourcesListD,
+			fmt.Sprintf("%s.list", strings.ReplaceAll(cfgService.serviceHostConfig.Config.Name, " ", "-")),
+		)
+		app.Log.Info(fmt.Sprintf("Setting repos to %s", sourcesPath))
 		err := cfgService.serviceAptActions.Install(ctx, []string{"ca-certificates"})
 		if err != nil {
 			return err
 		}
-		err = os.RemoveAll("/etc/apt/sources.list.d")
-		if err != nil {
-			return err
-		}
-		err = os.WriteFile("/etc/apt/sources.list", []byte(strings.Join(repos, "\n")+"\n"), 0644)
+
+		err = os.WriteFile(
+			sourcesPath,
+			[]byte(strings.Join(repos, "\n")+"\n"), 0644,
+		)
 		if err != nil {
 			return err
 		}
