@@ -76,7 +76,7 @@ func NewActions(appConfig *app.Config) *Actions {
 	}
 
 	hostImageSvc := build.NewHostImageService(
-		appConfig.ConfigManager.GetConfig().CommandPrefix,
+		appConfig.ConfigManager.GetConfig(),
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 	)
 	hostConfigSvc := build.NewHostConfigService(
