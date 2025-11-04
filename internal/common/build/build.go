@@ -111,134 +111,8 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	for _, module := range cfgService.serviceHostConfig.Config.Modules {
-		if module.Name != "" {
-			app.Log.Info(fmt.Sprintf("-: %s", module.Name))
-		}
-		var b = &module.Body
-		switch module.Type {
-		case TypeCopy:
-			var withReplaceText string
-			if b.Replace {
-				withReplaceText = " with replacing"
-			}
-			app.Log.Info(fmt.Sprintf("Copying %s to %s%s", b.Target, b.Destination, withReplaceText))
-			err = osutils.Copy(b.Target, b.Destination, b.Replace)
-			if err != nil {
-				return err
-			}
-		case TypeGit:
-			if len(b.Deps) != 0 {
-				errInstall := cfgService.CombineInstallRemovePackages(ctx, b.Deps, false, false)
-				if errInstall != nil {
-					return errInstall
-				}
-			}
-
-			tempDir, errDir := os.MkdirTemp(os.TempDir(), "git-*")
-			if errDir != nil {
-				return errDir
-			}
-
-			cmd := exec.Command("git", "clone", b.Url, tempDir)
-			_, err = cmd.Output()
-			if err != nil {
-				return err
-			}
-
-			for _, cmdSh := range b.Commands {
-				app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
-				errExec := osutils.ExecSh(cmdSh, tempDir)
-				if errExec != nil {
-					return errExec
-				}
-			}
-
-			if len(b.Deps) != 0 {
-				err = cfgService.CombineInstallRemovePackages(ctx, b.Deps, true, true)
-				if err != nil {
-					return err
-				}
-			}
-		case TypeLink:
-			app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
-			err = os.Symlink(b.Target, b.Destination)
-			if err != nil {
-				return err
-			}
-		case TypeMerge:
-			app.Log.Info(fmt.Sprintf("Merging %s with %s", b.Target, b.Destination))
-			err = osutils.AppendFile(b.Target, b.Destination)
-			if err != nil {
-				return err
-			}
-		case TypeMove:
-			var withText []string
-			if b.CreateLink {
-				withText = append(withText, "with linking")
-			}
-			if b.Replace {
-				withText = append(withText, "with replacing")
-			}
-			app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
-			err = osutils.Move(b.Target, b.Destination, b.Replace)
-			if err != nil {
-				return err
-			}
-
-			if b.CreateLink {
-				err = os.Symlink(b.Destination, b.Target)
-				if err != nil {
-					return err
-				}
-			}
-		case TypePackages:
-			var text []string
-			if len(b.Install) != 0 {
-				text = append(text, fmt.Sprintf("installing %s", strings.Join(b.Install, ", ")))
-			}
-			if b.Replace {
-				text = append(text, fmt.Sprintf("removing %s", strings.Join(b.Remove, ", ")))
-			}
-			app.Log.Info(osutils.Capitalize(strings.Join(text, " and ")))
-			var do []string
-			for _, p := range b.Install {
-				do = append(do, p+"+")
-			}
-			for _, p := range b.Remove {
-				do = append(do, p+"-")
-			}
-			var err = cfgService.CombineInstallRemovePackages(ctx, do, false, false)
-			if err != nil {
-				return err
-			}
-		case TypeRemove:
-			app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.GetTargets(), ", ")))
-			for _, pathTarget := range b.GetTargets() {
-				err = os.RemoveAll(pathTarget)
-				if err != nil {
-					return err
-				}
-			}
-		case TypeShell:
-			for _, cmdsh := range b.Commands {
-				app.Log.Info(fmt.Sprintf("Executing `%s`", cmdsh))
-				osutils.ExecSh(cmdsh, cfgService.appConfig.ConfigManager.GetResourcesDir())
-			}
-		case TypeSystemd:
-			for _, target := range b.GetTargets() {
-				var text = fmt.Sprintf("Disabling %s", target)
-				var action = "disable"
-				if b.Enabled {
-					text = fmt.Sprintf("Enabling %s", target)
-					action = "enable"
-				}
-				app.Log.Info(text)
-				cmd := exec.Command("systemctl", action, target)
-				_, err = cmd.Output()
-				if err != nil {
-					return err
-				}
-			}
+		if err = cfgService.executeModule(ctx, module); err != nil {
+			return err
 		}
 	}
 
@@ -255,6 +129,174 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		cfgService.appConfig.ConfigManager.GetPathImageFile(),
 		cfgService.appConfig.ConfigManager.GetResourcesDir(),
 	)
+}
+
+type moduleHandler func(context.Context, *ConfigService, *Module) error
+
+var moduleHandlers = map[string]moduleHandler{
+	TypeCopy:     executeCopyModule,
+	TypeGit:      executeGitModule,
+	TypeLink:     executeLinkModule,
+	TypeMerge:    executeMergeModule,
+	TypeMove:     executeMoveModule,
+	TypePackages: executePackagesModule,
+	TypeRemove:   executeRemoveModule,
+	TypeShell:    executeShellModule,
+	TypeSystemd:  executeSystemdModule,
+}
+
+func (cfgService *ConfigService) executeModule(ctx context.Context, module Module) error {
+	if module.Name != "" {
+		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
+	}
+
+	handler, ok := moduleHandlers[module.Type]
+	if !ok {
+		return fmt.Errorf(app.T_("Unknown module type: %s"), module.Type)
+	}
+
+	return handler(ctx, cfgService, &module)
+}
+
+func executeCopyModule(_ context.Context, _ *ConfigService, module *Module) error {
+	b := &module.Body
+	var withReplaceText string
+	if b.Replace {
+		withReplaceText = " with replacing"
+	}
+	app.Log.Info(fmt.Sprintf("Copying %s to %s%s", b.Target, b.Destination, withReplaceText))
+	return osutils.Copy(b.Target, b.Destination, b.Replace)
+}
+
+func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
+	b := &module.Body
+	if len(b.Deps) != 0 {
+		errInstall := cfgService.CombineInstallRemovePackages(ctx, b.Deps, false, false)
+		if errInstall != nil {
+			return errInstall
+		}
+	}
+
+	tempDir, errDir := os.MkdirTemp(os.TempDir(), "git-*")
+	if errDir != nil {
+		return errDir
+	}
+
+	cmd := exec.Command("git", "clone", b.Url, tempDir)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	for _, cmdSh := range b.Commands {
+		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
+		errExec := osutils.ExecSh(cmdSh, tempDir)
+		if errExec != nil {
+			return errExec
+		}
+	}
+
+	if len(b.Deps) != 0 {
+		err := cfgService.CombineInstallRemovePackages(ctx, b.Deps, true, true)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func executeLinkModule(_ context.Context, _ *ConfigService, module *Module) error {
+	b := &module.Body
+	app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
+	return os.Symlink(b.Target, b.Destination)
+}
+
+func executeMergeModule(_ context.Context, _ *ConfigService, module *Module) error {
+	b := &module.Body
+	app.Log.Info(fmt.Sprintf("Merging %s with %s", b.Target, b.Destination))
+	return osutils.AppendFile(b.Target, b.Destination)
+}
+
+func executeMoveModule(_ context.Context, _ *ConfigService, module *Module) error {
+	b := &module.Body
+	var withText []string
+	if b.CreateLink {
+		withText = append(withText, "with linking")
+	}
+	if b.Replace {
+		withText = append(withText, "with replacing")
+	}
+	app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
+	err := osutils.Move(b.Target, b.Destination, b.Replace)
+	if err != nil {
+		return err
+	}
+
+	if b.CreateLink {
+		err = os.Symlink(b.Destination, b.Target)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func executePackagesModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
+	b := &module.Body
+	var text []string
+	if len(b.Install) != 0 {
+		text = append(text, fmt.Sprintf("installing %s", strings.Join(b.Install, ", ")))
+	}
+	if b.Replace {
+		text = append(text, fmt.Sprintf("removing %s", strings.Join(b.Remove, ", ")))
+	}
+	app.Log.Info(osutils.Capitalize(strings.Join(text, " and ")))
+	var do []string
+	for _, p := range b.Install {
+		do = append(do, p+"+")
+	}
+	for _, p := range b.Remove {
+		do = append(do, p+"-")
+	}
+	return cfgService.CombineInstallRemovePackages(ctx, do, false, false)
+}
+
+func executeRemoveModule(_ context.Context, _ *ConfigService, module *Module) error {
+	b := &module.Body
+	app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.GetTargets(), ", ")))
+	for _, pathTarget := range b.GetTargets() {
+		err := os.RemoveAll(pathTarget)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func executeShellModule(_ context.Context, cfgService *ConfigService, module *Module) error {
+	b := &module.Body
+	for _, cmdSh := range b.Commands {
+		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
+		osutils.ExecSh(cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir())
+	}
+	return nil
+}
+
+func executeSystemdModule(_ context.Context, _ *ConfigService, module *Module) error {
+	b := &module.Body
+	for _, target := range b.GetTargets() {
+		var text = fmt.Sprintf("Disabling %s", target)
+		var action = "disable"
+		if b.Enabled {
+			text = fmt.Sprintf("Enabling %s", target)
+			action = "enable"
+		}
+		app.Log.Info(text)
+		cmd := exec.Command("systemctl", action, target)
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool) error {
