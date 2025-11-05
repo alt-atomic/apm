@@ -326,6 +326,7 @@ func (h *HostImageService) GenerateDockerfile(config Config) error {
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", h.appConfig.PathResourcesDir, h.appConfig.PathResourcesDir))
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", h.appConfig.PathImageFile, h.appConfig.PathImageFile))
 	dockerfileLines = append(dockerfileLines, "RUN apm system image build")
+	dockerfileLines = append(dockerfileLines, fmt.Sprintf("RUN rm -rf \"%s\" \"%s\"", h.appConfig.PathResourcesDir, h.appConfig.PathImageFile))
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
 	err := os.WriteFile(h.containerPath, []byte(dockerStr), 0644)

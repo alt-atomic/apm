@@ -142,19 +142,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 	}
 
-	cleanup := func(paths ...string) error {
-		for _, path := range paths {
-			if err = os.RemoveAll(path); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	return cleanup(
-		cfgService.appConfig.ConfigManager.GetPathImageFile(),
-		cfgService.appConfig.ConfigManager.GetResourcesDir(),
-	)
+	return nil
 }
 
 type moduleHandler func(context.Context, *ConfigService, *Module) error
