@@ -137,7 +137,6 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	var kernel = cfgService.serviceHostConfig.Config.Kernel
 	var kmodules = kernel.Modules
 	if kernel.Flavour != "" {
-		app.Log.Info(fmt.Sprintf("Installing kernel %s", kernel.Flavour))
 		latest, err := cfgService.kernelManager.FindLatestKernel(ctx, kernel.Flavour)
 		if err != nil {
 			return err
@@ -170,6 +169,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 
 		if currentKernel != nil {
+			app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
 			err = cfgService.kernelManager.RemoveKernel(currentKernel, true)
 			if err != nil {
 				return err
@@ -189,6 +189,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			}
 		}
 
+		app.Log.Info(fmt.Sprintf("Installing kernel %s", latest.Flavour))
 		err = cfgService.kernelManager.InstallKernel(ctx, latest, kmodules, kernel.IncludeHeaders, false)
 		if err != nil {
 			return err
@@ -205,6 +206,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			return err
 		}
 
+		app.Log.Info("Copy vmlinuz")
 		err = osutils.Copy(
 			fmt.Sprintf("/boot/vmlinuz-%s", latestInstalledKernelVersion),
 			fmt.Sprintf("/usr/lib/modules/%s/vmlinuz", latestInstalledKernelVersion),
@@ -226,6 +228,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 	}
 
+	app.Log.Info("Rebuild initramfs via dracut")
 	err = rebuildInitramfs(ctx)
 	if err != nil {
 		return nil
