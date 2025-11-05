@@ -391,7 +391,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 
 	aptActions := _binding.NewActions()
 	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
-	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, kernelManager, a.serviceHostConfig)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, a.serviceHostConfig)
 	err = buildService.Build(ctx)
 	if err != nil {
 		return nil, err
