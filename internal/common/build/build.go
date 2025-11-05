@@ -136,11 +136,6 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return err
 	}
 
-	err = os.Chdir(cfgService.appConfig.ConfigManager.GetResourcesDir())
-	if err != nil {
-		return err
-	}
-
 	for _, module := range cfgService.serviceHostConfig.Config.Modules {
 		if err = cfgService.executeModule(ctx, module); err != nil {
 			return err

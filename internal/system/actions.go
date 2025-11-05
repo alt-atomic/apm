@@ -28,6 +28,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"syscall"
 )
@@ -376,7 +377,12 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 	app.Log.EnableStdoutLogging()
 	reply.StopSpinner(a.appConfig)
 
-	err := a.serviceHostConfig.LoadConfig()
+	err := os.Chdir(a.appConfig.ConfigManager.GetResourcesDir())
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
