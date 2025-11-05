@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"unicode"
 )
 
@@ -68,9 +69,28 @@ func AppendFile(sourcePath, destPath string) error {
 	return nil
 }
 
+func ExecShOutput(ctx context.Context, command string, chDir string, std bool) (string, error) {
+	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+	if chDir != "" {
+		cmd.Dir = chDir
+	}
+	if std {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	var out, err = cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Trim(string(out), "\n"), nil
+}
+
 func ExecSh(ctx context.Context, command string, chDir string, std bool) error {
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
-	cmd.Dir = chDir
+	if chDir != "" {
+		cmd.Dir = chDir
+	}
 	if std {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

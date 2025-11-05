@@ -30,7 +30,10 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
+
+	version "github.com/hashicorp/go-version"
 )
 
 const (
@@ -141,8 +144,10 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			return err
 		}
 
+		var currentKernel *service.Info
+
 		if len(kmodules) == 0 {
-			currentKernel, _ := cfgService.getCurrentKernel(ctx)
+			currentKernel, _ = cfgService.getCurrentKernel(ctx)
 			if currentKernel != nil {
 				inheritedModules, _ := cfgService.kernelManager.InheritModulesFromKernel(latest, currentKernel)
 				if len(inheritedModules) > 0 {
@@ -167,7 +172,19 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 
 		err = cfgService.kernelManager.InstallKernel(ctx, latest, kmodules, kernel.IncludeHeaders, false)
 		if err != nil {
-			return fmt.Errorf(app.T_("failed to install kernel: %s"), err.Error())
+			return err
+		}
+
+		if currentKernel != nil {
+			err = cfgService.kernelManager.RemoveKernel(currentKernel, true)
+			if err != nil {
+				return err
+			}
+
+			var path = fmt.Sprintf("/usr/lib/modules/%s/vmlinuz", latest.Version)
+			if osutils.IsExists(path) {
+				_ = os.RemoveAll(path)
+			}
 		}
 
 		app.Log.Info("Updating packages DB")
@@ -175,6 +192,12 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+
+		osutils.Copy(
+			fmt.Sprintf("/boot/vmlinuz-%s", latest.Version),
+			fmt.Sprintf("/usr/lib/modules/%s/vmlinuz", latest.Version),
+			true,
+		)
 	}
 
 	err = os.MkdirAll(cfgService.appConfig.ConfigManager.GetResourcesDir(), 0644)
@@ -186,6 +209,11 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		if err = cfgService.executeModule(ctx, module); err != nil {
 			return err
 		}
+	}
+
+	err = rebuildInitramfs(ctx)
+	if err != nil {
+		return nil
 	}
 
 	return nil
@@ -400,6 +428,35 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 	return nil
 }
 
+func rebuildInitramfs(ctx context.Context) error {
+	var kernelDir = "/usr/lib/modules"
+
+	var kernelVersion, err = getLastKernelVersion(kernelDir)
+	if err != nil {
+		return err
+	}
+
+	err = osutils.ExecSh(ctx, fmt.Sprintf(
+		"depmod -a -v '%s'",
+		kernelVersion,
+	), "", true)
+	if err != nil {
+		return err
+	}
+
+	err = osutils.ExecSh(ctx, fmt.Sprintf(
+		"dracut --force '%s/%s/initramfs.img' %s",
+		kernelDir,
+		kernelVersion,
+		kernelVersion,
+	), "", true)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (cfgService *ConfigService) getCurrentKernel(ctx context.Context) (*service.Info, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.CurrentKernel"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.CurrentKernel"))
@@ -426,4 +483,32 @@ func (cfgService *ConfigService) getCurrentKernel(ctx context.Context) (*service
 	kernel.IsInstalled = true
 
 	return kernel, nil
+}
+
+func getLastKernelVersion(kernelDir string) (string, error) {
+	files, err := os.ReadDir(kernelDir)
+	if err != nil {
+		return "", err
+	}
+
+	var versions []*version.Version
+	for _, f := range files {
+		if f.IsDir() {
+			v, err := version.NewVersion(f.Name())
+			if err == nil {
+				versions = append(versions, v)
+			}
+		}
+	}
+
+	if len(versions) == 0 {
+		return "", fmt.Errorf("no kernel versions found in %s", kernelDir)
+	}
+
+	// Сортируем по убыванию, берём первую (самую новую)
+	sortVersions := version.Collection(versions)
+	sort.Sort(sortVersions)
+
+	latest := sortVersions[len(sortVersions)-1]
+	return latest.String(), nil
 }
