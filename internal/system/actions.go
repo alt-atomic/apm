@@ -20,9 +20,11 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
+	_binding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	_kservice "apm/internal/kernel/service"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
 	"context"
@@ -387,7 +389,9 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceHostConfig)
+	aptActions := _binding.NewActions()
+	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, kernelManager, a.serviceHostConfig)
 	err = buildService.Build(ctx)
 	if err != nil {
 		return nil, err

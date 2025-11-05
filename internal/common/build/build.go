@@ -20,6 +20,8 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/osutils"
+	"apm/internal/common/reply"
+	"apm/internal/kernel/service"
 	"context"
 	"errors"
 	"fmt"
@@ -27,6 +29,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -44,10 +47,12 @@ const (
 )
 
 // NewConfigService — конструктор сервиса для сборки
-func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, hostConfig *HostConfigService) *ConfigService {
+func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, hostConfig *HostConfigService) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
 		serviceAptActions: aptActions,
+		serviceDBService:  dBService,
+		kernelManager:     kernelManager,
 		serviceHostConfig: hostConfig,
 	}
 }
@@ -55,6 +60,8 @@ func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, hostC
 type ConfigService struct {
 	appConfig         *app.Config
 	serviceAptActions *_package.Actions
+	serviceDBService  *_package.PackageDBService
+	kernelManager     *service.Manager
 	serviceHostConfig *HostConfigService
 }
 
@@ -126,9 +133,48 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 
 	// Kernel
 	var kernel = cfgService.serviceHostConfig.Config.Kernel
-	if kernel != "" {
-		app.Log.Info(fmt.Sprintf("Installing kernel %s", kernel))
-		// TODO: Add Kernel support
+	var kmodules = kernel.Modules
+	if kernel.Flavour != "" {
+		app.Log.Info(fmt.Sprintf("Installing kernel %s", kernel.Flavour))
+		latest, err := cfgService.kernelManager.FindLatestKernel(ctx, kernel.Flavour)
+		if err != nil {
+			return err
+		}
+
+		if len(kmodules) == 0 {
+			currentKernel, _ := cfgService.getCurrentKernel(ctx)
+			if currentKernel != nil {
+				inheritedModules, _ := cfgService.kernelManager.InheritModulesFromKernel(latest, currentKernel)
+				if len(inheritedModules) > 0 {
+					kmodules = inheritedModules
+				}
+			}
+		}
+		additionalPackages, _ := cfgService.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, kernel.IncludeHeaders)
+
+		for _, pkg := range additionalPackages {
+			// Если это модуль ядра - извлекаем имя модуля
+			if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", latest.Flavour)) {
+				moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
+				moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", latest.Flavour))
+				// Добавляем только если его еще нет в списке
+				moduleExists := slices.Contains(kmodules, moduleName)
+				if !moduleExists {
+					kmodules = append(kmodules, moduleName)
+				}
+			}
+		}
+
+		err = cfgService.kernelManager.InstallKernel(ctx, latest, kmodules, kernel.IncludeHeaders, false)
+		if err != nil {
+			return fmt.Errorf(app.T_("failed to install kernel: %s"), err.Error())
+		}
+
+		app.Log.Info("Updating packages DB")
+		_, err = cfgService.serviceAptActions.Update(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = os.MkdirAll(cfgService.appConfig.ConfigManager.GetResourcesDir(), 0644)
@@ -352,4 +398,32 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 	}
 
 	return nil
+}
+
+func (cfgService *ConfigService) getCurrentKernel(ctx context.Context) (*service.Info, error) {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.CurrentKernel"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.CurrentKernel"))
+
+	filters := map[string]interface{}{
+		"typePackage": int(_package.PackageTypeSystem),
+		"name":        "kernel-image-",
+		"installed":   true,
+	}
+	packages, err := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	if len(packages) == 0 {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errors.New(app.T_("failed to find current kernel package in database"))
+	}
+
+	kernel := cfgService.kernelManager.ParseKernelPackageFromDB(packages[0])
+	if kernel == nil {
+		return nil, errors.New(app.T_("failed to parse kernel package from database"))
+	}
+
+	kernel.IsRunning = true
+	kernel.IsInstalled = true
+
+	return kernel, nil
 }

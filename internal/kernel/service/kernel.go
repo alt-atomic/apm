@@ -190,7 +190,7 @@ func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
 	}
 
 	pkg := packages[0]
-	kernel := parseKernelPackageFromDB(pkg)
+	kernel := km.ParseKernelPackageFromDB(pkg)
 	if kernel == nil {
 		return nil, errors.New(app.T_("failed to parse kernel package from database"))
 	}
@@ -249,7 +249,7 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 			continue
 		}
 
-		kernel := parseKernelPackageFromDB(pkg)
+		kernel := km.ParseKernelPackageFromDB(pkg)
 		if kernel == nil {
 			continue
 		}
@@ -447,7 +447,7 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 	flavourVersions := make(map[string]string)
 
 	for _, pkg := range packages {
-		kernel := parseKernelPackageFromDB(pkg)
+		kernel := km.ParseKernelPackageFromDB(pkg)
 		if kernel == nil {
 			continue
 		}
@@ -570,7 +570,7 @@ func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 
 		// Ищем пакет с подходящей версией
 		for _, p := range packages {
-			dbKernel := parseKernelPackageFromDB(p)
+			dbKernel := km.ParseKernelPackageFromDB(p)
 			if dbKernel != nil && dbKernel.Version == kernel.Version && dbKernel.Release == kernel.Release {
 				pkg = p
 				break
@@ -712,7 +712,7 @@ func parseKernelRelease(release string) *Info {
 }
 
 // parseKernelPackageFromDB парсит информацию о пакете ядра из базы данных
-func parseKernelPackageFromDB(pkg _package.Package) *Info {
+func (km *Manager) ParseKernelPackageFromDB(pkg _package.Package) *Info {
 	if !strings.HasPrefix(pkg.Name, "kernel-image-") {
 		return nil
 	}

@@ -26,6 +26,7 @@ import (
 	"path"
 	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -62,10 +63,19 @@ type Config struct {
 	// Задачи для подключения в качестве репозиториев
 	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 	// Ядро для использования в образе. Если пусто, используется ядро из образа
-	Kernel string `yaml:"kernel,omitempty" json:"kernel,omitempty"`
+	Kernel Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
 	// Список модулей
 	Modules    []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 	hasInclude bool
+}
+
+type Kernel struct {
+	// Версия ядра
+	Flavour string `yaml:"flavour,omitempty" json:"flavour,omitempty"`
+	// Модуля ядра
+	Modules []string `yaml:"modules,omitempty" json:"modules,omitempty"`
+	// Включать хедеры
+	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
 }
 
 func (cfg *Config) TasksRepos() []string {
@@ -233,6 +243,9 @@ func (cfg *Config) fix() error {
 	}
 	if sE(cfg.Name) {
 		return errors.New(app.T_("Name can not be empty"))
+	}
+	if !aE(cfg.Kernel.Modules) && sE(cfg.Kernel.Flavour) {
+		return errors.New(app.T_("Kernel flavour can not be empty"))
 	}
 
 	var requiredText = app.T_("Module '%s' required '%s'")
@@ -460,7 +473,7 @@ func removeByValue(arr []string, value string) []string {
 
 // sE проверяет, пуста ли строка
 func sE(s string) bool {
-	return s == ""
+	return strings.TrimSpace(s) == ""
 }
 
 // aE проверяет, пуст ли массив

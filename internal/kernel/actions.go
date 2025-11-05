@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"syscall"
 )
@@ -171,13 +172,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 			moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
 			moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", latest.Flavour))
 			// Добавляем только если его еще нет в списке
-			moduleExists := false
-			for _, existingModule := range modules {
-				if existingModule == moduleName {
-					moduleExists = true
-					break
-				}
-			}
+			moduleExists := slices.Contains(modules, moduleName)
 			if !moduleExists {
 				modules = append(modules, moduleName)
 			}
