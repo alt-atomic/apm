@@ -30,11 +30,10 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
-
-	version "github.com/hashicorp/go-version"
 )
+
+var kernelDir = "/usr/lib/modules"
 
 const (
 	TypeCopy     = "copy"
@@ -170,21 +169,29 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			}
 		}
 
-		err = cfgService.kernelManager.InstallKernel(ctx, latest, kmodules, kernel.IncludeHeaders, false)
-		if err != nil {
-			return err
-		}
-
 		if currentKernel != nil {
 			err = cfgService.kernelManager.RemoveKernel(currentKernel, true)
 			if err != nil {
 				return err
 			}
 
-			var path = fmt.Sprintf("/usr/lib/modules/%s/vmlinuz", latest.Version)
-			if osutils.IsExists(path) {
-				_ = os.RemoveAll(path)
+			entries, err := os.ReadDir(kernelDir)
+			if err != nil {
+				return err
 			}
+
+			for _, entry := range entries {
+				entryPath := filepath.Join(kernelDir, entry.Name())
+				err := os.RemoveAll(entryPath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		err = cfgService.kernelManager.InstallKernel(ctx, latest, kmodules, kernel.IncludeHeaders, false)
+		if err != nil {
+			return err
 		}
 
 		app.Log.Info("Updating packages DB")
@@ -193,11 +200,19 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			return err
 		}
 
-		osutils.Copy(
-			fmt.Sprintf("/boot/vmlinuz-%s", latest.Version),
-			fmt.Sprintf("/usr/lib/modules/%s/vmlinuz", latest.Version),
+		latestInstalledKernelVersion, err := getLatestInstalledKernelVersion()
+		if err != nil {
+			return err
+		}
+
+		err = osutils.Copy(
+			fmt.Sprintf("/boot/vmlinuz-%s", latestInstalledKernelVersion),
+			fmt.Sprintf("/usr/lib/modules/%s/vmlinuz", latestInstalledKernelVersion),
 			true,
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = os.MkdirAll(cfgService.appConfig.ConfigManager.GetResourcesDir(), 0644)
@@ -429,9 +444,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 }
 
 func rebuildInitramfs(ctx context.Context) error {
-	var kernelDir = "/usr/lib/modules"
-
-	var kernelVersion, err = getLastKernelVersion(kernelDir)
+	var kernelVersion, err = getLatestInstalledKernelVersion()
 	if err != nil {
 		return err
 	}
@@ -485,30 +498,17 @@ func (cfgService *ConfigService) getCurrentKernel(ctx context.Context) (*service
 	return kernel, nil
 }
 
-func getLastKernelVersion(kernelDir string) (string, error) {
+func getLatestInstalledKernelVersion() (string, error) {
 	files, err := os.ReadDir(kernelDir)
 	if err != nil {
 		return "", err
 	}
 
-	var versions []*version.Version
-	for _, f := range files {
-		if f.IsDir() {
-			v, err := version.NewVersion(f.Name())
-			if err == nil {
-				versions = append(versions, v)
-			}
-		}
-	}
-
-	if len(versions) == 0 {
+	if len(files) == 0 {
 		return "", fmt.Errorf("no kernel versions found in %s", kernelDir)
+	} else if len(files) > 1 {
+		return "", fmt.Errorf("too many kernel versions found in %s", kernelDir)
 	}
 
-	// Сортируем по убыванию, берём первую (самую новую)
-	sortVersions := version.Collection(versions)
-	sort.Sort(sortVersions)
-
-	latest := sortVersions[len(sortVersions)-1]
-	return latest.String(), nil
+	return files[0].Name(), nil
 }
