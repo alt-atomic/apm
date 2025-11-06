@@ -63,6 +63,10 @@ type Config struct {
 	// Может быть взята из переменной среды
 	// APM_BUILD_NAME
 	Name string `yaml:"name" json:"name"`
+	// Имя хоста
+	// Может быть взята из переменной среды
+	// APM_BUILD_HOSTNAME
+	Hostname string `yaml:"hostname,omitempty" json:"hostname,omitempty"`
 	// Осистить старые репозитории
 	CleanRepos bool `yaml:"clean-repos,omitempty" json:"clean-repos,omitempty"`
 	// Репозитории для sources.list. Если пусто, используются репозитории из образа
@@ -309,6 +313,9 @@ func (cfg *Config) fix() error {
 	}
 	if !sE(os.Getenv("APM_BUILD_NAME")) {
 		cfg.Name = os.Getenv("APM_BUILD_NAME")
+	}
+	if !sE(os.Getenv("APM_BUILD_HOSTNAME")) {
+		cfg.Hostname = os.Getenv("APM_BUILD_HOSTNAME")
 	}
 	if !sE(os.Getenv("APM_BUILD_KERNEL_FLAVOUR")) {
 		cfg.Kernel.Flavour = os.Getenv("APM_BUILD_KERNEL_FLAVOUR")

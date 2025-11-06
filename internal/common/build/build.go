@@ -72,6 +72,28 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
+	if cfgService.serviceHostConfig.Config.Hostname != "" {
+		os.WriteFile(
+			"/etc/hostname",
+			fmt.Appendf(
+				nil,
+				"%s\n",
+				cfgService.serviceHostConfig.Config.Hostname,
+			),
+			0644,
+		)
+		os.WriteFile(
+			"/etc/hosts",
+			fmt.Appendf(
+				nil,
+				"127.0.0.1  localhost.localdomain localhost %s\n::1  localhost6.localdomain localhost6 %s6\n",
+				cfgService.serviceHostConfig.Config.Hostname,
+				cfgService.serviceHostConfig.Config.Hostname,
+			),
+			0644,
+		)
+	}
+
 	var sourcesListD = "/etc/apt/sources.list.d"
 	if cfgService.serviceHostConfig.Config.CleanRepos {
 		app.Log.Info(fmt.Sprintf("Cleaining repos in %s", sourcesListD))
