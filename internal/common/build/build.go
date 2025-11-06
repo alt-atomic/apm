@@ -324,7 +324,7 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Mo
 		return err
 	}
 
-	for _, cmdSh := range b.Commands {
+	for _, cmdSh := range b.GetCommands() {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
 		errExec := osutils.ExecSh(ctx, cmdSh, tempDir, true)
 		if errExec != nil {
@@ -416,7 +416,7 @@ func executeRemoveModule(_ context.Context, _ *ConfigService, module *Module) er
 
 func executeShellModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
 	b := &module.Body
-	for _, cmdSh := range b.Commands {
+	for _, cmdSh := range b.GetCommands() {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
 		osutils.ExecSh(ctx, cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir(), true)
 	}

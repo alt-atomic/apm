@@ -355,15 +355,15 @@ func (cfg *Config) fix() error {
 
 		switch module.Type {
 		case TypeGit:
-			if aE(b.Commands) {
-				return fmt.Errorf(requiredText, TypeGit, "commands")
+			if aE(b.GetCommands()) {
+				return fmt.Errorf(requiredTextOr, TypeGit, "command", "commands")
 			}
 			if sE(b.Url) {
 				return fmt.Errorf(requiredText, TypeGit, "url")
 			}
 		case TypeShell:
-			if aE(b.Commands) {
-				return fmt.Errorf(requiredText, TypeShell, "commands")
+			if aE(b.GetCommands()) {
+				return fmt.Errorf(requiredTextOr, TypeShell, "command", "commands")
 			}
 		case TypeMerge:
 			if sE(b.Target) {
@@ -457,6 +457,10 @@ type Module struct {
 
 type Body struct {
 	// Типы: git, shell
+	// Команда для выполнения относительно директории ресурсов
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+
+	// Типы: git, shell
 	// Команды для выполнения относительно директории ресурсов
 	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty"`
 
@@ -519,6 +523,20 @@ func (b *Body) GetTargets() []string {
 	}
 
 	return targets
+}
+
+// GetCommands возвращает все команды (command и commands)
+func (b *Body) GetCommands() []string {
+	var commands []string
+
+	if !sE(b.Command) {
+		commands = append(commands, b.Command)
+	}
+	if !aE(b.Commands) {
+		commands = append(commands, b.Commands...)
+	}
+
+	return commands
 }
 
 // ReadAndParseYamlFile читает и парсит YAML файл, include'ы будут развернуты
