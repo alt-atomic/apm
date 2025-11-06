@@ -110,6 +110,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			}
 			return nil
 		})
+		os.WriteFile("/etc/apt/sources.list", []byte(""), 0644)
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
