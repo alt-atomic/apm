@@ -92,13 +92,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 	}
 
-	var repos []string
-	repos = append(repos, cfgService.serviceHostConfig.Config.Repos...)
-	// Empty line divider
-	if len(cfgService.serviceHostConfig.Config.TasksRepos()) != 0 {
-		repos = append(repos, "")
-		repos = append(repos, cfgService.serviceHostConfig.Config.TasksRepos()...)
-	}
+	var repos = cfgService.serviceHostConfig.Config.AllRepos()
 
 	if len(repos) != 0 {
 		var sourcesPath = path.Join(

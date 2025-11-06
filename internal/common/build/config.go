@@ -50,16 +50,23 @@ func NewHostConfigService(pathImageFile string, hostDBService *HostDBService, ho
 }
 
 var imageApplyModuleName = "Image apply result"
+var goodBranches = []string{
+	"sisyphus",
+}
 
 type Config struct {
 	// Базовый образ для использования
+	// Может быть взята из переменной среды
+	// APM_BUILD_IMAGE
 	Image string `yaml:"image" json:"image"`
 	// Имя образа. Используется в именах некоторых созданных файлов
+	// Может быть взята из переменной среды
+	// APM_BUILD_NAME
 	Name string `yaml:"name" json:"name"`
 	// Осистить старые репозитории
 	CleanRepos bool `yaml:"clean-repos,omitempty" json:"clean-repos,omitempty"`
 	// Репозитории для sources.list. Если пусто, используются репозитории из образа
-	Repos []string `yaml:"repos,omitempty" json:"repos,omitempty"`
+	Repos Repos `yaml:"repos,omitempty" json:"repos,omitempty"`
 	// Задачи для подключения в качестве репозиториев
 	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 	// Ядро для использования в образе. Если пусто, используется ядро из образа
@@ -71,11 +78,34 @@ type Config struct {
 
 type Kernel struct {
 	// Версия ядра
+	// Может быть взята из переменной среды
+	// APM_BUILD_KERNEL_FLAVOUR
 	Flavour string `yaml:"flavour,omitempty" json:"flavour,omitempty"`
 	// Модуля ядра
 	Modules []string `yaml:"modules,omitempty" json:"modules,omitempty"`
 	// Включать хедеры
 	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
+}
+
+type Repos struct {
+	// Прямые ссылки на репозитории
+	Urls []string `yaml:"urls,omitempty" json:"urls,omitempty"`
+	// Ветка репозитория. Работает только если URL пустой.
+	// Может быть взята из переменной среды
+	// APM_BUILD_REPO_BRANCH
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
+	// Дата в формате YYYY/MM/DD. Если пуст, берется latest
+	// Может быть взята из переменной среды
+	// APM_BUILD_REPO_DATE
+	Date string `yaml:"date,omitempty" json:"date,omitempty"`
+}
+
+func (cfg *Config) AllRepos() []string {
+	var repos []string
+	repos = append(repos, cfg.Repos.Urls...)
+	repos = append(repos, cfg.TasksRepos()...)
+	repos = append(repos, cfg.BranchRepos()...)
+	return repos
 }
 
 func (cfg *Config) TasksRepos() []string {
@@ -97,12 +127,48 @@ func (cfg *Config) TasksRepos() []string {
 		return []string{}
 	}
 
-	if !aE(templates) {
-		for _, task := range cfg.Tasks {
-			for _, template := range templates {
-				repos = append(repos, fmt.Sprintf(template, task))
-			}
+	for _, task := range cfg.Tasks {
+		for _, template := range templates {
+			repos = append(repos, fmt.Sprintf(template, task))
 		}
+	}
+
+	return repos
+}
+
+func (cfg *Config) BranchRepos() []string {
+	var repos []string
+
+	if cfg.Repos.Branch == "" {
+		return []string{}
+	}
+
+	var date = "latest"
+	if cfg.Repos.Date != "" {
+		date = fmt.Sprintf("date/%s", cfg.Repos.Date)
+	}
+
+	var templates []string
+	switch runtime.GOARCH {
+	case "amd64":
+		templates = append(
+			templates,
+			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/x86_64 classic",
+			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/x86_64-i586 classic",
+			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/noarch classic",
+		)
+	case "arm64", "aarch64":
+		templates = append(
+			templates,
+			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/aarch64 classic",
+			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/noarch classic",
+		)
+	default:
+		return []string{}
+	}
+
+	for _, template := range templates {
+		repos = append(repos, fmt.Sprintf(template, cfg.Repos.Branch, date))
 	}
 
 	return repos
@@ -238,6 +304,22 @@ func (cfg *Config) extendIncludes() error {
 }
 
 func (cfg *Config) fix() error {
+	if !sE(os.Getenv("APM_BUILD_IMAGE")) {
+		cfg.Image = os.Getenv("APM_BUILD_IMAGE")
+	}
+	if !sE(os.Getenv("APM_BUILD_NAME")) {
+		cfg.Name = os.Getenv("APM_BUILD_NAME")
+	}
+	if !sE(os.Getenv("APM_BUILD_KERNEL_FLAVOUR")) {
+		cfg.Kernel.Flavour = os.Getenv("APM_BUILD_KERNEL_FLAVOUR")
+	}
+	if !sE(os.Getenv("APM_BUILD_REPO_BRANCH")) {
+		cfg.Repos.Branch = os.Getenv("APM_BUILD_REPO_BRANCH")
+	}
+	if !sE(os.Getenv("APM_BUILD_REPO_DATE")) {
+		cfg.Repos.Date = os.Getenv("APM_BUILD_REPO_DATE")
+	}
+
 	if sE(cfg.Image) {
 		return errors.New(app.T_("Image can not be empty"))
 	}
@@ -246,6 +328,12 @@ func (cfg *Config) fix() error {
 	}
 	if !aE(cfg.Kernel.Modules) && sE(cfg.Kernel.Flavour) {
 		return errors.New(app.T_("Kernel flavour can not be empty"))
+	}
+	if !sE(cfg.Repos.Date) && sE(cfg.Repos.Branch) {
+		return errors.New(app.T_("Repos branch can not be empty"))
+	}
+	if !slices.Contains(goodBranches, cfg.Repos.Branch) {
+		return fmt.Errorf(app.T_("Branch %s not allowed"), cfg.Repos.Branch)
 	}
 
 	var requiredText = app.T_("Module '%s' required '%s'")
