@@ -390,6 +390,10 @@ func (cfg *Config) fix() error {
 			if aE(b.GetTargets()) {
 				return fmt.Errorf(requiredTextOr, TypeRemove, "target", "targets")
 			}
+		case TypeMkdir:
+			if aE(b.GetTargets()) {
+				return fmt.Errorf(requiredTextOr, TypeMkdir, "target", "targets")
+			}
 		case TypeSystemd:
 			if aE(b.GetTargets()) {
 				return fmt.Errorf(requiredTextOr, TypeSystemd, "target", "targets")
@@ -468,17 +472,17 @@ type Body struct {
 	// Зависимости для модуля. Они будут удалены после завершения модуля
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
-	// Типы: merge, include, copy, move, remove, systemd, link
+	// Типы: merge, include, copy, move, remove, systemd, link, mkdir
 	// Цель для использования в типе
 	// Относительный путь к /var/apm/resources в merge, include, copy
-	// Абсолютный путь в remove
+	// Абсолютный путь в remove, mkdir
 	// Имя сервиса в systemd
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-	// Типы: include, remove, systemd
+	// Типы: include, remove, systemd, mkdir
 	// Цели для использования в типе
 	// Относительные пути к /var/apm/resources в include
-	// Абсолютные пути в remove
+	// Абсолютные пути в remove, mkdir
 	// Имена сервисов в systemd
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 

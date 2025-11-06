@@ -46,6 +46,7 @@ const (
 	TypeRemove   = "remove"
 	TypeShell    = "shell"
 	TypeSystemd  = "systemd"
+	TypeMkdir    = "mkdir"
 )
 
 // NewConfigService — конструктор сервиса для сборки
@@ -271,6 +272,7 @@ var moduleHandlers = map[string]moduleHandler{
 	TypeRemove:   executeRemoveModule,
 	TypeShell:    executeShellModule,
 	TypeSystemd:  executeSystemdModule,
+	TypeMkdir:    executeMkdirModule,
 }
 
 func (cfgService *ConfigService) executeModule(ctx context.Context, module Module) error {
@@ -407,6 +409,18 @@ func executeRemoveModule(_ context.Context, _ *ConfigService, module *Module) er
 	app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.GetTargets(), ", ")))
 	for _, pathTarget := range b.GetTargets() {
 		err := os.RemoveAll(pathTarget)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func executeMkdirModule(_ context.Context, _ *ConfigService, module *Module) error {
+	b := &module.Body
+	app.Log.Info(fmt.Sprintf("Creating dirs at %s", strings.Join(b.GetTargets(), ", ")))
+	for _, pathTarget := range b.GetTargets() {
+		err := os.MkdirAll(pathTarget, 0644)
 		if err != nil {
 			return err
 		}
