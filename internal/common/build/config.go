@@ -67,12 +67,8 @@ type Config struct {
 	// Может быть взята из переменной среды
 	// APM_BUILD_HOSTNAME
 	Hostname string `yaml:"hostname,omitempty" json:"hostname,omitempty"`
-	// Осистить старые репозитории
-	CleanRepos bool `yaml:"clean-repos,omitempty" json:"clean-repos,omitempty"`
 	// Репозитории для sources.list. Если пусто, используются репозитории из образа
 	Repos Repos `yaml:"repos,omitempty" json:"repos,omitempty"`
-	// Задачи для подключения в качестве репозиториев
-	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 	// Ядро для использования в образе. Если пусто, используется ядро из образа
 	Kernel Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
 	// Список модулей
@@ -92,9 +88,11 @@ type Kernel struct {
 }
 
 type Repos struct {
-	// Прямые ссылки на репозитории
-	Urls []string `yaml:"urls,omitempty" json:"urls,omitempty"`
-	// Ветка репозитория. Работает только если URL пустой.
+	// Очистить репозитории
+	Clean bool `yaml:"clean,omitempty" json:"clean,omitempty"`
+	// Кастомные записи в sources.list
+	Custom []string `yaml:"custom,omitempty" json:"custom,omitempty"`
+	// Ветка репозитория ALT. Сейчас доступен только sisyphus
 	// Может быть взята из переменной среды
 	// APM_BUILD_REPO_BRANCH
 	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
@@ -102,11 +100,13 @@ type Repos struct {
 	// Может быть взята из переменной среды
 	// APM_BUILD_REPO_DATE
 	Date string `yaml:"date,omitempty" json:"date,omitempty"`
+	// Задачи для подключения в качестве репозиториев
+	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 }
 
 func (cfg *Config) AllRepos() []string {
 	var repos []string
-	repos = append(repos, cfg.Repos.Urls...)
+	repos = append(repos, cfg.Repos.Custom...)
 	repos = append(repos, cfg.TasksRepos()...)
 	repos = append(repos, cfg.BranchRepos()...)
 	return repos
@@ -131,7 +131,7 @@ func (cfg *Config) TasksRepos() []string {
 		return []string{}
 	}
 
-	for _, task := range cfg.Tasks {
+	for _, task := range cfg.Repos.Tasks {
 		for _, template := range templates {
 			repos = append(repos, fmt.Sprintf(template, task))
 		}

@@ -96,7 +96,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	var sourcesListD = "/etc/apt/sources.list.d"
-	if cfgService.serviceHostConfig.Config.CleanRepos {
+	if cfgService.serviceHostConfig.Config.Repos.Clean {
 		app.Log.Info(fmt.Sprintf("Cleaining repos in %s", sourcesListD))
 		err := filepath.Walk(sourcesListD, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
