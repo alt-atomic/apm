@@ -222,6 +222,12 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 	}
 
+	app.Log.Info("Final updating package cache")
+	_, err = cfgService.serviceAptActions.Update(ctx)
+	if err != nil {
+		return err
+	}
+
 	app.Log.Info("Rebuild initramfs via dracut")
 	err = rebuildInitramfs(ctx)
 	if err != nil {
