@@ -216,11 +216,6 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			switch name {
 			case "VERSION":
 				vars[name] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
-			case "ID":
-				if value == "altlinux" {
-					vars["ID_LIKE"] = value
-				}
-				vars[name] = fmt.Sprintf("%s-%s", value, bType)
 			case "VERSION_ID":
 				vars[name] = fmt.Sprintf("%s-%s", curVer, bType)
 			case "RELEASE_TYPE":
