@@ -554,9 +554,6 @@ func executeMoveModule(ctx context.Context, cfgService *ConfigService, b *Body) 
 	}
 	app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
 
-	if !filepath.IsAbs(b.Target) {
-		return fmt.Errorf("target in move type must be absolute path")
-	}
 	if !filepath.IsAbs(b.Destination) {
 		return fmt.Errorf("destination in move type must be absolute path")
 	}
