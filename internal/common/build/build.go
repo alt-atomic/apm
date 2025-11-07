@@ -29,8 +29,12 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
+	"time"
+
+	"github.com/thediveo/osrelease"
 )
 
 var kernelDir = "/usr/lib/modules"
@@ -180,6 +184,71 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 		}
 		executePackagesModule(ctx, cfgService, &Body{
 			Install: pkgsNames,
+		})
+
+		var osReleaseFile = "/usr/lib/os-release"
+		var info, _ = os.Stat(osReleaseFile)
+		vars := osrelease.NewFromName(osReleaseFile)
+
+		now := time.Now()
+		curVer := now.Format("20060102")
+		prettyCurVer := now.Format("02.01.2006")
+
+		prettyType := ""
+		prettyNamePostfix := ""
+		releaseType := ""
+
+		bType := cfgService.serviceHostConfig.Config.BuildType
+
+		switch bType {
+		case "stable":
+			prettyType = osutils.Capitalize(bType)
+			releaseType = bType
+		case "nightly":
+			prettyType = osutils.Capitalize(bType)
+			prettyNamePostfix = fmt.Sprintf(" %s", prettyType)
+			releaseType = "development"
+		}
+
+		for name, value := range vars {
+			switch name {
+			case "VERSION":
+				vars[name] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
+			case "ID":
+				if value == "altlinux" {
+					vars["ID_LIKE"] = value
+				}
+				vars[name] = fmt.Sprintf("%s-%s", value, bType)
+			case "VERSION_ID":
+				vars[name] = fmt.Sprintf("%s-%s", curVer, bType)
+			case "RELEASE_TYPE":
+				vars[name] = releaseType
+			case "PRETTY_NAME":
+				vars[name] = value + prettyNamePostfix
+			case "CPE_NAME":
+				re, err := regexp.Compile(`:\d+$`)
+				if err != nil {
+					return err
+				}
+				vars[name] = re.ReplaceAllString(value, fmt.Sprintf(":%s:%s", bType, curVer))
+			}
+		}
+
+		vars["IMAGE_ID"] = vars["ID"]
+		vars["IMAGE_VERSION"] = vars["VERSION_ID"]
+
+		var newLines = []string{}
+		for name, value := range vars {
+			newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
+		}
+
+		var newOsReleaseContent = strings.Join(newLines, "\n") + "\n"
+		os.WriteFile(osReleaseFile, []byte(newOsReleaseContent), info.Mode().Perm())
+
+		executeLinkModule(ctx, cfgService, &Body{
+			Target:      "/etc/os-release",
+			Destination: "/usr/lib/os-release",
+			Replace:     true,
 		})
 	}
 
