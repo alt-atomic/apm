@@ -362,11 +362,15 @@ func (cfg *Config) fix() error {
 	if !sE(cfg.Repos.Date) && sE(cfg.Repos.Branch) {
 		return errors.New(app.T_("Repos branch can not be empty"))
 	}
-	if !slices.Contains(goodBranches, cfg.Repos.Branch) {
-		return fmt.Errorf(app.T_("Branch %s not allowed"), cfg.Repos.Branch)
+	if cfg.Repos.Branch != "" {
+		if !slices.Contains(goodBranches, cfg.Repos.Branch) {
+			return fmt.Errorf(app.T_("Branch %s not allowed"), cfg.Repos.Branch)
+		}
 	}
-	if !slices.Contains(goodBTypes, cfg.BuildType) {
-		return fmt.Errorf(app.T_("Build type %s not allowed"), cfg.Repos.Branch)
+	if cfg.BuildType != "" {
+		if !slices.Contains(goodBTypes, cfg.BuildType) {
+			return fmt.Errorf(app.T_("Build type %s not allowed"), cfg.Repos.Branch)
+		}
 	}
 
 	var requiredText = app.T_("Module '%s' required '%s'")

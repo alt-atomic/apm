@@ -129,10 +129,6 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return nil
 	}
 
-	if err = os.MkdirAll(cfgService.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
-		return err
-	}
-
 	for _, module := range cfgService.serviceHostConfig.Config.Modules {
 		if err = cfgService.executeModule(ctx, module); err != nil {
 			return err
@@ -468,6 +464,8 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 		if output == true {
 			return handler(ctx, cfgService, &module.Body)
 		}
+	} else {
+		return handler(ctx, cfgService, &module.Body)
 	}
 
 	return nil

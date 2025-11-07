@@ -388,6 +388,10 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 	app.Log.EnableStdoutLogging()
 	reply.StopSpinner(a.appConfig)
 
+	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
+		return nil, err
+	}
+
 	err := os.Chdir(a.appConfig.ConfigManager.GetResourcesDir())
 	if err != nil {
 		return nil, err
