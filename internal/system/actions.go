@@ -261,7 +261,13 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		return nil, errPrepare
 	}
 
-	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false, false)
+	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesInstall,
+		packagesRemove,
+		false,
+		false,
+	)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -297,7 +303,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		return nil, err
 	}
 
-	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove)
+	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)
 	if errInstall != nil {
 		var matchedErr *apt.MatchedError
 		if errors.As(errInstall, &matchedErr) && matchedErr.NeedUpdate() {

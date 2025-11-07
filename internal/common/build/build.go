@@ -475,7 +475,13 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		return errFind
 	}
 
-	errInstall := cfgService.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove)
+	errInstall := cfgService.serviceAptActions.CombineInstallRemovePackages(
+		ctx,
+		packagesInstall,
+		packagesRemove,
+		purge,
+		depends,
+	)
 	if errInstall != nil {
 		return errInstall
 	}

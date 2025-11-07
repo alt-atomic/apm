@@ -76,7 +76,8 @@ func (a *Actions) operationWrapper(fn func() error) error {
 }
 
 // CombineInstallRemovePackages комбинированный метод установки и удаления
-func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string, handler lib.ProgressHandler) error {
+func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string,
+	handler lib.ProgressHandler, purge bool, depends bool) error {
 	return a.operationWrapper(func() error {
 		system, err := getSystem()
 		if err != nil {
@@ -90,7 +91,7 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 		defer cache.Close()
 
 		for _, name := range packagesRemove {
-			if e := cache.MarkRemove(name, false, false); e != nil {
+			if e := cache.MarkRemove(name, purge, depends); e != nil {
 				return e
 			}
 		}
