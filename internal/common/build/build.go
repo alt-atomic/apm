@@ -445,16 +445,16 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, b *Body) e
 }
 
 func executeLinkModule(_ context.Context, _ *ConfigService, b *Body) error {
+	if !filepath.IsAbs(b.Target) {
+		return fmt.Errorf("target in link type must be absolute path")
+	}
+
 	app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
 	if b.Replace {
-		err := os.RemoveAll(b.Destination)
+		err := os.RemoveAll(b.Target)
 		if err != nil {
 			return err
 		}
-	}
-
-	if !filepath.IsAbs(b.Target) {
-		return fmt.Errorf("target in link type must be absolute path")
 	}
 
 	relativePath, err := filepath.Rel(path.Dir(b.Target), b.Destination)
