@@ -505,22 +505,29 @@ AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& 
         
         for (pkgCache::DepIterator dep = ver1.DependsList(); !dep.end(); ++dep) {
             if (dep->Type != pkgCache::Dep::Conflicts) continue;
-            
+
             pkgCache::PkgIterator target_pkg = dep.TargetPkg();
             if (target_pkg.end()) continue;
-            
+
             bool target_is_requested = false;
+            pkgCache::VerIterator target_ver;
+
             for (size_t j = 0; j < requested_packages.size(); j++) {
                 if (j != i && requested_packages[j] == target_pkg) {
                     target_is_requested = true;
+                    // Get the candidate version of the target package
+                    pkgDepCache::StateCache& target_state = (*cache->dep_cache)[target_pkg];
+                    target_ver = target_state.CandidateVerIter(*cache->dep_cache);
                     break;
                 }
             }
-            
-            if (target_is_requested) {
-                std::string error_msg = "Conflicting packages: " + std::string(pkg1.Name()) + " and " + std::string(target_pkg.Name());
-                
-                return make_result(APT_ERROR_DEPENDENCY_BROKEN, error_msg.c_str());
+
+            if (target_is_requested && !target_ver.end()) {
+                if (cache->dep_cache->VS().CheckDep(target_ver.VerStr(), dep)) {
+                    std::string error_msg = "Conflicting packages: " + std::string(pkg1.Name()) + " and " + std::string(target_pkg.Name());
+
+                    return make_result(APT_ERROR_DEPENDENCY_BROKEN, error_msg.c_str());
+                }
             }
         }
     }
