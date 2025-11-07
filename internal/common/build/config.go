@@ -481,6 +481,9 @@ type Module struct {
 	// Тип тела модуля
 	Type string `yaml:"type" json:"type"`
 
+	// Условие в формате языка expr
+	If string `yaml:"if,omitempty" json:"if,omitempty"`
+
 	// Тело модуля
 	Body Body `yaml:"body" json:"body"`
 }

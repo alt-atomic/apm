@@ -34,6 +34,17 @@ import (
 	"unicode"
 )
 
+func GetEnvMap() map[string]string {
+	envMap := make(map[string]string)
+	for _, envLine := range os.Environ() {
+		parts := strings.SplitN(envLine, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+	return envMap
+}
+
 func IsExists(path string) bool {
 	_, err := os.Stat(path)
 	return os.IsExist(err)

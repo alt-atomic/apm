@@ -34,6 +34,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/expr-lang/expr"
 	"github.com/thediveo/osrelease"
 )
 
@@ -52,6 +53,11 @@ const (
 	TypeSystemd  = "systemd"
 	TypeMkdir    = "mkdir"
 )
+
+type ExprData struct {
+	Config *Config
+	Env    map[string]string
+}
 
 // NewConfigService — конструктор сервиса для сборки
 func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, hostConfig *HostConfigService) *ConfigService {
@@ -443,7 +449,28 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 		return fmt.Errorf(app.T_("Unknown module type: %s"), module.Type)
 	}
 
-	return handler(ctx, cfgService, &module.Body)
+	if module.If != "" {
+		data := ExprData{}
+		data.Config = cfgService.serviceHostConfig.Config
+		data.Env = osutils.GetEnvMap()
+
+		env := expr.Env(data)
+
+		program, err := expr.Compile(module.If, env)
+		if err != nil {
+			return err
+		}
+
+		output, err := expr.Run(program, data)
+		if err != nil {
+			return err
+		}
+		if output == true {
+			return handler(ctx, cfgService, &module.Body)
+		}
+	}
+
+	return nil
 }
 
 // ExecuteModule - публичная обертка для тестирования модулей
