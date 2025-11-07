@@ -357,6 +357,12 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Mo
 func executeLinkModule(_ context.Context, _ *ConfigService, module *Module) error {
 	b := &module.Body
 	app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
+	if b.Replace {
+		err := os.RemoveAll(b.Destination)
+		if err != nil {
+			return err
+		}
+	}
 	return os.Symlink(b.Target, b.Destination)
 }
 

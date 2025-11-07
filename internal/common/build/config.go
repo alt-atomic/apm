@@ -53,12 +53,20 @@ var imageApplyModuleName = "Image apply result"
 var goodBranches = []string{
 	"sisyphus",
 }
+var goodBTypes = []string{
+	"stable",
+	"nightly",
+}
 
 type Config struct {
 	// Базовый образ для использования
 	// Может быть взята из переменной среды
 	// APM_BUILD_IMAGE
 	Image string `yaml:"image" json:"image"`
+	// Тип сборки. stable (по умолчанию) или nightly
+	// Может быть взята из переменной среды
+	// APM_BUILD_BUILD_TYPE
+	BuildType string `yaml:"build-type" json:"build-type"`
 	// Имя образа. Используется в именах некоторых созданных файлов
 	// Может быть взята из переменной среды
 	// APM_BUILD_NAME
@@ -311,6 +319,9 @@ func (cfg *Config) fix() error {
 	if !sE(os.Getenv("APM_BUILD_IMAGE")) {
 		cfg.Image = os.Getenv("APM_BUILD_IMAGE")
 	}
+	if !sE(os.Getenv("APM_BUILD_BUILD_TYPE")) {
+		cfg.BuildType = os.Getenv("APM_BUILD_BUILD_TYPE")
+	}
 	if !sE(os.Getenv("APM_BUILD_NAME")) {
 		cfg.Name = os.Getenv("APM_BUILD_NAME")
 	}
@@ -327,6 +338,9 @@ func (cfg *Config) fix() error {
 		cfg.Repos.Date = os.Getenv("APM_BUILD_REPO_DATE")
 	}
 
+	if sE(cfg.BuildType) {
+		cfg.BuildType = "stable"
+	}
 	if sE(cfg.Image) {
 		return errors.New(app.T_("Image can not be empty"))
 	}
@@ -341,6 +355,9 @@ func (cfg *Config) fix() error {
 	}
 	if !slices.Contains(goodBranches, cfg.Repos.Branch) {
 		return fmt.Errorf(app.T_("Branch %s not allowed"), cfg.Repos.Branch)
+	}
+	if !slices.Contains(goodBTypes, cfg.BuildType) {
+		return fmt.Errorf(app.T_("Build type %s not allowed"), cfg.Repos.Branch)
 	}
 
 	var requiredText = app.T_("Module '%s' required '%s'")
@@ -498,7 +515,7 @@ type Body struct {
 	// Пакеты для удаления из образа
 	Remove []string `yaml:"remove,omitempty" json:"remove,omitempty"`
 
-	// Типы: [copy], [move]
+	// Типы: [copy], [move], [link]
 	// Заменить назначение, если оно существует
 	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
 
