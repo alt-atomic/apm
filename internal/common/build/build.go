@@ -289,6 +289,11 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 	return handler(ctx, cfgService, &module)
 }
 
+// ExecuteModule - публичная обертка для тестирования модулей
+func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module Module) error {
+	return cfgService.executeModule(ctx, module)
+}
+
 func executeCopyModule(_ context.Context, _ *ConfigService, module *Module) error {
 	b := &module.Body
 	var withReplaceText string
