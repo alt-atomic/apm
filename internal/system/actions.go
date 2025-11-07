@@ -164,7 +164,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool, confirm bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
@@ -191,19 +191,22 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 		return nil, errors.New(messageNothingDo)
 	}
 
-	reply.StopSpinnerForDialog(a.appConfig)
-	dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
-	if err != nil {
-		return nil, err
+	if !confirm {
+		reply.StopSpinnerForDialog(a.appConfig)
+		dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
+		if err != nil {
+			return nil, err
+		}
+
+		if !dialogStatus {
+			errDialog := errors.New(app.T_("Cancel dialog"))
+
+			return nil, errDialog
+		}
+
+		reply.CreateSpinner(a.appConfig)
 	}
 
-	if !dialogStatus {
-		errDialog := errors.New(app.T_("Cancel dialog"))
-
-		return nil, errDialog
-	}
-
-	reply.CreateSpinner(a.appConfig)
 	err = a.serviceAptActions.Remove(ctx, packageNames, purge, depends)
 	if err != nil {
 		return nil, err
@@ -237,7 +240,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
@@ -267,7 +270,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 		return nil, errors.New(app.T_("The operation will not make any changes"))
 	}
 
-	if len(packagesInfo) > 0 {
+	if len(packagesInfo) > 0 && !confirm {
 		reply.StopSpinnerForDialog(a.appConfig)
 
 		action := dialog.ActionInstall

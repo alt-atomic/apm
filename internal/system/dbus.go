@@ -55,7 +55,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Install(ctx, packages)
+	resp, err := w.actions.Install(ctx, packages, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -73,7 +73,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, packages, purge, depends)
+	resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
