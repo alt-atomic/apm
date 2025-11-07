@@ -71,6 +71,8 @@ type Config struct {
 	// Может быть взята из переменной среды
 	// APM_BUILD_NAME
 	Name string `yaml:"name" json:"name"`
+	// Брендинг образа
+	Branding Branding `yaml:"branding" json:"branding"`
 	// Имя хоста
 	// Может быть взята из переменной среды
 	// APM_BUILD_HOSTNAME
@@ -82,6 +84,13 @@ type Config struct {
 	// Список модулей
 	Modules    []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 	hasInclude bool
+}
+
+type Branding struct {
+	// Имя брендинга для пакетов
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+	// Тема плимут
+	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`
 }
 
 type Kernel struct {
@@ -112,15 +121,15 @@ type Repos struct {
 	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 }
 
-func (cfg *Config) AllRepos() []string {
+func (r *Repos) AllRepos() []string {
 	var repos []string
-	repos = append(repos, cfg.Repos.Custom...)
-	repos = append(repos, cfg.TasksRepos()...)
-	repos = append(repos, cfg.BranchRepos()...)
+	repos = append(repos, r.Custom...)
+	repos = append(repos, r.TasksRepos()...)
+	repos = append(repos, r.BranchRepos()...)
 	return repos
 }
 
-func (cfg *Config) TasksRepos() []string {
+func (r *Repos) TasksRepos() []string {
 	var repos []string
 
 	var templates []string
@@ -139,7 +148,7 @@ func (cfg *Config) TasksRepos() []string {
 		return []string{}
 	}
 
-	for _, task := range cfg.Repos.Tasks {
+	for _, task := range r.Tasks {
 		for _, template := range templates {
 			repos = append(repos, fmt.Sprintf(template, task))
 		}
@@ -148,16 +157,16 @@ func (cfg *Config) TasksRepos() []string {
 	return repos
 }
 
-func (cfg *Config) BranchRepos() []string {
+func (r *Repos) BranchRepos() []string {
 	var repos []string
 
-	if cfg.Repos.Branch == "" {
+	if r.Branch == "" {
 		return []string{}
 	}
 
 	var date = "latest"
-	if cfg.Repos.Date != "" {
-		date = fmt.Sprintf("date/%s", cfg.Repos.Date)
+	if r.Date != "" {
+		date = fmt.Sprintf("date/%s", r.Date)
 	}
 
 	var templates []string
@@ -180,7 +189,7 @@ func (cfg *Config) BranchRepos() []string {
 	}
 
 	for _, template := range templates {
-		repos = append(repos, fmt.Sprintf(template, cfg.Repos.Branch, date))
+		repos = append(repos, fmt.Sprintf(template, r.Branch, date))
 	}
 
 	return repos

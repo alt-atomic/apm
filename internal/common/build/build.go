@@ -95,8 +95,144 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		)
 	}
 
+	if err := cfgService.executeRepos(ctx); err != nil {
+		return nil
+	}
+
+	app.Log.Info("Updating package cache")
+	_, err := cfgService.serviceAptActions.Update(ctx)
+	if err != nil {
+		return err
+	}
+
+	app.Log.Info("Upgrading packages")
+	err = cfgService.serviceAptActions.Upgrade(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err = cfgService.executeBranding(ctx); err != nil {
+		return nil
+	}
+
+	if err = cfgService.executeKernel(ctx); err != nil {
+		return nil
+	}
+
+	if err = os.MkdirAll(cfgService.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
+		return err
+	}
+
+	for _, module := range cfgService.serviceHostConfig.Config.Modules {
+		if err = cfgService.executeModule(ctx, module); err != nil {
+			return err
+		}
+	}
+
+	app.Log.Info("Final updating package cache")
+	_, err = cfgService.serviceAptActions.Update(ctx)
+	if err != nil {
+		return err
+	}
+
+	app.Log.Info("Rebuild initramfs via dracut")
+	err = rebuildInitramfs(ctx)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+type moduleHandler func(context.Context, *ConfigService, *Body) error
+
+var moduleHandlers = map[string]moduleHandler{
+	TypeCopy:     executeCopyModule,
+	TypeGit:      executeGitModule,
+	TypeLink:     executeLinkModule,
+	TypeMerge:    executeMergeModule,
+	TypeMove:     executeMoveModule,
+	TypePackages: executePackagesModule,
+	TypeRemove:   executeRemoveModule,
+	TypeShell:    executeShellModule,
+	TypeSystemd:  executeSystemdModule,
+	TypeMkdir:    executeMkdirModule,
+}
+
+func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
+	var branding = cfgService.serviceHostConfig.Config.Branding
+
+	if branding.Name != "" {
+		filters := map[string]any{
+			"name": fmt.Sprintf("branding-%s-", branding.Name),
+		}
+		packages, err := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+		if err != nil {
+			return err
+		}
+		if len(packages) == 0 {
+			return fmt.Errorf("no branding packages found for %s", branding.Name)
+		}
+
+		var pkgsNames = []string{}
+		for _, pkg := range packages {
+			pkgsNames = append(pkgsNames, pkg.Name)
+		}
+		executePackagesModule(ctx, cfgService, &Body{
+			Install: pkgsNames,
+		})
+	}
+
+	if branding.PlymouthTheme != "" {
+		files, err := os.ReadDir("/usr/share/plymouth/themes")
+		if err != nil {
+			return err
+		}
+		var themes = []string{}
+		for _, file := range files {
+			themes = append(themes, file.Name())
+		}
+
+		if !slices.Contains(themes, branding.PlymouthTheme) {
+			filters := map[string]any{
+				"name": fmt.Sprintf("plymouth-theme-%s", branding.Name),
+			}
+			packages, err := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+			if err != nil {
+				return err
+			}
+			if len(packages) == 0 {
+				return fmt.Errorf("no plymouth theme found for %s", branding.Name)
+			}
+
+			var pkgsNames = []string{}
+			for _, pkg := range packages {
+				pkgsNames = append(pkgsNames, pkg.Name)
+			}
+			executePackagesModule(ctx, cfgService, &Body{
+				Install: pkgsNames,
+			})
+		}
+
+		os.WriteFile(
+			"/etc/plymouth/plymouthd.conf",
+			[]byte(strings.Join([]string{
+				"[Daemon]",
+				fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
+				"ShowDelay=0",
+				"DeviceTimeout=10",
+			}, "\n")+"\n"),
+			0644,
+		)
+	}
+
+	return nil
+}
+
+func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
+	var repos = cfgService.serviceHostConfig.Config.Repos
 	var sourcesListD = "/etc/apt/sources.list.d"
-	if cfgService.serviceHostConfig.Config.Repos.Clean {
+	if repos.Clean {
 		app.Log.Info(fmt.Sprintf("Cleaining repos in %s", sourcesListD))
 		err := filepath.Walk(sourcesListD, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -116,9 +252,9 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 	}
 
-	var repos = cfgService.serviceHostConfig.Config.AllRepos()
+	var allRepos = repos.AllRepos()
 
-	if len(repos) != 0 {
+	if len(allRepos) != 0 {
 		var sourcesPath = path.Join(
 			sourcesListD,
 			fmt.Sprintf("%s.list", strings.ReplaceAll(cfgService.serviceHostConfig.Config.Name, " ", "-")),
@@ -131,27 +267,17 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 
 		err = os.WriteFile(
 			sourcesPath,
-			[]byte(strings.Join(repos, "\n")+"\n"), 0644,
+			[]byte(strings.Join(allRepos, "\n")+"\n"), 0644,
 		)
 		if err != nil {
 			return err
 		}
 	}
 
-	app.Log.Info("Updating package cache")
-	_, err := cfgService.serviceAptActions.Update(ctx)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
-	// Upgrade packages
-	app.Log.Info("Upgrading packages")
-	err = cfgService.serviceAptActions.Upgrade(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Kernel
+func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 	var kernel = cfgService.serviceHostConfig.Config.Kernel
 	var kmodules = kernel.Modules
 	if kernel.Flavour != "" {
@@ -235,45 +361,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		}
 	}
 
-	err = os.MkdirAll(cfgService.appConfig.ConfigManager.GetResourcesDir(), 0644)
-	if err != nil {
-		return err
-	}
-
-	for _, module := range cfgService.serviceHostConfig.Config.Modules {
-		if err = cfgService.executeModule(ctx, module); err != nil {
-			return err
-		}
-	}
-
-	app.Log.Info("Final updating package cache")
-	_, err = cfgService.serviceAptActions.Update(ctx)
-	if err != nil {
-		return err
-	}
-
-	app.Log.Info("Rebuild initramfs via dracut")
-	err = rebuildInitramfs(ctx)
-	if err != nil {
-		return nil
-	}
-
 	return nil
-}
-
-type moduleHandler func(context.Context, *ConfigService, *Module) error
-
-var moduleHandlers = map[string]moduleHandler{
-	TypeCopy:     executeCopyModule,
-	TypeGit:      executeGitModule,
-	TypeLink:     executeLinkModule,
-	TypeMerge:    executeMergeModule,
-	TypeMove:     executeMoveModule,
-	TypePackages: executePackagesModule,
-	TypeRemove:   executeRemoveModule,
-	TypeShell:    executeShellModule,
-	TypeSystemd:  executeSystemdModule,
-	TypeMkdir:    executeMkdirModule,
 }
 
 func (cfgService *ConfigService) executeModule(ctx context.Context, module Module) error {
@@ -286,7 +374,7 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 		return fmt.Errorf(app.T_("Unknown module type: %s"), module.Type)
 	}
 
-	return handler(ctx, cfgService, &module)
+	return handler(ctx, cfgService, &module.Body)
 }
 
 // ExecuteModule - публичная обертка для тестирования модулей
@@ -294,19 +382,21 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module Modul
 	return cfgService.executeModule(ctx, module)
 }
 
-func executeCopyModule(_ context.Context, _ *ConfigService, module *Module) error {
-	b := &module.Body
+func executeCopyModule(_ context.Context, _ *ConfigService, b *Body) error {
 	var withReplaceText string
 	if b.Replace {
 		withReplaceText = " with replacing"
 	}
 	app.Log.Info(fmt.Sprintf("Copying %s to %s%s", b.Target, b.Destination, withReplaceText))
+
+	if !filepath.IsAbs(b.Destination) {
+		return fmt.Errorf("destination in move type must be absolute path")
+	}
+
 	return osutils.Copy(b.Target, b.Destination, b.Replace)
 }
 
-func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
-	b := &module.Body
-
+func executeGitModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
 	if len(b.Deps) != 0 {
 		var doInstall []string
 		for _, p := range b.Deps {
@@ -354,8 +444,7 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, module *Mo
 	return nil
 }
 
-func executeLinkModule(_ context.Context, _ *ConfigService, module *Module) error {
-	b := &module.Body
+func executeLinkModule(_ context.Context, _ *ConfigService, b *Body) error {
 	app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
 	if b.Replace {
 		err := os.RemoveAll(b.Destination)
@@ -363,17 +452,30 @@ func executeLinkModule(_ context.Context, _ *ConfigService, module *Module) erro
 			return err
 		}
 	}
-	return os.Symlink(b.Target, b.Destination)
+
+	if !filepath.IsAbs(b.Target) {
+		return fmt.Errorf("target in link type must be absolute path")
+	}
+
+	relativePath, err := filepath.Rel(path.Dir(b.Target), b.Destination)
+	if err != nil {
+		relativePath = b.Destination
+	}
+
+	return os.Symlink(relativePath, b.Target)
 }
 
-func executeMergeModule(_ context.Context, _ *ConfigService, module *Module) error {
-	b := &module.Body
+func executeMergeModule(_ context.Context, _ *ConfigService, b *Body) error {
 	app.Log.Info(fmt.Sprintf("Merging %s with %s", b.Target, b.Destination))
+
+	if !filepath.IsAbs(b.Target) {
+		return fmt.Errorf("target in merge type must be absolute path")
+	}
+
 	return osutils.AppendFile(b.Target, b.Destination)
 }
 
-func executeMoveModule(_ context.Context, _ *ConfigService, module *Module) error {
-	b := &module.Body
+func executeMoveModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
 	var withText []string
 	if b.CreateLink {
 		withText = append(withText, "with linking")
@@ -382,13 +484,24 @@ func executeMoveModule(_ context.Context, _ *ConfigService, module *Module) erro
 		withText = append(withText, "with replacing")
 	}
 	app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
+
+	if !filepath.IsAbs(b.Target) {
+		return fmt.Errorf("target in move type must be absolute path")
+	}
+	if !filepath.IsAbs(b.Destination) {
+		return fmt.Errorf("destination in move type must be absolute path")
+	}
+
 	err := osutils.Move(b.Target, b.Destination, b.Replace)
 	if err != nil {
 		return err
 	}
 
 	if b.CreateLink {
-		err = os.Symlink(b.Destination, b.Target)
+		err = executeLinkModule(ctx, cfgService, &Body{
+			Target:      b.Target,
+			Destination: b.Destination,
+		})
 		if err != nil {
 			return err
 		}
@@ -396,8 +509,7 @@ func executeMoveModule(_ context.Context, _ *ConfigService, module *Module) erro
 	return nil
 }
 
-func executePackagesModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
-	b := &module.Body
+func executePackagesModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
 	var text []string
 	if len(b.Install) != 0 {
 		text = append(text, fmt.Sprintf("installing %s", strings.Join(b.Install, ", ")))
@@ -416,10 +528,14 @@ func executePackagesModule(ctx context.Context, cfgService *ConfigService, modul
 	return cfgService.CombineInstallRemovePackages(ctx, do, false, false)
 }
 
-func executeRemoveModule(_ context.Context, _ *ConfigService, module *Module) error {
-	b := &module.Body
+func executeRemoveModule(_ context.Context, _ *ConfigService, b *Body) error {
 	app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.GetTargets(), ", ")))
+
 	for _, pathTarget := range b.GetTargets() {
+		if !filepath.IsAbs(pathTarget) {
+			return fmt.Errorf("target in remove type must be absolute path")
+		}
+
 		err := os.RemoveAll(pathTarget)
 		if err != nil {
 			return err
@@ -428,8 +544,7 @@ func executeRemoveModule(_ context.Context, _ *ConfigService, module *Module) er
 	return nil
 }
 
-func executeMkdirModule(_ context.Context, _ *ConfigService, module *Module) error {
-	b := &module.Body
+func executeMkdirModule(_ context.Context, _ *ConfigService, b *Body) error {
 	app.Log.Info(fmt.Sprintf("Creating dirs at %s", strings.Join(b.GetTargets(), ", ")))
 	for _, pathTarget := range b.GetTargets() {
 		err := os.MkdirAll(pathTarget, 0644)
@@ -440,8 +555,7 @@ func executeMkdirModule(_ context.Context, _ *ConfigService, module *Module) err
 	return nil
 }
 
-func executeShellModule(ctx context.Context, cfgService *ConfigService, module *Module) error {
-	b := &module.Body
+func executeShellModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
 	for _, cmdSh := range b.GetCommands() {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
 		osutils.ExecSh(ctx, cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir(), true)
@@ -449,8 +563,7 @@ func executeShellModule(ctx context.Context, cfgService *ConfigService, module *
 	return nil
 }
 
-func executeSystemdModule(ctx context.Context, _ *ConfigService, module *Module) error {
-	b := &module.Body
+func executeSystemdModule(ctx context.Context, _ *ConfigService, b *Body) error {
 	for _, target := range b.GetTargets() {
 		var text = fmt.Sprintf("Disabling %s", target)
 		var action = "disable"
@@ -541,7 +654,7 @@ func (cfgService *ConfigService) getCurrentKernel(ctx context.Context) (*service
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.New(app.T_("failed to find current kernel package in database"))
+		return nil, err
 	}
 
 	kernel := cfgService.kernelManager.ParseKernelPackageFromDB(packages[0])
