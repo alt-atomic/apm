@@ -26,7 +26,6 @@ import (
 	"path"
 	"runtime"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -325,41 +324,41 @@ func (cfg *Config) extendIncludes() error {
 }
 
 func (cfg *Config) fix() error {
-	if !sE(os.Getenv("APM_BUILD_IMAGE")) {
+	if os.Getenv("APM_BUILD_IMAGE") != "" {
 		cfg.Image = os.Getenv("APM_BUILD_IMAGE")
 	}
-	if !sE(os.Getenv("APM_BUILD_BUILD_TYPE")) {
+	if os.Getenv("APM_BUILD_BUILD_TYPE") != "" {
 		cfg.BuildType = os.Getenv("APM_BUILD_BUILD_TYPE")
 	}
-	if !sE(os.Getenv("APM_BUILD_NAME")) {
+	if os.Getenv("APM_BUILD_NAME") != "" {
 		cfg.Name = os.Getenv("APM_BUILD_NAME")
 	}
-	if !sE(os.Getenv("APM_BUILD_HOSTNAME")) {
+	if os.Getenv("APM_BUILD_HOSTNAME") != "" {
 		cfg.Hostname = os.Getenv("APM_BUILD_HOSTNAME")
 	}
-	if !sE(os.Getenv("APM_BUILD_KERNEL_FLAVOUR")) {
+	if os.Getenv("APM_BUILD_KERNEL_FLAVOUR") != "" {
 		cfg.Kernel.Flavour = os.Getenv("APM_BUILD_KERNEL_FLAVOUR")
 	}
-	if !sE(os.Getenv("APM_BUILD_REPO_BRANCH")) {
+	if os.Getenv("APM_BUILD_REPO_BRANCH") != "" {
 		cfg.Repos.Branch = os.Getenv("APM_BUILD_REPO_BRANCH")
 	}
-	if !sE(os.Getenv("APM_BUILD_REPO_DATE")) {
+	if os.Getenv("APM_BUILD_REPO_DATE") != "" {
 		cfg.Repos.Date = os.Getenv("APM_BUILD_REPO_DATE")
 	}
 
-	if sE(cfg.BuildType) {
+	if cfg.BuildType == "" {
 		cfg.BuildType = "stable"
 	}
-	if sE(cfg.Image) {
+	if cfg.Image == "" {
 		return errors.New(app.T_("Image can not be empty"))
 	}
-	if sE(cfg.Name) {
+	if cfg.Name == "" {
 		return errors.New(app.T_("Name can not be empty"))
 	}
-	if !aE(cfg.Kernel.Modules) && sE(cfg.Kernel.Flavour) {
+	if len(cfg.Kernel.Modules) != 0 && cfg.Kernel.Flavour == "" {
 		return errors.New(app.T_("Kernel flavour can not be empty"))
 	}
-	if !sE(cfg.Repos.Date) && sE(cfg.Repos.Branch) {
+	if cfg.Repos.Date != "" && cfg.Repos.Branch == "" {
 		return errors.New(app.T_("Repos branch can not be empty"))
 	}
 	if cfg.Repos.Branch != "" {
@@ -377,7 +376,7 @@ func (cfg *Config) fix() error {
 	var requiredTextOr = fmt.Sprintf(requiredText, "%s", app.T_("%s or %s"))
 
 	for _, module := range cfg.Modules {
-		if sE(module.Type) {
+		if module.Type == "" {
 			return errors.New(app.T_("Module type can not be empty"))
 		}
 
@@ -385,54 +384,54 @@ func (cfg *Config) fix() error {
 
 		switch module.Type {
 		case TypeGit:
-			if aE(b.GetCommands()) {
+			if len(b.GetCommands()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeGit, "command", "commands")
 			}
-			if sE(b.Url) {
+			if b.Url == "" {
 				return fmt.Errorf(requiredText, TypeGit, "url")
 			}
 		case TypeShell:
-			if aE(b.GetCommands()) {
+			if len(b.GetCommands()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeShell, "command", "commands")
 			}
 		case TypeMerge:
-			if sE(b.Target) {
+			if b.Target == "" {
 				return fmt.Errorf(requiredText, TypeMerge, "target")
 			}
-			if sE(b.Destination) {
+			if b.Destination == "" {
 				return fmt.Errorf(requiredText, TypeMerge, "destination")
 			}
 		case TypeCopy:
-			if sE(b.Target) {
+			if b.Target == "" {
 				return fmt.Errorf(requiredText, TypeCopy, "target")
 			}
-			if sE(b.Destination) {
+			if b.Destination == "" {
 				return fmt.Errorf(requiredText, TypeCopy, "destination")
 			}
 		case TypeMove:
-			if sE(b.Target) {
+			if b.Target == "" {
 				return fmt.Errorf(requiredText, TypeMove, "target")
 			}
-			if sE(b.Destination) {
+			if b.Destination == "" {
 				return fmt.Errorf(requiredText, TypeMove, "destination")
 			}
 		case TypeRemove:
-			if aE(b.GetTargets()) {
+			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeRemove, "target", "targets")
 			}
 		case TypeMkdir:
-			if aE(b.GetTargets()) {
+			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeMkdir, "target", "targets")
 			}
 		case TypeSystemd:
-			if aE(b.GetTargets()) {
+			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeSystemd, "target", "targets")
 			}
 		case TypeLink:
-			if sE(b.Target) {
+			if b.Target == "" {
 				return fmt.Errorf(requiredText, TypeLink, "target")
 			}
-			if sE(b.Destination) {
+			if b.Destination == "" {
 				return fmt.Errorf(requiredText, TypeLink, "destination")
 			}
 		case TypePackages:
@@ -442,7 +441,7 @@ func (cfg *Config) fix() error {
 			return errors.New(app.T_("Unknown type: " + module.Type))
 		}
 
-		if !sE(b.Destination) {
+		if b.Destination != "" {
 			if !path.IsAbs(b.Destination) {
 				return errors.New(app.T_(""))
 			}
@@ -556,10 +555,10 @@ type Body struct {
 func (b *Body) GetTargets() []string {
 	var targets []string
 
-	if !sE(b.Target) {
+	if b.Target != "" {
 		targets = append(targets, b.Target)
 	}
-	if !aE(b.Targets) {
+	if len(b.Targets) != 0 {
 		targets = append(targets, b.Targets...)
 	}
 
@@ -570,10 +569,10 @@ func (b *Body) GetTargets() []string {
 func (b *Body) GetCommands() []string {
 	var commands []string
 
-	if !sE(b.Command) {
+	if b.Command != "" {
 		commands = append(commands, b.Command)
 	}
-	if !aE(b.Commands) {
+	if len(b.Commands) != 0 {
 		commands = append(commands, b.Commands...)
 	}
 
@@ -623,16 +622,6 @@ func removeByValue(arr []string, value string) []string {
 	return slices.DeleteFunc(arr, func(s string) bool {
 		return s == value
 	})
-}
-
-// sE проверяет, пуста ли строка
-func sE(s string) bool {
-	return strings.TrimSpace(s) == ""
-}
-
-// aE проверяет, пуст ли массив
-func aE(a []string) bool {
-	return len(a) == 0
 }
 
 // syncYamlMutex защищает операции работы с файлом.
