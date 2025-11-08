@@ -29,10 +29,26 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"unicode"
 )
+
+func CleanDir(dir string) error {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		err = os.RemoveAll(path.Join(dir, file.Name()))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func GetEnvMap() map[string]string {
 	envMap := make(map[string]string)

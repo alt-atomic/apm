@@ -147,6 +147,10 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return nil
 	}
 
+	// Cleanup
+	osutils.CleanDir("/boot")
+	osutils.CleanDir("/var/root")
+
 	return nil
 }
 
