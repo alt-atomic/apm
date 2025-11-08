@@ -658,7 +658,14 @@ func executeSystemdModule(ctx context.Context, _ *ConfigService, b *Body) error 
 			action = "enable"
 		}
 		app.Log.Info(text)
-		cmd := exec.CommandContext(ctx, "systemctl", action, target)
+
+		args := []string{}
+		if b.Global {
+			args = append(args, "--global")
+		}
+		args = append(args, action, target)
+
+		cmd := exec.CommandContext(ctx, "systemctl", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {

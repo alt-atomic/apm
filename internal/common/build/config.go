@@ -543,6 +543,10 @@ type Body struct {
 	// Включить или отключить systemd сервис
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
+	// Типы: systemd
+	// Использовать ли --global или нет
+	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
+
 	// Типы: git
 	// URL git-репозитория
 	Url string `yaml:"url,omitempty" json:"url,omitempty"`
