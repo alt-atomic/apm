@@ -550,12 +550,16 @@ func executeLinkModule(_ context.Context, _ *ConfigService, b *Body) error {
 		}
 	}
 
-	relativePath, err := filepath.Rel(path.Dir(b.Target), b.Destination)
-	if err != nil {
-		relativePath = b.Destination
-	}
+	if filepath.IsAbs(b.Destination) {
+		relativePath, err := filepath.Rel(path.Dir(b.Target), b.Destination)
+		if err != nil {
+			relativePath = b.Destination
+		}
 
-	return os.Symlink(relativePath, b.Target)
+		return os.Symlink(relativePath, b.Target)
+	} else {
+		return os.Symlink(b.Destination, b.Target)
+	}
 }
 
 func executeMergeModule(_ context.Context, _ *ConfigService, b *Body) error {
