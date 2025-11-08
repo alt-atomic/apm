@@ -46,6 +46,7 @@ const (
 	TypeInclude  = "include"
 	TypeLink     = "link"
 	TypeMerge    = "merge"
+	TypeReplace  = "replace"
 	TypeMove     = "move"
 	TypePackages = "packages"
 	TypeRemove   = "remove"
@@ -167,6 +168,7 @@ var moduleHandlers = map[string]moduleHandler{
 	TypeShell:    executeShellModule,
 	TypeSystemd:  executeSystemdModule,
 	TypeMkdir:    executeMkdirModule,
+	TypeReplace:  executeReplaceModule,
 }
 
 func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
@@ -489,6 +491,35 @@ func executeCopyModule(_ context.Context, _ *ConfigService, b *Body) error {
 	return osutils.Copy(b.Target, b.Destination, b.Replace)
 }
 
+func executeReplaceModule(_ context.Context, _ *ConfigService, b *Body) error {
+	app.Log.Info(fmt.Sprintf("Replacing %s to %s in %s", b.Pattern, b.Repl, b.Target))
+
+	if !filepath.IsAbs(b.Target) {
+		return fmt.Errorf("target in replace type must be absolute path")
+	}
+
+	var info, err = os.Stat(b.Target)
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(b.Target)
+	if err != nil {
+		return err
+	}
+	re, err := regexp.Compile(b.Pattern)
+	if err != nil {
+		return err
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		lines[i] = re.ReplaceAllString(line, b.Repl)
+	}
+
+	return os.WriteFile(b.Target, []byte(strings.Join(lines, "\n")), info.Mode().Perm())
+}
+
 func executeGitModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
 	if len(b.Deps) != 0 {
 		var doInstall []string
@@ -582,6 +613,9 @@ func executeMoveModule(ctx context.Context, cfgService *ConfigService, b *Body) 
 	}
 	app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
 
+	if !filepath.IsAbs(b.Target) {
+		return fmt.Errorf("target in move type must be absolute path")
+	}
 	if !filepath.IsAbs(b.Destination) {
 		return fmt.Errorf("destination in move type must be absolute path")
 	}
@@ -641,6 +675,10 @@ func executeRemoveModule(_ context.Context, _ *ConfigService, b *Body) error {
 func executeMkdirModule(_ context.Context, _ *ConfigService, b *Body) error {
 	app.Log.Info(fmt.Sprintf("Creating dirs at %s", strings.Join(b.GetTargets(), ", ")))
 	for _, pathTarget := range b.GetTargets() {
+		if !filepath.IsAbs(pathTarget) {
+			return fmt.Errorf("target in mkdir type must be absolute path")
+		}
+
 		err := os.MkdirAll(pathTarget, 0644)
 		if err != nil {
 			return err

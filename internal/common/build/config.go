@@ -437,6 +437,16 @@ func (cfg *Config) fix() error {
 		case TypePackages:
 		case TypeInclude:
 			return errors.New(app.T_("Include should be extended"))
+		case TypeReplace:
+			if b.Target == "" {
+				return fmt.Errorf(requiredText, TypeReplace, "target")
+			}
+			if b.Pattern == "" {
+				return fmt.Errorf(requiredText, TypeReplace, "pattern")
+			}
+			if b.Repl == "" {
+				return fmt.Errorf(requiredText, TypeReplace, "repl")
+			}
 		default:
 			return errors.New(app.T_("Unknown type: " + module.Type))
 		}
@@ -492,63 +502,86 @@ type Module struct {
 }
 
 type Body struct {
-	// Типы: git, shell
-	// Команда для выполнения относительно директории ресурсов
+	// Types: git, shell
+	// Usage:
+	// shell: Команд для выполнения относительно директории ресурсов
+	// git: Команда для выполнения относительно git репозитория
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 
-	// Типы: git, shell
-	// Команды для выполнения относительно директории ресурсов
+	// Types: git, shell
+	// Usage:
+	// shell: Команды для выполнения относительно директории ресурсов
+	// git: Команды для выполнения относительно git репозитория
 	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty"`
 
-	// Типы: [git]
-	// Зависимости для модуля. Они будут удалены после завершения модуля
+	// Types: [git]
+	// Usage:
+	// git: Зависимости для модуля. Они будут удалены после завершения модуля
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
-	// Типы: merge, include, copy, move, remove, systemd, link, mkdir
-	// Цель для использования в типе
-	// Относительный путь к /var/apm/resources в merge, include, copy
-	// Абсолютный путь в remove, mkdir
-	// Имя сервиса в systemd
+	// Types: merge, include, copy, move, remove, systemd, link, mkdir, replace
+	// Usage:
+	// merge, include, copy: Путь
+	// remove, mkdir, move, link, replace: Абсолютный путь
+	// systemd: Имя сервиса
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-	// Типы: include, remove, systemd, mkdir
-	// Цели для использования в типе
-	// Относительные пути к /var/apm/resources в include
-	// Абсолютные пути в remove, mkdir
-	// Имена сервисов в systemd
+	// Types: include, remove, systemd, mkdir
+	// Usage:
+	// include: Пути для подключения yml конфигов
+	// remove, mkdir: Абсолютные пути
+	// systemd: Имена сервисов
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
 
-	// Типы: copy, move, merge, link
-	// Директория назначения
+	// Types: copy, move, merge, link
+	// Usage:
+	// copy, move, merge, link: Директория назначения
 	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
 
-	// Типы: packages
-	// Пакеты для установки из repos/tasks
+	// Types: packages
+	// Usage:
+	// packages: Пакеты для установки из repos/tasks
 	Install []string `yaml:"install,omitempty" json:"install,omitempty"`
 
-	// Типы: packages
-	// Пакеты для удаления из образа
+	// Types: packages
+	// Usage:
+	// packages: Пакеты для удаления из образа
 	Remove []string `yaml:"remove,omitempty" json:"remove,omitempty"`
 
-	// Типы: [copy], [move], [link]
-	// Заменить назначение, если оно существует
+	// Types: [copy], [move], [link]
+	// Usage:
+	// copy, move, link: Заменить назначение, если оно существует
 	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
 
-	// Типы: [move]
-	// Создать ссылку из родительской директории цели на назначение
+	// Types: [move]
+	// Usage:
+	// move: Создать ссылку из родительской директории цели на назначение
 	CreateLink bool `yaml:"create-link,omitempty" json:"create-link,omitempty"`
 
-	// Типы: systemd
-	// Включить или отключить systemd сервис
+	// Types: systemd
+	// Usage:
+	// systemd: Включить или отключить systemd сервис
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
-	// Типы: systemd
-	// Использовать ли --global или нет
+	// Types: systemd
+	// Usage:
+	// systemd: Использовать ли --global или нет
 	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
 
-	// Типы: git
-	// URL git-репозитория
+	// Types: git
+	// Usage:
+	// git: URL git-репозитория
 	Url string `yaml:"url,omitempty" json:"url,omitempty"`
+
+	// Types: replace
+	// Usage:
+	// replace: Regex шаблон для замены
+	Pattern string `yaml:"pattern,omitempty" json:"pattern,omitempty"`
+
+	// Types: replace
+	// Usage:
+	// replace: Текст, на который нужно заменить
+	Repl string `yaml:"text,omitempty" json:"text,omitempty"`
 }
 
 // GetTargets возвращает все цели (target и targets)
