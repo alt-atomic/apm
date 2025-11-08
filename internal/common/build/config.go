@@ -355,7 +355,7 @@ func (cfg *Config) fix() error {
 	if cfg.Name == "" {
 		return errors.New(app.T_("Name can not be empty"))
 	}
-	if len(cfg.Kernel.Modules) != 0 && cfg.Kernel.Flavour == "" {
+	if (len(cfg.Kernel.Modules) != 0 || cfg.Kernel.IncludeHeaders) && cfg.Kernel.Flavour == "" {
 		return errors.New(app.T_("Kernel flavour can not be empty"))
 	}
 	if cfg.Repos.Date != "" && cfg.Repos.Branch == "" {
