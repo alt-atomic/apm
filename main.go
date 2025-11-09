@@ -99,6 +99,13 @@ func main() {
 				ArgsUsage: app.T_("[command]"),
 				HideHelp:  true,
 			},
+			{
+				Name:      "version",
+				Aliases:   []string{"v"},
+				Usage:     app.T_("Print version"),
+				ArgsUsage: app.T_("[command]"),
+				Action:    printVersion,
+			},
 		},
 	}
 
@@ -247,6 +254,11 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 	// Блокируем до сигнала
 	select {}
+}
+
+func printVersion(ctx context.Context, cmd *cli.Command) error {
+	fmt.Printf("%s: %s\n", "APM - Atomic Package Manager", appConfig.ConfigManager.GetConfig().Version)
+	return nil
 }
 
 func cliError(err error) {
