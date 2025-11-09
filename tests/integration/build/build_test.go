@@ -276,8 +276,8 @@ modules:
   - name: "Test link"
     type: link
     body:
-      target: "` + targetFile + `"
-      destination: "` + linkFile + `"
+      target: "` + linkFile + `"
+      destination: "` + targetFile + `"
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
