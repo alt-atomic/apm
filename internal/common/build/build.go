@@ -39,9 +39,18 @@ import (
 	"github.com/thediveo/osrelease"
 )
 
-var kernelDir = "/usr/lib/modules"
-
 const (
+	etcHostname         = "/etc/hostname"
+	etcHosts            = "/etc/hosts"
+	etcOsRelease        = "/etc/os-release"
+	usrLibOsRelease     = "/usr/lib/os-release"
+	aptSourcesList      = "/etc/apt/sources.list"
+	aptSourcesListD     = "/etc/apt/sources.list.d"
+	plymouthThemesDir   = "/usr/share/plymouth/themes"
+	plymouthConfigFile  = "/etc/plymouth/plymouthd.conf"
+	kernelDir           = "/usr/lib/modules"
+	bootVmlinuzTemplate = "/boot/vmlinuz-%s"
+
 	TypeCopy     = "copy"
 	TypeGit      = "git"
 	TypeInclude  = "include"
@@ -92,13 +101,16 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			if len(parts) != 2 {
 				return fmt.Errorf("error in %s env", e)
 			}
-			os.Setenv(parts[0], parts[1])
+			err := os.Setenv(parts[0], parts[1])
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	if cfgService.serviceHostConfig.Config.Hostname != "" {
-		os.WriteFile(
-			"/etc/hostname",
+		err := os.WriteFile(
+			etcHostname,
 			fmt.Appendf(
 				nil,
 				"%s\n",
@@ -106,8 +118,11 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			),
 			0644,
 		)
-		os.WriteFile(
-			"/etc/hosts",
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(
+			etcHosts,
 			fmt.Appendf(
 				nil,
 				"127.0.0.1  localhost.localdomain localhost %s\n::1  localhost6.localdomain localhost6 %s6\n",
@@ -116,6 +131,9 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 			),
 			0644,
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := cfgService.executeRepos(ctx); err != nil {
@@ -143,7 +161,6 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	for _, module := range cfgService.serviceHostConfig.Config.Modules {
-
 		if err = cfgService.executeModule(ctx, module); err != nil {
 			return err
 		}
@@ -161,14 +178,12 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return err
 	}
 
-	// Cleanup
-	osutils.CleanDir("/boot")
-	osutils.CleanDir("/var/root")
-
 	return nil
 }
 
 type moduleHandler func(context.Context, *ConfigService, *Body) error
+
+var cpeNameRegex = regexp.MustCompile(`:\d+$`)
 
 func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 	var branding = cfgService.serviceHostConfig.Config.Branding
@@ -189,13 +204,18 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 		for _, pkg := range packages {
 			pkgsNames = append(pkgsNames, pkg.Name)
 		}
-		executePackagesModule(ctx, cfgService, &Body{
+		err = executePackagesModule(ctx, cfgService, &Body{
 			Install: pkgsNames,
 		})
+		if err != nil {
+			return err
+		}
 
-		var osReleaseFile = "/usr/lib/os-release"
-		var info, _ = os.Stat(osReleaseFile)
-		vars := osrelease.NewFromName(osReleaseFile)
+		info, err := os.Stat(usrLibOsRelease)
+		if err != nil {
+			return err
+		}
+		vars := osrelease.NewFromName(usrLibOsRelease)
 
 		now := time.Now()
 		curVer := now.Format("20060102")
@@ -228,38 +248,40 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			case "PRETTY_NAME":
 				vars[name] = value + prettyNamePostfix
 			case "CPE_NAME":
-				re, err := regexp.Compile(`:\d+$`)
-				if err != nil {
-					return err
-				}
-				vars[name] = re.ReplaceAllString(value, fmt.Sprintf(":%s:%s", bType, curVer))
+				vars[name] = cpeNameRegex.ReplaceAllString(value, fmt.Sprintf(":%s:%s", bType, curVer))
 			}
 		}
 
 		vars["IMAGE_ID"] = vars["ID"]
 		vars["IMAGE_VERSION"] = vars["VERSION_ID"]
 
-		var newLines = []string{}
+		var newLines []string
 		for name, value := range vars {
 			newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
 		}
 
 		var newOsReleaseContent = strings.Join(newLines, "\n") + "\n"
-		os.WriteFile(osReleaseFile, []byte(newOsReleaseContent), info.Mode().Perm())
-
-		executeLinkModule(ctx, cfgService, &Body{
-			Target:      "/etc/os-release",
-			Destination: "/usr/lib/os-release",
-			Replace:     true,
-		})
-	}
-
-	if branding.PlymouthTheme != "" {
-		files, err := os.ReadDir("/usr/share/plymouth/themes")
+		err = os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), info.Mode().Perm())
 		if err != nil {
 			return err
 		}
-		var themes = []string{}
+
+		err = executeLinkModule(ctx, cfgService, &Body{
+			Target:      etcOsRelease,
+			Destination: usrLibOsRelease,
+			Replace:     true,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if branding.PlymouthTheme != "" {
+		files, err := os.ReadDir(plymouthThemesDir)
+		if err != nil {
+			return err
+		}
+		var themes []string
 		for _, file := range files {
 			themes = append(themes, file.Name())
 		}
@@ -276,17 +298,20 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 				return fmt.Errorf("no plymouth theme found for %s", branding.Name)
 			}
 
-			var pkgsNames = []string{}
+			var pkgsNames []string
 			for _, pkg := range packages {
 				pkgsNames = append(pkgsNames, pkg.Name)
 			}
-			executePackagesModule(ctx, cfgService, &Body{
+			err = executePackagesModule(ctx, cfgService, &Body{
 				Install: pkgsNames,
 			})
+			if err != nil {
+				return err
+			}
 		}
 
-		os.WriteFile(
-			"/etc/plymouth/plymouthd.conf",
+		err = os.WriteFile(
+			plymouthConfigFile,
 			[]byte(strings.Join([]string{
 				"[Daemon]",
 				fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
@@ -295,6 +320,9 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			}, "\n")+"\n"),
 			0644,
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -302,14 +330,13 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 
 func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
 	var repos = cfgService.serviceHostConfig.Config.Repos
-	var sourcesListD = "/etc/apt/sources.list.d"
 	if repos.Clean {
-		app.Log.Info(fmt.Sprintf("Cleaining repos in %s", sourcesListD))
-		err := filepath.Walk(sourcesListD, func(path string, info os.FileInfo, err error) error {
+		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesListD))
+		err := filepath.Walk(aptSourcesListD, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			if path != sourcesListD {
+			if path != aptSourcesListD {
 				err = os.RemoveAll(path)
 				if err != nil {
 					return err
@@ -317,9 +344,13 @@ func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
 			}
 			return nil
 		})
-		os.WriteFile("/etc/apt/sources.list", []byte(""), 0644)
 		if err != nil {
-			fmt.Println("Error:", err)
+			return err
+		}
+
+		err = os.WriteFile(aptSourcesList, []byte(""), 0644)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -327,7 +358,7 @@ func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
 
 	if len(allRepos) != 0 {
 		var sourcesPath = path.Join(
-			sourcesListD,
+			aptSourcesListD,
 			fmt.Sprintf("%s.list", strings.ReplaceAll(cfgService.serviceHostConfig.Config.Name, " ", "-")),
 		)
 		app.Log.Info(fmt.Sprintf("Setting repos to %s", sourcesPath))
@@ -350,7 +381,7 @@ func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
 
 func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 	var kernel = cfgService.serviceHostConfig.Config.Kernel
-	var kmodules = kernel.Modules
+	var kModules = kernel.Modules
 	if kernel.Flavour != "" {
 		latest, err := cfgService.kernelManager.FindLatestKernel(ctx, kernel.Flavour)
 		if err != nil {
@@ -359,12 +390,12 @@ func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 
 		var currentKernel *service.Info
 
-		if len(kmodules) == 0 {
+		if len(kModules) == 0 {
 			currentKernel, _ = cfgService.getCurrentKernel(ctx)
 			if currentKernel != nil {
 				inheritedModules, _ := cfgService.kernelManager.InheritModulesFromKernel(latest, currentKernel)
 				if len(inheritedModules) > 0 {
-					kmodules = inheritedModules
+					kModules = inheritedModules
 				}
 			}
 		}
@@ -376,9 +407,9 @@ func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 				moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
 				moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", latest.Flavour))
 				// Добавляем только если его еще нет в списке
-				moduleExists := slices.Contains(kmodules, moduleName)
+				moduleExists := slices.Contains(kModules, moduleName)
 				if !moduleExists {
-					kmodules = append(kmodules, moduleName)
+					kModules = append(kModules, moduleName)
 				}
 			}
 		}
@@ -397,7 +428,7 @@ func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 
 			for _, entry := range entries {
 				entryPath := filepath.Join(kernelDir, entry.Name())
-				err := os.RemoveAll(entryPath)
+				err = os.RemoveAll(entryPath)
 				if err != nil {
 					return err
 				}
@@ -405,7 +436,7 @@ func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 		}
 
 		app.Log.Info(fmt.Sprintf("Installing kernel %s", latest.Flavour))
-		err = cfgService.kernelManager.InstallKernel(ctx, latest, kmodules, kernel.IncludeHeaders, false)
+		err = cfgService.kernelManager.InstallKernel(ctx, latest, kModules, kernel.IncludeHeaders, false)
 		if err != nil {
 			return err
 		}
@@ -423,8 +454,8 @@ func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 
 		app.Log.Info("Copy vmlinuz")
 		err = osutils.Copy(
-			fmt.Sprintf("/boot/vmlinuz-%s", latestInstalledKernelVersion),
-			fmt.Sprintf("/usr/lib/modules/%s/vmlinuz", latestInstalledKernelVersion),
+			fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
+			fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
 			true,
 		)
 		if err != nil {
@@ -478,7 +509,7 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 		if err != nil {
 			return err
 		}
-		if output == true {
+		if output.(bool) {
 			return handler(ctx, cfgService, &module.Body)
 		}
 	} else {
@@ -501,7 +532,10 @@ func executeIncludeModule(ctx context.Context, cfgService *ConfigService, b *Bod
 		}
 
 		for _, module := range *modules {
-			cfgService.executeModule(ctx, module)
+			err = cfgService.executeModule(ctx, module)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -512,7 +546,10 @@ func executeIncludeModule(ctx context.Context, cfgService *ConfigService, b *Bod
 		}
 
 		for _, module := range *modules {
-			cfgService.executeModule(ctx, module)
+			err = cfgService.executeModule(ctx, module)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -579,6 +616,7 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, b *Body) e
 	if errDir != nil {
 		return errDir
 	}
+	defer os.RemoveAll(tempDir)
 
 	app.Log.Info(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
 	cmd := exec.CommandContext(ctx, "git", "clone", b.Url, tempDir)
@@ -732,7 +770,10 @@ func executeMkdirModule(_ context.Context, _ *ConfigService, b *Body) error {
 func executeShellModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
 	for _, cmdSh := range b.GetCommands() {
 		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
-		osutils.ExecSh(ctx, cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir(), true)
+		err := osutils.ExecSh(ctx, cmdSh, cfgService.appConfig.ConfigManager.GetResourcesDir(), true)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -747,7 +788,7 @@ func executeSystemdModule(ctx context.Context, _ *ConfigService, b *Body) error 
 		}
 		app.Log.Info(text)
 
-		args := []string{}
+		var args []string
 		if b.Global {
 			args = append(args, "--global")
 		}

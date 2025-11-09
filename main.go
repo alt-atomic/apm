@@ -59,12 +59,7 @@ func main() {
 	ctx = context.WithValue(ctx, app.AppConfigKey, appConfig)
 
 	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
-
-	os.Setenv("APM_VERSION", v.ToString())
-	os.Setenv("APM_VERSION_MAJOR", strconv.Itoa(v.Major))
-	os.Setenv("APM_VERSION_MINOR", strconv.Itoa(v.Minor))
-	os.Setenv("APM_VERSION_PATCH", strconv.Itoa(v.Patch))
-	os.Setenv("APM_VERSION_COMMITS", strconv.Itoa(v.Commits))
+	setEnvVersion(v)
 
 	systemCommands := system.CommandList(ctx)
 	distroboxCommands := distrobox.CommandList(ctx)
@@ -267,7 +262,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	select {}
 }
 
-func printVersion(ctx context.Context, cmd *cli.Command) error {
+func printVersion(_ context.Context, _ *cli.Command) error {
 	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
 	fmt.Printf("%s version %s\n", "apm", v.ToString())
 	return nil
@@ -315,6 +310,25 @@ func closeApp(appConfig *app.Config) {
 	if appConfig.DatabaseManager != nil {
 		if err := appConfig.DatabaseManager.Close(); err != nil {
 			app.Log.Errorf(app.T_("failed to close databases: %w"), err)
+		}
+	}
+}
+
+func setEnvVersion(v version.Version) {
+	versionEnvVars := []struct {
+		key   string
+		value string
+	}{
+		{"APM_VERSION", v.ToString()},
+		{"APM_VERSION_MAJOR", strconv.Itoa(v.Major)},
+		{"APM_VERSION_MINOR", strconv.Itoa(v.Minor)},
+		{"APM_VERSION_PATCH", strconv.Itoa(v.Patch)},
+		{"APM_VERSION_COMMITS", strconv.Itoa(v.Commits)},
+	}
+
+	for _, env := range versionEnvVars {
+		if err := os.Setenv(env.key, env.value); err != nil {
+			app.Log.Fatal(err)
 		}
 	}
 }
