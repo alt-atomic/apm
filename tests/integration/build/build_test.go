@@ -120,7 +120,7 @@ modules:
 	assert.NoError(s.T(), err)
 
 	// Загружаем и выполняем конфигурацию
-	cfg, err := build.ReadAndParseYamlFile(s.testImageFile)
+	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), 1, len(cfg.Modules))
 	assert.Equal(s.T(), build.TypeCopy, cfg.Modules[0].Type)
@@ -166,7 +166,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseYamlFile(s.testImageFile)
+	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -208,7 +208,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseYamlFile(s.testImageFile)
+	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -242,7 +242,7 @@ modules:
 	err := os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseYamlFile(s.testImageFile)
+	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -282,7 +282,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseYamlFile(s.testImageFile)
+	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -331,7 +331,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseYamlFile(s.testImageFile)
+	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -389,7 +389,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseYamlFile(s.testImageFile)
+	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), 3, len(cfg.Modules), "Should have 3 modules")
 
@@ -492,7 +492,7 @@ modules:
 			err := os.WriteFile(testFile, []byte(tt.yaml), 0644)
 			assert.NoError(t, err)
 
-			_, err = build.ReadAndParseYamlFile(testFile)
+			_, err = build.ReadAndParseConfigYamlFile(testFile)
 			if tt.shouldErr {
 				assert.Error(t, err, "Should fail validation")
 				if tt.errMsg != "" {

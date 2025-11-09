@@ -90,7 +90,7 @@ func (DBHistory) TableName() string {
 func (dbh DBHistory) fromDBModel() (ImageHistory, error) {
 	var err error
 	var cfg Config
-	if cfg, err = ParseJsonData([]byte(dbh.ConfigJSON)); err != nil {
+	if cfg, err = ParseJsonConfigData([]byte(dbh.ConfigJSON)); err != nil {
 		return ImageHistory{}, fmt.Errorf(app.T_("Config conversion error: %v"), err)
 	}
 
@@ -210,7 +210,7 @@ func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config
 	}
 
 	var latestConfig Config
-	if latestConfig, err = ParseJsonData([]byte(dbHist.ConfigJSON)); err != nil {
+	if latestConfig, err = ParseJsonConfigData([]byte(dbHist.ConfigJSON)); err != nil {
 		return false, fmt.Errorf(app.T_("History config conversion error: %v"), err)
 	}
 

@@ -22,8 +22,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
-	"path"
 	"runtime"
 	"slices"
 	"sync"
@@ -56,6 +57,8 @@ var goodBTypes = []string{
 	"stable",
 	"nightly",
 }
+var requiredText = app.T_("module '%s' required '%s'")
+var requiredTextOr = fmt.Sprintf(requiredText, "%s", app.T_("%s' or '%s"))
 
 type Config struct {
 	// Базовый образ для использования
@@ -81,8 +84,7 @@ type Config struct {
 	// Ядро для использования в образе. Если пусто, используется ядро из образа
 	Kernel Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
 	// Список модулей
-	Modules    []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
-	hasInclude bool
+	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
 type Branding struct {
@@ -226,10 +228,6 @@ func (cfg *Config) getTotalRemove() []string {
 	return totalRemove
 }
 
-func (cfg *Config) HasInclude() bool {
-	return cfg.hasInclude
-}
-
 func (cfg *Config) IsInstalled(pkg string) bool {
 	return slices.Contains(cfg.getTotalInstall(), pkg)
 }
@@ -290,40 +288,7 @@ func (cfg *Config) AddRemovePackage(pkg string) {
 	}
 }
 
-func (cfg *Config) extendIncludes() error {
-	var newModules []Module
-	cfg.hasInclude = false
-
-	for _, module := range cfg.Modules {
-		if module.Type == TypeInclude {
-			cfg.hasInclude = true
-			for _, include := range module.Body.GetTargets() {
-				data, err := os.ReadFile(include)
-				if err != nil {
-					return err
-				}
-				includeCfg, err := parseData(data, true, false)
-				if err != nil {
-					return err
-				}
-				err = includeCfg.extendIncludes()
-				if err != nil {
-					return err
-				}
-
-				newModules = append(newModules, includeCfg.Modules...)
-			}
-		} else {
-			newModules = append(newModules, module)
-		}
-	}
-
-	cfg.Modules = newModules
-
-	return nil
-}
-
-func (cfg *Config) fix() error {
+func (cfg *Config) fix() {
 	if os.Getenv("APM_BUILD_IMAGE") != "" {
 		cfg.Image = os.Getenv("APM_BUILD_IMAGE")
 	}
@@ -349,6 +314,9 @@ func (cfg *Config) fix() error {
 	if cfg.BuildType == "" {
 		cfg.BuildType = "stable"
 	}
+}
+
+func (cfg *Config) checkRoot() error {
 	if cfg.Image == "" {
 		return errors.New(app.T_("Image can not be empty"))
 	}
@@ -372,10 +340,15 @@ func (cfg *Config) fix() error {
 		}
 	}
 
-	var requiredText = app.T_("Module '%s' required '%s'")
-	var requiredTextOr = fmt.Sprintf(requiredText, "%s", app.T_("%s or %s"))
+	return nil
+}
 
-	for _, module := range cfg.Modules {
+func (cfg *Config) checkModules() error {
+	return CheckModules(&cfg.Modules)
+}
+
+func CheckModules(modules *[]Module) error {
+	for _, module := range *modules {
 		if module.Type == "" {
 			return errors.New(app.T_("Module type can not be empty"))
 		}
@@ -435,8 +408,28 @@ func (cfg *Config) fix() error {
 				return fmt.Errorf(requiredText, TypeLink, "destination")
 			}
 		case TypePackages:
+			if len(b.Install) == 0 || len(b.Remove) == 0 {
+				return fmt.Errorf(requiredTextOr, TypePackages, "install", "remove")
+			}
 		case TypeInclude:
-			return errors.New(app.T_("Include should be extended"))
+			if b.Url == "" && len(b.GetTargets()) == 0 {
+				return fmt.Errorf(requiredText, TypeInclude, "target', 'targets' or 'url")
+			}
+			if b.Url != "" && len(b.GetTargets()) != 0 {
+				return fmt.Errorf("in include type dont allow 'url' and 'target'/'targets'")
+			}
+			for _, targetPath := range b.GetTargets() {
+				_, err := ReadAndParseModulesYamlFile(targetPath)
+				if err != nil {
+					return err
+				}
+			}
+			if b.Url != "" {
+				_, err := ReadAndParseModulesYamlUrl(b.Url)
+				if err != nil {
+					return err
+				}
+			}
 		case TypeReplace:
 			if b.Target == "" {
 				return fmt.Errorf(requiredText, TypeReplace, "target")
@@ -450,12 +443,6 @@ func (cfg *Config) fix() error {
 		default:
 			return errors.New(app.T_("Unknown type: " + module.Type))
 		}
-
-		if b.Destination != "" {
-			if !path.IsAbs(b.Destination) {
-				return errors.New(app.T_(""))
-			}
-		}
 	}
 
 	return nil
@@ -463,20 +450,25 @@ func (cfg *Config) fix() error {
 
 // CheckAndFix проверяет и разворачивает include'ы
 func (cfg *Config) CheckAndFix() error {
-	if err := cfg.extendIncludes(); err != nil {
+	cfg.fix()
+
+	if err := cfg.checkRoot(); err != nil {
 		return err
 	}
-	if err := cfg.fix(); err != nil {
+	if err := cfg.checkModules(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Save проверяет и разворачивает include'ы, затем сохраняет конфигурацию
+// Save проверяет, затем сохраняет конфигурацию
 func (cfg *Config) Save(filename string) error {
 	var err error
-	if err = cfg.CheckAndFix(); err != nil {
+	if err = cfg.checkRoot(); err != nil {
+		return err
+	}
+	if err = cfg.checkModules(); err != nil {
 		return err
 	}
 
@@ -612,26 +604,26 @@ func (b *Body) GetCommands() []string {
 	return commands
 }
 
-// ReadAndParseYamlFile читает и парсит YAML файл, include'ы будут развернуты
-func ReadAndParseYamlFile(name string) (cfg Config, err error) {
+// ReadAndParseConfigYamlFile читает и парсит YAML файл
+func ReadAndParseConfigYamlFile(name string) (cfg Config, err error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
 		return cfg, err
 	}
-	return ParseYamlData(data)
+	return ParseYamlConfigData(data)
 }
 
-// ParseYamlData парсит YAML данные, include'ы будут развернуты
-func ParseYamlData(data []byte) (cfg Config, err error) {
-	return parseData(data, true, true)
+// ParseYamlConfigData парсит YAML данные, include'ы будут развернуты
+func ParseYamlConfigData(data []byte) (cfg Config, err error) {
+	return parseConfigData(data, true)
 }
 
-// ParseJsonData парсит JSON данные, include'ы вернут ошибку
-func ParseJsonData(data []byte) (cfg Config, err error) {
-	return parseData(data, false, true)
+// ParseJsonConfigData парсит JSON данные, include'ы вернут ошибку
+func ParseJsonConfigData(data []byte) (cfg Config, err error) {
+	return parseConfigData(data, false)
 }
 
-func parseData(data []byte, isYaml bool, fix bool) (cfg Config, err error) {
+func parseConfigData(data []byte, isYaml bool) (cfg Config, err error) {
 	if isYaml {
 		err = yaml.Unmarshal(data, &cfg)
 	} else {
@@ -641,14 +633,51 @@ func parseData(data []byte, isYaml bool, fix bool) (cfg Config, err error) {
 	if err != nil {
 		return cfg, err
 	}
-	if fix {
-		err = cfg.CheckAndFix()
-		if err != nil {
-			return cfg, err
-		}
+	err = cfg.CheckAndFix()
+	if err != nil {
+		return cfg, err
 	}
 
 	return cfg, nil
+}
+
+func ReadAndParseModulesYamlData(data []byte) (modules *[]Module, err error) {
+	cfg := Config{}
+	err = yaml.Unmarshal(data, &cfg)
+
+	if err != nil {
+		return nil, err
+	}
+	err = cfg.checkModules()
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg.Modules, nil
+}
+
+func ReadAndParseModulesYamlFile(name string) (modules *[]Module, err error) {
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return ReadAndParseModulesYamlData(data)
+}
+
+func ReadAndParseModulesYamlUrl(url string) (modules *[]Module, err error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return ReadAndParseModulesYamlData(data)
 }
 
 func removeByValue(arr []string, value string) []string {
@@ -673,7 +702,7 @@ func (s *HostConfigService) LoadConfig() error {
 		s.Config = &cfg
 		return s.SaveConfig()
 	} else {
-		if cfg, err = ReadAndParseYamlFile(s.pathImageFile); err != nil {
+		if cfg, err = ReadAndParseConfigYamlFile(s.pathImageFile); err != nil {
 			return err
 		}
 		s.Config = &cfg
@@ -686,10 +715,6 @@ func (s *HostConfigService) SaveConfig() error {
 	if s.Config == nil {
 		return errors.New(app.T_("Configuration not loaded"))
 	}
-	if s.Config.HasInclude() {
-		return errors.New(app.T_("Saving config with 'include' module type not supported"))
-	}
-
 	syncYamlMutex.Lock()
 	defer syncYamlMutex.Unlock()
 

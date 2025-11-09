@@ -107,7 +107,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	if err := cfgService.executeRepos(ctx); err != nil {
-		return nil
+		return err
 	}
 
 	app.Log.Info("Updating package cache")
@@ -123,14 +123,15 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	if err = cfgService.executeBranding(ctx); err != nil {
-		return nil
+		return err
 	}
 
 	if err = cfgService.executeKernel(ctx); err != nil {
-		return nil
+		return err
 	}
 
 	for _, module := range cfgService.serviceHostConfig.Config.Modules {
+
 		if err = cfgService.executeModule(ctx, module); err != nil {
 			return err
 		}
@@ -145,7 +146,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	app.Log.Info("Rebuild initramfs via dracut")
 	err = rebuildInitramfs(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// Cleanup
@@ -156,20 +157,6 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 }
 
 type moduleHandler func(context.Context, *ConfigService, *Body) error
-
-var moduleHandlers = map[string]moduleHandler{
-	TypeCopy:     executeCopyModule,
-	TypeGit:      executeGitModule,
-	TypeLink:     executeLinkModule,
-	TypeMerge:    executeMergeModule,
-	TypeMove:     executeMoveModule,
-	TypePackages: executePackagesModule,
-	TypeRemove:   executeRemoveModule,
-	TypeShell:    executeShellModule,
-	TypeSystemd:  executeSystemdModule,
-	TypeMkdir:    executeMkdirModule,
-	TypeReplace:  executeReplaceModule,
-}
 
 func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 	var branding = cfgService.serviceHostConfig.Config.Branding
@@ -441,6 +428,21 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
 	}
 
+	var moduleHandlers = map[string]moduleHandler{
+		TypeCopy:     executeCopyModule,
+		TypeGit:      executeGitModule,
+		TypeLink:     executeLinkModule,
+		TypeMerge:    executeMergeModule,
+		TypeMove:     executeMoveModule,
+		TypePackages: executePackagesModule,
+		TypeRemove:   executeRemoveModule,
+		TypeShell:    executeShellModule,
+		TypeSystemd:  executeSystemdModule,
+		TypeMkdir:    executeMkdirModule,
+		TypeReplace:  executeReplaceModule,
+		TypeInclude:  executeIncludeModule,
+	}
+
 	handler, ok := moduleHandlers[module.Type]
 	if !ok {
 		return fmt.Errorf(app.T_("Unknown module type: %s"), module.Type)
@@ -475,6 +477,32 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 // ExecuteModule - публичная обертка для тестирования модулей
 func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module Module) error {
 	return cfgService.executeModule(ctx, module)
+}
+
+func executeIncludeModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
+	if b.Url != "" {
+		modules, err := ReadAndParseModulesYamlUrl(b.Url)
+		if err != nil {
+			return err
+		}
+
+		for _, module := range *modules {
+			cfgService.executeModule(ctx, module)
+		}
+	}
+
+	for _, targetPath := range b.GetTargets() {
+		modules, err := ReadAndParseModulesYamlFile(targetPath)
+		if err != nil {
+			return err
+		}
+
+		for _, module := range *modules {
+			cfgService.executeModule(ctx, module)
+		}
+	}
+
+	return nil
 }
 
 func executeCopyModule(_ context.Context, _ *ConfigService, b *Body) error {
