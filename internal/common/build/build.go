@@ -56,8 +56,9 @@ const (
 )
 
 type ExprData struct {
-	Config *Config
-	Env    map[string]string
+	Config  *Config
+	Env     map[string]string
+	Version string
 }
 
 // NewConfigService — конструктор сервиса для сборки
@@ -459,9 +460,11 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 	}
 
 	if module.If != "" {
-		data := ExprData{}
-		data.Config = cfgService.serviceHostConfig.Config
-		data.Env = osutils.GetEnvMap()
+		data := ExprData{
+			Config:  cfgService.serviceHostConfig.Config,
+			Env:     osutils.GetEnvMap(),
+			Version: cfgService.appConfig.ConfigManager.GetConfig().Version,
+		}
 
 		env := expr.Env(data)
 
