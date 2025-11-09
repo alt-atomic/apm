@@ -84,6 +84,16 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
+	if len(cfgService.serviceHostConfig.Config.Env) != 0 {
+		for _, e := range cfgService.serviceHostConfig.Config.Env {
+			parts := strings.SplitN(e, "=", 2)
+			if len(parts) != 2 {
+				return fmt.Errorf("error in %s env", e)
+			}
+			os.Setenv(parts[0], parts[1])
+		}
+	}
+
 	if cfgService.serviceHostConfig.Config.Hostname != "" {
 		os.WriteFile(
 			"/etc/hostname",

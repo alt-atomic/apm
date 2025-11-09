@@ -73,6 +73,8 @@ type Config struct {
 	// Может быть взята из переменной среды
 	// APM_BUILD_NAME
 	Name string `yaml:"name" json:"name"`
+	// Переменные среды
+	Env []string `yaml:"env" json:"env"`
 	// Брендинг образа
 	Branding Branding `yaml:"branding" json:"branding"`
 	// Имя хоста
