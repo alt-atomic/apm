@@ -23,6 +23,7 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
+	"apm/internal/common/version"
 	"apm/internal/distrobox"
 	"apm/internal/kernel"
 	"apm/internal/system"
@@ -31,6 +32,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/godbus/dbus/v5"
@@ -56,6 +58,14 @@ func main() {
 	setupSignalHandling()
 	ctx = context.WithValue(ctx, app.AppConfigKey, appConfig)
 
+	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
+
+	os.Setenv("APM_VERSION", v.ToString())
+	os.Setenv("APM_VERSION_MAJOR", strconv.Itoa(v.Major))
+	os.Setenv("APM_VERSION_MINOR", strconv.Itoa(v.Minor))
+	os.Setenv("APM_VERSION_PATCH", strconv.Itoa(v.Patch))
+	os.Setenv("APM_VERSION_COMMITS", strconv.Itoa(v.Commits))
+
 	systemCommands := system.CommandList(ctx)
 	distroboxCommands := distrobox.CommandList(ctx)
 	kernelCommands := kernel.CommandList(ctx)
@@ -64,7 +74,7 @@ func main() {
 	rootCommand := &cli.Command{
 		Name:    "apm",
 		Usage:   "Atomic Package Manager",
-		Version: appConfig.ConfigManager.GetConfig().Version,
+		Version: v.ToString(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -98,6 +108,13 @@ func main() {
 				Usage:     app.T_("Show the list of commands or help for each command"),
 				ArgsUsage: app.T_("[command]"),
 				HideHelp:  true,
+			},
+			{
+				Name:      "version",
+				Aliases:   []string{"v"},
+				Usage:     app.T_("Print version"),
+				ArgsUsage: app.T_("[command]"),
+				Action:    printVersion,
 			},
 		},
 	}
@@ -134,11 +151,12 @@ func setupSignalHandling() {
 		}
 		code := 1
 		if s, ok := sig.(syscall.Signal); ok {
-			if s == syscall.SIGINT {
+			switch s {
+			case syscall.SIGINT:
 				code = 130
-			} else if s == syscall.SIGTERM {
+			case syscall.SIGTERM:
 				code = 143
-			} else {
+			default:
 				code = 128 + int(s)
 			}
 		}
@@ -166,7 +184,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
 		cliError(errors.New(errPermission))
-		return fmt.Errorf(errPermission)
+		return errors.New(errPermission)
 	}
 	defer cleanup()
 	err := appConfig.DBusManager.ConnectSessionBus()
@@ -212,7 +230,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
 		cliError(errors.New(errPermission))
-		return fmt.Errorf(errPermission)
+		return errors.New(errPermission)
 	}
 
 	defer cleanup()
@@ -223,7 +241,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if syscall.Geteuid() != 0 {
-		return fmt.Errorf(app.T_("Administrator privileges are required to start"))
+		return errors.New(app.T_("Administrator privileges are required to start"))
 	}
 
 	sysActions := system.NewActions(appConfig)
@@ -247,6 +265,12 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 	// Блокируем до сигнала
 	select {}
+}
+
+func printVersion(ctx context.Context, cmd *cli.Command) error {
+	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
+	fmt.Printf("%s version %s\n", "apm", v.ToString())
+	return nil
 }
 
 func cliError(err error) {

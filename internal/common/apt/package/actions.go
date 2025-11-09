@@ -364,11 +364,18 @@ func (a *Actions) Install(ctx context.Context, packages []string) error {
 	return nil
 }
 
-func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string, packagesRemove []string) error {
+func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string,
+	packagesRemove []string, purge bool, depends bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
 
-	err := a.serviceAptBinding.CombineInstallRemovePackages(packagesInstall, packagesRemove, a.getHandler(ctx))
+	err := a.serviceAptBinding.CombineInstallRemovePackages(
+		packagesInstall,
+		packagesRemove,
+		a.getHandler(ctx),
+		purge,
+		depends,
+	)
 	if err != nil {
 		return err
 	}

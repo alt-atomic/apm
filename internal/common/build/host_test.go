@@ -1,4 +1,4 @@
-package service
+package build
 
 import (
 	"strings"
@@ -129,91 +129,6 @@ func TestSplitCommand_LineLength(t *testing.T) {
 			t.Errorf("Line %d exceeds max length (%d): %d characters: %q",
 				i, maxLineLength, len(checkLine), line)
 		}
-	}
-}
-
-func TestHostImageService_checkCommands(t *testing.T) {
-	service := &HostImageService{}
-
-	tests := []struct {
-		name        string
-		config      Config
-		expectError bool
-	}{
-		{
-			name: "empty config",
-			config: Config{
-				Image: "test-image",
-				Packages: struct {
-					Install []string `yaml:"install" json:"install"`
-					Remove  []string `yaml:"remove" json:"remove"`
-				}{
-					Install: []string{},
-					Remove:  []string{},
-				},
-				Commands: []string{},
-			},
-			expectError: true,
-		},
-		{
-			name: "config with install packages",
-			config: Config{
-				Image: "test-image",
-				Packages: struct {
-					Install []string `yaml:"install" json:"install"`
-					Remove  []string `yaml:"remove" json:"remove"`
-				}{
-					Install: []string{"package1"},
-					Remove:  []string{},
-				},
-				Commands: []string{},
-			},
-			expectError: false,
-		},
-		{
-			name: "config with remove packages",
-			config: Config{
-				Image: "test-image",
-				Packages: struct {
-					Install []string `yaml:"install" json:"install"`
-					Remove  []string `yaml:"remove" json:"remove"`
-				}{
-					Install: []string{},
-					Remove:  []string{"package1"},
-				},
-				Commands: []string{},
-			},
-			expectError: false,
-		},
-		{
-			name: "config with commands",
-			config: Config{
-				Image: "test-image",
-				Packages: struct {
-					Install []string `yaml:"install" json:"install"`
-					Remove  []string `yaml:"remove" json:"remove"`
-				}{
-					Install: []string{},
-					Remove:  []string{},
-				},
-				Commands: []string{"echo hello"},
-			},
-			expectError: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := service.checkCommands(tt.config)
-
-			if tt.expectError && err == nil {
-				t.Error("Expected error but got none")
-			}
-
-			if !tt.expectError && err != nil {
-				t.Errorf("Expected no error but got: %v", err)
-			}
-		})
 	}
 }
 

@@ -152,3 +152,24 @@ func (s *TemporaryConfigService) DeleteFile() error {
 
 	return os.Remove(s.temporaryImageFile)
 }
+
+// removeElement удаляет элемент из среза строк.
+func removeElement(slice []string, element string) []string {
+	var newSlice []string
+	for _, v := range slice {
+		if v != element {
+			newSlice = append(newSlice, v)
+		}
+	}
+	return newSlice
+}
+
+// contains проверяет, содержит ли срез slice значение s.
+func contains(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}

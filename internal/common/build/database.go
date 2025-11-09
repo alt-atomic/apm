@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package build
 
 import (
 	"apm/internal/common/app"
@@ -88,8 +88,9 @@ func (DBHistory) TableName() string {
 
 // fromDBModel — превращает DBHistory (структура БД) в бизнес-структуру ImageHistory
 func (dbh DBHistory) fromDBModel() (ImageHistory, error) {
+	var err error
 	var cfg Config
-	if err := json.Unmarshal([]byte(dbh.ConfigJSON), &cfg); err != nil {
+	if cfg, err = ParseJsonConfigData([]byte(dbh.ConfigJSON)); err != nil {
 		return ImageHistory{}, fmt.Errorf(app.T_("Config conversion error: %v"), err)
 	}
 
@@ -209,7 +210,7 @@ func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config
 	}
 
 	var latestConfig Config
-	if err = json.Unmarshal([]byte(dbHist.ConfigJSON), &latestConfig); err != nil {
+	if latestConfig, err = ParseJsonConfigData([]byte(dbHist.ConfigJSON)); err != nil {
 		return false, fmt.Errorf(app.T_("History config conversion error: %v"), err)
 	}
 

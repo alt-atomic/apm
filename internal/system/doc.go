@@ -19,9 +19,9 @@ package system
 import (
 	_package "apm/internal/common/apt/package"
 	aptlib "apm/internal/common/binding/apt/lib"
+	"apm/internal/common/build"
 	"apm/internal/common/doc"
 	"apm/internal/common/reply"
-	"apm/internal/system/service"
 	"context"
 	_ "embed"
 	"reflect"
@@ -89,14 +89,14 @@ type ImageApplyResponse struct {
 
 // ImageHistoryResponse структура ответа для ImageHistory метода
 type ImageHistoryResponse struct {
-	Message    string                 `json:"message"`
-	History    []service.ImageHistory `json:"history"`
-	TotalCount int64                  `json:"totalCount"`
+	Message    string               `json:"message"`
+	History    []build.ImageHistory `json:"history"`
+	TotalCount int64                `json:"totalCount"`
 }
 
 // ImageConfigResponse структура ответа для ImageGetConfig/ImageSaveConfig методов
 type ImageConfigResponse struct {
-	Config service.Config `json:"config"`
+	Config build.Config `json:"config"`
 }
 
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода

@@ -22,7 +22,6 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"log"
@@ -40,40 +39,53 @@ import (
 
 // PackageDBService — сервис для операций с базой данных пакетов
 type PackageDBService struct {
-	db *gorm.DB
+	dbManager app.DatabaseManager
+	realDb    *gorm.DB
 }
+
+var initDBMutex sync.Mutex
 
 // syncDBMutex защищает операции синхронизации базы пакетов.
 var syncDBMutex sync.Mutex
 
-// NewPackageDBService  — конструктор сервиса
-func NewPackageDBService(db *sql.DB) (*PackageDBService, error) {
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			LogLevel: logger.Silent,
-		},
-	)
+func (s *PackageDBService) db() (*gorm.DB, error) {
+	initDBMutex.Lock()
+	defer initDBMutex.Unlock()
 
-	gormDB, err := gorm.Open(sqlite.Dialector{
-		Conn:       db,
-		DriverName: "sqlite3",
-	}, &gorm.Config{
-		Logger: gormLogger,
-	})
+	if s.realDb == nil {
+		gormLogger := logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				LogLevel: logger.Silent,
+			},
+		)
 
-	if err != nil {
-		return nil, fmt.Errorf("ошибка подключения к SQLite через GORM: %w", err)
+		var err error
+		s.realDb, err = gorm.Open(sqlite.Dialector{
+			Conn:       s.dbManager.GetSystemDB(),
+			DriverName: "sqlite3",
+		}, &gorm.Config{
+			Logger: gormLogger,
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("ошибка подключения к SQLite через GORM: %w", err)
+		}
+
+		// Автоматическая миграция
+		if err = s.realDb.AutoMigrate(&DBPackage{}); err != nil {
+			return nil, fmt.Errorf("ошибка миграции структуры таблицы: %w", err)
+		}
 	}
 
-	// Автоматическая миграция
-	if err = gormDB.AutoMigrate(&DBPackage{}); err != nil {
-		return nil, fmt.Errorf("ошибка миграции структуры таблицы: %w", err)
-	}
+	return s.realDb, nil
+}
 
+// NewPackageDBService — конструктор сервиса
+func NewPackageDBService(dbManager app.DatabaseManager) *PackageDBService {
 	return &PackageDBService{
-		db: gormDB,
-	}, nil
+		dbManager: dbManager,
+	}
 }
 
 type PackageType uint8
@@ -193,7 +205,12 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SavePackagesToDB"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SavePackagesToDB"))
 
-	err := s.db.Transaction(func(tx *gorm.DB) error {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
 		// Очищаем таблицу
 		if errDel := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&DBPackage{}).Error; errDel != nil {
 			return fmt.Errorf(app.T_("Table cleanup error: %w"), errDel)
@@ -226,8 +243,13 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 
 // GetPackageByName возвращает запись пакета по имени.
 func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName string) (Package, error) {
+	db, err := s.db()
+	if err != nil {
+		return Package{}, err
+	}
+
 	var dbPkg DBPackage
-	err := s.db.WithContext(ctx).
+	err = db.WithContext(ctx).
 		Where("name = ? OR (',' || aliases || ',') LIKE ?", packageName, "%,"+packageName+",%").
 		First(&dbPkg).Error
 	if err != nil {
@@ -242,7 +264,12 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
 
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec("DROP TABLE IF EXISTS tmp_installed").Error; err != nil {
 			return fmt.Errorf(app.T_("Temporary table drop error: %w"), err)
 		}
@@ -289,7 +316,12 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 
 // SearchPackagesByNameLike ищет пакеты по произвольному шаблону LIKE
 func (s *PackageDBService) SearchPackagesByNameLike(ctx context.Context, likePattern string, installed bool) ([]Package, error) {
-	query := s.db.WithContext(ctx).Model(&DBPackage{}).
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
+	query := db.WithContext(ctx).Model(&DBPackage{}).
 		Where("name LIKE ?", likePattern)
 
 	if installed {
@@ -314,7 +346,12 @@ func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePat
 		limit = 100
 	}
 
-	query := s.db.WithContext(ctx).
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
+	query := db.WithContext(ctx).
 		Model(&DBPackage{}).
 		Where("name LIKE ?", likePattern).
 		Limit(limit)
@@ -342,11 +379,14 @@ func (s *PackageDBService) QueryHostImagePackages(
 	sortField, sortOrder string,
 	limit, offset int,
 ) ([]Package, error) {
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
 
-	query := s.db.WithContext(ctx).Model(&DBPackage{})
+	query := db.WithContext(ctx).Model(&DBPackage{})
 
 	// Применяем фильтры через общий метод
-	var err error
 	query, err = s.applyFilters(query, filters)
 	if err != nil {
 		return nil, err
@@ -386,9 +426,13 @@ func (s *PackageDBService) QueryHostImagePackages(
 
 // CountHostImagePackages возвращает количество записей с учётом фильтров
 func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters map[string]interface{}) (int64, error) {
-	query := s.db.WithContext(ctx).Model(&DBPackage{})
+	db, err := s.db()
+	if err != nil {
+		return 0, err
+	}
 
-	var err error
+	query := db.WithContext(ctx).Model(&DBPackage{})
+
 	query, err = s.applyFilters(query, filters)
 	if err != nil {
 		return 0, err
@@ -456,9 +500,14 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) error {
 	dbPkg := pkg.toDBModel()
 
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
 	// Используем OnConflict для UPSERT логики
 	// Primary key состоит из name + version, используем оба поля
-	err := s.db.WithContext(ctx).
+	err = db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "name"}, {Name: "version"}},
 			DoUpdates: clause.AssignmentColumns([]string{
@@ -479,8 +528,13 @@ func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) e
 
 // PackageDatabaseExist проверяет, существует ли таблица и содержит ли она хотя бы одну запись.
 func (s *PackageDBService) PackageDatabaseExist(ctx context.Context) error {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
 	var count int64
-	if err := s.db.WithContext(ctx).
+	if err = db.WithContext(ctx).
 		Model(&DBPackage{}).
 		Count(&count).Error; err != nil {
 		return err

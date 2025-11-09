@@ -20,12 +20,17 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
+	_binding "apm/internal/common/binding/apt"
+	"apm/internal/common/build"
+	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	_kservice "apm/internal/kernel/service"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"syscall"
 )
@@ -33,11 +38,11 @@ import (
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	appConfig              *app.Config
-	serviceHostImage       *service.HostImageService
+	serviceHostImage       *build.HostImageService
 	serviceAptActions      *_package.Actions
 	serviceAptDatabase     *_package.PackageDBService
-	serviceHostDatabase    *service.HostDBService
-	serviceHostConfig      *service.HostConfigService
+	serviceHostDatabase    *build.HostDBService
+	serviceHostConfig      *build.HostConfigService
 	serviceTemporaryConfig *service.TemporaryConfigService
 }
 
@@ -46,9 +51,9 @@ func NewActionsWithDeps(
 	appConfig *app.Config,
 	aptDB *_package.PackageDBService,
 	aptActions *_package.Actions,
-	hostImage *service.HostImageService,
-	hostDB *service.HostDBService,
-	hostConfig *service.HostConfigService,
+	hostImage *build.HostImageService,
+	hostDB *build.HostDBService,
+	hostConfig *build.HostConfigService,
 	temporaryConfig *service.TemporaryConfigService,
 ) *Actions {
 	return &Actions{
@@ -64,20 +69,18 @@ func NewActionsWithDeps(
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions(appConfig *app.Config) *Actions {
-	hostPackageDBSvc, err := _package.NewPackageDBService(appConfig.DatabaseManager.GetSystemDB())
-	if err != nil {
-		app.Log.Fatal(err)
-	}
-	hostDBSvc, err := service.NewHostDBService(appConfig.DatabaseManager.GetSystemDB())
+	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
+
+	hostDBSvc, err := build.NewHostDBService(appConfig.DatabaseManager.GetSystemDB())
 	if err != nil {
 		app.Log.Fatal(err)
 	}
 
-	hostImageSvc := service.NewHostImageService(
-		appConfig.ConfigManager.GetConfig().CommandPrefix,
+	hostImageSvc := build.NewHostImageService(
+		appConfig.ConfigManager.GetConfig(),
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 	)
-	hostConfigSvc := service.NewHostConfigService(
+	hostConfigSvc := build.NewHostConfigService(
 		appConfig.ConfigManager.GetPathImageFile(),
 		hostDBSvc,
 		hostImageSvc,
@@ -99,9 +102,9 @@ func NewActions(appConfig *app.Config) *Actions {
 }
 
 type ImageStatus struct {
-	Image  service.HostImage `json:"image"`
-	Status string            `json:"status"`
-	Config service.Config    `json:"config"`
+	Image  build.HostImage `json:"image"`
+	Status string          `json:"status"`
+	Config build.Config    `json:"config"`
 }
 
 // CheckRemove проверяем пакеты перед удалением
@@ -159,7 +162,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool, confirm bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
@@ -186,19 +189,22 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 		return nil, errors.New(messageNothingDo)
 	}
 
-	reply.StopSpinnerForDialog(a.appConfig)
-	dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
-	if err != nil {
-		return nil, err
+	if !confirm {
+		reply.StopSpinnerForDialog(a.appConfig)
+		dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
+		if err != nil {
+			return nil, err
+		}
+
+		if !dialogStatus {
+			errDialog := errors.New(app.T_("Cancel dialog"))
+
+			return nil, errDialog
+		}
+
+		reply.CreateSpinner(a.appConfig)
 	}
 
-	if !dialogStatus {
-		errDialog := errors.New(app.T_("Cancel dialog"))
-
-		return nil, errDialog
-	}
-
-	reply.CreateSpinner(a.appConfig)
 	err = a.serviceAptActions.Remove(ctx, packageNames, purge, depends)
 	if err != nil {
 		return nil, err
@@ -232,7 +238,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
@@ -253,7 +259,13 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 		return nil, errPrepare
 	}
 
-	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false, false)
+	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesInstall,
+		packagesRemove,
+		false,
+		false,
+	)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -262,7 +274,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 		return nil, errors.New(app.T_("The operation will not make any changes"))
 	}
 
-	if len(packagesInfo) > 0 {
+	if len(packagesInfo) > 0 && !confirm {
 		reply.StopSpinnerForDialog(a.appConfig)
 
 		action := dialog.ActionInstall
@@ -289,7 +301,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 		return nil, err
 	}
 
-	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove)
+	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)
 	if errInstall != nil {
 		var matchedErr *apt.MatchedError
 		if errors.As(errInstall, &matchedErr) && matchedErr.NeedUpdate() {
@@ -358,6 +370,47 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 		Data: map[string]interface{}{
 			"message": app.T_("Package list updated successfully"),
 			"count":   len(packages),
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
+// ImageBuild Update Сборка образа
+func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
+	if !helper.IsRunningInContainer() {
+		return nil, errors.New(app.T_("Running build not in container not supported"))
+	}
+
+	app.Log.EnableStdoutLogging()
+	reply.StopSpinner(a.appConfig)
+
+	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
+		return nil, err
+	}
+
+	err := os.Chdir(a.appConfig.ConfigManager.GetResourcesDir())
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.serviceHostConfig.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	aptActions := _binding.NewActions()
+	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, a.serviceHostConfig)
+	err = buildService.Build(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := reply.APIResponse{
+		Data: map[string]any{
+			"message": app.T_("DONE"),
 		},
 		Error: false,
 	}
@@ -801,7 +854,7 @@ func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
 }
 
 // ImageSaveConfig сохранить конфиг
-func (a *Actions) ImageSaveConfig(config service.Config) (*reply.APIResponse, error) {
+func (a *Actions) ImageSaveConfig(config build.Config) (*reply.APIResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err

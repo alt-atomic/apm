@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"syscall"
 )
@@ -54,10 +55,7 @@ func NewActionsWithDeps(
 
 // NewActions создаёт новый экземпляр Actions.
 func NewActions(appConfig *app.Config) *Actions {
-	hostPackageDBSvc, err := _package.NewPackageDBService(appConfig.DatabaseManager.GetSystemDB())
-	if err != nil {
-		app.Log.Fatal(err)
-	}
+	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
 
 	aptActions := apt.NewActions()
 	aptPackageActions := _package.NewActions(hostPackageDBSvc, appConfig)
@@ -171,13 +169,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 			moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
 			moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", latest.Flavour))
 			// Добавляем только если его еще нет в списке
-			moduleExists := false
-			for _, existingModule := range modules {
-				if existingModule == moduleName {
-					moduleExists = true
-					break
-				}
-			}
+			moduleExists := slices.Contains(modules, moduleName)
 			if !moduleExists {
 				modules = append(modules, moduleName)
 			}

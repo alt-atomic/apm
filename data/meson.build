@@ -1,7 +1,7 @@
 conf = configuration_data()
 conf.set('SERVICE_ID', SERVICE_ID)
 conf.set('USER', 'root')
-conf.set('BINDIR', get_option('prefix') / get_option('bindir'))
+conf.set('BINDIR', get_option('bindir'))
 conf.set('NAME', meson.project_name())
 
 configure_file(
@@ -9,7 +9,7 @@ configure_file(
   output: SERVICE_ID + '.policy',
   configuration: conf,
   install: true,
-  install_dir: join_paths(get_option('datadir'), 'polkit-1', 'actions')
+  install_dir: get_option('datadir') / 'polkit-1' / 'actions'
 )
 
 configure_file(
@@ -25,7 +25,7 @@ configure_file(
   output: SERVICE_ID + '.service',
   configuration: conf,
   install: true,
-  install_dir: get_option('prefix') / get_option('datadir') / 'dbus-1' / 'system-services'
+  install_dir: get_option('datadir') / 'dbus-1' / 'system-services'
 )
 
 configure_file(
@@ -33,7 +33,7 @@ configure_file(
   output: SERVICE_ID + '.User.service',
   configuration: conf,
   install: true,
-  install_dir: get_option('prefix') / get_option('datadir') / 'dbus-1' / 'services'
+  install_dir: get_option('datadir') / 'dbus-1' / 'services'
 )
 
 systemd = dependency('systemd')

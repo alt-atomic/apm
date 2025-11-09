@@ -139,6 +139,12 @@ func CommandList(ctx context.Context) *cli.Command {
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
+						Name:    "yes",
+						Usage:   app.T_("Install without confirmation"),
+						Aliases: []string{"y"},
+						Value:   false,
+					},
+					&cli.BoolFlag{
 						Name:    "simulate",
 						Usage:   app.T_("Simulate installation"),
 						Aliases: []string{"s"},
@@ -151,7 +157,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if cmd.Bool("simulate") {
 						resp, err = actions.CheckInstall(ctx, cmd.Args().Slice())
 					} else {
-						resp, err = actions.Install(ctx, cmd.Args().Slice())
+						resp, err = actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
 					}
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
@@ -166,6 +172,12 @@ func CommandList(ctx context.Context) *cli.Command {
 				Usage:     app.T_("List of packages to remove"),
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "yes",
+						Usage:   app.T_("Remove without confirmation"),
+						Aliases: []string{"y"},
+						Value:   false,
+					},
 					&cli.BoolFlag{
 						Name:    "purge",
 						Usage:   app.T_("Attempt to remove all files"),
@@ -191,7 +203,8 @@ func CommandList(ctx context.Context) *cli.Command {
 					if cmd.Bool("simulate") {
 						resp, err = actions.CheckRemove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
 					} else {
-						resp, err = actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
+						resp, err = actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"),
+							cmd.Bool("yes"))
 					}
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
@@ -349,6 +362,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				Aliases: []string{"i"},
 				Hidden:  !appConfig.ConfigManager.GetConfig().IsAtomic,
 				Commands: []*cli.Command{
+					{
+						Name:  "build",
+						Usage: app.T_("Build image"),
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ImageBuild(ctx)
+							if err != nil {
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							}
+
+							return reply.CliResponse(ctx, *resp)
+						}),
+					},
 					{
 						Name:  "apply",
 						Usage: app.T_("Apply changes to the host"),

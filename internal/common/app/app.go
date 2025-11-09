@@ -60,6 +60,7 @@ func (l *testLogger) Error(...interface{})          {}
 func (l *testLogger) Errorf(string, ...interface{}) {}
 func (l *testLogger) Fatal(...interface{})          {}
 func (l *testLogger) Warning(...interface{})        {}
+func (l *testLogger) EnableStdoutLogging()          {}
 
 // LoggerImpl интерфейс для логирования
 type LoggerImpl interface {
@@ -71,6 +72,7 @@ type LoggerImpl interface {
 	Errorf(format string, args ...interface{})
 	Fatal(args ...interface{})
 	Warning(args ...interface{})
+	EnableStdoutLogging()
 }
 
 // DatabaseManager управляет подключениями к базам данных
