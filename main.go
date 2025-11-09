@@ -23,6 +23,7 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
+	"apm/internal/common/version"
 	"apm/internal/distrobox"
 	"apm/internal/kernel"
 	"apm/internal/system"
@@ -31,6 +32,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/godbus/dbus/v5"
@@ -56,6 +58,14 @@ func main() {
 	setupSignalHandling()
 	ctx = context.WithValue(ctx, app.AppConfigKey, appConfig)
 
+	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
+
+	os.Setenv("APM_VERSION", v.ToString())
+	os.Setenv("APM_VERSION_MAJOR", strconv.Itoa(v.Major))
+	os.Setenv("APM_VERSION_MINOR", strconv.Itoa(v.Minor))
+	os.Setenv("APM_VERSION_PATCH", strconv.Itoa(v.Patch))
+	os.Setenv("APM_VERSION_COMMITS", strconv.Itoa(v.Commits))
+
 	systemCommands := system.CommandList(ctx)
 	distroboxCommands := distrobox.CommandList(ctx)
 	kernelCommands := kernel.CommandList(ctx)
@@ -64,7 +74,7 @@ func main() {
 	rootCommand := &cli.Command{
 		Name:    "apm",
 		Usage:   "Atomic Package Manager",
-		Version: appConfig.ConfigManager.GetConfig().Version,
+		Version: v.ToString(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -258,7 +268,8 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 }
 
 func printVersion(ctx context.Context, cmd *cli.Command) error {
-	fmt.Printf("%s version %s\n", "apm", appConfig.ConfigManager.GetConfig().Version)
+	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
+	fmt.Printf("%s version %s\n", "apm", v.ToString())
 	return nil
 }
 

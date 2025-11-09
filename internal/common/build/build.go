@@ -21,6 +21,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
+	"apm/internal/common/version"
 	"apm/internal/kernel/service"
 	"context"
 	"errors"
@@ -58,7 +59,7 @@ const (
 type ExprData struct {
 	Config  *Config
 	Env     map[string]string
-	Version string
+	Version version.Version
 }
 
 // NewConfigService — конструктор сервиса для сборки
@@ -463,7 +464,7 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module Modul
 		data := ExprData{
 			Config:  cfgService.serviceHostConfig.Config,
 			Env:     osutils.GetEnvMap(),
-			Version: cfgService.appConfig.ConfigManager.GetConfig().Version,
+			Version: version.ParseVersion(cfgService.appConfig.ConfigManager.GetConfig().Version),
 		}
 
 		env := expr.Env(data)
