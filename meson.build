@@ -13,7 +13,12 @@ i18n = import('i18n')
 go_root = run_command('printenv', 'GOROOT', check: false)
 go_bin = go_root.returncode() != 0 ? find_program('go') : find_program(join_paths(go_root.stdout().strip(), 'bin', 'go'))
 
-version = run_command('sh', meson.current_source_dir() + '/scripts/get-version.sh', check: false).stdout()
+version = run_command(
+  'sh',
+  meson.current_source_dir() + '/scripts/get-version.sh',
+  meson.project_version(),
+  check: false
+).stdout()
 
 cpp = meson.get_compiler('cpp')
 apt_lib = cpp.find_library('apt-pkg', dirs: ['/usr/lib64', '/usr/lib'], required: true)

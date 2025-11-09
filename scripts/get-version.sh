@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null)
+VERSION=$1
+
+TAG="v$VERSION"
 
 if [ -z "$TAG" ]; then
   echo -n ""
