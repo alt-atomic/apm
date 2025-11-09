@@ -448,7 +448,7 @@ func CheckModules(modules *[]Module) error {
 	return nil
 }
 
-// CheckAndFix проверяет и разворачивает include'ы
+// CheckAndFix проверяет и ставит переменные среды
 func (cfg *Config) CheckAndFix() error {
 	cfg.fix()
 
@@ -513,7 +513,7 @@ type Body struct {
 
 	// Types: merge, include, copy, move, remove, systemd, link, mkdir, replace
 	// Usage:
-	// merge, include, copy: Путь
+	// merge, include, copy: Путь для подключения yml конфигов
 	// remove, mkdir, move, link, replace: Абсолютный путь
 	// systemd: Имя сервиса
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
@@ -613,12 +613,12 @@ func ReadAndParseConfigYamlFile(name string) (cfg Config, err error) {
 	return ParseYamlConfigData(data)
 }
 
-// ParseYamlConfigData парсит YAML данные, include'ы будут развернуты
+// ParseYamlConfigData парсит YAML данные и правит их
 func ParseYamlConfigData(data []byte) (cfg Config, err error) {
 	return parseConfigData(data, true)
 }
 
-// ParseJsonConfigData парсит JSON данные, include'ы вернут ошибку
+// ParseJsonConfigData парсит JSON данные и правит их
 func ParseJsonConfigData(data []byte) (cfg Config, err error) {
 	return parseConfigData(data, false)
 }
