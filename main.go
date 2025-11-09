@@ -141,11 +141,12 @@ func setupSignalHandling() {
 		}
 		code := 1
 		if s, ok := sig.(syscall.Signal); ok {
-			if s == syscall.SIGINT {
+			switch s {
+			case syscall.SIGINT:
 				code = 130
-			} else if s == syscall.SIGTERM {
+			case syscall.SIGTERM:
 				code = 143
-			} else {
+			default:
 				code = 128 + int(s)
 			}
 		}
@@ -173,7 +174,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
 		cliError(errors.New(errPermission))
-		return fmt.Errorf(errPermission)
+		return errors.New(errPermission)
 	}
 	defer cleanup()
 	err := appConfig.DBusManager.ConnectSessionBus()
@@ -219,7 +220,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
 		cliError(errors.New(errPermission))
-		return fmt.Errorf(errPermission)
+		return errors.New(errPermission)
 	}
 
 	defer cleanup()
@@ -230,7 +231,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	if syscall.Geteuid() != 0 {
-		return fmt.Errorf(app.T_("Administrator privileges are required to start"))
+		return errors.New(app.T_("Administrator privileges are required to start"))
 	}
 
 	sysActions := system.NewActions(appConfig)
@@ -257,7 +258,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 }
 
 func printVersion(ctx context.Context, cmd *cli.Command) error {
-	fmt.Printf("%s: %s\n", "APM - Atomic Package Manager", appConfig.ConfigManager.GetConfig().Version)
+	fmt.Printf("%s version %s\n", "apm", appConfig.ConfigManager.GetConfig().Version)
 	return nil
 }
 
