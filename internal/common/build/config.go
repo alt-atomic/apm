@@ -410,7 +410,7 @@ func CheckModules(modules *[]Module) error {
 				return fmt.Errorf(requiredText, TypeLink, "destination")
 			}
 		case TypePackages:
-			if len(b.Install) == 0 || len(b.Remove) == 0 {
+			if len(b.Install) == 0 && len(b.Remove) == 0 {
 				return fmt.Errorf(requiredTextOr, TypePackages, "install", "remove")
 			}
 		case TypeInclude:
