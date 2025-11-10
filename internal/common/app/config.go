@@ -121,6 +121,9 @@ func (cm *configManagerImpl) loadConfiguration(buildInfo BuildInfo) error {
 	if cm.config.PathDBSQLSystem == "" {
 		cm.config.PathDBSQLSystem = filepath.Join(os.TempDir(), "apm-system.db")
 	}
+	if cm.config.PathResourcesDir == "" {
+		cm.config.PathResourcesDir = filepath.Join(os.TempDir(), "apm-resources")
+	}
 
 	if err := cm.loadConfigFile(); err != nil {
 		return err
