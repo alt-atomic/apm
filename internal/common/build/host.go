@@ -325,8 +325,8 @@ func (h *HostImageService) GenerateDockerfile(config Config) error {
 	// Формирование Dockerfile.
 	var dockerfileLines []string
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", config.Image))
-	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", "resources", "/etc/apm/resources"))
-	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", "image.yml", "/etc/apm/image.yml"))
+	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", "resources", "/var/apm/resources"))
+	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", "image.yml", "/var/apm/image.yml"))
 	dockerfileLines = append(dockerfileLines, "RUN apm system image build")
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
