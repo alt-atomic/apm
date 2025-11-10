@@ -115,7 +115,7 @@ func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Comman
 
 			actions := NewActions(appConfig)
 
-			// reply.CreateSpinner(appConfig)
+			reply.CreateSpinner(appConfig)
 			return actionFunc(ctx, cmd, actions)
 		}
 	}
