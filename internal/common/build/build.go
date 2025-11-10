@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -525,22 +526,8 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module Modul
 }
 
 func executeIncludeModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
-	if b.Url != "" {
-		modules, err := ReadAndParseModulesYamlUrl(b.Url)
-		if err != nil {
-			return err
-		}
-
-		for _, module := range *modules {
-			err = cfgService.executeModule(ctx, module)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	for _, targetPath := range b.GetTargets() {
-		modules, err := ReadAndParseModulesYamlFile(targetPath)
+	for _, target := range b.GetTargets() {
+		modules, err := ReadAndParseModulesYaml(target)
 		if err != nil {
 			return err
 		}
@@ -618,8 +605,16 @@ func executeGitModule(ctx context.Context, cfgService *ConfigService, b *Body) e
 	}
 	defer os.RemoveAll(tempDir)
 
-	app.Log.Info(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
-	cmd := exec.CommandContext(ctx, "git", "clone", b.Url, tempDir)
+	app.Log.Info(fmt.Sprintf("Cloning %s to %s", b.Target, tempDir))
+
+	args := []string{}
+	args = append(args, "clone")
+	if b.Ref != "" {
+		args = append(args, "-b", b.Ref)
+	}
+	args = append(args, b.Target, tempDir)
+
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -680,7 +675,7 @@ func executeMergeModule(_ context.Context, _ *ConfigService, b *Body) error {
 		return fmt.Errorf("target in merge type must be absolute path")
 	}
 
-	return osutils.AppendFile(b.Target, b.Destination)
+	return osutils.AppendFile(b.Target, b.Destination, fs.FileMode(b.Perm))
 }
 
 func executeMoveModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
@@ -759,7 +754,7 @@ func executeMkdirModule(_ context.Context, _ *ConfigService, b *Body) error {
 			return fmt.Errorf("target in mkdir type must be absolute path")
 		}
 
-		err := os.MkdirAll(pathTarget, 0644)
+		err := os.MkdirAll(pathTarget, os.FileMode(b.Perm))
 		if err != nil {
 			return err
 		}

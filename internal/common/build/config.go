@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime"
 	"slices"
@@ -359,8 +360,8 @@ func CheckModules(modules *[]Module) error {
 			if len(b.GetCommands()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeGit, "command", "commands")
 			}
-			if b.Url == "" {
-				return fmt.Errorf(requiredText, TypeGit, "url")
+			if b.Target == "" {
+				return fmt.Errorf(requiredText, TypeGit, "target")
 			}
 		case TypeShell:
 			if len(b.GetCommands()) == 0 {
@@ -395,6 +396,9 @@ func CheckModules(modules *[]Module) error {
 			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeMkdir, "target", "targets")
 			}
+			if b.Perm == 0 {
+				return fmt.Errorf(requiredText, TypeMkdir, "perm")
+			}
 		case TypeSystemd:
 			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeSystemd, "target", "targets")
@@ -411,20 +415,11 @@ func CheckModules(modules *[]Module) error {
 				return fmt.Errorf(requiredTextOr, TypePackages, "install", "remove")
 			}
 		case TypeInclude:
-			if b.Url == "" && len(b.GetTargets()) == 0 {
-				return fmt.Errorf(requiredText, TypeInclude, "target', 'targets' or 'url")
+			if len(b.GetTargets()) == 0 {
+				return fmt.Errorf(requiredTextOr, TypeInclude, "target", "targets")
 			}
-			if b.Url != "" && len(b.GetTargets()) != 0 {
-				return fmt.Errorf("in include type dont allow 'url' and 'target'/'targets'")
-			}
-			for _, targetPath := range b.GetTargets() {
-				_, err := ReadAndParseModulesYamlFile(targetPath)
-				if err != nil {
-					return err
-				}
-			}
-			if b.Url != "" {
-				_, err := ReadAndParseModulesYamlUrl(b.Url)
+			for _, target := range b.GetTargets() {
+				_, err := ReadAndParseModulesYaml(target)
 				if err != nil {
 					return err
 				}
@@ -510,11 +505,12 @@ type Body struct {
 	// git: Зависимости для модуля. Они будут удалены после завершения модуля
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
-	// Types: merge, include, copy, move, remove, systemd, link, mkdir, replace
+	// Types: merge, include, copy, move, remove, systemd, link, mkdir, replace, git
 	// Usage:
 	// merge, include, copy: Путь для подключения yml конфигов
 	// remove, mkdir, move, link, replace: Абсолютный путь
 	// systemd: Имя сервиса
+	// git: URL git-репозитория
 	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
 	// Types: include, remove, systemd, mkdir
@@ -559,11 +555,6 @@ type Body struct {
 	// systemd: Использовать ли --global или нет
 	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
 
-	// Types: git
-	// Usage:
-	// git: URL git-репозитория
-	Url string `yaml:"url,omitempty" json:"url,omitempty"`
-
 	// Types: replace
 	// Usage:
 	// replace: Regex шаблон для замены
@@ -573,6 +564,16 @@ type Body struct {
 	// Usage:
 	// replace: Текст, на который нужно заменить
 	Repl string `yaml:"text,omitempty" json:"text,omitempty"`
+
+	// Types: git
+	// Usage:
+	// git: reference
+	Ref string `yaml:"ref,omitempty" ref:"text,omitempty"`
+
+	// Types: mkdir, [merge]
+	// Usage:
+	// mkdir, merge: file permissions
+	Perm uint8 `yaml:"perm,omitempty" ref:"perm,omitempty"`
 }
 
 // GetTargets возвращает все цели (target и targets)
@@ -655,6 +656,14 @@ func ReadAndParseModulesYamlData(data []byte) (modules *[]Module, err error) {
 	return &cfg.Modules, nil
 }
 
+func ReadAndParseModulesYaml(target string) (modules *[]Module, err error) {
+	if isURL(target) {
+		return ReadAndParseModulesYamlUrl(target)
+	} else {
+		return ReadAndParseModulesYamlFile(target)
+	}
+}
+
 func ReadAndParseModulesYamlFile(name string) (modules *[]Module, err error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
@@ -677,6 +686,15 @@ func ReadAndParseModulesYamlUrl(url string) (modules *[]Module, err error) {
 	}
 
 	return ReadAndParseModulesYamlData(data)
+}
+
+func isURL(str string) bool {
+	u, err := url.Parse(str)
+	if err != nil {
+		return false
+	}
+
+	return u.Scheme != "" && u.Host != ""
 }
 
 func removeByValue(arr []string, value string) []string {

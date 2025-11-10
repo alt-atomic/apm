@@ -27,6 +27,7 @@ package osutils
 import (
 	"context"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -75,14 +76,14 @@ func Capitalize(s string) string {
 	return string(runes)
 }
 
-func AppendFile(sourcePath, destPath string) error {
+func AppendFile(sourcePath, destPath string, perm fs.FileMode) error {
 	src, err := os.Open(sourcePath)
 	if err != nil {
 		return err
 	}
 	defer src.Close()
 
-	dst, err := os.OpenFile(destPath, os.O_APPEND|os.O_WRONLY, 0644)
+	dst, err := os.OpenFile(destPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, perm)
 	if err != nil {
 		return err
 	}
