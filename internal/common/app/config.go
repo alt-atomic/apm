@@ -68,16 +68,17 @@ type Colors struct {
 
 // Configuration основная конфигурация приложения
 type Configuration struct {
-	CommandPrefix    string `yaml:"commandPrefix"`
-	Environment      string `yaml:"environment"`
-	PathDBSQLSystem  string `yaml:"pathDBSQLSystem"`
-	PathDBSQLUser    string `yaml:"pathDBSQLUser"`
-	PathDBKV         string `yaml:"pathDBKV"`
-	PathImageFile    string `yaml:"pathImageFile"`
-	PathResourcesDir string `yaml:"pathResourcesDir"`
-	PathLocales      string `yaml:"pathLocales"`
-	Version          string `yaml:"version"`
-	Colors           Colors `yaml:"colors"`
+	CommandPrefix   string `yaml:"commandPrefix"`
+	Environment     string `yaml:"environment"`
+	PathDBSQLSystem string `yaml:"pathDBSQLSystem"`
+	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
+	PathDBKV        string `yaml:"pathDBKV"`
+	PathLocales     string `yaml:"pathLocales"`
+	Colors          Colors `yaml:"colors"`
+
+	PathImageFile    string `yaml:"-"`
+	PathResourcesDir string `yaml:"-"`
+	Version          string `yaml:"-"`
 
 	// Runtime flags
 	ExistStplr     bool   `yaml:"-"`
@@ -203,6 +204,9 @@ func (cm *configManagerImpl) ensureDirectories() error {
 		if err := EnsurePath(cm.config.PathDBSQLSystem); err != nil {
 			return err
 		}
+		if err := EnsureDir(cm.config.PathResourcesDir); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -240,14 +244,14 @@ func (cm *configManagerImpl) GetPathImageFile() string {
 	return cm.config.PathImageFile
 }
 
-// GetPathImageFile возвращает путь к файлу конфигурации образа
+// GetResourcesDir возвращает путь к файлу конфигурации образа
 func (cm *configManagerImpl) GetResourcesDir() string {
 	return cm.config.PathResourcesDir
 }
 
 // GetPathImageContainerFile возвращает путь к файлу для сборки контейнера
 func (cm *configManagerImpl) GetPathImageContainerFile() string {
-	return "/var/Containerfile"
+	return "/var/apm/Containerfile"
 }
 
 // SetFormat устанавливает формат вывода

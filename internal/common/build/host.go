@@ -178,9 +178,10 @@ func (h *HostImageService) EnableOverlay() error {
 func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (string, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.BuildImage"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.BuildImage"))
-	command := fmt.Sprintf("%s podman build --squash -t os /var", h.appConfig.CommandPrefix)
+
+	command := fmt.Sprintf("%s podman build --squash -t os /var/apm", h.appConfig.CommandPrefix)
 	if pullImage {
-		command = fmt.Sprintf("%s podman build --pull=always --squash -t os /var", h.appConfig.CommandPrefix)
+		command = fmt.Sprintf("%s podman build --pull=always --squash -t os /var/apm", h.appConfig.CommandPrefix)
 	}
 
 	stdout, err := PullAndProgress(ctx, command)
@@ -324,8 +325,8 @@ func (h *HostImageService) GenerateDockerfile(config Config) error {
 	// Формирование Dockerfile.
 	var dockerfileLines []string
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", config.Image))
-	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", h.appConfig.PathResourcesDir, "/etc/apm/resources"))
-	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", h.appConfig.PathImageFile, "/etc/apm/image.yml"))
+	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", "resources", "/etc/apm/resources"))
+	dockerfileLines = append(dockerfileLines, fmt.Sprintf("COPY \"%s\" \"%s\"", "image.yml", "/etc/apm/image.yml"))
 	dockerfileLines = append(dockerfileLines, "RUN apm system image build")
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"

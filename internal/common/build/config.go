@@ -49,7 +49,7 @@ func NewHostConfigService(pathImageFile string, hostDBService *HostDBService, ho
 	}
 }
 
-var imageApplyModuleName = "Image apply result"
+var imageApplyModuleName = "image-apply-results"
 var goodBranches = []string{
 	"sisyphus",
 }
@@ -68,15 +68,15 @@ type Config struct {
 	// Тип сборки. stable (по умолчанию) или nightly
 	// Может быть взята из переменной среды
 	// APM_BUILD_BUILD_TYPE
-	BuildType string `yaml:"build-type" json:"build-type"`
+	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty"`
 	// Имя образа. Используется в именах некоторых созданных файлов
 	// Может быть взята из переменной среды
 	// APM_BUILD_NAME
 	Name string `yaml:"name" json:"name"`
 	// Переменные среды
-	Env []string `yaml:"env" json:"env"`
+	Env []string `yaml:"env,omitempty" json:"env,omitempty"`
 	// Брендинг образа
-	Branding Branding `yaml:"branding" json:"branding"`
+	Branding Branding `yaml:"branding,omitempty" json:"branding,omitempty"`
 	// Имя хоста
 	// Может быть взята из переменной среды
 	// APM_BUILD_HOSTNAME
@@ -238,24 +238,32 @@ func (cfg *Config) IsRemoved(pkg string) bool {
 	return slices.Contains(cfg.getTotalRemove(), pkg)
 }
 
+func (cfg *Config) getApplyPackagesModule() *Module {
+	var empty = Module{
+		Name: imageApplyModuleName,
+		Type: TypePackages,
+		Body: Body{
+			Install: []string{},
+			Remove:  []string{},
+		},
+	}
+
+	if len(cfg.Modules) == 0 {
+		cfg.Modules = append(cfg.Modules, empty)
+	} else if cfg.Modules[len(cfg.Modules)-1].Type != TypePackages || cfg.Modules[len(cfg.Modules)-1].Name != imageApplyModuleName {
+		cfg.Modules = append(cfg.Modules, empty)
+	}
+
+	return &cfg.Modules[len(cfg.Modules)-1]
+}
+
 func (cfg *Config) AddInstallPackage(pkg string) {
 	var totalInstall = cfg.getTotalInstall()
 
 	if slices.Contains(totalInstall, pkg) {
 		return
 	} else {
-		var packagesModule *Module
-		if cfg.Modules[len(cfg.Modules)-1].Type != TypePackages || cfg.Modules[len(cfg.Modules)-1].Name != imageApplyModuleName {
-			cfg.Modules = append(cfg.Modules, Module{
-				Name: imageApplyModuleName,
-				Type: TypePackages,
-				Body: Body{
-					Install: []string{},
-					Remove:  []string{},
-				},
-			})
-		}
-		packagesModule = &cfg.Modules[len(cfg.Modules)-1]
+		var packagesModule = cfg.getApplyPackagesModule()
 		if slices.Contains(packagesModule.Body.Remove, pkg) {
 			packagesModule.Body.Remove = removeByValue(packagesModule.Body.Remove, pkg)
 		} else {
@@ -270,18 +278,7 @@ func (cfg *Config) AddRemovePackage(pkg string) {
 	if slices.Contains(totalRemove, pkg) {
 		return
 	} else {
-		var packagesModule *Module
-		if cfg.Modules[len(cfg.Modules)-1].Type != TypePackages || cfg.Modules[len(cfg.Modules)-1].Name != imageApplyModuleName {
-			cfg.Modules = append(cfg.Modules, Module{
-				Name: imageApplyModuleName,
-				Type: TypePackages,
-				Body: Body{
-					Install: []string{},
-					Remove:  []string{},
-				},
-			})
-		}
-		packagesModule = &cfg.Modules[len(cfg.Modules)-1]
+		var packagesModule = cfg.getApplyPackagesModule()
 		if slices.Contains(packagesModule.Body.Install, pkg) {
 			packagesModule.Body.Install = removeByValue(packagesModule.Body.Install, pkg)
 		} else {
@@ -316,14 +313,14 @@ func (cfg *Config) fix() {
 	if cfg.BuildType == "" {
 		cfg.BuildType = "stable"
 	}
+	if cfg.Name == "" {
+		cfg.Name = "local"
+	}
 }
 
 func (cfg *Config) checkRoot() error {
 	if cfg.Image == "" {
 		return errors.New(app.T_("Image can not be empty"))
-	}
-	if cfg.Name == "" {
-		return errors.New(app.T_("Name can not be empty"))
 	}
 	if (len(cfg.Kernel.Modules) != 0 || cfg.Kernel.IncludeHeaders) && cfg.Kernel.Flavour == "" {
 		return errors.New(app.T_("Kernel flavour can not be empty"))
