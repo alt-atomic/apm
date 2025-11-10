@@ -70,11 +70,7 @@ func NewActionsWithDeps(
 // NewActions создаёт новый экземпляр Actions.
 func NewActions(appConfig *app.Config) *Actions {
 	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
-
-	hostDBSvc, err := build.NewHostDBService(appConfig.DatabaseManager.GetSystemDB())
-	if err != nil {
-		app.Log.Fatal(err)
-	}
+	hostDBSvc := build.NewHostDBService(appConfig.DatabaseManager)
 
 	hostImageSvc := build.NewHostImageService(
 		appConfig.ConfigManager.GetConfig(),

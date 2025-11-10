@@ -20,7 +20,6 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +27,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"gorm.io/gorm/logger"
@@ -49,36 +49,50 @@ type DBHistory struct {
 }
 
 type HostDBService struct {
-	db *gorm.DB
+	dbManager app.DatabaseManager
+	realDb    *gorm.DB
+}
+
+var initDBMutex sync.Mutex
+
+func (h *HostDBService) db() (*gorm.DB, error) {
+	initDBMutex.Lock()
+	defer initDBMutex.Unlock()
+
+	if h.realDb == nil {
+		gormLogger := logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				LogLevel: logger.Silent,
+			},
+		)
+
+		var err error
+		h.realDb, err = gorm.Open(sqlite.Dialector{
+			Conn:       h.dbManager.GetSystemDB(),
+			DriverName: "sqlite3",
+		}, &gorm.Config{
+			Logger: gormLogger,
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("ошибка подключения к SQLite через GORM: %w", err)
+		}
+
+		// Автоматическая миграция
+		if err = h.realDb.AutoMigrate(&DBHistory{}); err != nil {
+			return nil, fmt.Errorf("ошибка миграции структуры таблицы: %w", err)
+		}
+	}
+
+	return h.realDb, nil
 }
 
 // NewHostDBService — конструктор сервиса
-func NewHostDBService(db *sql.DB) (*HostDBService, error) {
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			LogLevel: logger.Silent,
-		},
-	)
-
-	gormDB, err := gorm.Open(sqlite.Dialector{
-		Conn:       db,
-		DriverName: "sqlite3",
-	}, &gorm.Config{
-		Logger: gormLogger,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("ошибка подключения к SQLite через GORM: %w", err)
-	}
-
-	// автоматическая миграция
-	if err = gormDB.AutoMigrate(&DBHistory{}); err != nil {
-		return nil, fmt.Errorf("ошибка миграции структуры таблицы: %w", err)
-	}
-
+func NewHostDBService(dbManager app.DatabaseManager) *HostDBService {
 	return &HostDBService{
-		db: gormDB,
-	}, nil
+		dbManager: dbManager,
+	}
 }
 
 // TableName - задаём нужное имя таблицы
@@ -131,7 +145,12 @@ func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHis
 		return err
 	}
 
-	err = h.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	db, err := h.db()
+	if err != nil {
+		return err
+	}
+
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if errCreate := tx.Create(&dbHist).Error; errCreate != nil {
 			return fmt.Errorf(app.T_("Error inserting data: %v"), errCreate)
 		}
@@ -143,7 +162,12 @@ func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHis
 
 // GetImageHistoriesFiltered возвращает все записи по имени
 func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int) ([]ImageHistory, error) {
-	query := h.db.WithContext(ctx).Model(&DBHistory{})
+	db, err := h.db()
+	if err != nil {
+		return nil, err
+	}
+
+	query := db.WithContext(ctx).Model(&DBHistory{})
 
 	if imageNameFilter != "" {
 		query = query.Where("imagename LIKE ?", "%"+imageNameFilter+"%")
@@ -175,7 +199,12 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 
 // CountImageHistoriesFiltered — возвращает количество записей с фильтром по имени образа.
 func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (int, error) {
-	query := h.db.WithContext(ctx).Model(&DBHistory{})
+	db, err := h.db()
+	if err != nil {
+		return 0, err
+	}
+
+	query := db.WithContext(ctx).Model(&DBHistory{})
 
 	if imageNameFilter != "" {
 		query = query.Where("imagename LIKE ?", "%"+imageNameFilter+"%")
@@ -195,7 +224,12 @@ func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNa
 // IsLatestConfigSame сравнивает newConfig с последним сохранённым в БД.
 func (h *HostDBService) IsLatestConfigSame(ctx context.Context, newConfig Config) (bool, error) {
 	var dbHist DBHistory
-	err := h.db.WithContext(ctx).Model(&DBHistory{}).
+	db, err := h.db()
+	if err != nil {
+		return false, err
+	}
+
+	err = db.WithContext(ctx).Model(&DBHistory{}).
 		Order("imagedate DESC").
 		Limit(1).
 		Take(&dbHist).Error
