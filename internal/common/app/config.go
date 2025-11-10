@@ -283,7 +283,7 @@ func getDefaultColors() Colors {
 func EnsurePath(path string) error {
 	dir := filepath.Dir(path)
 
-	if err := os.MkdirAll(dir, 0777); err != nil {
+	if err := EnsureDir(dir); err != nil {
 		return err
 	}
 
