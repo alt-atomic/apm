@@ -26,15 +26,85 @@ package osutils
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode"
 )
+
+func parseSymbolicMode(s string) (os.FileMode, error) {
+	if len(s) != 9 {
+		return 0, fmt.Errorf("expected 9 characters, got %d", len(s))
+	}
+
+	var mode os.FileMode
+
+	// Сопоставляем позиции и биты
+	for i, char := range s {
+		switch i {
+		case 0:
+			if char == 'r' {
+				mode |= 0400
+			} // владелец: чтение
+		case 1:
+			if char == 'w' {
+				mode |= 0200
+			} // владелец: запись
+		case 2:
+			if char == 'x' {
+				mode |= 0100
+			} // владелец: исполнение
+		case 3:
+			if char == 'r' {
+				mode |= 0040
+			} // группа: чтение
+		case 4:
+			if char == 'w' {
+				mode |= 0020
+			} // группа: запись
+		case 5:
+			if char == 'x' {
+				mode |= 0010
+			} // группа: исполнение
+		case 6:
+			if char == 'r' {
+				mode |= 0004
+			} // другие: чтение
+		case 7:
+			if char == 'w' {
+				mode |= 0002
+			} // другие: запись
+		case 8:
+			if char == 'x' {
+				mode |= 0001
+			} // другие: исполнение
+		}
+	}
+
+	return mode, nil
+}
+
+func StringToFileMode(s string) (os.FileMode, error) {
+	if len(s) == 9 {
+		mode, err := parseSymbolicMode(s)
+		if err != nil {
+			return 0, err
+		}
+		return mode, nil
+	}
+
+	mode, err := strconv.ParseUint(s, 8, 32)
+	if err != nil {
+		return 0, err
+	}
+	return os.FileMode(mode), nil
+}
 
 func CleanDir(dir string) error {
 	files, err := os.ReadDir(dir)

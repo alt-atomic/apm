@@ -396,7 +396,7 @@ func CheckModules(modules *[]Module) error {
 			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeMkdir, "target", "targets")
 			}
-			if b.Perm == 0 {
+			if b.Perm == "" {
 				return fmt.Errorf(requiredText, TypeMkdir, "perm")
 			}
 		case TypeSystemd:
@@ -573,7 +573,7 @@ type Body struct {
 	// Types: mkdir, [merge]
 	// Usage:
 	// mkdir, merge: file permissions
-	Perm uint8 `yaml:"perm,omitempty" ref:"perm,omitempty"`
+	Perm string `yaml:"perm,omitempty" ref:"perm,omitempty"`
 }
 
 // GetTargets возвращает все цели (target и targets)

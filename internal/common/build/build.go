@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -675,7 +674,11 @@ func executeMergeModule(_ context.Context, _ *ConfigService, b *Body) error {
 		return fmt.Errorf("target in merge type must be absolute path")
 	}
 
-	return osutils.AppendFile(b.Target, b.Destination, fs.FileMode(b.Perm))
+	mode, err := osutils.StringToFileMode(b.Perm)
+	if err != nil {
+		return err
+	}
+	return osutils.AppendFile(b.Target, b.Destination, mode)
 }
 
 func executeMoveModule(ctx context.Context, cfgService *ConfigService, b *Body) error {
@@ -754,7 +757,11 @@ func executeMkdirModule(_ context.Context, _ *ConfigService, b *Body) error {
 			return fmt.Errorf("target in mkdir type must be absolute path")
 		}
 
-		err := os.MkdirAll(pathTarget, os.FileMode(b.Perm))
+		mode, err := osutils.StringToFileMode(b.Perm)
+		if err != nil {
+			return err
+		}
+		err = os.MkdirAll(pathTarget, mode)
 		if err != nil {
 			return err
 		}
