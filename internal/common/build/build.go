@@ -742,9 +742,16 @@ func executeRemoveModule(_ context.Context, _ *ConfigService, b *Body) error {
 			return fmt.Errorf("target in remove type must be absolute path")
 		}
 
-		err := os.RemoveAll(pathTarget)
-		if err != nil {
-			return err
+		if b.Inside {
+			err := osutils.Clean(pathTarget)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := os.RemoveAll(pathTarget)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

@@ -106,7 +106,33 @@ func StringToFileMode(s string) (os.FileMode, error) {
 	return os.FileMode(mode), nil
 }
 
-func CleanDir(dir string) error {
+func Clean(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		// File doesn't exists, do nothing
+		return nil
+	}
+
+	switch {
+	case info.IsDir():
+		return cleanDir(path)
+	case info.Mode().IsRegular():
+		return cleanFile(path)
+	default:
+		return nil
+	}
+}
+
+func cleanFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil
+	}
+
+	return os.WriteFile(path, []byte(""), info.Mode().Perm())
+}
+
+func cleanDir(dir string) error {
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err

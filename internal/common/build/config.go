@@ -574,6 +574,11 @@ type Body struct {
 	// Usage:
 	// mkdir, merge: file permissions
 	Perm string `yaml:"perm,omitempty" ref:"perm,omitempty"`
+
+	// Types: [remove]
+	// Usage:
+	// remove: remove inside of object instead of removing an object
+	Inside bool `yaml:"inside,omitempty" ref:"inside,omitempty"`
 }
 
 // GetTargets возвращает все цели (target и targets)
