@@ -45,6 +45,11 @@ optional support for atomic images based on ALT Linux.
 %setup -a1
 %autopatch -p1
 
+# Fix go vendoring build
+for file in $(find -name "*\[generated\]*"); do
+  mv -v "$file" "${file//\[generated\]/}"
+done
+
 %build
 %meson -Dprofile=prod
 %meson_build
