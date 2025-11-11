@@ -18,7 +18,7 @@ package lib
 
 /*
 // cgo-timestamp: 17574454192
-#cgo CPPFLAGS: -I${SRCDIR} -I/usr/include/apt-pkg -DAPT_WRAPPER_BUILD
+#cgo CPPFLAGS: -I${SRCDIR} -I/usr/include/apt-pkg -DAPT_WRAPPER_BUILD -D_FILE_OFFSET_BITS=64
 #cgo CXXFLAGS: -std=c++17
 #cgo LDFLAGS: -lapt-pkg -lstdc++
 
