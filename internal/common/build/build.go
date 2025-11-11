@@ -40,16 +40,18 @@ import (
 )
 
 const (
-	etcHostname         = "/etc/hostname"
-	etcHosts            = "/etc/hosts"
-	etcOsRelease        = "/etc/os-release"
-	usrLibOsRelease     = "/usr/lib/os-release"
-	aptSourcesList      = "/etc/apt/sources.list"
-	aptSourcesListD     = "/etc/apt/sources.list.d"
-	plymouthThemesDir   = "/usr/share/plymouth/themes"
-	plymouthConfigFile  = "/etc/plymouth/plymouthd.conf"
-	kernelDir           = "/usr/lib/modules"
-	bootVmlinuzTemplate = "/boot/vmlinuz-%s"
+	etcHostname              = "/etc/hostname"
+	etcHosts                 = "/etc/hosts"
+	etcOsRelease             = "/etc/os-release"
+	usrLibOsRelease          = "/usr/lib/os-release"
+	aptSourcesList           = "/etc/apt/sources.list"
+	aptSourcesListD          = "/etc/apt/sources.list.d"
+	plymouthThemesDir        = "/usr/share/plymouth/themes"
+	plymouthConfigFile       = "/etc/plymouth/plymouthd.conf"
+	plymouthKargsPath        = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
+	plymouthDracutConfPath   = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
+	kernelDir                = "/usr/lib/modules"
+	bootVmlinuzTemplate      = "/boot/vmlinuz-%s"
 
 	TypeCopy     = "copy"
 	TypeGit      = "git"
@@ -313,62 +315,42 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			}
 		}
 
-		plymouthKargsPath := "/usr/lib/bootc/kargs.d/00-plymouth.toml"
-		plymouthDracutCondPath := "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
+		plymouthPaths := []string{plymouthKargsPath, plymouthDracutConfPath}
 
 		if branding.PlymouthTheme == "disabled" {
-			err := os.WriteFile(
-				plymouthConfigFile,
-				[]byte(""),
-				0644,
-			)
-			if err != nil {
+			if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
 				return err
 			}
 
-			for _, p := range []string{plymouthKargsPath, plymouthDracutCondPath} {
-				err = os.RemoveAll(p)
-				if err != nil {
+			for _, p := range plymouthPaths {
+				if err := os.RemoveAll(p); err != nil {
 					return err
 				}
 			}
-
 		} else {
-			err := os.WriteFile(
-				plymouthConfigFile,
-				[]byte(strings.Join([]string{
-					"[Daemon]",
-					fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
-					"ShowDelay=0",
-					"DeviceTimeout=10",
-				}, "\n")+"\n"),
-				0644,
-			)
-			if err != nil {
+			plymouthConfig := strings.Join([]string{
+				"[Daemon]",
+				fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
+				"ShowDelay=0",
+				"DeviceTimeout=10",
+			}, "\n") + "\n"
+
+			if err := os.WriteFile(plymouthConfigFile, []byte(plymouthConfig), 0644); err != nil {
 				return err
 			}
 
-			for _, p := range []string{plymouthKargsPath, plymouthDracutCondPath} {
-				err = os.MkdirAll(path.Dir(p), 0644)
-				if err != nil {
+			for _, p := range plymouthPaths {
+				if err := os.MkdirAll(path.Dir(p), 0644); err != nil {
 					return err
 				}
 			}
 
-			err = os.WriteFile(
-				plymouthKargsPath,
-				[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`),
-				0644,
-			)
-			if err != nil {
+			if err := os.WriteFile(plymouthKargsPath,
+				[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`), 0644); err != nil {
 				return err
 			}
-			err = os.WriteFile(
-				plymouthDracutCondPath,
-				[]byte(`add_dracutmodules+=" plymouth "`),
-				0644,
-			)
-			if err != nil {
+
+			if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`), 0644); err != nil {
 				return err
 			}
 		}
