@@ -20,6 +20,7 @@ ExclusiveArch: %go_arches
 Source: %name-%version.tar
 Source1: vendor.tar
 Source11: %name.tmpfiles
+Patch: %name-%version-%release.patch
 
 # From v0.1.3 distrobox in optional requires
 # Requires: distrobox
@@ -42,6 +43,7 @@ optional support for atomic images based on ALT Linux.
 
 %prep
 %setup -a1
+%autopatch -p1
 
 %build
 %meson -Dprofile=prod

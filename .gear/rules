@@ -2,3 +2,4 @@ spec: .gear/apm.spec
 copy: .gear/apm.tmpfiles
 tar: v@version@:.
 tar: vendor name=vendor
+diff: v@version@:. . exclude=.gear exclude=vendor
