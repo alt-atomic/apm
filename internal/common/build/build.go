@@ -277,13 +277,16 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 	}
 
 	if branding.PlymouthTheme != "" {
-		files, err := os.ReadDir(plymouthThemesDir)
-		if err != nil {
-			return err
-		}
 		var themes []string
-		for _, file := range files {
-			themes = append(themes, file.Name())
+		if osutils.IsExists(plymouthThemesDir) {
+			files, err := os.ReadDir(plymouthThemesDir)
+			if err != nil {
+				return err
+			}
+
+			for _, file := range files {
+				themes = append(themes, file.Name())
+			}
 		}
 
 		if !slices.Contains(themes, branding.PlymouthTheme) {
@@ -310,7 +313,7 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			}
 		}
 
-		err = os.WriteFile(
+		err := os.WriteFile(
 			plymouthConfigFile,
 			[]byte(strings.Join([]string{
 				"[Daemon]",
