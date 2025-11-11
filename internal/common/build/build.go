@@ -40,18 +40,18 @@ import (
 )
 
 const (
-	etcHostname              = "/etc/hostname"
-	etcHosts                 = "/etc/hosts"
-	etcOsRelease             = "/etc/os-release"
-	usrLibOsRelease          = "/usr/lib/os-release"
-	aptSourcesList           = "/etc/apt/sources.list"
-	aptSourcesListD          = "/etc/apt/sources.list.d"
-	plymouthThemesDir        = "/usr/share/plymouth/themes"
-	plymouthConfigFile       = "/etc/plymouth/plymouthd.conf"
-	plymouthKargsPath        = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
-	plymouthDracutConfPath   = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
-	kernelDir                = "/usr/lib/modules"
-	bootVmlinuzTemplate      = "/boot/vmlinuz-%s"
+	etcHostname            = "/etc/hostname"
+	etcHosts               = "/etc/hosts"
+	etcOsRelease           = "/etc/os-release"
+	usrLibOsRelease        = "/usr/lib/os-release"
+	aptSourcesList         = "/etc/apt/sources.list"
+	aptSourcesListD        = "/etc/apt/sources.list.d"
+	plymouthThemesDir      = "/usr/share/plymouth/themes"
+	plymouthConfigFile     = "/etc/plymouth/plymouthd.conf"
+	plymouthKargsPath      = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
+	plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
+	kernelDir              = "/usr/lib/modules"
+	bootVmlinuzTemplate    = "/boot/vmlinuz-%s"
 
 	TypeCopy     = "copy"
 	TypeGit      = "git"
@@ -346,11 +346,11 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			}
 
 			if err := os.WriteFile(plymouthKargsPath,
-				[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`), 0644); err != nil {
+				[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
 				return err
 			}
 
-			if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`), 0644); err != nil {
+			if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
 				return err
 			}
 		}
