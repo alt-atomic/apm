@@ -17,41 +17,47 @@
 package system
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
+	_binding "apm/internal/common/binding/apt"
+	"apm/internal/common/build"
+	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	_kservice "apm/internal/kernel/service"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
-	"apm/lib"
 	"context"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 )
 
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
-	serviceHostImage       *service.HostImageService
+	appConfig              *app.Config
+	serviceHostImage       *build.HostImageService
 	serviceAptActions      *_package.Actions
 	serviceAptDatabase     *_package.PackageDBService
-	serviceHostDatabase    *service.HostDBService
-	serviceHostConfig      *service.HostConfigService
+	serviceHostDatabase    *build.HostDBService
+	serviceHostConfig      *build.HostConfigService
 	serviceTemporaryConfig *service.TemporaryConfigService
 }
 
 // NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
 func NewActionsWithDeps(
+	appConfig *app.Config,
 	aptDB *_package.PackageDBService,
 	aptActions *_package.Actions,
-	hostImage *service.HostImageService,
-	hostDB *service.HostDBService,
-	hostConfig *service.HostConfigService,
+	hostImage *build.HostImageService,
+	hostDB *build.HostDBService,
+	hostConfig *build.HostConfigService,
 	temporaryConfig *service.TemporaryConfigService,
 ) *Actions {
 	return &Actions{
+		appConfig:              appConfig,
 		serviceHostImage:       hostImage,
 		serviceAptActions:      aptActions,
 		serviceAptDatabase:     aptDB,
@@ -62,22 +68,26 @@ func NewActionsWithDeps(
 }
 
 // NewActions создаёт новый экземпляр Actions.
-func NewActions() *Actions {
-	hostPackageDBSvc, err := _package.NewPackageDBService(lib.GetDB(true))
-	if err != nil {
-		lib.Log.Fatal(err)
-	}
-	hostDBSvc, err := service.NewHostDBService(lib.GetDB(true))
-	if err != nil {
-		lib.Log.Fatal(err)
-	}
+func NewActions(appConfig *app.Config) *Actions {
+	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
+	hostDBSvc := build.NewHostDBService(appConfig.DatabaseManager)
 
-	hostConfigSvc := service.NewHostConfigService(lib.Env.PathImageFile, hostDBSvc)
-	hostTemporarySvc := service.NewTemporaryConfigService(filepath.Join(os.TempDir(), "apm.tmp"))
-	hostImageSvc := service.NewHostImageService(hostConfigSvc)
-	hostAptSvc := _package.NewActions(hostPackageDBSvc)
+	hostImageSvc := build.NewHostImageService(
+		appConfig.ConfigManager.GetConfig(),
+		appConfig.ConfigManager.GetPathImageContainerFile(),
+	)
+	hostConfigSvc := build.NewHostConfigService(
+		appConfig.ConfigManager.GetPathImageFile(),
+		hostDBSvc,
+		hostImageSvc,
+	)
+	hostTemporarySvc := service.NewTemporaryConfigService(
+		appConfig.ConfigManager.GetTemporaryImageFile(),
+	)
+	hostAptSvc := _package.NewActions(hostPackageDBSvc, appConfig)
 
 	return &Actions{
+		appConfig:              appConfig,
 		serviceHostImage:       hostImageSvc,
 		serviceAptActions:      hostAptSvc,
 		serviceAptDatabase:     hostPackageDBSvc,
@@ -88,21 +98,21 @@ func NewActions() *Actions {
 }
 
 type ImageStatus struct {
-	Image  service.HostImage `json:"image"`
-	Status string            `json:"status"`
-	Config service.Config    `json:"config"`
+	Image  build.HostImage `json:"image"`
+	Status string          `json:"status"`
+	Config build.Config    `json:"config"`
 }
 
 // CheckRemove проверяем пакеты перед удалением
-func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool) (*reply.APIResponse, error) {
-	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge)
+func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool, depends bool) (*reply.APIResponse, error) {
+	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge, depends)
 	if aptError != nil {
 		return nil, aptError
 	}
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": lib.T_("Inspection information"),
+			"message": app.T_("Inspection information"),
 			"info":    packageParse,
 		},
 		Error: false,
@@ -120,7 +130,7 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (*reply.APIResponse, error) 
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": lib.T_("Inspection information"),
+			"message": app.T_("Inspection information"),
 			"info":    packageParse,
 		},
 		Error: false,
@@ -138,7 +148,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": lib.T_("Inspection information"),
+			"message": app.T_("Inspection information"),
 			"info":    packageParse,
 		},
 		Error: false,
@@ -148,8 +158,8 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*reply.APIResponse, error) {
-	err := a.checkOverlay()
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool, confirm bool) (*reply.APIResponse, error) {
+	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -160,35 +170,38 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := errors.New(lib.T_("At least one package must be specified"))
+		errPackageNotFound := errors.New(app.T_("At least one package must be specified"))
 
 		return nil, errPackageNotFound
 	}
 
-	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge)
+	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge, depends)
 	if errFind != nil {
 		return nil, errFind
 	}
 
 	if packageParse.RemovedCount == 0 {
-		messageNothingDo := lib.T_("No candidates for removal found")
+		messageNothingDo := app.T_("No candidates for removal found")
 		return nil, errors.New(messageNothingDo)
 	}
 
-	reply.StopSpinnerForDialog()
-	dialogStatus, err := dialog.NewDialog(packagesInfo, *packageParse, dialog.ActionRemove)
-	if err != nil {
-		return nil, err
+	if !confirm {
+		reply.StopSpinnerForDialog(a.appConfig)
+		dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
+		if err != nil {
+			return nil, err
+		}
+
+		if !dialogStatus {
+			errDialog := errors.New(app.T_("Cancel dialog"))
+
+			return nil, errDialog
+		}
+
+		reply.CreateSpinner(a.appConfig)
 	}
 
-	if !dialogStatus {
-		errDialog := errors.New(lib.T_("Cancel dialog"))
-
-		return nil, errDialog
-	}
-
-	reply.CreateSpinner()
-	err = a.serviceAptActions.Remove(ctx, packageNames, purge)
+	err = a.serviceAptActions.Remove(ctx, packageNames, purge, depends)
 	if err != nil {
 		return nil, err
 	}
@@ -199,11 +212,11 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 		return nil, err
 	}
 
-	messageAnswer := fmt.Sprintf(lib.TN_("%s removed successfully", "%s removed successfully", packageParse.RemovedCount), removePackageNames)
+	messageAnswer := fmt.Sprintf(app.TN_("%s removed successfully", "%s removed successfully", packageParse.RemovedCount), removePackageNames)
 
-	if lib.Env.IsAtomic {
-		messageAnswer += lib.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
-		errSave := a.saveChange([]string{}, packageNames)
+	if a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		messageAnswer += app.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
+		errSave := a.saveChange(ctx, []string{}, packageNames)
 		if errSave != nil {
 			return nil, errSave
 		}
@@ -221,8 +234,8 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool) (*r
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIResponse, error) {
-	err := a.checkOverlay()
+func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) (*reply.APIResponse, error) {
+	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +246,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 	}
 
 	if len(packages) == 0 {
-		errPackageNotFound := errors.New(lib.T_("You must specify at least one package"))
+		errPackageNotFound := errors.New(app.T_("You must specify at least one package"))
 		return nil, errPackageNotFound
 	}
 
@@ -242,35 +255,41 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 		return nil, errPrepare
 	}
 
-	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, packagesInstall, packagesRemove, false)
+	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesInstall,
+		packagesRemove,
+		false,
+		false,
+	)
 	if errFind != nil {
 		return nil, errFind
 	}
 
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
-		return nil, errors.New(lib.T_("The operation will not make any changes"))
+		return nil, errors.New(app.T_("The operation will not make any changes"))
 	}
 
-	if len(packagesInfo) > 0 {
-		reply.StopSpinnerForDialog()
+	if len(packagesInfo) > 0 && !confirm {
+		reply.StopSpinnerForDialog(a.appConfig)
 
 		action := dialog.ActionInstall
 		if packageParse.RemovedCount > 0 {
 			action = dialog.ActionMultiInstall
 		}
 
-		dialogStatus, errDialog := dialog.NewDialog(packagesInfo, *packageParse, action)
+		dialogStatus, errDialog := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, action)
 		if errDialog != nil {
 			return nil, errDialog
 		}
 
 		if !dialogStatus {
-			errDialog = errors.New(lib.T_("Cancel dialog"))
+			errDialog = errors.New(app.T_("Cancel dialog"))
 
 			return nil, errDialog
 		}
 
-		reply.CreateSpinner()
+		reply.CreateSpinner(a.appConfig)
 	}
 
 	err = a.serviceAptActions.AptUpdate(ctx)
@@ -278,7 +297,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 		return nil, err
 	}
 
-	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove)
+	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)
 	if errInstall != nil {
 		var matchedErr *apt.MatchedError
 		if errors.As(errInstall, &matchedErr) && matchedErr.NeedUpdate() {
@@ -287,7 +306,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 				return nil, err
 			}
 
-			errAptRepo := errors.New(lib.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
+			errAptRepo := errors.New(app.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
 
 			return nil, errAptRepo
 		}
@@ -302,14 +321,14 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 
 	messageAnswer := fmt.Sprintf(
 		"%s %s %s",
-		fmt.Sprintf(lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
-		lib.T_("and"),
-		fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
+		fmt.Sprintf(app.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+		app.T_("and"),
+		fmt.Sprintf(app.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
 	)
 
-	if lib.Env.IsAtomic {
-		messageAnswer += lib.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
-		errSave := a.saveChange(packagesInstall, packagesRemove)
+	if a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		messageAnswer += app.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
+		errSave := a.saveChange(ctx, packagesInstall, packagesRemove)
 		if errSave != nil {
 			return nil, errSave
 		}
@@ -328,7 +347,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) (*reply.APIRes
 
 // Update обновляет информацию или базу данных пакетов.
 func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkOverlay()
+	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -345,8 +364,49 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": lib.T_("Package list updated successfully"),
+			"message": app.T_("Package list updated successfully"),
 			"count":   len(packages),
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
+// ImageBuild Update Сборка образа
+func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
+	if !helper.IsRunningInContainer() {
+		return nil, errors.New(app.T_("Running build not in container not supported"))
+	}
+
+	app.Log.EnableStdoutLogging()
+	reply.StopSpinner(a.appConfig)
+
+	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
+		return nil, err
+	}
+
+	err := os.Chdir(a.appConfig.ConfigManager.GetResourcesDir())
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.serviceHostConfig.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	aptActions := _binding.NewActions()
+	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, a.serviceHostConfig)
+	err = buildService.Build(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := reply.APIResponse{
+		Data: map[string]any{
+			"message": app.T_("DONE"),
 		},
 		Error: false,
 	}
@@ -356,7 +416,7 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 
 // Upgrade общее обновление системы
 func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkOverlay()
+	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -379,26 +439,26 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
 		return &reply.APIResponse{
 			Data: map[string]interface{}{
-				"message": lib.T_("The operation will not make any changes"),
+				"message": app.T_("The operation will not make any changes"),
 			},
 			Error: false,
 		}, nil
 	}
 
-	reply.StopSpinnerForDialog()
+	reply.StopSpinnerForDialog(a.appConfig)
 
-	dialogStatus, err := dialog.NewDialog([]_package.Package{}, *packageParse, dialog.ActionUpgrade)
+	dialogStatus, err := dialog.NewDialog(a.appConfig, []_package.Package{}, *packageParse, dialog.ActionUpgrade)
 	if err != nil {
 		return nil, err
 	}
 
 	if !dialogStatus {
-		errDialog := errors.New(lib.T_("Cancel dialog"))
+		errDialog := errors.New(app.T_("Cancel dialog"))
 
 		return nil, errDialog
 	}
 
-	reply.CreateSpinner()
+	reply.CreateSpinner(a.appConfig)
 
 	errUpgrade := a.serviceAptActions.Upgrade(ctx)
 	if errUpgrade != nil {
@@ -407,14 +467,14 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 
 	messageAnswer := fmt.Sprintf(
 		"%s %s %s",
-		fmt.Sprintf(lib.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
-		lib.T_("and"),
-		fmt.Sprintf(lib.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
+		fmt.Sprintf(app.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+		app.T_("and"),
+		fmt.Sprintf(app.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
 	)
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message": lib.T_("The system has been upgrade successfully"),
+			"message": app.T_("The system has been upgrade successfully"),
 			"result":  messageAnswer,
 		},
 		Error: false,
@@ -428,7 +488,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 	packageName = strings.TrimSpace(packageName)
 	//packageName = helper.CleanPackageName(packageName)
 	if packageName == "" {
-		errMsg := lib.T_("Package name must be specified, for example info package")
+		errMsg := app.T_("Package name must be specified, for example info package")
 		return nil, errors.New(errMsg)
 	}
 
@@ -449,7 +509,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 		}
 
 		if len(alternativePackages) == 0 {
-			errorFindPackage := fmt.Sprintf(lib.T_("Failed to retrieve information about the package %s"), packageName)
+			errorFindPackage := fmt.Sprintf(app.T_("Failed to retrieve information about the package %s"), packageName)
 			return nil, errors.New(errorFindPackage)
 		}
 
@@ -458,7 +518,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 			altNames = append(altNames, altPkg.Name)
 		}
 
-		message := err.Error() + lib.T_(". Maybe you were looking for: ")
+		message := err.Error() + app.T_(". Maybe you were looking for: ")
 
 		errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
 
@@ -467,7 +527,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     lib.T_("Package found"),
+			"message":     app.T_("Package found"),
 			"packageInfo": a.FormatPackageOutput(packageInfo, isFullFormat),
 		},
 		Error: false,
@@ -527,10 +587,10 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	}
 
 	if len(packages) == 0 {
-		return nil, errors.New(lib.T_("Nothing found"))
+		return nil, errors.New(app.T_("Nothing found"))
 	}
 
-	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
+	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
@@ -544,7 +604,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	return &resp, nil
 }
 
-// GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
+// GetFilterFields возвращает список свойств для фильтрации. Метод для DBUS
 func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, error) {
 	if err := a.validateDB(ctx); err != nil {
 		return nil, err
@@ -579,8 +639,8 @@ func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, erro
 		case "typePackage":
 			ff.Type = "ENUM"
 			ff.Info = map[_package.PackageType]string{
-				_package.PackageTypeSystem: lib.T_("System package"),
-				_package.PackageTypeStplr:  lib.T_("Stplr package"),
+				_package.PackageTypeSystem: app.T_("System package"),
+				_package.PackageTypeStplr:  app.T_("Stplr package"),
 			}
 		}
 
@@ -602,7 +662,7 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(lib.T_("You must specify the package name, for example `%s package`"), "search")
+		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "search")
 		return nil, errors.New(errMsg)
 	}
 
@@ -612,10 +672,10 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 	}
 
 	if len(packages) == 0 {
-		return nil, errors.New(lib.T_("Nothing found"))
+		return nil, errors.New(app.T_("Nothing found"))
 	}
 
-	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(packages)), len(packages))
+	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
@@ -637,7 +697,7 @@ func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     lib.T_("Image status"),
+			"message":     app.T_("Image status"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
@@ -665,7 +725,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     lib.T_("Command executed successfully"),
+			"message":     app.T_("Command executed successfully"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
@@ -676,7 +736,12 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageApply применить изменения к хосту
 func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.serviceTemporaryConfig.LoadConfig()
+	err := a.checkOverlay(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.serviceTemporaryConfig.LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -687,9 +752,10 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
-		reply.StopSpinnerForDialog()
+		reply.StopSpinnerForDialog(a.appConfig)
 		// Показываем диалог выбора пакетов
 		result, errDialog := dialog.NewPackageSelectionDialog(
+			a.appConfig,
 			a.serviceTemporaryConfig.Config.Packages.Install,
 			a.serviceTemporaryConfig.Config.Packages.Remove,
 		)
@@ -698,11 +764,11 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 		}
 
 		if result.Canceled {
-			errDialog = errors.New(lib.T_("Cancel dialog"))
+			errDialog = errors.New(app.T_("Cancel dialog"))
 			return nil, errDialog
 		}
 
-		reply.CreateSpinner()
+		reply.CreateSpinner(a.appConfig)
 		for _, pkg := range result.InstallPackages {
 			err = a.serviceHostConfig.AddInstallPackage(pkg)
 			if err != nil {
@@ -727,7 +793,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, false, true)
+	err = a.serviceHostImage.BuildAndSwitch(ctx, false, true, a.serviceHostConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -736,7 +802,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
-			"message":     lib.T_("Changes applied successfully. A reboot is required"),
+			"message":     app.T_("Changes applied successfully. A reboot is required"),
 			"bootedImage": imageStatus,
 		},
 		Error: false,
@@ -757,7 +823,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 		return nil, err
 	}
 
-	msg := fmt.Sprintf(lib.TN_("%d record found", "%d records found", len(history)), len(history))
+	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(history)), len(history))
 
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
@@ -789,7 +855,7 @@ func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
 }
 
 // ImageSaveConfig сохранить конфиг
-func (a *Actions) ImageSaveConfig(config service.Config) (*reply.APIResponse, error) {
+func (a *Actions) ImageSaveConfig(config build.Config) (*reply.APIResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
@@ -813,8 +879,8 @@ func (a *Actions) ImageSaveConfig(config service.Config) (*reply.APIResponse, er
 }
 
 // checkOverlay проверяет, включен ли overlay
-func (a *Actions) checkOverlay() error {
-	if lib.Env.IsAtomic {
+func (a *Actions) checkOverlay(_ context.Context) error {
+	if a.appConfig.ConfigManager.GetConfig().IsAtomic {
 		err := a.serviceHostImage.EnableOverlay()
 		if err != nil {
 			return err
@@ -825,9 +891,9 @@ func (a *Actions) checkOverlay() error {
 }
 
 // saveChange применяет изменения к образу системы
-func (a *Actions) saveChange(packagesInstall []string, packagesRemove []string) error {
-	if !lib.Env.IsAtomic {
-		return errors.New(lib.T_("This option is only available for an atomic system"))
+func (a *Actions) saveChange(_ context.Context, packagesInstall []string, packagesRemove []string) error {
+	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		return errors.New(app.T_("This option is only available for an atomic system"))
 	}
 
 	if err := a.serviceTemporaryConfig.LoadConfig(); err != nil {
@@ -863,7 +929,7 @@ func (a *Actions) saveChange(packagesInstall []string, packagesRemove []string) 
 func (a *Actions) validateDB(ctx context.Context) error {
 	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
 		if syscall.Geteuid() != 0 {
-			return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+			return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
 		}
 
 		_, err = a.serviceAptActions.Update(ctx)
@@ -906,14 +972,14 @@ func (a *Actions) getImageStatus(_ context.Context) (ImageStatus, error) {
 
 	if hostImage.Status.Booted.Image.Image.Transport == "containers-storage" {
 		return ImageStatus{
-			Status: lib.T_("Modified image. Configuration file: ") + lib.Env.PathImageFile,
+			Status: app.T_("Modified image. Configuration file: ") + a.appConfig.ConfigManager.GetConfig().PathImageFile,
 			Image:  hostImage,
 			Config: *a.serviceHostConfig.Config,
 		}, nil
 	}
 
 	return ImageStatus{
-		Status: lib.T_("Cloud image without changes"),
+		Status: app.T_("Cloud image without changes"),
 		Image:  hostImage,
 		Config: *a.serviceHostConfig.Config,
 	}, nil

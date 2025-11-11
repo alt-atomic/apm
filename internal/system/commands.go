@@ -17,9 +17,9 @@
 package system
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"context"
 	"fmt"
 	"strings"
@@ -30,7 +30,7 @@ import (
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
 func newErrorResponse(message string) reply.APIResponse {
-	lib.Log.Error(message)
+	app.Log.Error(message)
 
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
@@ -40,6 +40,7 @@ func newErrorResponse(message string) reply.APIResponse {
 
 func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
+		appConfig := app.GetAppConfig(ctx)
 		args := cmd.Args().Slice()
 
 		// Текущий токен — последний позиционный аргумент (если есть)
@@ -65,7 +66,7 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 		}
 
 		like := base + "%"
-		svc := NewActions().serviceAptDatabase
+		svc := NewActions(appConfig).serviceAptDatabase
 		if svc == nil {
 			return
 		}
@@ -104,16 +105,17 @@ func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 		return func(ctx context.Context, cmd *cli.Command) error {
-			lib.Env.Format = cmd.String("format")
+			appConfig := app.GetAppConfig(ctx)
+			appConfig.ConfigManager.SetFormat(cmd.String("format"))
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
 			if requireRoot && syscall.Geteuid() != 0 {
-				return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+				return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
 			}
 
-			actions := NewActions()
+			actions := NewActions(appConfig)
 
-			reply.CreateSpinner()
+			reply.CreateSpinner(appConfig)
 			return actionFunc(ctx, cmd, actions)
 		}
 	}
@@ -122,19 +124,41 @@ func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Comman
 var withGlobalWrapper = wrapperWithOptions(false)
 var withRootCheckWrapper = wrapperWithOptions(true)
 
-func CommandList() *cli.Command {
+func CommandList(ctx context.Context) *cli.Command {
+	appConfig := app.GetAppConfig(ctx)
+
 	return &cli.Command{
 		Name:            "system",
 		Aliases:         []string{"s"},
-		Usage:           lib.T_("System package management"),
+		Usage:           app.T_("System package management"),
 		HideHelpCommand: true,
 		Commands: []*cli.Command{
 			{
 				Name:      "install",
-				Usage:     lib.T_("Package list for installation. The format package- package+ is supported."),
+				Usage:     app.T_("Package list for installation. The format package- package+ is supported."),
 				ArgsUsage: "packages",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "yes",
+						Usage:   app.T_("Install without confirmation"),
+						Aliases: []string{"y"},
+						Value:   false,
+					},
+					&cli.BoolFlag{
+						Name:    "simulate",
+						Usage:   app.T_("Simulate installation"),
+						Aliases: []string{"s"},
+						Value:   false,
+					},
+				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Install(ctx, cmd.Args().Slice())
+					var resp *reply.APIResponse
+					var err error
+					if cmd.Bool("simulate") {
+						resp, err = actions.CheckInstall(ctx, cmd.Args().Slice())
+					} else {
+						resp, err = actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
+					}
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -145,18 +169,43 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "remove",
-				Usage:     lib.T_("List of packages to remove"),
+				Usage:     app.T_("List of packages to remove"),
 				ArgsUsage: "packages",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
+						Name:    "yes",
+						Usage:   app.T_("Remove without confirmation"),
+						Aliases: []string{"y"},
+						Value:   false,
+					},
+					&cli.BoolFlag{
 						Name:    "purge",
-						Usage:   lib.T_("Delete all files"),
+						Usage:   app.T_("Attempt to remove all files"),
 						Aliases: []string{"p"},
+						Value:   false,
+					},
+					&cli.BoolFlag{
+						Name:    "depends",
+						Usage:   app.T_("Attempt to remove depends"),
+						Aliases: []string{"d"},
+						Value:   false,
+					},
+					&cli.BoolFlag{
+						Name:    "simulate",
+						Usage:   app.T_("Simulate removal"),
+						Aliases: []string{"s"},
 						Value:   false,
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"))
+					var resp *reply.APIResponse
+					var err error
+					if cmd.Bool("simulate") {
+						resp, err = actions.CheckRemove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
+					} else {
+						resp, err = actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"),
+							cmd.Bool("yes"))
+					}
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -167,7 +216,7 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "update",
-				Usage: lib.T_("Updating package database"),
+				Usage: app.T_("Updating package database"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Update(ctx)
 					if err != nil {
@@ -179,11 +228,11 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "upgrade",
-				Usage: lib.T_("General system upgrade"),
+				Usage: app.T_("General system upgrade"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					var resp *reply.APIResponse
 					var err error
-					if lib.Env.IsAtomic {
+					if appConfig.ConfigManager.GetConfig().IsAtomic {
 						resp, err = actions.ImageUpdate(ctx)
 					} else {
 						resp, err = actions.Upgrade(ctx)
@@ -198,12 +247,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "info",
-				Usage:     lib.T_("Package information"),
+				Usage:     app.T_("Package information"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: lib.T_("Full output of information"),
+						Usage: app.T_("Full output of information"),
 						Value: false,
 					},
 				},
@@ -219,18 +268,18 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "search",
-				Usage:     lib.T_("Quick package search by name"),
+				Usage:     app.T_("Quick package search by name"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "installed",
-						Usage:   lib.T_("Only installed"),
+						Usage:   app.T_("Only installed"),
 						Aliases: []string{"i"},
 						Value:   false,
 					},
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: lib.T_("Full information output"),
+						Usage: app.T_("Full information output"),
 						Value: false,
 					},
 				},
@@ -245,39 +294,39 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "list",
-				Usage: lib.T_("Building a query to get a list of packages"),
+				Usage: app.T_("Building a query to get a list of packages"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: lib.T_("Sort packages by field, example fields: name, section"),
+						Usage: app.T_("Sort packages by field, example fields: name, section"),
 					},
 					&cli.StringFlag{
 						Name:  "order",
-						Usage: lib.T_("Sorting order: ASC or DESC"),
+						Usage: app.T_("Sorting order: ASC or DESC"),
 						Value: "ASC",
 					},
 					&cli.IntFlag{
 						Name:  "limit",
-						Usage: lib.T_("Maximum number of records to return"),
+						Usage: app.T_("Maximum number of records to return"),
 						Value: 10,
 					},
 					&cli.IntFlag{
 						Name:  "offset",
-						Usage: lib.T_("Starting position (offset) for the result set"),
+						Usage: app.T_("Starting position (offset) for the result set"),
 						Value: 0,
 					},
 					&cli.StringSliceFlag{
 						Name:  "filter",
-						Usage: lib.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
+						Usage: app.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
-						Usage: lib.T_("Force update all packages before query"),
+						Usage: app.T_("Force update all packages before query"),
 						Value: false,
 					},
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: lib.T_("Full information output"),
+						Usage: app.T_("Full information output"),
 						Value: false,
 					},
 				},
@@ -301,23 +350,35 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "dbus-doc",
-				Usage: lib.T_("Show dbus online documentation"),
+				Usage: app.T_("Show dbus online documentation"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					reply.StopSpinner()
+					reply.StopSpinner(appConfig)
 					return actions.GenerateOnlineDoc(ctx)
 				}),
 			},
 			{
 				Name:    "image",
-				Usage:   lib.T_("Module for working with the image"),
+				Usage:   app.T_("Module for working with the image"),
 				Aliases: []string{"i"},
-				Hidden:  !lib.Env.IsAtomic,
+				Hidden:  !appConfig.ConfigManager.GetConfig().IsAtomic,
 				Commands: []*cli.Command{
 					{
-						Name:  "apply",
-						Usage: lib.T_("Apply changes to the host"),
+						Name:  "build",
+						Usage: app.T_("Build image"),
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							resp, err := NewActions().ImageApply(ctx)
+							resp, err := actions.ImageBuild(ctx)
+							if err != nil {
+								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							}
+
+							return reply.CliResponse(ctx, *resp)
+						}),
+					},
+					{
+						Name:  "apply",
+						Usage: app.T_("Apply changes to the host"),
+						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+							resp, err := actions.ImageApply(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -327,7 +388,7 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "status",
-						Usage: lib.T_("Image status"),
+						Usage: app.T_("Image status"),
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ImageStatus(ctx)
 							if err != nil {
@@ -339,7 +400,7 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "update",
-						Usage: lib.T_("Image update"),
+						Usage: app.T_("Image update"),
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ImageUpdate(ctx)
 							if err != nil {
@@ -351,20 +412,20 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "history",
-						Usage: lib.T_("Image changes history"),
+						Usage: app.T_("Image changes history"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "image",
-								Usage: lib.T_("Filter by image name"),
+								Usage: app.T_("Filter by image name"),
 							},
 							&cli.IntFlag{
 								Name:  "limit",
-								Usage: lib.T_("Maximum number of records to return"),
+								Usage: app.T_("Maximum number of records to return"),
 								Value: 10,
 							},
 							&cli.IntFlag{
 								Name:  "offset",
-								Usage: lib.T_("Starting position (offset) for the result set"),
+								Usage: app.T_("Starting position (offset) for the result set"),
 								Value: 0,
 							},
 						},

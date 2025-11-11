@@ -17,10 +17,11 @@
 package helper
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/urfave/cli/v3"
 )
@@ -31,7 +32,7 @@ func SetupHelpTemplates() {
 	cli.HelpFlag = &cli.BoolFlag{
 		Name:        "help",
 		Aliases:     []string{"h"},
-		Usage:       lib.T_("show help"),
+		Usage:       app.T_("show help"),
 		HideDefault: true,
 		Local:       true,
 	}
@@ -39,7 +40,7 @@ func SetupHelpTemplates() {
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:        "version",
 		Aliases:     []string{"v"},
-		Usage:       lib.T_("print the version"),
+		Usage:       app.T_("print the version"),
 		HideDefault: true,
 		Local:       true,
 	}
@@ -62,12 +63,12 @@ func SetupHelpTemplates() {
 
 %s{{template "visibleFlagTemplate" .}}{{end}}
 `,
-		titleStyle.Render(lib.T_("Module:")),
-		titleStyle.Render(lib.T_("Usage:")),
-		titleStyle.Render(lib.T_("Description:")),
-		titleStyle.Render(lib.T_("Commands:")),
-		titleStyle.Render(lib.T_("Options:")),
-		titleStyle.Render(lib.T_("Options:")),
+		titleStyle.Render(app.T_("Module:")),
+		titleStyle.Render(app.T_("Usage:")),
+		titleStyle.Render(app.T_("Description:")),
+		titleStyle.Render(app.T_("Commands:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Options:")),
 	)
 
 	// Overriding the template for "command" help
@@ -89,13 +90,13 @@ func SetupHelpTemplates() {
 
 %s{{template "visiblePersistentFlagTemplate" .}}{{end}}
 `,
-		titleStyle.Render(lib.T_("Module:")),
-		titleStyle.Render(lib.T_("Usage:")),
-		titleStyle.Render(lib.T_("Category:")),
-		titleStyle.Render(lib.T_("Description:")),
-		titleStyle.Render(lib.T_("Options:")),
-		titleStyle.Render(lib.T_("Options:")),
-		titleStyle.Render(lib.T_("Global options:")),
+		titleStyle.Render(app.T_("Module:")),
+		titleStyle.Render(app.T_("Usage:")),
+		titleStyle.Render(app.T_("Category:")),
+		titleStyle.Render(app.T_("Description:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Global options:")),
 	)
 
 	// Overriding the template for "subcommand" help (if nested commands are used)
@@ -117,13 +118,13 @@ func SetupHelpTemplates() {
 
 %s{{template "visibleFlagTemplate" .}}{{end}}
 `,
-		titleStyle.Render(lib.T_("Module:")),
-		titleStyle.Render(lib.T_("Usage:")),
-		titleStyle.Render(lib.T_("Category:")),
-		titleStyle.Render(lib.T_("Description:")),
-		titleStyle.Render(lib.T_("Commands:")),
-		titleStyle.Render(lib.T_("Options:")),
-		titleStyle.Render(lib.T_("Options:")),
+		titleStyle.Render(app.T_("Module:")),
+		titleStyle.Render(app.T_("Usage:")),
+		titleStyle.Render(app.T_("Category:")),
+		titleStyle.Render(app.T_("Description:")),
+		titleStyle.Render(app.T_("Commands:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Options:")),
 	)
 
 	cli.FlagStringer = func(fl cli.Flag) string {
@@ -143,7 +144,7 @@ func SetupHelpTemplates() {
 		if rf, ok := fl.(cli.RequiredFlag); !ok || !rf.IsRequired() {
 			isVisible := df.IsDefaultVisible()
 			if s := df.GetDefaultText(); isVisible && s != "" {
-				defaultValueString = fmt.Sprintf(" (%s: %s)", lib.T_("default"), s)
+				defaultValueString = fmt.Sprintf(" (%s: %s)", app.T_("default"), s)
 			}
 		}
 

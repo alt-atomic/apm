@@ -17,9 +17,9 @@
 package distrobox
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"context"
 	"syscall"
 
@@ -28,7 +28,7 @@ import (
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
 func newErrorResponse(message string) reply.APIResponse {
-	lib.Log.Error(message)
+	app.Log.Error(message)
 
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
@@ -39,16 +39,17 @@ func newErrorResponse(message string) reply.APIResponse {
 func wrapperWithOptions() func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 		return func(ctx context.Context, cmd *cli.Command) error {
-			lib.Env.Format = cmd.String("format")
+			appConfig := app.GetAppConfig(ctx)
+			appConfig.ConfigManager.SetFormat(cmd.String("format"))
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
 			if syscall.Geteuid() == 0 {
-				return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")))
+				return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")))
 			}
 
-			actions := NewActions()
+			actions := NewActions(appConfig)
 
-			reply.CreateSpinner()
+			reply.CreateSpinner(appConfig)
 			return actionFunc(ctx, cmd, actions)
 		}
 	}
@@ -56,20 +57,22 @@ func wrapperWithOptions() func(func(context.Context, *cli.Command, *Actions) err
 
 var withGlobalWrapper = wrapperWithOptions()
 
-func CommandList() *cli.Command {
+func CommandList(ctx context.Context) *cli.Command {
+	appConfig := app.GetAppConfig(ctx)
+
 	return &cli.Command{
 		Name:    "distrobox",
 		Aliases: []string{"d"},
-		Hidden:  !lib.Env.ExistDistrobox,
-		Usage:   lib.T_("Managing packages and containers in distrobox"),
+		Hidden:  !appConfig.ConfigManager.GetConfig().ExistDistrobox,
+		Usage:   app.T_("Managing packages and containers in distrobox"),
 		Commands: []*cli.Command{
 			{
 				Name:  "update",
-				Usage: lib.T_("Update and synchronize the list of installed packages with the host"),
+				Usage: app.T_("Update and synchronize the list of installed packages with the host"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    lib.T_("Container name. Required"),
+						Usage:    app.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
@@ -85,12 +88,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "info",
-				Usage:     lib.T_("Package information"),
+				Usage:     app.T_("Package information"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    lib.T_("Container name. Required"),
+						Usage:    app.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
@@ -106,12 +109,12 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "search",
-				Usage:     lib.T_("Quick package search by name"),
+				Usage:     app.T_("Quick package search by name"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "container",
-						Usage:   lib.T_("Container name. Optional flag"),
+						Usage:   app.T_("Container name. Optional flag"),
 						Aliases: []string{"c"},
 					},
 				},
@@ -126,39 +129,39 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "list",
-				Usage: lib.T_("Building query to retrieve package list"),
+				Usage: app.T_("Building query to retrieve package list"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "container",
-						Usage:   lib.T_("Container name. Optional flag"),
+						Usage:   app.T_("Container name. Optional flag"),
 						Aliases: []string{"c"},
 					},
 					&cli.StringFlag{
 						Name:  "sort",
-						Usage: lib.T_("Field for sorting, for example: name, version"),
+						Usage: app.T_("Field for sorting, for example: name, version"),
 					},
 					&cli.StringFlag{
 						Name:  "order",
-						Usage: lib.T_("Sorting order: ASC or DESC"),
+						Usage: app.T_("Sorting order: ASC or DESC"),
 						Value: "ASC",
 					},
 					&cli.IntFlag{
 						Name:  "limit",
-						Usage: lib.T_("Maximum number of records to return"),
+						Usage: app.T_("Maximum number of records to return"),
 						Value: 10,
 					},
 					&cli.IntFlag{
 						Name:  "offset",
-						Usage: lib.T_("Starting position (offset) for the result set"),
+						Usage: app.T_("Starting position (offset) for the result set"),
 						Value: 0,
 					},
 					&cli.StringSliceFlag{
 						Name:  "filter",
-						Usage: lib.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
+						Usage: app.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
-						Usage: lib.T_("Force update all packages before the request"),
+						Usage: app.T_("Force update all packages before the request"),
 						Value: false,
 					},
 				},
@@ -183,18 +186,18 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "install",
-				Usage:     lib.T_("Install package"),
+				Usage:     app.T_("Install package"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    lib.T_("Container name. Required"),
+						Usage:    app.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
 					&cli.BoolFlag{
 						Name:  "export",
-						Usage: lib.T_("Export package"),
+						Usage: app.T_("Export package"),
 						Value: true,
 					},
 				},
@@ -209,18 +212,18 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "remove",
-				Usage:     lib.T_("Remove package"),
+				Usage:     app.T_("Remove package"),
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "container",
-						Usage:    lib.T_("Container name. Required"),
+						Usage:    app.T_("Container name. Required"),
 						Aliases:  []string{"c"},
 						Required: true,
 					},
 					&cli.BoolFlag{
 						Name:  "only-host",
-						Usage: lib.T_("Remove only from host, leave package in container"),
+						Usage: app.T_("Remove only from host, leave package in container"),
 						Value: false,
 					},
 				},
@@ -235,20 +238,20 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "dbus-doc",
-				Usage: lib.T_("Show dbus online documentation"),
+				Usage: app.T_("Show dbus online documentation"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					reply.StopSpinner()
+					reply.StopSpinner(appConfig)
 					return actions.GenerateOnlineDoc(ctx)
 				}),
 			},
 			{
 				Name:    "container",
-				Usage:   lib.T_("Module for working with containers"),
+				Usage:   app.T_("Module for working with containers"),
 				Aliases: []string{"c"},
 				Commands: []*cli.Command{
 					{
 						Name:  "list",
-						Usage: lib.T_("List of containers"),
+						Usage: app.T_("List of containers"),
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ContainerList(ctx)
 							if err != nil {
@@ -260,16 +263,16 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "create",
-						Usage: lib.T_("Add container"),
+						Usage: app.T_("Add container"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "image",
-								Usage:    lib.T_("Container. Must be specified, options: alt, ubuntu, arch"),
+								Usage:    app.T_("Container. Must be specified, options: alt, ubuntu, arch"),
 								Required: true,
 							},
 							&cli.StringFlag{
 								Name:     "name",
-								Usage:    lib.T_("Container name"),
+								Usage:    app.T_("Container name"),
 								Required: false,
 							},
 						},
@@ -285,7 +288,7 @@ func CommandList() *cli.Command {
 							}
 							if !valid {
 								return reply.CliResponse(ctx,
-									newErrorResponse(lib.T_("The value for image must be one of: alt, ubuntu, arch")))
+									newErrorResponse(app.T_("The value for image must be one of: alt, ubuntu, arch")))
 							}
 
 							var imageLink string
@@ -313,26 +316,26 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:  "create-manual",
-						Usage: lib.T_("Manual container addition"),
+						Usage: app.T_("Manual container addition"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "image",
-								Usage:    lib.T_("Image link. Required"),
+								Usage:    app.T_("Image link. Required"),
 								Required: true,
 							},
 							&cli.StringFlag{
 								Name:     "name",
-								Usage:    lib.T_("Container name. Required"),
+								Usage:    app.T_("Container name. Required"),
 								Required: true,
 							},
 							&cli.StringFlag{
 								Name:  "additional-packages",
-								Usage: lib.T_("List of packages to install"),
+								Usage: app.T_("List of packages to install"),
 								Value: "zsh",
 							},
 							&cli.StringFlag{
 								Name:  "init-hooks",
-								Usage: lib.T_("Calling hook to execute commands"),
+								Usage: app.T_("Calling hook to execute commands"),
 							},
 						},
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
@@ -351,12 +354,12 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:    "remove",
-						Usage:   lib.T_("Remove container"),
+						Usage:   app.T_("Remove container"),
 						Aliases: []string{"rm"},
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "name",
-								Usage:    lib.T_("Container name. Required"),
+								Usage:    app.T_("Container name. Required"),
 								Required: true,
 							},
 						},

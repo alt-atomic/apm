@@ -17,7 +17,7 @@
 package doc
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 	"context"
 	"encoding/json"
 	"errors"
@@ -428,7 +428,7 @@ func (g *Generator) StartDocServer(ctx context.Context) error {
 		_, err := fmt.Fprint(w, html)
 		if err != nil {
 			if !strings.Contains(err.Error(), "broken pipe") {
-				lib.Log.Error("HTTP write error: " + err.Error())
+				app.Log.Error("HTTP write error: " + err.Error())
 			}
 			return
 		}
@@ -445,7 +445,7 @@ func (g *Generator) StartDocServer(ctx context.Context) error {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			lib.Log.Fatal(err.Error())
+			app.Log.Fatal(err.Error())
 		}
 	}()
 

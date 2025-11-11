@@ -17,8 +17,8 @@
 package dialog
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"errors"
 	"fmt"
 	"os"
@@ -45,6 +45,7 @@ type selectionModel struct {
 	canceled        bool
 	width           int
 	height          int
+	appConfig       *app.Config
 }
 
 type packageItem struct {
@@ -53,8 +54,8 @@ type packageItem struct {
 }
 
 // NewPackageSelectionDialog запускает диалог выбора пакетов для установки/удаления
-func NewPackageSelectionDialog(installPkgs, removePkgs []string) (*PackageSelectionResult, error) {
-	if lib.Env.Format != "text" || !reply.IsTTY() {
+func NewPackageSelectionDialog(appConfig *app.Config, installPkgs, removePkgs []string) (*PackageSelectionResult, error) {
+	if appConfig.ConfigManager.GetConfig().Format != "text" || !reply.IsTTY() {
 		return &PackageSelectionResult{
 			InstallPackages: installPkgs,
 			RemovePackages:  removePkgs,
@@ -77,9 +78,10 @@ func NewPackageSelectionDialog(installPkgs, removePkgs []string) (*PackageSelect
 		removePackages:  removeItems,
 		currentPanel:    0,
 		cursor:          0,
-		choices:         []string{lib.T_("Apply"), lib.T_("Abort")},
+		choices:         []string{app.T_("Apply"), app.T_("Abort")},
 		width:           80,
 		height:          24,
+		appConfig:       appConfig,
 	}
 
 	p := tea.NewProgram(m,
@@ -89,13 +91,13 @@ func NewPackageSelectionDialog(installPkgs, removePkgs []string) (*PackageSelect
 
 	finalModel, err := p.Run()
 	if err != nil {
-		lib.Log.Errorf(lib.T_("Error starting TEA: %v"), err)
+		app.Log.Errorf(app.T_("Error starting TEA: %v"), err)
 		return nil, err
 	}
 
 	if m, ok := finalModel.(selectionModel); ok {
-		if m.canceled || m.choice == lib.T_("Abort") {
-			return &PackageSelectionResult{Canceled: true}, errors.New(lib.T_("Operation cancelled"))
+		if m.canceled || m.choice == app.T_("Abort") {
+			return &PackageSelectionResult{Canceled: true}, errors.New(app.T_("Operation cancelled"))
 		}
 
 		// Собираем выбранные пакеты
@@ -118,7 +120,7 @@ func NewPackageSelectionDialog(installPkgs, removePkgs []string) (*PackageSelect
 		}, nil
 	}
 
-	return &PackageSelectionResult{Canceled: true}, errors.New(lib.T_("Operation cancelled"))
+	return &PackageSelectionResult{Canceled: true}, errors.New(app.T_("Operation cancelled"))
 }
 
 func (m selectionModel) Init() tea.Cmd {
@@ -142,7 +144,7 @@ func (m selectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.isInActionArea() {
 				m.choice = m.choices[m.getActionCursor()]
 			} else {
-				m.choice = lib.T_("Apply")
+				m.choice = app.T_("Apply")
 			}
 			return m, tea.Quit
 
@@ -185,37 +187,38 @@ func (m selectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.canceled = true
 				return m, tea.Quit
 			case "a":
-				// Выбрать все в текущей панели
 				m.selectAllInCurrentPanel(true)
 				return m, nil
 			case "n":
-				// Снять выбор со всех в текущей панели
 				m.selectAllInCurrentPanel(false)
 				return m, nil
 			}
+
+		default:
+			// Игнорируем неизвестные клавиши
+			return m, nil
 		}
 	}
 	return m, nil
 }
 
 func (m selectionModel) View() string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(lib.Env.Colors.Accent))
-	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Install))
-	removeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Delete))
-	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Shortcut)).Faint(true)
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent))
+	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Install))
+	removeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Delete))
+	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Shortcut)).Faint(true)
 
 	var s strings.Builder
 
 	// Заголовок
-	s.WriteString(titleStyle.Render(lib.T_("Select packages to apply")) + "\n\n")
+	s.WriteString(titleStyle.Render(app.T_("Select packages to apply")) + "\n\n")
 
-	separatorWidth := 1 // Ширина для диагонального разделителя
-	panelWidth := (m.width - separatorWidth) / 2
-	contentHeight := m.height - 8 // Резервируем место для заголовка, подсказок и кнопок
+	panelWidth := (m.width - 1) / 2
+	contentHeight := m.height - 8
 
 	// Создаем панели
-	installPanel := m.buildPackagePanel(lib.T_("Install"), m.installPackages, 0, panelWidth, contentHeight, installStyle)
-	removePanel := m.buildPackagePanel(lib.T_("Remove"), m.removePackages, 1, panelWidth, contentHeight, removeStyle)
+	installPanel := m.buildPackagePanel(app.T_("Install"), m.installPackages, 0, panelWidth, contentHeight, installStyle)
+	removePanel := m.buildPackagePanel(app.T_("Remove"), m.removePackages, 1, panelWidth, contentHeight, removeStyle)
 
 	separator := m.buildDiagonalSeparator(contentHeight)
 
@@ -227,7 +230,7 @@ func (m selectionModel) View() string {
 	s.WriteString(centeredPanels + "\n\n")
 
 	// Подсказки по клавишам
-	shortcuts := shortcutStyle.Render(lib.T_("Navigation: ↑/↓ - move, ←/→/Tab - switch panel, Space - toggle, a - select all, n - none, Enter - apply, Esc/q - cancel"))
+	shortcuts := shortcutStyle.Render(app.T_("Navigation: ↑/↓ - move, ←/→/Tab - switch panel, Space - toggle, a - select all, n - none, Enter - apply, Esc/q - cancel"))
 	s.WriteString(shortcuts + "\n\n")
 
 	// Кнопки действий
@@ -248,7 +251,7 @@ func (m selectionModel) buildPackagePanel(title string, packages []packageItem, 
 		emptyMsg := lipgloss.NewStyle().
 			Faint(true).
 			Padding(1).
-			Render(lib.T_("No packages"))
+			Render(app.T_("No packages"))
 		s.WriteString(emptyMsg + "\n")
 		return lipgloss.NewStyle().
 			Width(width).
@@ -295,11 +298,11 @@ func (m selectionModel) buildPackagePanel(title string, packages []packageItem, 
 func (m selectionModel) buildActionButtons() string {
 	var s strings.Builder
 
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(lib.Env.Colors.Accent))
-	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(lib.Env.Colors.Install))
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent))
+	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Install))
 	normalStyle := lipgloss.NewStyle()
 
-	s.WriteString(titleStyle.Render(lib.T_("Action:")) + "\n")
+	s.WriteString(titleStyle.Render(app.T_("Action:")) + "\n")
 
 	for i, choice := range m.choices {
 		prefix := "  "
@@ -320,19 +323,19 @@ func (m selectionModel) buildActionButtons() string {
 	return s.String()
 }
 
+// buildDiagonalSeparator вертикальный разделитель
 func (m selectionModel) buildDiagonalSeparator(height int) string {
-	// Создаем настоящий вертикальный разделитель используя lipgloss Border
 	return lipgloss.NewStyle().
 		Width(0).
 		Height(height).
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderLeft(true).
-		BorderForeground(lipgloss.Color(lib.Env.Colors.Accent)).
+		BorderForeground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent)).
 		Render("")
 }
 
 // Кастомный enumerator для панели установки
-func (m selectionModel) installPackageEnumerator(items list.Items, index int) string {
+func (m selectionModel) installPackageEnumerator(_ list.Items, index int) string {
 	if index < 0 || index >= len(m.installPackages) {
 		return ""
 	}
@@ -356,7 +359,7 @@ func (m selectionModel) installPackageEnumerator(items list.Items, index int) st
 }
 
 // Кастомный enumerator для панели удаления
-func (m selectionModel) removePackageEnumerator(items list.Items, index int) string {
+func (m selectionModel) removePackageEnumerator(_ list.Items, index int) string {
 	if index < 0 || index >= len(m.removePackages) {
 		return ""
 	}
@@ -380,7 +383,7 @@ func (m selectionModel) removePackageEnumerator(items list.Items, index int) str
 
 // Вспомогательные методы
 
-func (m *selectionModel) moveCursorUp() {
+func (m selectionModel) moveCursorUp() {
 	if m.isInActionArea() {
 		actionCursor := m.getActionCursor()
 		if actionCursor > 0 {
@@ -405,7 +408,7 @@ func (m *selectionModel) moveCursorUp() {
 	}
 }
 
-func (m *selectionModel) moveCursorDown() {
+func (m selectionModel) moveCursorDown() {
 	if m.isInActionArea() {
 		actionCursor := m.getActionCursor()
 		if actionCursor < len(m.choices)-1 {
@@ -425,7 +428,7 @@ func (m *selectionModel) moveCursorDown() {
 	}
 }
 
-func (m *selectionModel) switchPanel() {
+func (m selectionModel) switchPanel() {
 	if m.currentPanel == 0 && len(m.removePackages) > 0 {
 		m.currentPanel = 1
 	} else if m.currentPanel == 1 && len(m.installPackages) > 0 {
@@ -434,7 +437,7 @@ func (m *selectionModel) switchPanel() {
 	m.cursor = 0
 }
 
-func (m *selectionModel) toggleCurrentPackage() {
+func (m selectionModel) toggleCurrentPackage() {
 	if m.currentPanel == 0 && m.cursor < len(m.installPackages) {
 		m.installPackages[m.cursor].selected = !m.installPackages[m.cursor].selected
 	} else if m.currentPanel == 1 && m.cursor < len(m.removePackages) {
@@ -442,7 +445,7 @@ func (m *selectionModel) toggleCurrentPackage() {
 	}
 }
 
-func (m *selectionModel) selectAllInCurrentPanel(selected bool) {
+func (m selectionModel) selectAllInCurrentPanel(selected bool) {
 	if m.currentPanel == 0 {
 		for i := range m.installPackages {
 			m.installPackages[i].selected = selected
@@ -471,27 +474,4 @@ func (m selectionModel) isInActionArea() bool {
 
 func (m selectionModel) getActionCursor() int {
 	return m.cursor - m.getTotalPackages()
-}
-
-func (m selectionModel) getVisibleRange(packages []packageItem, maxVisible int) (int, int) {
-	if len(packages) <= maxVisible {
-		return 0, len(packages)
-	}
-
-	// Центрируем курсор в видимой области
-	start := m.cursor - maxVisible/2
-	if start < 0 {
-		start = 0
-	}
-
-	end := start + maxVisible
-	if end > len(packages) {
-		end = len(packages)
-		start = end - maxVisible
-		if start < 0 {
-			start = 0
-		}
-	}
-
-	return start, end
 }

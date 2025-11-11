@@ -1,195 +1,195 @@
 package reply
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 )
 
 // TranslateKey принимает ключ и возвращает английский текст.
 func TranslateKey(key string) string {
 	switch key {
 	case "aliases":
-		return lib.T_("Aliases")
+		return app.T_("Aliases")
 	case "desktopPaths":
-		return lib.T_("Desktop Paths")
+		return app.T_("Desktop Paths")
 	case "consolePaths":
-		return lib.T_("Console Paths")
+		return app.T_("Console Paths")
 	case "architecture":
-		return lib.T_("Architecture")
+		return app.T_("Architecture")
 	case "result":
-		return lib.T_("Result")
+		return app.T_("Result")
 	case "appStream":
-		return lib.T_("Application Information")
+		return app.T_("Application Information")
 	case "downloadSize":
-		return lib.T_("Downloaded Size")
+		return app.T_("Downloaded Size")
 	case "installSize":
-		return lib.T_("Installed Size")
+		return app.T_("Installed Size")
 	case "package":
-		return lib.T_("Package")
+		return app.T_("Package")
 	case "isApp":
-		return lib.T_("This Application")
+		return app.T_("This Application")
 	case "typePackage":
-		return lib.T_("Type Package")
+		return app.T_("Type Package")
 	case "count":
-		return lib.T_("Count")
+		return app.T_("Count")
 	case "isConsole":
-		return lib.T_("Console Application")
+		return app.T_("Console Application")
 	case "packageInfo":
-		return lib.T_("Package Information")
+		return app.T_("Package Information")
 	case "install":
-		return lib.T_("Install")
+		return app.T_("Install")
 	case "store":
-		return lib.T_("Storage Type")
+		return app.T_("Storage Type")
 	case "timestamp":
-		return lib.T_("Date")
+		return app.T_("Date")
 	case "imageDigest":
-		return lib.T_("Image Digest")
+		return app.T_("Image Digest")
 	case "os":
-		return lib.T_("Distribution")
+		return app.T_("Distribution")
 	case "container":
-		return lib.T_("Container")
+		return app.T_("Container")
 	case "name":
-		return lib.T_("Name")
+		return app.T_("Name")
 	case "extraInstalled":
-		return lib.T_("Extra Installed")
+		return app.T_("Extra Installed")
 	case "upgradedCount":
-		return lib.T_("Upgraded Count")
+		return app.T_("Upgraded Count")
 	case "bootedImage":
-		return lib.T_("Booted Image")
+		return app.T_("Booted Image")
 	case "removedPackages":
-		return lib.T_("Removed Packages")
+		return app.T_("Removed Packages")
 	case "provides":
-		return lib.T_("Provides")
+		return app.T_("Provides")
 	case "providers":
-		return lib.T_("Providers")
+		return app.T_("Providers")
 	case "version":
-		return lib.T_("Version")
+		return app.T_("Version")
 	case "history":
-		return lib.T_("History")
+		return app.T_("History")
 	case "depends":
-		return lib.T_("Dependencies")
+		return app.T_("Dependencies")
 	case "installedSize":
-		return lib.T_("Installed Size")
+		return app.T_("Installed Size")
 	case "removedCount":
-		return lib.T_("Removed Count")
+		return app.T_("Removed Count")
 	case "upgradedPackages":
-		return lib.T_("Upgraded Packages")
+		return app.T_("Upgraded Packages")
 	case "packageName":
-		return lib.T_("Package Name")
+		return app.T_("Package Name")
 	case "image":
-		return lib.T_("Image")
+		return app.T_("Image")
 	case "commands":
-		return lib.T_("Commands")
+		return app.T_("Commands")
 	case "maintainer":
-		return lib.T_("Maintainer")
+		return app.T_("Maintainer")
 	case "versionInstalled":
-		return lib.T_("Installed Version")
+		return app.T_("Installed Version")
 	case "remove":
-		return lib.T_("Remove")
+		return app.T_("Remove")
 	case "containers":
-		return lib.T_("Containers")
+		return app.T_("Containers")
 	case "paths":
-		return lib.T_("Paths")
+		return app.T_("Paths")
 	case "description":
-		return lib.T_("Description")
+		return app.T_("Description")
 	case "date":
-		return lib.T_("Date")
+		return app.T_("Date")
 	case "newInstalledCount":
-		return lib.T_("Newly Installed Count")
+		return app.T_("Newly Installed Count")
 	case "active":
-		return lib.T_("Active")
+		return app.T_("Active")
 	case "info":
-		return lib.T_("Information")
+		return app.T_("Information")
 	case "totalCount":
-		return lib.T_("Total Count")
+		return app.T_("Total Count")
 	case "installed":
-		return lib.T_("Installed")
+		return app.T_("Installed")
 	case "manager":
-		return lib.T_("Package Manager")
+		return app.T_("Package Manager")
 	case "lastChangelog":
-		return lib.T_("Last Changelog")
+		return app.T_("Last Changelog")
 	case "section":
-		return lib.T_("Section")
+		return app.T_("Section")
 	case "spec":
-		return lib.T_("Specification")
+		return app.T_("Specification")
 	case "booted":
-		return lib.T_("Booted")
+		return app.T_("Booted")
 	case "staged":
-		return lib.T_("Staged")
+		return app.T_("Staged")
 	case "size":
-		return lib.T_("Size")
+		return app.T_("Size")
 	case "newInstalledPackages":
-		return lib.T_("Newly Installed Packages")
+		return app.T_("Newly Installed Packages")
 	case "notUpgradedCount":
-		return lib.T_("Not Upgraded Count")
+		return app.T_("Not Upgraded Count")
 	case "containerName":
-		return lib.T_("Container Name")
+		return app.T_("Container Name")
 	case "config":
-		return lib.T_("Configuration")
+		return app.T_("Configuration")
 	case "exporting":
-		return lib.T_("Exporting")
+		return app.T_("Exporting")
 	case "status":
-		return lib.T_("Status")
+		return app.T_("Status")
 	case "imageDate":
-		return lib.T_("Image Date")
+		return app.T_("Image Date")
 	case "packages":
-		return lib.T_("Packages")
+		return app.T_("Packages")
 	case "filename":
-		return lib.T_("Filename")
+		return app.T_("Filename")
 	case "containerInfo":
-		return lib.T_("Container Information")
+		return app.T_("Container Information")
 	case "imageName":
-		return lib.T_("Image Name")
+		return app.T_("Image Name")
 	case "transport":
-		return lib.T_("Transport")
+		return app.T_("Transport")
 	case "pinned":
-		return lib.T_("Pinned")
+		return app.T_("Pinned")
 	case "list":
-		return lib.T_("List")
+		return app.T_("List")
 	case "kernel":
-		return lib.T_("Kernel")
+		return app.T_("Kernel")
 	case "kernels":
-		return lib.T_("Kernels")
+		return app.T_("Kernels")
 	case "currentKernel":
-		return lib.T_("Current Kernel")
+		return app.T_("Current Kernel")
 	case "latestKernel":
-		return lib.T_("Latest Kernel")
+		return app.T_("Latest Kernel")
 	case "preview":
-		return lib.T_("Preview")
+		return app.T_("Preview")
 	case "ageInDays":
-		return lib.T_("Age in Days")
+		return app.T_("Age in Days")
 	case "buildTime":
-		return lib.T_("Build Time")
+		return app.T_("Build Time")
 	case "flavour":
-		return lib.T_("Flavour")
+		return app.T_("Flavour")
 	case "fullVersion":
-		return lib.T_("Full Version")
+		return app.T_("Full Version")
 	case "isInstalled":
-		return lib.T_("Is Installed")
+		return app.T_("Is Installed")
 	case "isRunning":
-		return lib.T_("Is Running")
+		return app.T_("Is Running")
 	case "release":
-		return lib.T_("Release")
+		return app.T_("Release")
 	case "modules":
-		return lib.T_("Modules")
+		return app.T_("Modules")
 	case "kept":
-		return lib.T_("Kept")
+		return app.T_("Kept")
 	case "reasons":
-		return lib.T_("Reasons")
+		return app.T_("Reasons")
 	case "versionRaw":
-		return lib.T_("Version Raw")
+		return app.T_("Version Raw")
 	case "keptKernels":
-		return lib.T_("Kept Kernels")
+		return app.T_("Kept Kernels")
 	case "removeKernels":
-		return lib.T_("Remove kernels")
+		return app.T_("Remove kernels")
 	case "InstalledModules":
-		return lib.T_("Installed Modules")
+		return app.T_("Installed Modules")
 	case "selectedModules":
-		return lib.T_("Selected Modules")
+		return app.T_("Selected Modules")
 	case "missingModules":
-		return lib.T_("Missing Modules")
+		return app.T_("Missing Modules")
 	case "updateAvailable":
-		return lib.T_("Available Update")
+		return app.T_("Available Update")
 	default:
-		return lib.T_(key)
+		return app.T_(key)
 	}
 }

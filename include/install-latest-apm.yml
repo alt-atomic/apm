@@ -1,0 +1,15 @@
+modules:
+  - name: install-latest-apm
+    type: git
+    body:
+      target: https://altlinux.space/alt-atomic/apm.git
+      deps:
+        - meson
+        - golang
+        - libapt-devel
+        - gcc-c++
+        - gettext-devel
+        - "pkgconfig(systemd)"
+      commands:
+        - meson setup _build --prefix=/usr
+        - meson install -C _build

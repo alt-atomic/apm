@@ -17,9 +17,9 @@
 package kernel
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/lib"
 	"context"
 	"syscall"
 
@@ -28,7 +28,7 @@ import (
 
 // newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
 func newErrorResponse(message string) reply.APIResponse {
-	lib.Log.Error(message)
+	app.Log.Error(message)
 
 	return reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
@@ -39,16 +39,17 @@ func newErrorResponse(message string) reply.APIResponse {
 func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
 		return func(ctx context.Context, cmd *cli.Command) error {
-			lib.Env.Format = cmd.String("format")
+			appConfig := app.GetAppConfig(ctx)
+			appConfig.ConfigManager.SetFormat(cmd.String("format"))
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
 			if requireRoot && syscall.Geteuid() != 0 {
-				return reply.CliResponse(ctx, newErrorResponse(lib.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+				return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
 			}
 
-			actions := NewActions()
+			actions := NewActions(appConfig)
 
-			reply.CreateSpinner()
+			reply.CreateSpinner(appConfig)
 			return actionFunc(ctx, cmd, actions)
 		}
 	}
@@ -56,30 +57,32 @@ func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Comman
 
 var withRootCheckWrapper = wrapperWithOptions(true)
 
-func CommandList() *cli.Command {
+func CommandList(ctx context.Context) *cli.Command {
+	appConfig := app.GetAppConfig(ctx)
+
 	return &cli.Command{
 		Name:    "kernel",
 		Aliases: []string{"k"},
-		Hidden:  lib.Env.IsAtomic,
-		Usage:   lib.T_("Kernel Management. WARNING - experimental module"),
+		Hidden:  appConfig.ConfigManager.GetConfig().IsAtomic,
+		Usage:   app.T_("Kernel Management. WARNING - experimental module"),
 		Commands: []*cli.Command{
 			{
 				Name:  "list",
-				Usage: lib.T_("List available kernels"),
+				Usage: app.T_("List available kernels"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "flavour",
-						Usage: lib.T_("Filter by kernel flavour (e.g., std-def, un-def)"),
+						Usage: app.T_("Filter by kernel flavour (e.g., std-def, un-def)"),
 					},
 					&cli.BoolFlag{
 						Name:    "installed",
-						Usage:   lib.T_("Show only installed kernels"),
+						Usage:   app.T_("Show only installed kernels"),
 						Aliases: []string{"i"},
 						Value:   false,
 					},
 					&cli.BoolFlag{
 						Name:  "full",
-						Usage: lib.T_("Show full information"),
+						Usage: app.T_("Show full information"),
 						Value: false,
 					},
 				},
@@ -93,7 +96,7 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "info",
-				Usage: lib.T_("Show information about current kernel"),
+				Usage: app.T_("Show information about current kernel"),
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetCurrentKernel(ctx)
 					if err != nil {
@@ -104,31 +107,32 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:      "install",
-				Usage:     lib.T_("Install kernel with specified flavour"),
+				Usage:     app.T_("Install kernel with specified flavour"),
 				ArgsUsage: "flavour",
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{
 						Name:  "modules",
-						Usage: lib.T_("Install additional kernel modules"),
+						Usage: app.T_("Install additional kernel modules"),
 					},
 					&cli.BoolFlag{
 						Name:  "headers",
-						Usage: lib.T_("Install kernel headers"),
+						Usage: app.T_("Install kernel headers"),
 						Value: false,
 					},
 					&cli.BoolFlag{
-						Name:  "dry-run",
-						Usage: lib.T_("Show what would be installed without actually installing"),
-						Value: false,
+						Name:    "simulate",
+						Usage:   app.T_("Simulate installation"),
+						Value:   false,
+						Aliases: []string{"s"},
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					flavour := cmd.Args().First()
 					if flavour == "" {
-						return reply.CliResponse(ctx, newErrorResponse(lib.T_("Kernel flavour must be specified")))
+						return reply.CliResponse(ctx, newErrorResponse(app.T_("Kernel flavour must be specified")))
 					}
 
-					resp, err := actions.InstallKernel(ctx, flavour, cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("dry-run"))
+					resp, err := actions.InstallKernel(ctx, flavour, cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -137,29 +141,30 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "update",
-				Usage: lib.T_("Update kernel to latest version"),
+				Usage: app.T_("Update kernel to latest version"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "flavour",
-						Usage: lib.T_("Update to specific flavour (default: current flavour)"),
+						Usage: app.T_("Update to specific flavour (default: current flavour)"),
 					},
 					&cli.StringSliceFlag{
 						Name:  "modules",
-						Usage: lib.T_("Install additional kernel modules"),
+						Usage: app.T_("Install additional kernel modules"),
 					},
 					&cli.BoolFlag{
 						Name:  "headers",
-						Usage: lib.T_("Install kernel headers"),
+						Usage: app.T_("Install kernel headers"),
 						Value: false,
 					},
 					&cli.BoolFlag{
-						Name:  "dry-run",
-						Usage: lib.T_("Show what would be updated without actually updating"),
-						Value: false,
+						Name:    "simulate",
+						Usage:   app.T_("Simulate update"),
+						Value:   false,
+						Aliases: []string{"s"},
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.UpdateKernel(ctx, cmd.String("flavour"), cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("dry-run"))
+					resp, err := actions.UpdateKernel(ctx, cmd.String("flavour"), cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -168,21 +173,22 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "clean",
-				Usage: lib.T_("Remove old kernel versions"),
+				Usage: app.T_("Remove old kernel versions"),
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "no-backup",
-						Usage: lib.T_("Delete kernels even if it is in 'backup' state"),
+						Usage: app.T_("Delete kernels even if it is in 'backup' state"),
 						Value: false,
 					},
 					&cli.BoolFlag{
-						Name:  "dry-run",
-						Usage: lib.T_("Show what would be removed without actually removing"),
-						Value: false,
+						Name:    "simulate",
+						Usage:   app.T_("Show what would be removed without actually removing"),
+						Value:   false,
+						Aliases: []string{"s"},
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.CleanOldKernels(ctx, cmd.Bool("no-backup"), cmd.Bool("dry-run"))
+					resp, err := actions.CleanOldKernels(ctx, cmd.Bool("no-backup"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -191,15 +197,15 @@ func CommandList() *cli.Command {
 			},
 			{
 				Name:  "modules",
-				Usage: lib.T_("Kernel modules management"),
+				Usage: app.T_("Kernel modules management"),
 				Commands: []*cli.Command{
 					{
 						Name:  "list",
-						Usage: lib.T_("List available modules for kernel"),
+						Usage: app.T_("List available modules for kernel"),
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "flavour",
-								Usage: lib.T_("List modules for specific kernel flavour (default: current flavour)"),
+								Usage: app.T_("List modules for specific kernel flavour (default: current flavour)"),
 							},
 						},
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
@@ -216,26 +222,27 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:      "install",
-						Usage:     lib.T_("Install kernel modules"),
+						Usage:     app.T_("Install kernel modules"),
 						ArgsUsage: "module-name [module-name...]",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "flavour",
-								Usage: lib.T_("Install for specific kernel flavour"),
+								Usage: app.T_("Install for specific kernel flavour"),
 							},
 							&cli.BoolFlag{
-								Name:  "dry-run",
-								Usage: lib.T_("Show what would be installed without actually installing"),
-								Value: false,
+								Name:    "simulate",
+								Usage:   app.T_("Show what would be installed without actually installing"),
+								Aliases: []string{"s"},
+								Value:   false,
 							},
 						},
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							modules := cmd.Args().Slice()
 							if len(modules) == 0 {
-								return reply.CliResponse(ctx, newErrorResponse(lib.T_("At least one module must be specified")))
+								return reply.CliResponse(ctx, newErrorResponse(app.T_("At least one module must be specified")))
 							}
 
-							resp, err := actions.InstallKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("dry-run"))
+							resp, err := actions.InstallKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("simulate"))
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}
@@ -244,26 +251,27 @@ func CommandList() *cli.Command {
 					},
 					{
 						Name:      "remove",
-						Usage:     lib.T_("Remove kernel modules"),
+						Usage:     app.T_("Remove kernel modules"),
 						ArgsUsage: "module-name [module-name...]",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:  "flavour",
-								Usage: lib.T_("Remove from specific kernel flavour"),
+								Usage: app.T_("Remove from specific kernel flavour"),
 							},
 							&cli.BoolFlag{
-								Name:  "dry-run",
-								Usage: lib.T_("Show what would be removed without actually removing"),
-								Value: false,
+								Name:    "simulate",
+								Usage:   app.T_("Show what would be removed without actually removing"),
+								Aliases: []string{"s"},
+								Value:   false,
 							},
 						},
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							modules := cmd.Args().Slice()
 							if len(modules) == 0 {
-								return reply.CliResponse(ctx, newErrorResponse(lib.T_("At least one module must be specified")))
+								return reply.CliResponse(ctx, newErrorResponse(app.T_("At least one module must be specified")))
 							}
 
-							resp, err := actions.RemoveKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("dry-run"))
+							resp, err := actions.RemoveKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("simulate"))
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 							}

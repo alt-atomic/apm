@@ -17,7 +17,7 @@
 package service
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 	"errors"
 	"os"
 	"sync"
@@ -35,13 +35,13 @@ type TemporaryConfig struct {
 
 // TemporaryConfigService HostConfigService — сервис для работы с временным конфигурационным файлом
 type TemporaryConfigService struct {
-	Config     *TemporaryConfig
-	configPath string
+	Config             *TemporaryConfig
+	temporaryImageFile string
 }
 
-func NewTemporaryConfigService(configPath string) *TemporaryConfigService {
+func NewTemporaryConfigService(temporaryImageFile string) *TemporaryConfigService {
 	return &TemporaryConfigService{
-		configPath: configPath,
+		temporaryImageFile: temporaryImageFile,
 	}
 }
 
@@ -50,7 +50,7 @@ var syncYamlTemporaryMutex sync.Mutex
 
 // LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
 func (s *TemporaryConfigService) LoadConfig() error {
-	data, err := os.ReadFile(s.configPath)
+	data, err := os.ReadFile(s.temporaryImageFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			cfg, err := s.generateDefaultConfig()
@@ -76,7 +76,7 @@ func (s *TemporaryConfigService) LoadConfig() error {
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
 func (s *TemporaryConfigService) SaveConfig() error {
 	if s.Config == nil {
-		return errors.New(lib.T_("Configuration not loaded"))
+		return errors.New(app.T_("Configuration not loaded"))
 	}
 
 	syncYamlTemporaryMutex.Lock()
@@ -86,7 +86,7 @@ func (s *TemporaryConfigService) SaveConfig() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.configPath, data, 0644)
+	return os.WriteFile(s.temporaryImageFile, data, 0644)
 }
 
 // generateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
@@ -100,7 +100,7 @@ func (s *TemporaryConfigService) generateDefaultConfig() (TemporaryConfig, error
 		return cfg, err
 	}
 
-	if err = os.WriteFile(s.configPath, data, 0644); err != nil {
+	if err = os.WriteFile(s.temporaryImageFile, data, 0644); err != nil {
 		return cfg, err
 	}
 
@@ -146,9 +146,30 @@ func (s *TemporaryConfigService) DeleteFile() error {
 	syncYamlTemporaryMutex.Lock()
 	defer syncYamlTemporaryMutex.Unlock()
 
-	if _, err := os.Stat(s.configPath); os.IsNotExist(err) {
+	if _, err := os.Stat(s.temporaryImageFile); os.IsNotExist(err) {
 		return nil
 	}
 
-	return os.Remove(s.configPath)
+	return os.Remove(s.temporaryImageFile)
+}
+
+// removeElement удаляет элемент из среза строк.
+func removeElement(slice []string, element string) []string {
+	var newSlice []string
+	for _, v := range slice {
+		if v != element {
+			newSlice = append(newSlice, v)
+		}
+	}
+	return newSlice
+}
+
+// contains проверяет, содержит ли срез slice значение s.
+func contains(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }

@@ -17,7 +17,6 @@
 package helper
 
 import (
-	"apm/lib"
 	"github.com/godbus/dbus/v5/introspect"
 )
 
@@ -107,9 +106,8 @@ const UserIntrospectXML = `
 ` + introspect.IntrospectDataString + `</node>`
 
 // GetUserIntrospectXML возвращает XML интроспекции для пользовательской сессии
-// в зависимости от наличия distrobox в системе
-func GetUserIntrospectXML() string {
-	if lib.Env.ExistDistrobox {
+func GetUserIntrospectXML(existDistrobox bool) string {
+	if existDistrobox {
 		return UserIntrospectXML
 	}
 
@@ -133,7 +131,7 @@ func GetUserIntrospectXML() string {
 
 // GetSystemIntrospectXML возвращает XML интроспекции для системной сессии
 // в зависимости от типа системы (атомарная или обычная)
-func GetSystemIntrospectXML() string {
+func GetSystemIntrospectXML(isAtomic bool) string {
 	baseSystemXML := `<node>
   <interface name="org.altlinux.APM">
     <signal name="Notification">
@@ -167,6 +165,7 @@ func GetSystemIntrospectXML() string {
     <method name="Remove">
       <arg direction="in" type="as" name="packages"/>
       <arg direction="in" type="b" name="purge"/>
+ 	  <arg direction="in" type="b" name="depends"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
@@ -196,6 +195,7 @@ func GetSystemIntrospectXML() string {
 
     <method name="CheckRemove">
       <arg direction="in" type="as" name="packages"/>
+      <arg direction="in" type="b" name="depends"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
@@ -208,7 +208,7 @@ func GetSystemIntrospectXML() string {
     </method>`
 
 	// Если система атомарная, добавляем методы для работы с образом
-	if lib.Env.IsAtomic {
+	if isAtomic {
 		baseSystemXML += `
     
     <method name="ImageApply">

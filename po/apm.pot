@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-09 01:09+0600\n"
+"POT-Creation-Date: 2025-09-12 02:36+0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,560 +18,596 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: internal/common/appstream/swcat.go:123
+#: internal/common/app/database.go:99
+msgid "error opening system database: %w"
+msgstr ""
+
+#: internal/common/app/database.go:104
+msgid "error connecting to system database: %w"
+msgstr ""
+
+#: internal/common/app/database.go:119
+msgid "error opening user database: %w"
+msgstr ""
+
+#: internal/common/app/database.go:124
+msgid "error connecting to user database: %w"
+msgstr ""
+
+#: internal/common/app/database.go:139
+msgid "error opening key-value database: %w"
+msgstr ""
+
+#: internal/common/app/dbus.go:71
+msgid "failed to connect to DBus: %w"
+msgstr ""
+
+#: internal/common/app/dbus.go:79
+msgid "failed to request DBus name: %w"
+msgstr ""
+
+#: internal/common/app/dbus.go:85
+msgid "Interface org.altlinux.APM is already in use"
+msgstr ""
+
+#: internal/common/app/dbus.go:101
+msgid "failed to close DBus connection: %w"
+msgstr ""
+
+#: internal/common/appstream/swcat.go:122
 msgid "Cannot read dir %s: %w"
 msgstr ""
 
-#: internal/common/appstream/swcat.go:136
+#: internal/common/appstream/swcat.go:135
 msgid "Read file %s failed: %w"
 msgstr ""
 
-#: internal/common/appstream/swcat.go:140
+#: internal/common/appstream/swcat.go:139
 msgid "Unpack %s failed: %w"
 msgstr ""
 
-#: internal/common/appstream/swcat.go:146
+#: internal/common/appstream/swcat.go:145
 msgid "Parse %s failed: %w"
 msgstr ""
 
-#: internal/common/apt/errors.go:167
+#: internal/common/apt/errors.go:168
 msgid "Broken packages"
 msgstr ""
 
-#: internal/common/apt/errors.go:170
+#: internal/common/apt/errors.go:171
 msgid "You have no permissions for that"
 msgstr ""
 
-#: internal/common/apt/errors.go:173
+#: internal/common/apt/errors.go:174
 msgid "Internal Error, InstallPackages was called with broken packages!"
 msgstr ""
 
-#: internal/common/apt/errors.go:176
+#: internal/common/apt/errors.go:177
 msgid "Packages need to be removed but Remove is disabled."
 msgstr ""
 
-#: internal/common/apt/errors.go:179
+#: internal/common/apt/errors.go:180
 msgid "Unable to lock the download directory"
 msgstr ""
 
-#: internal/common/apt/errors.go:182
+#: internal/common/apt/errors.go:183
 msgid "There are problems and -y was used without --force-yes"
 msgstr ""
 
-#: internal/common/apt/errors.go:185
+#: internal/common/apt/errors.go:186
 #, c-format
 msgid "You don't have enough free space in %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:188
+#: internal/common/apt/errors.go:189
 #, c-format
 msgid "Package file %s is out of sync"
 msgstr ""
 
-#: internal/common/apt/errors.go:191
+#: internal/common/apt/errors.go:192
 msgid "Trivial Only specified but this is not a trivial operation"
 msgstr ""
 
-#: internal/common/apt/errors.go:194 internal/system/dialog/dialog.go:92
-#: internal/system/dialog/dialog.go:98
-#: internal/system/dialog/dialog_image.go:98
-#: internal/system/dialog/dialog_image.go:121
+#: internal/common/apt/errors.go:195 internal/system/dialog/dialog.go:94
+#: internal/system/dialog/dialog.go:100
+#: internal/system/dialog/dialog_image.go:100
+#: internal/system/dialog/dialog_image.go:123
 msgid "Operation cancelled"
 msgstr ""
 
-#: internal/common/apt/errors.go:197
+#: internal/common/apt/errors.go:198
 msgid "Must specify at least one package to check builddeps for"
 msgstr ""
 
-#: internal/common/apt/errors.go:200
+#: internal/common/apt/errors.go:201
 #, c-format
 msgid "Unable to find a source package for %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:203
+#: internal/common/apt/errors.go:204
 #, c-format
 msgid "Unable to get build-dependency information for %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:206
+#: internal/common/apt/errors.go:207
 #, c-format
 msgid ""
 "Some broken packages were found while trying to process build-dependencies "
 "for %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:209
+#: internal/common/apt/errors.go:210
 #, c-format
 msgid "Package %s is a virtual package with no good providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:212
+#: internal/common/apt/errors.go:213
 #, c-format
 msgid "Package %s is a virtual package with multiple good providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:215
+#: internal/common/apt/errors.go:216
 msgid "No packages found"
 msgstr ""
 
-#: internal/common/apt/errors.go:218
+#: internal/common/apt/errors.go:219
 #, c-format
 msgid "Package %s is not installed, so not removed"
 msgstr ""
 
-#: internal/common/apt/errors.go:221
+#: internal/common/apt/errors.go:222
 #, c-format
 msgid "Release %s'%s' for '%s' was not found"
 msgstr ""
 
-#: internal/common/apt/errors.go:224
+#: internal/common/apt/errors.go:225
 #, c-format
 msgid "Version %s'%s' for '%s' was not found"
 msgstr ""
 
-#: internal/common/apt/errors.go:227
+#: internal/common/apt/errors.go:228
 #, c-format
 msgid "Sources list %s could not be read"
 msgstr ""
 
-#: internal/common/apt/errors.go:230
+#: internal/common/apt/errors.go:231
 #, c-format
 msgid "Sources list %s doesn't exist"
 msgstr ""
 
-#: internal/common/apt/errors.go:233
+#: internal/common/apt/errors.go:234
 msgid "Excessive arguments"
 msgstr ""
 
-#: internal/common/apt/errors.go:236
+#: internal/common/apt/errors.go:237
 msgid "Internal Error, problem resolver broke stuff"
 msgstr ""
 
-#: internal/common/apt/errors.go:239
+#: internal/common/apt/errors.go:240
 msgid "Internal Error, Ordering didn't finish"
 msgstr ""
 
-#: internal/common/apt/errors.go:242
+#: internal/common/apt/errors.go:243
 msgid "Some files failed to download"
 msgstr ""
 
-#: internal/common/apt/errors.go:245
+#: internal/common/apt/errors.go:246
 msgid ""
 "Unable to fetch some archives, maybe run apt-get update or try with --fix-"
 "missing?"
 msgstr ""
 
-#: internal/common/apt/errors.go:248
+#: internal/common/apt/errors.go:249
 msgid "--fix-missing and media swapping is not currently supported"
 msgstr ""
 
-#: internal/common/apt/errors.go:251
+#: internal/common/apt/errors.go:252
 msgid "Unable to correct missing packages"
 msgstr ""
 
-#: internal/common/apt/errors.go:254
+#: internal/common/apt/errors.go:255
 msgid "Aborting Install"
 msgstr ""
 
-#: internal/common/apt/errors.go:257
+#: internal/common/apt/errors.go:258
 msgid "Could not open RPM database"
 msgstr ""
 
-#: internal/common/apt/errors.go:260
+#: internal/common/apt/errors.go:261
 #, c-format
 msgid "Couldn't parse name '%s'"
 msgstr ""
 
-#: internal/common/apt/errors.go:263
+#: internal/common/apt/errors.go:264
 msgid "Write to stdout failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:266
+#: internal/common/apt/errors.go:267
 msgid "Exceeded maximum number of command arguments"
 msgstr ""
 
-#: internal/common/apt/errors.go:269
+#: internal/common/apt/errors.go:270
 #, c-format
 msgid ""
 "Package %s dependency for %s cannot be satisfied because the package %s "
 "cannot be found"
 msgstr ""
 
-#: internal/common/apt/errors.go:272
+#: internal/common/apt/errors.go:273
 #, c-format
 msgid "Regex compilation error - %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:275
+#: internal/common/apt/errors.go:276
 #, c-format
 msgid "Package %s has no installation candidate"
 msgstr ""
 
-#: internal/common/apt/errors.go:278
+#: internal/common/apt/errors.go:279
 msgid "Internal Error, AllUpgrade broke stuff"
 msgstr ""
 
-#: internal/common/apt/errors.go:281
+#: internal/common/apt/errors.go:282
 msgid "Requested autoremove failed."
 msgstr ""
 
-#: internal/common/apt/errors.go:284
+#: internal/common/apt/errors.go:285
 #, c-format
 msgid "Couldn't find package %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:287
+#: internal/common/apt/errors.go:288
 #, c-format
 msgid "%s dependency for %s cannot be satisfied"
 msgstr ""
 
-#: internal/common/apt/errors.go:290
+#: internal/common/apt/errors.go:291
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: Installed package %s is too new"
 msgstr ""
 
-#: internal/common/apt/errors.go:293
+#: internal/common/apt/errors.go:294
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:296
+#: internal/common/apt/errors.go:297
 msgid "You must give exactly one pattern"
 msgstr ""
 
-#: internal/common/apt/errors.go:298
+#: internal/common/apt/errors.go:299
 msgid "No help for that"
 msgstr ""
 
-#: internal/common/apt/errors.go:300
+#: internal/common/apt/errors.go:301
 #, c-format
 msgid "%s is already the newest version."
 msgstr ""
 
-#: internal/common/apt/errors.go:303
+#: internal/common/apt/errors.go:304
 msgid "The list of sources could not be read."
 msgstr ""
 
-#: internal/common/apt/errors.go:306
+#: internal/common/apt/errors.go:307
 msgid "There are changes to be made"
 msgstr ""
 
-#: internal/common/apt/errors.go:309
+#: internal/common/apt/errors.go:310
 msgid "Failed to fetch some archives."
 msgstr ""
 
-#: internal/common/apt/errors.go:312
+#: internal/common/apt/errors.go:313
 #, c-format
 msgid "Failed to fetch %s  %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:315
+#: internal/common/apt/errors.go:316
 msgid ""
 "Some index files failed to download. They have been ignored, or old ones "
 "used instead."
 msgstr ""
 
-#: internal/common/apt/errors.go:318
+#: internal/common/apt/errors.go:319
 msgid ""
 "'apt-get upgrade' is disabled because it can leave system in a broken state."
 msgstr ""
 
-#: internal/common/apt/errors.go:321
+#: internal/common/apt/errors.go:322
 msgid ""
 "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or "
 "specify a solution)."
 msgstr ""
 
-#: internal/common/apt/errors.go:324
+#: internal/common/apt/errors.go:325
 msgid "Must specify at least one package to fetch source for"
 msgstr ""
 
-#: internal/common/apt/errors.go:327
+#: internal/common/apt/errors.go:328
 #, c-format
 msgid "Fatal: conflicts violated %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:330
+#: internal/common/apt/errors.go:331
 msgid "Child process failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:333
+#: internal/common/apt/errors.go:334
 msgid "Must specify at least one package to get changelog for"
 msgstr ""
 
-#: internal/common/apt/errors.go:336
+#: internal/common/apt/errors.go:337
 msgid "Failed to process build dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:339
+#: internal/common/apt/errors.go:340
 #, c-format
 msgid "Package %s is a virtual package with no "
 msgstr ""
 
-#: internal/common/apt/errors.go:342
+#: internal/common/apt/errors.go:343
 #, c-format
 msgid "Package %s is a virtual package with multiple "
 msgstr ""
 
 #. Bindings specific patterns (from C++ bindings messages)
-#: internal/common/apt/errors.go:345
+#: internal/common/apt/errors.go:346
 msgid "Failed to initialize APT configuration"
 msgstr ""
 
-#: internal/common/apt/errors.go:346
+#: internal/common/apt/errors.go:347
 msgid "Invalid system pointer"
 msgstr ""
 
-#: internal/common/apt/errors.go:347
+#: internal/common/apt/errors.go:348
 msgid "Failed to initialize APT system"
 msgstr ""
 
-#: internal/common/apt/errors.go:348
+#: internal/common/apt/errors.go:349
 msgid "Invalid arguments for cache_open"
 msgstr ""
 
-#: internal/common/apt/errors.go:349
+#: internal/common/apt/errors.go:350
 msgid "System not properly initialized"
 msgstr ""
 
-#: internal/common/apt/errors.go:350
+#: internal/common/apt/errors.go:351
 msgid "Unable to acquire APT system lock - another process may be using APT"
 msgstr ""
 
-#: internal/common/apt/errors.go:351
+#: internal/common/apt/errors.go:352
 msgid "Failed to open APT cache"
 msgstr ""
 
-#: internal/common/apt/errors.go:352
+#: internal/common/apt/errors.go:353
 msgid "Failed to check dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:353
+#: internal/common/apt/errors.go:354
 msgid "Failed to get dependency cache"
 msgstr ""
 
-#: internal/common/apt/errors.go:354
+#: internal/common/apt/errors.go:355
 msgid "Failed to reopen cache after refresh"
 msgstr ""
 
-#: internal/common/apt/errors.go:355
+#: internal/common/apt/errors.go:356
 msgid "Failed to check dependencies after refresh"
 msgstr ""
 
-#: internal/common/apt/errors.go:356
+#: internal/common/apt/errors.go:357
 msgid "Failed to get dependency cache after refresh"
 msgstr ""
 
-#: internal/common/apt/errors.go:357
+#: internal/common/apt/errors.go:358
 msgid "Failed to get package indexes"
 msgstr ""
 
-#: internal/common/apt/errors.go:358
+#: internal/common/apt/errors.go:359
 msgid "Failed to download package lists"
 msgstr ""
 
-#: internal/common/apt/errors.go:359
+#: internal/common/apt/errors.go:360
 msgid "Failed to rebuild caches"
 msgstr ""
 
-#: internal/common/apt/errors.go:360
+#: internal/common/apt/errors.go:361
 msgid "Invalid cache or output pointer for pm create"
 msgstr ""
 
-#: internal/common/apt/errors.go:361
+#: internal/common/apt/errors.go:362
 msgid "Failed to create package manager"
 msgstr ""
 
-#: internal/common/apt/errors.go:362
+#: internal/common/apt/errors.go:363
 msgid "Invalid arguments for mark_install"
 msgstr ""
 
-#: internal/common/apt/errors.go:363
+#: internal/common/apt/errors.go:364
 msgid "Invalid arguments for mark_remove"
 msgstr ""
 
-#: internal/common/apt/errors.go:364
+#: internal/common/apt/errors.go:365
 msgid "Problem resolver failed to handle package removal dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:365
+#: internal/common/apt/errors.go:366
 msgid "Invalid arguments for mark_keep"
 msgstr ""
 
-#: internal/common/apt/errors.go:366
+#: internal/common/apt/errors.go:367
 msgid "Invalid arguments for mark_auto"
 msgstr ""
 
-#: internal/common/apt/errors.go:367
+#: internal/common/apt/errors.go:368
 msgid "Invalid package manager instance"
 msgstr ""
 
-#: internal/common/apt/errors.go:368
+#: internal/common/apt/errors.go:369
 msgid "Cannot install packages with broken dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:369
+#: internal/common/apt/errors.go:370
 msgid "Failed to get package archives"
 msgstr ""
 
-#: internal/common/apt/errors.go:370
+#: internal/common/apt/errors.go:371
 msgid "Failed to download packages"
 msgstr ""
 
-#: internal/common/apt/errors.go:371
+#: internal/common/apt/errors.go:372
 msgid "Package manager operation failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:372
+#: internal/common/apt/errors.go:373
 msgid "Package manager operation incomplete"
 msgstr ""
 
-#: internal/common/apt/errors.go:373
+#: internal/common/apt/errors.go:374
 msgid "Unknown package manager result"
 msgstr ""
 
-#: internal/common/apt/errors.go:374
+#: internal/common/apt/errors.go:375
 msgid "Failed to update package marks"
 msgstr ""
 
-#: internal/common/apt/errors.go:375
+#: internal/common/apt/errors.go:376
 msgid "Invalid cache for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:376
+#: internal/common/apt/errors.go:377
 msgid "Distribution upgrade failed"
 msgstr ""
 
-#: internal/common/apt/errors.go:377
+#: internal/common/apt/errors.go:378
 msgid "Failed to create package manager for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:378
+#: internal/common/apt/errors.go:379
 msgid "Failed to get package archives for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:379
+#: internal/common/apt/errors.go:380
 msgid "Failed to download packages for dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:380
+#: internal/common/apt/errors.go:381
 msgid "Failed to update package marks after dist upgrade"
 msgstr ""
 
-#: internal/common/apt/errors.go:381
+#: internal/common/apt/errors.go:382
 msgid "Invalid parameters for search"
 msgstr ""
 
-#: internal/common/apt/errors.go:382
+#: internal/common/apt/errors.go:383
 msgid "Failed to compile regex pattern"
 msgstr ""
 
-#: internal/common/apt/errors.go:383
+#: internal/common/apt/errors.go:384
 msgid "Failed to create package records parser"
 msgstr ""
 
-#: internal/common/apt/errors.go:384
+#: internal/common/apt/errors.go:385
 msgid "Failed to allocate memory for search results"
 msgstr ""
 
-#: internal/common/apt/errors.go:385
+#: internal/common/apt/errors.go:386
 msgid "Unknown exception in search"
 msgstr ""
 
-#: internal/common/apt/errors.go:386
+#: internal/common/apt/errors.go:387
 msgid "Invalid parameters for get_package_info"
 msgstr ""
 
-#: internal/common/apt/errors.go:387
+#: internal/common/apt/errors.go:388
 msgid "Invalid parameters for simulation"
 msgstr ""
 
-#: internal/common/apt/errors.go:388
+#: internal/common/apt/errors.go:389
 msgid "Cache file not available"
 msgstr ""
 
-#: internal/common/apt/errors.go:389
+#: internal/common/apt/errors.go:390
 msgid "Invalid parameters for multi-package simulation"
 msgstr ""
 
-#: internal/common/apt/errors.go:390
+#: internal/common/apt/errors.go:391
 #, c-format
 msgid "Virtual package %s has no installable providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:392
+#: internal/common/apt/errors.go:393
 #, c-format
 msgid ""
 "Virtual package %s has multiple providers. Please select specific package."
 msgstr ""
 
-#: internal/common/apt/errors.go:394
+#: internal/common/apt/errors.go:395
 #, c-format
 msgid "Package not found: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:395
+#: internal/common/apt/errors.go:396
 #, c-format
 msgid "Package is not installed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:396
+#: internal/common/apt/errors.go:397
 #, c-format
 msgid "Package %s has no installed providers"
 msgstr ""
 
-#: internal/common/apt/errors.go:398
+#: internal/common/apt/errors.go:399
 #, c-format
 msgid ""
 "Virtual package %s has multiple installed providers: %s. Please remove "
 "specific package."
 msgstr ""
 
-#: internal/common/apt/errors.go:400
+#: internal/common/apt/errors.go:401
 #, c-format
 msgid "Dist upgrade simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:401
+#: internal/common/apt/errors.go:402
 #, c-format
 msgid "Multi-package install simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:402
+#: internal/common/apt/errors.go:403
 #, c-format
 msgid "Multi-package remove simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:403
+#: internal/common/apt/errors.go:404
 #, c-format
 msgid "Combined simulation failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:404
+#: internal/common/apt/errors.go:405
 #, c-format
 msgid "Virtual name '%s' has multiple providers; specify exact package name"
 msgstr ""
 
-#: internal/common/apt/errors.go:405
+#: internal/common/apt/errors.go:406
 #, c-format
 msgid "Cannot remove %s not installed"
 msgstr ""
 
-#: internal/common/apt/errors.go:406
+#: internal/common/apt/errors.go:407
 #, c-format
 msgid "Cannot remove essential package %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:407
+#: internal/common/apt/errors.go:408
 #, c-format
 msgid "Cannot remove %s. Try removing together: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:408
+#: internal/common/apt/errors.go:409
 msgid "Broken dependencies"
 msgstr ""
 
-#: internal/common/apt/errors.go:410
+#: internal/common/apt/errors.go:411
 #, c-format
 msgid ""
 "Virtual package %s is provided by:\n"
@@ -579,96 +615,107 @@ msgid ""
 "You should explicitly select one to install"
 msgstr ""
 
-#: internal/common/apt/errors.go:412
+#: internal/common/apt/errors.go:413
 #, c-format
 msgid "Repository update failed: %s"
 msgstr ""
 
-#: internal/common/apt/errors.go:413
+#: internal/common/apt/errors.go:414
 #, c-format
 msgid "Package index update failed: %s"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:268
+#: internal/common/apt/errors.go:415
+#, c-format
+msgid "Conflicting packages: %s and %s"
+msgstr ""
+
+#: internal/common/apt/errors.go:417
+msgid ""
+"Some packages could not be installed. This may mean that you have requested "
+"an impossible situation"
+msgstr ""
+
+#: internal/common/apt/package/actions.go:270
 msgid "Downloading packages"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:277
+#: internal/common/apt/package/actions.go:279
 msgid "All packages downloaded"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:335
+#: internal/common/apt/package/actions.go:337
 #, c-format
 msgid "Installing progress: %s"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:342
+#: internal/common/apt/package/actions.go:344
 #, c-format
 msgid "Installing %s"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:454
+#: internal/common/apt/package/actions.go:456
 msgid "AppStream load failed: %v"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:554
+#: internal/common/apt/package/actions.go:556
 msgid "Error updating information about installed packages: %w"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:590
+#: internal/common/apt/package/actions.go:592
 msgid "Error executing the rpm -qia command: %w"
 msgstr ""
 
-#: internal/common/apt/package/actions.go:657
-#: internal/distrobox/service/alt.go:256
+#: internal/common/apt/package/actions.go:659
+#: internal/distrobox/service/alt.go:258
 msgid "Error scanning rpm output: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:198
+#: internal/common/apt/package/database.go:199
 msgid "Table cleanup error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:217
+#: internal/common/apt/package/database.go:218
 msgid "Batch insert error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:233
+#: internal/common/apt/package/database.go:234
 #, c-format
 msgid "Failed to get information about the package %s"
 msgstr ""
 
-#: internal/common/apt/package/database.go:246
+#: internal/common/apt/package/database.go:247
 msgid "Temporary table drop error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:250
+#: internal/common/apt/package/database.go:251
 msgid "Temporary table creation error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:262
+#: internal/common/apt/package/database.go:263
 msgid "Batch insert into temporary table error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:281
+#: internal/common/apt/package/database.go:282
 msgid "Batch update error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:300
-#: internal/common/apt/package/database.go:327
-#: internal/common/apt/package/database.go:374
+#: internal/common/apt/package/database.go:301
+#: internal/common/apt/package/database.go:328
+#: internal/common/apt/package/database.go:375
 msgid "Query execution error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:356
+#: internal/common/apt/package/database.go:357
 #, c-format
 msgid "Invalid sort field: %s. Available fields: %s"
 msgstr ""
 
-#: internal/common/apt/package/database.go:398
+#: internal/common/apt/package/database.go:399
 msgid "Package count error: %w"
 msgstr ""
 
-#: internal/common/apt/package/database.go:409
+#: internal/common/apt/package/database.go:410
 #, c-format
 msgid "Invalid filter field: %s. Available fields: %s"
 msgstr ""
@@ -700,326 +747,326 @@ msgstr ""
 msgid "%.2f MB"
 msgstr ""
 
-#: internal/common/helper/translate.go:34
+#: internal/common/helper/translate.go:35
 msgid "show help"
 msgstr ""
 
-#: internal/common/helper/translate.go:42
+#: internal/common/helper/translate.go:43
 msgid "print the version"
-msgstr ""
-
-#: internal/common/helper/translate.go:65
-#: internal/common/helper/translate.go:92
-#: internal/common/helper/translate.go:120
-msgid "Module:"
 msgstr ""
 
 #: internal/common/helper/translate.go:66
 #: internal/common/helper/translate.go:93
 #: internal/common/helper/translate.go:121
-msgid "Usage:"
+msgid "Module:"
 msgstr ""
 
 #: internal/common/helper/translate.go:67
-#: internal/common/helper/translate.go:95
-#: internal/common/helper/translate.go:123
-msgid "Description:"
+#: internal/common/helper/translate.go:94
+#: internal/common/helper/translate.go:122
+msgid "Usage:"
 msgstr ""
 
 #: internal/common/helper/translate.go:68
+#: internal/common/helper/translate.go:96
 #: internal/common/helper/translate.go:124
-msgid "Commands:"
+msgid "Description:"
 msgstr ""
 
 #: internal/common/helper/translate.go:69
-#: internal/common/helper/translate.go:70
-#: internal/common/helper/translate.go:96
-#: internal/common/helper/translate.go:97
 #: internal/common/helper/translate.go:125
+msgid "Commands:"
+msgstr ""
+
+#: internal/common/helper/translate.go:70
+#: internal/common/helper/translate.go:71
+#: internal/common/helper/translate.go:97
+#: internal/common/helper/translate.go:98
 #: internal/common/helper/translate.go:126
+#: internal/common/helper/translate.go:127
 msgid "Options:"
 msgstr ""
 
-#: internal/common/helper/translate.go:94
-#: internal/common/helper/translate.go:122
+#: internal/common/helper/translate.go:95
+#: internal/common/helper/translate.go:123
 msgid "Category:"
 msgstr ""
 
-#: internal/common/helper/translate.go:98
+#: internal/common/helper/translate.go:99
 msgid "Global options:"
 msgstr ""
 
-#: internal/common/helper/translate.go:146
+#: internal/common/helper/translate.go:147
 msgid "default"
 msgstr ""
 
-#: internal/common/icon/service.go:61
+#: internal/common/icon/service.go:63
 msgid "Icon for package %s not found: %v"
 msgstr ""
 
-#: internal/common/icon/service.go:86 internal/common/icon/service.go:102
+#: internal/common/icon/service.go:88 internal/common/icon/service.go:104
 msgid "Error saving icon %s: %v"
 msgstr ""
 
-#: internal/common/icon/service.go:112
+#: internal/common/icon/service.go:114
 msgid "Error calculating icon statistics: "
 msgstr ""
 
-#: internal/common/icon/service.go:114
+#: internal/common/icon/service.go:116
 #, c-format
 msgid "Total number of icons in the database: %d, total size: %d bytes"
 msgstr ""
 
-#: internal/common/icon/service.go:134
+#: internal/common/icon/service.go:136
 msgid "Error preparing temporary directories: %v"
 msgstr ""
 
-#: internal/common/icon/service.go:152
+#: internal/common/icon/service.go:154
 msgid "Error checking the existence of the icon in the database: "
 msgstr ""
 
-#: internal/common/icon/service.go:165
+#: internal/common/icon/service.go:167
 #, c-format
 msgid "Error retrieving icon: %s"
 msgstr ""
 
-#: internal/common/icon/service.go:171
+#: internal/common/icon/service.go:173
 msgid "Error compressing the icon: "
 msgstr ""
 
-#: internal/common/icon/service.go:196
+#: internal/common/icon/service.go:198
 msgid "Error writing icon %s to the database: %v"
 msgstr ""
 
-#: internal/common/icon/service.go:212
+#: internal/common/icon/service.go:214
 #, c-format
 msgid "Icon %s not found"
 msgstr ""
 
-#: internal/common/icon/service.go:216
+#: internal/common/icon/service.go:218
 msgid "Error unpacking icon %s: %v"
 msgstr ""
 
-#: internal/common/icon/swcat.go:86
+#: internal/common/icon/swcat.go:88
 msgid "Error copying from container: %v, stderr: %s"
 msgstr ""
 
-#: internal/common/icon/swcat.go:176
+#: internal/common/icon/swcat.go:177
 #, c-format
 msgid "File %s not found in %s"
 msgstr ""
 
-#: internal/common/icon/swcat.go:251
+#: internal/common/icon/swcat.go:252
 #, c-format
 msgid "Icon not found for package %s"
 msgstr ""
 
-#: internal/common/icon/swcat.go:264
+#: internal/common/icon/swcat.go:265
 msgid "Failed to read directory %s: %w"
 msgstr ""
 
-#: internal/common/icon/swcat.go:276
+#: internal/common/icon/swcat.go:277
 msgid "Error retrieving files in %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/common/icon/swcat.go:297
+#: internal/common/icon/swcat.go:298
 msgid "Failed to read file %s: %w"
 msgstr ""
 
-#: internal/common/icon/swcat.go:303
+#: internal/common/icon/swcat.go:304
 msgid "Error executing command for file %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/common/icon/swcat.go:310
+#: internal/common/icon/swcat.go:311
 msgid "Failed to unpack file %s: %w"
 msgstr ""
 
-#: internal/common/icon/swcat.go:316
+#: internal/common/icon/swcat.go:317
 msgid "Error parsing XML file %s: %w"
 msgstr ""
 
-#: internal/common/reply/event.go:144
+#: internal/common/reply/event.go:146
 msgid "DBus connection is not initialized"
 msgstr ""
 
-#: internal/common/reply/event.go:153
+#: internal/common/reply/event.go:155
 msgid "Error sending notification: %v"
 msgstr ""
 
-#: internal/common/reply/event.go:160 internal/common/reply/event.go:202
+#: internal/common/reply/event.go:162 internal/common/reply/event.go:204
 msgid "Saving packages to the database"
 msgstr ""
 
-#: internal/common/reply/event.go:162
+#: internal/common/reply/event.go:164
 msgid "Requesting list of containers"
 msgstr ""
 
-#: internal/common/reply/event.go:164
+#: internal/common/reply/event.go:166
 msgid "Exporting package"
 msgstr ""
 
-#: internal/common/reply/event.go:166
+#: internal/common/reply/event.go:168
 msgid "Requesting container information"
 msgstr ""
 
-#: internal/common/reply/event.go:168
+#: internal/common/reply/event.go:170
 msgid "Creating container"
 msgstr ""
 
-#: internal/common/reply/event.go:170
+#: internal/common/reply/event.go:172
 msgid "Deleting container"
 msgstr ""
 
-#: internal/common/reply/event.go:172
+#: internal/common/reply/event.go:174
 msgid "Installing package"
 msgstr ""
 
-#: internal/common/reply/event.go:174
+#: internal/common/reply/event.go:176
 msgid "Removing package"
 msgstr ""
 
-#: internal/common/reply/event.go:176
+#: internal/common/reply/event.go:178
 msgid "Retrieving list of packages"
 msgstr ""
 
-#: internal/common/reply/event.go:178
+#: internal/common/reply/event.go:180
 msgid "Determining file owner"
 msgstr ""
 
-#: internal/common/reply/event.go:180
+#: internal/common/reply/event.go:182
 msgid "Searching package paths"
 msgstr ""
 
-#: internal/common/reply/event.go:182
+#: internal/common/reply/event.go:184
 msgid "Retrieving package information"
 msgstr ""
 
-#: internal/common/reply/event.go:184
+#: internal/common/reply/event.go:186
 msgid "Updating packages"
 msgstr ""
 
-#: internal/common/reply/event.go:186
+#: internal/common/reply/event.go:188
 msgid "Filtering packages"
 msgstr ""
 
-#: internal/common/reply/event.go:188
+#: internal/common/reply/event.go:190
 msgid "Working with packages"
 msgstr ""
 
-#: internal/common/reply/event.go:190
+#: internal/common/reply/event.go:192
 msgid "System update"
 msgstr ""
 
-#: internal/common/reply/event.go:192
+#: internal/common/reply/event.go:194
 msgid "Analyzing packages"
 msgstr ""
 
-#: internal/common/reply/event.go:194
+#: internal/common/reply/event.go:196
 msgid "General update process"
 msgstr ""
 
-#: internal/common/reply/event.go:196
+#: internal/common/reply/event.go:198
 msgid "General update kernel"
 msgstr ""
 
-#: internal/common/reply/event.go:198
+#: internal/common/reply/event.go:200
 msgid "Loading package list from STPLR repository"
 msgstr ""
 
-#: internal/common/reply/event.go:200
+#: internal/common/reply/event.go:202
 msgid "Loading package list from ALT repository"
 msgstr ""
 
-#: internal/common/reply/event.go:204
+#: internal/common/reply/event.go:206
 msgid "Saving image history to the database"
 msgstr ""
 
-#: internal/common/reply/event.go:206
+#: internal/common/reply/event.go:208
 msgid "Building local image"
 msgstr ""
 
-#: internal/common/reply/event.go:208
+#: internal/common/reply/event.go:210
 msgid "Switching to local image"
 msgstr ""
 
-#: internal/common/reply/event.go:210
+#: internal/common/reply/event.go:212
 msgid "General Image Update Process"
 msgstr ""
 
-#: internal/common/reply/event.go:212
+#: internal/common/reply/event.go:214
 msgid "Downloading base image update"
 msgstr ""
 
-#: internal/common/reply/event.go:214
+#: internal/common/reply/event.go:216
 msgid "Cleaning up old images"
 msgstr ""
 
-#: internal/common/reply/event.go:216
+#: internal/common/reply/event.go:218
 msgid "Synchronizing database"
 msgstr ""
 
-#: internal/common/reply/event.go:218
+#: internal/common/reply/event.go:220
 msgid "Update information about applications"
 msgstr ""
 
-#: internal/common/reply/event.go:220
+#: internal/common/reply/event.go:222
 msgid "Get current kernel"
 msgstr ""
 
-#: internal/common/reply/event.go:222
+#: internal/common/reply/event.go:224
 msgid "Get list kernels"
 msgstr ""
 
-#: internal/common/reply/event.go:224
+#: internal/common/reply/event.go:226
 msgid "Install kernel"
 msgstr ""
 
-#: internal/common/reply/event.go:226 internal/kernel/commands.go:219
+#: internal/common/reply/event.go:228 internal/kernel/commands.go:225
 msgid "Install kernel modules"
 msgstr ""
 
-#: internal/common/reply/event.go:228
+#: internal/common/reply/event.go:230
 msgid "Remove packages"
 msgstr ""
 
-#: internal/common/reply/event.go:230
+#: internal/common/reply/event.go:232
 msgid "Simulate Remove packages"
 msgstr ""
 
 #. Общий спиннер + фраза
-#: internal/common/reply/preloader.go:343
+#: internal/common/reply/preloader.go:348
 msgid "Executing tasks"
 msgstr ""
 
-#: internal/common/reply/preloader.go:360
+#: internal/common/reply/preloader.go:365
 msgid "Progress completed"
 msgstr ""
 
-#: internal/common/reply/preloader.go:362
+#: internal/common/reply/preloader.go:367
 #, c-format
 msgid "Progress: %s completed"
 msgstr ""
 
-#: internal/common/reply/response.go:140 internal/common/reply/response.go:163
-#: internal/common/reply/response.go:284 internal/common/reply/response.go:311
-#: internal/common/reply/response.go:337
+#: internal/common/reply/response.go:155 internal/common/reply/response.go:178
+#: internal/common/reply/response.go:299 internal/common/reply/response.go:326
+#: internal/common/reply/response.go:352
 msgid "%T (unknown type)"
 msgstr ""
 
-#: internal/common/reply/response.go:159 internal/common/reply/response.go:333
+#: internal/common/reply/response.go:174 internal/common/reply/response.go:348
 msgid "%T (slice of unknown type)"
 msgstr ""
 
-#: internal/common/reply/response.go:186 internal/common/reply/response.go:193
+#: internal/common/reply/response.go:201 internal/common/reply/response.go:208
 #, c-format
 msgid "%s: no"
 msgstr ""
 
-#: internal/common/reply/response.go:203
+#: internal/common/reply/response.go:218
 msgid "yes"
 msgstr ""
 
-#: internal/common/reply/response.go:205
+#: internal/common/reply/response.go:220
 msgid "no"
 msgstr ""
 
@@ -1047,12 +1094,12 @@ msgstr ""
 msgid "Application Information"
 msgstr ""
 
-#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:375
+#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:377
 msgid "Downloaded Size"
 msgstr ""
 
 #: internal/common/reply/translate.go:25 internal/common/reply/translate.go:71
-#: internal/system/dialog/dialog.go:376
+#: internal/system/dialog/dialog.go:378
 msgid "Installed Size"
 msgstr ""
 
@@ -1080,11 +1127,10 @@ msgstr ""
 msgid "Package Information"
 msgstr ""
 
-#. Резервируем место для заголовка, подсказок и кнопок
 #. Создаем панели
-#: internal/common/reply/translate.go:39 internal/system/dialog/dialog.go:66
-#: internal/system/dialog/dialog.go:95
-#: internal/system/dialog/dialog_image.go:217
+#: internal/common/reply/translate.go:39 internal/system/dialog/dialog.go:67
+#: internal/system/dialog/dialog.go:97
+#: internal/system/dialog/dialog_image.go:220
 msgid "Install"
 msgstr ""
 
@@ -1108,7 +1154,7 @@ msgstr ""
 msgid "Container"
 msgstr ""
 
-#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:326
+#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:328
 msgid "Name"
 msgstr ""
 
@@ -1144,7 +1190,7 @@ msgstr ""
 msgid "History"
 msgstr ""
 
-#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:350
+#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:352
 msgid "Dependencies"
 msgstr ""
 
@@ -1168,7 +1214,7 @@ msgstr ""
 msgid "Commands"
 msgstr ""
 
-#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:329
+#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:331
 msgid "Maintainer"
 msgstr ""
 
@@ -1176,9 +1222,9 @@ msgstr ""
 msgid "Installed Version"
 msgstr ""
 
-#: internal/common/reply/translate.go:87 internal/system/dialog/dialog.go:68
-#: internal/system/dialog/dialog.go:95
-#: internal/system/dialog/dialog_image.go:218
+#: internal/common/reply/translate.go:87 internal/system/dialog/dialog.go:69
+#: internal/system/dialog/dialog.go:97
+#: internal/system/dialog/dialog_image.go:221
 msgid "Remove"
 msgstr ""
 
@@ -1210,7 +1256,7 @@ msgstr ""
 msgid "Total Count"
 msgstr ""
 
-#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:330
+#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:332
 msgid "Installed"
 msgstr ""
 
@@ -1238,7 +1284,7 @@ msgstr ""
 msgid "Staged"
 msgstr ""
 
-#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:347
+#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:349
 msgid "Size"
 msgstr ""
 
@@ -1392,18 +1438,18 @@ msgstr ""
 
 #: internal/distrobox/actions.go:94 internal/distrobox/actions.go:129
 #: internal/distrobox/actions.go:235 internal/distrobox/actions.go:283
-#: internal/system/actions.go:605
+#: internal/system/actions.go:616
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr ""
 
-#: internal/distrobox/actions.go:103 internal/system/actions.go:470
+#: internal/distrobox/actions.go:103 internal/system/actions.go:481
 msgid "Package found"
 msgstr ""
 
 #: internal/distrobox/actions.go:138 internal/distrobox/actions.go:214
-#: internal/system/actions.go:533 internal/system/actions.go:618
-#: internal/system/actions.go:760
+#: internal/system/actions.go:544 internal/system/actions.go:629
+#: internal/system/actions.go:772
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -1454,220 +1500,220 @@ msgstr ""
 msgid "Failed to delete container records: %w"
 msgstr ""
 
-#: internal/distrobox/commands.go:46 main.go:175
+#: internal/distrobox/commands.go:47 main.go:167
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
 msgstr ""
 
-#: internal/distrobox/commands.go:64
+#: internal/distrobox/commands.go:67
 msgid "Managing packages and containers in distrobox"
 msgstr ""
 
-#: internal/distrobox/commands.go:68
+#: internal/distrobox/commands.go:71
 msgid "Update and synchronize the list of installed packages with the host"
 msgstr ""
 
-#: internal/distrobox/commands.go:72 internal/distrobox/commands.go:93
-#: internal/distrobox/commands.go:191 internal/distrobox/commands.go:217
-#: internal/distrobox/commands.go:325 internal/distrobox/commands.go:359
+#: internal/distrobox/commands.go:75 internal/distrobox/commands.go:96
+#: internal/distrobox/commands.go:194 internal/distrobox/commands.go:220
+#: internal/distrobox/commands.go:328 internal/distrobox/commands.go:362
 msgid "Container name. Required"
 msgstr ""
 
-#: internal/distrobox/commands.go:88 internal/system/commands.go:201
+#: internal/distrobox/commands.go:91 internal/system/commands.go:237
 msgid "Package information"
 msgstr ""
 
-#: internal/distrobox/commands.go:109 internal/system/commands.go:222
+#: internal/distrobox/commands.go:112 internal/system/commands.go:258
 msgid "Quick package search by name"
 msgstr ""
 
-#: internal/distrobox/commands.go:114 internal/distrobox/commands.go:133
+#: internal/distrobox/commands.go:117 internal/distrobox/commands.go:136
 msgid "Container name. Optional flag"
 msgstr ""
 
-#: internal/distrobox/commands.go:129
+#: internal/distrobox/commands.go:132
 msgid "Building query to retrieve package list"
 msgstr ""
 
-#: internal/distrobox/commands.go:138
+#: internal/distrobox/commands.go:141
 msgid "Field for sorting, for example: name, version"
 msgstr ""
 
-#: internal/distrobox/commands.go:142 internal/system/commands.go:256
+#: internal/distrobox/commands.go:145 internal/system/commands.go:292
 msgid "Sorting order: ASC or DESC"
 msgstr ""
 
-#: internal/distrobox/commands.go:147 internal/system/commands.go:261
-#: internal/system/commands.go:362
+#: internal/distrobox/commands.go:150 internal/system/commands.go:297
+#: internal/system/commands.go:398
 msgid "Maximum number of records to return"
 msgstr ""
 
-#: internal/distrobox/commands.go:152 internal/system/commands.go:266
-#: internal/system/commands.go:367
+#: internal/distrobox/commands.go:155 internal/system/commands.go:302
+#: internal/system/commands.go:403
 msgid "Starting position (offset) for the result set"
 msgstr ""
 
-#: internal/distrobox/commands.go:157 internal/system/commands.go:271
+#: internal/distrobox/commands.go:160 internal/system/commands.go:307
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
 msgstr ""
 
-#: internal/distrobox/commands.go:161
+#: internal/distrobox/commands.go:164
 msgid "Force update all packages before the request"
 msgstr ""
 
-#: internal/distrobox/commands.go:186
+#: internal/distrobox/commands.go:189
 msgid "Install package"
 msgstr ""
 
-#: internal/distrobox/commands.go:197
+#: internal/distrobox/commands.go:200
 msgid "Export package"
 msgstr ""
 
-#: internal/distrobox/commands.go:212
+#: internal/distrobox/commands.go:215
 msgid "Remove package"
 msgstr ""
 
-#: internal/distrobox/commands.go:223
+#: internal/distrobox/commands.go:226
 msgid "Remove only from host, leave package in container"
 msgstr ""
 
-#: internal/distrobox/commands.go:238 internal/system/commands.go:304
+#: internal/distrobox/commands.go:241 internal/system/commands.go:340
 msgid "Show dbus online documentation"
 msgstr ""
 
-#: internal/distrobox/commands.go:246
+#: internal/distrobox/commands.go:249
 msgid "Module for working with containers"
 msgstr ""
 
-#: internal/distrobox/commands.go:251
+#: internal/distrobox/commands.go:254
 msgid "List of containers"
 msgstr ""
 
-#: internal/distrobox/commands.go:263
+#: internal/distrobox/commands.go:266
 msgid "Add container"
 msgstr ""
 
-#: internal/distrobox/commands.go:267
+#: internal/distrobox/commands.go:270
 msgid "Container. Must be specified, options: alt, ubuntu, arch"
 msgstr ""
 
-#: internal/distrobox/commands.go:272
+#: internal/distrobox/commands.go:275
 msgid "Container name"
 msgstr ""
 
-#: internal/distrobox/commands.go:288
+#: internal/distrobox/commands.go:291
 msgid "The value for image must be one of: alt, ubuntu, arch"
 msgstr ""
 
-#: internal/distrobox/commands.go:316
+#: internal/distrobox/commands.go:319
 msgid "Manual container addition"
 msgstr ""
 
-#: internal/distrobox/commands.go:320
+#: internal/distrobox/commands.go:323
 msgid "Image link. Required"
 msgstr ""
 
-#: internal/distrobox/commands.go:330
+#: internal/distrobox/commands.go:333
 msgid "List of packages to install"
 msgstr ""
 
-#: internal/distrobox/commands.go:335
+#: internal/distrobox/commands.go:338
 msgid "Calling hook to execute commands"
 msgstr ""
 
-#: internal/distrobox/commands.go:354
+#: internal/distrobox/commands.go:357
 msgid "Remove container"
 msgstr ""
 
-#: internal/distrobox/dbus.go:119 internal/system/dbus.go:131
-#: internal/system/dbus.go:347
+#: internal/distrobox/dbus.go:120 internal/system/dbus.go:132
+#: internal/system/dbus.go:348
 msgid "Failed to parse JSON: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:46 internal/distrobox/service/arch.go:45
-#: internal/distrobox/service/ubuntu.go:47
+#: internal/distrobox/service/alt.go:48 internal/distrobox/service/arch.go:47
+#: internal/distrobox/service/ubuntu.go:49
 msgid "Failed to update package database: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:54
+#: internal/distrobox/service/alt.go:56
 msgid "Error opening stdout pipe: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:57
+#: internal/distrobox/service/alt.go:59
 msgid "Error executing command: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:63 internal/distrobox/service/arch.go:57
+#: internal/distrobox/service/alt.go:65 internal/distrobox/service/arch.go:59
 msgid "Error retrieving installed packages: "
 msgstr ""
 
-#: internal/distrobox/service/alt.go:138
+#: internal/distrobox/service/alt.go:140
 #, c-format
 msgid "String too large: (over %dMB) - "
 msgstr ""
 
-#: internal/distrobox/service/alt.go:140
+#: internal/distrobox/service/alt.go:142
 msgid "Scanner error: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:144
+#: internal/distrobox/service/alt.go:146
 msgid "Command execution error: %w"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:166 internal/distrobox/service/arch.go:79
-#: internal/distrobox/service/ubuntu.go:142
+#: internal/distrobox/service/alt.go:168 internal/distrobox/service/arch.go:81
+#: internal/distrobox/service/ubuntu.go:144
 msgid "Failed to remove package %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:176 internal/distrobox/service/arch.go:89
-#: internal/distrobox/service/ubuntu.go:131
+#: internal/distrobox/service/alt.go:178 internal/distrobox/service/arch.go:91
+#: internal/distrobox/service/ubuntu.go:133
 msgid "Failed to install package %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:198 internal/distrobox/service/alt.go:226
-#: internal/distrobox/service/arch.go:165
-#: internal/distrobox/service/ubuntu.go:87
+#: internal/distrobox/service/alt.go:200 internal/distrobox/service/alt.go:228
+#: internal/distrobox/service/arch.go:167
+#: internal/distrobox/service/ubuntu.go:89
 #, c-format
 msgid "Command execution error: %s %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:207 internal/distrobox/service/arch.go:174
-#: internal/distrobox/service/ubuntu.go:96
+#: internal/distrobox/service/alt.go:209 internal/distrobox/service/arch.go:176
+#: internal/distrobox/service/ubuntu.go:98
 #, c-format
 msgid "Fallback command execution error: %s %s"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:213 internal/distrobox/service/arch.go:180
-#: internal/distrobox/service/ubuntu.go:102
+#: internal/distrobox/service/alt.go:215 internal/distrobox/service/arch.go:182
+#: internal/distrobox/service/ubuntu.go:104
 #, c-format
 msgid "Fallback search found %d files"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:240
+#: internal/distrobox/service/alt.go:242
 msgid "Error executing command rpm -qia: %w"
 msgstr ""
 
-#: internal/distrobox/service/arch.go:52
+#: internal/distrobox/service/arch.go:54
 msgid "Failed to search packages (pacman -Ss): %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/arch.go:63
+#: internal/distrobox/service/arch.go:65
 msgid "Error parsing official packages: %v"
 msgstr ""
 
-#: internal/distrobox/service/arch.go:112
+#: internal/distrobox/service/arch.go:114
 #, c-format
 msgid "Failed to recognize the owner for file '%s'"
 msgstr ""
 
-#: internal/distrobox/service/arch.go:119
+#: internal/distrobox/service/arch.go:121
 msgid "Failed to find a package for file '%s': %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/arch.go:141
+#: internal/distrobox/service/arch.go:143
 #, c-format
 msgid "Failed to determine the package for file '%s'"
 msgstr ""
@@ -1712,791 +1758,803 @@ msgstr ""
 msgid "Invalid filter field: %s. Available fields: %s."
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:55
+#: internal/distrobox/service/distrobox.go:59
 msgid "Failed to retrieve the list of containers: "
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:154
+#: internal/distrobox/service/distrobox.go:158
 msgid "Error executing command %q: %v"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:179
+#: internal/distrobox/service/distrobox.go:183
 msgid "Error getting OS information for container %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:230
+#: internal/distrobox/service/distrobox.go:234
 msgid "Failed to get the list of containers: %v"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:242
+#: internal/distrobox/service/distrobox.go:246
 #, c-format
 msgid "Container %s not found"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:263
+#: internal/distrobox/service/distrobox.go:267
 #, c-format
 msgid "Container already exists: %s"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:297
+#: internal/distrobox/service/distrobox.go:301
 msgid "Failed to create container %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:298
+#: internal/distrobox/service/distrobox.go:302
 msgid "Failed to create container %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/distrobox.go:321
+#: internal/distrobox/service/distrobox.go:325
 msgid "Failed to delete container %s: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:94
+#: internal/distrobox/service/provider.go:97
 msgid "This container is not supported: "
 msgstr ""
 
-#: internal/distrobox/service/provider.go:165
+#: internal/distrobox/service/provider.go:168
 #, c-format
 msgid "Failed to retrieve package information: %s"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:171
+#: internal/distrobox/service/provider.go:174
 msgid "Error retrieving desktop file path: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:178
+#: internal/distrobox/service/provider.go:181
 msgid "Error retrieving console path: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:218
+#: internal/distrobox/service/provider.go:221
 msgid "A container must be specified for the forced update operation"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:275
+#: internal/distrobox/service/provider.go:278
 msgid "Error retrieving desktop applications for container %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:278
+#: internal/distrobox/service/provider.go:281
 msgid "Error retrieving console applications for container %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:303
-#: internal/distrobox/service/provider.go:347
+#: internal/distrobox/service/provider.go:306
+#: internal/distrobox/service/provider.go:350
 msgid "Failed to retrieve home directory: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:309
-#: internal/distrobox/service/provider.go:353
+#: internal/distrobox/service/provider.go:312
+#: internal/distrobox/service/provider.go:356
 msgid "Error reading directory %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:324
-#: internal/distrobox/service/provider.go:372
+#: internal/distrobox/service/provider.go:327
+#: internal/distrobox/service/provider.go:375
 msgid "Error retrieving owner for file %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/provider.go:365
+#: internal/distrobox/service/provider.go:368
 msgid "Error processing file %s: %v"
 msgstr ""
 
-#: internal/distrobox/service/ubuntu.go:53
+#: internal/distrobox/service/ubuntu.go:55
 msgid "Failed to execute apt search: %v, stderr: %s"
 msgstr ""
 
-#: internal/distrobox/service/ubuntu.go:58
+#: internal/distrobox/service/ubuntu.go:60
 msgid "Failed to retrieve installed packages: "
 msgstr ""
 
-#: internal/kernel/actions.go:92
+#: internal/kernel/actions.go:96
 msgid "No kernels found"
 msgstr ""
 
-#: internal/kernel/actions.go:96
+#: internal/kernel/actions.go:100
 #, c-format
 msgid "%d kernel found"
 msgid_plural "%d kernels found"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/kernel/actions.go:119
+#: internal/kernel/actions.go:123
 msgid "Current kernel information"
 msgstr ""
 
-#: internal/kernel/actions.go:145 internal/kernel/commands.go:128
+#: internal/kernel/actions.go:149 internal/kernel/commands.go:132
 msgid "Kernel flavour must be specified"
-msgstr ""
-
-#: internal/kernel/actions.go:189
-#, c-format
-msgid "some modules are not available: %s"
 msgstr ""
 
 #: internal/kernel/actions.go:193
 #, c-format
+msgid "some modules are not available: %s"
+msgstr ""
+
+#: internal/kernel/actions.go:197
+#, c-format
 msgid "Kernel %s is already installed"
 msgstr ""
 
-#: internal/kernel/actions.go:206
+#: internal/kernel/actions.go:210
 msgid "Installation preview"
 msgstr ""
 
-#: internal/kernel/actions.go:219
+#: internal/kernel/actions.go:223
 #, c-format
 msgid "failed to install kernel: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:228
+#: internal/kernel/actions.go:232
 #, c-format
 msgid "Kernel %s installed successfully"
 msgstr ""
 
-#: internal/kernel/actions.go:275
+#: internal/kernel/actions.go:279
 msgid "Kernel is already up to date"
 msgstr ""
 
-#: internal/kernel/actions.go:307
+#: internal/kernel/actions.go:311
 msgid "no kernels found"
 msgstr ""
 
-#: internal/kernel/actions.go:350
+#: internal/kernel/actions.go:354
 #, c-format
 msgid "latest for %s"
 msgstr ""
 
-#: internal/kernel/actions.go:356
+#: internal/kernel/actions.go:360
 msgid "Currently booted"
 msgstr ""
 
-#: internal/kernel/actions.go:362
+#: internal/kernel/actions.go:366
 msgid "backup kernel"
 msgstr ""
 
-#: internal/kernel/actions.go:379
+#: internal/kernel/actions.go:383
 msgid "no old kernels to clean"
 msgstr ""
 
-#: internal/kernel/actions.go:390
+#: internal/kernel/actions.go:394
 #, c-format
 msgid "failed to simulate kernels removal: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:394
+#: internal/kernel/actions.go:398
 #, c-format
 msgid "Would remove %d old kernel"
 msgid_plural "Would remove %d old kernels"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/kernel/actions.go:413
+#: internal/kernel/actions.go:417
 #, c-format
 msgid "failed to remove kernels: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:417
+#: internal/kernel/actions.go:421
 #, c-format
 msgid "Successfully removed %d old kernel"
 msgid_plural "Successfully removed %d old kernels"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/kernel/actions.go:456
+#: internal/kernel/actions.go:460
 #, c-format
 msgid "%d module found"
 msgid_plural "%d modules found"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/kernel/actions.go:478 internal/kernel/actions.go:601
-#: internal/kernel/commands.go:235 internal/kernel/commands.go:263
+#: internal/kernel/actions.go:482 internal/kernel/actions.go:605
+#: internal/kernel/commands.go:242 internal/kernel/commands.go:271
 msgid "At least one module must be specified"
 msgstr ""
 
-#: internal/kernel/actions.go:514
+#: internal/kernel/actions.go:518
 #, c-format
 msgid "modules not available: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:530
+#: internal/kernel/actions.go:534
 #, c-format
 msgid "modules already installed: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:548
+#: internal/kernel/actions.go:552
 #, c-format
 msgid "failed to simulate modules installation: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:552
+#: internal/kernel/actions.go:556
 msgid "Modules installation preview"
 msgstr ""
 
-#: internal/kernel/actions.go:565
+#: internal/kernel/actions.go:569
 #, c-format
 msgid "failed to install modules: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:579
+#: internal/kernel/actions.go:583
 #, c-format
 msgid "%d module installed successfully for kernel %s"
 msgid_plural "%d modules installed successfully for kernel %s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/kernel/actions.go:638
+#: internal/kernel/actions.go:642
 #, c-format
 msgid "module not found: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:643
+#: internal/kernel/actions.go:647
 #, c-format
 msgid "modules not installed: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:649
+#: internal/kernel/actions.go:653
 msgid "No modules to remove"
 msgstr ""
 
-#: internal/kernel/actions.go:671
+#: internal/kernel/actions.go:675
 #, c-format
 msgid "failed to simulate modules removal: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:675
+#: internal/kernel/actions.go:679
 msgid "Modules removal preview"
 msgstr ""
 
-#: internal/kernel/actions.go:688
+#: internal/kernel/actions.go:692
 #, c-format
 msgid "failed to remove modules: %s"
 msgstr ""
 
-#: internal/kernel/actions.go:703
+#: internal/kernel/actions.go:707
 #, c-format
 msgid "%d module removed successfully from kernel %s"
 msgid_plural "%d modules removed successfully from kernel %s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/kernel/actions.go:745
+#: internal/kernel/actions.go:749
 msgid ""
 "Direct kernel installation is not supported on atomic systems. Use system "
 "image updates instead"
 msgstr ""
 
-#: internal/kernel/actions.go:747
+#: internal/kernel/actions.go:751
 msgid ""
 "Direct kernel removal is not supported on atomic systems. Use system image "
 "management instead"
 msgstr ""
 
-#: internal/kernel/actions.go:749
+#: internal/kernel/actions.go:753
 msgid ""
 "Kernel updates are managed through system image updates on atomic systems"
 msgstr ""
 
-#: internal/kernel/actions.go:786 internal/kernel/commands.go:46
-#: internal/system/actions.go:866 internal/system/commands.go:111 main.go:231
+#: internal/kernel/actions.go:790 internal/kernel/commands.go:47
+#: internal/system/actions.go:878 internal/system/commands.go:113 main.go:213
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 
-#: internal/kernel/commands.go:64
+#: internal/kernel/commands.go:67
 msgid "Kernel Management. WARNING - experimental module"
 msgstr ""
 
-#: internal/kernel/commands.go:68
+#: internal/kernel/commands.go:71
 msgid "List available kernels"
 msgstr ""
 
-#: internal/kernel/commands.go:72
+#: internal/kernel/commands.go:75
 msgid "Filter by kernel flavour (e.g., std-def, un-def)"
 msgstr ""
 
-#: internal/kernel/commands.go:76
+#: internal/kernel/commands.go:79
 msgid "Show only installed kernels"
 msgstr ""
 
-#: internal/kernel/commands.go:82
+#: internal/kernel/commands.go:85
 msgid "Show full information"
 msgstr ""
 
-#: internal/kernel/commands.go:96
+#: internal/kernel/commands.go:99
 msgid "Show information about current kernel"
 msgstr ""
 
-#: internal/kernel/commands.go:107
+#: internal/kernel/commands.go:110
 msgid "Install kernel with specified flavour"
 msgstr ""
 
-#: internal/kernel/commands.go:112 internal/kernel/commands.go:148
+#: internal/kernel/commands.go:115 internal/kernel/commands.go:152
 msgid "Install additional kernel modules"
 msgstr ""
 
-#: internal/kernel/commands.go:116 internal/kernel/commands.go:152
+#: internal/kernel/commands.go:119 internal/kernel/commands.go:156
 msgid "Install kernel headers"
 msgstr ""
 
-#: internal/kernel/commands.go:121 internal/kernel/commands.go:228
-msgid "Show what would be installed without actually installing"
-msgstr ""
-
-#: internal/kernel/commands.go:140
-msgid "Update kernel to latest version"
+#: internal/kernel/commands.go:124 internal/system/commands.go:143
+msgid "Simulate installation"
 msgstr ""
 
 #: internal/kernel/commands.go:144
+msgid "Update kernel to latest version"
+msgstr ""
+
+#: internal/kernel/commands.go:148
 msgid "Update to specific flavour (default: current flavour)"
 msgstr ""
 
-#: internal/kernel/commands.go:157
-msgid "Show what would be updated without actually updating"
+#: internal/kernel/commands.go:161
+msgid "Simulate update"
 msgstr ""
 
-#: internal/kernel/commands.go:171
+#: internal/kernel/commands.go:176
 msgid "Remove old kernel versions"
 msgstr ""
 
-#: internal/kernel/commands.go:175
+#: internal/kernel/commands.go:180
 msgid "Delete kernels even if it is in 'backup' state"
 msgstr ""
 
-#: internal/kernel/commands.go:180 internal/kernel/commands.go:256
+#: internal/kernel/commands.go:185 internal/kernel/commands.go:263
 msgid "Show what would be removed without actually removing"
 msgstr ""
 
-#: internal/kernel/commands.go:194
+#: internal/kernel/commands.go:200
 msgid "Kernel modules management"
 msgstr ""
 
-#: internal/kernel/commands.go:198
+#: internal/kernel/commands.go:204
 msgid "List available modules for kernel"
 msgstr ""
 
-#: internal/kernel/commands.go:202
+#: internal/kernel/commands.go:208
 msgid "List modules for specific kernel flavour (default: current flavour)"
 msgstr ""
 
-#: internal/kernel/commands.go:224
+#: internal/kernel/commands.go:230
 msgid "Install for specific kernel flavour"
 msgstr ""
 
-#: internal/kernel/commands.go:247
+#: internal/kernel/commands.go:234
+msgid "Show what would be installed without actually installing"
+msgstr ""
+
+#: internal/kernel/commands.go:254
 msgid "Remove kernel modules"
 msgstr ""
 
-#: internal/kernel/commands.go:252
+#: internal/kernel/commands.go:259
 msgid "Remove from specific kernel flavour"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:173
+#: internal/kernel/service/kernel.go:171
 #, c-format
 msgid "failed to get current kernel: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:181
+#: internal/kernel/service/kernel.go:179
 #, c-format
 msgid "failed to parse kernel release: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:191
+#: internal/kernel/service/kernel.go:189
 msgid "failed to find current kernel package in database"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:197
+#: internal/kernel/service/kernel.go:195
 msgid "failed to parse kernel package from database"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:211
+#: internal/kernel/service/kernel.go:209
 #, c-format
 msgid "failed to get default kernel: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:242
+#: internal/kernel/service/kernel.go:240
 #, c-format
 msgid "failed to search kernel packages in database: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:309
+#: internal/kernel/service/kernel.go:306
 #, c-format
 msgid "no kernels found for flavour: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:323
+#: internal/kernel/service/kernel.go:320
 #, c-format
 msgid "failed to search kernel modules in database: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:360
+#: internal/kernel/service/kernel.go:357
 #, c-format
 msgid "failed to simulate kernel upgrade: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:431
+#: internal/kernel/service/kernel.go:427
 msgid "cannot detect current kernel"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:448
+#: internal/kernel/service/kernel.go:444
 #, c-format
 msgid "failed to search kernels in database: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:489
+#: internal/kernel/service/kernel.go:485
 #, c-format
 msgid "failed to get available modules from source kernel: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:507
+#: internal/kernel/service/kernel.go:503
 #, c-format
 msgid "failed to get available modules for target kernel: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:814
+#: internal/kernel/service/kernel.go:810
 #, c-format
 msgid "failed to query installed kernels: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:867
+#: internal/kernel/service/kernel.go:863
 #, c-format
 msgid "error scanning RPM output: %s"
 msgstr ""
 
-#: internal/kernel/service/kernel.go:945
+#: internal/kernel/service/kernel.go:938
 #, c-format
 msgid "failed to get reboot history: %s"
 msgstr ""
 
-#: internal/system/actions.go:105 internal/system/actions.go:123
-#: internal/system/actions.go:141
+#: internal/system/actions.go:116 internal/system/actions.go:134
+#: internal/system/actions.go:152
 msgid "Inspection information"
 msgstr ""
 
-#: internal/system/actions.go:163
+#: internal/system/actions.go:174
 msgid "At least one package must be specified"
 msgstr ""
 
-#: internal/system/actions.go:174
+#: internal/system/actions.go:185
 msgid "No candidates for removal found"
 msgstr ""
 
-#: internal/system/actions.go:185 internal/system/actions.go:268
-#: internal/system/actions.go:396 internal/system/actions.go:701
+#: internal/system/actions.go:196 internal/system/actions.go:279
+#: internal/system/actions.go:407 internal/system/actions.go:713
 msgid "Cancel dialog"
 msgstr ""
 
-#: internal/system/actions.go:202
+#: internal/system/actions.go:213
 #, c-format
 msgid "%s removed successfully"
 msgid_plural "%s removed successfully"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/actions.go:205 internal/system/actions.go:311
+#: internal/system/actions.go:216 internal/system/actions.go:322
 msgid ""
 ". The system image has not been changed. To apply the changes, run: apm s "
 "image apply"
 msgstr ""
 
-#: internal/system/actions.go:236
+#: internal/system/actions.go:247
 msgid "You must specify at least one package"
 msgstr ""
 
-#: internal/system/actions.go:251 internal/system/actions.go:382
+#: internal/system/actions.go:262 internal/system/actions.go:393
 msgid "The operation will not make any changes"
 msgstr ""
 
-#: internal/system/actions.go:290
+#: internal/system/actions.go:301
 msgid ""
 "A repository connection error occurred. The package list has been updated, "
 "please try running the command again"
 msgstr ""
 
-#: internal/system/actions.go:305 internal/system/actions.go:410
+#: internal/system/actions.go:316 internal/system/actions.go:421
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/actions.go:306 internal/system/actions.go:411
+#: internal/system/actions.go:317 internal/system/actions.go:422
 msgid "and"
 msgstr ""
 
-#: internal/system/actions.go:307 internal/system/actions.go:412
+#: internal/system/actions.go:318 internal/system/actions.go:423
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/actions.go:348
+#: internal/system/actions.go:359
 msgid "Package list updated successfully"
 msgstr ""
 
-#: internal/system/actions.go:417
+#: internal/system/actions.go:428
 msgid "The system has been upgrade successfully"
 msgstr ""
 
-#: internal/system/actions.go:431
+#: internal/system/actions.go:442
 msgid "Package name must be specified, for example info package"
 msgstr ""
 
-#: internal/system/actions.go:452
+#: internal/system/actions.go:463
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr ""
 
-#: internal/system/actions.go:461
+#: internal/system/actions.go:472
 msgid ". Maybe you were looking for: "
 msgstr ""
 
-#: internal/system/actions.go:530 internal/system/actions.go:615
+#: internal/system/actions.go:541 internal/system/actions.go:626
 msgid "Nothing found"
 msgstr ""
 
-#: internal/system/actions.go:582
+#: internal/system/actions.go:593
 msgid "System package"
 msgstr ""
 
-#: internal/system/actions.go:583
+#: internal/system/actions.go:594
 msgid "Stplr package"
 msgstr ""
 
-#: internal/system/actions.go:640 internal/system/commands.go:330
+#: internal/system/actions.go:651 internal/system/commands.go:366
 msgid "Image status"
 msgstr ""
 
-#: internal/system/actions.go:668
+#: internal/system/actions.go:679
 msgid "Command executed successfully"
 msgstr ""
 
-#: internal/system/actions.go:739
+#: internal/system/actions.go:751
 msgid "Changes applied successfully. A reboot is required"
 msgstr ""
 
-#: internal/system/actions.go:830
+#: internal/system/actions.go:842
 msgid "This option is only available for an atomic system"
 msgstr ""
 
-#: internal/system/actions.go:909
+#: internal/system/actions.go:921
 msgid "Modified image. Configuration file: "
 msgstr ""
 
-#: internal/system/actions.go:916
+#: internal/system/actions.go:928
 msgid "Cloud image without changes"
 msgstr ""
 
-#: internal/system/commands.go:129
+#: internal/system/commands.go:133
 msgid "System package management"
 msgstr ""
 
-#: internal/system/commands.go:134
+#: internal/system/commands.go:138
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 
-#: internal/system/commands.go:148
+#: internal/system/commands.go:166
 msgid "List of packages to remove"
 msgstr ""
 
-#: internal/system/commands.go:153
-msgid "Delete all files"
+#: internal/system/commands.go:171
+msgid "Attempt to remove all files"
 msgstr ""
 
-#: internal/system/commands.go:170
-msgid "Updating package database"
+#: internal/system/commands.go:177
+msgid "Attempt to remove depends"
 msgstr ""
 
-#: internal/system/commands.go:182
-msgid "General system upgrade"
+#: internal/system/commands.go:183
+msgid "Simulate removal"
 msgstr ""
 
 #: internal/system/commands.go:206
+msgid "Updating package database"
+msgstr ""
+
+#: internal/system/commands.go:218
+msgid "General system upgrade"
+msgstr ""
+
+#: internal/system/commands.go:242
 msgid "Full output of information"
 msgstr ""
 
-#: internal/system/commands.go:227
+#: internal/system/commands.go:263
 msgid "Only installed"
 msgstr ""
 
-#: internal/system/commands.go:233 internal/system/commands.go:280
+#: internal/system/commands.go:269 internal/system/commands.go:316
 msgid "Full information output"
 msgstr ""
 
-#: internal/system/commands.go:248
+#: internal/system/commands.go:284
 msgid "Building a query to get a list of packages"
 msgstr ""
 
-#: internal/system/commands.go:252
+#: internal/system/commands.go:288
 msgid "Sort packages by field, example fields: name, section"
 msgstr ""
 
-#: internal/system/commands.go:275
+#: internal/system/commands.go:311
 msgid "Force update all packages before query"
 msgstr ""
 
-#: internal/system/commands.go:312
+#: internal/system/commands.go:348
 msgid "Module for working with the image"
 msgstr ""
 
-#: internal/system/commands.go:318
+#: internal/system/commands.go:354
 msgid "Apply changes to the host"
 msgstr ""
 
-#: internal/system/commands.go:342
+#: internal/system/commands.go:378
 msgid "Image update"
 msgstr ""
 
-#: internal/system/commands.go:354
+#: internal/system/commands.go:390
 msgid "Image changes history"
 msgstr ""
 
-#: internal/system/commands.go:358
+#: internal/system/commands.go:394
 msgid "Filter by image name"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:64 internal/system/dialog/dialog.go:95
+#: internal/system/dialog/dialog.go:65 internal/system/dialog/dialog.go:97
 msgid "Edit"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:64 internal/system/dialog/dialog.go:66
-#: internal/system/dialog/dialog.go:68 internal/system/dialog/dialog.go:70
-#: internal/system/dialog/dialog_image.go:80
-#: internal/system/dialog/dialog_image.go:97
+#: internal/system/dialog/dialog.go:65 internal/system/dialog/dialog.go:67
+#: internal/system/dialog/dialog.go:69 internal/system/dialog/dialog.go:71
+#: internal/system/dialog/dialog_image.go:81
+#: internal/system/dialog/dialog_image.go:99
 msgid "Abort"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:70 internal/system/dialog/dialog.go:95
+#: internal/system/dialog/dialog.go:71 internal/system/dialog/dialog.go:97
 msgid "Upgrade"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:86
-#: internal/system/dialog/dialog_image.go:92
+#: internal/system/dialog/dialog.go:88
+#: internal/system/dialog/dialog_image.go:94
 msgid "Error starting TEA: %v"
 msgstr ""
 
 #. Формируем строку с подсказками по клавишам
-#: internal/system/dialog/dialog.go:229
+#: internal/system/dialog/dialog.go:231
 msgid ""
 "Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/"
 "bottom, Enter - choose, Esc/q - cancel"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:233
+#: internal/system/dialog/dialog.go:235
 msgid "Select an action:"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:294
+#: internal/system/dialog/dialog.go:296
 msgid "Package information:"
 msgid_plural "Packages information:"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/dialog/dialog.go:302
+#: internal/system/dialog/dialog.go:304
 msgid "Package list:"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:308
+#: internal/system/dialog/dialog.go:310
 msgid "[Installed]"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:319
+#: internal/system/dialog/dialog.go:321
 #, c-format
 msgid ""
 "\n"
 "Package %d:"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:321 internal/system/dialog/dialog.go:412
-#: internal/system/dialog/dialog.go:433
+#: internal/system/dialog/dialog.go:323 internal/system/dialog/dialog.go:414
+#: internal/system/dialog/dialog.go:435
 msgid "No"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:323
+#: internal/system/dialog/dialog.go:325
 msgid "Yes"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:327
+#: internal/system/dialog/dialog.go:329
 msgid "Action"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:328
+#: internal/system/dialog/dialog.go:330
 msgid "Category"
 msgstr ""
 
 #. Выводим "Версия в облаке" обычным стилем
-#: internal/system/dialog/dialog.go:334 internal/system/dialog/dialog.go:345
+#: internal/system/dialog/dialog.go:336 internal/system/dialog/dialog.go:347
 msgid "Repository version"
 msgstr ""
 
 #. Выводим "Версия в системе", уже с раскрашенным текстом
-#: internal/system/dialog/dialog.go:343
+#: internal/system/dialog/dialog.go:345
 msgid "System version"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:354
+#: internal/system/dialog/dialog.go:356
 msgid "Affected changes:"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:359
+#: internal/system/dialog/dialog.go:361
 msgid "Extra packages"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:360 internal/system/dialog/dialog.go:370
-#: internal/system/dialog/dialog.go:404
+#: internal/system/dialog/dialog.go:362 internal/system/dialog/dialog.go:372
+#: internal/system/dialog/dialog.go:406
 msgid "Will be updated"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:361 internal/system/dialog/dialog.go:371
-#: internal/system/dialog/dialog.go:400
+#: internal/system/dialog/dialog.go:363 internal/system/dialog/dialog.go:373
+#: internal/system/dialog/dialog.go:402
 msgid "Will be installed"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:362 internal/system/dialog/dialog.go:372
-#: internal/system/dialog/dialog.go:408
+#: internal/system/dialog/dialog.go:364 internal/system/dialog/dialog.go:374
+#: internal/system/dialog/dialog.go:410
 msgid "Will be removed"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:364 internal/system/dialog/dialog.go:365
 #: internal/system/dialog/dialog.go:366 internal/system/dialog/dialog.go:367
+#: internal/system/dialog/dialog.go:368 internal/system/dialog/dialog.go:369
 #, c-format
 msgid "%d package"
 msgid_plural "%d packages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: internal/system/dialog/dialog.go:369
+#: internal/system/dialog/dialog.go:371
 msgid "Total:"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:373
+#: internal/system/dialog/dialog.go:375
 msgid "Not affected"
 msgstr ""
 
-#: internal/system/dialog/dialog.go:436
+#: internal/system/dialog/dialog.go:438
 msgid "and others"
 msgstr ""
 
-#: internal/system/dialog/dialog_image.go:80
-#: internal/system/dialog/dialog_image.go:145
+#: internal/system/dialog/dialog_image.go:81
+#: internal/system/dialog/dialog_image.go:147
 msgid "Apply"
 msgstr ""
 
 #. Заголовок
-#: internal/system/dialog/dialog_image.go:210
+#: internal/system/dialog/dialog_image.go:214
 msgid "Select packages to apply"
 msgstr ""
 
 #. Подсказки по клавишам
-#: internal/system/dialog/dialog_image.go:230
+#: internal/system/dialog/dialog_image.go:233
 msgid ""
 "Navigation: ↑/↓ - move, ←/→/Tab - switch panel, Space - toggle, a - select "
 "all, n - none, Enter - apply, Esc/q - cancel"
 msgstr ""
 
-#: internal/system/dialog/dialog_image.go:251
+#: internal/system/dialog/dialog_image.go:254
 msgid "No packages"
 msgstr ""
 
-#: internal/system/dialog/dialog_image.go:302
+#: internal/system/dialog/dialog_image.go:305
 msgid "Action:"
 msgstr ""
 
@@ -2508,7 +2566,7 @@ msgstr ""
 msgid "Configuration not loaded"
 msgstr ""
 
-#: internal/system/service/config.go:179
+#: internal/system/service/config.go:110 internal/system/service/host.go:375
 msgid "Local image configuration file has no changes"
 msgstr ""
 
@@ -2543,83 +2601,83 @@ msgstr ""
 msgid "History config conversion error: %v"
 msgstr ""
 
-#: internal/system/service/host.go:86
+#: internal/system/service/host.go:82
 msgid "Failed to execute bootc command: %v"
 msgstr ""
 
-#: internal/system/service/host.go:90
+#: internal/system/service/host.go:86
 msgid "Failed to parse JSON: %v"
 msgstr ""
 
-#: internal/system/service/host.go:110
+#: internal/system/service/host.go:106
 msgid "Failed to open file %s: %w"
 msgstr ""
 
-#: internal/system/service/host.go:131
+#: internal/system/service/host.go:127
 msgid "Error reading file %s: %w"
 msgstr ""
 
-#: internal/system/service/host.go:134
+#: internal/system/service/host.go:130
 #, c-format
 msgid ""
 "Failed to determine the distribution image, please specify it manually in "
 "the file: %s"
 msgstr ""
 
-#: internal/system/service/host.go:141
+#: internal/system/service/host.go:137
 msgid "Access error to /proc/mounts: %v"
 msgstr ""
 
-#: internal/system/service/host.go:147
+#: internal/system/service/host.go:143
 msgid "Failed to close /proc/mounts: %v"
 msgstr ""
 
-#: internal/system/service/host.go:174
+#: internal/system/service/host.go:170
 #, c-format
 msgid "Error activating usr-overlay: %s"
 msgstr ""
 
-#: internal/system/service/host.go:192
+#: internal/system/service/host.go:188
 #, c-format
 msgid "Error building image: %s status: %d"
 msgstr ""
 
-#: internal/system/service/host.go:198
+#: internal/system/service/host.go:194
 msgid "Error podman image: %v"
 msgstr ""
 
-#: internal/system/service/host.go:203
+#: internal/system/service/host.go:199
 msgid "No valid images with tag 'os'. Please build the image first."
 msgstr ""
 
-#: internal/system/service/host.go:217
+#: internal/system/service/host.go:213
 #, c-format
 msgid "Error switching to the new image: %s"
 msgstr ""
 
-#: internal/system/service/host.go:229
+#: internal/system/service/host.go:225
 msgid "Error retrieving information: %v"
 msgstr ""
 
-#: internal/system/service/host.go:248
+#: internal/system/service/host.go:244
 #, c-format
 msgid "Error, file %s not found"
 msgstr ""
 
-#: internal/system/service/host.go:289
+#: internal/system/service/host.go:285
 msgid "Skopeo inspect error: %v"
 msgstr ""
 
-#: internal/system/service/host.go:294
+#: internal/system/service/host.go:290
 msgid "Failed to parse skopeo inspect: %w"
 msgstr ""
 
-#: internal/system/service/host.go:306
+#: internal/system/service/host.go:302
 #, c-format
 msgid "Bootc upgrade failed: %s"
 msgstr ""
 
-#: internal/system/service/host.go:319
+#: internal/system/service/host.go:387
 msgid "The image has not changed, build paused"
 msgstr ""
 
@@ -2628,101 +2686,66 @@ msgstr ""
 msgid "Command failed with error: %v, output: %s"
 msgstr ""
 
-#: internal/system/service/podman.go:158
-#, c-format
-msgid "Cannot parse size: %s"
-msgstr ""
-
-#: internal/system/service/podman.go:178
-#, c-format
-msgid "Unknown suffix: %s"
-msgstr ""
-
-#: internal/system/service/podman.go:192
+#: internal/system/service/podman.go:196
 msgid "Error deleting old images: %v, output: %s"
 msgstr ""
 
-#: internal/system/service/podman.go:199
+#: internal/system/service/podman.go:203
 msgid "Error retrieving podman image: %v"
 msgstr ""
 
-#: internal/system/service/podman.go:214
+#: internal/system/service/podman.go:218
 msgid "Error deleting image %s: %v, output: %s\n"
 msgstr ""
 
-#: lib/database.go:40 lib/pogreb.go:35
-msgid "Database file not found. It will be created automatically."
+#: main.go:71
+msgid "Output format: json, text"
 msgstr ""
 
-#: lib/database.go:46 lib/pogreb.go:41
-msgid "Error opening database: %v"
+#: main.go:77
+msgid "Internal property, adds the transaction to the output"
 msgstr ""
 
-#: lib/database.go:50
-msgid "Error connecting to database: %v"
+#: main.go:84
+msgid "Start session D-Bus service org.altlinux.APM"
 msgstr ""
 
-#: lib/dbus.go:46
-msgid "Interface org.altlinux.APM is already in use"
+#: main.go:89
+msgid "Start system D-Bus service org.altlinux.APM"
 msgstr ""
 
-#: lib/i18n.go:32
-#, c-format
-msgid "Translations folder not found at path: %s"
+#: main.go:98
+msgid "Show the list of commands or help for each command"
 msgstr ""
 
-#: main.go:69
+#: main.go:99
+msgid "[command]"
+msgstr ""
+
+#: main.go:122
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr ""
 
-#: main.go:78
+#: main.go:129
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr ""
 
-#: main.go:115
-msgid "Output format: json, text"
-msgstr ""
-
-#: main.go:121
-msgid "Internal property, adds the transaction to the output"
-msgstr ""
-
-#: main.go:128
-msgid "Start session D-Bus service org.altlinux.APM"
-msgstr ""
-
-#: main.go:133
-msgid "Start system D-Bus service org.altlinux.APM"
-msgstr ""
-
-#: main.go:142
-msgid "Show the list of commands or help for each command"
-msgstr ""
-
-#: main.go:143
-msgid "[command]"
-msgstr ""
-
-#: main.go:160
+#: main.go:152
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr ""
 
-#: main.go:255
+#: main.go:226
 msgid "Administrator privileges are required to start"
 msgstr ""
 
-#: main.go:282
-msgid "Terminating the application. Releasing resources…"
+#: main.go:286
+msgid "failed to close DBus: %w"
 msgstr ""
 
-#: main.go:288
-msgid "Error closing KV database: "
-msgstr ""
-
-#: main.go:294
-msgid "Error closing SQL database: "
+#: main.go:293
+msgid "failed to close databases: %w"
 msgstr ""

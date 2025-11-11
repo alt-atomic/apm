@@ -17,7 +17,7 @@
 package helper
 
 import (
-	"apm/lib"
+	"apm/internal/common/app"
 	"bytes"
 	"context"
 	"os"
@@ -31,7 +31,7 @@ const TransactionKey contextKey = "transaction"
 
 // RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
 func RunCommand(ctx context.Context, command string) (string, string, error) {
-	lib.Log.Debug("run command: ", command)
+	app.Log.Debug("run command: ", command)
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

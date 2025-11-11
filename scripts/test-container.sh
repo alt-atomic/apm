@@ -1,6 +1,8 @@
 #!/bin/bash
 # Test runner script for containerized testing using pre-built container
+# Builds and installs APM inside container, then runs go test directly (no meson)
 # Usage: ./scripts/test-container.sh [test-suite]
+# Test suites: integration, all, exec
 # Usage: ./scripts/test-container.sh exec - to enter container interactively
 
 set -euo pipefail
@@ -16,7 +18,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 print_status() {
     local color=$1
@@ -66,6 +68,15 @@ if ! command -v podman &> /dev/null; then
     exit 1
 fi
 
+# Cleanup function
+cleanup() {
+    print_info "🧹 Cleaning up container ${CONTAINER_NAME} ..."
+    podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+}
+
+# Set trap for cleanup
+trap cleanup EXIT
+
 # Check/build container image
 check_container_image
 
@@ -87,24 +98,29 @@ fi
 
 print_success "Container started: ${CONTAINER_NAME}"
 
-print_info "🔨 Building project in container..."
+print_info "🔨 Building and installing APM in container..."
 
-# Setup build directory and compile
-if ! podman exec "${CONTAINER_NAME}" bash -c "
-    rsync -av --exclude='.cache' /workspace/ /tmp/apm-src/ && \
+# Copy source, build and install inside container
+if ! podman exec --user root "${CONTAINER_NAME}" bash -c "
+    # Copy source to temp directory
+    rsync -av --exclude='.cache' --exclude='builddir' /workspace/ /tmp/apm-src/ && \
     cd /tmp/apm-src && \
-    # Set Go environment for build
+    
+    # Set Go environment
     export GOCACHE=/tmp/go-cache && \
     export GOMODCACHE=/tmp/go-mod && \
     export GO111MODULE=on && \
-    meson setup builddir --prefix=/usr --buildtype=debug --wipe && \
-    meson compile -C builddir
+    
+    # Build and install directly into container (not build dir)
+    meson setup build --wipe --prefix /usr && \
+    meson install -C build
+
 "; then
-    print_error "Build failed in container"
+    print_error "Build and install failed in container"
     exit 1
 fi
 
-print_success "Project built successfully"
+print_success "APM built and installed in container"
 
 print_info "🧪 Running tests..."
 
@@ -131,63 +147,42 @@ if [ "${TEST_SUITE}" = "exec" ]; then
     exit 0
 fi
 
-# Run different test suites based on parameter
+# Run different test suites based on parameter using go test directly
 case "${TEST_SUITE}" in
-    "unit")
-        print_info "Running unit tests only..."
-        podman exec "${CONTAINER_NAME}" bash -c "
-            cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
-            export GO111MODULE=on && \
-            meson test -C builddir --suite unit --verbose
-        "
-        ;;
-    "system")
-        print_info "Running system tests only..."
+    "integration")
+        print_info "Running system tests (requires root and system packages)..."
         podman exec --user root "${CONTAINER_NAME}" bash -c "
             cd /tmp/apm-src && \
             export GOCACHE=/tmp/go-cache && \
             export GOMODCACHE=/tmp/go-mod && \
             export GO111MODULE=on && \
-            meson test -C builddir --suite system --verbose
-        "
-        ;;
-    "apt")
-        print_info "Running APT binding tests only..."
-        podman exec --user root "${CONTAINER_NAME}" bash -c "
-            cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
-            export GO111MODULE=on && \
-            meson test -C builddir --suite apt --verbose
+            echo '🧪 Running system tests...' && \
+            go test ./tests/integration/system/... -v && \
+            echo '🧪 Running binding tests...' && \
+            go test ./tests/binding/... -v
         "
         ;;
     "all")
-        print_warning "Running ALL tests including distrobox (may fail in container)..."
-        podman exec "${CONTAINER_NAME}" bash -c "
+        print_info "Running all tests..."
+        podman exec --user root "${CONTAINER_NAME}" bash -c "
             cd /tmp/apm-src && \
             export GOCACHE=/tmp/go-cache && \
             export GOMODCACHE=/tmp/go-mod && \
             export GO111MODULE=on && \
-            meson test -C builddir --verbose
+            echo '🧪 Running system tests...' && \
+            go test ./tests/integration/system/... -v && \
+            echo '🧪 Running binding tests...' && \
+            go test ./tests/binding/... -v && \
+            echo '🧪 Running unit tests...' && \
+            go test ./internal/... -v
         "
         ;;
     *)
         print_error "Unknown test suite: ${TEST_SUITE}"
-        print_info "Available test suites: unit, system, apt, safe, all, exec"
+        print_info "Available test suites: unit, system, distrobox, all, exec"
         exit 1
         ;;
 esac
-
-# Cleanup function
-cleanup() {
-    print_info "🧹 Cleaning up container ${CONTAINER_NAME} ..."
-    podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
-}
-
-# Set trap for cleanup
-trap cleanup EXIT
 
 # Check test results
 TEST_EXIT_CODE=$?

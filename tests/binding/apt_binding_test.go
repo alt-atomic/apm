@@ -1,7 +1,18 @@
 // Atomic Package Manager
-// Copyright (C) 2025 Дмитрий Удалов
-
-//go:build apt_binding
+// Copyright (C) 2025 Дмитрий Удалов dmitry@udalov.online
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package binding
 
@@ -112,7 +123,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	}
 
 	// Now simulate removing the package (should work since we ensured it's installed)
-	changes, err := actions.SimulateRemove([]string{testPackage}, true)
+	changes, err := actions.SimulateRemove([]string{testPackage}, true, true)
 	if err != nil {
 		t.Fatalf("SimulateRemove failed: %v", err)
 	}
@@ -149,7 +160,7 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 	}
 
 	if installedFirst {
-		if err := actions.RemovePackages([]string{testPackage}, false, nil); err != nil {
+		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
 		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
@@ -159,7 +170,7 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
-		if err := actions.RemovePackages([]string{testPackage}, false, nil); err != nil {
+		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
 	}
@@ -178,11 +189,11 @@ func TestAptInvalidParameters(t *testing.T) {
 		t.Fatalf("expected error for empty package list in SimulateInstall")
 	}
 
-	if _, err := actions.SimulateRemove([]string{}, true); err == nil {
+	if _, err := actions.SimulateRemove([]string{}, true, true); err == nil {
 		t.Fatalf("expected error for empty package list in SimulateRemove")
 	}
 
-	if _, err := actions.SimulateChange(nil, nil, false); err == nil {
+	if _, err := actions.SimulateChange(nil, nil, false, true); err == nil {
 		t.Fatalf("expected error for empty lists in SimulateChange")
 	} else if ae, ok := err.(*aptlib.AptError); ok {
 		if ae.Code != aptlib.AptErrorInvalidParameters {

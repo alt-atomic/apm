@@ -17,8 +17,8 @@
 package service
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
-	"apm/lib"
 	"context"
 	"fmt"
 	"regexp"
@@ -28,39 +28,41 @@ import (
 // ArchProvider реализует методы для работы с пакетами в Arch
 type ArchProvider struct {
 	servicePackage *PackageService
+	commandPrefix  string
 }
 
 // NewArchProvider возвращает новый экземпляр ArchProvider.
-func NewArchProvider(servicePackage *PackageService) *ArchProvider {
+func NewArchProvider(servicePackage *PackageService, commandPrefix string) *ArchProvider {
 	return &ArchProvider{
 		servicePackage: servicePackage,
+		commandPrefix:  commandPrefix,
 	}
 }
 
 // GetPackages обновляет базу пакетов и выполняет поиск:
 func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	// Обновляем базу пакетов и базу владельцев файлов.
-	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Suy ", lib.Env.CommandPrefix, containerInfo.ContainerName)
+	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Suy ", p.commandPrefix, containerInfo.ContainerName)
 	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
-		return nil, fmt.Errorf(lib.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
+		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
 	// Получаем пакеты из официальных репозиториев
-	commandSs := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Ss", lib.Env.CommandPrefix, containerInfo.ContainerName)
+	commandSs := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Ss", p.commandPrefix, containerInfo.ContainerName)
 	stdoutSs, stderrSs, err := helper.RunCommand(ctx, commandSs)
 	if err != nil {
-		return nil, fmt.Errorf(lib.T_("Failed to search packages (pacman -Ss): %v, stderr: %s"), err, stderrSs)
+		return nil, fmt.Errorf(app.T_("Failed to search packages (pacman -Ss): %v, stderr: %s"), err, stderrSs)
 	}
 
 	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
-		lib.Log.Error(lib.T_("Error retrieving installed packages: "), err)
+		app.Log.Error(app.T_("Error retrieving installed packages: "), err)
 		exportingPackages = []string{}
 	}
 
 	packagesOfficial, err := p.parseOutput(stdoutSs, exportingPackages)
 	if err != nil {
-		lib.Log.Errorf(lib.T_("Error parsing official packages: %v"), err)
+		app.Log.Errorf(app.T_("Error parsing official packages: %v"), err)
 		return nil, err
 	}
 
@@ -73,20 +75,20 @@ func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerI
 
 // RemovePackage удаляет указанный пакет с помощью pacman -R.
 func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Rs --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Rs --noconfirm %s", p.commandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf(lib.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
+		return fmt.Errorf(app.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
 
 // InstallPackage устанавливает указанный пакет с помощью pacman -S.
 func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -S --noconfirm %s", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -S --noconfirm %s", p.commandPrefix, containerInfo.ContainerName, packageName)
 	_, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return fmt.Errorf(lib.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
+		return fmt.Errorf(app.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
@@ -96,7 +98,7 @@ func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo Contain
 // затем, если не найден, выполняется поиск через pacman -F.
 func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, fileName string) (string, error) {
 	// Попытка через pacman -Qo.
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Qo %s", lib.Env.CommandPrefix, containerInfo.ContainerName, fileName)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Qo %s", p.commandPrefix, containerInfo.ContainerName, fileName)
 	stdout, _, err := helper.RunCommand(ctx, cmdStr)
 	if err == nil {
 		ownerInfo := strings.TrimSpace(stdout)
@@ -109,14 +111,14 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 				return fields[0], nil
 			}
 		}
-		return "", fmt.Errorf(lib.T_("Failed to recognize the owner for file '%s'"), fileName)
+		return "", fmt.Errorf(app.T_("Failed to recognize the owner for file '%s'"), fileName)
 	}
 
 	// Если не найдено, пробуем через pacman -F.
-	cmdStr = fmt.Sprintf("%s distrobox enter %s -- pacman -F %s", lib.Env.CommandPrefix, containerInfo.ContainerName, fileName)
+	cmdStr = fmt.Sprintf("%s distrobox enter %s -- pacman -F %s", p.commandPrefix, containerInfo.ContainerName, fileName)
 	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		return "", fmt.Errorf(lib.T_("Failed to find a package for file '%s': %v, stderr: %s"), fileName, err, stderr)
+		return "", fmt.Errorf(app.T_("Failed to find a package for file '%s': %v, stderr: %s"), fileName, err, stderr)
 	}
 	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
@@ -138,7 +140,7 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 			return pkgName, nil
 		}
 	}
-	return "", fmt.Errorf(lib.T_("Failed to determine the package for file '%s'"), fileName)
+	return "", fmt.Errorf(app.T_("Failed to determine the package for file '%s'"), fileName)
 }
 
 // GetPathByPackageName возвращает список путей для файла, принадлежащего указанному пакету,
@@ -159,25 +161,25 @@ func (p *ArchProvider) GetPathByPackageName(ctx context.Context, containerInfo C
 		return paths
 	}
 
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Ql %s | grep '%s'", lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
+	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Ql %s | grep '%s'", p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
 	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
 	if err != nil {
-		lib.Log.Debugf(lib.T_("Command execution error: %s %s"), stderr, err.Error())
+		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
 
 	paths := parseOutput(stdout)
 	if len(paths) == 0 {
 		fallbackCommand := fmt.Sprintf("%s distrobox enter %s -- pacman -Qq | grep '^%s' | xargs pacman -Ql | grep '%s' | sort",
-			lib.Env.CommandPrefix, containerInfo.ContainerName, packageName, filePath)
+			p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
 		fallbackStdout, fallbackStderr, fallbackErr := helper.RunCommand(ctx, fallbackCommand)
 		if fallbackErr != nil {
-			lib.Log.Debugf(lib.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
+			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
 			return paths, nil
 		}
 
 		fallbackPaths := parseOutput(fallbackStdout)
 		if len(fallbackPaths) > 0 {
-			lib.Log.Debugf(lib.T_("Fallback search found %d files"), len(fallbackPaths))
+			app.Log.Debugf(app.T_("Fallback search found %d files"), len(fallbackPaths))
 			return fallbackPaths, nil
 		}
 	}

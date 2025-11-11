@@ -76,7 +76,8 @@ func (a *Actions) operationWrapper(fn func() error) error {
 }
 
 // CombineInstallRemovePackages комбинированный метод установки и удаления
-func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string, handler lib.ProgressHandler) error {
+func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string,
+	handler lib.ProgressHandler, purge bool, depends bool) error {
 	return a.operationWrapper(func() error {
 		system, err := getSystem()
 		if err != nil {
@@ -90,7 +91,7 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 		defer cache.Close()
 
 		for _, name := range packagesRemove {
-			if e := cache.MarkRemove(name, false); e != nil {
+			if e := cache.MarkRemove(name, purge, depends); e != nil {
 				return e
 			}
 		}
@@ -152,7 +153,7 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 }
 
 // RemovePackages удаление пакетов
-func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.ProgressHandler) error {
+func (a *Actions) RemovePackages(packageNames []string, purge bool, depends bool, handler lib.ProgressHandler) error {
 	if len(packageNames) == 0 {
 		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
@@ -170,7 +171,7 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, handler lib.
 		defer cache.Close()
 
 		for _, name := range packageNames {
-			if e := cache.MarkRemove(name, purge); e != nil {
+			if e := cache.MarkRemove(name, purge, depends); e != nil {
 				return e
 			}
 		}
@@ -292,7 +293,7 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 }
 
 // SimulateRemove симуляция удаления
-func (a *Actions) SimulateRemove(packageNames []string, purge bool) (packageInfo *lib.PackageChanges, err error) {
+func (a *Actions) SimulateRemove(packageNames []string, purge bool, depends bool) (packageInfo *lib.PackageChanges, err error) {
 	if len(packageNames) == 0 {
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
@@ -309,7 +310,7 @@ func (a *Actions) SimulateRemove(packageNames []string, purge bool) (packageInfo
 		}
 		defer cache.Close()
 
-		packageInfo, e = cache.SimulateRemove(packageNames, purge)
+		packageInfo, e = cache.SimulateRemove(packageNames, purge, depends)
 		return e
 	})
 	return
@@ -356,7 +357,7 @@ func (a *Actions) SimulateAutoRemove() (packageChanges *lib.PackageChanges, err 
 }
 
 // SimulateChange комбинированная симуляция установки и удаления
-func (a *Actions) SimulateChange(installNames []string, removeNames []string, purge bool) (packageChanges *lib.PackageChanges, err error) {
+func (a *Actions) SimulateChange(installNames []string, removeNames []string, purge bool, depends bool) (packageChanges *lib.PackageChanges, err error) {
 	if len(installNames) == 0 && len(removeNames) == 0 {
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "Invalid parameters")
 	}
@@ -373,7 +374,7 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 		}
 		defer cache.Close()
 
-		packageChanges, e = cache.SimulateChange(installNames, removeNames, purge)
+		packageChanges, e = cache.SimulateChange(installNames, removeNames, purge, depends)
 		return e
 	})
 	return
