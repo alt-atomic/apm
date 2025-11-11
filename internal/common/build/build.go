@@ -313,45 +313,64 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			}
 		}
 
-		err := os.WriteFile(
-			plymouthConfigFile,
-			[]byte(strings.Join([]string{
-				"[Daemon]",
-				fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
-				"ShowDelay=0",
-				"DeviceTimeout=10",
-			}, "\n")+"\n"),
-			0644,
-		)
-		if err != nil {
-			return err
-		}
-
 		plymouthKargsPath := "/usr/lib/bootc/kargs.d/00-plymouth.toml"
 		plymouthDracutCondPath := "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
 
-		for _, p := range []string{plymouthKargsPath, plymouthDracutCondPath} {
-			err = os.MkdirAll(path.Dir(p), 0644)
+		if branding.PlymouthTheme == "disabled" {
+			err := os.WriteFile(
+				plymouthConfigFile,
+				[]byte(""),
+				0644,
+			)
 			if err != nil {
 				return err
 			}
-		}
 
-		err = os.WriteFile(
-			plymouthKargsPath,
-			[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`),
-			0644,
-		)
-		if err != nil {
-			return err
-		}
-		err = os.WriteFile(
-			plymouthDracutCondPath,
-			[]byte(`add_dracutmodules+=" plymouth "`),
-			0644,
-		)
-		if err != nil {
-			return err
+			for _, p := range []string{plymouthKargsPath, plymouthDracutCondPath} {
+				err = os.RemoveAll(p)
+				if err != nil {
+					return err
+				}
+			}
+
+		} else {
+			err := os.WriteFile(
+				plymouthConfigFile,
+				[]byte(strings.Join([]string{
+					"[Daemon]",
+					fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
+					"ShowDelay=0",
+					"DeviceTimeout=10",
+				}, "\n")+"\n"),
+				0644,
+			)
+			if err != nil {
+				return err
+			}
+
+			for _, p := range []string{plymouthKargsPath, plymouthDracutCondPath} {
+				err = os.MkdirAll(path.Dir(p), 0644)
+				if err != nil {
+					return err
+				}
+			}
+
+			err = os.WriteFile(
+				plymouthKargsPath,
+				[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`),
+				0644,
+			)
+			if err != nil {
+				return err
+			}
+			err = os.WriteFile(
+				plymouthDracutCondPath,
+				[]byte(`add_dracutmodules+=" plymouth "`),
+				0644,
+			)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
