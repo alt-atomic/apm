@@ -413,6 +413,10 @@ func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
 func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 	var kernel = cfgService.serviceHostConfig.Config.Kernel
 
+	if kernel.Flavour == "" && len(kernel.Modules) == 0 && !kernel.IncludeHeaders {
+		return nil
+	}
+
 	var currentKernel *service.Info
 	var latestKernelInfo *service.Info
 	var kModules = kernel.Modules
