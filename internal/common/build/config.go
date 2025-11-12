@@ -323,9 +323,6 @@ func (cfg *Config) checkRoot() error {
 	if cfg.Image == "" {
 		return errors.New(app.T_("Image can not be empty"))
 	}
-	if (len(cfg.Kernel.Modules) != 0 || cfg.Kernel.IncludeHeaders) && cfg.Kernel.Flavour == "" {
-		return errors.New(app.T_("Kernel flavour can not be empty"))
-	}
 	if cfg.Repos.Date != "" && cfg.Repos.Branch == "" {
 		return errors.New(app.T_("Repos branch can not be empty"))
 	}

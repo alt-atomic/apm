@@ -412,86 +412,96 @@ func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
 
 func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 	var kernel = cfgService.serviceHostConfig.Config.Kernel
+
+	var currentKernel *service.Info
+	var latestKernelInfo *service.Info
 	var kModules = kernel.Modules
+
 	if kernel.Flavour != "" {
-		latest, err := cfgService.kernelManager.FindLatestKernel(ctx, kernel.Flavour)
+		var err error
+		latestKernelInfo, err = cfgService.kernelManager.FindLatestKernel(ctx, kernel.Flavour)
+		if err != nil {
+			return err
+		}
+	}
+
+	currentKernel, _ = cfgService.getCurrentKernel(ctx)
+
+	var toInstallInfo *service.Info
+	if latestKernelInfo != nil {
+		toInstallInfo = latestKernelInfo
+	} else if currentKernel != nil {
+		toInstallInfo = currentKernel
+
+		inheritedModules, _ := cfgService.kernelManager.InheritModulesFromKernel(toInstallInfo, currentKernel)
+		if len(inheritedModules) > 0 {
+			kModules = append(kModules, inheritedModules...)
+		}
+	} else {
+		return errors.New("kernel must be specified")
+	}
+
+	additionalPackages, _ := cfgService.kernelManager.AutoSelectHeadersAndFirmware(ctx, toInstallInfo, kernel.IncludeHeaders)
+
+	for _, pkg := range additionalPackages {
+		// Если это модуль ядра - извлекаем имя модуля
+		if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", toInstallInfo.Flavour)) {
+			moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
+			moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", toInstallInfo.Flavour))
+			// Добавляем только если его еще нет в списке
+			moduleExists := slices.Contains(kModules, moduleName)
+			if !moduleExists {
+				kModules = append(kModules, moduleName)
+			}
+		}
+	}
+
+	if currentKernel != nil {
+		app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
+		err := cfgService.kernelManager.RemoveKernel(currentKernel, true)
 		if err != nil {
 			return err
 		}
 
-		var currentKernel *service.Info
-
-		if len(kModules) == 0 {
-			currentKernel, _ = cfgService.getCurrentKernel(ctx)
-			if currentKernel != nil {
-				inheritedModules, _ := cfgService.kernelManager.InheritModulesFromKernel(latest, currentKernel)
-				if len(inheritedModules) > 0 {
-					kModules = inheritedModules
-				}
-			}
-		}
-		additionalPackages, _ := cfgService.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, kernel.IncludeHeaders)
-
-		for _, pkg := range additionalPackages {
-			// Если это модуль ядра - извлекаем имя модуля
-			if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", latest.Flavour)) {
-				moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
-				moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", latest.Flavour))
-				// Добавляем только если его еще нет в списке
-				moduleExists := slices.Contains(kModules, moduleName)
-				if !moduleExists {
-					kModules = append(kModules, moduleName)
-				}
-			}
+		entries, err := os.ReadDir(kernelDir)
+		if err != nil {
+			return err
 		}
 
-		if currentKernel != nil {
-			app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
-			err = cfgService.kernelManager.RemoveKernel(currentKernel, true)
+		for _, entry := range entries {
+			entryPath := filepath.Join(kernelDir, entry.Name())
+			err = os.RemoveAll(entryPath)
 			if err != nil {
 				return err
 			}
-
-			entries, err := os.ReadDir(kernelDir)
-			if err != nil {
-				return err
-			}
-
-			for _, entry := range entries {
-				entryPath := filepath.Join(kernelDir, entry.Name())
-				err = os.RemoveAll(entryPath)
-				if err != nil {
-					return err
-				}
-			}
 		}
+	}
 
-		app.Log.Info(fmt.Sprintf("Installing kernel %s", latest.Flavour))
-		err = cfgService.kernelManager.InstallKernel(ctx, latest, kModules, kernel.IncludeHeaders, false)
-		if err != nil {
-			return err
-		}
+	app.Log.Info(fmt.Sprintf("Installing kernel %s with modules: %s", toInstallInfo.Flavour, strings.Join(kModules, ", ")))
+	err := cfgService.kernelManager.InstallKernel(ctx, toInstallInfo, kModules, kernel.IncludeHeaders, false)
+	if err != nil {
+		return err
+	}
 
-		app.Log.Info("Updating packages DB")
-		_, err = cfgService.serviceAptActions.Update(ctx)
-		if err != nil {
-			return err
-		}
+	app.Log.Info("Updating packages DB")
+	_, err = cfgService.serviceAptActions.Update(ctx)
+	if err != nil {
+		return err
+	}
 
-		latestInstalledKernelVersion, err := getLatestInstalledKernelVersion()
-		if err != nil {
-			return err
-		}
+	latestInstalledKernelVersion, err := getLatestInstalledKernelVersion()
+	if err != nil {
+		return err
+	}
 
-		app.Log.Info("Copy vmlinuz")
-		err = osutils.Copy(
-			fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
-			fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
-			true,
-		)
-		if err != nil {
-			return err
-		}
+	app.Log.Info("Copy vmlinuz")
+	err = osutils.Copy(
+		fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
+		fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
+		true,
+	)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -942,9 +952,14 @@ func getLatestInstalledKernelVersion() (string, error) {
 
 	if len(files) == 0 {
 		return "", fmt.Errorf("no kernel versions found in %s", kernelDir)
-	} else if len(files) > 1 {
-		return "", fmt.Errorf("too many kernel versions found in %s", kernelDir)
 	}
 
-	return files[0].Name(), nil
+	var names = []string{}
+	for _, file := range files {
+		names = append(names, file.Name())
+	}
+
+	slices.Sort(names)
+
+	return names[0], nil
 }
