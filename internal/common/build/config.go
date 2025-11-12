@@ -563,22 +563,22 @@ type Body struct {
 	// Types: replace
 	// Usage:
 	// replace: Текст, на который нужно заменить
-	Repl string `yaml:"text,omitempty" json:"text,omitempty"`
+	Repl string `yaml:"repl,omitempty" json:"repl,omitempty"`
 
 	// Types: git
 	// Usage:
 	// git: reference
-	Ref string `yaml:"ref,omitempty" ref:"text,omitempty"`
+	Ref string `yaml:"ref,omitempty" json:"ref,omitempty"`
 
 	// Types: mkdir, [merge]
 	// Usage:
 	// mkdir, merge: file permissions
-	Perm string `yaml:"perm,omitempty" ref:"perm,omitempty"`
+	Perm string `yaml:"perm,omitempty" json:"perm,omitempty"`
 
 	// Types: [remove]
 	// Usage:
 	// remove: remove inside of object instead of removing an object
-	Inside bool `yaml:"inside,omitempty" ref:"inside,omitempty"`
+	Inside bool `yaml:"inside,omitempty" json:"inside,omitempty"`
 }
 
 // GetTargets возвращает все цели (target и targets)
