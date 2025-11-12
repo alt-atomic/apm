@@ -323,9 +323,6 @@ func (cfg *Config) checkRoot() error {
 	if cfg.Image == "" {
 		return errors.New(app.T_("Image can not be empty"))
 	}
-	if (len(cfg.Kernel.Modules) != 0 || cfg.Kernel.IncludeHeaders) && cfg.Kernel.Flavour == "" {
-		return errors.New(app.T_("Kernel flavour can not be empty"))
-	}
 	if cfg.Repos.Date != "" && cfg.Repos.Branch == "" {
 		return errors.New(app.T_("Repos branch can not be empty"))
 	}
@@ -402,6 +399,9 @@ func CheckModules(modules *[]Module) error {
 		case TypeSystemd:
 			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeSystemd, "target", "targets")
+			}
+			if b.Enabled && b.Masked {
+				return fmt.Errorf("module %s can't have both 'enabled' and 'masked'", TypeSystemd)
 			}
 		case TypeLink:
 			if b.Target == "" {
@@ -555,6 +555,11 @@ type Body struct {
 	// systemd: Использовать ли --global или нет
 	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
 
+	// Types: systemd
+	// Usage:
+	// systemd: Замаскировать сервис или нет
+	Masked bool `yaml:"masked,omitempty" json:"masked,omitempty"`
+
 	// Types: replace
 	// Usage:
 	// replace: Regex шаблон для замены
@@ -563,22 +568,22 @@ type Body struct {
 	// Types: replace
 	// Usage:
 	// replace: Текст, на который нужно заменить
-	Repl string `yaml:"text,omitempty" json:"text,omitempty"`
+	Repl string `yaml:"repl,omitempty" json:"repl,omitempty"`
 
 	// Types: git
 	// Usage:
 	// git: reference
-	Ref string `yaml:"ref,omitempty" ref:"text,omitempty"`
+	Ref string `yaml:"ref,omitempty" json:"ref,omitempty"`
 
 	// Types: mkdir, [merge]
 	// Usage:
 	// mkdir, merge: file permissions
-	Perm string `yaml:"perm,omitempty" ref:"perm,omitempty"`
+	Perm string `yaml:"perm,omitempty" json:"perm,omitempty"`
 
 	// Types: [remove]
 	// Usage:
 	// remove: remove inside of object instead of removing an object
-	Inside bool `yaml:"inside,omitempty" ref:"inside,omitempty"`
+	Inside bool `yaml:"inside,omitempty" json:"inside,omitempty"`
 }
 
 // GetTargets возвращает все цели (target и targets)

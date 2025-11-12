@@ -40,16 +40,18 @@ import (
 )
 
 const (
-	etcHostname         = "/etc/hostname"
-	etcHosts            = "/etc/hosts"
-	etcOsRelease        = "/etc/os-release"
-	usrLibOsRelease     = "/usr/lib/os-release"
-	aptSourcesList      = "/etc/apt/sources.list"
-	aptSourcesListD     = "/etc/apt/sources.list.d"
-	plymouthThemesDir   = "/usr/share/plymouth/themes"
-	plymouthConfigFile  = "/etc/plymouth/plymouthd.conf"
-	kernelDir           = "/usr/lib/modules"
-	bootVmlinuzTemplate = "/boot/vmlinuz-%s"
+	etcHostname            = "/etc/hostname"
+	etcHosts               = "/etc/hosts"
+	etcOsRelease           = "/etc/os-release"
+	usrLibOsRelease        = "/usr/lib/os-release"
+	aptSourcesList         = "/etc/apt/sources.list"
+	aptSourcesListD        = "/etc/apt/sources.list.d"
+	plymouthThemesDir      = "/usr/share/plymouth/themes"
+	plymouthConfigFile     = "/etc/plymouth/plymouthd.conf"
+	plymouthKargsPath      = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
+	plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
+	kernelDir              = "/usr/lib/modules"
+	bootVmlinuzTemplate    = "/boot/vmlinuz-%s"
 
 	TypeCopy     = "copy"
 	TypeGit      = "git"
@@ -291,14 +293,14 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 
 		if !slices.Contains(themes, branding.PlymouthTheme) {
 			filters := map[string]any{
-				"name": fmt.Sprintf("plymouth-theme-%s", branding.Name),
+				"name": fmt.Sprintf("plymouth-theme-%s", branding.PlymouthTheme),
 			}
 			packages, err := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 			if err != nil {
 				return err
 			}
 			if len(packages) == 0 {
-				return fmt.Errorf("no plymouth theme found for %s", branding.Name)
+				return fmt.Errorf("no plymouth theme found for %s", branding.PlymouthTheme)
 			}
 
 			var pkgsNames []string
@@ -313,62 +315,42 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 			}
 		}
 
-		plymouthKargsPath := "/usr/lib/bootc/kargs.d/00-plymouth.toml"
-		plymouthDracutCondPath := "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
+		plymouthPaths := []string{plymouthKargsPath, plymouthDracutConfPath}
 
 		if branding.PlymouthTheme == "disabled" {
-			err := os.WriteFile(
-				plymouthConfigFile,
-				[]byte(""),
-				0644,
-			)
-			if err != nil {
+			if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
 				return err
 			}
 
-			for _, p := range []string{plymouthKargsPath, plymouthDracutCondPath} {
-				err = os.RemoveAll(p)
-				if err != nil {
+			for _, p := range plymouthPaths {
+				if err := os.RemoveAll(p); err != nil {
 					return err
 				}
 			}
-
 		} else {
-			err := os.WriteFile(
-				plymouthConfigFile,
-				[]byte(strings.Join([]string{
-					"[Daemon]",
-					fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
-					"ShowDelay=0",
-					"DeviceTimeout=10",
-				}, "\n")+"\n"),
-				0644,
-			)
-			if err != nil {
+			plymouthConfig := strings.Join([]string{
+				"[Daemon]",
+				fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
+				"ShowDelay=0",
+				"DeviceTimeout=10",
+			}, "\n") + "\n"
+
+			if err := os.WriteFile(plymouthConfigFile, []byte(plymouthConfig), 0644); err != nil {
 				return err
 			}
 
-			for _, p := range []string{plymouthKargsPath, plymouthDracutCondPath} {
-				err = os.MkdirAll(path.Dir(p), 0644)
-				if err != nil {
+			for _, p := range plymouthPaths {
+				if err := os.MkdirAll(path.Dir(p), 0644); err != nil {
 					return err
 				}
 			}
 
-			err = os.WriteFile(
-				plymouthKargsPath,
-				[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`),
-				0644,
-			)
-			if err != nil {
+			if err := os.WriteFile(plymouthKargsPath,
+				[]byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
 				return err
 			}
-			err = os.WriteFile(
-				plymouthDracutCondPath,
-				[]byte(`add_dracutmodules+=" plymouth "`),
-				0644,
-			)
-			if err != nil {
+
+			if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
 				return err
 			}
 		}
@@ -430,86 +412,96 @@ func (cfgService *ConfigService) executeRepos(ctx context.Context) error {
 
 func (cfgService *ConfigService) executeKernel(ctx context.Context) error {
 	var kernel = cfgService.serviceHostConfig.Config.Kernel
+
+	var currentKernel *service.Info
+	var latestKernelInfo *service.Info
 	var kModules = kernel.Modules
+
 	if kernel.Flavour != "" {
-		latest, err := cfgService.kernelManager.FindLatestKernel(ctx, kernel.Flavour)
+		var err error
+		latestKernelInfo, err = cfgService.kernelManager.FindLatestKernel(ctx, kernel.Flavour)
+		if err != nil {
+			return err
+		}
+	}
+
+	currentKernel, _ = cfgService.getCurrentKernel(ctx)
+
+	var toInstallInfo *service.Info
+	if latestKernelInfo != nil {
+		toInstallInfo = latestKernelInfo
+	} else if currentKernel != nil {
+		toInstallInfo = currentKernel
+
+		inheritedModules, _ := cfgService.kernelManager.InheritModulesFromKernel(toInstallInfo, currentKernel)
+		if len(inheritedModules) > 0 {
+			kModules = append(kModules, inheritedModules...)
+		}
+	} else {
+		return errors.New("kernel must be specified")
+	}
+
+	additionalPackages, _ := cfgService.kernelManager.AutoSelectHeadersAndFirmware(ctx, toInstallInfo, kernel.IncludeHeaders)
+
+	for _, pkg := range additionalPackages {
+		// Если это модуль ядра - извлекаем имя модуля
+		if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", toInstallInfo.Flavour)) {
+			moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
+			moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", toInstallInfo.Flavour))
+			// Добавляем только если его еще нет в списке
+			moduleExists := slices.Contains(kModules, moduleName)
+			if !moduleExists {
+				kModules = append(kModules, moduleName)
+			}
+		}
+	}
+
+	if currentKernel != nil {
+		app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
+		err := cfgService.kernelManager.RemoveKernel(currentKernel, true)
 		if err != nil {
 			return err
 		}
 
-		var currentKernel *service.Info
-
-		if len(kModules) == 0 {
-			currentKernel, _ = cfgService.getCurrentKernel(ctx)
-			if currentKernel != nil {
-				inheritedModules, _ := cfgService.kernelManager.InheritModulesFromKernel(latest, currentKernel)
-				if len(inheritedModules) > 0 {
-					kModules = inheritedModules
-				}
-			}
-		}
-		additionalPackages, _ := cfgService.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, kernel.IncludeHeaders)
-
-		for _, pkg := range additionalPackages {
-			// Если это модуль ядра - извлекаем имя модуля
-			if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", latest.Flavour)) {
-				moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
-				moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", latest.Flavour))
-				// Добавляем только если его еще нет в списке
-				moduleExists := slices.Contains(kModules, moduleName)
-				if !moduleExists {
-					kModules = append(kModules, moduleName)
-				}
-			}
+		entries, err := os.ReadDir(kernelDir)
+		if err != nil {
+			return err
 		}
 
-		if currentKernel != nil {
-			app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
-			err = cfgService.kernelManager.RemoveKernel(currentKernel, true)
+		for _, entry := range entries {
+			entryPath := filepath.Join(kernelDir, entry.Name())
+			err = os.RemoveAll(entryPath)
 			if err != nil {
 				return err
 			}
-
-			entries, err := os.ReadDir(kernelDir)
-			if err != nil {
-				return err
-			}
-
-			for _, entry := range entries {
-				entryPath := filepath.Join(kernelDir, entry.Name())
-				err = os.RemoveAll(entryPath)
-				if err != nil {
-					return err
-				}
-			}
 		}
+	}
 
-		app.Log.Info(fmt.Sprintf("Installing kernel %s", latest.Flavour))
-		err = cfgService.kernelManager.InstallKernel(ctx, latest, kModules, kernel.IncludeHeaders, false)
-		if err != nil {
-			return err
-		}
+	app.Log.Info(fmt.Sprintf("Installing kernel %s with modules: %s", toInstallInfo.Flavour, strings.Join(kModules, ", ")))
+	err := cfgService.kernelManager.InstallKernel(ctx, toInstallInfo, kModules, kernel.IncludeHeaders, false)
+	if err != nil {
+		return err
+	}
 
-		app.Log.Info("Updating packages DB")
-		_, err = cfgService.serviceAptActions.Update(ctx)
-		if err != nil {
-			return err
-		}
+	app.Log.Info("Updating packages DB")
+	_, err = cfgService.serviceAptActions.Update(ctx)
+	if err != nil {
+		return err
+	}
 
-		latestInstalledKernelVersion, err := getLatestInstalledKernelVersion()
-		if err != nil {
-			return err
-		}
+	latestInstalledKernelVersion, err := getLatestInstalledKernelVersion()
+	if err != nil {
+		return err
+	}
 
-		app.Log.Info("Copy vmlinuz")
-		err = osutils.Copy(
-			fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
-			fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
-			true,
-		)
-		if err != nil {
-			return err
-		}
+	app.Log.Info("Copy vmlinuz")
+	err = osutils.Copy(
+		fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
+		fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
+		true,
+	)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -840,6 +832,10 @@ func executeSystemdModule(ctx context.Context, _ *ConfigService, b *Body) error 
 	for _, target := range b.GetTargets() {
 		var text = fmt.Sprintf("Disabling %s", target)
 		var action = "disable"
+		if b.Masked {
+			text = fmt.Sprintf("Masking %s", target)
+			action = "mask"
+		}
 		if b.Enabled {
 			text = fmt.Sprintf("Enabling %s", target)
 			action = "enable"
@@ -956,9 +952,14 @@ func getLatestInstalledKernelVersion() (string, error) {
 
 	if len(files) == 0 {
 		return "", fmt.Errorf("no kernel versions found in %s", kernelDir)
-	} else if len(files) > 1 {
-		return "", fmt.Errorf("too many kernel versions found in %s", kernelDir)
 	}
 
-	return files[0].Name(), nil
+	var names = []string{}
+	for _, file := range files {
+		names = append(names, file.Name())
+	}
+
+	slices.Sort(names)
+
+	return names[0], nil
 }
