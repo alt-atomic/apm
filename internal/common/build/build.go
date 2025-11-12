@@ -293,14 +293,14 @@ func (cfgService *ConfigService) executeBranding(ctx context.Context) error {
 
 		if !slices.Contains(themes, branding.PlymouthTheme) {
 			filters := map[string]any{
-				"name": fmt.Sprintf("plymouth-theme-%s", branding.Name),
+				"name": fmt.Sprintf("plymouth-theme-%s", branding.PlymouthTheme),
 			}
 			packages, err := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 			if err != nil {
 				return err
 			}
 			if len(packages) == 0 {
-				return fmt.Errorf("no plymouth theme found for %s", branding.Name)
+				return fmt.Errorf("no plymouth theme found for %s", branding.PlymouthTheme)
 			}
 
 			var pkgsNames []string
