@@ -403,6 +403,9 @@ func CheckModules(modules *[]Module) error {
 			if len(b.GetTargets()) == 0 {
 				return fmt.Errorf(requiredTextOr, TypeSystemd, "target", "targets")
 			}
+			if b.Enabled && b.Masked {
+				return fmt.Errorf("module %s can't have both 'enabled' and 'masked'", TypeSystemd)
+			}
 		case TypeLink:
 			if b.Target == "" {
 				return fmt.Errorf(requiredText, TypeLink, "target")
@@ -554,6 +557,11 @@ type Body struct {
 	// Usage:
 	// systemd: Использовать ли --global или нет
 	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
+
+	// Types: systemd
+	// Usage:
+	// systemd: Замаскировать сервис или нет
+	Masked bool `yaml:"masked,omitempty" json:"masked,omitempty"`
 
 	// Types: replace
 	// Usage:

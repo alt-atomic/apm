@@ -822,6 +822,10 @@ func executeSystemdModule(ctx context.Context, _ *ConfigService, b *Body) error 
 	for _, target := range b.GetTargets() {
 		var text = fmt.Sprintf("Disabling %s", target)
 		var action = "disable"
+		if b.Masked {
+			text = fmt.Sprintf("Masking %s", target)
+			action = "mask"
+		}
 		if b.Enabled {
 			text = fmt.Sprintf("Enabling %s", target)
 			action = "enable"
