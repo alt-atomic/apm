@@ -780,19 +780,19 @@ func executePackagesModule(ctx context.Context, cfgService *ConfigService, b *Bo
 }
 
 func executeRemoveModule(_ context.Context, _ *ConfigService, b *Body) error {
-	app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.GetTargets(), ", ")))
-
 	for _, pathTarget := range b.GetTargets() {
 		if !filepath.IsAbs(pathTarget) {
 			return fmt.Errorf("target in remove type must be absolute path")
 		}
 
 		if b.Inside {
+			app.Log.Info(fmt.Sprintf("Cleaning %s", strings.Join(b.GetTargets(), ", ")))
 			err := osutils.Clean(pathTarget)
 			if err != nil {
 				return err
 			}
 		} else {
+			app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.GetTargets(), ", ")))
 			err := os.RemoveAll(pathTarget)
 			if err != nil {
 				return err
