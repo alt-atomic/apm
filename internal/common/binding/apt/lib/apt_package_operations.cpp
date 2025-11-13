@@ -654,6 +654,37 @@ AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::st
     }
 
     if (cache->dep_cache->BrokenCount() != 0) {
+        std::string broken_info;
+        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+            pkgDepCache::StateCache &st = (*cache->dep_cache)[it];
+            if (st.InstBroken() || st.NowBroken()) {
+                if (!broken_info.empty()) broken_info += "; ";
+                broken_info += it.Name();
+                pkgCache::VerIterator InstVer = st.InstVerIter(*cache->dep_cache);
+                if (!InstVer.end()) {
+                    for (pkgCache::DepIterator D = InstVer.DependsList(); !D.end(); ++D) {
+                        if (D->Type != pkgCache::Dep::Depends && D->Type != pkgCache::Dep::PreDepends) continue;
+                        if (((*cache->dep_cache)[D] & pkgDepCache::DepInstall) == pkgDepCache::DepInstall) continue;
+
+                        broken_info += " (depends: ";
+                        broken_info += D.TargetPkg().Name();
+                        if (D.TargetVer() != nullptr) {
+                            broken_info += " ";
+                            broken_info += D.CompType();
+                            broken_info += " ";
+                            broken_info += D.TargetVer();
+                        }
+                        broken_info += ")";
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!broken_info.empty()) {
+            std::string out = "Some packages could not be installed. Broken: " + broken_info;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+        }
         return make_result(APT_ERROR_DEPENDENCY_BROKEN,
                            "Some packages could not be installed. This may mean that you have requested an impossible situation");
     }
