@@ -879,13 +879,6 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		return errFind
 	}
 
-	if len(packagesInstall) > 0 {
-		app.Log.Info(fmt.Sprintf("Packages to install: %s", strings.Join(packagesInstall, ", ")))
-	}
-	if len(packagesRemove) > 0 {
-		app.Log.Info(fmt.Sprintf("Packages to remove: %s", strings.Join(packagesRemove, ", ")))
-	}
-
 	errInstall := cfgService.serviceAptActions.CombineInstallRemovePackages(
 		ctx,
 		packagesInstall,
