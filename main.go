@@ -49,7 +49,9 @@ var (
 func main() {
 	var errInitial error
 	appConfig, errInitial = app.InitializeAppDefault()
-	cliError(errInitial)
+	if errInitial != nil {
+		panic(errInitial)
+	}
 	defer cleanup()
 
 	helper.SetupHelpTemplates()
