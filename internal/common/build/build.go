@@ -155,6 +155,7 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module core.
 		return fmt.Errorf(app.T_("Unknown module type: %s"), module.Type)
 	}
 
+	shouldExecute := true
 	if module.If != "" {
 		data := ExprData{
 			Config:  cfgService.serviceHostConfig.Config,
@@ -175,12 +176,26 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module core.
 		if !ok {
 			return fmt.Errorf("module expression must return bool")
 		}
-		if !boolResult {
-			return nil
-		}
+		shouldExecute = boolResult
 	}
 
-	return handler(ctx, cfgService, &module.Body)
+	if !shouldExecute {
+		return nil
+	}
+
+	if err := handler(ctx, cfgService, &module.Body); err != nil {
+		label := module.Name
+		if label == "" {
+			label = fmt.Sprintf("type=%s", module.Type)
+		}
+		return fmt.Errorf("module %s: %w", label, err)
+	}
+
+	return nil
+}
+
+func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module) error {
+	return cfgService.executeModule(ctx, module)
 }
 
 func (cfgService *ConfigService) executeIncludeModule(ctx context.Context, body *core.Body) error {
@@ -190,7 +205,7 @@ func (cfgService *ConfigService) executeIncludeModule(ctx context.Context, body 
 			return err
 		}
 		for _, module := range *modules {
-			if err := cfgService.executeModule(ctx, module); err != nil {
+			if err = cfgService.executeModule(ctx, module); err != nil {
 				return err
 			}
 		}
@@ -212,7 +227,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		return errPrepare
 	}
 
-	packagesInstall, packagesRemove, _, _, errFind := cfgService.serviceAptActions.FindPackage(
+	packagesInstall, packagesRemove, _, aptPackageChanges, errFind := cfgService.serviceAptActions.FindPackage(
 		ctx,
 		packagesInstall,
 		packagesRemove,
@@ -221,6 +236,16 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 	)
 	if errFind != nil {
 		return errFind
+	}
+
+	if aptPackageChanges != nil {
+		if len(aptPackageChanges.NewInstalledPackages) > 0 {
+			app.Log.Info(fmt.Sprintf("Install plan: %s", strings.Join(aptPackageChanges.NewInstalledPackages, ", ")))
+		}
+
+		if len(aptPackageChanges.RemovedPackages) > 0 {
+			app.Log.Info(fmt.Sprintf("Remove plan: %s", strings.Join(aptPackageChanges.RemovedPackages, ", ")))
+		}
 	}
 
 	errInstall := cfgService.serviceAptActions.CombineInstallRemovePackages(

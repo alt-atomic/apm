@@ -17,6 +17,7 @@
 package build
 
 import (
+	"apm/internal/common/build/core"
 	"context"
 	"os"
 	"path/filepath"
@@ -120,10 +121,10 @@ modules:
 	assert.NoError(s.T(), err)
 
 	// Загружаем и выполняем конфигурацию
-	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), 1, len(cfg.Modules))
-	assert.Equal(s.T(), build.TypeCopy, cfg.Modules[0].Type)
+	assert.Equal(s.T(), core.TypeCopy, cfg.Modules[0].Type)
 
 	// Выполняем модуль через реальный ConfigService
 	module := cfg.Modules[0]
@@ -166,7 +167,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -208,7 +209,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -238,11 +239,12 @@ modules:
     type: mkdir
     body:
       target: "` + dirToCreate + `"
+      perm: "0755"
 `
 	err := os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -282,7 +284,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -327,11 +329,12 @@ modules:
     body:
       target: "` + sourceFile + `"
       destination: "` + destFile + `"
+      perm: "0644"
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
@@ -373,6 +376,7 @@ modules:
     type: mkdir
     body:
       target: "` + destDir + `"
+      perm: "0755"
 
   - name: "Copy file 1"
     type: copy
@@ -389,7 +393,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := build.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), 3, len(cfg.Modules), "Should have 3 modules")
 
@@ -440,8 +444,7 @@ modules: []
 image: "alt:sisyphus"
 modules: []
 `,
-			shouldErr: true,
-			errMsg:    "Name can not be empty",
+			shouldErr: false,
 		},
 		{
 			name: "Valid minimal config",
@@ -492,7 +495,7 @@ modules:
 			err := os.WriteFile(testFile, []byte(tt.yaml), 0644)
 			assert.NoError(t, err)
 
-			_, err = build.ReadAndParseConfigYamlFile(testFile)
+			_, err = core.ReadAndParseConfigYamlFile(testFile)
 			if tt.shouldErr {
 				assert.Error(t, err, "Should fail validation")
 				if tt.errMsg != "" {

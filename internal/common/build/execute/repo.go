@@ -20,7 +20,7 @@ func Repos(ctx context.Context, svc Service) error {
 				return err
 			}
 			if p != core.AptSourcesListD {
-				if err := os.RemoveAll(p); err != nil {
+				if err = os.RemoveAll(p); err != nil {
 					return err
 				}
 			}

@@ -53,23 +53,68 @@ var (
 	requiredTextOr       = fmt.Sprintf(requiredText, "%s", app.T_("%s' or '%s"))
 )
 
+type Config struct {
+	// Базовый образ для использования
+	// Может быть взята из переменной среды
+	// APM_BUILD_IMAGE
+	Image string `yaml:"image" json:"image"`
+	// Тип сборки. stable (по умолчанию) или nightly
+	// Может быть взята из переменной среды
+	// APM_BUILD_BUILD_TYPE
+	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty"`
+	// Имя образа. Используется в именах некоторых созданных файлов
+	// Может быть взята из переменной среды
+	// APM_BUILD_NAME
+	Name string `yaml:"name" json:"name"`
+	// Переменные среды
+	Env []string `yaml:"env,omitempty" json:"env,omitempty"`
+	// Брендинг образа
+	Branding Branding `yaml:"branding,omitempty" json:"branding,omitempty"`
+	// Имя хоста
+	// Может быть взята из переменной среды
+	// APM_BUILD_HOSTNAME
+	Hostname string `yaml:"hostname,omitempty" json:"hostname,omitempty"`
+	// Репозитории для sources.list. Если пусто, используются репозитории из образа
+	Repos Repos `yaml:"repos,omitempty" json:"repos,omitempty"`
+	// Ядро для использования в образе. Если пусто, используется ядро из образа
+	Kernel Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
+	// Список модулей
+	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
+}
+
 type Branding struct {
-	Name          string `yaml:"name,omitempty" json:"name,omitempty"`
+	// Имя брендинга для пакетов
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+	// Тема плимут
 	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`
 }
 
 type Kernel struct {
-	Flavour        string   `yaml:"flavour,omitempty" json:"flavour,omitempty"`
-	Modules        []string `yaml:"modules,omitempty" json:"modules,omitempty"`
-	IncludeHeaders bool     `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
+	// Версия ядра
+	// Может быть взята из переменной среды
+	// APM_BUILD_KERNEL_FLAVOUR
+	Flavour string `yaml:"flavour,omitempty" json:"flavour,omitempty"`
+	// Модуля ядра
+	Modules []string `yaml:"modules,omitempty" json:"modules,omitempty"`
+	// Включать хедеры
+	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
 }
 
 type Repos struct {
-	Clean  bool     `yaml:"clean,omitempty" json:"clean,omitempty"`
+	// Очистить репозитории
+	Clean bool `yaml:"clean,omitempty" json:"clean,omitempty"`
+	// Кастомные записи в sources.list
 	Custom []string `yaml:"custom,omitempty" json:"custom,omitempty"`
-	Branch string   `yaml:"branch,omitempty" json:"branch,omitempty"`
-	Date   string   `yaml:"date,omitempty" json:"date,omitempty"`
-	Tasks  []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
+	// Ветка репозитория ALT. Сейчас доступен только sisyphus
+	// Может быть взята из переменной среды
+	// APM_BUILD_REPO_BRANCH
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
+	// Дата в формате YYYY/MM/DD. Если пуст, берется latest
+	// Может быть взята из переменной среды
+	// APM_BUILD_REPO_DATE
+	Date string `yaml:"date,omitempty" json:"date,omitempty"`
+	// Задачи для подключения в качестве репозиториев
+	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 }
 
 func (r *Repos) AllRepos() []string {
@@ -138,18 +183,6 @@ func (r *Repos) BranchRepos() []string {
 	}
 
 	return repos
-}
-
-type Config struct {
-	Image     string   `yaml:"image" json:"image"`
-	BuildType string   `yaml:"build-type,omitempty" json:"build-type,omitempty"`
-	Name      string   `yaml:"name" json:"name"`
-	Env       []string `yaml:"env,omitempty" json:"env,omitempty"`
-	Branding  Branding `yaml:"branding,omitempty" json:"branding,omitempty"`
-	Hostname  string   `yaml:"hostname,omitempty" json:"hostname,omitempty"`
-	Repos     Repos    `yaml:"repos,omitempty" json:"repos,omitempty"`
-	Kernel    Kernel   `yaml:"kernel,omitempty" json:"kernel,omitempty"`
-	Modules   []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
 func (cfg *Config) getTotalInstall() []string {
@@ -316,31 +349,116 @@ func (cfg *Config) Save(filename string) error {
 }
 
 type Module struct {
+	// Имя модуля для логирования
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Тип тела модуля
 	Type string `yaml:"type" json:"type"`
-	If   string `yaml:"if,omitempty" json:"if,omitempty"`
-	Body Body   `yaml:"body" json:"body"`
+
+	// Условие в формате языка expr
+	If string `yaml:"if,omitempty" json:"if,omitempty"`
+
+	// Тело модуля
+	Body Body `yaml:"body" json:"body"`
 }
 
 type Body struct {
-	Command     string   `yaml:"command,omitempty" json:"command,omitempty"`
-	Commands    []string `yaml:"commands,omitempty" json:"commands,omitempty"`
-	Deps        []string `yaml:"deps,omitempty" json:"deps,omitempty"`
-	Target      string   `yaml:"target,omitempty" json:"target,omitempty"`
-	Targets     []string `yaml:"targets,omitempty" json:"targets,omitempty"`
-	Destination string   `yaml:"destination,omitempty" json:"destination,omitempty"`
-	Install     []string `yaml:"install,omitempty" json:"install,omitempty"`
-	Remove      []string `yaml:"remove,omitempty" json:"remove,omitempty"`
-	Replace     bool     `yaml:"replace,omitempty" json:"replace,omitempty"`
-	CreateLink  bool     `yaml:"create-link,omitempty" json:"create-link,omitempty"`
-	Enabled     bool     `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-	Global      bool     `yaml:"global,omitempty" json:"global,omitempty"`
-	Masked      bool     `yaml:"masked,omitempty" json:"masked,omitempty"`
-	Pattern     string   `yaml:"pattern,omitempty" json:"pattern,omitempty"`
-	Repl        string   `yaml:"repl,omitempty" json:"repl,omitempty"`
-	Ref         string   `yaml:"ref,omitempty" json:"ref,omitempty"`
-	Perm        string   `yaml:"perm,omitempty" json:"perm,omitempty"`
-	Inside      bool     `yaml:"inside,omitempty" json:"inside,omitempty"`
+	// Types: git, shell
+	// Usage:
+	// shell: Команд для выполнения относительно директории ресурсов
+	// git: Команда для выполнения относительно git репозитория
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+
+	// Types: git, shell
+	// Usage:
+	// shell: Команды для выполнения относительно директории ресурсов
+	// git: Команды для выполнения относительно git репозитория
+	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty"`
+
+	// Types: [git]
+	// Usage:
+	// git: Зависимости для модуля. Они будут удалены после завершения модуля
+	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
+
+	// Types: merge, include, copy, move, remove, systemd, link, mkdir, replace, git
+	// Usage:
+	// merge, include, copy: Путь для подключения yml конфигов
+	// remove, mkdir, move, link, replace: Абсолютный путь
+	// systemd: Имя сервиса
+	// git: URL git-репозитория
+	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+
+	// Types: include, remove, systemd, mkdir
+	// Usage:
+	// include: Пути для подключения yml конфигов
+	// remove, mkdir: Абсолютные пути
+	// systemd: Имена сервисов
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
+
+	// Types: copy, move, merge, link
+	// Usage:
+	// copy, move, merge, link: Директория назначения
+	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
+
+	// Types: packages
+	// Usage:
+	// packages: Пакеты для установки из repos/tasks
+	Install []string `yaml:"install,omitempty" json:"install,omitempty"`
+
+	// Types: packages
+	// Usage:
+	// packages: Пакеты для удаления из образа
+	Remove []string `yaml:"remove,omitempty" json:"remove,omitempty"`
+
+	// Types: [copy], [move], [link]
+	// Usage:
+	// copy, move, link: Заменить назначение, если оно существует
+	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
+
+	// Types: [move]
+	// Usage:
+	// move: Создать ссылку из родительской директории цели на назначение
+	CreateLink bool `yaml:"create-link,omitempty" json:"create-link,omitempty"`
+
+	// Types: systemd
+	// Usage:
+	// systemd: Включить или отключить systemd сервис
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Types: systemd
+	// Usage:
+	// systemd: Использовать ли --global или нет
+	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
+
+	// Types: systemd
+	// Usage:
+	// systemd: Замаскировать сервис или нет
+	Masked bool `yaml:"masked,omitempty" json:"masked,omitempty"`
+
+	// Types: replace
+	// Usage:
+	// replace: Regex шаблон для замены
+	Pattern string `yaml:"pattern,omitempty" json:"pattern,omitempty"`
+
+	// Types: replace
+	// Usage:
+	// replace: Текст, на который нужно заменить
+	Repl string `yaml:"repl,omitempty" json:"repl,omitempty"`
+
+	// Types: git
+	// Usage:
+	// git: reference
+	Ref string `yaml:"ref,omitempty" json:"ref,omitempty"`
+
+	// Types: mkdir, [merge]
+	// Usage:
+	// mkdir, merge: file permissions
+	Perm string `yaml:"perm,omitempty" json:"perm,omitempty"`
+
+	// Types: [remove]
+	// Usage:
+	// remove: remove inside of object instead of removing an object
+	Inside bool `yaml:"inside,omitempty" json:"inside,omitempty"`
 }
 
 func (b *Body) GetTargets() []string {
