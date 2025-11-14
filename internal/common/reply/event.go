@@ -150,7 +150,7 @@ func SendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
 	objPath := dbus.ObjectPath("/org/altlinux/APM")
 	signalName := "org.altlinux.APM.Notification"
 
-	err = dbusConn.Emit(objPath, signalName, message)
+	err = dbusConn.Emit(objPath, signalName, string(message))
 	if err != nil {
 		app.Log.Error(app.T_("Error sending notification: %v"), err)
 	}
