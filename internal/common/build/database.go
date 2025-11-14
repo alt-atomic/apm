@@ -211,7 +211,7 @@ func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNa
 	}
 
 	var count int64
-	if err := query.Count(&count).Error; err != nil {
+	if err = query.Count(&count).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
 			return 0, errors.New(app.T_("History not found"))
 		}
