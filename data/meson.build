@@ -1,7 +1,7 @@
 conf = configuration_data()
 conf.set('SERVICE_ID', SERVICE_ID)
 conf.set('USER', 'root')
-conf.set('BINDIR', get_option('bindir'))
+conf.set('BINDIR', get_option('prefix') / get_option('bindir'))
 conf.set('NAME', meson.project_name())
 
 configure_file(
