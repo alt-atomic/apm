@@ -1,8 +1,7 @@
-package execute
+package models
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/build/core"
 	"context"
 	"fmt"
 	"os"
@@ -10,7 +9,22 @@ import (
 	"path/filepath"
 )
 
-func Link(_ context.Context, _ Service, b *core.Body) error {
+type LinkBody struct {
+	// Где создать ссылку, абсолютный путь
+	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+
+	// Куда она будет вести
+	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
+
+	// Заменить ли target
+	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
+}
+
+func (b *LinkBody) Check() error {
+	return nil
+}
+
+func (b *LinkBody) Execute(_ context.Context, _ Service) error {
 	if !filepath.IsAbs(b.Target) {
 		return fmt.Errorf("target in link type must be absolute path")
 	}

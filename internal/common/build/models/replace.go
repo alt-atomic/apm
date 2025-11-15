@@ -1,8 +1,7 @@
-package execute
+package models
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/build/core"
 	"context"
 	"fmt"
 	"os"
@@ -11,7 +10,22 @@ import (
 	"strings"
 )
 
-func Replace(_ context.Context, _ Service, b *core.Body) error {
+type ReplaceBody struct {
+	// Путь до файла
+	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+
+	// Regex шаблон
+	Pattern string `yaml:"pattern,omitempty" json:"pattern,omitempty"`
+
+	// Замена
+	Repl string `yaml:"repl,omitempty" json:"repl,omitempty"`
+}
+
+func (b *ReplaceBody) Check() error {
+	return nil
+}
+
+func (b *ReplaceBody) Execute(_ context.Context, _ Service) error {
 	app.Log.Info(fmt.Sprintf("Replacing %s to %s in %s", b.Pattern, b.Repl, b.Target))
 
 	if !filepath.IsAbs(b.Target) {

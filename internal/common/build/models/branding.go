@@ -1,4 +1,4 @@
-package execute
+package models
 
 import (
 	"apm/internal/common/build/core"
@@ -16,35 +16,57 @@ import (
 )
 
 var cpeNameRegex = regexp.MustCompile(`:\d+$`)
+var usrLibOsRelease = "/usr/lib/os-release"
+var etcOsRelease = "/etc/os-release"
+var plymouthThemesDir = "/usr/share/plymouth/themes"
+var plymouthConfigFile = "/etc/plymouth/plymouthd.conf"
+var plymouthKargsPath = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
+var plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
 
-func Branding(ctx context.Context, svc Service) error {
-	branding := svc.Config().Branding
+type BrandingBody struct {
+	// Имя брендинга для пакетов
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	if branding.Name != "" {
+	// Тема плимут
+	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`
+
+	// Тема плимут
+	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty"`
+}
+
+func (b *BrandingBody) Check() error {
+	return nil
+}
+
+func (b *BrandingBody) Execute(ctx context.Context, svc core.Service) error {
+	if b.Name != "" {
 		filters := map[string]any{
-			"name": fmt.Sprintf("branding-%s-", branding.Name),
+			"name": fmt.Sprintf("branding-%s-", b.Name),
 		}
 		packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 		if err != nil {
 			return err
 		}
 		if len(packages) == 0 {
-			return fmt.Errorf("no branding packages found for %s", branding.Name)
+			return fmt.Errorf("no branding packages found for %s", b.Name)
 		}
 
 		var pkgsNames []string
 		for _, pkg := range packages {
 			pkgsNames = append(pkgsNames, pkg.Name)
 		}
-		if err = Packages(ctx, svc, &core.Body{Install: pkgsNames}); err != nil {
+
+		packagesBody := &PackagesBody{Install: pkgsNames}
+
+		if err = packagesBody.Execute(ctx, svc); err != nil {
 			return err
 		}
 
-		info, err := os.Stat(core.UsrLibOsRelease)
+		info, err := os.Stat(usrLibOsRelease)
 		if err != nil {
 			return err
 		}
-		vars := osrelease.NewFromName(core.UsrLibOsRelease)
+		vars := osrelease.NewFromName(usrLibOsRelease)
 
 		now := time.Now()
 		curVer := now.Format("20060102")
@@ -54,7 +76,7 @@ func Branding(ctx context.Context, svc Service) error {
 		prettyNamePostfix := ""
 		releaseType := ""
 
-		bType := svc.Config().BuildType
+		bType := b.BuildType
 		switch bType {
 		case "stable":
 			prettyType = osutils.Capitalize(bType)
@@ -89,23 +111,25 @@ func Branding(ctx context.Context, svc Service) error {
 		}
 
 		newOsReleaseContent := strings.Join(newLines, "\n") + "\n"
-		if err = os.WriteFile(core.UsrLibOsRelease, []byte(newOsReleaseContent), info.Mode().Perm()); err != nil {
+		if err = os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), info.Mode().Perm()); err != nil {
 			return err
 		}
 
-		if err = Link(ctx, svc, &core.Body{
-			Target:      core.EtcOsRelease,
-			Destination: core.UsrLibOsRelease,
+		linkBody := &LinkBody{
+			Target:      etcOsRelease,
+			Destination: usrLibOsRelease,
 			Replace:     true,
-		}); err != nil {
+		}
+
+		if err = linkBody.Execute(ctx, svc); err != nil {
 			return err
 		}
 	}
 
-	if branding.PlymouthTheme != "" {
+	if b.PlymouthTheme != "" {
 		var themes []string
-		if osutils.IsExists(core.PlymouthThemesDir) {
-			files, err := os.ReadDir(core.PlymouthThemesDir)
+		if osutils.IsExists(plymouthThemesDir) {
+			files, err := os.ReadDir(plymouthThemesDir)
 			if err != nil {
 				return err
 			}
@@ -114,31 +138,34 @@ func Branding(ctx context.Context, svc Service) error {
 			}
 		}
 
-		if !slices.Contains(themes, branding.PlymouthTheme) {
+		if !slices.Contains(themes, b.PlymouthTheme) {
 			filters := map[string]any{
-				"name": fmt.Sprintf("plymouth-theme-%s", branding.PlymouthTheme),
+				"name": fmt.Sprintf("plymouth-theme-%s", b.PlymouthTheme),
 			}
 			packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 			if err != nil {
 				return err
 			}
 			if len(packages) == 0 {
-				return fmt.Errorf("no plymouth theme found for %s", branding.PlymouthTheme)
+				return fmt.Errorf("no plymouth theme found for %s", b.PlymouthTheme)
 			}
 
 			var pkgsNames []string
 			for _, pkg := range packages {
 				pkgsNames = append(pkgsNames, pkg.Name)
 			}
-			if err := Packages(ctx, svc, &core.Body{Install: pkgsNames}); err != nil {
+
+			packagesBody := &PackagesBody{Install: pkgsNames}
+
+			if err := packagesBody.Execute(ctx, svc); err != nil {
 				return err
 			}
 		}
 
-		plymouthPaths := []string{core.PlymouthKargsPath, core.PlymouthDracutConfPath}
+		plymouthPaths := []string{plymouthKargsPath, plymouthDracutConfPath}
 
-		if branding.PlymouthTheme == "disabled" {
-			if err := os.WriteFile(core.PlymouthConfigFile, []byte(""), 0644); err != nil {
+		if b.PlymouthTheme == "disabled" {
+			if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
 				return err
 			}
 			for _, p := range plymouthPaths {
@@ -149,12 +176,12 @@ func Branding(ctx context.Context, svc Service) error {
 		} else {
 			plymouthConfig := strings.Join([]string{
 				"[Daemon]",
-				fmt.Sprintf("Theme=%s", branding.PlymouthTheme),
+				fmt.Sprintf("Theme=%s", b.PlymouthTheme),
 				"ShowDelay=0",
 				"DeviceTimeout=10",
 			}, "\n") + "\n"
 
-			if err := os.WriteFile(core.PlymouthConfigFile, []byte(plymouthConfig), 0644); err != nil {
+			if err := os.WriteFile(plymouthConfigFile, []byte(plymouthConfig), 0644); err != nil {
 				return err
 			}
 
@@ -164,10 +191,10 @@ func Branding(ctx context.Context, svc Service) error {
 				}
 			}
 
-			if err := os.WriteFile(core.PlymouthKargsPath, []byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
+			if err := os.WriteFile(plymouthKargsPath, []byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
 				return err
 			}
-			if err := os.WriteFile(core.PlymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
+			if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
 				return err
 			}
 		}

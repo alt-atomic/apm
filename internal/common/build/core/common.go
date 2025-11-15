@@ -1,4 +1,4 @@
-package execute
+package core
 
 import (
 	_package "apm/internal/common/apt/package"

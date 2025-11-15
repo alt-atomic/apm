@@ -20,14 +20,12 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/core"
-	"apm/internal/common/build/execute"
 	"apm/internal/common/osutils"
 	"apm/internal/common/version"
 	"apm/internal/kernel/service"
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/expr-lang/expr"
@@ -62,97 +60,48 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
-	if len(cfgService.serviceHostConfig.Config.Env) != 0 {
-		for _, e := range cfgService.serviceHostConfig.Config.Env {
-			parts := strings.SplitN(e, "=", 2)
-			if len(parts) != 2 {
-				return fmt.Errorf("error in %s env", e)
-			}
-			if err := os.Setenv(parts[0], parts[1]); err != nil {
-				return err
-			}
-		}
-	}
+	// TODO: Перенести в работу с Env
+	// if len(cfgService.serviceHostConfig.Config.Env) != 0 {
+	// 	for _, e := range cfgService.serviceHostConfig.Config.Env {
+	// 		parts := strings.SplitN(e, "=", 2)
+	// 		if len(parts) != 2 {
+	// 			return fmt.Errorf("error in %s env", e)
+	// 		}
+	// 		if err := os.Setenv(parts[0], parts[1]); err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// }
 
-	if cfgService.serviceHostConfig.Config.Hostname != "" {
-		if err := os.WriteFile(core.EtcHostname, []byte(fmt.Sprintf("%s\n", cfgService.serviceHostConfig.Config.Hostname)), 0644); err != nil {
-			return err
-		}
-		hosts := fmt.Sprintf(
-			"127.0.0.1  localhost.localdomain localhost %s\n::1  localhost6.localdomain localhost6 %s6\n",
-			cfgService.serviceHostConfig.Config.Hostname,
-			cfgService.serviceHostConfig.Config.Hostname,
-		)
-		if err := os.WriteFile(core.EtcHosts, []byte(hosts), 0644); err != nil {
-			return err
-		}
-	}
-
-	if err := execute.Repos(ctx, cfgService); err != nil {
-		return err
-	}
-
-	app.Log.Info("Updating package cache")
-	if _, err := cfgService.serviceAptActions.Update(ctx); err != nil {
-		return err
-	}
-
-	app.Log.Info("Upgrading packages")
-	if err := cfgService.serviceAptActions.Upgrade(ctx); err != nil {
-		return err
-	}
-
-	if err := execute.Branding(ctx, cfgService); err != nil {
-		return err
-	}
-
-	if err := execute.Kernel(ctx, cfgService); err != nil {
-		return err
-	}
+	// TODO: Исправить hostname
+	// if cfgService.serviceHostConfig.Config.Hostname != "" {
+	// 	if err := os.WriteFile(core.EtcHostname, []byte(fmt.Sprintf("%s\n", cfgService.serviceHostConfig.Config.Hostname)), 0644); err != nil {
+	// 		return err
+	// 	}
+	// 	hosts := fmt.Sprintf(
+	// 		"127.0.0.1  localhost.localdomain localhost %s\n::1  localhost6.localdomain localhost6 %s6\n",
+	// 		cfgService.serviceHostConfig.Config.Hostname,
+	// 		cfgService.serviceHostConfig.Config.Hostname,
+	// 	)
+	// 	if err := os.WriteFile(core.EtcHosts, []byte(hosts), 0644); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	for _, module := range cfgService.serviceHostConfig.Config.Modules {
-		if err := cfgService.executeModule(ctx, module); err != nil {
+		if err := cfgService.ExecuteModule(ctx, module); err != nil {
 			return err
 		}
 	}
 
-	app.Log.Info("Final updating package cache")
-	if _, err := cfgService.serviceAptActions.Update(ctx); err != nil {
-		return err
-	}
-
-	app.Log.Info("Rebuild initramfs via dracut")
-	return rebuildInitramfs(ctx)
+	return nil
 }
 
-type moduleHandler func(context.Context, execute.Service, *core.Body) error
+type moduleHandler func(context.Context, core.Service, *core.Body) error
 
-func (cfgService *ConfigService) executeModule(ctx context.Context, module core.Module) error {
+func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module) error {
 	if module.Name != "" {
 		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
-	}
-
-	if module.Type == core.TypeInclude {
-		return cfgService.executeIncludeModule(ctx, &module.Body)
-	}
-
-	moduleHandlers := map[string]moduleHandler{
-		core.TypeCopy:     execute.Copy,
-		core.TypeGit:      execute.Git,
-		core.TypeLink:     execute.Link,
-		core.TypeMerge:    execute.Merge,
-		core.TypeMove:     execute.Move,
-		core.TypePackages: execute.Packages,
-		core.TypeRemove:   execute.Remove,
-		core.TypeShell:    execute.Shell,
-		core.TypeSystemd:  execute.Systemd,
-		core.TypeMkdir:    execute.Mkdir,
-		core.TypeReplace:  execute.Replace,
-	}
-
-	handler, ok := moduleHandlers[module.Type]
-	if !ok {
-		return fmt.Errorf(app.T_("Unknown module type: %s"), module.Type)
 	}
 
 	shouldExecute := true
@@ -183,7 +132,7 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module core.
 		return nil
 	}
 
-	if err := handler(ctx, cfgService, &module.Body); err != nil {
+	if err := module.Body.Execute(ctx, cfgService); err != nil {
 		label := module.Name
 		if label == "" {
 			label = fmt.Sprintf("type=%s", module.Type)
@@ -191,25 +140,6 @@ func (cfgService *ConfigService) executeModule(ctx context.Context, module core.
 		return fmt.Errorf("module %s: %w", label, err)
 	}
 
-	return nil
-}
-
-func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module) error {
-	return cfgService.executeModule(ctx, module)
-}
-
-func (cfgService *ConfigService) executeIncludeModule(ctx context.Context, body *core.Body) error {
-	for _, target := range body.GetTargets() {
-		modules, err := ReadAndParseModulesYaml(target)
-		if err != nil {
-			return err
-		}
-		for _, module := range *modules {
-			if err = cfgService.executeModule(ctx, module); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 
@@ -271,23 +201,15 @@ func (cfgService *ConfigService) UpdatePackages(ctx context.Context) error {
 	return err
 }
 
+func (cfgService *ConfigService) UpgradePackages(ctx context.Context) error {
+	err := cfgService.serviceAptActions.Upgrade(ctx)
+	return err
+}
+
 func (cfgService *ConfigService) KernelManager() *service.Manager {
 	return cfgService.kernelManager
 }
 
 func (cfgService *ConfigService) ResourcesDir() string {
 	return cfgService.appConfig.ConfigManager.GetResourcesDir()
-}
-
-func rebuildInitramfs(ctx context.Context) error {
-	kernelVersion, err := execute.LatestInstalledKernelVersion()
-	if err != nil {
-		return err
-	}
-
-	if err = osutils.ExecSh(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
-		return err
-	}
-
-	return osutils.ExecSh(ctx, fmt.Sprintf("dracut --force '%s/%s/initramfs.img' %s", core.KernelDir, kernelVersion, kernelVersion), "", true)
 }

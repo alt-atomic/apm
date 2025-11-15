@@ -1,8 +1,7 @@
-package execute
+package models
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/build/core"
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
@@ -11,7 +10,25 @@ import (
 	"strings"
 )
 
-func Git(ctx context.Context, svc Service, b *core.Body) error {
+type GitBody struct {
+	// URL git-репозитория
+	Url string `yaml:"target,omitempty" json:"target,omitempty"`
+
+	// Команды для выполнения относительно git репозитория
+	Commands string `yaml:"command,omitempty" json:"command,omitempty"`
+
+	// Зависимости для сборки. Они будут удалены после завершения модуля
+	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
+
+	// Git reference
+	Ref string `yaml:"ref,omitempty" json:"ref,omitempty"`
+}
+
+func (b *GitBody) Check() error {
+	return nil
+}
+
+func (b *GitBody) Execute(ctx context.Context, svc Service) error {
 	if len(b.Deps) != 0 {
 		var ops []string
 		for _, p := range b.Deps {
@@ -29,13 +46,13 @@ func Git(ctx context.Context, svc Service, b *core.Body) error {
 	}
 	defer os.RemoveAll(tempDir)
 
-	app.Log.Info(fmt.Sprintf("Cloning %s to %s", b.Target, tempDir))
+	app.Log.Info(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
 
 	args := []string{"clone"}
 	if b.Ref != "" {
 		args = append(args, "-b", b.Ref)
 	}
-	args = append(args, b.Target, tempDir)
+	args = append(args, b.Url, tempDir)
 
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Stdout = os.Stdout
@@ -44,11 +61,9 @@ func Git(ctx context.Context, svc Service, b *core.Body) error {
 		return err
 	}
 
-	for _, cmdSh := range b.GetCommands() {
-		app.Log.Info(fmt.Sprintf("Executing `%s`", cmdSh))
-		if err = osutils.ExecSh(ctx, cmdSh, tempDir, true); err != nil {
-			return err
-		}
+	app.Log.Info(fmt.Sprintf("Executing `%s`", b.Commands))
+	if err = osutils.ExecSh(ctx, b.Commands, tempDir, true); err != nil {
+		return err
 	}
 
 	if len(b.Deps) != 0 {
