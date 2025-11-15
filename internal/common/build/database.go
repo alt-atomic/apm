@@ -178,7 +178,7 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 		Offset(offset)
 
 	var dbHistories []DBHistory
-	if err := query.Find(&dbHistories).Error; err != nil {
+	if err = query.Find(&dbHistories).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
 			return nil, errors.New(app.T_("History not found"))
 		}

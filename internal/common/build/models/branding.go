@@ -1,7 +1,6 @@
 package models
 
 import (
-	"apm/internal/common/build/core"
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
@@ -38,7 +37,7 @@ func (b *BrandingBody) Check() error {
 	return nil
 }
 
-func (b *BrandingBody) Execute(ctx context.Context, svc core.Service) error {
+func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 	if b.Name != "" {
 		filters := map[string]any{
 			"name": fmt.Sprintf("branding-%s-", b.Name),

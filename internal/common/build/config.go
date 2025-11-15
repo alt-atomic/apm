@@ -29,8 +29,7 @@ import (
 type Config = core.Config
 
 var (
-	ParseJsonConfigData     = core.ParseJsonConfigData
-	ReadAndParseModulesYaml = core.ReadAndParseModulesYaml
+	ParseJsonConfigData = core.ParseJsonConfigData
 )
 
 // HostConfigService — сервис для работы с конфигурацией хоста.

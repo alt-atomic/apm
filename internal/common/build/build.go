@@ -97,8 +97,6 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	return nil
 }
 
-type moduleHandler func(context.Context, core.Service, *core.Body) error
-
 func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module) error {
 	if module.Name != "" {
 		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
@@ -132,7 +130,12 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		return nil
 	}
 
-	if err := module.Body.Execute(ctx, cfgService); err != nil {
+	body := module.Body
+	if body == nil {
+		return fmt.Errorf("module %s has no body", module.Type)
+	}
+
+	if err := body.Execute(ctx, cfgService); err != nil {
 		label := module.Name
 		if label == "" {
 			label = fmt.Sprintf("type=%s", module.Type)
@@ -141,10 +144,6 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	}
 
 	return nil
-}
-
-func (cfgService *ConfigService) Config() *core.Config {
-	return cfgService.serviceHostConfig.Config
 }
 
 func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters map[string]any, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
@@ -212,4 +211,19 @@ func (cfgService *ConfigService) KernelManager() *service.Manager {
 
 func (cfgService *ConfigService) ResourcesDir() string {
 	return cfgService.appConfig.ConfigManager.GetResourcesDir()
+}
+
+func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) error {
+	modules, err := core.ReadAndParseModulesYaml(target)
+	if err != nil {
+		return err
+	}
+
+	for _, module := range *modules {
+		if err = cfgService.ExecuteModule(ctx, module); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

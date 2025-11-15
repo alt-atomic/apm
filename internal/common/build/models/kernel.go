@@ -3,7 +3,6 @@ package models
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build/core"
 	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
 	"apm/internal/kernel/service"
@@ -37,7 +36,7 @@ func (b *KernelBody) Check() error {
 	return nil
 }
 
-func (b *KernelBody) Execute(ctx context.Context, svc core.Service) error {
+func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
 	mgr := svc.KernelManager()
 	modules := append([]string{}, b.Modules...)
 
@@ -155,7 +154,7 @@ func LatestInstalledKernelVersion() (string, error) {
 	return names[0], nil
 }
 
-func currentKernelInfo(ctx context.Context, svc core.Service) (*service.Info, error) {
+func currentKernelInfo(ctx context.Context, svc Service) (*service.Info, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.CurrentKernel"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.CurrentKernel"))
 

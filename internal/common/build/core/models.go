@@ -3,7 +3,6 @@ package core
 import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/models"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,22 +33,22 @@ const (
 	TypeSystemd  = "systemd"
 )
 
-var modelMap = map[string]func() Body{
-	TypeBranding: func() Body { return &models.BrandingBody{} },
-	TypeCopy:     func() Body { return &models.CopyBody{} },
-	TypeGit:      func() Body { return &models.GitBody{} },
-	TypeInclude:  func() Body { return &models.IncludeBody{} },
-	TypeKernel:   func() Body { return &models.KernelBody{} },
-	TypeLink:     func() Body { return &models.LinkBody{} },
-	TypeMerge:    func() Body { return &models.MergeBody{} },
-	TypeMkdir:    func() Body { return &models.MkdirBody{} },
-	TypeMove:     func() Body { return &models.MoveBody{} },
-	TypePackages: func() Body { return &models.PackagesBody{} },
-	TypeRemove:   func() Body { return &models.RemoveBody{} },
-	TypeReplace:  func() Body { return &models.ReplaceBody{} },
-	TypeRepos:    func() Body { return &models.ReposBody{} },
-	TypeShell:    func() Body { return &models.ShellBody{} },
-	TypeSystemd:  func() Body { return &models.SystemdBody{} },
+var modelMap = map[string]func() models.Body{
+	TypeBranding: func() models.Body { return &models.BrandingBody{} },
+	TypeCopy:     func() models.Body { return &models.CopyBody{} },
+	TypeGit:      func() models.Body { return &models.GitBody{} },
+	TypeInclude:  func() models.Body { return &models.IncludeBody{} },
+	TypeKernel:   func() models.Body { return &models.KernelBody{} },
+	TypeLink:     func() models.Body { return &models.LinkBody{} },
+	TypeMerge:    func() models.Body { return &models.MergeBody{} },
+	TypeMkdir:    func() models.Body { return &models.MkdirBody{} },
+	TypeMove:     func() models.Body { return &models.MoveBody{} },
+	TypePackages: func() models.Body { return &models.PackagesBody{} },
+	TypeRemove:   func() models.Body { return &models.RemoveBody{} },
+	TypeReplace:  func() models.Body { return &models.ReplaceBody{} },
+	TypeRepos:    func() models.Body { return &models.ReposBody{} },
+	TypeShell:    func() models.Body { return &models.ShellBody{} },
+	TypeSystemd:  func() models.Body { return &models.SystemdBody{} },
 }
 
 const (
@@ -82,7 +81,10 @@ func (cfg *Config) getTotalInstall() []string {
 	var totalInstall []string
 	for _, module := range cfg.Modules {
 		if module.Type == TypePackages {
-			body := &models.PackagesBody(module.Body)
+			body, ok := module.Body.(*models.PackagesBody)
+			if !ok {
+				continue
+			}
 			totalInstall = append(totalInstall, body.Install...)
 			for _, p := range body.Remove {
 				totalInstall = removeByValue(totalInstall, p)
@@ -96,7 +98,10 @@ func (cfg *Config) getTotalRemove() []string {
 	var totalRemove []string
 	for _, module := range cfg.Modules {
 		if module.Type == TypePackages {
-			body := &models.PackagesBody(module.Body)
+			body, ok := module.Body.(*models.PackagesBody)
+			if !ok {
+				continue
+			}
 			for _, p := range body.Install {
 				totalRemove = removeByValue(totalRemove, p)
 			}
@@ -107,19 +112,15 @@ func (cfg *Config) getTotalRemove() []string {
 }
 
 func (cfg *Config) getApplyPackagesModule() *Module {
-	empty := Module{
-		Name: imageApplyModuleName,
-		Type: TypePackages,
-		Body: models.PackagesBody{
-			Install: []string{},
-			Remove:  []string{},
-		},
-	}
-
-	if len(cfg.Modules) == 0 {
-		cfg.Modules = append(cfg.Modules, empty)
-	} else if cfg.Modules[len(cfg.Modules)-1].Type != TypePackages || cfg.Modules[len(cfg.Modules)-1].Name != imageApplyModuleName {
-		cfg.Modules = append(cfg.Modules, empty)
+	if len(cfg.Modules) == 0 || cfg.Modules[len(cfg.Modules)-1].Type != TypePackages || cfg.Modules[len(cfg.Modules)-1].Name != imageApplyModuleName {
+		cfg.Modules = append(cfg.Modules, Module{
+			Name: imageApplyModuleName,
+			Type: TypePackages,
+			Body: &models.PackagesBody{
+				Install: []string{},
+				Remove:  []string{},
+			},
+		})
 	}
 
 	return &cfg.Modules[len(cfg.Modules)-1]
@@ -131,11 +132,17 @@ func (cfg *Config) AddInstallPackage(pkg string) {
 		return
 	}
 
-	packagesModule := &models.PackagesBody(cfg.getApplyPackagesModule().Body)
-	if slices.Contains(packagesModule.Body.Remove, pkg) {
-		packagesModule.Body.Remove = removeByValue(packagesModule.Body.Remove, pkg)
+	module := cfg.getApplyPackagesModule()
+	body, ok := module.Body.(*models.PackagesBody)
+	if !ok {
+		body = &models.PackagesBody{}
+		module.Body = body
+	}
+
+	if slices.Contains(body.Remove, pkg) {
+		body.Remove = removeByValue(body.Remove, pkg)
 	} else {
-		packagesModule.Body.Install = append(packagesModule.Body.Install, pkg)
+		body.Install = append(body.Install, pkg)
 	}
 }
 
@@ -145,11 +152,17 @@ func (cfg *Config) AddRemovePackage(pkg string) {
 		return
 	}
 
-	packagesModule := &models.PackagesBody(cfg.getApplyPackagesModule().Body)
-	if slices.Contains(packagesModule.Body.Install, pkg) {
-		packagesModule.Body.Install = removeByValue(packagesModule.Body.Install, pkg)
+	module := cfg.getApplyPackagesModule()
+	body, ok := module.Body.(*models.PackagesBody)
+	if !ok {
+		body = &models.PackagesBody{}
+		module.Body = body
+	}
+
+	if slices.Contains(body.Install, pkg) {
+		body.Install = removeByValue(body.Install, pkg)
 	} else {
-		packagesModule.Body.Remove = append(packagesModule.Body.Remove, pkg)
+		body.Remove = append(body.Remove, pkg)
 	}
 }
 
@@ -209,7 +222,7 @@ type Module struct {
 	If string `yaml:"if,omitempty" json:"if,omitempty"`
 
 	// Тело модуля
-	Body Body `yaml:"body" json:"body"`
+	Body models.Body `yaml:"body" json:"body"`
 }
 
 func (m *Module) UnmarshalYAML(value *yaml.Node) error {
@@ -228,7 +241,6 @@ func (m *Module) UnmarshalYAML(value *yaml.Node) error {
 	})
 }
 
-// Для JSON
 func (m *Module) UnmarshalJSON(data []byte) error {
 	type alias Module
 	aux := &struct {
@@ -247,121 +259,33 @@ func (m *Module) UnmarshalJSON(data []byte) error {
 	})
 }
 
-// Общая логика выбора типа
+// decodeBody Общая логика выбора типа
 func (m *Module) decodeBody(decode func(any) error) error {
 	if m.Type == "" {
 		return fmt.Errorf("module type is required")
 	}
 
-	keys := make([]string, 0, len(modelMap))
-	for k := range modelMap {
-		keys = append(keys, k)
-	}
-	if slices.Contains(keys, m.Type) {
+	factory, ok := modelMap[m.Type]
+	if !ok {
 		return fmt.Errorf("unknown module type: %s", m.Type)
 	}
 
-	var body = modelMap[m.Type]()
-	if err := decode(&body); err != nil {
-		return fmt.Errorf("failed to decode system body: %w", err)
+	body := factory()
+	if err := decode(body); err != nil {
+		return fmt.Errorf("failed to decode module body: %w", err)
 	}
 	m.Body = body
 	return nil
 }
 
-type Body interface {
-	Execute(context.Context, Service) error
-	Check() error
-}
-
 func CheckModules(modules *[]Module) error {
 	for _, module := range *modules {
-		module.Body.Check()
-
-		// switch module.Type {
-		// case TypeGit:
-		// 	if len(b.GetCommands()) == 0 {
-		// 		return fmt.Errorf(requiredTextOr, TypeGit, "command", "commands")
-		// 	}
-		// 	if b.Target == "" {
-		// 		return fmt.Errorf(requiredText, TypeGit, "target")
-		// 	}
-		// case TypeShell:
-		// 	if len(b.GetCommands()) == 0 {
-		// 		return fmt.Errorf(requiredTextOr, TypeShell, "command", "commands")
-		// 	}
-		// case TypeMerge:
-		// 	if b.Target == "" {
-		// 		return fmt.Errorf(requiredText, TypeMerge, "target")
-		// 	}
-		// 	if b.Destination == "" {
-		// 		return fmt.Errorf(requiredText, TypeMerge, "destination")
-		// 	}
-		// case TypeCopy:
-		// 	if b.Target == "" {
-		// 		return fmt.Errorf(requiredText, TypeCopy, "target")
-		// 	}
-		// 	if b.Destination == "" {
-		// 		return fmt.Errorf(requiredText, TypeCopy, "destination")
-		// 	}
-		// case TypeMove:
-		// 	if b.Target == "" {
-		// 		return fmt.Errorf(requiredText, TypeMove, "target")
-		// 	}
-		// 	if b.Destination == "" {
-		// 		return fmt.Errorf(requiredText, TypeMove, "destination")
-		// 	}
-		// case TypeRemove:
-		// 	if len(b.GetTargets()) == 0 {
-		// 		return fmt.Errorf(requiredTextOr, TypeRemove, "target", "targets")
-		// 	}
-		// case TypeMkdir:
-		// 	if len(b.GetTargets()) == 0 {
-		// 		return fmt.Errorf(requiredTextOr, TypeMkdir, "target", "targets")
-		// 	}
-		// 	if b.Perm == "" {
-		// 		return fmt.Errorf(requiredText, TypeMkdir, "perm")
-		// 	}
-		// case TypeSystemd:
-		// 	if len(b.GetTargets()) == 0 {
-		// 		return fmt.Errorf(requiredTextOr, TypeSystemd, "target", "targets")
-		// 	}
-		// 	if b.Enabled && b.Masked {
-		// 		return fmt.Errorf("module %s can't have both 'enabled' and 'masked'", TypeSystemd)
-		// 	}
-		// case TypeLink:
-		// 	if b.Target == "" {
-		// 		return fmt.Errorf(requiredText, TypeLink, "target")
-		// 	}
-		// 	if b.Destination == "" {
-		// 		return fmt.Errorf(requiredText, TypeLink, "destination")
-		// 	}
-		// case TypePackages:
-		// 	if len(b.Install) == 0 && len(b.Remove) == 0 {
-		// 		return fmt.Errorf(requiredTextOr, TypePackages, "install", "remove")
-		// 	}
-		// case TypeInclude:
-		// 	if len(b.GetTargets()) == 0 {
-		// 		return fmt.Errorf(requiredTextOr, TypeInclude, "target", "targets")
-		// 	}
-		// 	for _, target := range b.GetTargets() {
-		// 		if _, err := ReadAndParseModulesYaml(target); err != nil {
-		// 			return err
-		// 		}
-		// 	}
-		// case TypeReplace:
-		// 	if b.Target == "" {
-		// 		return fmt.Errorf(requiredText, TypeReplace, "target")
-		// 	}
-		// 	if b.Pattern == "" {
-		// 		return fmt.Errorf(requiredText, TypeReplace, "pattern")
-		// 	}
-		// 	if b.Repl == "" {
-		// 		return fmt.Errorf(requiredText, TypeReplace, "repl")
-		// 	}
-		// default:
-		// 	return errors.New(app.T_("Unknown type: " + module.Type))
-		// }
+		if module.Body == nil {
+			return fmt.Errorf("module %s has empty body", module.Type)
+		}
+		if err := module.Body.Check(); err != nil {
+			return err
+		}
 	}
 
 	return nil
