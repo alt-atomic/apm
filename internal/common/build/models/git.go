@@ -15,7 +15,7 @@ type GitBody struct {
 	Url string `yaml:"target,omitempty" json:"target,omitempty"`
 
 	// Команды для выполнения относительно git репозитория
-	Commands string `yaml:"command,omitempty" json:"command,omitempty"`
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 
 	// Зависимости для сборки. Они будут удалены после завершения модуля
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
@@ -61,8 +61,8 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) error {
 		return err
 	}
 
-	app.Log.Info(fmt.Sprintf("Executing `%s`", b.Commands))
-	if err = osutils.ExecSh(ctx, b.Commands, tempDir, true); err != nil {
+	app.Log.Info(fmt.Sprintf("Executing `%s`", b.Command))
+	if err = osutils.ExecSh(ctx, b.Command, tempDir, true); err != nil {
 		return err
 	}
 
