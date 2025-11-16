@@ -126,53 +126,55 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 	}
 
 	if b.PlymouthTheme != "" {
-		var themes []string
-		if osutils.IsExists(plymouthThemesDir) {
-			files, err := os.ReadDir(plymouthThemesDir)
-			if err != nil {
-				return err
-			}
-			for _, file := range files {
-				themes = append(themes, file.Name())
-			}
-		}
-
-		if !slices.Contains(themes, b.PlymouthTheme) {
-			filters := map[string]any{
-				"name": fmt.Sprintf("plymouth-theme-%s", b.PlymouthTheme),
-			}
-			packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
-			if err != nil {
-				return err
-			}
-			if len(packages) == 0 {
-				return fmt.Errorf("no plymouth theme found for %s", b.PlymouthTheme)
-			}
-
-			var pkgsNames []string
-			for _, pkg := range packages {
-				pkgsNames = append(pkgsNames, pkg.Name)
-			}
-
-			packagesBody := &PackagesBody{Install: pkgsNames}
-
-			if err := packagesBody.Execute(ctx, svc); err != nil {
-				return err
-			}
-		}
-
 		plymouthPaths := []string{plymouthKargsPath, plymouthDracutConfPath}
 
 		if b.PlymouthTheme == "disabled" {
-			if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
-				return err
-			}
-			for _, p := range plymouthPaths {
-				if err := os.RemoveAll(p); err != nil {
+			if osutils.IsExists(plymouthConfigFile) {
+				if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
 					return err
+				}
+				for _, p := range plymouthPaths {
+					if err := os.RemoveAll(p); err != nil {
+						return err
+					}
 				}
 			}
 		} else {
+			var themes []string
+			if osutils.IsExists(plymouthThemesDir) {
+				files, err := os.ReadDir(plymouthThemesDir)
+				if err != nil {
+					return err
+				}
+				for _, file := range files {
+					themes = append(themes, file.Name())
+				}
+			}
+
+			if !slices.Contains(themes, b.PlymouthTheme) {
+				filters := map[string]any{
+					"name": fmt.Sprintf("plymouth-theme-%s", b.PlymouthTheme),
+				}
+				packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+				if err != nil {
+					return err
+				}
+				if len(packages) == 0 {
+					return fmt.Errorf("no plymouth theme found for %s", b.PlymouthTheme)
+				}
+
+				var pkgsNames []string
+				for _, pkg := range packages {
+					pkgsNames = append(pkgsNames, pkg.Name)
+				}
+
+				packagesBody := &PackagesBody{Install: pkgsNames}
+
+				if err := packagesBody.Execute(ctx, svc); err != nil {
+					return err
+				}
+			}
+
 			plymouthConfig := strings.Join([]string{
 				"[Daemon]",
 				fmt.Sprintf("Theme=%s", b.PlymouthTheme),
@@ -180,6 +182,9 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 				"DeviceTimeout=10",
 			}, "\n") + "\n"
 
+			if err := os.MkdirAll(path.Dir(plymouthConfigFile), 0644); err != nil {
+				return err
+			}
 			if err := os.WriteFile(plymouthConfigFile, []byte(plymouthConfig), 0644); err != nil {
 				return err
 			}
