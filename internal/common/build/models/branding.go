@@ -1,12 +1,12 @@
 package models
 
 import (
+	_package "apm/internal/common/apt/package"
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -14,7 +14,6 @@ import (
 	"github.com/thediveo/osrelease"
 )
 
-var cpeNameRegex = regexp.MustCompile(`:\d+$`)
 var usrLibOsRelease = "/usr/lib/os-release"
 var etcOsRelease = "/etc/os-release"
 var plymouthThemesDir = "/usr/share/plymouth/themes"
@@ -39,8 +38,10 @@ func (b *BrandingBody) Check() error {
 
 func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 	if b.Name != "" {
+		var brandingPackagesPrefix = fmt.Sprintf("branding-%s-", b.Name)
+
 		filters := map[string]any{
-			"name": fmt.Sprintf("branding-%s-", b.Name),
+			"name": brandingPackagesPrefix,
 		}
 		packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 		if err != nil {
@@ -50,8 +51,11 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 			return fmt.Errorf("no branding packages found for %s", b.Name)
 		}
 
+		var brandingMap = map[string]_package.Package{}
+
 		var pkgsNames []string
 		for _, pkg := range packages {
+			brandingMap[pkg.Name[len(brandingPackagesPrefix):len(pkg.Name)+1]] = pkg
 			pkgsNames = append(pkgsNames, pkg.Name)
 		}
 
@@ -61,67 +65,65 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 			return err
 		}
 
-		info, err := os.Stat(usrLibOsRelease)
-		if err != nil {
-			return err
-		}
-		vars := osrelease.NewFromName(usrLibOsRelease)
-
-		now := time.Now()
-		curVer := now.Format("20060102")
-		prettyCurVer := now.Format("02.01.2006")
-
-		prettyType := ""
-		prettyNamePostfix := ""
-		releaseType := ""
-
-		bType := b.BuildType
-		switch bType {
-		case "stable":
-			prettyType = osutils.Capitalize(bType)
-			releaseType = bType
-		case "nightly":
-			prettyType = osutils.Capitalize(bType)
-			prettyNamePostfix = fmt.Sprintf(" %s", prettyType)
-			releaseType = "development"
-		}
-
-		for name, value := range vars {
-			switch name {
-			case "VERSION":
-				vars[name] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
-			case "VERSION_ID":
-				vars[name] = fmt.Sprintf("%s-%s", curVer, bType)
-			case "RELEASE_TYPE":
-				vars[name] = releaseType
-			case "PRETTY_NAME":
-				vars[name] = value + prettyNamePostfix
-			case "CPE_NAME":
-				vars[name] = cpeNameRegex.ReplaceAllString(value, fmt.Sprintf(":%s:%s", bType, curVer))
+		if _, ok := brandingMap["release"]; ok {
+			info, err := os.Stat(usrLibOsRelease)
+			if err != nil {
+				return err
 			}
-		}
+			vars := osrelease.NewFromName(usrLibOsRelease)
 
-		vars["IMAGE_ID"] = vars["ID"]
-		vars["IMAGE_VERSION"] = vars["VERSION_ID"]
+			now := time.Now()
+			curVer := now.Format("20060102")
+			prettyCurVer := now.Format("02.01.2006")
 
-		var newLines []string
-		for name, value := range vars {
-			newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
-		}
+			bType := b.BuildType
+			prettyType := ""
+			prettyNameSuffix := ""
+			releaseType := ""
+			versionId := fmt.Sprintf("%s-%s", curVer, bType)
 
-		newOsReleaseContent := strings.Join(newLines, "\n") + "\n"
-		if err = os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), info.Mode().Perm()); err != nil {
-			return err
-		}
+			switch bType {
+			case "stable":
+				prettyType = osutils.Capitalize(bType)
+				releaseType = bType
+			case "nightly":
+				prettyType = osutils.Capitalize(bType)
+				prettyNameSuffix = fmt.Sprintf(" %s", prettyType)
+				releaseType = "development"
+			}
 
-		linkBody := &LinkBody{
-			Target:      etcOsRelease,
-			Destination: usrLibOsRelease,
-			Replace:     true,
-		}
+			if value, ok := vars["PRETTY_NAME"]; ok {
+				// Package was not installed, but installed now
+				if !strings.HasSuffix(value, prettyNameSuffix) {
+					vars["PRETTY_NAME"] = value + prettyNameSuffix
+				}
+			}
+			vars["RELEASE_TYPE"] = releaseType
+			vars["VERSION"] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
+			vars["VERSION_ID"] = versionId
+			vars["CPE_NAME"] = fmt.Sprintf("cpe:/o:%s:%s", strings.ReplaceAll(versionId, "-", ":"), curVer)
+			vars["IMAGE_ID"] = vars["ID"]
+			vars["IMAGE_VERSION"] = vars["VERSION_ID"]
 
-		if err = linkBody.Execute(ctx, svc); err != nil {
-			return err
+			var newLines []string
+			for name, value := range vars {
+				newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
+			}
+
+			newOsReleaseContent := strings.Join(newLines, "\n") + "\n"
+			if err = os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), info.Mode().Perm()); err != nil {
+				return err
+			}
+
+			linkBody := &LinkBody{
+				Target:      etcOsRelease,
+				Destination: usrLibOsRelease,
+				Replace:     true,
+			}
+
+			if err = linkBody.Execute(ctx, svc); err != nil {
+				return err
+			}
 		}
 	}
 
