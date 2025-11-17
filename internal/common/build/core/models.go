@@ -427,7 +427,7 @@ func extractEnvKey(raw string) (string, bool) {
 		return "", false
 	}
 
-	if !strings.HasPrefix(strings.ToLower(raw), "env.") {
+	if !strings.HasPrefix(strings.ToLower(raw), "Env.") {
 		return "", false
 	}
 
