@@ -10,7 +10,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -51,17 +53,8 @@ var modelMap = map[string]func() models.Body{
 	TypeSystemd:  func() models.Body { return &models.SystemdBody{} },
 }
 
-const (
-	EtcHostname = "/etc/hostname"
-	EtcHosts    = "/etc/hosts"
-)
-
 var (
 	imageApplyModuleName = "image-apply-results"
-	goodBranches         = []string{"sisyphus"}
-	goodBTypes           = []string{"stable", "nightly"}
-	requiredText         = app.T_("module '%s' required '%s'")
-	requiredTextOr       = fmt.Sprintf(requiredText, "%s", app.T_("%s' or '%s"))
 )
 
 type Envs struct {
@@ -308,8 +301,12 @@ func ParseJsonConfigData(data []byte) (Config, error) {
 }
 
 func parseConfigData(data []byte, isYaml bool, hasRoot bool) (Config, error) {
+	data, err := resolvePlaceholders(data)
+	if err != nil {
+		return Config{}, err
+	}
+
 	var cfg Config
-	var err error
 	if isYaml {
 		err = yaml.Unmarshal(data, &cfg)
 	} else {
@@ -384,4 +381,61 @@ func removeByValue(arr []string, value string) []string {
 	return slices.DeleteFunc(arr, func(s string) bool {
 		return s == value
 	})
+}
+
+var placeholderRegexp = regexp.MustCompile(`\$\{\{\s*([A-Za-z0-9_\-.]+)\s*}}`)
+
+func resolvePlaceholders(data []byte) ([]byte, error) {
+	var firstErr error
+
+	result := placeholderRegexp.ReplaceAllFunc(data, func(match []byte) []byte {
+		if firstErr != nil {
+			return match
+		}
+
+		submatches := placeholderRegexp.FindSubmatch(match)
+		if len(submatches) != 2 {
+			return match
+		}
+
+		rawKey := string(submatches[1])
+		envKey, ok := extractEnvKey(rawKey)
+		if !ok {
+			firstErr = fmt.Errorf("unsupported placeholder %q; expected format ${ { Env.VAR } }", rawKey)
+			return match
+		}
+
+		value, found := os.LookupEnv(envKey)
+		if !found {
+			firstErr = fmt.Errorf("environment variable %q is not set", envKey)
+			return match
+		}
+
+		return []byte(value)
+	})
+
+	if firstErr != nil {
+		return nil, firstErr
+	}
+
+	return result, nil
+}
+
+func extractEnvKey(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", false
+	}
+
+	if !strings.HasPrefix(strings.ToLower(raw), "env.") {
+		return "", false
+	}
+
+	key := raw[4:]
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return "", false
+	}
+
+	return key, true
 }

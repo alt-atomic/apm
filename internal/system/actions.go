@@ -22,7 +22,6 @@ import (
 	_package "apm/internal/common/apt/package"
 	_binding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
-	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	_kservice "apm/internal/kernel/service"
 	"apm/internal/system/dialog"
@@ -375,10 +374,6 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageBuild Update Сборка образа
 func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
-	if !helper.IsRunningInContainer() {
-		return nil, errors.New(app.T_("Running build not in container not supported"))
-	}
-
 	app.Log.EnableStdoutLogging()
 	reply.StopSpinner(a.appConfig)
 
