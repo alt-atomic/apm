@@ -26,6 +26,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/expr-lang/expr"
@@ -214,15 +217,68 @@ func (cfgService *ConfigService) ResourcesDir() string {
 }
 
 func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) error {
-	modules, err := core.ReadAndParseModulesYaml(target)
-	if err != nil {
+	wd, err := os.Getwd()
+	if err != err {
 		return err
 	}
 
-	for _, module := range *modules {
-		if err = cfgService.ExecuteModule(ctx, module); err != nil {
+	realExecuteInclude := func(path string) error {
+		modules, err := core.ReadAndParseModulesYaml(path)
+		if err != nil {
 			return err
 		}
+
+		for _, module := range *modules {
+			if err = cfgService.ExecuteModule(ctx, module); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if !osutils.IsURL(target) {
+		info, err := os.Stat(target)
+		if err != err {
+			return err
+		}
+
+		if info.IsDir() {
+			if err := filepath.Walk(target, func(name string, _ os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if name != target {
+					cfgService.ExecuteInclude(ctx, path.Join(target, name))
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			includeDir := filepath.Dir(target)
+			includeName := filepath.Base(target)
+
+			if includeDir != wd {
+				if err = os.Chdir(includeDir); err != nil {
+					return err
+				}
+			}
+
+			if err := realExecuteInclude(includeName); err != nil {
+				return err
+			}
+		}
+
+	} else {
+		if err := realExecuteInclude(target); err != nil {
+			return err
+		}
+	}
+
+	// Reset pwd
+	if err = os.Chdir(wd); err != nil {
+		return err
 	}
 
 	return nil

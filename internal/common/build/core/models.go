@@ -3,12 +3,12 @@ package core
 import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/models"
+	"apm/internal/common/osutils"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"slices"
@@ -329,7 +329,7 @@ func parseConfigData(data []byte, isYaml bool, hasRoot bool) (Config, error) {
 }
 
 func ReadAndParseModulesYaml(target string) (*[]Module, error) {
-	if isURL(target) {
+	if osutils.IsURL(target) {
 		return ReadAndParseModulesYamlUrl(target)
 	}
 	return ReadAndParseModulesYamlFile(target)
@@ -367,14 +367,6 @@ func ReadAndParseModulesYamlUrl(url string) (*[]Module, error) {
 	}
 
 	return &cfg.Modules, nil
-}
-
-func isURL(str string) bool {
-	u, err := url.Parse(str)
-	if err != nil {
-		return false
-	}
-	return u.Scheme != "" && u.Host != ""
 }
 
 func removeByValue(arr []string, value string) []string {
