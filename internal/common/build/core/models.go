@@ -11,9 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -296,12 +294,8 @@ func ReadAndParseConfigEnvYamlFile(name string) (Envs, error) {
 }
 
 func ParseYamlConfigEnvData(data []byte, isYaml bool) (Envs, error) {
-	data, err := resolvePlaceholders(data)
-	if err != nil {
-		return Envs{}, err
-	}
-
 	var envs Envs
+	var err error
 	if isYaml {
 		err = yaml.Unmarshal(data, &envs)
 	} else {
@@ -311,6 +305,12 @@ func ParseYamlConfigEnvData(data []byte, isYaml bool) (Envs, error) {
 	if err != nil {
 		return envs, err
 	}
+
+	resolved, err := models.ResolveEnvSlice(envs.Env)
+	if err != nil {
+		return Envs{}, err
+	}
+	envs.Env = resolved
 
 	return envs, nil
 }
@@ -332,12 +332,10 @@ func ParseJsonConfigData(data []byte) (Config, error) {
 }
 
 func parseConfigData(data []byte, isYaml bool, hasRoot bool) (Config, error) {
-	data, err := resolvePlaceholders(data)
-	if err != nil {
-		return Config{}, err
-	}
-
+	// НЕ резолвим плейсхолдеры здесь - они будут резолвиться при выполнении
+	// Это позволяет сохранять конфиг с плейсхолдерами
 	var cfg Config
+	var err error
 	if isYaml {
 		err = yaml.Unmarshal(data, &cfg)
 	} else {
@@ -426,61 +424,4 @@ func removeByValue(arr []string, value string) []string {
 	return slices.DeleteFunc(arr, func(s string) bool {
 		return s == value
 	})
-}
-
-var placeholderRegexp = regexp.MustCompile(`\$\{\{\s*([A-Za-z0-9_\-.]+)\s*}}`)
-
-func resolvePlaceholders(data []byte) ([]byte, error) {
-	var firstErr error
-
-	result := placeholderRegexp.ReplaceAllFunc(data, func(match []byte) []byte {
-		if firstErr != nil {
-			return match
-		}
-
-		submatches := placeholderRegexp.FindSubmatch(match)
-		if len(submatches) != 2 {
-			return match
-		}
-
-		rawKey := string(submatches[1])
-		envKey, ok := extractEnvKey(rawKey)
-		if !ok {
-			firstErr = fmt.Errorf("unsupported placeholder %q; expected format ${ { Env.VAR } }", rawKey)
-			return match
-		}
-
-		value, found := os.LookupEnv(envKey)
-		if !found {
-			firstErr = fmt.Errorf("environment variable %q is not set", envKey)
-			return match
-		}
-
-		return []byte(value)
-	})
-
-	if firstErr != nil {
-		return nil, firstErr
-	}
-
-	return result, nil
-}
-
-func extractEnvKey(raw string) (string, bool) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", false
-	}
-
-	if !strings.HasPrefix(raw, "Env.") {
-		return "", false
-	}
-
-	key := raw[4:]
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return "", false
-	}
-
-	return key, true
 }

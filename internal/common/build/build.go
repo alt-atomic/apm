@@ -20,6 +20,7 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/core"
+	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
 	"apm/internal/common/version"
 	"apm/internal/kernel/service"
@@ -122,6 +123,11 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	body := module.Body
 	if body == nil {
 		return fmt.Errorf("module %s has no body", module.Type)
+	}
+
+	// Резолвим env переменные в структуре модуля через рефлексию
+	if err := models.ResolveStruct(body); err != nil {
+		return fmt.Errorf("failed to resolve env variables: %w", err)
 	}
 
 	if err := body.Execute(ctx, cfgService); err != nil {
