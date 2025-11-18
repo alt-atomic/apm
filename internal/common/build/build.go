@@ -27,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -217,68 +216,74 @@ func (cfgService *ConfigService) ResourcesDir() string {
 }
 
 func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) error {
-	wd, err := os.Getwd()
-	if err != err {
+	if osutils.IsURL(target) {
+		return cfgService.executeIncludeFile(ctx, target)
+	}
+
+	info, err := os.Stat(target)
+	if err != nil {
 		return err
 	}
 
-	realExecuteInclude := func(path string) error {
-		modules, err := core.ReadAndParseModulesYaml(path)
+	if info.IsDir() {
+		return cfgService.executeIncludeDir(ctx, target)
+	}
+
+	return cfgService.executeIncludeFileWithCD(ctx, target)
+}
+
+// executeIncludeDir обрабатывает все файлы в директории
+func (cfgService *ConfigService) executeIncludeDir(ctx context.Context, dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		for _, module := range *modules {
-			if err = cfgService.ExecuteModule(ctx, module); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	if !osutils.IsURL(target) {
-		info, err := os.Stat(target)
-		if err != err {
-			return err
-		}
-
 		if info.IsDir() {
-			if err := filepath.Walk(target, func(name string, _ os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if name != target {
-					cfgService.ExecuteInclude(ctx, path.Join(target, name))
-				}
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			includeDir := filepath.Dir(target)
-			includeName := filepath.Base(target)
-
-			if includeDir != wd {
-				if err = os.Chdir(includeDir); err != nil {
-					return err
-				}
-			}
-
-			if err := realExecuteInclude(includeName); err != nil {
-				return err
-			}
+			return nil
 		}
 
-	} else {
-		if err := realExecuteInclude(target); err != nil {
-			return err
+		return cfgService.executeIncludeFileWithCD(ctx, path)
+	})
+}
+
+// executeIncludeFileWithCD меняет директорию перед выполнением файла
+func (cfgService *ConfigService) executeIncludeFileWithCD(ctx context.Context, filePath string) error {
+	originalWd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Гарантированно возвращаемся в исходную директорию
+	defer func() {
+		if chErr := os.Chdir(originalWd); chErr != nil {
+			app.Log.Error(fmt.Sprintf("failed to restore working directory: %v", chErr))
+		}
+	}()
+
+	includeDir := filepath.Dir(filePath)
+	includeName := filepath.Base(filePath)
+
+	if includeDir != originalWd {
+		if err = os.Chdir(includeDir); err != nil {
+			return fmt.Errorf("failed to change directory to %s: %w", includeDir, err)
 		}
 	}
 
-	// Reset pwd
-	if err = os.Chdir(wd); err != nil {
-		return err
+	return cfgService.executeIncludeFile(ctx, includeName)
+}
+
+// executeIncludeFile читает и выполняет файл с модулями (YAML или JSON)
+func (cfgService *ConfigService) executeIncludeFile(ctx context.Context, path string) error {
+	modules, err := core.ReadAndParseModules(path)
+	if err != nil {
+		return fmt.Errorf("failed to parse modules from %s: %w", path, err)
+	}
+
+	for _, module := range *modules {
+		if err = cfgService.ExecuteModule(ctx, module); err != nil {
+			return err
+		}
 	}
 
 	return nil

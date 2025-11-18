@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -362,6 +363,28 @@ func ReadAndParseModulesYamlUrl(url string) (*[]Module, error) {
 	}
 
 	cfg, err := parseConfigData(data, true, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg.Modules, nil
+}
+
+// ReadAndParseModules чтение и парсинг из файла или URL
+func ReadAndParseModules(target string) (*[]Module, error) {
+	if osutils.IsURL(target) {
+		return ReadAndParseModulesYaml(target)
+	}
+
+	ext := filepath.Ext(target)
+	isYaml := ext == ".yaml" || ext == ".yml"
+
+	data, err := os.ReadFile(target)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := parseConfigData(data, isYaml, false)
 	if err != nil {
 		return nil, err
 	}
