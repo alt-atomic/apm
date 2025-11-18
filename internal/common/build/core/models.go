@@ -57,16 +57,18 @@ var (
 )
 
 type Envs struct {
-	Env []string `yaml:"env" json:"env"`
+	Env map[string]string `yaml:"env" json:"env"`
 }
 
 type Config struct {
 	// Environment vars
-	Env []string `yaml:"env,omitempty" json:"env,omitempty"`
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+
 	// Базовый образ для использования
 	// Может быть взята из переменной среды
 	// APM_BUILD_IMAGE
 	Image string `yaml:"image" json:"image"`
+
 	// Список модулей
 	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
@@ -212,6 +214,9 @@ type Module struct {
 	// Тип тела модуля
 	Type string `yaml:"type" json:"type"`
 
+	// Environmant vars for module
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+
 	// Условие в формате языка expr
 	If string `yaml:"if,omitempty" json:"if,omitempty"`
 
@@ -306,7 +311,7 @@ func ParseYamlConfigEnvData(data []byte, isYaml bool) (Envs, error) {
 		return envs, err
 	}
 
-	resolved, err := models.ResolveEnvSlice(envs.Env)
+	resolved, err := models.ResolveEnvMap(envs.Env)
 	if err != nil {
 		return Envs{}, err
 	}

@@ -19,7 +19,6 @@ package build
 import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/core"
-	"apm/internal/common/osutils"
 	"context"
 	"errors"
 	"os"
@@ -74,18 +73,18 @@ func (s *HostConfigService) LoadConfig() error {
 	return nil
 }
 
-func (s *HostConfigService) GetConfigEnvVars() ([]string, error) {
+func (s *HostConfigService) GetConfigEnvVars() (map[string]string, error) {
 	var (
 		envs core.Envs
 		err  error
 	)
 
-	if !osutils.IsExists(s.pathImageFile) {
-		return []string{}, nil
+	if _, err = os.Stat(s.pathImageFile); os.IsNotExist(err) {
+		return map[string]string{}, nil
 	}
 
 	if envs, err = core.ReadAndParseConfigEnvYamlFile(s.pathImageFile); err != nil {
-		return []string{}, err
+		return map[string]string{}, err
 	}
 	return envs.Env, nil
 }

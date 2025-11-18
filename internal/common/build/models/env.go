@@ -30,6 +30,18 @@ func ResolveEnvSlice(strs []string) ([]string, error) {
 	return result, nil
 }
 
+func ResolveEnvMap(strs map[string]string) (map[string]string, error) {
+	var result = map[string]string{}
+	for key, value := range strs {
+		resolved, err := ResolveEnv(value)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = resolved
+	}
+	return result, nil
+}
+
 func ResolveStruct(v any) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Ptr {

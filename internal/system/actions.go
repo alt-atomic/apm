@@ -22,7 +22,6 @@ import (
 	_package "apm/internal/common/apt/package"
 	_binding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
-	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
 	_kservice "apm/internal/kernel/service"
 	"apm/internal/system/dialog"
@@ -391,8 +390,11 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = osutils.FillEnv(envVars); err != nil {
-		return nil, err
+
+	for key, value := range envVars {
+		if err := os.Setenv(key, value); err != nil {
+			return nil, err
+		}
 	}
 
 	err = a.serviceHostConfig.LoadConfig()

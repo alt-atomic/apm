@@ -92,6 +92,20 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
 	}
 
+	originalResolvedEnvMap, err := models.ResolveEnvMap(module.Env)
+	if err != nil {
+		return err
+	}
+
+	originalEnvExistanceMap := map[string]bool{}
+	for key, value := range originalResolvedEnvMap {
+		_, originalEnvExistanceMap[key] = os.LookupEnv(key)
+
+		if err = os.Setenv(key, value); err != nil {
+			return err
+		}
+	}
+
 	shouldExecute := true
 	if module.If != "" {
 		data := ExprData{
@@ -136,6 +150,19 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 			label = fmt.Sprintf("type=%s", module.Type)
 		}
 		return fmt.Errorf("module %s: %w", label, err)
+	}
+
+	for key, existed := range originalEnvExistanceMap {
+		if existed {
+			if err := os.Setenv(key, originalResolvedEnvMap[key]); err != nil {
+				return err
+			}
+		} else {
+			if err := os.Unsetenv(key); err != nil {
+				return err
+			}
+
+		}
 	}
 
 	return nil
