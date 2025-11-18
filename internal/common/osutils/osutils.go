@@ -91,6 +91,20 @@ func parseSymbolicMode(s string) (os.FileMode, error) {
 	return mode, nil
 }
 
+func FillEnv(vars []string) error {
+	for _, e := range vars {
+		parts := strings.SplitN(e, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("error in %s env", e)
+		}
+		if err := os.Setenv(parts[0], parts[1]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func IsURL(str string) bool {
 	u, err := url.Parse(str)
 	if err != nil {

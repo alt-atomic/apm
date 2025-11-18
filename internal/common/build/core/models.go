@@ -63,6 +63,8 @@ type Envs struct {
 }
 
 type Config struct {
+	// Environment vars
+	Env []string `yaml:"env,omitempty" json:"env,omitempty"`
 	// Базовый образ для использования
 	// Может быть взята из переменной среды
 	// APM_BUILD_IMAGE
@@ -285,6 +287,34 @@ func CheckModules(modules *[]Module) error {
 	return nil
 }
 
+func ReadAndParseConfigEnvYamlFile(name string) (Envs, error) {
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return Envs{}, err
+	}
+	return ParseYamlConfigEnvData(data, true)
+}
+
+func ParseYamlConfigEnvData(data []byte, isYaml bool) (Envs, error) {
+	data, err := resolvePlaceholders(data)
+	if err != nil {
+		return Envs{}, err
+	}
+
+	var envs Envs
+	if isYaml {
+		err = yaml.Unmarshal(data, &envs)
+	} else {
+		err = json.Unmarshal(data, &envs)
+	}
+
+	if err != nil {
+		return envs, err
+	}
+
+	return envs, nil
+}
+
 func ReadAndParseConfigYamlFile(name string) (Config, error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
@@ -442,7 +472,7 @@ func extractEnvKey(raw string) (string, bool) {
 		return "", false
 	}
 
-	if !strings.HasPrefix(strings.ToLower(raw), "Env.") {
+	if !strings.HasPrefix(raw, "Env.") {
 		return "", false
 	}
 

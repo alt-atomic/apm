@@ -19,6 +19,7 @@ package build
 import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/core"
+	"apm/internal/common/osutils"
 	"context"
 	"errors"
 	"os"
@@ -71,6 +72,22 @@ func (s *HostConfigService) LoadConfig() error {
 	}
 	s.Config = &cfg
 	return nil
+}
+
+func (s *HostConfigService) GetConfigEnvVars() ([]string, error) {
+	var (
+		envs core.Envs
+		err  error
+	)
+
+	if !osutils.IsExists(s.pathImageFile) {
+		return []string{}, nil
+	}
+
+	if envs, err = core.ReadAndParseConfigEnvYamlFile(s.pathImageFile); err != nil {
+		return []string{}, err
+	}
+	return envs.Env, nil
 }
 
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
