@@ -226,14 +226,18 @@ type Module struct {
 
 func (m *Module) UnmarshalYAML(value *yaml.Node) error {
 	var aux struct {
-		Type string    `yaml:"type"`
-		Body yaml.Node `yaml:"body"`
+		Name string            `yaml:"name"`
+		Env  map[string]string `yaml:"env"`
+		Type string            `yaml:"type"`
+		Body yaml.Node         `yaml:"body"`
 	}
 
 	if err := value.Decode(&aux); err != nil {
 		return err
 	}
 
+	m.Name = aux.Name
+	m.Env = aux.Env
 	m.Type = aux.Type
 	return m.decodeBody(func(target any) error {
 		return aux.Body.Decode(target)
