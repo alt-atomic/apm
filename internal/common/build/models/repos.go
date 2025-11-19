@@ -32,6 +32,9 @@ type ReposBody struct {
 
 	// Имя файла репозиториев
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Не обновлять базу данных после сохранения репозиториев
+	NoUpdate bool `yaml:"no-update,omitempty" json:"no-update,omitempty"`
 }
 
 func (r *ReposBody) AllRepos() []string {
@@ -139,5 +142,13 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) error {
 		return err
 	}
 
-	return os.WriteFile(sourcesPath, []byte(strings.Join(allRepos, "\n")+"\n"), 0644)
+	if err := os.WriteFile(sourcesPath, []byte(strings.Join(allRepos, "\n")+"\n"), 0644); err != nil {
+		return err
+	}
+
+	if !b.NoUpdate {
+		return svc.UpdatePackages(ctx)
+	}
+
+	return nil
 }
