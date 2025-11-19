@@ -23,7 +23,7 @@ var plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
 
 type BrandingBody struct {
 	// Имя брендинга для пакетов
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" needs:"BuildType"`
 
 	// Тема плимут
 	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`

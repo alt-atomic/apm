@@ -45,28 +45,11 @@ func pascalToKebab(s string) string {
 	return string(result)
 }
 
-func checkFieldIsEmpty(field reflect.Value) bool {
-	switch field.Kind() {
-	case reflect.Bool:
-		return !field.Bool()
-	case reflect.Int:
-		return field.Int() == 0
-	case reflect.String:
-		fallthrough
-	case reflect.Slice:
-		fallthrough
-	case reflect.Map:
-		return field.Len() == 0
-	default:
-		panic("Unknown type")
-	}
-}
-
 func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
 	// Required equal true or not present at all
 	_, ok := fieldType.Tag.Lookup("required")
 	if ok {
-		if checkFieldIsEmpty(field) {
+		if field.IsZero() {
 			bodyType := strings.TrimSuffix(parent.Type().Name(), "Body")
 			return fmt.Errorf(
 				"'%s' required in '%s' type but not present",
@@ -81,18 +64,18 @@ func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.
 
 func checkNeeds(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
 	// Required equal true or not present at all
-	if checkFieldIsEmpty(field) {
+	if field.IsZero() {
 		return nil
 	}
 	whatNeeds, ok := fieldType.Tag.Lookup("needs")
 	if ok {
 		needsField := parent.FieldByName(whatNeeds)
-		if checkFieldIsEmpty(needsField) {
+		if needsField.IsZero() {
 			bodyType := strings.TrimSuffix(strings.ToLower(parent.Type().Name()), "body")
 			return fmt.Errorf(
 				"'%s' needs '%s' in '%s' type but it not present",
 				pascalToKebab(fieldType.Name),
-				pascalToKebab(needsField.Type().Name()),
+				pascalToKebab(whatNeeds),
 				pascalToKebab(bodyType),
 			)
 		}
@@ -103,18 +86,18 @@ func checkNeeds(parent reflect.Value, field reflect.Value, fieldType reflect.Str
 
 func checkConflicts(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
 	// Required equal true or not present at all
-	if checkFieldIsEmpty(field) {
+	if field.IsZero() {
 		return nil
 	}
 	conflictWith, ok := fieldType.Tag.Lookup("conflicts")
 	if ok {
 		conflictField := parent.FieldByName(conflictWith)
-		if !checkFieldIsEmpty(conflictField) {
+		if !conflictField.IsZero() {
 			bodyType := strings.TrimSuffix(strings.ToLower(parent.Type().Name()), "body")
 			return fmt.Errorf(
 				"'%s' conflicts with '%s' in '%s' type which present",
 				pascalToKebab(fieldType.Name),
-				pascalToKebab(conflictField.Type().Name()),
+				pascalToKebab(conflictWith),
 				pascalToKebab(bodyType),
 			)
 		}
