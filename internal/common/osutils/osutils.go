@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -88,6 +89,14 @@ func parseSymbolicMode(s string) (os.FileMode, error) {
 	}
 
 	return mode, nil
+}
+
+func IsURL(str string) bool {
+	u, err := url.Parse(str)
+	if err != nil {
+		return false
+	}
+	return u.Scheme != "" && u.Host != ""
 }
 
 func StringToFileMode(s string) (os.FileMode, error) {

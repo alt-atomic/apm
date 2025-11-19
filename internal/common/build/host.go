@@ -315,7 +315,6 @@ func (h *HostImageService) GenerateDefaultConfig() (Config, error) {
 	}
 
 	cfg.Image = imageName
-	cfg.Name = "local"
 
 	return cfg, nil
 }
