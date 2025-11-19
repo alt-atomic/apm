@@ -10,7 +10,7 @@ import (
 
 type SystemdBody struct {
 	// Имена сервисов
-	Targets []string `yaml:"names,omitempty" json:"names,omitempty" required:""`
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`
 
 	// Включать или нет
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" conflicts:"Masked"`
