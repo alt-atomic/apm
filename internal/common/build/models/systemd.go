@@ -10,17 +10,16 @@ import (
 
 type SystemdBody struct {
 	// Имена сервисов
-	Targets []string `yaml:"names,omitempty" json:"names,omitempty"`
+	Targets []string `yaml:"names,omitempty" json:"names,omitempty" required:""`
+
 	// Включать или нет
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" conflicts:"Masked"`
+
 	// Включать ли сервис глбоально, для всех пользоваетелей
 	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
-	// Маскировать ли сервис
-	Masked bool `yaml:"masked,omitempty" json:"masked,omitempty"`
-}
 
-func (b *SystemdBody) Check() error {
-	return nil
+	// Маскировать ли сервис
+	Masked bool `yaml:"masked,omitempty" json:"masked,omitempty" conflicts:"Enabled"`
 }
 
 func (b *SystemdBody) Execute(ctx context.Context, _ Service) error {

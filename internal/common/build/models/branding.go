@@ -28,12 +28,8 @@ type BrandingBody struct {
 	// Тема плимут
 	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`
 
-	// Тема плимут
-	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty"`
-}
-
-func (b *BrandingBody) Check() error {
-	return nil
+	// Тип сборки, нужен для os-release
+	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty" needs:"Name"`
 }
 
 func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {

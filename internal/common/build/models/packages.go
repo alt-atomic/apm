@@ -22,10 +22,6 @@ type PackagesBody struct {
 	Upgrade bool `yaml:"upgrade,omitempty" json:"upgrade,omitempty"`
 }
 
-func (b *PackagesBody) Check() error {
-	return nil
-}
-
 func (b *PackagesBody) Execute(ctx context.Context, svc Service) error {
 	if b.Update {
 		app.Log.Info("Updating package cache")
@@ -38,6 +34,10 @@ func (b *PackagesBody) Execute(ctx context.Context, svc Service) error {
 		if err := svc.UpdatePackages(ctx); err != nil {
 			return err
 		}
+	}
+
+	if len(b.Install) == 0 && len(b.Remove) == 0 {
+		return nil
 	}
 
 	var text []string

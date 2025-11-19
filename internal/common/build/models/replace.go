@@ -12,17 +12,13 @@ import (
 
 type ReplaceBody struct {
 	// Путь до файла
-	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`
 
 	// Regex шаблон
-	Pattern string `yaml:"pattern,omitempty" json:"pattern,omitempty"`
+	Pattern string `yaml:"pattern,omitempty" json:"pattern,omitempty" required:""`
 
 	// Замена
-	Repl string `yaml:"repl,omitempty" json:"repl,omitempty"`
-}
-
-func (b *ReplaceBody) Check() error {
-	return nil
+	Repl string `yaml:"repl,omitempty" json:"repl,omitempty" required:""`
 }
 
 func (b *ReplaceBody) Execute(_ context.Context, _ Service) error {

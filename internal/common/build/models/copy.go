@@ -10,16 +10,17 @@ import (
 
 type CopyBody struct {
 	// Путь до файла, кого копировать
-	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`
 
 	// Путь до файла, куда копировать
-	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
+	Destination string `yaml:"destination,omitempty" json:"destination,omitempty" required:""`
 
 	// Заменять ли destination
 	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
 }
 
 func (b *CopyBody) Check() error {
+
 	return nil
 }
 

@@ -286,7 +286,7 @@ func CheckModules(modules *[]Module) error {
 		if module.Body == nil {
 			return fmt.Errorf("module %s has empty body", module.Type)
 		}
-		if err := module.Body.Check(); err != nil {
+		if err := models.CheckBody(module.Body); err != nil {
 			return err
 		}
 	}

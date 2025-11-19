@@ -12,14 +12,10 @@ import (
 
 type RemoveBody struct {
 	// Путь до объектов, которые нужно удалить
-	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`
 
 	// Очистить объекты вместо удаления
 	Inside bool `yaml:"inside,omitempty" json:"inside,omitempty"`
-}
-
-func (b *RemoveBody) Check() error {
-	return nil
 }
 
 func (b *RemoveBody) Execute(_ context.Context, _ Service) error {

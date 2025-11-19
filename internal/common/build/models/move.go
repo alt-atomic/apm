@@ -11,17 +11,16 @@ import (
 
 type MoveBody struct {
 	// Что
-	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`
+
 	// Куда
-	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
+	Destination string `yaml:"destination,omitempty" json:"destination,omitempty" required:""`
+
 	// Заменить объект по destination
 	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
+
 	// Создать ссылку из родительской директории цели на назначение
 	CreateLink bool `yaml:"create-link,omitempty" json:"create-link,omitempty"`
-}
-
-func (b *MoveBody) Check() error {
-	return nil
 }
 
 func (b *MoveBody) Execute(ctx context.Context, svc Service) error {

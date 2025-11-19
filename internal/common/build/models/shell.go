@@ -9,11 +9,7 @@ import (
 
 type ShellBody struct {
 	// Команды на выполнение
-	Command string `yaml:"command,omitempty" json:"command,omitempty"`
-}
-
-func (b *ShellBody) Check() error {
-	return nil
+	Command string `yaml:"command,omitempty" json:"command,omitempty" required:""`
 }
 
 func (b *ShellBody) Execute(ctx context.Context, svc Service) error {

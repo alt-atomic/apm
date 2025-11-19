@@ -17,6 +17,5 @@ type Service interface {
 }
 
 type Body interface {
-	Check() error
 	Execute(context.Context, Service) error
 }

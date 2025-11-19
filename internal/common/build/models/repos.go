@@ -19,16 +19,16 @@ type ReposBody struct {
 	Clean bool `yaml:"clean,omitempty" json:"clean,omitempty"`
 
 	// Кастомные записи в sources.list
-	Custom []string `yaml:"custom,omitempty" json:"custom,omitempty"`
+	Custom []string `yaml:"custom,omitempty" json:"custom,omitempty" needs:"Name"`
 
 	// Ветка репозитория ALT. Сейчас доступен только sisyphus
-	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty" needs:"Name"`
 
 	// Дата в формате YYYY/MM/DD. Если пуст, берется latest
-	Date string `yaml:"date,omitempty" json:"date,omitempty"`
+	Date string `yaml:"date,omitempty" json:"date,omitempty" needs:"Branch"`
 
 	// Задачи для подключения в качестве репозиториев
-	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
+	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty" needs:"Name"`
 
 	// Имя файла репозиториев
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
@@ -100,10 +100,6 @@ func (r *ReposBody) BranchRepos() []string {
 	}
 
 	return repos
-}
-
-func (b *ReposBody) Check() error {
-	return nil
 }
 
 func (b *ReposBody) Execute(ctx context.Context, svc Service) error {

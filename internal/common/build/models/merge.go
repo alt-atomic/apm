@@ -10,14 +10,10 @@ import (
 
 type MergeBody struct {
 	// Путь до файла, содеримое которого нужно взять
-	Target string `yaml:"target,omitempty" json:"target,omitempty"`
+	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`
 
 	// Путь до файла, куда нужно добавить содержимое
-	Destination string `yaml:"destination,omitempty" json:"destination,omitempty"`
-}
-
-func (b *MergeBody) Check() error {
-	return nil
+	Destination string `yaml:"destination,omitempty" json:"destination,omitempty" required:""`
 }
 
 func (b *MergeBody) Execute(_ context.Context, _ Service) error {

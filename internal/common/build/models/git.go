@@ -12,20 +12,16 @@ import (
 
 type GitBody struct {
 	// URL git-репозитория
-	Url string `yaml:"target,omitempty" json:"target,omitempty"`
+	Url string `yaml:"target,omitempty" json:"target,omitempty" required:""`
 
 	// Команды для выполнения относительно git репозитория
-	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+	Command string `yaml:"command,omitempty" json:"command,omitempty" required:""`
 
 	// Зависимости для сборки. Они будут удалены после завершения модуля
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
 	// Git reference
 	Ref string `yaml:"ref,omitempty" json:"ref,omitempty"`
-}
-
-func (b *GitBody) Check() error {
-	return nil
 }
 
 func (b *GitBody) Execute(ctx context.Context, svc Service) error {

@@ -1,14 +1,12 @@
 package models
 
-import "context"
+import (
+	"context"
+)
 
 type IncludeBody struct {
 	// yml конфиги для выполнения
-	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
-}
-
-func (b *IncludeBody) Check() error {
-	return nil
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`
 }
 
 func (b *IncludeBody) Execute(ctx context.Context, svc Service) error {

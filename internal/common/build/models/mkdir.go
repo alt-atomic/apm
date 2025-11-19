@@ -12,13 +12,9 @@ import (
 
 type MkdirBody struct {
 	// Пути, по которым нужно создать директории
-	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty"`
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`
 	// Права у директорий
-	Perm string `yaml:"perm,omitempty" json:"perm,omitempty"`
-}
-
-func (b *MkdirBody) Check() error {
-	return nil
+	Perm string `yaml:"perm,omitempty" json:"perm,omitempty" required:""`
 }
 
 func (b *MkdirBody) Execute(_ context.Context, _ Service) error {
