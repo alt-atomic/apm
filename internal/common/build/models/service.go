@@ -18,5 +18,7 @@ type Service interface {
 }
 
 type Body interface {
+	// context.Context - app context
+	// Service - build service
 	Execute(context.Context, Service) error
 }

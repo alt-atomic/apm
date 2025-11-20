@@ -127,11 +127,11 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
 				return err
 			}
 
-			if _, err = osutils.ExecShOutput(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
+			if err = osutils.ExecSh(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true, true); err != nil {
 				return err
 			}
 
-			return osutils.ExecSh(ctx, fmt.Sprintf("dracut --force '%s/%s/initramfs.img' %s", kernelDir, kernelVersion, kernelVersion), "", true)
+			return osutils.ExecSh(ctx, fmt.Sprintf("dracut --force '%s/%s/initramfs.img' %s", kernelDir, kernelVersion, kernelVersion), "", true, false)
 		}
 	}
 	return nil

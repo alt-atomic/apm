@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 type GitBody struct {
@@ -26,12 +25,9 @@ type GitBody struct {
 
 func (b *GitBody) Execute(ctx context.Context, svc Service) error {
 	if len(b.Deps) != 0 {
-		var ops []string
-		for _, p := range b.Deps {
-			ops = append(ops, p+"+")
-		}
-		app.Log.Info(fmt.Sprintf("Installing %s", strings.Join(b.Deps, ", ")))
-		if err := svc.CombineInstallRemovePackages(ctx, ops, false, false); err != nil {
+		packagesBody := &PackagesBody{Install: b.Deps}
+
+		if err := packagesBody.Execute(ctx, svc); err != nil {
 			return err
 		}
 	}
@@ -58,17 +54,14 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) error {
 	}
 
 	app.Log.Info(fmt.Sprintf("Executing `%s`", b.Command))
-	if err = osutils.ExecSh(ctx, b.Command, tempDir, true); err != nil {
+	if err = osutils.ExecSh(ctx, b.Command, tempDir, true, false); err != nil {
 		return err
 	}
 
 	if len(b.Deps) != 0 {
-		var ops []string
-		for _, p := range b.Deps {
-			ops = append(ops, p+"-")
-		}
-		app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.Deps, ", ")))
-		if err = svc.CombineInstallRemovePackages(ctx, ops, true, true); err != nil {
+		packagesBody := &PackagesBody{Remove: b.Deps}
+
+		if err := packagesBody.Execute(ctx, svc); err != nil {
 			return err
 		}
 	}
