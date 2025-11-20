@@ -106,16 +106,12 @@ func (s *BuildTestSuite) TestCopyModule() {
 	// Создаем конфигурацию с copy модулем
 	yamlConfig := `
 image: "alt:sisyphus"
-name: "test-copy"
-repos:
-  branch: "sisyphus"
 modules:
   - name: "Test copy"
     type: copy
     body:
       target: "` + sourceFile + `"
       destination: "` + destFile + `"
-      replace: false
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
@@ -152,9 +148,6 @@ func (s *BuildTestSuite) TestMoveModule() {
 
 	yamlConfig := `
 image: "alt:sisyphus"
-name: "test-move"
-repos:
-  branch: "sisyphus"
 modules:
   - name: "Test move"
     type: move
@@ -197,9 +190,6 @@ func (s *BuildTestSuite) TestRemoveModule() {
 
 	yamlConfig := `
 image: "alt:sisyphus"
-name: "test-remove"
-repos:
-  branch: "sisyphus"
 modules:
   - name: "Test remove"
     type: remove
@@ -231,9 +221,6 @@ func (s *BuildTestSuite) TestMkdirModule() {
 
 	yamlConfig := `
 image: "alt:sisyphus"
-name: "test-mkdir"
-repos:
-  branch: "sisyphus"
 modules:
   - name: "Test mkdir"
     type: mkdir
@@ -271,9 +258,6 @@ func (s *BuildTestSuite) TestLinkModule() {
 
 	yamlConfig := `
 image: "alt:sisyphus"
-name: "test-link"
-repos:
-  branch: "sisyphus"
 modules:
   - name: "Test link"
     type: link
@@ -320,9 +304,6 @@ func (s *BuildTestSuite) TestMergeModule() {
 
 	yamlConfig := `
 image: "alt:sisyphus"
-name: "test-merge"
-repos:
-  branch: "sisyphus"
 modules:
   - name: "Test merge"
     type: merge
@@ -368,9 +349,6 @@ func (s *BuildTestSuite) TestComplexMultiModuleBuild() {
 
 	yamlConfig := `
 image: "alt:sisyphus"
-name: "test-multi-module"
-repos:
-  branch: "sisyphus"
 modules:
   - name: "Create directory"
     type: mkdir
@@ -430,30 +408,15 @@ func (s *BuildTestSuite) TestConfigValidation() {
 		errMsg    string
 	}{
 		{
-			name: "Empty image",
-			yaml: `
-name: "test"
-modules: []
-`,
+			name:      "Empty image",
+			yaml:      ``,
 			shouldErr: true,
 			errMsg:    "Image can not be empty",
-		},
-		{
-			name: "Empty name",
-			yaml: `
-image: "alt:sisyphus"
-modules: []
-`,
-			shouldErr: false,
 		},
 		{
 			name: "Valid minimal config",
 			yaml: `
 image: "alt:sisyphus"
-name: "test"
-repos:
-  branch: "sisyphus"
-modules: []
 `,
 			shouldErr: false,
 		},
@@ -461,9 +424,6 @@ modules: []
 			name: "Copy without target",
 			yaml: `
 image: "alt:sisyphus"
-name: "test"
-repos:
-  branch: "sisyphus"
 modules:
   - type: copy
     body:
@@ -476,9 +436,6 @@ modules:
 			name: "Copy without destination",
 			yaml: `
 image: "alt:sisyphus"
-name: "test"
-repos:
-  branch: "sisyphus"
 modules:
   - type: copy
     body:
