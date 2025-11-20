@@ -46,6 +46,7 @@ func pascalToKebab(s string) string {
 }
 
 func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
+	// Required equal something or not present at all
 	_, ok := fieldType.Tag.Lookup("required")
 	if ok {
 		if field.IsZero() {
@@ -62,6 +63,7 @@ func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.
 }
 
 func checkNeeds(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
+	// We dont touch needs field if it epmpty
 	if field.IsZero() {
 		return nil
 	}
@@ -83,6 +85,7 @@ func checkNeeds(parent reflect.Value, field reflect.Value, fieldType reflect.Str
 }
 
 func checkConflicts(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
+	// We dont touch needs field if it epmpty
 	if field.IsZero() {
 		return nil
 	}
