@@ -11,6 +11,7 @@ type Service interface {
 	InstallPackages(ctx context.Context, packages []string) error
 	QueryHostImagePackages(ctx context.Context, filters map[string]any, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
 	UpdatePackages(ctx context.Context) error
+	UpgradePackages(ctx context.Context) error
 	KernelManager() *service.Manager
 	ResourcesDir() string
 	ExecuteInclude(ctx context.Context, target string) error

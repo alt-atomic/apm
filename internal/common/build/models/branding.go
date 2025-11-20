@@ -168,7 +168,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 
 				packagesBody := &PackagesBody{Install: pkgsNames}
 
-				if err := packagesBody.Execute(ctx, svc); err != nil {
+				if err = packagesBody.Execute(ctx, svc); err != nil {
 					return err
 				}
 			}

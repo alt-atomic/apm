@@ -31,7 +31,7 @@ func (b *PackagesBody) Execute(ctx context.Context, svc Service) error {
 	}
 	if b.Upgrade {
 		app.Log.Info("Upgrading packages")
-		if err := svc.UpdatePackages(ctx); err != nil {
+		if err := svc.UpgradePackages(ctx); err != nil {
 			return err
 		}
 	}

@@ -76,12 +76,12 @@ func (h *HostDBService) db() (*gorm.DB, error) {
 		})
 
 		if err != nil {
-			return nil, fmt.Errorf("ошибка подключения к SQLite через GORM: %w", err)
+			return nil, fmt.Errorf(app.T_("SQLite connection error via GORM: %w"), err)
 		}
 
 		// Автоматическая миграция
 		if err = h.realDb.AutoMigrate(&DBHistory{}); err != nil {
-			return nil, fmt.Errorf("ошибка миграции структуры таблицы: %w", err)
+			return nil, fmt.Errorf(app.T_("Table structure migration error: %w"), err)
 		}
 	}
 

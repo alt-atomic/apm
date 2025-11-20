@@ -140,11 +140,11 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	}
 
 	// Резолвим env переменные в структуре модуля через рефлексию
-	if err := models.ResolveStruct(body); err != nil {
+	if err = models.ResolveStruct(body); err != nil {
 		return fmt.Errorf("failed to resolve env variables: %w", err)
 	}
 
-	if err := body.Execute(ctx, cfgService); err != nil {
+	if err = body.Execute(ctx, cfgService); err != nil {
 		label := module.Name
 		if label == "" {
 			label = fmt.Sprintf("type=%s", module.Type)
@@ -154,11 +154,11 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 
 	for key, existed := range originalEnvExistanceMap {
 		if existed {
-			if err := os.Setenv(key, originalResolvedEnvMap[key]); err != nil {
+			if err = os.Setenv(key, originalResolvedEnvMap[key]); err != nil {
 				return err
 			}
 		} else {
-			if err := os.Unsetenv(key); err != nil {
+			if err = os.Unsetenv(key); err != nil {
 				return err
 			}
 

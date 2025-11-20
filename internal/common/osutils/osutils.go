@@ -169,7 +169,7 @@ func GetEnvMap() map[string]string {
 
 func IsExists(path string) bool {
 	_, err := os.Stat(path)
-	return os.IsExist(err)
+	return err == nil
 }
 
 func Capitalize(s string) string {

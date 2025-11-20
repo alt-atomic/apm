@@ -29,7 +29,9 @@ func (b *LinkBody) Execute(ctx context.Context, svc Service) error {
 		Targets: []string{path.Dir(b.Target)},
 		Perm:    "rw-r--r--",
 	}
-	mkdirBody.Execute(ctx, svc)
+	if err := mkdirBody.Execute(ctx, svc); err != nil {
+		return err
+	}
 
 	app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
 	if b.Replace {

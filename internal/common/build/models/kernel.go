@@ -29,7 +29,7 @@ type KernelBody struct {
 	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
 
 	// Пересобрать initramfs
-	RebuildInitramfs string `yaml:"rebuild-iniramfs,omitempty" json:"rebuild-iniramfs,omitempty"`
+	RebuildInitramfs string `yaml:"rebuild-initramfs,omitempty" json:"rebuild-initramfs,omitempty"`
 }
 
 func (b *KernelBody) Check() error {
