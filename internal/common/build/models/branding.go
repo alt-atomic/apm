@@ -94,10 +94,21 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 					vars["PRETTY_NAME"] = value + prettyNameSuffix
 				}
 			}
+			if value, ok := vars["ID"]; ok {
+				// Package was not installed, but installed now
+				if value == "altlinux" {
+					vars["ID_LIKE"] = value
+				}
+				if !strings.HasSuffix(value, fmt.Sprintf("-%s", bType)) {
+					vars["ID"] = fmt.Sprintf("%s-%s", value, bType)
+				}
+			} else {
+				vars["ID"] = "unknown-distro"
+			}
 			vars["RELEASE_TYPE"] = releaseType
 			vars["VERSION"] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
 			vars["VERSION_ID"] = versionId
-			vars["CPE_NAME"] = fmt.Sprintf("cpe:/o:%s:%s", strings.ReplaceAll(versionId, "-", ":"), curVer)
+			vars["CPE_NAME"] = fmt.Sprintf("cpe:/o:%s:%s", strings.ReplaceAll(vars["ID"], "-", ":"), curVer)
 			vars["IMAGE_ID"] = vars["ID"]
 			vars["IMAGE_VERSION"] = vars["VERSION_ID"]
 
