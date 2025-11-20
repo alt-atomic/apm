@@ -365,7 +365,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					{
 						Name:  "build",
 						Usage: app.T_("Build image"),
-						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ImageBuild(ctx)
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
