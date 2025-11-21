@@ -132,11 +132,7 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	}
 
 	if err = body.Execute(ctx, cfgService); err != nil {
-		label := module.Name
-		if label == "" {
-			label = fmt.Sprintf("type=%s", module.Type)
-		}
-		return fmt.Errorf("module %s: %w", label, err)
+		return fmt.Errorf("module '%s': %w", module.GetLabel(), err)
 	}
 
 	for key := range moduleResolvedEnvMap {

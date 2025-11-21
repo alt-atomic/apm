@@ -4,6 +4,7 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -226,6 +227,13 @@ type Module struct {
 	Body models.Body `yaml:"body" json:"body"`
 }
 
+func (m Module) GetLabel() any {
+	if m.Name == "" {
+		return fmt.Sprintf("type=%s", m.Type)
+	}
+	return m.Name
+}
+
 func (m *Module) UnmarshalYAML(value *yaml.Node) error {
 	var aux struct {
 		Name string            `yaml:"name"`
@@ -350,9 +358,13 @@ func parseConfigData(data []byte, isYaml bool, hasRoot bool) (Config, error) {
 	var cfg Config
 	var err error
 	if isYaml {
-		err = yaml.Unmarshal(data, &cfg)
+		decoder := yaml.NewDecoder(bytes.NewReader(data))
+		decoder.KnownFields(true)
+		err = decoder.Decode(&cfg)
 	} else {
-		err = json.Unmarshal(data, &cfg)
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.DisallowUnknownFields()
+		err = decoder.Decode(&cfg)
 	}
 
 	if err != nil {

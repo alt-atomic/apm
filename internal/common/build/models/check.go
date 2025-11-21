@@ -27,15 +27,38 @@ import (
 	"unicode"
 )
 
+func KebabToPascal(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	var result []rune
+	capitalizeNext := true // Флаг: следующую букву нужно сделать заглавной
+
+	for _, r := range s {
+		if r == '-' {
+			capitalizeNext = true // После дефиса — заглавная
+		} else {
+			if capitalizeNext {
+				result = append(result, unicode.ToUpper(r))
+				capitalizeNext = false
+			} else {
+				result = append(result, unicode.ToLower(r))
+			}
+		}
+	}
+
+	return string(result)
+}
+
 func pascalToKebab(s string) string {
 	if len(s) == 0 {
 		return s
 	}
 
 	var result []rune
-	runes := []rune(s)
 
-	for i, r := range runes {
+	for i, r := range s {
 		if i > 0 && unicode.IsUpper(r) {
 			result = append(result, '-')
 		}
@@ -50,16 +73,19 @@ func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.
 	_, ok := fieldType.Tag.Lookup("required")
 	if ok {
 		if field.IsZero() {
-			bodyType := strings.TrimSuffix(parent.Type().Name(), "Body")
 			return fmt.Errorf(
 				"'%s' required in '%s' type but not present",
 				pascalToKebab(fieldType.Name),
-				pascalToKebab(bodyType),
+				BodyTypeToType(parent.Type().Name()),
 			)
 		}
 	}
 
 	return nil
+}
+
+func BodyTypeToType(bodyType string) string {
+	return pascalToKebab(strings.TrimSuffix(bodyType, "Body"))
 }
 
 func checkNeeds(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
@@ -71,12 +97,11 @@ func checkNeeds(parent reflect.Value, field reflect.Value, fieldType reflect.Str
 	if ok {
 		needsField := parent.FieldByName(whatNeeds)
 		if needsField.IsZero() {
-			bodyType := strings.TrimSuffix(strings.ToLower(parent.Type().Name()), "body")
 			return fmt.Errorf(
 				"'%s' needs '%s' in '%s' type but it not present",
 				pascalToKebab(fieldType.Name),
 				pascalToKebab(whatNeeds),
-				pascalToKebab(bodyType),
+				BodyTypeToType(parent.Type().Name()),
 			)
 		}
 	}
@@ -93,12 +118,11 @@ func checkConflicts(parent reflect.Value, field reflect.Value, fieldType reflect
 	if ok {
 		conflictField := parent.FieldByName(conflictWith)
 		if !conflictField.IsZero() {
-			bodyType := strings.TrimSuffix(strings.ToLower(parent.Type().Name()), "body")
 			return fmt.Errorf(
 				"'%s' conflicts with '%s' in '%s' type which present",
 				pascalToKebab(fieldType.Name),
 				pascalToKebab(conflictWith),
-				pascalToKebab(bodyType),
+				BodyTypeToType(parent.Type().Name()),
 			)
 		}
 	}
