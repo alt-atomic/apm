@@ -230,6 +230,7 @@ func (m *Module) UnmarshalYAML(value *yaml.Node) error {
 	var aux struct {
 		Name string            `yaml:"name"`
 		Env  map[string]string `yaml:"env"`
+		If   string            `yaml:"if"`
 		Type string            `yaml:"type"`
 		Body yaml.Node         `yaml:"body"`
 	}
@@ -240,6 +241,7 @@ func (m *Module) UnmarshalYAML(value *yaml.Node) error {
 
 	m.Name = aux.Name
 	m.Env = aux.Env
+	m.If = aux.If
 	m.Type = aux.Type
 	return m.decodeBody(func(target any) error {
 		return aux.Body.Decode(target)
