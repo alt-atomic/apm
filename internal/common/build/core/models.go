@@ -26,6 +26,7 @@ const (
 	TypeMerge    = "merge"
 	TypeMkdir    = "mkdir"
 	TypeMove     = "move"
+	TypeNetwork  = "network"
 	TypePackages = "packages"
 	TypeRemove   = "remove"
 	TypeReplace  = "replace"
@@ -44,6 +45,7 @@ var modelMap = map[string]func() models.Body{
 	TypeMerge:    func() models.Body { return &models.MergeBody{} },
 	TypeMkdir:    func() models.Body { return &models.MkdirBody{} },
 	TypeMove:     func() models.Body { return &models.MoveBody{} },
+	TypeNetwork:  func() models.Body { return &models.NetworkBody{} },
 	TypePackages: func() models.Body { return &models.PackagesBody{} },
 	TypeRemove:   func() models.Body { return &models.RemoveBody{} },
 	TypeReplace:  func() models.Body { return &models.ReplaceBody{} },

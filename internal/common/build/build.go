@@ -63,21 +63,6 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
-	// TODO: Исправить hostname
-	// if cfgService.serviceHostConfig.Config.Hostname != "" {
-	// 	if err := os.WriteFile(core.EtcHostname, []byte(fmt.Sprintf("%s\n", cfgService.serviceHostConfig.Config.Hostname)), 0644); err != nil {
-	// 		return err
-	// 	}
-	// 	hosts := fmt.Sprintf(
-	// 		"127.0.0.1  localhost.localdomain localhost %s\n::1  localhost6.localdomain localhost6 %s6\n",
-	// 		cfgService.serviceHostConfig.Config.Hostname,
-	// 		cfgService.serviceHostConfig.Config.Hostname,
-	// 	)
-	// 	if err := os.WriteFile(core.EtcHosts, []byte(hosts), 0644); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	for _, module := range cfgService.serviceHostConfig.Config.Modules {
 		if err := cfgService.ExecuteModule(ctx, module); err != nil {
 			return err
