@@ -92,14 +92,16 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
 	}
 
-	originalResolvedEnvMap, err := models.ResolveEnvMap(module.Env)
+	moduleResolvedEnvMap, err := models.ResolveEnvMap(module.Env)
 	if err != nil {
 		return err
 	}
 
-	originalEnvExistanceMap := map[string]bool{}
-	for key, value := range originalResolvedEnvMap {
-		_, originalEnvExistanceMap[key] = os.LookupEnv(key)
+	existedEnvMap := map[string]string{}
+	for key, value := range moduleResolvedEnvMap {
+		if currentValue, ok := os.LookupEnv(key); ok {
+			existedEnvMap[key] = currentValue
+		}
 
 		if err = os.Setenv(key, value); err != nil {
 			return err
@@ -152,16 +154,15 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		return fmt.Errorf("module %s: %w", label, err)
 	}
 
-	for key, existed := range originalEnvExistanceMap {
-		if existed {
-			if err = os.Setenv(key, originalResolvedEnvMap[key]); err != nil {
+	for key := range moduleResolvedEnvMap {
+		if oldValue, ok := existedEnvMap[key]; ok {
+			if err = os.Setenv(key, oldValue); err != nil {
 				return err
 			}
 		} else {
 			if err = os.Unsetenv(key); err != nil {
 				return err
 			}
-
 		}
 	}
 
