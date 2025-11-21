@@ -41,8 +41,8 @@ import (
 )
 
 func parseSymbolicMode(s string) (os.FileMode, error) {
-	if len(s) != 10 {
-		return 0, fmt.Errorf("invalid length: expected 10 characters, got %d", len(s))
+	if len(s) != 9 {
+		return 0, fmt.Errorf(app.T_("invalid length: expected 9 characters, got %d"), len(s))
 	}
 
 	var mode os.FileMode
@@ -60,33 +60,30 @@ func parseSymbolicMode(s string) (os.FileMode, error) {
 		0001, // 9: other — исполнение
 	}
 
-	for i := 1; i <= 9; i++ {
+	for i := range 9 {
 		char := rune(s[i])
 		switch char {
 		case 'r', 'w', 'x':
-			mode |= bitMasks[i-1]
+			mode |= bitMasks[i]
 		}
 	}
 
-	switch rune(s[3]) { // 4‑й символ строки (индекс 3) — setuid
-	case 's':
-		mode |= 04000 // setuid: владелец может запускать как свой UID
-	case 'S':
-		mode |= 04000 // setuid установлен, но исполнение не разрешено
+	// Проверка setuid
+	switch rune(s[2]) {
+	case 's', 'S':
+		mode |= 04000 // setuid
 	}
 
-	switch rune(s[6]) { // 7‑й символ строки (индекс 6) — setgid
-	case 's':
-		mode |= 02000 // setgid: группа наследуется от директории
-	case 'S':
-		mode |= 02000 // setgid установлен, но исполнение не разрешено
+	// Проверка setgid
+	switch rune(s[5]) {
+	case 's', 'S':
+		mode |= 02000 // setgid
 	}
 
-	switch rune(s[9]) { // 10‑й символ строки (индекс 9) — sticky
-	case 't':
-		mode |= 01000 // sticky: только владелец может удалять файлы в директории
-	case 'T':
-		mode |= 01000 // sticky установлен, но исполнение не разрешено
+	// Проверка sticky
+	switch rune(s[8]) {
+	case 't', 'T':
+		mode |= 01000 // sticky
 	}
 
 	return mode, nil
