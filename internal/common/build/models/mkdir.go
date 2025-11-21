@@ -13,7 +13,8 @@ import (
 type MkdirBody struct {
 	// Пути, по которым нужно создать директории
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`
-	// Права у директорий
+
+	// Права у директорий в формате rwxrwxrwx
 	Perm string `yaml:"perm,omitempty" json:"perm,omitempty" required:""`
 }
 

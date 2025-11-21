@@ -25,7 +25,9 @@
 package osutils
 
 import (
+	"apm/internal/common/app"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -34,58 +36,57 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unicode"
 )
 
 func parseSymbolicMode(s string) (os.FileMode, error) {
-	if len(s) != 9 {
-		return 0, fmt.Errorf("expected 9 characters, got %d", len(s))
+	if len(s) != 10 {
+		return 0, fmt.Errorf("invalid length: expected 10 characters, got %d", len(s))
 	}
 
 	var mode os.FileMode
 
-	// Сопоставляем позиции и биты
-	for i, char := range s {
-		switch i {
-		case 0:
-			if char == 'r' {
-				mode |= 0400
-			} // владелец: чтение
-		case 1:
-			if char == 'w' {
-				mode |= 0200
-			} // владелец: запись
-		case 2:
-			if char == 'x' {
-				mode |= 0100
-			} // владелец: исполнение
-		case 3:
-			if char == 'r' {
-				mode |= 0040
-			} // группа: чтение
-		case 4:
-			if char == 'w' {
-				mode |= 0020
-			} // группа: запись
-		case 5:
-			if char == 'x' {
-				mode |= 0010
-			} // группа: исполнение
-		case 6:
-			if char == 'r' {
-				mode |= 0004
-			} // другие: чтение
-		case 7:
-			if char == 'w' {
-				mode |= 0002
-			} // другие: запись
-		case 8:
-			if char == 'x' {
-				mode |= 0001
-			} // другие: исполнение
+	// Битовые маски для обычных прав (позиции 1–9 в строке, индексы 1–9 в s)
+	bitMasks := []os.FileMode{
+		0400, // 1: owner — чтение
+		0200, // 2: owner — запись
+		0100, // 3: owner — исполнение
+		0040, // 4: group — чтение
+		0020, // 5: group — запись
+		0010, // 6: group — исполнение
+		0004, // 7: other — чтение
+		0002, // 8: other — запись
+		0001, // 9: other — исполнение
+	}
+
+	for i := 1; i <= 9; i++ {
+		char := rune(s[i])
+		switch char {
+		case 'r', 'w', 'x':
+			mode |= bitMasks[i-1]
 		}
+	}
+
+	switch rune(s[3]) { // 4‑й символ строки (индекс 3) — setuid
+	case 's':
+		mode |= 04000 // setuid: владелец может запускать как свой UID
+	case 'S':
+		mode |= 04000 // setuid установлен, но исполнение не разрешено
+	}
+
+	switch rune(s[6]) { // 7‑й символ строки (индекс 6) — setgid
+	case 's':
+		mode |= 02000 // setgid: группа наследуется от директории
+	case 'S':
+		mode |= 02000 // setgid установлен, но исполнение не разрешено
+	}
+
+	switch rune(s[9]) { // 10‑й символ строки (индекс 9) — sticky
+	case 't':
+		mode |= 01000 // sticky: только владелец может удалять файлы в директории
+	case 'T':
+		mode |= 01000 // sticky установлен, но исполнение не разрешено
 	}
 
 	return mode, nil
@@ -101,18 +102,10 @@ func IsURL(str string) bool {
 
 func StringToFileMode(s string) (os.FileMode, error) {
 	if len(s) == 9 {
-		mode, err := parseSymbolicMode(s)
-		if err != nil {
-			return 0, err
-		}
-		return mode, nil
+		return parseSymbolicMode(s)
 	}
 
-	mode, err := strconv.ParseUint(s, 8, 32)
-	if err != nil {
-		return 0, err
-	}
-	return os.FileMode(mode), nil
+	return 0, errors.New(app.T_("Wrong permission format"))
 }
 
 func Clean(path string) error {
