@@ -3,6 +3,7 @@ package models
 import (
 	"apm/internal/common/app"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -22,15 +23,11 @@ type LinkBody struct {
 
 func (b *LinkBody) Execute(ctx context.Context, svc Service) error {
 	if !filepath.IsAbs(b.Target) {
-		return fmt.Errorf("target in link type must be absolute path")
+		return errors.New(app.T_("target in link type must be absolute path"))
 	}
 
-	mkdirBody := MkdirBody{
-		Targets: []string{path.Dir(b.Target)},
-		Perm:    "rw-r--r--",
-	}
-	if err := mkdirBody.Execute(ctx, svc); err != nil {
-		return err
+	if _, err := os.Stat(path.Dir(b.Target)); os.IsNotExist(err) {
+		return fmt.Errorf(app.T_("path %s for link doesn't exists"), path.Dir(b.Target))
 	}
 
 	app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.Destination))
