@@ -1,27 +1,36 @@
-package models
+package core
 
 import (
+	"apm/internal/common/app"
+	"apm/internal/common/version"
+	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"regexp"
-	"strings"
+
+	"github.com/expr-lang/expr"
 )
+
+type ExprData struct {
+	Config  *Config
+	Env     map[string]string
+	Version version.Version
+}
 
 var placeholderRegexp = regexp.MustCompile(`\$\{\{\s*([A-Za-z0-9_\-.]+)\s*}}`)
 
-func ResolveEnv(str string) (string, error) {
-	data, err := resolvePlaceholders([]byte(str))
+func ResolveExpr(str string, exprData ExprData) (string, error) {
+	data, err := resolvePlaceholders([]byte(str), exprData)
 	if err != nil {
 		return "", err
 	}
 	return string(data), nil
 }
 
-func ResolveEnvSlice(strs []string) ([]string, error) {
+func ResolveExprSlice(strs []string, data ExprData) ([]string, error) {
 	result := make([]string, len(strs))
 	for i, str := range strs {
-		resolved, err := ResolveEnv(str)
+		resolved, err := ResolveExpr(str, data)
 		if err != nil {
 			return nil, err
 		}
@@ -30,10 +39,10 @@ func ResolveEnvSlice(strs []string) ([]string, error) {
 	return result, nil
 }
 
-func ResolveEnvMap(strs map[string]string) (map[string]string, error) {
+func ResolveExprMap(strs map[string]string, data ExprData) (map[string]string, error) {
 	var result = map[string]string{}
 	for key, value := range strs {
-		resolved, err := ResolveEnv(value)
+		resolved, err := ResolveExpr(value, data)
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +51,7 @@ func ResolveEnvMap(strs map[string]string) (map[string]string, error) {
 	return result, nil
 }
 
-func ResolveStruct(v any) error {
+func ResolveStruct(v any, data ExprData) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Ptr {
 		return fmt.Errorf("ResolveStruct requires a pointer to struct")
@@ -53,10 +62,10 @@ func ResolveStruct(v any) error {
 		return fmt.Errorf("ResolveStruct requires a pointer to struct")
 	}
 
-	return resolveStructValue(val)
+	return resolveStructValue(val, data)
 }
 
-func resolveStructValue(val reflect.Value) error {
+func resolveStructValue(val reflect.Value, data ExprData) error {
 	typ := val.Type()
 
 	for i := 0; i < val.NumField(); i++ {
@@ -70,7 +79,7 @@ func resolveStructValue(val reflect.Value) error {
 		switch field.Kind() {
 		case reflect.String:
 			original := field.String()
-			resolved, err := ResolveEnv(original)
+			resolved, err := ResolveExpr(original, data)
 			if err != nil {
 				return fmt.Errorf("failed to resolve field %s: %w", fieldType.Name, err)
 			}
@@ -83,7 +92,7 @@ func resolveStructValue(val reflect.Value) error {
 					original[j] = field.Index(j).String()
 				}
 
-				resolved, err := ResolveEnvSlice(original)
+				resolved, err := ResolveExprSlice(original, data)
 				if err != nil {
 					return fmt.Errorf("failed to resolve field %s: %w", fieldType.Name, err)
 				}
@@ -104,7 +113,7 @@ func resolveStructValue(val reflect.Value) error {
 					k := iter.Key().String()
 					v := iter.Value().String()
 
-					resolvedValue, err := ResolveEnv(v)
+					resolvedValue, err := ResolveExpr(v, data)
 					if err != nil {
 						return fmt.Errorf("failed to resolve map field %s[%s]: %w", fieldType.Name, k, err)
 					}
@@ -116,13 +125,13 @@ func resolveStructValue(val reflect.Value) error {
 			}
 
 		case reflect.Struct:
-			if err := resolveStructValue(field); err != nil {
+			if err := resolveStructValue(field, data); err != nil {
 				return err
 			}
 
 		case reflect.Ptr:
 			if !field.IsNil() && field.Elem().Kind() == reflect.Struct {
-				if err := resolveStructValue(field.Elem()); err != nil {
+				if err := resolveStructValue(field.Elem(), data); err != nil {
 					return err
 				}
 			}
@@ -135,7 +144,7 @@ func resolveStructValue(val reflect.Value) error {
 	return nil
 }
 
-func resolvePlaceholders(data []byte) ([]byte, error) {
+func resolvePlaceholders(data []byte, exprData ExprData) ([]byte, error) {
 	var firstErr error
 
 	result := placeholderRegexp.ReplaceAllFunc(data, func(match []byte) []byte {
@@ -148,20 +157,14 @@ func resolvePlaceholders(data []byte) ([]byte, error) {
 			return match
 		}
 
-		rawKey := string(submatches[1])
-		envKey, ok := extractEnvKey(rawKey)
-		if !ok {
-			firstErr = fmt.Errorf("unsupported placeholder %q; expected format ${ { Env.VAR } }", rawKey)
+		expression := string(submatches[1])
+		output, err := ExtractExprResult(expression, exprData)
+		if err != nil {
+			firstErr = err
 			return match
 		}
 
-		value, found := os.LookupEnv(envKey)
-		if !found {
-			firstErr = fmt.Errorf("environment variable %q is not set", envKey)
-			return match
-		}
-
-		return []byte(value)
+		return []byte(output)
 	})
 
 	if firstErr != nil {
@@ -171,22 +174,35 @@ func resolvePlaceholders(data []byte) ([]byte, error) {
 	return result, nil
 }
 
-func extractEnvKey(raw string) (string, bool) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", false
+func ExtractExprResult(raw string, data ExprData) (string, error) {
+	program, err := expr.Compile(raw, expr.Env(data))
+	if err != nil {
+		return "", err
 	}
 
-	// Проверяем префикс без учета регистра
-	if !strings.HasPrefix(strings.ToLower(raw), "env.") {
-		return "", false
+	output, err := expr.Run(program, data)
+	if err != nil {
+		return "", err
 	}
 
-	key := raw[4:]
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return "", false
+	switch output.(type) {
+	case int, int64, float32, float64, bool, string, []string:
+		return fmt.Sprintf("%v", output), nil
+	default:
+		return "", errors.New(app.T_("unknown expr output type"))
+	}
+}
+
+func ExtractExprResultBool(raw string, data ExprData) (bool, error) {
+	program, err := expr.Compile(raw, expr.Env(data), expr.AsBool())
+	if err != nil {
+		return false, err
 	}
 
-	return key, true
+	output, err := expr.Run(program, data)
+	if err != nil {
+		return false, err
+	}
+
+	return output.(bool), nil
 }

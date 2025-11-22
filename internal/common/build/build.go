@@ -20,7 +20,6 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/core"
-	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
 	"apm/internal/common/version"
 	"apm/internal/kernel/service"
@@ -30,15 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/expr-lang/expr"
 )
-
-type ExprData struct {
-	Config  *Config
-	Env     map[string]string
-	Version version.Version
-}
 
 type ConfigService struct {
 	appConfig         *app.Config
@@ -77,9 +68,23 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
 	}
 
-	moduleResolvedEnvMap, err := models.ResolveEnvMap(module.Env)
+	exprData := core.ExprData{
+		Config:  cfgService.serviceHostConfig.Config,
+		Env:     osutils.GetEnvMap(),
+		Version: version.ParseVersion(cfgService.appConfig.ConfigManager.GetConfig().Version),
+	}
+
+	moduleResolvedEnvMap, err := core.ResolveExprMap(module.Env, exprData)
 	if err != nil {
 		return err
+	}
+
+	shouldExecute := true
+	if module.If != "" {
+		shouldExecute, err = core.ExtractExprResultBool(module.If, exprData)
+		if err != nil {
+			return err
+		}
 	}
 
 	existedEnvMap := map[string]string{}
@@ -93,30 +98,6 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		}
 	}
 
-	shouldExecute := true
-	if module.If != "" {
-		data := ExprData{
-			Config:  cfgService.serviceHostConfig.Config,
-			Env:     osutils.GetEnvMap(),
-			Version: version.ParseVersion(cfgService.appConfig.ConfigManager.GetConfig().Version),
-		}
-
-		program, err := expr.Compile(module.If, expr.Env(data))
-		if err != nil {
-			return err
-		}
-
-		output, err := expr.Run(program, data)
-		if err != nil {
-			return err
-		}
-		boolResult, ok := output.(bool)
-		if !ok {
-			return fmt.Errorf("module expression must return bool")
-		}
-		shouldExecute = boolResult
-	}
-
 	if !shouldExecute {
 		return nil
 	}
@@ -126,8 +107,10 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		return fmt.Errorf("module %s has no body", module.Type)
 	}
 
+	exprData.Env = osutils.GetEnvMap()
+
 	// Резолвим env переменные в структуре модуля через рефлексию
-	if err = models.ResolveStruct(body); err != nil {
+	if err = core.ResolveStruct(body, exprData); err != nil {
 		return fmt.Errorf("failed to resolve env variables: %w", err)
 	}
 

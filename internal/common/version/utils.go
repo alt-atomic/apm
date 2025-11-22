@@ -27,14 +27,7 @@ type Version struct {
 	Minor   int
 	Patch   int
 	Commits int
-}
-
-func (v *Version) ToString() string {
-	postfix := ""
-	if v.Commits != 0 {
-		postfix = fmt.Sprintf("+%d", v.Commits)
-	}
-	return fmt.Sprintf("%d.%d.%d%s", v.Major, v.Minor, v.Patch, postfix)
+	Value   string
 }
 
 func ParseVersion(version string) Version {
@@ -69,6 +62,12 @@ func ParseVersion(version string) Version {
 	if err != nil {
 		panic("Wrong version format")
 	}
+
+	postfix := ""
+	if ver.Commits != 0 {
+		postfix = fmt.Sprintf("+%d", ver.Commits)
+	}
+	ver.Value = fmt.Sprintf("%d.%d.%d%s", ver.Major, ver.Minor, ver.Patch, postfix)
 
 	return ver
 }

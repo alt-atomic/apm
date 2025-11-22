@@ -4,6 +4,7 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
+	"apm/internal/common/version"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -306,15 +307,15 @@ func CheckModules(modules *[]Module) error {
 	return nil
 }
 
-func ReadAndParseConfigEnvYamlFile(name string) (Envs, error) {
+func ReadAndParseConfigEnvYamlFile(name string, version version.Version) (Envs, error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
 		return Envs{}, err
 	}
-	return ParseYamlConfigEnvData(data, true)
+	return ParseYamlConfigEnvData(data, true, version)
 }
 
-func ParseYamlConfigEnvData(data []byte, isYaml bool) (Envs, error) {
+func ParseYamlConfigEnvData(data []byte, isYaml bool, version version.Version) (Envs, error) {
 	var envs Envs
 	var err error
 	if isYaml {
@@ -327,7 +328,10 @@ func ParseYamlConfigEnvData(data []byte, isYaml bool) (Envs, error) {
 		return envs, err
 	}
 
-	resolved, err := models.ResolveEnvMap(envs.Env)
+	resolved, err := ResolveExprMap(envs.Env, ExprData{
+		Env:     osutils.GetEnvMap(),
+		Version: version,
+	})
 	if err != nil {
 		return Envs{}, err
 	}

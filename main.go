@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/godbus/dbus/v5"
@@ -60,9 +59,6 @@ func main() {
 	setupSignalHandling()
 	ctx = context.WithValue(ctx, app.AppConfigKey, appConfig)
 
-	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
-	setEnvVersion(v)
-
 	systemCommands := system.CommandList(ctx)
 	distroboxCommands := distrobox.CommandList(ctx)
 	kernelCommands := kernel.CommandList(ctx)
@@ -71,7 +67,7 @@ func main() {
 	rootCommand := &cli.Command{
 		Name:    "apm",
 		Usage:   "Atomic Package Manager",
-		Version: v.ToString(),
+		Version: version.ParseVersion(appConfig.ConfigManager.GetConfig().Version).Value,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -266,7 +262,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 func printVersion(_ context.Context, _ *cli.Command) error {
 	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
-	fmt.Printf("%s version %s\n", "apm", v.ToString())
+	fmt.Printf("%s version %s\n", "apm", v.Value)
 	return nil
 }
 
@@ -312,25 +308,6 @@ func closeApp(appConfig *app.Config) {
 	if appConfig.DatabaseManager != nil {
 		if err := appConfig.DatabaseManager.Close(); err != nil {
 			app.Log.Errorf(app.T_("failed to close databases: %w"), err)
-		}
-	}
-}
-
-func setEnvVersion(v version.Version) {
-	versionEnvVars := []struct {
-		key   string
-		value string
-	}{
-		{"APM_VERSION", v.ToString()},
-		{"APM_VERSION_MAJOR", strconv.Itoa(v.Major)},
-		{"APM_VERSION_MINOR", strconv.Itoa(v.Minor)},
-		{"APM_VERSION_PATCH", strconv.Itoa(v.Patch)},
-		{"APM_VERSION_COMMITS", strconv.Itoa(v.Commits)},
-	}
-
-	for _, env := range versionEnvVars {
-		if err := os.Setenv(env.key, env.value); err != nil {
-			app.Log.Fatal(err)
 		}
 	}
 }
