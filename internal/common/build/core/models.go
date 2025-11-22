@@ -15,7 +15,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 const (
@@ -235,16 +236,17 @@ func (m Module) GetLabel() any {
 	return m.Name
 }
 
-func (m *Module) UnmarshalYAML(value *yaml.Node) error {
+func (m *Module) UnmarshalYAML(n ast.Node) error {
 	var aux struct {
 		Name string            `yaml:"name"`
 		Env  map[string]string `yaml:"env"`
 		If   string            `yaml:"if"`
 		Type string            `yaml:"type"`
-		Body yaml.Node         `yaml:"body"`
+		Body ast.MappingNode   `yaml:"body"`
 	}
 
-	if err := value.Decode(&aux); err != nil {
+	decoder := yaml.NewDecoder(n, yaml.DisallowUnknownField())
+	if err := decoder.Decode(&aux); err != nil {
 		return err
 	}
 
@@ -253,7 +255,14 @@ func (m *Module) UnmarshalYAML(value *yaml.Node) error {
 	m.If = aux.If
 	m.Type = aux.Type
 	return m.decodeBody(func(target any) error {
-		return aux.Body.Decode(target)
+		decoder := yaml.NewDecoder(
+			&aux.Body,
+			yaml.DisallowUnknownField(),
+		)
+		if err := decoder.Decode(target); err != nil {
+			return err
+		}
+		return nil
 	})
 }
 
@@ -271,7 +280,9 @@ func (m *Module) UnmarshalJSON(data []byte) error {
 	}
 
 	return m.decodeBody(func(target any) error {
-		return json.Unmarshal(aux.Body, target)
+		dec := json.NewDecoder(bytes.NewReader(aux.Body))
+		dec.DisallowUnknownFields()
+		return dec.Decode(target)
 	})
 }
 
@@ -288,7 +299,7 @@ func (m *Module) decodeBody(decode func(any) error) error {
 
 	body := factory()
 	if err := decode(body); err != nil {
-		return fmt.Errorf("failed to decode module body: %w", err)
+		return fmt.Errorf("failed to decode module %s: %w", m.GetLabel(), err)
 	}
 	m.Body = body
 	return nil
@@ -362,8 +373,10 @@ func parseConfigData(data []byte, isYaml bool, hasRoot bool) (Config, error) {
 	var cfg Config
 	var err error
 	if isYaml {
-		decoder := yaml.NewDecoder(bytes.NewReader(data))
-		decoder.KnownFields(true)
+		decoder := yaml.NewDecoder(
+			bytes.NewReader(data),
+			yaml.DisallowUnknownField(),
+		)
 		err = decoder.Decode(&cfg)
 	} else {
 		decoder := json.NewDecoder(bytes.NewReader(data))
