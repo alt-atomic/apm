@@ -123,9 +123,9 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 			}
 
 			linkBody := &LinkBody{
-				Target:      etcOsRelease,
-				Destination: usrLibOsRelease,
-				Replace:     true,
+				Target:  etcOsRelease,
+				To:      usrLibOsRelease,
+				Replace: true,
 			}
 
 			if err = linkBody.Execute(ctx, svc); err != nil {

@@ -45,7 +45,7 @@ func (b *MoveBody) Execute(ctx context.Context, svc Service) error {
 	}
 
 	if b.CreateLink {
-		linkBody := &LinkBody{Target: b.Target, Destination: b.Destination}
+		linkBody := &LinkBody{Target: b.Target, To: b.Destination}
 
 		if err := linkBody.Execute(ctx, svc); err != nil {
 			return err
