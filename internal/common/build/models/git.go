@@ -11,7 +11,7 @@ import (
 
 type GitBody struct {
 	// URL git-репозитория
-	Url string `yaml:"target,omitempty" json:"target,omitempty" required:""`
+	Url string `yaml:"url,omitempty" json:"url,omitempty" required:""`
 
 	// Команды для выполнения относительно git репозитория
 	Command string `yaml:"command,omitempty" json:"command,omitempty" required:""`
