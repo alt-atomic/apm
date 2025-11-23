@@ -228,7 +228,11 @@ func (cfgService *ConfigService) executeIncludeDir(ctx context.Context, dir stri
 			return nil
 		}
 
-		return cfgService.executeIncludeFileWithCD(ctx, path)
+		if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
+			return cfgService.executeIncludeFileWithCD(ctx, path)
+		}
+
+		return nil
 	})
 }
 
