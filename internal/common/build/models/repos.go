@@ -2,17 +2,25 @@ package models
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/osutils"
 	"context"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
-var aptSourcesList = "/etc/apt/sources.list"
-var aptSourcesListD = "/etc/apt/sources.list.d"
+var (
+	goodBranches = []string{
+		"sisyphus",
+		// "p11",
+	}
+	aptSourcesList  = "/etc/apt/sources.list"
+	aptSourcesListD = "/etc/apt/sources.list.d"
+)
 
 type ReposBody struct {
 	// Очистить репозитории
@@ -24,7 +32,7 @@ type ReposBody struct {
 	// Ветка репозитория ALT. Сейчас доступен только sisyphus
 	Branch string `yaml:"branch,omitempty" json:"branch,omitempty" needs:"Name"`
 
-	// Дата в формате YYYY/MM/DD. Если пуст, берется latest
+	// Дата в формате YYYY.MM.DD. Если пуст, берется обычныц репозиторий. Может быть latest
 	Date string `yaml:"date,omitempty" json:"date,omitempty" needs:"Branch"`
 
 	// Задачи для подключения в качестве репозиториев
@@ -37,15 +45,15 @@ type ReposBody struct {
 	NoUpdate bool `yaml:"no-update,omitempty" json:"no-update,omitempty"`
 }
 
-func (r *ReposBody) AllRepos() []string {
+func (b *ReposBody) AllRepos() []string {
 	var repos []string
-	repos = append(repos, r.Custom...)
-	repos = append(repos, r.TasksRepos()...)
-	repos = append(repos, r.BranchRepos()...)
+	repos = append(repos, b.Custom...)
+	repos = append(repos, b.TasksRepos()...)
+	repos = append(repos, b.BranchRepos()...)
 	return repos
 }
 
-func (r *ReposBody) TasksRepos() []string {
+func (b *ReposBody) TasksRepos() []string {
 	var repos []string
 	var templates []string
 
@@ -58,7 +66,7 @@ func (r *ReposBody) TasksRepos() []string {
 		return []string{}
 	}
 
-	for _, task := range r.Tasks {
+	for _, task := range b.Tasks {
 		for _, template := range templates {
 			repos = append(repos, fmt.Sprintf(template, task))
 		}
@@ -67,45 +75,47 @@ func (r *ReposBody) TasksRepos() []string {
 	return repos
 }
 
-func (r *ReposBody) BranchRepos() []string {
-	if r.Branch == "" {
+func (b *ReposBody) BranchRepos() []string {
+	if b.Branch == "" {
 		return []string{}
 	}
 
-	date := "latest"
-	if r.Date != "" {
-		date = fmt.Sprintf("date/%s", r.Date)
-	}
-
 	var repos []string
-	var templates []string
+	repoArchs := []string{}
 
 	switch runtime.GOARCH {
 	case "amd64":
-		templates = append(
-			templates,
-			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/x86_64 classic",
-			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/x86_64-i586 classic",
-			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/noarch classic",
-		)
+		repoArchs = append(repoArchs, "x86_64", "noarch", "x86_64-i586")
 	case "arm64", "aarch64":
-		templates = append(
-			templates,
-			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/aarch64 classic",
-			"rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/noarch classic",
-		)
+		repoArchs = append(repoArchs, "aarch64", "noarch")
 	default:
 		return []string{}
 	}
 
-	for _, template := range templates {
-		repos = append(repos, fmt.Sprintf(template, r.Branch, date))
+	if b.Date == "" {
+		branchName := ""
+		if b.Branch == "sisyphus" {
+			branchName = osutils.Capitalize(b.Branch)
+		} else {
+			branchName = b.Branch
+		}
+		for _, arch := range repoArchs {
+			repos = append(repos, fmt.Sprintf("rpm [alt] https://ftp.altlinux.org/pub/distributions ALTLinux/%s/%s classic", branchName, arch))
+		}
+	} else {
+		for _, arch := range repoArchs {
+			repos = append(repos, fmt.Sprintf("rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/%s classic", b.Branch, fmt.Sprintf("date/%s", strings.ReplaceAll(b.Date, ".", "/")), arch))
+		}
 	}
 
 	return repos
 }
 
 func (b *ReposBody) Execute(ctx context.Context, svc Service) error {
+	if b.Branch == "" || !slices.Contains(goodBranches, b.Branch) {
+		return fmt.Errorf(app.T_("unknown branch %s"), b.Branch)
+	}
+
 	if b.Clean {
 		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesListD))
 		if err := filepath.Walk(aptSourcesListD, func(p string, _ os.FileInfo, err error) error {
@@ -122,7 +132,8 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) error {
 			return err
 		}
 
-		if err := os.WriteFile(aptSourcesList, []byte(""), 0644); err != nil {
+		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesList))
+		if err := os.WriteFile(aptSourcesList, []byte("\n"), 0644); err != nil {
 			return err
 		}
 	}
