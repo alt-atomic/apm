@@ -22,7 +22,7 @@ type SystemdBody struct {
 	Masked bool `yaml:"masked,omitempty" json:"masked,omitempty" conflicts:"Enabled"`
 }
 
-func (b *SystemdBody) Execute(ctx context.Context, _ Service) error {
+func (b *SystemdBody) Execute(ctx context.Context, _ Service) (any, error) {
 	for _, target := range b.Targets {
 		var text = fmt.Sprintf("Disabling %s", target)
 		var action = "disable"
@@ -46,8 +46,8 @@ func (b *SystemdBody) Execute(ctx context.Context, _ Service) error {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }

@@ -20,32 +20,17 @@
 
 package models
 
-import (
-	"context"
-	"fmt"
-	"os"
-)
+import "strings"
 
-var EtcHostname = "/etc/hostname"
-var EtcHosts = "/etc/hosts"
+var Divider = "::::DIVIDER::::"
 
-type NetworkBody struct {
-	// Hostname in image
-	Hostname string `yaml:"hostname,omitempty" json:"hostname,omitempty" required:""`
-}
-
-func (b *NetworkBody) Execute(ctx context.Context, svc Service) (any, error) {
-	if err := os.WriteFile(EtcHostname, fmt.Appendf(nil, "%s\n", b.Hostname), 0644); err != nil {
-		return nil, err
+func GetEnvFromOutput(bytes string) map[string]string {
+	m := make(map[string]string)
+	for _, line := range strings.Split(bytes, "\n") {
+		if strings.Contains(line, "=") {
+			kv := strings.SplitN(line, "=", 2)
+			m[kv[0]] = kv[1]
+		}
 	}
-	hosts := fmt.Sprintf(
-		"127.0.0.1 localhost %s\n::1 localhost6 %s6\n",
-		b.Hostname,
-		b.Hostname,
-	)
-	if err := os.WriteFile(EtcHosts, []byte(hosts), 0644); err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return m
 }

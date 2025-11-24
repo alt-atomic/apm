@@ -26,6 +26,7 @@ package osutils
 
 import (
 	"apm/internal/common/app"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -192,37 +193,113 @@ func AppendFile(sourcePath, destPath string, perm fs.FileMode) error {
 	return nil
 }
 
-func ExecShOutput(ctx context.Context, command string, chDir string, std bool) (string, error) {
+type Writer struct {
+	RealWriter       io.Writer
+	RealOutputWriter io.Writer
+	Divider          string
+	dividerPassed    bool
+}
+
+func (w *Writer) Write(p []byte) (n int, err error) {
+	if w.dividerPassed {
+		n, err = w.RealOutputWriter.Write(p)
+		if err != nil {
+			return
+		}
+	} else {
+		if strings.Contains(string(p), w.Divider) {
+			w.dividerPassed = true
+
+			parts := strings.SplitN(string(p), w.Divider, 2)
+
+			n, err = w.RealWriter.Write([]byte(parts[0]))
+			if err != nil {
+				return
+			}
+			n, err = w.RealOutputWriter.Write([]byte(parts[1]))
+			if err != nil {
+				return
+			}
+			n = len(p)
+			err = nil
+
+		} else {
+			n, err = w.RealWriter.Write(p)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	return
+}
+
+func ExecShWithDivider(
+	ctx context.Context,
+	command string,
+	commandOutput string,
+	divider string,
+	quite bool,
+) (string, string, error) {
+	cmd := exec.CommandContext(ctx, "bash", "-c", command+fmt.Sprintf("\necho '%s'\n%s", divider, commandOutput))
+
+	// Если нужен вывод в консоль И в переменную
+	var cmdout bytes.Buffer
+	var cmdoutOutput bytes.Buffer
+	if quite {
+		cmd.Stdout = &Writer{
+			RealWriter:       &cmdout,
+			RealOutputWriter: &cmdoutOutput,
+			Divider:          divider,
+		}
+	} else {
+		cmd.Stdout = &Writer{
+			RealWriter:       io.MultiWriter(os.Stdout, &cmdout),
+			RealOutputWriter: &cmdoutOutput,
+			Divider:          divider,
+		}
+	}
+
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	result := cmdout.Bytes()
+	resultOutput := cmdoutOutput.Bytes()
+
+	if err != nil {
+		return "", "", err
+	}
+
+	return string(result), string(resultOutput), nil
+}
+
+func ExecShWithOutput(
+	ctx context.Context,
+	command string,
+	chDir string,
+	quite bool,
+) (string, error) {
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	if chDir != "" {
 		cmd.Dir = chDir
 	}
-	if std {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+
+	// Если нужен вывод в консоль И в переменную
+	var stdout bytes.Buffer
+	if quite {
+		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
+	} else {
+		cmd.Stdout = io.MultiWriter(&stdout)
 	}
-	var out, err = cmd.Output()
+
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	output := stdout.Bytes()
+
 	if err != nil {
 		return "", err
 	}
 
-	return strings.Trim(string(out), "\n"), nil
-}
-
-func ExecSh(ctx context.Context, command string, chDir string, std bool, quite bool) error {
-	cmd := exec.CommandContext(ctx, "bash", "-c", command)
-	if chDir != "" {
-		cmd.Dir = chDir
-	}
-	if std {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-	return nil
+	return string(output), nil
 }
 
 // Move attempts to use os.Rename and if that fails (such as for a cross-device move),

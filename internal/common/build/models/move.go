@@ -23,7 +23,7 @@ type MoveBody struct {
 	CreateLink bool `yaml:"create-link,omitempty" json:"create-link,omitempty"`
 }
 
-func (b *MoveBody) Execute(ctx context.Context, svc Service) error {
+func (b *MoveBody) Execute(ctx context.Context, svc Service) (any, error) {
 	var withText []string
 	if b.CreateLink {
 		withText = append(withText, "with linking")
@@ -34,22 +34,22 @@ func (b *MoveBody) Execute(ctx context.Context, svc Service) error {
 	app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
 
 	if !filepath.IsAbs(b.Target) {
-		return fmt.Errorf("target in move type must be absolute path")
+		return nil, fmt.Errorf("target in move type must be absolute path")
 	}
 	if !filepath.IsAbs(b.Destination) {
-		return fmt.Errorf("destination in move type must be absolute path")
+		return nil, fmt.Errorf("destination in move type must be absolute path")
 	}
 
 	if err := osutils.Move(b.Target, b.Destination, b.Replace); err != nil {
-		return err
+		return nil, err
 	}
 
 	if b.CreateLink {
 		linkBody := &LinkBody{Target: b.Target, To: b.Destination}
 
-		if err := linkBody.Execute(ctx, svc); err != nil {
-			return err
+		if _, err := linkBody.Execute(ctx, svc); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }

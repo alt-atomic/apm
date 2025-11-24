@@ -18,23 +18,23 @@ type RemoveBody struct {
 	Inside bool `yaml:"inside,omitempty" json:"inside,omitempty"`
 }
 
-func (b *RemoveBody) Execute(_ context.Context, _ Service) error {
+func (b *RemoveBody) Execute(_ context.Context, _ Service) (any, error) {
 	for _, pathTarget := range b.Targets {
 		if !filepath.IsAbs(pathTarget) {
-			return fmt.Errorf("target in remove type must be absolute path")
+			return nil, fmt.Errorf("target in remove type must be absolute path")
 		}
 
 		if b.Inside {
 			app.Log.Info(fmt.Sprintf("Cleaning %s", strings.Join(b.Targets, ", ")))
 			if err := osutils.Clean(pathTarget); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.Targets, ", ")))
 			if err := os.RemoveAll(pathTarget); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }

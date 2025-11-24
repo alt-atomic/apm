@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 
 	"github.com/goccy/go-yaml"
@@ -219,6 +220,9 @@ type Module struct {
 	// Тип тела модуля
 	Type string `yaml:"type" json:"type"`
 
+	// Module ID
+	Id string `yaml:"id,omitempty" json:"id,omitempty"`
+
 	// Environmant vars for module
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 
@@ -227,22 +231,30 @@ type Module struct {
 
 	// Тело модуля
 	Body models.Body `yaml:"body" json:"body"`
+
+	// Данные для вывода
+	Output map[string]string `yaml:"output,omitempty" json:"output,omitempty"`
 }
 
 func (m Module) GetLabel() any {
-	if m.Name == "" {
+	if m.Name != "" {
+		return m.Name
+	} else if m.Id != "" {
+		return fmt.Sprintf("id=%s", m.Id)
+	} else {
 		return fmt.Sprintf("type=%s", m.Type)
 	}
-	return m.Name
 }
 
 func (m *Module) UnmarshalYAML(n ast.Node) error {
 	var aux struct {
-		Name string            `yaml:"name"`
-		Env  map[string]string `yaml:"env"`
-		If   string            `yaml:"if"`
-		Type string            `yaml:"type"`
-		Body ast.MappingNode   `yaml:"body"`
+		Name   string            `yaml:"name"`
+		Env    map[string]string `yaml:"env"`
+		If     string            `yaml:"if"`
+		Id     string            `yaml:"id"`
+		Type   string            `yaml:"type"`
+		Body   ast.MappingNode   `yaml:"body"`
+		Output map[string]string `yaml:"output"`
 	}
 
 	decoder := yaml.NewDecoder(n, yaml.DisallowUnknownField())
@@ -253,7 +265,9 @@ func (m *Module) UnmarshalYAML(n ast.Node) error {
 	m.Name = aux.Name
 	m.Env = aux.Env
 	m.If = aux.If
+	m.Id = aux.Id
 	m.Type = aux.Type
+	m.Output = aux.Output
 	return m.decodeBody(func(target any) error {
 		decoder := yaml.NewDecoder(
 			&aux.Body,
@@ -306,7 +320,25 @@ func (m *Module) decodeBody(decode func(any) error) error {
 }
 
 func CheckModules(modules *[]Module) error {
+	moduleIds := []string{}
+
+	re, err := regexp.Compile(`^[A-z][A-z0-9_]*$`)
+	if err != nil {
+		return err
+	}
+
 	for _, module := range *modules {
+		if module.Id != "" {
+			matched := re.MatchString(module.Id)
+
+			if !matched {
+				return fmt.Errorf(app.T_("Invalid id '%s'. Acceptable characters are letters, numbers, and underscores. The key must start with a letter."), module.Id)
+			}
+			if slices.Contains(moduleIds, module.Id) {
+				return fmt.Errorf("found id collision")
+			}
+			moduleIds = append(moduleIds, module.Id)
+		}
 		if module.Body == nil {
 			return fmt.Errorf("module %s has empty body", module.Type)
 		}

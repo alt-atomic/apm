@@ -26,18 +26,18 @@ type GitBody struct {
 	Quite bool `yaml:"quite,omitempty" json:"quite,omitempty"`
 }
 
-func (b *GitBody) Execute(ctx context.Context, svc Service) error {
+func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if len(b.Deps) != 0 {
 		packagesBody := &PackagesBody{Install: b.Deps}
 
-		if err := packagesBody.Execute(ctx, svc); err != nil {
-			return err
+		if _, err := packagesBody.Execute(ctx, svc); err != nil {
+			return nil, err
 		}
 	}
 
 	tempDir, err := os.MkdirTemp(os.TempDir(), "git-*")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -53,20 +53,20 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err = cmd.Run(); err != nil {
-		return err
+		return nil, err
 	}
 
 	app.Log.Debug(fmt.Sprintf("Executing `%s`", b.Command))
-	if err = osutils.ExecSh(ctx, b.Command, tempDir, true, b.Quite); err != nil {
-		return err
+	if _, err = osutils.ExecShWithOutput(ctx, b.Command, tempDir, b.Quite); err != nil {
+		return nil, err
 	}
 
 	if len(b.Deps) != 0 {
 		packagesBody := &PackagesBody{Remove: b.Deps}
 
-		if err := packagesBody.Execute(ctx, svc); err != nil {
-			return err
+		if _, err := packagesBody.Execute(ctx, svc); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }

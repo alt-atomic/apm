@@ -36,7 +36,7 @@ func (b *KernelBody) Check() error {
 	return nil
 }
 
-func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
+func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 	mgr := svc.KernelManager()
 	modules := append([]string{}, b.Modules...)
 
@@ -45,7 +45,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
 	if b.Flavour != "" {
 		latestKernelInfo, err = mgr.FindLatestKernel(ctx, b.Flavour)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -61,7 +61,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
 			modules = append(modules, inheritedModules...)
 		}
 	} else {
-		return errors.New("kernel must be specified")
+		return nil, errors.New("kernel must be specified")
 	}
 
 	additionalPackages, _ := mgr.AutoSelectHeadersAndFirmware(ctx, toInstall, b.IncludeHeaders)
@@ -78,33 +78,33 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
 	if currentKernel != nil {
 		app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
 		if err = mgr.RemoveKernel(currentKernel, true); err != nil {
-			return err
+			return nil, err
 		}
 
 		entries, err := os.ReadDir(kernelDir)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, entry := range entries {
 			if err = os.RemoveAll(filepath.Join(kernelDir, entry.Name())); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	app.Log.Info(fmt.Sprintf("Installing kernel %s with modules: %s", toInstall.Flavour, strings.Join(modules, ", ")))
 	if err = mgr.InstallKernel(ctx, toInstall, modules, b.IncludeHeaders, false); err != nil {
-		return err
+		return nil, err
 	}
 
 	app.Log.Info("Updating packages DB")
 	if err = svc.UpdatePackages(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
 	latestInstalledKernelVersion, err := LatestInstalledKernelVersion()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	app.Log.Info("Copy vmlinuz")
@@ -114,7 +114,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
 		true,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if b.RebuildInitramfs != "" {
@@ -124,17 +124,19 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) error {
 
 			kernelVersion, err := LatestInstalledKernelVersion()
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			if err = osutils.ExecSh(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true, true); err != nil {
-				return err
+			if _, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
+				return nil, err
 			}
 
-			return osutils.ExecSh(ctx, fmt.Sprintf("dracut --force '%s/%s/initramfs.img' %s", kernelDir, kernelVersion, kernelVersion), "", true, false)
+			_, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("dracut --force '%s/%s/initramfs.img' %s", kernelDir, kernelVersion, kernelVersion), "", false)
+
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func LatestInstalledKernelVersion() (string, error) {

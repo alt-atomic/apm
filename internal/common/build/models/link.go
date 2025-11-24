@@ -21,19 +21,19 @@ type LinkBody struct {
 	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
 }
 
-func (b *LinkBody) Execute(ctx context.Context, svc Service) error {
+func (b *LinkBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if !filepath.IsAbs(b.Target) {
-		return errors.New(app.T_("target in link type must be absolute path"))
+		return nil, errors.New(app.T_("target in link type must be absolute path"))
 	}
 
 	if _, err := os.Stat(path.Dir(b.Target)); os.IsNotExist(err) {
-		return fmt.Errorf(app.T_("path %s for link doesn't exists"), path.Dir(b.Target))
+		return nil, fmt.Errorf(app.T_("path %s for link doesn't exists"), path.Dir(b.Target))
 	}
 
 	app.Log.Info(fmt.Sprintf("Linking %s to %s", b.Target, b.To))
 	if b.Replace {
 		if err := os.RemoveAll(b.Target); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -42,7 +42,7 @@ func (b *LinkBody) Execute(ctx context.Context, svc Service) error {
 		if err != nil {
 			relativePath = b.To
 		}
-		return os.Symlink(relativePath, b.Target)
+		return nil, os.Symlink(relativePath, b.Target)
 	}
-	return os.Symlink(b.To, b.Target)
+	return nil, os.Symlink(b.To, b.Target)
 }

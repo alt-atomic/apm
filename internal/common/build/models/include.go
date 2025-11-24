@@ -9,11 +9,11 @@ type IncludeBody struct {
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`
 }
 
-func (b *IncludeBody) Execute(ctx context.Context, svc Service) error {
+func (b *IncludeBody) Execute(ctx context.Context, svc Service) (any, error) {
 	for _, target := range b.Targets {
 		if err := svc.ExecuteInclude(ctx, target); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }

@@ -22,22 +22,22 @@ type PackagesBody struct {
 	Upgrade bool `yaml:"upgrade,omitempty" json:"upgrade,omitempty"`
 }
 
-func (b *PackagesBody) Execute(ctx context.Context, svc Service) error {
+func (b *PackagesBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if b.Update {
 		app.Log.Info("Updating package cache")
 		if err := svc.UpdatePackages(ctx); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if b.Upgrade {
 		app.Log.Info("Upgrading packages")
 		if err := svc.UpgradePackages(ctx); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if len(b.Install) == 0 && len(b.Remove) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	var text []string
@@ -59,5 +59,5 @@ func (b *PackagesBody) Execute(ctx context.Context, svc Service) error {
 		ops = append(ops, p+"-")
 	}
 
-	return svc.CombineInstallRemovePackages(ctx, ops, false, false)
+	return nil, svc.CombineInstallRemovePackages(ctx, ops, false, false)
 }

@@ -18,20 +18,20 @@ type MkdirBody struct {
 	Perm string `yaml:"perm,omitempty" json:"perm,omitempty" required:""`
 }
 
-func (b *MkdirBody) Execute(_ context.Context, _ Service) error {
+func (b *MkdirBody) Execute(_ context.Context, _ Service) (any, error) {
 	app.Log.Info(fmt.Sprintf("Creating dirs at %s", strings.Join(b.Targets, ", ")))
 	for _, pathTarget := range b.Targets {
 		if !filepath.IsAbs(pathTarget) {
-			return fmt.Errorf("target in mkdir type must be absolute path")
+			return nil, fmt.Errorf("target in mkdir type must be absolute path")
 		}
 
 		mode, err := osutils.StringToFileMode(b.Perm)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if err = os.MkdirAll(pathTarget, mode); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }

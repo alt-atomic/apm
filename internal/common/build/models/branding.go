@@ -32,7 +32,7 @@ type BrandingBody struct {
 	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty" needs:"Name"`
 }
 
-func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
+func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if b.Name != "" {
 		var brandingPackagesPrefix = fmt.Sprintf("branding-%s-", b.Name)
 
@@ -41,10 +41,10 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 		}
 		packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if len(packages) == 0 {
-			return fmt.Errorf("no branding packages found for %s", b.Name)
+			return nil, fmt.Errorf("no branding packages found for %s", b.Name)
 		}
 
 		var brandingMap = map[string]_package.Package{}
@@ -57,14 +57,14 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 
 		packagesBody := &PackagesBody{Install: pkgsNames}
 
-		if err = packagesBody.Execute(ctx, svc); err != nil {
-			return err
+		if _, err = packagesBody.Execute(ctx, svc); err != nil {
+			return nil, err
 		}
 
 		if _, ok := brandingMap["release"]; ok {
 			info, err := os.Stat(usrLibOsRelease)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			vars := osrelease.NewFromName(usrLibOsRelease)
 
@@ -119,7 +119,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 
 			newOsReleaseContent := strings.Join(newLines, "\n") + "\n"
 			if err = os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), info.Mode().Perm()); err != nil {
-				return err
+				return nil, err
 			}
 
 			linkBody := &LinkBody{
@@ -128,8 +128,8 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 				Replace: true,
 			}
 
-			if err = linkBody.Execute(ctx, svc); err != nil {
-				return err
+			if _, err = linkBody.Execute(ctx, svc); err != nil {
+				return nil, err
 			}
 		}
 	}
@@ -140,11 +140,11 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 		if b.PlymouthTheme == "disabled" {
 			if osutils.IsExists(plymouthConfigFile) {
 				if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
-					return err
+					return nil, err
 				}
 				for _, p := range plymouthPaths {
 					if err := os.RemoveAll(p); err != nil {
-						return err
+						return nil, err
 					}
 				}
 			}
@@ -153,7 +153,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 			if osutils.IsExists(plymouthThemesDir) {
 				files, err := os.ReadDir(plymouthThemesDir)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				for _, file := range files {
 					themes = append(themes, file.Name())
@@ -166,10 +166,10 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 				}
 				packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if len(packages) == 0 {
-					return fmt.Errorf("no plymouth theme found for %s", b.PlymouthTheme)
+					return nil, fmt.Errorf("no plymouth theme found for %s", b.PlymouthTheme)
 				}
 
 				var pkgsNames []string
@@ -179,8 +179,8 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 
 				packagesBody := &PackagesBody{Install: pkgsNames}
 
-				if err = packagesBody.Execute(ctx, svc); err != nil {
-					return err
+				if _, err = packagesBody.Execute(ctx, svc); err != nil {
+					return nil, err
 				}
 			}
 
@@ -192,26 +192,26 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) error {
 			}, "\n") + "\n"
 
 			if err := os.MkdirAll(path.Dir(plymouthConfigFile), 0644); err != nil {
-				return err
+				return nil, err
 			}
 			if err := os.WriteFile(plymouthConfigFile, []byte(plymouthConfig), 0644); err != nil {
-				return err
+				return nil, err
 			}
 
 			for _, p := range plymouthPaths {
 				if err := os.MkdirAll(path.Dir(p), 0644); err != nil {
-					return err
+					return nil, err
 				}
 			}
 
 			if err := os.WriteFile(plymouthKargsPath, []byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
-				return err
+				return nil, err
 			}
 			if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }

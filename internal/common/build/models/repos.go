@@ -111,9 +111,9 @@ func (b *ReposBody) BranchRepos() []string {
 	return repos
 }
 
-func (b *ReposBody) Execute(ctx context.Context, svc Service) error {
+func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if b.Branch == "" || !slices.Contains(goodBranches, b.Branch) {
-		return fmt.Errorf(app.T_("unknown branch %s"), b.Branch)
+		return nil, fmt.Errorf(app.T_("unknown branch %s"), b.Branch)
 	}
 
 	if b.Clean {
@@ -129,18 +129,18 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) error {
 			}
 			return nil
 		}); err != nil {
-			return err
+			return nil, err
 		}
 
 		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesList))
 		if err := os.WriteFile(aptSourcesList, []byte("\n"), 0644); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	allRepos := b.AllRepos()
 	if len(allRepos) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	sourcesPath := path.Join(
@@ -150,16 +150,16 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) error {
 	app.Log.Info(fmt.Sprintf("Setting repos to %s", sourcesPath))
 
 	if err := svc.InstallPackages(ctx, []string{"ca-certificates"}); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := os.WriteFile(sourcesPath, []byte(strings.Join(allRepos, "\n")+"\n"), 0644); err != nil {
-		return err
+		return nil, err
 	}
 
 	if !b.NoUpdate {
-		return svc.UpdatePackages(ctx)
+		return nil, svc.UpdatePackages(ctx)
 	}
 
-	return nil
+	return nil, nil
 }

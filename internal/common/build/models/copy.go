@@ -24,7 +24,7 @@ func (b *CopyBody) Check() error {
 	return nil
 }
 
-func (b *CopyBody) Execute(_ context.Context, _ Service) error {
+func (b *CopyBody) Execute(_ context.Context, _ Service) (any, error) {
 	replaceText := ""
 	if b.Replace {
 		replaceText = " with replacing"
@@ -32,8 +32,8 @@ func (b *CopyBody) Execute(_ context.Context, _ Service) error {
 	app.Log.Info(fmt.Sprintf("Copying %s to %s%s", b.Target, b.Destination, replaceText))
 
 	if !filepath.IsAbs(b.Destination) {
-		return fmt.Errorf("destination in move type must be absolute path")
+		return nil, fmt.Errorf("destination in move type must be absolute path")
 	}
 
-	return osutils.Copy(b.Target, b.Destination, b.Replace)
+	return nil, osutils.Copy(b.Target, b.Destination, b.Replace)
 }

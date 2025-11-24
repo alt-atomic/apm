@@ -21,25 +21,25 @@ type ReplaceBody struct {
 	Repl string `yaml:"repl,omitempty" json:"repl,omitempty" required:""`
 }
 
-func (b *ReplaceBody) Execute(_ context.Context, _ Service) error {
+func (b *ReplaceBody) Execute(_ context.Context, _ Service) (any, error) {
 	app.Log.Info(fmt.Sprintf("Replacing %s to %s in %s", b.Pattern, b.Repl, b.Target))
 
 	if !filepath.IsAbs(b.Target) {
-		return fmt.Errorf("target in replace type must be absolute path")
+		return nil, fmt.Errorf("target in replace type must be absolute path")
 	}
 
 	info, err := os.Stat(b.Target)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	data, err := os.ReadFile(b.Target)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	re, err := regexp.Compile(b.Pattern)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	lines := strings.Split(string(data), "\n")
@@ -47,5 +47,5 @@ func (b *ReplaceBody) Execute(_ context.Context, _ Service) error {
 		lines[i] = re.ReplaceAllString(line, b.Repl)
 	}
 
-	return os.WriteFile(b.Target, []byte(strings.Join(lines, "\n")), info.Mode().Perm())
+	return nil, os.WriteFile(b.Target, []byte(strings.Join(lines, "\n")), info.Mode().Perm())
 }

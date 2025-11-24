@@ -20,5 +20,8 @@ type Service interface {
 type Body interface {
 	// context.Context - app context
 	// Service - build service
-	Execute(context.Context, Service) error
+	//
+	// returns
+	// any as output struct
+	Execute(context.Context, Service) (any, error)
 }

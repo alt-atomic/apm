@@ -33,6 +33,7 @@ import (
 
 type ConfigService struct {
 	appConfig         *app.Config
+	modulesMap        map[string]core.MapModule
 	serviceAptActions *_package.Actions
 	serviceDBService  *_package.PackageDBService
 	kernelManager     *service.Manager
@@ -42,6 +43,7 @@ type ConfigService struct {
 func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, hostConfig *HostConfigService) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
+		modulesMap:        map[string]core.MapModule{},
 		serviceAptActions: aptActions,
 		serviceDBService:  dBService,
 		kernelManager:     kernelManager,
@@ -69,7 +71,7 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	}
 
 	exprData := core.ExprData{
-		Config:  cfgService.serviceHostConfig.Config,
+		Modules: cfgService.modulesMap,
 		Env:     osutils.GetEnvMap(),
 		Version: version.ParseVersion(cfgService.appConfig.ConfigManager.GetConfig().Version),
 	}
@@ -99,6 +101,16 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	}
 
 	if !shouldExecute {
+		if module.Id != "" {
+			cfgService.modulesMap[module.Id] = core.MapModule{
+				Name:   module.Name,
+				Type:   module.Type,
+				Id:     module.Id,
+				If:     false,
+				Output: map[string]string{},
+			}
+		}
+
 		return nil
 	}
 
@@ -114,8 +126,19 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		return fmt.Errorf("failed to resolve env variables: %w", err)
 	}
 
-	if err = body.Execute(ctx, cfgService); err != nil {
+	output := map[string]string{}
+
+	if out, err := body.Execute(ctx, cfgService); err != nil {
 		return fmt.Errorf("module '%s': %w", module.GetLabel(), err)
+	} else {
+		if out == nil {
+			app.Log.Warn(app.T_("'%s' type doesn't support output"), module.Type)
+		} else {
+			output, err = core.ResolveExprMap(module.Output, out)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	for key := range moduleResolvedEnvMap {
@@ -127,6 +150,16 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 			if err = os.Unsetenv(key); err != nil {
 				return err
 			}
+		}
+	}
+
+	if module.Id != "" {
+		cfgService.modulesMap[module.Id] = core.MapModule{
+			Name:   module.Name,
+			Type:   module.Type,
+			Id:     module.Id,
+			If:     true,
+			Output: output,
 		}
 	}
 

@@ -11,15 +11,23 @@ import (
 	"github.com/expr-lang/expr"
 )
 
+type MapModule struct {
+	Name   string
+	Type   string
+	Id     string
+	If     bool
+	Output map[string]string
+}
+
 type ExprData struct {
-	Config  *Config
+	Modules map[string]MapModule
 	Env     map[string]string
 	Version version.Version
 }
 
 var placeholderRegexp = regexp.MustCompile(`\$\{\{\s*([A-Za-z0-9_\-.]+)\s*}}`)
 
-func ResolveExpr(str string, exprData ExprData) (string, error) {
+func ResolveExpr(str string, exprData any) (string, error) {
 	data, err := resolvePlaceholders([]byte(str), exprData)
 	if err != nil {
 		return "", err
@@ -27,7 +35,7 @@ func ResolveExpr(str string, exprData ExprData) (string, error) {
 	return string(data), nil
 }
 
-func ResolveExprSlice(strs []string, data ExprData) ([]string, error) {
+func ResolveExprSlice(strs []string, data any) ([]string, error) {
 	result := make([]string, len(strs))
 	for i, str := range strs {
 		resolved, err := ResolveExpr(str, data)
@@ -39,7 +47,7 @@ func ResolveExprSlice(strs []string, data ExprData) ([]string, error) {
 	return result, nil
 }
 
-func ResolveExprMap(strs map[string]string, data ExprData) (map[string]string, error) {
+func ResolveExprMap(strs map[string]string, data any) (map[string]string, error) {
 	var result = map[string]string{}
 	for key, value := range strs {
 		resolved, err := ResolveExpr(value, data)
@@ -144,7 +152,7 @@ func resolveStructValue(val reflect.Value, data ExprData) error {
 	return nil
 }
 
-func resolvePlaceholders(data []byte, exprData ExprData) ([]byte, error) {
+func resolvePlaceholders(data []byte, exprData any) ([]byte, error) {
 	var firstErr error
 
 	result := placeholderRegexp.ReplaceAllFunc(data, func(match []byte) []byte {
@@ -174,7 +182,7 @@ func resolvePlaceholders(data []byte, exprData ExprData) ([]byte, error) {
 	return result, nil
 }
 
-func ExtractExprResult(raw string, data ExprData) (string, error) {
+func ExtractExprResult(raw string, data any) (string, error) {
 	program, err := expr.Compile(raw, expr.Env(data))
 	if err != nil {
 		return "", err

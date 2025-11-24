@@ -15,12 +15,26 @@ type ShellBody struct {
 	Quite bool `yaml:"quite,omitempty" json:"quite,omitempty"`
 }
 
-func (b *ShellBody) Execute(ctx context.Context, svc Service) error {
+type ShellOutput struct {
+	Env map[string]string
+}
+
+func (b *ShellBody) Execute(ctx context.Context, svc Service) (any, error) {
 	app.Log.Debug(fmt.Sprintf("Executing `%s`", b.Command))
 
-	if err := osutils.ExecSh(ctx, b.Command, svc.ResourcesDir(), true, b.Quite); err != nil {
-		return err
+	output := ShellOutput{}
+
+	if _, cmdOutputShell, err := osutils.ExecShWithDivider(
+		ctx,
+		b.Command,
+		"env",
+		Divider,
+		b.Quite,
+	); err != nil {
+		return nil, err
+	} else {
+		output.Env = GetEnvFromOutput(cmdOutputShell)
 	}
 
-	return nil
+	return output, nil
 }
