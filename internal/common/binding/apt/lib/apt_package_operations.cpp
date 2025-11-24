@@ -180,7 +180,6 @@ AptResult process_package_installs(AptCache *cache,
 
         std::string raw(install_names[i]);
         RequirementSpec req = parse_requirement(raw);
-        requested_install.insert(req.name);
 
         pkgCache::PkgIterator pkg;
         AptResult result = find_install_package(cache, req, pkg);
@@ -192,6 +191,9 @@ AptResult process_package_installs(AptCache *cache,
         if (result.code != APT_SUCCESS) {
             return result;
         }
+
+        // Store the actual package name (not the file path or requirement string)
+        requested_install.insert(pkg.Name());
 
         cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
 
@@ -651,6 +653,20 @@ AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::st
     Fix.InstallProtect();
     if (!Fix.Resolve(true)) {
         _error->Discard();
+    }
+
+    // Check if any requested packages were unmarked by the resolver
+    // If Fix.Resolve() couldn't satisfy dependencies, it unmarked the package (MarkKeep)
+    // This results in BrokenCount=0 but the package is not installed - we must detect this
+    for (const auto &name: requested_install) {
+        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(name.c_str());
+        if (pkg.end()) continue;
+
+        pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[pkg];
+
+        if (!pkg_state.Install() && pkg.CurrentVer().end()) {
+            cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
+        }
     }
 
     if (cache->dep_cache->BrokenCount() != 0) {

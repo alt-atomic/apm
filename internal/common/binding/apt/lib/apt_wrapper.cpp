@@ -899,9 +899,8 @@ AptResult apt_preprocess_install_arguments(const char **install_names, size_t in
 
             // Use shared RPM file detection logic
             if (is_rpm_file(arg)) {
-                // Add to APT::Arguments configuration
-                std::string key = "APT::Arguments::" + std::to_string(i);
-                _config->Set(key, arg);
+                // Add to APT::Arguments configuration without index
+                _config->Set("APT::Arguments::", arg);
             }
         }
 
