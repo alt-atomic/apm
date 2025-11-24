@@ -170,6 +170,15 @@ func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, fil
 	return cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, sortField, sortOrder, limit, offset)
 }
 
+func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error) {
+	packageInfo, err := cfgService.serviceDBService.GetPackageByName(ctx, packageName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &packageInfo, nil
+}
+
 func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool) error {
 	packagesInstall, packagesRemove, errPrepare := cfgService.serviceAptActions.PrepareInstallPackages(ctx, packages)
 	if errPrepare != nil {

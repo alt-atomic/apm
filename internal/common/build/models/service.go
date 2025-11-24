@@ -10,6 +10,7 @@ type Service interface {
 	CombineInstallRemovePackages(ctx context.Context, packages []string, purge, depends bool) error
 	InstallPackages(ctx context.Context, packages []string) error
 	QueryHostImagePackages(ctx context.Context, filters map[string]any, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
+	GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error)
 	UpdatePackages(ctx context.Context) error
 	UpgradePackages(ctx context.Context) error
 	KernelManager() *service.Manager

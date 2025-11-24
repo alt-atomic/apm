@@ -27,8 +27,20 @@ type GitBody struct {
 }
 
 func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
-	if len(b.Deps) != 0 {
-		packagesBody := &PackagesBody{Install: b.Deps}
+	needInstallDeps := []string{}
+
+	for _, dep := range b.Deps {
+		pkg, err := svc.GetPackageByName(ctx, dep)
+		if err != nil {
+			return nil, err
+		}
+		if !pkg.Installed {
+			needInstallDeps = append(needInstallDeps, pkg.Name)
+		}
+	}
+
+	if len(needInstallDeps) != 0 {
+		packagesBody := &PackagesBody{Install: needInstallDeps}
 
 		if _, err := packagesBody.Execute(ctx, svc); err != nil {
 			return nil, err
@@ -41,7 +53,7 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	app.Log.Info(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
+	app.Log.Debug(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
 
 	args := []string{"clone"}
 	if b.Ref != "" {
@@ -61,8 +73,8 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, err
 	}
 
-	if len(b.Deps) != 0 {
-		packagesBody := &PackagesBody{Remove: b.Deps}
+	if len(needInstallDeps) != 0 {
+		packagesBody := &PackagesBody{Remove: needInstallDeps}
 
 		if _, err := packagesBody.Execute(ctx, svc); err != nil {
 			return nil, err
