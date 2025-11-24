@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -17,6 +18,7 @@ import (
 
 var (
 	goodInitrdMethods = []string{
+		"auto",
 		"dracut",
 		// "make-initrd",
 	}
@@ -127,28 +129,53 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, err
 	}
 
-	if b.RebuildInitrdMethod != "" {
-		switch b.RebuildInitrdMethod {
-		case "dracut":
-			app.Log.Info("Rebuild initramfs via dracut")
-
-			kernelVersion, err := LatestInstalledKernelVersion()
-			if err != nil {
-				return nil, err
-			}
-
-			if _, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
-				return nil, err
-			}
-
-			_, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("dracut --force '%s/%s/initramfs.img' %s", kernelDir, kernelVersion, kernelVersion), "", false)
-
+	switch b.RebuildInitrdMethod {
+	case "dracut":
+		err = rebuildDracut(ctx, "dracut")
+		if err != nil {
 			return nil, err
-		default:
-			panic("unknown initrd method")
+		}
+	case "auto":
+		fallthrough
+	default:
+		dracutPath, dracutErr := exec.LookPath("dracut")
+		makeInitrdPath, makeInitrdErr := exec.LookPath("/usr/sbin/makr-initrd")
+		if pathFound(dracutPath, dracutErr) {
+			if err = rebuildDracut(ctx, dracutPath); err != nil {
+				return nil, err
+			}
+		} else if pathFound(makeInitrdPath, makeInitrdErr) {
+			if err = rebuildMakeInitrd(ctx, makeInitrdPath); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return nil, nil
+}
+
+func pathFound(path string, err error) bool {
+	return path != "" && err == nil
+}
+
+func rebuildMakeInitrd(ctx context.Context, makeInitrdExecutable string) error {
+	return errors.New("make-initd not supported")
+}
+
+func rebuildDracut(ctx context.Context, dracutExecutable string) error {
+	app.Log.Info("Rebuild initramfs via dracut")
+
+	kernelVersion, err := LatestInstalledKernelVersion()
+	if err != nil {
+		return err
+	}
+
+	if _, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
+		return err
+	}
+
+	_, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("%s --force '%s/%s/initramfs.img' %s", dracutExecutable, kernelDir, kernelVersion, kernelVersion), "", false)
+
+	return err
 }
 
 func LatestInstalledKernelVersion() (string, error) {
