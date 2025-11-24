@@ -15,8 +15,14 @@ import (
 	"strings"
 )
 
-var kernelDir = "/usr/lib/modules"
-var bootVmlinuzTemplate = "/boot/vmlinuz-%s"
+var (
+	goodInitrdMethods = []string{
+		"dracut",
+		// "make-initrd",
+	}
+	kernelDir           = "/usr/lib/modules"
+	bootVmlinuzTemplate = "/boot/vmlinuz-%s"
+)
 
 type KernelBody struct {
 	// Версия ядра
@@ -29,7 +35,7 @@ type KernelBody struct {
 	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
 
 	// Пересобрать initramfs
-	RebuildInitramfs string `yaml:"rebuild-initramfs,omitempty" json:"rebuild-initramfs,omitempty"`
+	RebuildInitrdMethod string `yaml:"rebuild-initrd-method,omitempty" json:"rebuild-initrd-method,omitempty"`
 }
 
 func (b *KernelBody) Check() error {
@@ -37,6 +43,10 @@ func (b *KernelBody) Check() error {
 }
 
 func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
+	if b.RebuildInitrdMethod == "" || !slices.Contains(goodInitrdMethods, b.RebuildInitrdMethod) {
+		return nil, fmt.Errorf(app.T_("unknown initrd method %s"), b.RebuildInitrdMethod)
+	}
+
 	mgr := svc.KernelManager()
 	modules := append([]string{}, b.Modules...)
 
@@ -117,8 +127,8 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, err
 	}
 
-	if b.RebuildInitramfs != "" {
-		switch b.RebuildInitramfs {
+	if b.RebuildInitrdMethod != "" {
+		switch b.RebuildInitrdMethod {
 		case "dracut":
 			app.Log.Info("Rebuild initramfs via dracut")
 
@@ -134,6 +144,8 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 			_, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("dracut --force '%s/%s/initramfs.img' %s", kernelDir, kernelVersion, kernelVersion), "", false)
 
 			return nil, err
+		default:
+			panic("unknown initrd method")
 		}
 	}
 	return nil, nil
