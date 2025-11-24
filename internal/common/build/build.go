@@ -132,7 +132,7 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		return fmt.Errorf("module '%s': %w", module.GetLabel(), err)
 	} else {
 		if out == nil {
-			app.Log.Warn(app.T_("'%s' type doesn't support output"), module.Type)
+			app.Log.Warn(fmt.Sprintf(app.T_("'%s' type doesn't support output"), module.Type))
 		} else {
 			output, err = core.ResolveExprMap(module.Output, out)
 			if err != nil {
