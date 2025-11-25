@@ -157,7 +157,7 @@ func pathFound(path string, err error) bool {
 	return path != "" && err == nil
 }
 
-func rebuildMakeInitrd(ctx context.Context, makeInitrdExecutable string) error {
+func rebuildMakeInitrd(_ context.Context, _ string) error {
 	return errors.New("make-initd not supported")
 }
 
