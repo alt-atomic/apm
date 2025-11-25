@@ -154,6 +154,22 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	}
 
 	if module.Id != "" {
+		if value, found := cfgService.modulesMap[module.Id]; found {
+			oldLabel := value.GetLabel()
+			newLabel := module.GetLabel()
+
+			oldLabelText := ""
+			newLabelText := ""
+
+			if value.Name != "" {
+				oldLabelText = fmt.Sprintf(" (%s)", oldLabel)
+			}
+			if module.Name != "" {
+				newLabelText = fmt.Sprintf(" with %s", newLabel)
+			}
+
+			app.Log.Warn(fmt.Sprintf(app.T_("module with id='%s'%s will be overriding%s"), module.Id, oldLabelText, newLabelText))
+		}
 		cfgService.modulesMap[module.Id] = core.MapModule{
 			Name:   module.Name,
 			Type:   module.Type,
