@@ -517,18 +517,20 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 		if len(alternativePackages) == 0 {
 			errorFindPackage := fmt.Sprintf(app.T_("Failed to retrieve information about the package %s"), packageName)
 			return nil, errors.New(errorFindPackage)
+		} else if len(alternativePackages) == 1 {
+			packageInfo = alternativePackages[0]
+		} else {
+			var altNames []string
+			for _, altPkg := range alternativePackages {
+				altNames = append(altNames, altPkg.Name)
+			}
+
+			message := err.Error() + app.T_(". Maybe you were looking for: ")
+
+			errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
+
+			return nil, errPackageNotFound
 		}
-
-		var altNames []string
-		for _, altPkg := range alternativePackages {
-			altNames = append(altNames, altPkg.Name)
-		}
-
-		message := err.Error() + app.T_(". Maybe you were looking for: ")
-
-		errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
-
-		return nil, errPackageNotFound
 	}
 
 	resp := reply.APIResponse{
