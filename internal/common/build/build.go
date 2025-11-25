@@ -189,7 +189,32 @@ func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, fil
 func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error) {
 	packageInfo, err := cfgService.serviceDBService.GetPackageByName(ctx, packageName)
 	if err != nil {
-		return nil, err
+		filters := map[string]interface{}{
+			"provides": packageName,
+		}
+
+		alternativePackages, errFind := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
+		if errFind != nil {
+			return nil, errFind
+		}
+
+		if len(alternativePackages) == 0 {
+			errorFindPackage := fmt.Sprintf(app.T_("Failed to retrieve information about the package %s"), packageName)
+			return nil, errors.New(errorFindPackage)
+		} else if len(alternativePackages) == 1 {
+			return &alternativePackages[0], nil
+		}
+
+		var altNames []string
+		for _, altPkg := range alternativePackages {
+			altNames = append(altNames, altPkg.Name)
+		}
+
+		message := err.Error() + app.T_(". Maybe you were looking for: ")
+
+		errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
+
+		return nil, errPackageNotFound
 	}
 
 	return &packageInfo, nil
