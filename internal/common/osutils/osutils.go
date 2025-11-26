@@ -297,8 +297,7 @@ func ExecShWithOutput(
 	return string(output), nil
 }
 
-// Move attempts to use os.Rename and if that fails (such as for a cross-device move),
-// it instead copies the source to the destination and then removes the source.
+// Copies the source to the destination and then removes the source.
 func Move(sourcePath, destPath string, replace bool) error {
 	// Copy the source to the destination
 	err := Copy(sourcePath, destPath, replace)
