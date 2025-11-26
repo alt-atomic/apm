@@ -51,7 +51,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 		var pkgsNames []string
 		for _, pkg := range packages {
-			brandingMap[pkg.Name[len(brandingPackagesPrefix):len(pkg.Name)+1]] = pkg
+			brandingMap[pkg.Name[len(brandingPackagesPrefix):len(pkg.Name)]] = pkg
 			pkgsNames = append(pkgsNames, pkg.Name)
 		}
 
