@@ -20,7 +20,7 @@ var (
 	goodInitrdMethods = []string{
 		"auto",
 		"dracut",
-		// "make-initrd",
+		"make-initrd",
 	}
 	kernelDir           = "/usr/lib/modules"
 	bootVmlinuzTemplate = "/boot/vmlinuz-%s"
@@ -45,7 +45,7 @@ func (b *KernelBody) Check() error {
 }
 
 func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
-	if b.RebuildInitrdMethod == "" || !slices.Contains(goodInitrdMethods, b.RebuildInitrdMethod) {
+	if b.RebuildInitrdMethod != "" && !slices.Contains(goodInitrdMethods, b.RebuildInitrdMethod) {
 		return nil, fmt.Errorf(app.T_("unknown initrd method %s"), b.RebuildInitrdMethod)
 	}
 
@@ -136,6 +136,8 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 			return nil, err
 		}
 	case "auto":
+		fallthrough
+	case "make-initrd":
 		fallthrough
 	default:
 		dracutPath, dracutErr := exec.LookPath("dracut")
