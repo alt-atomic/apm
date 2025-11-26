@@ -158,11 +158,6 @@ func GetEnvMap() map[string]string {
 	return envMap
 }
 
-func IsExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
 func Capitalize(s string) string {
 	if s == "" {
 		return s
@@ -305,21 +300,8 @@ func ExecShWithOutput(
 // Move attempts to use os.Rename and if that fails (such as for a cross-device move),
 // it instead copies the source to the destination and then removes the source.
 func Move(sourcePath, destPath string, replace bool) error {
-	if IsExists(destPath) && replace {
-		err := os.RemoveAll(destPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Try to rename the source to the destination
-	err := os.Rename(sourcePath, destPath)
-	if err == nil {
-		return nil // Successful move
-	}
-
-	// Rename failed, so copy the source to the destination
-	err = Copy(sourcePath, destPath, replace)
+	// Copy the source to the destination
+	err := Copy(sourcePath, destPath, replace)
 	if err != nil {
 		return err
 	}
@@ -350,13 +332,6 @@ func Copy(sourcePath, destPath string, replace bool) error {
 }
 
 func copyDir(sourcePath, destPath string, replace bool) error {
-	if IsExists(destPath) && replace {
-		err := os.RemoveAll(destPath)
-		if err != nil {
-			return err
-		}
-	}
-
 	sourceInfo, err := os.Stat(sourcePath)
 	if err != nil {
 		return err
@@ -386,7 +361,7 @@ func copyDir(sourcePath, destPath string, replace bool) error {
 }
 
 func copyFile(sourcePath, destPath string, replace bool) error {
-	if IsExists(destPath) && replace {
+	if _, err := os.Stat(destPath); err == nil && replace {
 		err := os.RemoveAll(destPath)
 		if err != nil {
 			return err

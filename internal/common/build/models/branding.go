@@ -138,7 +138,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 		plymouthPaths := []string{plymouthKargsPath, plymouthDracutConfPath}
 
 		if b.PlymouthTheme == "disabled" {
-			if osutils.IsExists(plymouthConfigFile) {
+			if _, err := os.Stat(plymouthConfigFile); err == nil {
 				if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
 					return nil, err
 				}
@@ -150,7 +150,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			}
 		} else {
 			var themes []string
-			if osutils.IsExists(plymouthThemesDir) {
+			if _, err := os.Stat(plymouthThemesDir); err == nil {
 				files, err := os.ReadDir(plymouthThemesDir)
 				if err != nil {
 					return nil, err
