@@ -1,0 +1,3 @@
+[remote "upstream"]
+	url = https://altlinux.space/alt-atomic/apm.git
+	fetch = +refs/heads/*:refs/remotes/upstream/*
