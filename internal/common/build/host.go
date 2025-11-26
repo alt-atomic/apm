@@ -204,6 +204,20 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 }
 
 // SwitchImage переключение образа
+func (h *HostImageService) SwitchImageRemote(ctx context.Context, podmanImageID string) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SwitchImageRemote"))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SwitchImageRemote"))
+
+	command := fmt.Sprintf("%s bootc switch %s", h.appConfig.CommandPrefix, podmanImageID)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf(app.T_("Error switching to the new image: %s"), string(output))
+	}
+
+	return nil
+}
+
+// SwitchImage переключение образа
 func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SwitchImage"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SwitchImage"))

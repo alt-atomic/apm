@@ -791,19 +791,26 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 		}
 	}
 
-	err = a.serviceHostConfig.GenerateDockerfile()
-	if err != nil {
-		return nil, err
-	}
-
 	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = a.serviceHostImage.BuildAndSwitch(ctx, false, true, a.serviceHostConfig)
-	if err != nil {
-		return nil, err
+	if len(a.serviceHostConfig.Config.Modules) > 0 {
+		err = a.serviceHostConfig.GenerateDockerfile()
+		if err != nil {
+			return nil, err
+		}
+
+		err = a.serviceHostImage.BuildAndSwitch(ctx, false, true, a.serviceHostConfig)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = a.serviceHostImage.SwitchImage(ctx, a.serviceHostConfig.Config.Image)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	_ = a.serviceTemporaryConfig.DeleteFile()
