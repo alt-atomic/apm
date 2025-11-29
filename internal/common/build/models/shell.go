@@ -11,8 +11,8 @@ type ShellBody struct {
 	// Команды на выполнение
 	Command string `yaml:"command,omitempty" json:"command,omitempty" required:""`
 
-	// Quite command output
-	Quite bool `yaml:"quite,omitempty" json:"quite,omitempty"`
+	// Quiet command output
+	Quiet bool `yaml:"quiet,omitempty" json:"quiet,omitempty"`
 }
 
 type ShellOutput struct {
@@ -29,7 +29,7 @@ func (b *ShellBody) Execute(ctx context.Context, svc Service) (any, error) {
 		b.Command,
 		"env",
 		Divider,
-		b.Quite,
+		b.Quiet,
 	); err != nil {
 		return nil, err
 	} else {
