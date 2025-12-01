@@ -234,14 +234,14 @@ func ExecShWithDivider(
 	command string,
 	commandOutput string,
 	divider string,
-	quite bool,
+	quiet bool,
 ) (string, string, error) {
 	cmd := exec.CommandContext(ctx, "bash", "-c", command+fmt.Sprintf("\necho '%s'\n%s", divider, commandOutput))
 
 	// Если нужен вывод в консоль И в переменную
 	var cmdout bytes.Buffer
 	var cmdoutOutput bytes.Buffer
-	if quite {
+	if quiet {
 		cmd.Stdout = &Writer{
 			RealWriter:       &cmdout,
 			RealOutputWriter: &cmdoutOutput,
@@ -271,7 +271,7 @@ func ExecShWithOutput(
 	ctx context.Context,
 	command string,
 	chDir string,
-	quite bool,
+	quiet bool,
 ) (string, error) {
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	if chDir != "" {
@@ -280,7 +280,7 @@ func ExecShWithOutput(
 
 	// Если нужен вывод в консоль И в переменную
 	var stdout bytes.Buffer
-	if quite {
+	if quiet {
 		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
 	} else {
 		cmd.Stdout = io.MultiWriter(&stdout)

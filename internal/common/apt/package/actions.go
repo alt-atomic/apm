@@ -141,12 +141,12 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 	var expandedRemove []string
 
 	// Вспомогательная функция для обработки списка пакетов
-	processPackageList := func(packages []string, targetList *[]string) error {
+	processPackageList := func(packages []string, targetList *[]string, onlyInstalled bool) error {
 		for _, original := range packages {
 			if strings.Contains(original, "*") {
 				like := strings.ReplaceAll(original, "*", "%")
 				if strings.TrimSpace(like) != "" {
-					matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, false)
+					matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, onlyInstalled)
 					if errSearch != nil {
 						return errSearch
 					}
@@ -177,14 +177,20 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 		return nil
 	}
 
-	// Обрабатываем пакеты на установку
-	if err := processPackageList(installed, &expandedInstall); err != nil {
+	// Обрабатываем пакеты на установку (ищем среди всех доступных)
+	if err := processPackageList(installed, &expandedInstall, false); err != nil {
 		return nil, nil, nil, nil, err
 	}
 
-	// Обрабатываем пакеты на удаление
-	if err := processPackageList(removed, &expandedRemove); err != nil {
+	// Обрабатываем пакеты на удаление (ищем только среди установленных)
+	if err := processPackageList(removed, &expandedRemove, true); err != nil {
 		return nil, nil, nil, nil, err
+	}
+
+	if len(expandedInstall) == 0 && len(expandedRemove) == 0 {
+		if len(installed) > 0 || len(removed) > 0 {
+			return nil, nil, nil, nil, fmt.Errorf(app.T_("No packages found matching the specified patterns"))
+		}
 	}
 
 	var aptError error

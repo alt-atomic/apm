@@ -10,7 +10,7 @@ import (
 
 type CopyBody struct {
 	// Путь до файла, кого копировать
-	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`
+	Source string `yaml:"source,omitempty" json:"source,omitempty" required:""`
 
 	// Путь до файла, куда копировать
 	Destination string `yaml:"destination,omitempty" json:"destination,omitempty" required:""`
@@ -29,11 +29,11 @@ func (b *CopyBody) Execute(_ context.Context, _ Service) (any, error) {
 	if b.Replace {
 		replaceText = " with replacing"
 	}
-	app.Log.Info(fmt.Sprintf("Copying %s to %s%s", b.Target, b.Destination, replaceText))
+	app.Log.Info(fmt.Sprintf("Copying %s to %s%s", b.Source, b.Destination, replaceText))
 
 	if !filepath.IsAbs(b.Destination) {
 		return nil, fmt.Errorf("destination in move type must be absolute path")
 	}
 
-	return nil, osutils.Copy(b.Target, b.Destination, b.Replace)
+	return nil, osutils.Copy(b.Source, b.Destination, b.Replace)
 }

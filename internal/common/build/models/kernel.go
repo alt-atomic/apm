@@ -22,8 +22,10 @@ var (
 		"dracut",
 		"make-initrd",
 	}
-	kernelDir           = "/usr/lib/modules"
-	bootVmlinuzTemplate = "/boot/vmlinuz-%s"
+	defaultDracutPath     = "/usr/bin/dracut"
+	defaultMakeInitrdPath = "/usr/sbin/make-initrd"
+	kernelDir             = "/usr/lib/modules"
+	bootVmlinuzTemplate   = "/boot/vmlinuz-%s"
 )
 
 type KernelBody struct {
@@ -131,17 +133,20 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	switch b.RebuildInitrdMethod {
 	case "dracut":
-		err = rebuildDracut(ctx, "dracut")
+		err = rebuildDracut(ctx, defaultDracutPath)
+		if err != nil {
+			return nil, err
+		}
+	case "make-initrd":
+		err = rebuildMakeInitrd(ctx, defaultMakeInitrdPath)
 		if err != nil {
 			return nil, err
 		}
 	case "auto":
 		fallthrough
-	case "make-initrd":
-		fallthrough
 	default:
-		dracutPath, dracutErr := exec.LookPath("dracut")
-		makeInitrdPath, makeInitrdErr := exec.LookPath("/usr/sbin/makr-initrd")
+		dracutPath, dracutErr := exec.LookPath(defaultDracutPath)
+		makeInitrdPath, makeInitrdErr := exec.LookPath(defaultMakeInitrdPath)
 		if pathFound(dracutPath, dracutErr) {
 			if err = rebuildDracut(ctx, dracutPath); err != nil {
 				return nil, err

@@ -22,8 +22,8 @@ type GitBody struct {
 	// Git reference
 	Ref string `yaml:"ref,omitempty" json:"ref,omitempty"`
 
-	// Quite command output
-	Quite bool `yaml:"quite,omitempty" json:"quite,omitempty"`
+	// Quiet command output
+	Quiet bool `yaml:"quiet,omitempty" json:"quiet,omitempty"`
 }
 
 func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
@@ -69,7 +69,7 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 
 	app.Log.Debug(fmt.Sprintf("Executing `%s`", b.Command))
-	if _, err = osutils.ExecShWithOutput(ctx, b.Command, tempDir, b.Quite); err != nil {
+	if _, err = osutils.ExecShWithOutput(ctx, b.Command, tempDir, b.Quiet); err != nil {
 		return nil, err
 	}
 

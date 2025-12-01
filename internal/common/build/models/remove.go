@@ -23,14 +23,19 @@ func (b *RemoveBody) Execute(_ context.Context, _ Service) (any, error) {
 		if !filepath.IsAbs(pathTarget) {
 			return nil, fmt.Errorf("target in remove type must be absolute path")
 		}
+	}
+	if b.Inside {
+		app.Log.Info(fmt.Sprintf("Cleaning %s", strings.Join(b.Targets, ", ")))
+	} else {
+		app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.Targets, ", ")))
+	}
 
+	for _, pathTarget := range b.Targets {
 		if b.Inside {
-			app.Log.Info(fmt.Sprintf("Cleaning %s", strings.Join(b.Targets, ", ")))
 			if err := osutils.Clean(pathTarget); err != nil {
 				return nil, err
 			}
 		} else {
-			app.Log.Info(fmt.Sprintf("Removing %s", strings.Join(b.Targets, ", ")))
 			if err := os.RemoveAll(pathTarget); err != nil {
 				return nil, err
 			}

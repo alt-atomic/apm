@@ -11,7 +11,7 @@ import (
 
 type MoveBody struct {
 	// Что
-	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`
+	Source string `yaml:"source,omitempty" json:"source,omitempty" required:""`
 
 	// Куда
 	Destination string `yaml:"destination,omitempty" json:"destination,omitempty" required:""`
@@ -31,21 +31,21 @@ func (b *MoveBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if b.Replace {
 		withText = append(withText, "with replacing")
 	}
-	app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Target, b.Destination, " "+strings.Join(withText, " and ")))
+	app.Log.Info(fmt.Sprintf("Moving %s to %s%s", b.Source, b.Destination, " "+strings.Join(withText, " and ")))
 
-	if !filepath.IsAbs(b.Target) {
-		return nil, fmt.Errorf("target in move type must be absolute path")
+	if !filepath.IsAbs(b.Source) {
+		return nil, fmt.Errorf("source in move type must be absolute path")
 	}
 	if !filepath.IsAbs(b.Destination) {
 		return nil, fmt.Errorf("destination in move type must be absolute path")
 	}
 
-	if err := osutils.Move(b.Target, b.Destination, b.Replace); err != nil {
+	if err := osutils.Move(b.Source, b.Destination, b.Replace); err != nil {
 		return nil, err
 	}
 
 	if b.CreateLink {
-		linkBody := &LinkBody{Target: b.Target, To: b.Destination}
+		linkBody := &LinkBody{Target: b.Source, To: b.Destination}
 
 		if _, err := linkBody.Execute(ctx, svc); err != nil {
 			return nil, err
