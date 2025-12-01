@@ -63,12 +63,6 @@ mkdir -p %buildroot%tmpfiles_config_dir
 
 %find_lang %name
 
-%post
-%post_service %name
-
-%preun
-%preun_service %name
-
 %files -f %name.lang
 %_tmpfilesdir/%name.conf
 %_bindir/%name
