@@ -6,7 +6,7 @@
 %define service_id org.altlinux.APM
 
 Name: apm
-Version: 0.2.2
+Version: 0.2.3
 Release: alt1
 
 Summary: Atomic Package Manager 
@@ -81,6 +81,9 @@ mkdir -p %buildroot%tmpfiles_config_dir
 %doc README.ru.md
 
 %changelog
+* Mon Dec 01 2025 Vladimir Romanov <rirusha@altlinux.org> 0.2.3-alt1
+- v0.2.3
+
 * Wed Nov 26 2025 Vladimir Romanov <rirusha@altlinux.org> 0.2.2-alt1
 - v0.2.2
 
