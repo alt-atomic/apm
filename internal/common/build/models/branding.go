@@ -211,6 +211,14 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 				return nil, err
 			}
 		}
+
+		// Нам нужно пересобрать initrd после переключения plymouth темы
+		kernalBody := KernelBody{
+			RebuildInitrdMethod: "auto",
+		}
+		if _, err := kernalBody.Execute(ctx, svc); err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
