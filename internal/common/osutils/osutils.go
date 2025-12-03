@@ -260,6 +260,10 @@ func ExecShWithDivider(
 	result := cmdout.Bytes()
 	resultOutput := cmdoutOutput.Bytes()
 
+	if cmd.ProcessState.ExitCode() != 0 {
+		return "", "", fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
+	}
+
 	if err != nil {
 		return "", "", err
 	}
@@ -289,6 +293,10 @@ func ExecShWithOutput(
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	output := stdout.Bytes()
+
+	if cmd.ProcessState.ExitCode() != 0 {
+		return "", fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
+	}
 
 	if err != nil {
 		return "", err
