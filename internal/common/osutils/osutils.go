@@ -285,9 +285,9 @@ func ExecShWithOutput(
 	// Если нужен вывод в консоль И в переменную
 	var stdout bytes.Buffer
 	if quiet {
-		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
-	} else {
 		cmd.Stdout = io.MultiWriter(&stdout)
+	} else {
+		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
 	}
 
 	cmd.Stderr = os.Stderr
