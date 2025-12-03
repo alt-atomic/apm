@@ -807,7 +807,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 			return nil, err
 		}
 	} else {
-		err = a.serviceHostImage.SwitchImage(ctx, a.serviceHostConfig.Config.Image)
+		err = a.serviceHostImage.SwitchImage(ctx, a.serviceHostConfig.Config.Image, false)
 		if err != nil {
 			return nil, err
 		}

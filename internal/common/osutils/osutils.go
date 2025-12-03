@@ -260,6 +260,10 @@ func ExecShWithDivider(
 	result := cmdout.Bytes()
 	resultOutput := cmdoutOutput.Bytes()
 
+	if cmd.ProcessState.ExitCode() != 0 {
+		return "", "", fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
+	}
+
 	if err != nil {
 		return "", "", err
 	}
@@ -281,14 +285,18 @@ func ExecShWithOutput(
 	// Если нужен вывод в консоль И в переменную
 	var stdout bytes.Buffer
 	if quiet {
-		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
-	} else {
 		cmd.Stdout = io.MultiWriter(&stdout)
+	} else {
+		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
 	}
 
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	output := stdout.Bytes()
+
+	if cmd.ProcessState.ExitCode() != 0 {
+		return "", fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
+	}
 
 	if err != nil {
 		return "", err
