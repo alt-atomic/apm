@@ -124,7 +124,7 @@ modules:
 
 	// Выполняем модуль через реальный ConfigService
 	module := cfg.Modules[0]
-	err = s.configService.ExecuteModule(s.ctx, module)
+	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
 	assert.NoError(s.T(), err)
 
 	// Проверяем что файл скопирован
@@ -164,7 +164,7 @@ modules:
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
-	err = s.configService.ExecuteModule(s.ctx, module)
+	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
 	assert.NoError(s.T(), err)
 
 	// Проверяем что файл перемещен
@@ -203,7 +203,7 @@ modules:
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
-	err = s.configService.ExecuteModule(s.ctx, module)
+	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
 	assert.NoError(s.T(), err)
 
 	// Проверяем что файл удален
@@ -235,7 +235,7 @@ modules:
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
-	err = s.configService.ExecuteModule(s.ctx, module)
+	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
 	assert.NoError(s.T(), err)
 
 	// Проверяем что директория создана
@@ -272,7 +272,7 @@ modules:
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
-	err = s.configService.ExecuteModule(s.ctx, module)
+	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
 	assert.NoError(s.T(), err)
 
 	// Проверяем что ссылка создана
@@ -319,7 +319,7 @@ modules:
 	assert.NoError(s.T(), err)
 
 	module := cfg.Modules[0]
-	err = s.configService.ExecuteModule(s.ctx, module)
+	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
 	assert.NoError(s.T(), err)
 
 	// Проверяем что содержимое объединено
@@ -378,7 +378,7 @@ modules:
 	// Выполняем все модули последовательно через реальный ConfigService
 	for i, module := range cfg.Modules {
 		s.T().Logf("Executing module %d: %s", i+1, module.Name)
-		err = s.configService.ExecuteModule(s.ctx, module)
+		_, err = s.configService.ExecuteModule(s.ctx, module, nil)
 		assert.NoError(s.T(), err, "Module %d failed", i+1)
 	}
 
