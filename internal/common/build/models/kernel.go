@@ -111,6 +111,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, err
 	}
 
+	// TODO: Заменить на более точечное обновление, как в kernel service
 	app.Log.Info("Updating packages DB")
 	if err = svc.UpdatePackages(ctx); err != nil {
 		return nil, err

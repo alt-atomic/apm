@@ -2,6 +2,7 @@ package core
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/build/common_types"
 	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
 	"apm/internal/common/version"
@@ -371,7 +372,7 @@ func ParseYamlConfigEnvData(data []byte, isYaml bool, version version.Version) (
 		return envs, err
 	}
 
-	resolved, err := ResolveExprMap(envs.Env, ExprData{
+	resolved, err := ResolveExprMap(envs.Env, common_types.ExprData{
 		Env:     osutils.GetEnvMap(),
 		Version: version,
 	})
