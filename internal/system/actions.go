@@ -266,7 +266,12 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 	}
 
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
-		return nil, errors.New(app.T_("The operation will not make any changes"))
+		return &reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": app.T_("The operation will not make any changes"),
+			},
+			Error: false,
+		}, nil
 	}
 
 	if len(packagesInfo) > 0 && !confirm {
