@@ -726,6 +726,8 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
+	a.serviceHostConfig.Config.CheckImage()
+
 	err = a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.Config)
 	if err != nil {
 		return nil, err
@@ -763,6 +765,8 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	a.serviceHostConfig.Config.CheckImage()
 
 	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
 		reply.StopSpinnerForDialog(a.appConfig)

@@ -72,9 +72,7 @@ type Config struct {
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 
 	// Базовый образ для использования
-	// Может быть взята из переменной среды
-	// APM_BUILD_IMAGE
-	Image string `yaml:"image" json:"image"`
+	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 
 	// Список модулей
 	Modules []Module `yaml:"modules,omitempty" json:"modules,omitempty"`
@@ -177,7 +175,7 @@ func (cfg *Config) IsRemoved(pkg string) bool {
 	return slices.Contains(cfg.getTotalRemove(), pkg)
 }
 
-func (cfg *Config) checkRoot() error {
+func (cfg *Config) CheckImage() error {
 	if cfg.Image == "" {
 		return errors.New(app.T_("Image can not be empty"))
 	}
@@ -189,20 +187,7 @@ func (cfg *Config) checkModules() error {
 	return CheckModules(&cfg.Modules)
 }
 
-func (cfg *Config) Check() error {
-	if err := cfg.checkRoot(); err != nil {
-		return err
-	}
-	if err := cfg.checkModules(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (cfg *Config) Save(filename string) error {
-	if err := cfg.checkRoot(); err != nil {
-		return err
-	}
 	if err := cfg.checkModules(); err != nil {
 		return err
 	}
@@ -393,14 +378,14 @@ func ReadAndParseConfigYamlFile(name string) (Config, error) {
 }
 
 func ParseYamlConfigData(data []byte) (Config, error) {
-	return parseConfigData(data, true, true)
+	return parseConfigData(data, true)
 }
 
 func ParseJsonConfigData(data []byte) (Config, error) {
-	return parseConfigData(data, false, true)
+	return parseConfigData(data, false)
 }
 
-func parseConfigData(data []byte, isYaml bool, hasRoot bool) (Config, error) {
+func parseConfigData(data []byte, isYaml bool) (Config, error) {
 	// НЕ резолвим плейсхолдеры здесь - они будут резолвиться при выполнении
 	// Это позволяет сохранять конфиг с плейсхолдерами
 	var cfg Config
@@ -419,11 +404,6 @@ func parseConfigData(data []byte, isYaml bool, hasRoot bool) (Config, error) {
 
 	if err != nil {
 		return cfg, err
-	}
-	if hasRoot {
-		if err = cfg.checkRoot(); err != nil {
-			return cfg, err
-		}
 	}
 	if err = cfg.checkModules(); err != nil {
 		return cfg, err
@@ -445,7 +425,7 @@ func ReadAndParseModulesYamlFile(name string) (*[]Module, error) {
 		return nil, err
 	}
 
-	cfg, err := parseConfigData(data, true, false)
+	cfg, err := parseConfigData(data, true)
 	if err != nil {
 		return nil, err
 	}
@@ -465,7 +445,7 @@ func ReadAndParseModulesYamlUrl(url string) (*[]Module, error) {
 		return nil, err
 	}
 
-	cfg, err := parseConfigData(data, true, false)
+	cfg, err := parseConfigData(data, true)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +467,7 @@ func ReadAndParseModules(target string) (*[]Module, error) {
 		return nil, err
 	}
 
-	cfg, err := parseConfigData(data, isYaml, false)
+	cfg, err := parseConfigData(data, isYaml)
 	if err != nil {
 		return nil, err
 	}
