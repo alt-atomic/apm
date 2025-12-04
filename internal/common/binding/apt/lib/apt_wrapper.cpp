@@ -867,7 +867,7 @@ PackageManagerCallback_t create_common_progress_callback(CallbackBridge *) {
 // RPM file detection utility (shared implementation)
 bool is_rpm_file(const std::string &path) {
     // Check if it's an absolute path and file exists
-    if (path.empty() || path[0] != '/') {
+    if (path.empty()) {
         return false;
     }
 
