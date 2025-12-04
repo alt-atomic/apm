@@ -249,14 +249,39 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 		return nil, err
 	}
 
+	userSpecifiedFlavour := flavour != ""
+
 	flavour, err = a.detectFlavourOrDefault(ctx, flavour)
 	if err != nil {
 		return nil, err
 	}
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
+
+	// Если ядро не найдено и пользователь НЕ указал flavour явно - ищем ближайшую новую версию
+	if err != nil && !userSpecifiedFlavour {
+		current, currentErr := a.kernelManager.GetCurrentKernel(ctx)
+		if currentErr == nil {
+			nextFlavours, flavourErr := a.kernelManager.FindNextFlavours(current.Version)
+			if flavourErr == nil && len(nextFlavours) > 0 {
+				// Берем ПЕРВЫЙ (ближайший новый) flavour
+				newFlavour := nextFlavours[0]
+
+				newLatest, newErr := a.kernelManager.FindLatestKernel(ctx, newFlavour)
+				if newErr == nil {
+					latest = newLatest
+					flavour = newFlavour
+					err = nil
+				}
+			}
+		}
+	}
+
 	if err != nil {
-		return nil, err
+		if userSpecifiedFlavour {
+			return nil, fmt.Errorf(app.T_("no kernels found for flavour: %s. Remove --flavour option to attempt an automatic upgrade"), flavour)
+		}
+		return nil, fmt.Errorf(app.T_("no kernels found for flavour: %s"), flavour)
 	}
 
 	current, err := a.kernelManager.GetCurrentKernel(ctx)
@@ -277,8 +302,8 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 	}
 
 	if len(modules) == 0 {
-		inheritedModules, err := a.kernelManager.InheritModulesFromKernel(latest, current)
-		if err == nil && len(inheritedModules) > 0 {
+		inheritedModules, errModuleKernel := a.kernelManager.InheritModulesFromKernel(latest, current)
+		if errModuleKernel == nil && len(inheritedModules) > 0 {
 			modules = inheritedModules
 		}
 	}
@@ -467,7 +492,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string, modu
 		return nil, err
 	}
 
-	if err := a.checkAtomicSystemRestriction("install"); err != nil {
+	if err = a.checkAtomicSystemRestriction("install"); err != nil {
 		return nil, err
 	}
 	if len(modules) == 0 {
