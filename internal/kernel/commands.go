@@ -58,12 +58,9 @@ func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Comman
 var withRootCheckWrapper = wrapperWithOptions(true)
 
 func CommandList(ctx context.Context) *cli.Command {
-	appConfig := app.GetAppConfig(ctx)
-
 	return &cli.Command{
 		Name:    "kernel",
 		Aliases: []string{"k"},
-		Hidden:  appConfig.ConfigManager.GetConfig().IsAtomic,
 		Usage:   app.T_("Kernel Management. WARNING - experimental module"),
 		Commands: []*cli.Command{
 			{
