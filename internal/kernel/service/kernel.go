@@ -49,46 +49,78 @@ type Info struct {
 	AgeInDays        int       `json:"ageInDays"`
 }
 
-// ToMap конвертирует Info в map[string]interface{} для JSON ответов
-func (info *Info) ToMap(full bool, manager *Manager) map[string]interface{} {
-	if full {
-		result := map[string]interface{}{
-			"packageName":      info.PackageName,
-			"flavour":          info.Flavour,
-			"version":          info.Version,
-			"versionInstalled": info.VersionInstalled,
-			"release":          info.Release,
-			"fullVersion":      info.FullVersion,
-			"isInstalled":      info.IsInstalled,
-			"isRunning":        info.IsRunning,
-			"ageInDays":        info.AgeInDays,
-			"buildTime":        info.BuildTime.Format(time.RFC3339),
-		}
+// FullKernelInfo полная информация о ядре с модулями
+type FullKernelInfo struct {
+	PackageName      string                `json:"packageName"`
+	Flavour          string                `json:"flavour"`
+	Version          string                `json:"version"`
+	VersionInstalled string                `json:"versionInstalled"`
+	Release          string                `json:"release"`
+	FullVersion      string                `json:"fullVersion"`
+	IsInstalled      bool                  `json:"isInstalled"`
+	IsRunning        bool                  `json:"isRunning"`
+	AgeInDays        int                   `json:"ageInDays"`
+	BuildTime        string                `json:"buildTime"`
+	InstalledModules []InstalledModuleInfo `json:"installedModules,omitempty"`
+}
 
-		if manager != nil {
-			allModules, _ := manager.FindAvailableModules(info)
-			var installedModules []map[string]interface{}
-			for _, module := range allModules {
-				if module.IsInstalled {
-					installedModules = append(installedModules, map[string]interface{}{
-						"name":        module.Name,
-						"packageName": module.PackageName,
-					})
-				}
+// ShortKernelInfo сокращенная информация о ядре
+type ShortKernelInfo struct {
+	Version          string `json:"version"`
+	VersionInstalled string `json:"versionInstalled"`
+	Flavour          string `json:"flavour"`
+	FullVersion      string `json:"fullVersion"`
+	IsInstalled      bool   `json:"isInstalled"`
+	IsRunning        bool   `json:"isRunning"`
+}
+
+// InstalledModuleInfo информация об установленном модуле
+type InstalledModuleInfo struct {
+	Name        string `json:"name"`
+	PackageName string `json:"packageName"`
+}
+
+// ToFull конвертирует Info в FullKernelInfo
+func (info *Info) ToFull(manager *Manager) FullKernelInfo {
+	result := FullKernelInfo{
+		PackageName:      info.PackageName,
+		Flavour:          info.Flavour,
+		Version:          info.Version,
+		VersionInstalled: info.VersionInstalled,
+		Release:          info.Release,
+		FullVersion:      info.FullVersion,
+		IsInstalled:      info.IsInstalled,
+		IsRunning:        info.IsRunning,
+		AgeInDays:        info.AgeInDays,
+		BuildTime:        info.BuildTime.Format(time.RFC3339),
+	}
+
+	if manager != nil {
+		allModules, _ := manager.FindAvailableModules(info)
+		var installedModules []InstalledModuleInfo
+		for _, module := range allModules {
+			if module.IsInstalled {
+				installedModules = append(installedModules, InstalledModuleInfo{
+					Name:        module.Name,
+					PackageName: module.PackageName,
+				})
 			}
-			result["InstalledModules"] = installedModules
 		}
+		result.InstalledModules = installedModules
+	}
 
-		return result
-	} else {
-		return map[string]interface{}{
-			"version":          info.Version,
-			"versionInstalled": info.VersionInstalled,
-			"flavour":          info.Flavour,
-			"fullVersion":      info.FullVersion,
-			"isInstalled":      info.IsInstalled,
-			"isRunning":        info.IsRunning,
-		}
+	return result
+}
+
+// ToShort конвертирует Info в ShortKernelInfo
+func (info *Info) ToShort() ShortKernelInfo {
+	return ShortKernelInfo{
+		Version:          info.Version,
+		VersionInstalled: info.VersionInstalled,
+		Flavour:          info.Flavour,
+		FullVersion:      info.FullVersion,
+		IsInstalled:      info.IsInstalled,
+		IsRunning:        info.IsRunning,
 	}
 }
 
@@ -264,9 +296,9 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 
 		// Проверяем является ли текущим - сравниваем по PackageName, Version и Release
 		if currentKernel != nil &&
-		   kernel.PackageName == currentKernel.PackageName &&
-		   kernel.Version == currentKernel.Version &&
-		   kernel.Release == currentKernel.Release {
+			kernel.PackageName == currentKernel.PackageName &&
+			kernel.Version == currentKernel.Version &&
+			kernel.Release == currentKernel.Release {
 			kernel.IsRunning = true
 			// Обновляем currentKernel реальными данными из базы
 			currentKernel.BuildTime = kernel.BuildTime
@@ -276,9 +308,9 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 
 		// Проверяем является ли по умолчанию - сравниваем по PackageName, Version и Release
 		if defaultKernel != nil &&
-		   kernel.PackageName == defaultKernel.PackageName &&
-		   kernel.Version == defaultKernel.Version &&
-		   kernel.Release == defaultKernel.Release {
+			kernel.PackageName == defaultKernel.PackageName &&
+			kernel.Version == defaultKernel.Version &&
+			kernel.Release == defaultKernel.Release {
 			defaultKernel.BuildTime = kernel.BuildTime
 			defaultKernel.AgeInDays = kernel.AgeInDays
 			defaultKernel.FullVersion = kernel.FullVersion

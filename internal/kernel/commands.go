@@ -58,6 +58,8 @@ func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Comman
 var withRootCheckWrapper = wrapperWithOptions(true)
 
 func CommandList(ctx context.Context) *cli.Command {
+	appConfig := app.GetAppConfig(ctx)
+
 	return &cli.Command{
 		Name:    "kernel",
 		Aliases: []string{"k"},
@@ -77,14 +79,9 @@ func CommandList(ctx context.Context) *cli.Command {
 						Aliases: []string{"i"},
 						Value:   false,
 					},
-					&cli.BoolFlag{
-						Name:  "full",
-						Usage: app.T_("Show full information"),
-						Value: false,
-					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.ListKernels(ctx, cmd.String("flavour"), cmd.Bool("installed"), cmd.Bool("full"))
+					resp, err := actions.ListKernels(ctx, cmd.String("flavour"), cmd.Bool("installed"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -276,6 +273,14 @@ func CommandList(ctx context.Context) *cli.Command {
 						}),
 					},
 				},
+			},
+			{
+				Name:  "dbus-doc",
+				Usage: app.T_("Show dbus online documentation"),
+				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					reply.StopSpinner(appConfig)
+					return actions.GenerateOnlineDoc(ctx)
+				}),
 			},
 		},
 	}

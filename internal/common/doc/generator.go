@@ -412,6 +412,14 @@ func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 			fieldValue.Set(slice)
 		case reflect.Struct:
 			fieldValue.Set(reflect.ValueOf(g.createExampleStruct(field.Type)))
+		case reflect.Ptr:
+			// Создаем новый экземпляр типа, на который указывает указатель
+			elemType := field.Type.Elem()
+			ptrValue := reflect.New(elemType)
+			// Заполняем структуру, на которую указывает указатель
+			filledValue := g.createExampleStruct(elemType)
+			ptrValue.Elem().Set(reflect.ValueOf(filledValue))
+			fieldValue.Set(ptrValue)
 		default:
 			continue
 		}

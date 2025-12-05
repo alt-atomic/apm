@@ -253,11 +253,20 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 	sysActions := system.NewActions(appConfig)
 	conn, _ := dbus.SystemBus()
-	sysObj := system.NewDBusWrapper(sysActions, conn, ctx)
 
-	// Экспортируем в D-Bus
+	// Экспортируем system методы в D-Bus
+	sysObj := system.NewDBusWrapper(sysActions, conn, ctx)
 	if err = appConfig.DBusManager.GetConnection().Export(sysObj, "/org/altlinux/APM", "org.altlinux.APM.system"); err != nil {
 		return err
+	}
+
+	// Экспортируем kernel методы только для не-атомарных систем
+	if !appConfig.ConfigManager.GetConfig().IsAtomic {
+		kernelActions := kernel.NewActions(appConfig)
+		kernelObj := kernel.NewDBusWrapper(kernelActions, conn, ctx)
+		if err = appConfig.DBusManager.GetConnection().Export(kernelObj, "/org/altlinux/APM", "org.altlinux.APM.kernel"); err != nil {
+			return err
+		}
 	}
 
 	if err = appConfig.DBusManager.GetConnection().Export(

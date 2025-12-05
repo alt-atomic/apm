@@ -20,7 +20,6 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/build"
 	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -49,7 +48,7 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // Install – Установка пакетов
-// doc_response: InstallResponse
+// doc_response: InstallRemoveResponse
 func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -67,7 +66,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 }
 
 // Remove – Удаление пакетов
-// doc_response: InstallResponse
+// doc_response: InstallRemoveResponse
 func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, depends bool, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -176,20 +175,14 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string) (stri
 	return string(data), nil
 }
 
-// Upgrade – Обновить систему
-// doc_response: ImageUpdateResponse
+// Upgrade – Обновить систему (для не-атомарных систем)
+// doc_response: UpgradeResponse
 func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	var resp *reply.APIResponse
-	var err error
-	if w.actions.appConfig.ConfigManager.GetConfig().IsAtomic {
-		resp, err = w.actions.ImageUpdate(ctx)
-	} else {
-		resp, err = w.actions.Upgrade(ctx)
-	}
+	resp, err := w.actions.Upgrade(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
