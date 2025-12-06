@@ -228,6 +228,14 @@ AptResult apt_simulate_change(AptCache *cache,
                               bool remove_depends,
                               AptPackageChanges *changes);
 
+// Apply changes to cache (like simulate but with apply=true)
+// Use this before creating PackageManager to ensure simulation matches reality
+AptResult apt_apply_changes(AptCache *cache,
+                            const char **install_names, size_t install_count,
+                            const char **remove_names, size_t remove_count,
+                            bool purge,
+                            bool remove_depends);
+
 void apt_free_package_changes(AptPackageChanges *changes);
 
 // Utility functions

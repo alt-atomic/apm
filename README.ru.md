@@ -23,7 +23,7 @@ apt-get install apm
 
 Для ручной сборки:
 ```
-apt-get install systemd-devel libapt-devel gettext-tools meson
+apt-get install systemd-devel libapt-devel gettext-tools meson golang
 meson setup build --wipe --prefix /usr
 meson install -C build
 ```
