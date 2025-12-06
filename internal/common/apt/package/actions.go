@@ -65,6 +65,7 @@ type Package struct {
 	Provides         []string             `json:"provides"`
 	Size             int                  `json:"size"`
 	Filename         string               `json:"filename"`
+	Summary          string               `json:"summary"`
 	Description      string               `json:"description"`
 	AppStream        *appstream.Component `json:"appStream"`
 	Changelog        string               `json:"lastChangelog"`
@@ -536,6 +537,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 			Provides:         provides,
 			Size:             int(ap.DownloadSize),
 			Filename:         ap.Filename,
+			Summary:          ap.ShortDescription,
 			Description:      ap.Description,
 			AppStream:        nil,
 			Changelog:        ap.Changelog,
@@ -783,15 +785,12 @@ func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath stri
 		Provides:         provides,
 		Size:             int(ap.DownloadSize),
 		Filename:         ap.Filename,
+		Summary:          ap.ShortDescription,
 		Description:      ap.Description,
 		AppStream:        nil,
 		Changelog:        ap.Changelog,
 		Installed:        false,
 		TypePackage:      int(PackageTypeSystem),
-	}
-
-	if p.Description == "" {
-		p.Description = ap.ShortDescription
 	}
 
 	// Извлекаем последнее сообщение из changelog
@@ -815,7 +814,7 @@ func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath stri
 	return nil
 }
 
-// compareVersions сравнивает две версии (returns: 1 if a > b, -1 if a < b, 0 if equal)
+// CompareVersions сравнивает две версии (returns: 1 if a > b, -1 if a < b, 0 if equal)
 func CompareVersions(a, b string) int {
 	aParts := strings.Split(a, ".")
 	bParts := strings.Split(b, ".")

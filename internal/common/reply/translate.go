@@ -189,6 +189,8 @@ func TranslateKey(key string) string {
 		return app.T_("Missing Modules")
 	case "updateAvailable":
 		return app.T_("Available Update")
+	case "summary":
+		return app.T_("Summary")
 	default:
 		return app.T_(key)
 	}

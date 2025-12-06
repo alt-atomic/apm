@@ -17,30 +17,11 @@
 package apt
 
 import (
-	"apm/internal/common/appstream"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
-
-type Package struct {
-	Name             string               `json:"name"`
-	Section          string               `json:"section"`
-	InstalledSize    int                  `json:"installedSize"`
-	Maintainer       string               `json:"maintainer"`
-	Version          string               `json:"version"`
-	VersionInstalled string               `json:"versionInstalled"`
-	Depends          []string             `json:"depends"`
-	Provides         []string             `json:"provides"`
-	Size             int                  `json:"size"`
-	Filename         string               `json:"filename"`
-	Description      string               `json:"description"`
-	AppStream        *appstream.Component `json:"appStream"`
-	Changelog        string               `json:"lastChangelog"`
-	Installed        bool                 `json:"installed"`
-	TypePackage      int                  `json:"typePackage"`
-}
 
 var soNameRe = regexp.MustCompile(`^(.+?\.so(?:\.[0-9]+)*).*`)
 
