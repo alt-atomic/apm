@@ -71,6 +71,8 @@ void emit_log(const std::string &msg);
 
 bool check_apt_errors();
 
+std::string collect_pending_errors();
+
 AptResult make_result(AptErrorCode code, const char *message = nullptr);
 
 // RPM file detection utility

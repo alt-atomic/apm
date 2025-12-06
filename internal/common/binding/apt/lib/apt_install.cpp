@@ -81,13 +81,32 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
                 break;
             case pkgPackageManager::Failed:
                 if (_system) _system->Lock();
-                return make_result(APT_ERROR_OPERATION_FAILED, "Package manager operation failed");
+                // Collect detailed error message from APT
+                {
+                    std::string error_details = collect_pending_errors();
+                    if (error_details.empty()) {
+                        error_details = "Package manager operation failed";
+                    }
+                    return make_result(APT_ERROR_OPERATION_FAILED, error_details.c_str());
+                }
             case pkgPackageManager::Incomplete:
                 if (_system) _system->Lock();
-                return make_result(APT_ERROR_OPERATION_INCOMPLETE, "Package manager operation incomplete");
+                {
+                    std::string error_details = collect_pending_errors();
+                    if (error_details.empty()) {
+                        error_details = "Package manager operation incomplete";
+                    }
+                    return make_result(APT_ERROR_OPERATION_INCOMPLETE, error_details.c_str());
+                }
             default:
                 if (_system) _system->Lock();
-                return make_result(APT_ERROR_INSTALL_FAILED, "Unknown package manager result");
+                {
+                    std::string error_details = collect_pending_errors();
+                    if (error_details.empty()) {
+                        error_details = "Unknown package manager result";
+                    }
+                    return make_result(APT_ERROR_INSTALL_FAILED, error_details.c_str());
+                }
         }
 
         bool update_result = pm->pm->UpdateMarks();

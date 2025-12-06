@@ -136,9 +136,24 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (*reply.APIResponse, error) 
 
 // CheckInstall проверяем пакеты перед установкой
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
-	packageParse, aptError := a.serviceAptActions.CheckInstall(ctx, packages)
-	if aptError != nil {
-		return nil, aptError
+	if len(packages) == 0 {
+		return nil, errors.New(app.T_("You must specify at least one package"))
+	}
+
+	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
+	if errPrepare != nil {
+		return nil, errPrepare
+	}
+
+	_, _, _, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesInstall,
+		packagesRemove,
+		false,
+		false,
+	)
+	if errFind != nil {
+		return nil, errFind
 	}
 
 	return &reply.APIResponse{

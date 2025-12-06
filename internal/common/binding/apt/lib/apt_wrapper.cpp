@@ -163,7 +163,7 @@ bool check_apt_errors() {
     return true;
 }
 
-static std::string collect_pending_errors() {
+std::string collect_pending_errors() {
     std::string all_errors;
     if (_error->PendingError()) {
         std::string msg;
