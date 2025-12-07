@@ -151,16 +151,54 @@ func (m selectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeySpace:
 			// Переключаем выбор пакета
 			if !m.isInActionArea() {
-				m.toggleCurrentPackage()
+				if m.currentPanel == 0 && m.cursor < len(m.installPackages) {
+					m.installPackages[m.cursor].selected = !m.installPackages[m.cursor].selected
+				} else if m.currentPanel == 1 && m.cursor < len(m.removePackages) {
+					m.removePackages[m.cursor].selected = !m.removePackages[m.cursor].selected
+				}
 			}
 			return m, nil
 
 		case tea.KeyUp:
-			m.moveCursorUp()
+			if m.isInActionArea() {
+				actionCursor := m.getActionCursor()
+				if actionCursor > 0 {
+					m.cursor--
+				} else {
+					// Переходим к последнему пакету
+					if m.currentPanel == 0 && len(m.installPackages) > 0 {
+						m.cursor = len(m.installPackages) - 1
+					} else if m.currentPanel == 1 && len(m.removePackages) > 0 {
+						m.cursor = len(m.removePackages) - 1
+					}
+				}
+			} else {
+				if m.cursor > 0 {
+					m.cursor--
+				} else {
+					m.cursor = m.getTotalPackages()
+				}
+			}
 			return m, nil
 
 		case tea.KeyDown:
-			m.moveCursorDown()
+			if m.isInActionArea() {
+				actionCursor := m.getActionCursor()
+				if actionCursor < len(m.choices)-1 {
+					m.cursor++
+				} else {
+					m.cursor = 0
+				}
+			} else {
+				currentList := m.getCurrentPackageList()
+				if len(currentList) > 0 {
+					if m.cursor < len(currentList)-1 {
+						m.cursor++
+					} else {
+						m.cursor = m.getTotalPackages()
+					}
+				}
+			}
 			return m, nil
 
 		case tea.KeyLeft:
@@ -178,7 +216,25 @@ func (m selectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyTab:
-			m.switchPanel()
+			// Циклическое переключение: Install → Remove → Кнопки → Install
+			if m.isInActionArea() {
+				if len(m.installPackages) > 0 {
+					m.currentPanel = 0
+					m.cursor = 0
+				} else if len(m.removePackages) > 0 {
+					m.currentPanel = 1
+					m.cursor = 0
+				}
+			} else if m.currentPanel == 0 {
+				if len(m.removePackages) > 0 {
+					m.currentPanel = 1
+					m.cursor = 0
+				} else {
+					m.cursor = m.getTotalPackages()
+				}
+			} else {
+				m.cursor = m.getTotalPackages()
+			}
 			return m, nil
 
 		case tea.KeyRunes:
@@ -186,11 +242,67 @@ func (m selectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q":
 				m.canceled = true
 				return m, tea.Quit
+			case "j":
+				if m.isInActionArea() {
+					actionCursor := m.getActionCursor()
+					if actionCursor < len(m.choices)-1 {
+						m.cursor++
+					} else {
+						m.cursor = 0
+					}
+				} else {
+					currentList := m.getCurrentPackageList()
+					if len(currentList) > 0 {
+						if m.cursor < len(currentList)-1 {
+							m.cursor++
+						} else {
+							m.cursor = m.getTotalPackages()
+						}
+					}
+				}
+				return m, nil
+			case "k":
+				// Навигация вверх (vim-style)
+				if m.isInActionArea() {
+					actionCursor := m.getActionCursor()
+					if actionCursor > 0 {
+						m.cursor--
+					} else {
+						if m.currentPanel == 0 && len(m.installPackages) > 0 {
+							m.cursor = len(m.installPackages) - 1
+						} else if m.currentPanel == 1 && len(m.removePackages) > 0 {
+							m.cursor = len(m.removePackages) - 1
+						}
+					}
+				} else {
+					if m.cursor > 0 {
+						m.cursor--
+					} else {
+						m.cursor = m.getTotalPackages()
+					}
+				}
+				return m, nil
 			case "a":
-				m.selectAllInCurrentPanel(true)
+				if m.currentPanel == 0 {
+					for i := range m.installPackages {
+						m.installPackages[i].selected = true
+					}
+				} else {
+					for i := range m.removePackages {
+						m.removePackages[i].selected = true
+					}
+				}
 				return m, nil
 			case "n":
-				m.selectAllInCurrentPanel(false)
+				if m.currentPanel == 0 {
+					for i := range m.installPackages {
+						m.installPackages[i].selected = false
+					}
+				} else {
+					for i := range m.removePackages {
+						m.removePackages[i].selected = false
+					}
+				}
 				return m, nil
 			}
 
@@ -230,7 +342,7 @@ func (m selectionModel) View() string {
 	s.WriteString(centeredPanels + "\n\n")
 
 	// Подсказки по клавишам
-	shortcuts := shortcutStyle.Render(app.T_("Navigation: ↑/↓ - move, ←/→/Tab - switch panel, Space - toggle, a - select all, n - none, Enter - apply, Esc/q - cancel"))
+	shortcuts := shortcutStyle.Render(app.T_("Navigation: ↑/↓/j/k - move, ←/→ - switch panel, Tab - next area, Space - toggle, a - all, n - none, Enter - apply, Esc/q - cancel"))
 	s.WriteString(shortcuts + "\n\n")
 
 	// Кнопки действий
@@ -300,21 +412,24 @@ func (m selectionModel) buildActionButtons() string {
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent))
 	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Install))
-	normalStyle := lipgloss.NewStyle()
+	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+		Light: m.appConfig.ConfigManager.GetConfig().Colors.ItemLight,
+		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.ItemDark,
+	})
 
-	s.WriteString(titleStyle.Render(app.T_("Action:")) + "\n")
+	s.WriteString(titleStyle.Render(app.T_("Select an action:")) + "\n")
 
 	for i, choice := range m.choices {
 		prefix := "  "
 		if m.isInActionArea() && m.getActionCursor() == i {
-			prefix = "► "
+			prefix = "» "
 		}
 
 		var style lipgloss.Style
 		if i == 0 {
 			style = installStyle
 		} else {
-			style = normalStyle
+			style = valueStyle
 		}
 
 		s.WriteString(style.Render(prefix+choice) + "\n")
@@ -382,80 +497,6 @@ func (m selectionModel) removePackageEnumerator(_ list.Items, index int) string 
 }
 
 // Вспомогательные методы
-
-func (m selectionModel) moveCursorUp() {
-	if m.isInActionArea() {
-		actionCursor := m.getActionCursor()
-		if actionCursor > 0 {
-			m.cursor = m.getTotalPackages() + actionCursor - 1
-		} else {
-			// Переходим к последнему пакету
-			if m.currentPanel == 0 && len(m.installPackages) > 0 {
-				m.cursor = len(m.installPackages) - 1
-			} else if m.currentPanel == 1 && len(m.removePackages) > 0 {
-				m.cursor = len(m.removePackages) - 1
-			}
-		}
-	} else {
-		currentList := m.getCurrentPackageList()
-		if len(currentList) > 0 {
-			if m.cursor > 0 {
-				m.cursor--
-			} else {
-				m.cursor = m.getTotalPackages()
-			}
-		}
-	}
-}
-
-func (m selectionModel) moveCursorDown() {
-	if m.isInActionArea() {
-		actionCursor := m.getActionCursor()
-		if actionCursor < len(m.choices)-1 {
-			m.cursor++
-		} else {
-			m.cursor = 0
-		}
-	} else {
-		currentList := m.getCurrentPackageList()
-		if len(currentList) > 0 {
-			if m.cursor < len(currentList)-1 {
-				m.cursor++
-			} else {
-				m.cursor = m.getTotalPackages()
-			}
-		}
-	}
-}
-
-func (m selectionModel) switchPanel() {
-	if m.currentPanel == 0 && len(m.removePackages) > 0 {
-		m.currentPanel = 1
-	} else if m.currentPanel == 1 && len(m.installPackages) > 0 {
-		m.currentPanel = 0
-	}
-	m.cursor = 0
-}
-
-func (m selectionModel) toggleCurrentPackage() {
-	if m.currentPanel == 0 && m.cursor < len(m.installPackages) {
-		m.installPackages[m.cursor].selected = !m.installPackages[m.cursor].selected
-	} else if m.currentPanel == 1 && m.cursor < len(m.removePackages) {
-		m.removePackages[m.cursor].selected = !m.removePackages[m.cursor].selected
-	}
-}
-
-func (m selectionModel) selectAllInCurrentPanel(selected bool) {
-	if m.currentPanel == 0 {
-		for i := range m.installPackages {
-			m.installPackages[i].selected = selected
-		}
-	} else {
-		for i := range m.removePackages {
-			m.removePackages[i].selected = selected
-		}
-	}
-}
 
 func (m selectionModel) getCurrentPackageList() []packageItem {
 	if m.currentPanel == 0 {
