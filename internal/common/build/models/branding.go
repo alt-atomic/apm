@@ -1,7 +1,6 @@
 package models
 
 import (
-	_package "apm/internal/common/apt/package"
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
@@ -25,6 +24,9 @@ type BrandingBody struct {
 	// Имя брендинга для пакетов
 	Name string `yaml:"name,omitempty" json:"name,omitempty" needs:"BuildType"`
 
+	// Подпакетоы брендинга, которые нужно поставить. Если пуст, поставятся все
+	Subpackages []string `yaml:"subpackages,omitempty" json:"subpackages,omitempty" needs:"Name"`
+
 	// Тема плимут
 	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`
 
@@ -35,33 +37,42 @@ type BrandingBody struct {
 func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if b.Name != "" {
 		var brandingPackagesPrefix = fmt.Sprintf("branding-%s-", b.Name)
+		var brandingSubpackages = []string{}
 
-		filters := map[string]any{
-			"name": brandingPackagesPrefix,
-		}
-		packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
-		if err != nil {
-			return nil, err
-		}
-		if len(packages) == 0 {
-			return nil, fmt.Errorf("no branding packages found for %s", b.Name)
-		}
+		if len(b.Subpackages) != 0 {
+			brandingSubpackages = b.Subpackages
+		} else {
+			filters := map[string]any{
+				"name": brandingPackagesPrefix,
+			}
+			var err error
+			packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+			if err != nil {
+				return nil, err
+			}
 
-		var brandingMap = map[string]_package.Package{}
+			if len(packages) == 0 {
+				return nil, fmt.Errorf("no branding packages found for %s", b.Name)
+			}
+
+			for _, p := range packages {
+				brandingSubpackages = append(brandingSubpackages, strings.TrimPrefix(p.Name, brandingPackagesPrefix))
+			}
+		}
 
 		var pkgsNames []string
-		for _, pkg := range packages {
-			brandingMap[pkg.Name[len(brandingPackagesPrefix):len(pkg.Name)]] = pkg
-			pkgsNames = append(pkgsNames, pkg.Name)
+		for _, subpkg := range brandingSubpackages {
+			pkgsNames = append(pkgsNames, brandingPackagesPrefix+subpkg)
 		}
 
 		packagesBody := &PackagesBody{Install: pkgsNames}
 
-		if _, err = packagesBody.Execute(ctx, svc); err != nil {
+		if _, err := packagesBody.Execute(ctx, svc); err != nil {
 			return nil, err
 		}
 
-		if _, ok := brandingMap["release"]; ok {
+		// Исправить release файл для атомарной системы
+		if slices.Contains(brandingSubpackages, "release") && svc.IsAtomic() {
 			info, err := os.Stat(usrLibOsRelease)
 			if err != nil {
 				return nil, err
@@ -84,7 +95,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 				releaseType = bType
 			case "nightly":
 				prettyType = osutils.Capitalize(bType)
-				prettyNameSuffix = fmt.Sprintf(" %s", prettyType)
+				prettyNameSuffix = " " + prettyType
 				releaseType = "development"
 			}
 
@@ -103,7 +114,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 					vars["ID"] = fmt.Sprintf("%s-%s", value, bType)
 				}
 			} else {
-				vars["ID"] = "unknown-distro"
+				vars["ID"] = "linux"
 			}
 			vars["RELEASE_TYPE"] = releaseType
 			vars["VERSION"] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
@@ -204,11 +215,13 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 				}
 			}
 
-			if err := os.WriteFile(plymouthKargsPath, []byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
-				return nil, err
-			}
-			if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
-				return nil, err
+			if svc.IsAtomic() {
+				if err := os.WriteFile(plymouthKargsPath, []byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
+					return nil, err
+				}
+				if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
+					return nil, err
+				}
 			}
 		}
 

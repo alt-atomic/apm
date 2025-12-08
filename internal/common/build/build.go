@@ -50,6 +50,10 @@ func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBSer
 	}
 }
 
+func (cfgService *ConfigService) IsAtomic() bool {
+	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomic
+}
+
 func (cfgService *ConfigService) Build(ctx context.Context) error {
 	if cfgService.serviceHostConfig.Config == nil {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))

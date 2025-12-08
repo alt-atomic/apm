@@ -8,6 +8,7 @@ import (
 )
 
 type Service interface {
+	IsAtomic() bool
 	CombineInstallRemovePackages(ctx context.Context, packages []string, purge, depends bool) error
 	InstallPackages(ctx context.Context, packages []string) error
 	QueryHostImagePackages(ctx context.Context, filters map[string]any, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)

@@ -117,19 +117,21 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, err
 	}
 
-	latestInstalledKernelVersion, err := LatestInstalledKernelVersion()
-	if err != nil {
-		return nil, err
-	}
+	if svc.IsAtomic() {
+		latestInstalledKernelVersion, err := LatestInstalledKernelVersion()
+		if err != nil {
+			return nil, err
+		}
 
-	app.Log.Info("Copy vmlinuz")
-	err = osutils.Copy(
-		fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
-		fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
-		true,
-	)
-	if err != nil {
-		return nil, err
+		app.Log.Info("Copy vmlinuz")
+		err = osutils.Copy(
+			fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
+			fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
+			true,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	switch b.RebuildInitrdMethod {
