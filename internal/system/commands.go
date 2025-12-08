@@ -127,6 +127,93 @@ var withRootCheckWrapper = wrapperWithOptions(true)
 func CommandList(ctx context.Context) *cli.Command {
 	appConfig := app.GetAppConfig(ctx)
 
+	imageCmds := []*cli.Command{
+		{
+			Name:  "build",
+			Usage: app.T_("Build image"),
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.ImageBuild(ctx)
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+				}
+
+				return reply.CliResponse(ctx, *resp)
+			}),
+		},
+	}
+
+	if appConfig.ConfigManager.GetConfig().IsAtomic {
+		imageCmds = append(
+			imageCmds,
+			[]*cli.Command{
+				{
+					Name:  "apply",
+					Usage: app.T_("Apply changes to the host"),
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageApply(ctx)
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						}
+
+						return reply.CliResponse(ctx, *resp)
+					}),
+				},
+				{
+					Name:  "status",
+					Usage: app.T_("Image status"),
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageStatus(ctx)
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						}
+
+						return reply.CliResponse(ctx, *resp)
+					}),
+				},
+				{
+					Name:  "update",
+					Usage: app.T_("Image update"),
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageUpdate(ctx)
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						}
+
+						return reply.CliResponse(ctx, *resp)
+					}),
+				},
+				{
+					Name:  "history",
+					Usage: app.T_("Image changes history"),
+					Flags: []cli.Flag{
+						&cli.StringFlag{
+							Name:  "image",
+							Usage: app.T_("Filter by image name"),
+						},
+						&cli.IntFlag{
+							Name:  "limit",
+							Usage: app.T_("Maximum number of records to return"),
+							Value: 10,
+						},
+						&cli.IntFlag{
+							Name:  "offset",
+							Usage: app.T_("Starting position (offset) for the result set"),
+							Value: 0,
+						},
+					},
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						}
+
+						return reply.CliResponse(ctx, *resp)
+					}),
+				},
+			}...,
+		)
+	}
+
 	cmds := []*cli.Command{
 		{
 			Name:      "install",
@@ -344,6 +431,12 @@ func CommandList(ctx context.Context) *cli.Command {
 			}),
 		},
 		{
+			Name:     "image",
+			Usage:    app.T_("Module for working with the image"),
+			Aliases:  []string{"i"},
+			Commands: imageCmds,
+		},
+		{
 			Name:  "dbus-doc",
 			Usage: app.T_("Show dbus online documentation"),
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
@@ -351,95 +444,6 @@ func CommandList(ctx context.Context) *cli.Command {
 				return actions.GenerateOnlineDoc(ctx)
 			}),
 		},
-	}
-
-	if appConfig.ConfigManager.GetConfig().IsAtomic {
-		cmds = append(
-			cmds,
-			&cli.Command{
-				Name:    "image",
-				Usage:   app.T_("Module for working with the image"),
-				Aliases: []string{"i"},
-				Commands: []*cli.Command{
-					{
-						Name:  "build",
-						Usage: app.T_("Build image"),
-						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							resp, err := actions.ImageBuild(ctx)
-							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-							}
-
-							return reply.CliResponse(ctx, *resp)
-						}),
-					},
-					{
-						Name:  "apply",
-						Usage: app.T_("Apply changes to the host"),
-						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							resp, err := actions.ImageApply(ctx)
-							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-							}
-
-							return reply.CliResponse(ctx, *resp)
-						}),
-					},
-					{
-						Name:  "status",
-						Usage: app.T_("Image status"),
-						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							resp, err := actions.ImageStatus(ctx)
-							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-							}
-
-							return reply.CliResponse(ctx, *resp)
-						}),
-					},
-					{
-						Name:  "update",
-						Usage: app.T_("Image update"),
-						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							resp, err := actions.ImageUpdate(ctx)
-							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-							}
-
-							return reply.CliResponse(ctx, *resp)
-						}),
-					},
-					{
-						Name:  "history",
-						Usage: app.T_("Image changes history"),
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:  "image",
-								Usage: app.T_("Filter by image name"),
-							},
-							&cli.IntFlag{
-								Name:  "limit",
-								Usage: app.T_("Maximum number of records to return"),
-								Value: 10,
-							},
-							&cli.IntFlag{
-								Name:  "offset",
-								Usage: app.T_("Starting position (offset) for the result set"),
-								Value: 0,
-							},
-						},
-						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-							resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
-							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-							}
-
-							return reply.CliResponse(ctx, *resp)
-						}),
-					},
-				},
-			},
-		)
 	}
 
 	return &cli.Command{
