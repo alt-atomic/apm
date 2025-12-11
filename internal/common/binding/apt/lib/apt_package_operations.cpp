@@ -780,6 +780,12 @@ void collect_package_changes(AptCache *cache,
                 extra_removed.push_back(iter.Name());
             }
             if (st.InstallVer != 0) install_size -= st.InstallVer->InstalledSize;
+        } else if ((st.iFlags & pkgDepCache::ReInstall) != 0) {
+            new_installed.push_back(iter.Name());
+            pkgCache::VerIterator currentVer = iter.CurrentVer();
+            if (!currentVer.end()) {
+                download_size += currentVer->Size;
+            }
         }
     }
 }

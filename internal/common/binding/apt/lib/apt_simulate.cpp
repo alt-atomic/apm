@@ -278,25 +278,8 @@ AptResult plan_change_internal(
          uint64_t install_size = 0;
 
          collect_package_changes(cache, requested_install, requested_remove,
-                               extra_installed, extra_removed, upgraded, 
+                               extra_installed, extra_removed, upgraded,
                                new_installed, removed, download_size, install_size);
-
-         // Collect reinstall changes - packages with ReInstall flag
-         for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-             pkgDepCache::StateCache& pkg_state = (*cache->dep_cache)[iter];
-             if ((pkg_state.iFlags & pkgDepCache::ReInstall) != 0) {
-                 reinstalled.push_back(iter.Name());
-                 pkgCache::VerIterator currentVer = iter.CurrentVer();
-                 if (!currentVer.end()) {
-                     download_size += currentVer->Size;
-                 }
-             }
-         }
-
-         // Add reinstalled packages to new_installed for reporting
-         for (const auto& pkg : reinstalled) {
-             new_installed.push_back(pkg);
-         }
 
          populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed, download_size, install_size);
 
