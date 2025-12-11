@@ -216,6 +216,40 @@ func CommandList(ctx context.Context) *cli.Command {
 
 	cmds := []*cli.Command{
 		{
+			Name:      "reinstall",
+			Usage:     app.T_("Reinstall packages"),
+			ArgsUsage: "packages",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "yes",
+					Usage:   app.T_("Reinstall without confirmation"),
+					Aliases: []string{"y"},
+					Value:   false,
+				},
+				&cli.BoolFlag{
+					Name:    "simulate",
+					Usage:   app.T_("Simulate reinstallation"),
+					Aliases: []string{"s"},
+					Value:   false,
+				},
+			},
+			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				var resp *reply.APIResponse
+				var err error
+				if cmd.Bool("simulate") {
+					resp, err = actions.CheckReinstall(ctx, cmd.Args().Slice())
+				} else {
+					resp, err = actions.Reinstall(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
+				}
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+				}
+
+				return reply.CliResponse(ctx, *resp)
+			}),
+			ShellComplete: findPkgWithInstalled(true),
+		},
+		{
 			Name:      "install",
 			Usage:     app.T_("Package list for installation. The format package- package+ is supported."),
 			ArgsUsage: "packages",

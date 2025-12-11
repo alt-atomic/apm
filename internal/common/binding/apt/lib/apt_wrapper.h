@@ -220,6 +220,12 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
 
 AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes);
 
+// Reinstall simulation
+AptResult apt_simulate_reinstall(AptCache *cache, const char **package_names, size_t count, AptPackageChanges *changes);
+
+// Apply reinstall changes to cache
+AptResult apt_apply_reinstall(AptCache *cache, const char **package_names, size_t count);
+
 // Combined simulation: install and remove in a single transaction
 AptResult apt_simulate_change(AptCache *cache,
                               const char **install_names, size_t install_count,

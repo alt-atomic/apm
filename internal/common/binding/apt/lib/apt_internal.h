@@ -106,6 +106,7 @@ AptResult plan_change_internal(
     AptCache *cache,
     const char **install_names, size_t install_count,
     const char **remove_names, size_t remove_count,
+    const char **reinstall_names, size_t reinstall_count,
     bool purge,
     bool remove_depends,
     bool apply,

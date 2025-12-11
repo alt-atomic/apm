@@ -218,6 +218,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		packagesRemove,
 		false,
 		false,
+		false,
 	)
 	if errFind != nil {
 		return errFind

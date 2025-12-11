@@ -207,6 +207,90 @@ AptResult process_package_installs(AptCache *cache,
     return make_result(APT_SUCCESS, nullptr);
 }
 
+AptResult process_package_reinstalls(AptCache *cache,
+                                     const char **reinstall_names,
+                                     size_t reinstall_count,
+                                     std::set<std::string> &requested_reinstall) {
+    if (!cache || !cache->dep_cache) {
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
+    }
+    if (!reinstall_names || reinstall_count == 0) {
+        return make_result(APT_SUCCESS, nullptr);
+    }
+
+    for (size_t i = 0; i < reinstall_count; i++) {
+        if (!reinstall_names[i]) continue;
+
+        std::string raw(reinstall_names[i]);
+        RequirementSpec req = parse_requirement(raw);
+
+        pkgCache::PkgIterator pkg;
+
+        if (is_rpm_file(raw)) {
+            std::string pkg_name;
+            bool found = false;
+
+            // Scan cache to find package with matching RPM file
+            for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
+                pkgDepCache::StateCache &state = (*cache->dep_cache)[iter];
+                if (state.CandidateVer == 0) continue;
+
+                pkgCache::VerIterator ver = state.CandidateVerIter(*cache->dep_cache);
+                if (ver.end()) continue;
+
+                // Check if this version came from our RPM file
+                for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
+                    pkgCache::PkgFileIterator file = vf.File();
+                    if (file.FileName() && raw.find(file.FileName()) != std::string::npos) {
+                        pkg_name = iter.Name();
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+
+            if (!found) {
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                                 (std::string("Unable to find package from RPM file: ") + raw).c_str());
+            }
+
+            // Find the installed package by name
+            pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
+            if (pkg.end()) {
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                                 (std::string("Package ") + pkg_name + " is not installed, so cannot be reinstalled").c_str());
+            }
+        } else {
+            // For regular package names, use standard lookup
+            AptResult result = find_install_package(cache, req, pkg);
+            if (result.code != APT_SUCCESS) {
+                return result;
+            }
+        }
+
+        // Check if package is installed
+        if (pkg->CurrentVer == 0) {
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                             (std::string("Package ") + pkg.Name() + " is not installed, so cannot be reinstalled").c_str());
+        }
+
+        if (!is_rpm_file(raw)) {
+            pkgCache::VerIterator currentVer = pkg.CurrentVer();
+            if (!currentVer.Downloadable()) {
+                return make_result(APT_ERROR_DOWNLOAD_FAILED,
+                                 (std::string("Reinstallation of ") + pkg.Name() + " " +
+                                  currentVer.VerStr() + " is not possible, it cannot be downloaded").c_str());
+            }
+        }
+
+        requested_reinstall.insert(pkg.Name());
+        cache->dep_cache->SetReInstall(pkg, true);
+    }
+
+    return make_result(APT_SUCCESS, nullptr);
+}
+
 static AptResult find_remove_package(AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &result_pkg) {
     pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(req.name.c_str());
 
@@ -372,59 +456,6 @@ static void mark_orphan_packages_for_removal(AptCache *cache, const std::set<pkg
         }
     }
 }
-
-//static void mark_dependent_packages_for_removal(AptCache* cache, pkgCache::PkgIterator initial_pkg, bool purge) {
-//    std::set<pkgCache::PkgIterator> to_remove;
-//    std::set<pkgCache::PkgIterator> processed;
-//    to_remove.insert(initial_pkg);
-//
-//    while (!to_remove.empty()) {
-//        pkgCache::PkgIterator current = *to_remove.begin();
-//        to_remove.erase(to_remove.begin());
-//
-//        if (processed.find(current) != processed.end()) continue;
-//        processed.insert(current);
-//
-//        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-//            if (processed.find(it) != processed.end()) continue;
-//
-//            pkgCache::VerIterator cur = it.CurrentVer();
-//            if (cur.end()) continue;
-//
-//            pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
-//            if (it_st.Delete()) continue;
-//
-//            bool depends_on_current = false;
-//            for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
-//                if (dep->Type != pkgCache::Dep::Depends &&
-//                    dep->Type != pkgCache::Dep::PreDepends) continue;
-//
-//                if (dep.TargetPkg() == current) {
-//                    depends_on_current = true;
-//                    break;
-//                }
-//
-//                pkgCache::VerIterator cur_ver = current.CurrentVer();
-//                if (!cur_ver.end()) {
-//                    for (pkgCache::PrvIterator prv = cur_ver.ProvidesList(); !prv.end(); ++prv) {
-//                        if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
-//                            depends_on_current = true;
-//                            break;
-//                        }
-//                    }
-//                }
-//                if (depends_on_current) break;
-//            }
-//
-//            if (depends_on_current) {
-//                if ((it->Flags & pkgCache::Flag::Essential) == 0) {
-//                    cache->dep_cache->MarkDelete(it, purge);
-//                    to_remove.insert(it);
-//                }
-//            }
-//        }
-//    }
-//}
 
 AptResult process_package_removals(AptCache *cache,
                                    const char **remove_names,

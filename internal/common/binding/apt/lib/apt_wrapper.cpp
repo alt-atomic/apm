@@ -490,7 +490,7 @@ AptResult apt_mark_install(AptCache *cache, const char *package_name) {
         // Delegate to unified planner to guarantee parity with simulation
         const char *install_names[1] = {package_name};
         AptPackageChanges dummy{};
-        AptResult r = plan_change_internal(cache, install_names, 1, nullptr, 0, false, false, true, &dummy);
+        AptResult r = plan_change_internal(cache, install_names, 1, nullptr, 0, nullptr, 0, false, false, true, &dummy);
         apt_free_package_changes(&dummy);
         return r;
     } catch (const std::exception &e) {
@@ -507,7 +507,7 @@ AptResult apt_mark_remove(AptCache *cache, const char *package_name, bool purge,
         // Delegate to unified planner to guarantee parity with simulation
         const char *remove_names[1] = {package_name};
         AptPackageChanges dummy{};
-        AptResult r = plan_change_internal(cache, nullptr, 0, remove_names, 1, purge, remove_depends, true, &dummy);
+        AptResult r = plan_change_internal(cache, nullptr, 0, remove_names, 1, nullptr, 0, purge, remove_depends, true, &dummy);
         apt_free_package_changes(&dummy);
         return r;
     } catch (const std::exception &e) {

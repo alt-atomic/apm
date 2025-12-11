@@ -192,6 +192,7 @@ AptResult plan_change_internal(
      AptCache* cache,
      const char** install_names, size_t install_count,
      const char** remove_names, size_t remove_count,
+     const char** reinstall_names, size_t reinstall_count,
      bool purge,
      bool remove_depends,
      bool apply,
@@ -209,6 +210,7 @@ AptResult plan_change_internal(
 
          std::set<std::string> requested_install;
          std::set<std::string> requested_remove;
+         std::set<std::string> requested_reinstall;
          std::vector<std::pair<std::string, pkgCache::PkgIterator>> remove_targets;
 
          // Step 0: Preprocess RPM files BEFORE saving cache state
@@ -235,25 +237,31 @@ AptResult plan_change_internal(
              return result;
          }
 
-        // Step 3a: Check for package conflicts FIRST
+         // Step 3: Process package reinstalls
+         result = process_package_reinstalls(cache, reinstall_names, reinstall_count, requested_reinstall);
+         if (result.code != APT_SUCCESS) {
+             return result;
+         }
+
+        // Step 4a: Check for package conflicts FIRST
         result = check_package_conflicts(cache, requested_install);
         if (result.code != APT_SUCCESS) {
             return result;
         }
 
-        // Step 3b: Preprocess additional install dependencies
+        // Step 4b: Preprocess additional install dependencies
         result = preprocess_installs(cache, requested_install);
         if (result.code != APT_SUCCESS) {
             return result;
         }
 
-        // Step 3c: Preprocess removal validations
+        // Step 4c: Preprocess removal validations
         result = preprocess_removals(cache, requested_remove);
         if (result.code != APT_SUCCESS) {
             return result;
         }
 
-        // Step 3d: Finalize all dependency resolution (single Fix.Resolve for everything)
+        // Step 4d: Finalize all dependency resolution (single Fix.Resolve for everything)
         result = finalize_dependency_resolution(cache, requested_install, requested_remove, remove_depends);
         if (result.code != APT_SUCCESS) {
             return result;
@@ -265,12 +273,30 @@ AptResult plan_change_internal(
          std::vector<std::string> upgraded;
          std::vector<std::string> new_installed;
          std::vector<std::string> removed;
+         std::vector<std::string> reinstalled;
          uint64_t download_size = 0;
          uint64_t install_size = 0;
 
          collect_package_changes(cache, requested_install, requested_remove,
                                extra_installed, extra_removed, upgraded, 
                                new_installed, removed, download_size, install_size);
+
+         // Collect reinstall changes - packages with ReInstall flag
+         for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
+             pkgDepCache::StateCache& pkg_state = (*cache->dep_cache)[iter];
+             if ((pkg_state.iFlags & pkgDepCache::ReInstall) != 0) {
+                 reinstalled.push_back(iter.Name());
+                 pkgCache::VerIterator currentVer = iter.CurrentVer();
+                 if (!currentVer.end()) {
+                     download_size += currentVer->Size;
+                 }
+             }
+         }
+
+         // Add reinstalled packages to new_installed for reporting
+         for (const auto& pkg : reinstalled) {
+             new_installed.push_back(pkg);
+         }
 
          populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed, download_size, install_size);
 
@@ -290,7 +316,8 @@ AptResult apt_simulate_change(AptCache* cache,
                               bool purge,
                               bool remove_depends,
                               AptPackageChanges* changes) {
-    return plan_change_internal(cache, install_names, install_count, remove_names, remove_count, purge, remove_depends, false, changes);
+    return plan_change_internal(cache, install_names, install_count, remove_names, remove_count,
+                               nullptr, 0, purge, remove_depends, false, changes);
 }
 
 AptResult apt_apply_changes(AptCache* cache,
@@ -305,7 +332,28 @@ AptResult apt_apply_changes(AptCache* cache,
     AptPackageChanges dummy{};
     AptResult r = plan_change_internal(cache, install_names, install_count,
                                       remove_names, remove_count,
+                                      nullptr, 0,
                                       purge, remove_depends,
+                                      true,  // apply=true - commit changes to cache
+                                      &dummy);
+    apt_free_package_changes(&dummy);
+    return r;
+}
+
+AptResult apt_simulate_reinstall(AptCache* cache, const char** package_names, size_t count, AptPackageChanges* changes) {
+    return plan_change_internal(cache, nullptr, 0, nullptr, 0,
+                               package_names, count, false, false, false, changes);
+}
+
+AptResult apt_apply_reinstall(AptCache* cache, const char** package_names, size_t count) {
+    if (!cache) {
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache for apply reinstall");
+    }
+
+    AptPackageChanges dummy{};
+    AptResult r = plan_change_internal(cache, nullptr, 0, nullptr, 0,
+                                      package_names, count,
+                                      false, false,
                                       true,  // apply=true - commit changes to cache
                                       &dummy);
     apt_free_package_changes(&dummy);

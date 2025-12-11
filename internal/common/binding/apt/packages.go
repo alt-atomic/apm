@@ -371,6 +371,66 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 	return
 }
 
+// SimulateReinstall симуляция переустановки пакетов
+func (a *Actions) SimulateReinstall(packageNames []string) (packageInfo *lib.PackageChanges, err error) {
+	if len(packageNames) == 0 {
+		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
+	}
+
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
+
+		cache, e := lib.OpenCache(system, false)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageInfo, e = cache.SimulateReinstall(packageNames)
+		return e
+	})
+	return
+}
+
+// ReinstallPackages переустановка пакетов
+func (a *Actions) ReinstallPackages(packageNames []string, handler lib.ProgressHandler) error {
+	if len(packageNames) == 0 {
+		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
+	}
+
+	return a.operationWrapper(func() error {
+		system, err := getSystem()
+		if err != nil {
+			return err
+		}
+
+		cache, err := lib.OpenCache(system, false)
+		if err != nil {
+			return err
+		}
+		defer cache.Close()
+
+		// Apply reinstall changes to cache
+		if e := cache.ApplyReinstall(packageNames); e != nil {
+			return e
+		}
+
+		pm, err := lib.NewPackageManager(cache)
+		if err != nil {
+			return err
+		}
+		defer pm.Close()
+
+		if handler != nil {
+			return pm.InstallPackagesWithProgress(handler)
+		}
+		return pm.InstallPackages()
+	})
+}
+
 // checkAnyError анализ всех ошибок, включает в себя stdout из apt-lib
 func (a *Actions) checkAnyError(logs []string, err error) error {
 	aptErrors := apt.ErrorLinesAnalyseAll(logs)
