@@ -288,24 +288,26 @@ func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target stri
 
 // executeIncludeDir обрабатывает все файлы в директори
 func (cfgService *ConfigService) executeIncludeDir(ctx context.Context, dir string) error {
-	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
 		}
 
-		if info.IsDir() {
-			return nil
-		}
-
+		path := filepath.Join(dir, file.Name())
 		if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
 			// Не учитываем директорию, так как ID у include'ов будут неочевидны в рамках обзора одного yml файла
 			if _, err = cfgService.executeIncludeFileWithCD(ctx, path); err != nil {
 				return err
 			}
 		}
+	}
 
-		return nil
-	})
+	return nil
 }
 
 // executeIncludeFileWithCD меняет директорию перед выполнением файла
