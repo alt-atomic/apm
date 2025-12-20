@@ -766,6 +766,10 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
+	if err = a.serviceTemporaryConfig.LoadConfig(); err != nil {
+		return nil, err
+	}
+
 	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
 		reply.StopSpinnerForDialog(a.appConfig)
 		// Показываем диалог выбора пакетов
