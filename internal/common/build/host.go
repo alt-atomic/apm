@@ -333,7 +333,7 @@ func (h *HostImageService) GenerateDockerfile(config Config) error {
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", config.Image))
 	dockerfileLines = append(
 		dockerfileLines,
-		"RUN --mount=type=bind,ro,source=/etc/apm/image.yml,target=/etc/apm/image.yml --mount=type=bind,ro,source=/etc/apm/resources,target=/etc/apm/resources apm system image build",
+		"RUN --mount=type=bind,ro,source=image.yml,target=/etc/apm/image.yml --mount=type=bind,ro,source=resources,target=/etc/apm/resources apm system image build",
 	)
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
