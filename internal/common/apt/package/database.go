@@ -478,9 +478,9 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 			query = query.Where("typePackage = ?", value)
 		case "depends":
 			if strVal, ok := value.(string); ok {
-				query = query.Where("depends LIKE ?", "%"+strVal+"%")
+				query = query.Where("(',' || depends || ',') LIKE ?", "%,"+strVal+",%")
 			} else {
-				query = query.Where("depends LIKE ?", fmt.Sprintf("%%%v%%", value))
+				query = query.Where("(',' || depends || ',') LIKE ?", fmt.Sprintf("%%,%v,%%", value))
 			}
 		case "provides":
 			if strVal, ok := value.(string); ok {
