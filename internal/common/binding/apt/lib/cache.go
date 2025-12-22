@@ -284,6 +284,39 @@ func (c *Cache) SimulateChange(installNames []string, removeNames []string, purg
 	return changes, err
 }
 
+// ApplyChanges applies package changes to the cache
+func (c *Cache) ApplyChanges(installNames []string, removeNames []string, purge bool, depends bool) error {
+	return withMutex(func() error {
+		var cInst **C.char
+		var instCount C.size_t
+		var installArr []*C.char
+
+		if len(installNames) > 0 {
+			installArr = makeCStringArray(installNames)
+			defer freeCStringArray(installArr)
+			cInst = (**C.char)(unsafe.Pointer(&installArr[0]))
+			instCount = C.size_t(len(installNames))
+		}
+
+		var cRem **C.char
+		var remCount C.size_t
+		var removeArr []*C.char
+
+		if len(removeNames) > 0 {
+			removeArr = makeCStringArray(removeNames)
+			defer freeCStringArray(removeArr)
+			cRem = (**C.char)(unsafe.Pointer(&removeArr[0]))
+			remCount = C.size_t(len(removeNames))
+		}
+
+		res := C.apt_apply_changes(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), C.bool(depends))
+		if res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+		return nil
+	})
+}
+
 // Helper: safely convert C string to Go string
 func cStringToGo(cstr *C.char) string {
 	if cstr != nil {

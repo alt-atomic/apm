@@ -109,15 +109,13 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool
 		return nil, aptError
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": app.T_("Inspection information"),
-			"info":    packageParse,
+	return &reply.APIResponse{
+		Data: CheckResponse{
+			Message: app.T_("Inspection information"),
+			Info:    *packageParse,
 		},
 		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // CheckUpgrade проверяем пакеты перед обновлением системы
@@ -127,33 +125,44 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (*reply.APIResponse, error) 
 		return nil, aptError
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": app.T_("Inspection information"),
-			"info":    packageParse,
+	return &reply.APIResponse{
+		Data: CheckResponse{
+			Message: app.T_("Inspection information"),
+			Info:    *packageParse,
 		},
 		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // CheckInstall проверяем пакеты перед установкой
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
-	packageParse, aptError := a.serviceAptActions.CheckInstall(ctx, packages)
-	if aptError != nil {
-		return nil, aptError
+	if len(packages) == 0 {
+		return nil, errors.New(app.T_("You must specify at least one package"))
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": app.T_("Inspection information"),
-			"info":    packageParse,
+	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
+	if errPrepare != nil {
+		return nil, errPrepare
+	}
+
+	_, _, _, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesInstall,
+		packagesRemove,
+		false,
+		false,
+	)
+	if errFind != nil {
+		return nil, errFind
+	}
+
+	return &reply.APIResponse{
+		Data: CheckResponse{
+			Message: app.T_("Inspection information"),
+			Info:    *packageParse,
 		},
 		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // Remove удаляет системный пакет.
@@ -221,15 +230,13 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 		}
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": messageAnswer,
-			"info":    packageParse,
+	return &reply.APIResponse{
+		Data: InstallRemoveResponse{
+			Message: messageAnswer,
+			Info:    *packageParse,
 		},
 		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // Install осуществляет установку системного пакета.
@@ -266,7 +273,12 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 	}
 
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
-		return nil, errors.New(app.T_("The operation will not make any changes"))
+		return &reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": app.T_("The operation will not make any changes"),
+			},
+			Error: false,
+		}, nil
 	}
 
 	if len(packagesInfo) > 0 && !confirm {
@@ -334,9 +346,9 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 	}
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": messageAnswer,
-			"info":    packageParse,
+		Data: InstallRemoveResponse{
+			Message: messageAnswer,
+			Info:    *packageParse,
 		},
 		Error: false,
 	}
@@ -362,9 +374,9 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": app.T_("Package list updated successfully"),
-			"count":   len(packages),
+		Data: UpdateResponse{
+			Message: app.T_("Package list updated successfully"),
+			Count:   len(packages),
 		},
 		Error: false,
 	}
@@ -411,8 +423,8 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	resp := reply.APIResponse{
-		Data: map[string]any{
-			"message": app.T_("DONE"),
+		Data: ImageBuild{
+			Message: app.T_("DONE"),
 		},
 		Error: false,
 	}
@@ -444,8 +456,9 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
 		return &reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": app.T_("The operation will not make any changes"),
+			Data: UpgradeResponse{
+				Message: app.T_("The operation will not make any changes"),
+				Result:  nil,
 			},
 			Error: false,
 		}, nil
@@ -479,9 +492,9 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 	)
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": app.T_("The system has been upgrade successfully"),
-			"result":  messageAnswer,
+		Data: UpgradeResponse{
+			Message: app.T_("The system has been upgrade successfully"),
+			Result:  &messageAnswer,
 		},
 		Error: false,
 	}
@@ -620,14 +633,7 @@ func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, erro
 
 	fieldList := _package.AllowedFilterFields
 
-	type FilterField struct {
-		Name string                          `json:"name"`
-		Text string                          `json:"text"`
-		Info map[_package.PackageType]string `json:"info"`
-		Type string                          `json:"type"`
-	}
-
-	var fields []FilterField
+	var fields GetFilterFieldsResponse
 
 	for _, field := range fieldList {
 		ff := FilterField{
@@ -704,9 +710,9 @@ func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":     app.T_("Image status"),
-			"bootedImage": imageStatus,
+		Data: ImageStatusResponse{
+			Message:     app.T_("Image status"),
+			BootedImage: imageStatus,
 		},
 		Error: false,
 	}
@@ -716,12 +722,15 @@ func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageUpdate обновляет образ.
 func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.serviceHostConfig.LoadConfig()
-	if err != nil {
+	if err := a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, err
 	}
 
-	err = a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.Config)
+	if err := a.serviceHostConfig.Config.CheckImage(); err != nil {
+		return nil, err
+	}
+
+	err := a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -732,9 +741,9 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":     app.T_("Command executed successfully"),
-			"bootedImage": imageStatus,
+		Data: ImageUpdateResponse{
+			Message:     app.T_("Command executed successfully"),
+			BootedImage: imageStatus,
 		},
 		Error: false,
 	}
@@ -749,13 +758,15 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	err = a.serviceTemporaryConfig.LoadConfig()
-	if err != nil {
+	if err = a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, err
 	}
 
-	err = a.serviceHostConfig.LoadConfig()
-	if err != nil {
+	if err = a.serviceHostConfig.Config.CheckImage(); err != nil {
+		return nil, err
+	}
+
+	if err = a.serviceTemporaryConfig.LoadConfig(); err != nil {
 		return nil, err
 	}
 
@@ -816,9 +827,9 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	_ = a.serviceTemporaryConfig.DeleteFile()
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":     app.T_("Changes applied successfully. A reboot is required"),
-			"bootedImage": imageStatus,
+		Data: ImageApplyResponse{
+			Message:     app.T_("Changes applied successfully. A reboot is required"),
+			BootedImage: imageStatus,
 		},
 		Error: false,
 	}
@@ -841,10 +852,10 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(history)), len(history))
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":    msg,
-			"history":    history,
-			"totalCount": totalCount,
+		Data: ImageHistoryResponse{
+			Message:    msg,
+			History:    history,
+			TotalCount: totalCount,
 		},
 		Error: false,
 	}
@@ -860,8 +871,8 @@ func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
 	}
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"config": a.serviceHostConfig.Config,
+		Data: ImageConfigResponse{
+			Config: *a.serviceHostConfig.Config,
 		},
 		Error: false,
 	}
@@ -884,8 +895,8 @@ func (a *Actions) ImageSaveConfig(config build.Config) (*reply.APIResponse, erro
 	}
 
 	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"config": a.serviceHostConfig.Config,
+		Data: ImageConfigResponse{
+			Config: *a.serviceHostConfig.Config,
 		},
 		Error: false,
 	}
@@ -1003,6 +1014,7 @@ func (a *Actions) getImageStatus(_ context.Context) (ImageStatus, error) {
 // ShortPackageResponse Определяем структуру для короткого представления пакета
 type ShortPackageResponse struct {
 	Name       string `json:"name"`
+	Summary    string `json:"summary"`
 	Installed  bool   `json:"installed"`
 	Version    string `json:"version"`
 	Maintainer string `json:"maintainer"`
@@ -1019,6 +1031,7 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 		}
 		return ShortPackageResponse{
 			Name:       v.Name,
+			Summary:    v.Summary,
 			Version:    v.Version,
 			Installed:  v.Installed,
 			Maintainer: v.Maintainer,
@@ -1032,6 +1045,7 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 		for _, pkg := range v {
 			shortList = append(shortList, ShortPackageResponse{
 				Name:       pkg.Name,
+				Summary:    pkg.Summary,
 				Version:    pkg.Version,
 				Installed:  pkg.Installed,
 				Maintainer: pkg.Maintainer,

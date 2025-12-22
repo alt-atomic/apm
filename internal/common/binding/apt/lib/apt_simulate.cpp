@@ -293,6 +293,25 @@ AptResult apt_simulate_change(AptCache* cache,
     return plan_change_internal(cache, install_names, install_count, remove_names, remove_count, purge, remove_depends, false, changes);
 }
 
+AptResult apt_apply_changes(AptCache* cache,
+                            const char** install_names, size_t install_count,
+                            const char** remove_names, size_t remove_count,
+                            bool purge,
+                            bool remove_depends) {
+    if (!cache) {
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache for apply changes");
+    }
+
+    AptPackageChanges dummy{};
+    AptResult r = plan_change_internal(cache, install_names, install_count,
+                                      remove_names, remove_count,
+                                      purge, remove_depends,
+                                      true,  // apply=true - commit changes to cache
+                                      &dummy);
+    apt_free_package_changes(&dummy);
+    return r;
+}
+
 AptResult apt_simulate_autoremove(AptCache* cache, AptPackageChanges* changes) {
     if (!cache || !changes) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for autoremove simulation");

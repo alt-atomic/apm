@@ -49,46 +49,78 @@ type Info struct {
 	AgeInDays        int       `json:"ageInDays"`
 }
 
-// ToMap конвертирует Info в map[string]interface{} для JSON ответов
-func (info *Info) ToMap(full bool, manager *Manager) map[string]interface{} {
-	if full {
-		result := map[string]interface{}{
-			"packageName":      info.PackageName,
-			"flavour":          info.Flavour,
-			"version":          info.Version,
-			"versionInstalled": info.VersionInstalled,
-			"release":          info.Release,
-			"fullVersion":      info.FullVersion,
-			"isInstalled":      info.IsInstalled,
-			"isRunning":        info.IsRunning,
-			"ageInDays":        info.AgeInDays,
-			"buildTime":        info.BuildTime.Format(time.RFC3339),
-		}
+// FullKernelInfo полная информация о ядре с модулями
+type FullKernelInfo struct {
+	PackageName      string                `json:"packageName"`
+	Flavour          string                `json:"flavour"`
+	Version          string                `json:"version"`
+	VersionInstalled string                `json:"versionInstalled"`
+	Release          string                `json:"release"`
+	FullVersion      string                `json:"fullVersion"`
+	IsInstalled      bool                  `json:"isInstalled"`
+	IsRunning        bool                  `json:"isRunning"`
+	AgeInDays        int                   `json:"ageInDays"`
+	BuildTime        string                `json:"buildTime"`
+	InstalledModules []InstalledModuleInfo `json:"installedModules,omitempty"`
+}
 
-		if manager != nil {
-			allModules, _ := manager.FindAvailableModules(info)
-			var installedModules []map[string]interface{}
-			for _, module := range allModules {
-				if module.IsInstalled {
-					installedModules = append(installedModules, map[string]interface{}{
-						"name":        module.Name,
-						"packageName": module.PackageName,
-					})
-				}
+// ShortKernelInfo сокращенная информация о ядре
+type ShortKernelInfo struct {
+	Version          string `json:"version"`
+	VersionInstalled string `json:"versionInstalled"`
+	Flavour          string `json:"flavour"`
+	FullVersion      string `json:"fullVersion"`
+	IsInstalled      bool   `json:"isInstalled"`
+	IsRunning        bool   `json:"isRunning"`
+}
+
+// InstalledModuleInfo информация об установленном модуле
+type InstalledModuleInfo struct {
+	Name        string `json:"name"`
+	PackageName string `json:"packageName"`
+}
+
+// ToFull конвертирует Info в FullKernelInfo
+func (info *Info) ToFull(manager *Manager) FullKernelInfo {
+	result := FullKernelInfo{
+		PackageName:      info.PackageName,
+		Flavour:          info.Flavour,
+		Version:          info.Version,
+		VersionInstalled: info.VersionInstalled,
+		Release:          info.Release,
+		FullVersion:      info.FullVersion,
+		IsInstalled:      info.IsInstalled,
+		IsRunning:        info.IsRunning,
+		AgeInDays:        info.AgeInDays,
+		BuildTime:        info.BuildTime.Format(time.RFC3339),
+	}
+
+	if manager != nil {
+		allModules, _ := manager.FindAvailableModules(info)
+		var installedModules []InstalledModuleInfo
+		for _, module := range allModules {
+			if module.IsInstalled {
+				installedModules = append(installedModules, InstalledModuleInfo{
+					Name:        module.Name,
+					PackageName: module.PackageName,
+				})
 			}
-			result["InstalledModules"] = installedModules
 		}
+		result.InstalledModules = installedModules
+	}
 
-		return result
-	} else {
-		return map[string]interface{}{
-			"version":          info.Version,
-			"versionInstalled": info.VersionInstalled,
-			"flavour":          info.Flavour,
-			"fullVersion":      info.FullVersion,
-			"isInstalled":      info.IsInstalled,
-			"isRunning":        info.IsRunning,
-		}
+	return result
+}
+
+// ToShort конвертирует Info в ShortKernelInfo
+func (info *Info) ToShort() ShortKernelInfo {
+	return ShortKernelInfo{
+		Version:          info.Version,
+		VersionInstalled: info.VersionInstalled,
+		Flavour:          info.Flavour,
+		FullVersion:      info.FullVersion,
+		IsInstalled:      info.IsInstalled,
+		IsRunning:        info.IsRunning,
 	}
 }
 
@@ -173,32 +205,32 @@ func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
 
 	release := strings.TrimSpace(string(output))
 
-	// Используем uname только для получения flavour
 	tempKernel := parseKernelRelease(release)
 	if tempKernel == nil {
 		return nil, fmt.Errorf(app.T_("failed to parse kernel release: %s"), release)
 	}
 
-	filters := map[string]interface{}{
-		"typePackage": int(_package.PackageTypeSystem),
-		"name":        fmt.Sprintf("kernel-image-%s", tempKernel.Flavour),
-		"installed":   true,
-	}
-	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
-	if err != nil || len(packages) == 0 {
-		return nil, errors.New(app.T_("failed to find current kernel package in database"))
+	// Получаем все установленные ядра через RPM
+	installedKernels, err := km.ListInstalledKernelsFromRPM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(app.T_("failed to get installed kernels: %s"), err.Error())
 	}
 
-	pkg := packages[0]
-	kernel := km.ParseKernelPackageFromDB(pkg)
-	if kernel == nil {
-		return nil, errors.New(app.T_("failed to parse kernel package from database"))
+	// Ищем ядро с точной версией из uname
+	for _, kernel := range installedKernels {
+		if kernel.Flavour == tempKernel.Flavour &&
+			kernel.Version == tempKernel.Version &&
+			kernel.Release == tempKernel.Release {
+			kernel.IsRunning = true
+			kernel.IsInstalled = true
+
+			km.enrichKernelInfoFromDB(kernel)
+
+			return kernel, nil
+		}
 	}
 
-	kernel.IsRunning = true
-	kernel.IsInstalled = true
-
-	return kernel, nil
+	return nil, fmt.Errorf(app.T_("running kernel %s not found in installed packages"), release)
 }
 
 // GetDefaultKernel возвращает информацию о ядре по умолчанию (/boot/vmlinuz)
@@ -262,8 +294,11 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 		// Проверяем статус установки
 		kernel.IsInstalled = km.checkInstallStatus(kernel, pkg.Installed)
 
-		// Проверяем является ли текущим - сравниваем по PackageName
-		if currentKernel != nil && kernel.PackageName == currentKernel.PackageName {
+		// Проверяем является ли текущим - сравниваем по PackageName, Version и Release
+		if currentKernel != nil &&
+			kernel.PackageName == currentKernel.PackageName &&
+			kernel.Version == currentKernel.Version &&
+			kernel.Release == currentKernel.Release {
 			kernel.IsRunning = true
 			// Обновляем currentKernel реальными данными из базы
 			currentKernel.BuildTime = kernel.BuildTime
@@ -271,8 +306,11 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 			currentKernel.FullVersion = kernel.FullVersion
 		}
 
-		// Проверяем является ли по умолчанию - сравниваем по PackageName
-		if defaultKernel != nil && kernel.PackageName == defaultKernel.PackageName {
+		// Проверяем является ли по умолчанию - сравниваем по PackageName, Version и Release
+		if defaultKernel != nil &&
+			kernel.PackageName == defaultKernel.PackageName &&
+			kernel.Version == defaultKernel.Version &&
+			kernel.Release == defaultKernel.Release {
 			defaultKernel.BuildTime = kernel.BuildTime
 			defaultKernel.AgeInDays = kernel.AgeInDays
 			defaultKernel.FullVersion = kernel.FullVersion
@@ -430,7 +468,7 @@ func (km *Manager) DetectCurrentFlavour(ctx context.Context) (string, error) {
 	return current.Flavour, nil
 }
 
-// FindNextFlavours ищет доступные flavour'ы новее указанной версии
+// FindNextFlavours ищет доступные kernel-image пакеты >= указанной версии
 func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err error) {
 	ctx := context.Background()
 
@@ -444,27 +482,49 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 		return nil, fmt.Errorf(app.T_("failed to search kernels in database: %s"), err.Error())
 	}
 
+	// Структура для хранения информации о flavour и его максимальной версии
+	type FlavourWithVersion struct {
+		Flavour string
+		Version string
+	}
+
 	flavourVersions := make(map[string]string)
 
 	for _, pkg := range packages {
+		if strings.Contains(pkg.Name, "debuginfo") {
+			continue
+		}
+
 		kernel := km.ParseKernelPackageFromDB(pkg)
 		if kernel == nil {
 			continue
 		}
 
-		// Проверяем что версия больше минимальной
-		if _package.CompareVersions(kernel.Version, minVersion) > 0 {
+		cmp := _package.CompareVersions(kernel.Version, minVersion)
+		if cmp >= 0 {
 			if currentVer, exists := flavourVersions[kernel.Flavour]; !exists || _package.CompareVersions(kernel.Version, currentVer) > 0 {
 				flavourVersions[kernel.Flavour] = kernel.Version
 			}
 		}
 	}
 
-	for flavour := range flavourVersions {
-		flavours = append(flavours, flavour)
+	var flavourList []FlavourWithVersion
+	for flavour, version := range flavourVersions {
+		flavourList = append(flavourList, FlavourWithVersion{
+			Flavour: flavour,
+			Version: version,
+		})
 	}
 
-	sort.Strings(flavours)
+	// Сортируем по версии (старые сначала, чтобы первым был ближайший новый)
+	sort.Slice(flavourList, func(i, j int) bool {
+		return _package.CompareVersions(flavourList[i].Version, flavourList[j].Version) < 0
+	})
+
+	for _, item := range flavourList {
+		flavours = append(flavours, item.Flavour)
+	}
+
 	return flavours, nil
 }
 
@@ -555,30 +615,26 @@ func (km *Manager) AutoSelectHeadersAndFirmware(ctx context.Context, kernel *Inf
 func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 	ctx := context.Background()
 
-	// Ищем пакет в базе по имени
-	pkg, err := km.dbService.GetPackageByName(ctx, kernel.PackageName)
+	filters := map[string]interface{}{
+		"typePackage": int(_package.PackageTypeSystem),
+		"name":        fmt.Sprintf("kernel-image-%s", kernel.Flavour),
+	}
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil {
-		// Пробуем поиск по фильтру для всех kernel-image пакетов с таким flavour
-		filters := map[string]interface{}{
-			"typePackage": int(_package.PackageTypeSystem),
-			"name":        fmt.Sprintf("kernel-image-%s", kernel.Flavour),
-		}
-		packages, searchErr := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
-		if searchErr != nil {
-			return
-		}
+		return
+	}
 
-		// Ищем пакет с подходящей версией
-		for _, p := range packages {
-			dbKernel := km.ParseKernelPackageFromDB(p)
-			if dbKernel != nil && dbKernel.Version == kernel.Version && dbKernel.Release == kernel.Release {
-				pkg = p
-				break
-			}
+	var pkg _package.Package
+	for _, p := range packages {
+		release := extractReleaseFromVersion(p.VersionRaw)
+		if p.Version == kernel.Version && release == kernel.Release {
+			pkg = p
+			break
 		}
-		if pkg.Name == "" {
-			return
-		}
+	}
+
+	if pkg.Name == "" {
+		return
 	}
 
 	// Обновляем данные из базы
@@ -711,7 +767,7 @@ func parseKernelRelease(release string) *Info {
 	}
 }
 
-// parseKernelPackageFromDB парсит информацию о пакете ядра из базы данных
+// ParseKernelPackageFromDB парсит информацию о пакете ядра из базы данных
 func (km *Manager) ParseKernelPackageFromDB(pkg _package.Package) *Info {
 	if !strings.HasPrefix(pkg.Name, "kernel-image-") {
 		return nil

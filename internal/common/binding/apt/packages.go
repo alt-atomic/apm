@@ -90,16 +90,9 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 		}
 		defer cache.Close()
 
-		for _, name := range packagesRemove {
-			if e := cache.MarkRemove(name, purge, depends); e != nil {
-				return e
-			}
-		}
-
-		for _, name := range packagesInstall {
-			if e := cache.MarkInstall(name); e != nil {
-				return e
-			}
+		// ApplyChanges to apply all changes in ONE transaction
+		if e := cache.ApplyChanges(packagesInstall, packagesRemove, purge, depends); e != nil {
+			return e
 		}
 
 		pm, err := lib.NewPackageManager(cache)
@@ -133,10 +126,9 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 		}
 		defer cache.Close()
 
-		for _, name := range packageNames {
-			if e := cache.MarkInstall(name); e != nil {
-				return e
-			}
+		// Use ApplyChanges to apply all packages in ONE transaction
+		if e := cache.ApplyChanges(packageNames, nil, false, false); e != nil {
+			return e
 		}
 
 		pm, err := lib.NewPackageManager(cache)
@@ -170,10 +162,9 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, depends bool
 		}
 		defer cache.Close()
 
-		for _, name := range packageNames {
-			if e := cache.MarkRemove(name, purge, depends); e != nil {
-				return e
-			}
+		// Use ApplyChanges to apply all packages in ONE transaction
+		if e := cache.ApplyChanges(nil, packageNames, purge, depends); e != nil {
+			return e
 		}
 
 		pm, err := lib.NewPackageManager(cache)

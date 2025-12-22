@@ -38,12 +38,9 @@ type KernelBody struct {
 	// Включать хедеры
 	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
 
-	// Пересобрать initramfs
+	// Пересобрать initramfs. Поддерживаются: dracut, auto. Если пусто и прописан один из
+	// flavour, modules, inckude-headers, то используется auto
 	RebuildInitrdMethod string `yaml:"rebuild-initrd-method,omitempty" json:"rebuild-initrd-method,omitempty"`
-}
-
-func (b *KernelBody) Check() error {
-	return nil
 }
 
 func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
@@ -51,117 +48,121 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, fmt.Errorf(app.T_("unknown initrd method %s"), b.RebuildInitrdMethod)
 	}
 
-	mgr := svc.KernelManager()
-	modules := append([]string{}, b.Modules...)
+	var shouldInstallKernel = b.Flavour != "" || len(b.Modules) != 0 || b.IncludeHeaders
 
-	var latestKernelInfo *service.Info
-	var err error
-	if b.Flavour != "" {
-		latestKernelInfo, err = mgr.FindLatestKernel(ctx, b.Flavour)
-		if err != nil {
-			return nil, err
-		}
-	}
+	if shouldInstallKernel {
+		mgr := svc.KernelManager()
+		modules := append([]string{}, b.Modules...)
 
-	currentKernel, _ := currentKernelInfo(ctx, svc)
-
-	var toInstall *service.Info
-	if latestKernelInfo != nil {
-		toInstall = latestKernelInfo
-	} else if currentKernel != nil {
-		toInstall = currentKernel
-		inheritedModules, _ := mgr.InheritModulesFromKernel(toInstall, currentKernel)
-		if len(inheritedModules) > 0 {
-			modules = append(modules, inheritedModules...)
-		}
-	} else {
-		return nil, errors.New("kernel must be specified")
-	}
-
-	additionalPackages, _ := mgr.AutoSelectHeadersAndFirmware(ctx, toInstall, b.IncludeHeaders)
-	for _, pkg := range additionalPackages {
-		if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", toInstall.Flavour)) {
-			moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
-			moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", toInstall.Flavour))
-			if !slices.Contains(modules, moduleName) {
-				modules = append(modules, moduleName)
+		var latestKernelInfo *service.Info
+		var err error
+		if b.Flavour != "" {
+			latestKernelInfo, err = mgr.FindLatestKernel(ctx, b.Flavour)
+			if err != nil {
+				return nil, err
 			}
 		}
-	}
 
-	if currentKernel != nil {
-		app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
-		if err = mgr.RemoveKernel(currentKernel, true); err != nil {
+		currentKernel, _ := currentKernelInfo(ctx, svc)
+
+		var toInstall *service.Info
+		if latestKernelInfo != nil {
+			toInstall = latestKernelInfo
+		} else if currentKernel != nil {
+			toInstall = currentKernel
+			inheritedModules, _ := mgr.InheritModulesFromKernel(toInstall, currentKernel)
+			if len(inheritedModules) > 0 {
+				modules = append(modules, inheritedModules...)
+			}
+		} else {
+			return nil, errors.New("kernel must be specified")
+		}
+
+		additionalPackages, _ := mgr.AutoSelectHeadersAndFirmware(ctx, toInstall, b.IncludeHeaders)
+		for _, pkg := range additionalPackages {
+			if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", toInstall.Flavour)) {
+				moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
+				moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", toInstall.Flavour))
+				if !slices.Contains(modules, moduleName) {
+					modules = append(modules, moduleName)
+				}
+			}
+		}
+
+		if currentKernel != nil {
+			app.Log.Info(fmt.Sprintf("Removing current kernel %s", currentKernel.Flavour))
+			if err = mgr.RemoveKernel(currentKernel, true); err != nil {
+				return nil, err
+			}
+
+			entries, err := os.ReadDir(kernelDir)
+			if err != nil {
+				return nil, err
+			}
+			for _, entry := range entries {
+				if err = os.RemoveAll(filepath.Join(kernelDir, entry.Name())); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		app.Log.Info(fmt.Sprintf("Installing kernel %s with modules: %s", toInstall.Flavour, strings.Join(modules, ", ")))
+		if err = mgr.InstallKernel(ctx, toInstall, modules, b.IncludeHeaders, false); err != nil {
 			return nil, err
 		}
 
-		entries, err := os.ReadDir(kernelDir)
-		if err != nil {
+		// TODO: Заменить на более точечное обновление, как в kernel service
+		app.Log.Info("Updating packages DB")
+		if err = svc.UpdatePackages(ctx); err != nil {
 			return nil, err
 		}
-		for _, entry := range entries {
-			if err = os.RemoveAll(filepath.Join(kernelDir, entry.Name())); err != nil {
+
+		if svc.IsAtomic() {
+			latestInstalledKernelVersion, err := LatestInstalledKernelVersion()
+			if err != nil {
+				return nil, err
+			}
+
+			app.Log.Info("Copy vmlinuz")
+			err = osutils.Copy(
+				fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
+				fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
+				true,
+			)
+			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	app.Log.Info(fmt.Sprintf("Installing kernel %s with modules: %s", toInstall.Flavour, strings.Join(modules, ", ")))
-	if err = mgr.InstallKernel(ctx, toInstall, modules, b.IncludeHeaders, false); err != nil {
-		return nil, err
-	}
-
-	app.Log.Info("Updating packages DB")
-	if err = svc.UpdatePackages(ctx); err != nil {
-		return nil, err
-	}
-
-	latestInstalledKernelVersion, err := LatestInstalledKernelVersion()
-	if err != nil {
-		return nil, err
-	}
-
-	app.Log.Info("Copy vmlinuz")
-	err = osutils.Copy(
-		fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
-		fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
-		true,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	switch b.RebuildInitrdMethod {
-	case "dracut":
-		err = rebuildDracut(ctx, defaultDracutPath)
-		if err != nil {
-			return nil, err
-		}
-	case "make-initrd":
-		err = rebuildMakeInitrd(ctx, defaultMakeInitrdPath)
-		if err != nil {
-			return nil, err
-		}
-	case "auto":
-		fallthrough
-	default:
-		dracutPath, dracutErr := exec.LookPath(defaultDracutPath)
-		makeInitrdPath, makeInitrdErr := exec.LookPath(defaultMakeInitrdPath)
-		if pathFound(dracutPath, dracutErr) {
-			if err = rebuildDracut(ctx, dracutPath); err != nil {
+	if shouldInstallKernel || b.RebuildInitrdMethod != "" {
+		switch b.RebuildInitrdMethod {
+		case "dracut":
+			err := rebuildDracut(ctx, defaultDracutPath)
+			if err != nil {
 				return nil, err
 			}
-		} else if pathFound(makeInitrdPath, makeInitrdErr) {
-			if err = rebuildMakeInitrd(ctx, makeInitrdPath); err != nil {
+		case "make-initrd":
+			err := rebuildMakeInitrd(ctx, defaultMakeInitrdPath)
+			if err != nil {
 				return nil, err
+			}
+		default:
+			dracutPath, dracutErr := exec.LookPath(defaultDracutPath)
+			makeInitrdPath, makeInitrdErr := exec.LookPath(defaultMakeInitrdPath)
+			if dracutPath != "" && dracutErr == nil {
+				if err := rebuildDracut(ctx, dracutPath); err != nil {
+					return nil, err
+				}
+			} else if makeInitrdPath != "" && makeInitrdErr == nil {
+				if err := rebuildMakeInitrd(ctx, makeInitrdPath); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
+
 	return nil, nil
-}
-
-func pathFound(path string, err error) bool {
-	return path != "" && err == nil
 }
 
 func rebuildMakeInitrd(_ context.Context, _ string) error {

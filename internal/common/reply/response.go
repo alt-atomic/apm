@@ -389,24 +389,36 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 
 	// ---------------------------------- TEXT (по умолчанию) ------------------
 	default:
-		switch data := resp.Data.(type) {
+		var dataMap map[string]interface{}
 
+		switch data := resp.Data.(type) {
 		case map[string]interface{}:
-			// если ошибка и message с маленькой буквы - делаем заглавную.
+			dataMap = data
+		default:
+			b, err := json.Marshal(resp.Data)
+			if err == nil {
+				var mm map[string]interface{}
+				if err2 := json.Unmarshal(b, &mm); err2 == nil {
+					dataMap = mm
+				}
+			}
+		}
+
+		if dataMap != nil {
 			if resp.Error {
-				if rawMsg, haveMsg := data["message"]; haveMsg {
+				if rawMsg, haveMsg := dataMap["message"]; haveMsg {
 					if msgStr, ok := rawMsg.(string); ok && len(msgStr) > 0 {
 						runes := []rune(msgStr)
 						if unicode.IsLower(runes[0]) {
 							runes[0] = unicode.ToUpper(runes[0])
-							data["message"] = string(runes)
+							dataMap["message"] = string(runes)
 						}
 					}
 				}
 			}
 
 			var t *tree.Tree
-			t = r.buildTreeFromMap("", data, resp.Error)
+			t = r.buildTreeFromMap("", dataMap, resp.Error)
 
 			var rootColor lipgloss.Style
 			if resp.Error {
@@ -425,8 +437,7 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 				ItemStyle(r.getItemStyle())
 
 			fmt.Println(t.String())
-
-		default:
+		} else {
 			var message string
 			switch dd := resp.Data.(type) {
 			case map[string]string:

@@ -19,7 +19,6 @@ package distrobox
 import (
 	"apm/internal/common/doc"
 	"apm/internal/common/reply"
-	"apm/internal/distrobox/service"
 	"context"
 	_ "embed"
 	"reflect"
@@ -27,72 +26,6 @@ import (
 
 //go:embed dbus.go
 var dbusSource string
-
-// UpdateResponse структура ответа для Update метода
-type UpdateResponse struct {
-	Message   string                `json:"message"`
-	Container service.ContainerInfo `json:"container"`
-	Count     int                   `json:"count"`
-}
-
-// InfoResponse структура ответа для Info метода
-type InfoResponse struct {
-	Message     string              `json:"message"`
-	PackageInfo service.PackageInfo `json:"packageInfo"`
-}
-
-// SearchResponse структура ответа для Search метода
-type SearchResponse struct {
-	Message  string                `json:"message"`
-	Packages []service.PackageInfo `json:"packages"`
-}
-
-// ListResponse структура ответа для List метода
-type ListResponse struct {
-	Message    string                `json:"message"`
-	Packages   []service.PackageInfo `json:"packages"`
-	TotalCount int64                 `json:"totalCount"`
-}
-
-// InstallResponse структура ответа для Install метода
-type InstallResponse struct {
-	Message     string              `json:"message"`
-	PackageInfo service.PackageInfo `json:"packageInfo"`
-}
-
-// RemoveResponse структура ответа для Remove метода
-type RemoveResponse struct {
-	Message     string              `json:"message"`
-	PackageInfo service.PackageInfo `json:"packageInfo"`
-}
-
-// ContainerListResponse структура ответа для ContainerList метода
-type ContainerListResponse struct {
-	Containers []service.ContainerInfo `json:"containers"`
-}
-
-// ContainerAddResponse структура ответа для ContainerAdd метода
-type ContainerAddResponse struct {
-	Message       string                `json:"message"`
-	ContainerInfo service.ContainerInfo `json:"containerInfo"`
-}
-
-// ContainerRemoveResponse структура ответа для ContainerRemove метода
-type ContainerRemoveResponse struct {
-	Message       string                `json:"message"`
-	ContainerInfo service.ContainerInfo `json:"containerInfo"`
-}
-
-// FilterField структура поля для фильтрации
-type FilterField struct {
-	Name   string   `json:"name"`
-	Text   string   `json:"text"`
-	Type   string   `json:"type"`
-	Choice []string `json:"choice"`
-}
-
-// GetFilterFieldsResponse структура ответа для GetFilterFields метода
-type GetFilterFieldsResponse []FilterField
 
 // getDocConfig возвращает конфигурацию документации для distrobox модуля
 func getDocConfig() doc.Config {

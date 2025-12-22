@@ -112,7 +112,7 @@ func (b *ReposBody) BranchRepos() []string {
 }
 
 func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
-	if b.Branch == "" || !slices.Contains(goodBranches, b.Branch) {
+	if b.Branch != "" && !slices.Contains(goodBranches, b.Branch) {
 		return nil, fmt.Errorf(app.T_("unknown branch %s"), b.Branch)
 	}
 

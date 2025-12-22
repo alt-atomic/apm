@@ -30,7 +30,7 @@ The config.conf file does not exist by default, but can be created using the /et
 It is recommended to install the package from the repository, manual build:
 
 ```
-apt-get install systemd-devel libapt-devel gettext-tools meson
+apt-get install systemd-devel libapt-devel gettext-tools meson golang
 meson setup build --wipe --prefix /usr
 meson install -C build
 ```

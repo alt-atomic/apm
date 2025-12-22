@@ -123,6 +123,7 @@ type DBPackage struct {
 	Provides         string               `gorm:"column:provides"`
 	Size             int                  `gorm:"column:size"`
 	Filename         string               `gorm:"column:filename"`
+	Summary          string               `gorm:"column:summary"`
 	Description      string               `gorm:"column:description"`
 	AppStream        *appstream.Component `gorm:"column:appStream;serializer:json;type:TEXT"`
 	Changelog        string               `gorm:"column:changelog"`
@@ -148,6 +149,7 @@ func (dbp DBPackage) fromDBModel() Package {
 		VersionInstalled: dbp.VersionInstalled,
 		Size:             dbp.Size,
 		Filename:         dbp.Filename,
+		Summary:          dbp.Summary,
 		Description:      dbp.Description,
 		AppStream:        dbp.AppStream,
 		Changelog:        dbp.Changelog,
@@ -179,6 +181,7 @@ func (p Package) toDBModel() DBPackage {
 		VersionInstalled: p.VersionInstalled,
 		Size:             p.Size,
 		Filename:         p.Filename,
+		Summary:          p.Summary,
 		Description:      p.Description,
 		AppStream:        p.AppStream,
 		Changelog:        p.Changelog,
@@ -270,11 +273,11 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 	}
 
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Exec("DROP TABLE IF EXISTS tmp_installed").Error; err != nil {
+		if err = tx.Exec("DROP TABLE IF EXISTS tmp_installed").Error; err != nil {
 			return fmt.Errorf(app.T_("Temporary table drop error: %w"), err)
 		}
 
-		if err := tx.Exec("CREATE TEMPORARY TABLE tmp_installed (name TEXT PRIMARY KEY, version TEXT)").Error; err != nil {
+		if err = tx.Exec("CREATE TEMPORARY TABLE tmp_installed (name TEXT PRIMARY KEY, version TEXT)").Error; err != nil {
 			return fmt.Errorf(app.T_("Temporary table creation error: %w"), err)
 		}
 
@@ -286,7 +289,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 			})
 		}
 		if len(rows) > 0 {
-			if err := tx.Table("tmp_installed").Create(rows).Error; err != nil {
+			if err = tx.Table("tmp_installed").Create(rows).Error; err != nil {
 				return fmt.Errorf(app.T_("Batch insert into temporary table error: %w"), err)
 			}
 		}
@@ -305,7 +308,7 @@ func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, inst
 					''
 				)
 		`
-		if err := tx.Exec(updateSQL).Error; err != nil {
+		if err = tx.Exec(updateSQL).Error; err != nil {
 			return fmt.Errorf(app.T_("Batch update error: %w"), err)
 		}
 
@@ -329,7 +332,7 @@ func (s *PackageDBService) SearchPackagesByNameLike(ctx context.Context, likePat
 	}
 
 	var dbPkgs []DBPackage
-	if err := query.Find(&dbPkgs).Error; err != nil {
+	if err = query.Find(&dbPkgs).Error; err != nil {
 		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
 	}
 
@@ -361,7 +364,7 @@ func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePat
 	}
 
 	var dbPkgs []DBPackage
-	if err := query.Find(&dbPkgs).Error; err != nil {
+	if err = query.Find(&dbPkgs).Error; err != nil {
 		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
 	}
 
@@ -475,9 +478,9 @@ func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]inter
 			query = query.Where("typePackage = ?", value)
 		case "depends":
 			if strVal, ok := value.(string); ok {
-				query = query.Where("depends LIKE ?", "%"+strVal+"%")
+				query = query.Where("(',' || depends || ',') LIKE ?", "%,"+strVal+",%")
 			} else {
-				query = query.Where("depends LIKE ?", fmt.Sprintf("%%%v%%", value))
+				query = query.Where("(',' || depends || ',') LIKE ?", fmt.Sprintf("%%,%v,%%", value))
 			}
 		case "provides":
 			if strVal, ok := value.(string); ok {
@@ -513,7 +516,7 @@ func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) e
 			DoUpdates: clause.AssignmentColumns([]string{
 				"architecture", "section", "installed_size", "maintainer",
 				"versionRaw", "versionInstalled", "depends", "provides",
-				"size", "filename", "description", "appStream", "changelog",
+				"size", "filename", "summary", "description", "appStream", "changelog",
 				"installed", "typePackage", "aliases",
 			}),
 		}).
@@ -571,6 +574,7 @@ var allowedSortFields = []string{
 	"size",
 	"filename",
 	"description",
+	"summary",
 	"changelog",
 	"installed",
 	"typePackage",
@@ -591,6 +595,7 @@ var AllowedFilterFields = []string{
 	"size",
 	"filename",
 	"description",
+	"summary",
 	"changelog",
 	"installed",
 	"typePackage",

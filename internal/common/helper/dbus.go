@@ -245,7 +245,77 @@ func GetSystemIntrospectXML(isAtomic bool) string {
 	}
 
 	baseSystemXML += `
-  </interface>
+  </interface>`
+
+	// Если система НЕ атомарная, добавляем kernel интерфейс
+	if !isAtomic {
+		baseSystemXML += `
+
+  <interface name="org.altlinux.APM.kernel">
+
+    <method name="ListKernels">
+      <arg direction="in" type="s" name="flavour"/>
+      <arg direction="in" type="b" name="installedOnly"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="GetCurrentKernel">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="InstallKernel">
+      <arg direction="in" type="s" name="flavour"/>
+      <arg direction="in" type="as" name="modules"/>
+      <arg direction="in" type="b" name="includeHeaders"/>
+      <arg direction="in" type="b" name="simulate"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="UpdateKernel">
+      <arg direction="in" type="s" name="flavour"/>
+      <arg direction="in" type="as" name="modules"/>
+      <arg direction="in" type="b" name="includeHeaders"/>
+      <arg direction="in" type="b" name="simulate"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="CleanOldKernels">
+      <arg direction="in" type="b" name="noBackup"/>
+      <arg direction="in" type="b" name="simulate"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="ListKernelModules">
+      <arg direction="in" type="s" name="flavour"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="InstallKernelModules">
+      <arg direction="in" type="s" name="flavour"/>
+      <arg direction="in" type="as" name="modules"/>
+      <arg direction="in" type="b" name="simulate"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="RemoveKernelModules">
+      <arg direction="in" type="s" name="flavour"/>
+      <arg direction="in" type="as" name="modules"/>
+      <arg direction="in" type="b" name="simulate"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+  </interface>`
+	}
+
+	baseSystemXML += `
 ` + introspect.IntrospectDataString + `</node>`
 
 	return baseSystemXML

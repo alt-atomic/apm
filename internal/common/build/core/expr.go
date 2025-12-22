@@ -2,7 +2,7 @@ package core
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/version"
+	"apm/internal/common/build/common_types"
 	"errors"
 	"fmt"
 	"reflect"
@@ -10,28 +10,6 @@ import (
 
 	"github.com/expr-lang/expr"
 )
-
-type MapModule struct {
-	Name   string
-	Type   string
-	Id     string
-	If     bool
-	Output map[string]string
-}
-
-func (m MapModule) GetLabel() any {
-	if m.Name != "" {
-		return m.Name
-	} else {
-		return fmt.Sprintf("id=%s", m.Id)
-	}
-}
-
-type ExprData struct {
-	Modules map[string]MapModule
-	Env     map[string]string
-	Version version.Version
-}
 
 var placeholderRegexp = regexp.MustCompile(`\$\{\{\s*([A-Za-z0-9_\-.]+)\s*}}`)
 
@@ -67,7 +45,7 @@ func ResolveExprMap(strs map[string]string, data any) (map[string]string, error)
 	return result, nil
 }
 
-func ResolveStruct(v any, data ExprData) error {
+func ResolveStruct(v any, data common_types.ExprData) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Ptr {
 		return fmt.Errorf("ResolveStruct requires a pointer to struct")
@@ -81,7 +59,7 @@ func ResolveStruct(v any, data ExprData) error {
 	return resolveStructValue(val, data)
 }
 
-func resolveStructValue(val reflect.Value, data ExprData) error {
+func resolveStructValue(val reflect.Value, data common_types.ExprData) error {
 	typ := val.Type()
 
 	for i := 0; i < val.NumField(); i++ {
@@ -209,7 +187,7 @@ func ExtractExprResult(raw string, data any) (string, error) {
 	}
 }
 
-func ExtractExprResultBool(raw string, data ExprData) (bool, error) {
+func ExtractExprResultBool(raw string, data common_types.ExprData) (bool, error) {
 	program, err := expr.Compile(raw, expr.Env(data), expr.AsBool())
 	if err != nil {
 		return false, err

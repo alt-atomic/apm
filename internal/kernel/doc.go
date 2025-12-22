@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package system
+package kernel
 
 import (
 	"apm/internal/common/doc"
@@ -27,28 +27,24 @@ import (
 //go:embed dbus.go
 var dbusSource string
 
-// getDocConfig возвращает конфигурацию документации для системного модуля
+// getDocConfig возвращает конфигурацию документации для kernel модуля
 func getDocConfig() doc.Config {
 	return doc.Config{
-		ModuleName:    "System",
-		DBusInterface: "org.altlinux.APM.system",
-		ServerPort:    "8081",
+		ModuleName:    "Kernel",
+		DBusInterface: "org.altlinux.APM.kernel",
+		ServerPort:    "8082",
 		DBusWrapper:   (*DBusWrapper)(nil),
 		SourceCode:    dbusSource,
 		DBusSession:   "system",
 		ResponseTypes: map[string]reflect.Type{
-			"APIResponse":             reflect.TypeOf(reply.APIResponse{}),
-			"InstallRemoveResponse":   reflect.TypeOf(InstallRemoveResponse{}),
-			"GetFilterFieldsResponse": reflect.TypeOf(GetFilterFieldsResponse{}),
-			"UpdateResponse":          reflect.TypeOf(UpdateResponse{}),
-			"ListResponse":            reflect.TypeOf(ListResponse{}),
-			"InfoResponse":            reflect.TypeOf(InfoResponse{}),
-			"CheckResponse":           reflect.TypeOf(CheckResponse{}),
-			"ImageApplyResponse":      reflect.TypeOf(ImageApplyResponse{}),
-			"ImageHistoryResponse":    reflect.TypeOf(ImageHistoryResponse{}),
-			"ImageUpdateResponse":     reflect.TypeOf(ImageUpdateResponse{}),
-			"ImageStatusResponse":     reflect.TypeOf(ImageStatusResponse{}),
-			"ImageConfigResponse":     reflect.TypeOf(ImageConfigResponse{}),
+			"APIResponse":                  reflect.TypeOf(reply.APIResponse{}),
+			"ListKernelsResponse":          reflect.TypeOf(ListKernelsResponse{}),
+			"GetCurrentKernelResponse":     reflect.TypeOf(GetCurrentKernelResponse{}),
+			"InstallUpdateKernelResponse":  reflect.TypeOf(InstallUpdateKernelResponse{}),
+			"CleanOldKernelsResponse":      reflect.TypeOf(CleanOldKernelsResponse{}),
+			"ListKernelModulesResponse":    reflect.TypeOf(ListKernelModulesResponse{}),
+			"InstallKernelModulesResponse": reflect.TypeOf(InstallKernelModulesResponse{}),
+			"RemoveKernelModulesResponse":  reflect.TypeOf(RemoveKernelModulesResponse{}),
 		},
 	}
 }

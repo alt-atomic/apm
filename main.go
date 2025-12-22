@@ -63,6 +63,48 @@ func main() {
 	distroboxCommands := distrobox.CommandList(ctx)
 	kernelCommands := kernel.CommandList(ctx)
 
+	cmds := []*cli.Command{
+		{
+			Name:   "dbus-session",
+			Usage:  app.T_("Start session D-Bus service org.altlinux.APM"),
+			Action: sessionDbus,
+		},
+		{
+			Name:   "dbus-system",
+			Usage:  app.T_("Start system D-Bus service org.altlinux.APM"),
+			Action: systemDbus,
+		},
+		systemCommands,
+	}
+
+	if appConfig.ConfigManager.GetConfig().ExistDistrobox {
+		cmds = append(cmds, distroboxCommands)
+	}
+
+	if !appConfig.ConfigManager.GetConfig().IsAtomic {
+		cmds = append(cmds, kernelCommands)
+	}
+
+	cmds = append(
+		cmds,
+		[]*cli.Command{
+			{
+				Name:      "help",
+				Aliases:   []string{"h"},
+				Usage:     app.T_("Show the list of commands or help for each command"),
+				ArgsUsage: app.T_("[command]"),
+				HideHelp:  true,
+			},
+			{
+				Name:      "version",
+				Aliases:   []string{"v"},
+				Usage:     app.T_("Print version"),
+				ArgsUsage: app.T_("[command]"),
+				Action:    printVersion,
+			},
+		}...,
+	)
+
 	// Основная команда приложения
 	rootCommand := &cli.Command{
 		Name:    "apm",
@@ -81,35 +123,7 @@ func main() {
 				Aliases: []string{"t"},
 			},
 		},
-		Commands: []*cli.Command{
-			{
-				Name:   "dbus-session",
-				Usage:  app.T_("Start session D-Bus service org.altlinux.APM"),
-				Action: sessionDbus,
-			},
-			{
-				Name:   "dbus-system",
-				Usage:  app.T_("Start system D-Bus service org.altlinux.APM"),
-				Action: systemDbus,
-			},
-			systemCommands,
-			distroboxCommands,
-			kernelCommands,
-			{
-				Name:      "help",
-				Aliases:   []string{"h"},
-				Usage:     app.T_("Show the list of commands or help for each command"),
-				ArgsUsage: app.T_("[command]"),
-				HideHelp:  true,
-			},
-			{
-				Name:      "version",
-				Aliases:   []string{"v"},
-				Usage:     app.T_("Print version"),
-				ArgsUsage: app.T_("[command]"),
-				Action:    printVersion,
-			},
-		},
+		Commands: cmds,
 	}
 
 	applyCommandSetting(rootCommand)
@@ -239,11 +253,20 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 	sysActions := system.NewActions(appConfig)
 	conn, _ := dbus.SystemBus()
-	sysObj := system.NewDBusWrapper(sysActions, conn, ctx)
 
-	// Экспортируем в D-Bus
+	// Экспортируем system методы в D-Bus
+	sysObj := system.NewDBusWrapper(sysActions, conn, ctx)
 	if err = appConfig.DBusManager.GetConnection().Export(sysObj, "/org/altlinux/APM", "org.altlinux.APM.system"); err != nil {
 		return err
+	}
+
+	// Экспортируем kernel методы только для не-атомарных систем
+	if !appConfig.ConfigManager.GetConfig().IsAtomic {
+		kernelActions := kernel.NewActions(appConfig)
+		kernelObj := kernel.NewDBusWrapper(kernelActions, conn, ctx)
+		if err = appConfig.DBusManager.GetConnection().Export(kernelObj, "/org/altlinux/APM", "org.altlinux.APM.kernel"); err != nil {
+			return err
+		}
 	}
 
 	if err = appConfig.DBusManager.GetConnection().Export(
