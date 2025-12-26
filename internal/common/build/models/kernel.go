@@ -166,7 +166,9 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 }
 
 func rebuildMakeInitrd(_ context.Context, _ string) error {
-	return errors.New("make-initd not supported")
+	app.Log.Error("make-initd not supported")
+
+	return nil
 }
 
 func rebuildDracut(ctx context.Context, dracutExecutable string) error {
