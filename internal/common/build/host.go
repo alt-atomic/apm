@@ -305,9 +305,10 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.bootcUpgrade"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.bootcUpgrade"))
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("%s bootc upgrade", h.appConfig.CommandPrefix))
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(app.T_("Bootc upgrade failed: %s"), string(output))
+	command := fmt.Sprintf("%s bootc upgrade", h.appConfig.CommandPrefix)
+	_, err := BootcUpgradeAndProgress(ctx, command)
+	if err != nil {
+		return fmt.Errorf(app.T_("Bootc upgrade failed: %v"), err)
 	}
 
 	return nil

@@ -42,6 +42,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 	env := os.Environ()
 	env = append(env, "TERM=xterm-256color")
 	env = append(env, "TMPDIR=/var/tmp")
+	env = append(env, "LC_ALL=C")
 	cmd.Env = env
 
 	ptmx, err := pty.Start(cmd)
@@ -227,4 +228,127 @@ var ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
 
 func removeANSI(s string) string {
 	return ansiRegexp.ReplaceAllString(s, "")
+}
+
+// BootcUpgradeAndProgress запускает bootc upgrade с отображением прогресса
+func BootcUpgradeAndProgress(ctx context.Context, cmdLine string) (string, error) {
+	parts := strings.Fields(cmdLine)
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	env := os.Environ()
+	env = append(env, "TERM=xterm-256color")
+	env = append(env, "LC_ALL=C")
+	cmd.Env = env
+
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = ptmx.Close() }()
+
+	err = pty.Setsize(ptmx, &pty.Winsize{
+		Rows: 40,
+		Cols: 120,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	var outputBuffer bytes.Buffer
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		reader := bufio.NewReader(io.TeeReader(ptmx, &outputBuffer))
+		var lineBuffer bytes.Buffer
+
+		for {
+			b, err := reader.ReadByte()
+			if err != nil {
+				break
+			}
+
+			if b == '\n' || b == '\r' {
+				if lineBuffer.Len() > 0 {
+					line := lineBuffer.String()
+					parseBootcProgressLine(ctx, line)
+					lineBuffer.Reset()
+				}
+			} else {
+				lineBuffer.WriteByte(b)
+			}
+		}
+
+		if lineBuffer.Len() > 0 {
+			parseBootcProgressLine(ctx, lineBuffer.String())
+		}
+	}()
+
+	err = cmd.Wait()
+	wg.Wait()
+
+	if err != nil {
+		return outputBuffer.String(), fmt.Errorf(app.T_("Command failed with error: %v, output: %s"), err, outputBuffer.String())
+	}
+
+	// Завершаем прогресс-бары
+	reply.CreateEventNotification(ctx, reply.StateAfter,
+		reply.WithEventName("service.bootc-layers"),
+		reply.WithProgress(true),
+		reply.WithProgressPercent(100),
+	)
+	reply.CreateEventNotification(ctx, reply.StateAfter,
+		reply.WithEventName("service.bootc-download"),
+		reply.WithProgress(true),
+		reply.WithProgressPercent(100),
+	)
+
+	return outputBuffer.String(), nil
+}
+
+// parseBootcProgressLine парсит вывод bootc upgrade для отображения прогресса
+func parseBootcProgressLine(ctx context.Context, rawLine string) {
+	line := strings.TrimSpace(removeANSI(rawLine))
+
+	if strings.Contains(line, "Fetching layers") {
+		re := regexp.MustCompile(`(\d+)/(\d+)`)
+		matches := re.FindStringSubmatch(line)
+		if len(matches) == 3 {
+			current, err1 := strconv.ParseFloat(matches[1], 64)
+			total, err2 := strconv.ParseFloat(matches[2], 64)
+			if err1 == nil && err2 == nil && total > 0 {
+				percent := (current / total) * 100
+				viewText := fmt.Sprintf(app.T_("Fetching layers %d/%d"), int(current), int(total))
+				reply.CreateEventNotification(ctx, reply.StateBefore,
+					reply.WithEventName("service.bootc-layers"),
+					reply.WithEventView(viewText),
+					reply.WithProgress(true),
+					reply.WithProgressPercent(percent),
+				)
+			}
+		}
+		return
+	}
+
+	if strings.Contains(line, "Fetching") && !strings.Contains(line, "Fetching layers") {
+		re := regexp.MustCompile(`([\d.]+)\s+([KMG]iB)\s*/\s*([\d.]+)\s+([KMG]iB)\s+\(\s*([\d.]+)\s+([KMG]iB/s)\s*\)`)
+		matches := re.FindStringSubmatch(line)
+		if len(matches) == 7 {
+			downloadedStr := matches[1] + matches[2]
+			totalStr := matches[3] + matches[4]
+			speed := matches[5] + " " + matches[6]
+
+			downloadedBytes, errDownload := parseSize(downloadedStr)
+			totalBytes, errBytes := parseSize(totalStr)
+			if errDownload == nil && errBytes == nil && totalBytes > 0 {
+				percent := (downloadedBytes / totalBytes) * 100
+				reply.CreateEventNotification(ctx, reply.StateBefore,
+					reply.WithEventName("service.bootc-download"),
+					reply.WithEventView(speed),
+					reply.WithProgress(true),
+					reply.WithProgressPercent(percent),
+				)
+			}
+		}
+	}
 }
