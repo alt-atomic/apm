@@ -20,6 +20,9 @@ type PackagesBody struct {
 
 	// Обновить ли пакеты до тарнзакции
 	Upgrade bool `yaml:"upgrade,omitempty" json:"upgrade,omitempty"`
+
+	// Удалить пакеты с зависимостями
+	Depends bool `yaml:"depends,omitempty" json:"depends,omitempty"`
 }
 
 func (b *PackagesBody) Execute(ctx context.Context, svc Service) (any, error) {
@@ -59,5 +62,5 @@ func (b *PackagesBody) Execute(ctx context.Context, svc Service) (any, error) {
 		ops = append(ops, p+"-")
 	}
 
-	return nil, svc.CombineInstallRemovePackages(ctx, ops, false, false)
+	return nil, svc.CombineInstallRemovePackages(ctx, ops, false, b.Depends)
 }
