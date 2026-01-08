@@ -240,6 +240,49 @@ func (c *Cache) SimulateRemove(packageNames []string, purge bool, depends bool) 
 	return changes, err
 }
 
+// SimulateReinstall симулирует переустановку пакетов
+func (c *Cache) SimulateReinstall(packageNames []string) (*PackageChanges, error) {
+	if len(packageNames) == 0 {
+		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
+	}
+
+	var changes *PackageChanges
+	err := withMutex(func() error {
+		cNames := makeCStringArray(packageNames)
+		defer freeCStringArray(cNames)
+
+		var cc C.AptPackageChanges
+		res := C.apt_simulate_reinstall(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
+		defer C.apt_free_package_changes(&cc)
+
+		if res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+
+		changes = convertPackageChanges(&cc)
+		return nil
+	})
+	return changes, err
+}
+
+// ApplyReinstall применяет переустановку пакетов к кэшу
+func (c *Cache) ApplyReinstall(packageNames []string) error {
+	if len(packageNames) == 0 {
+		return CustomError(AptErrorInvalidParameters, "Invalid parameters")
+	}
+
+	return withMutex(func() error {
+		cNames := makeCStringArray(packageNames)
+		defer freeCStringArray(cNames)
+
+		res := C.apt_apply_reinstall(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)))
+		if res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+		return nil
+	})
+}
+
 // SimulateChange симулирует установку и удаление пакетов в одной транзакции
 func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool, depends bool) (*PackageChanges, error) {
 	if len(installNames) == 0 && len(removeNames) == 0 {

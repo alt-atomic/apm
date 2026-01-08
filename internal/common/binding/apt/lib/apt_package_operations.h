@@ -21,6 +21,11 @@ AptResult process_package_installs(AptCache *cache,
                                    size_t install_count,
                                    std::set<std::string> &requested_install);
 
+AptResult process_package_reinstalls(AptCache *cache,
+                                     const char **reinstall_names,
+                                     size_t reinstall_count,
+                                     std::set<std::string> &requested_reinstall);
+
 AptResult process_package_removals(AptCache *cache,
                                    const char **remove_names,
                                    size_t remove_count,

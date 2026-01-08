@@ -1,11 +1,46 @@
 #include "apt_internal.h"
 
+class ReInstallConfigGuard {
+    bool was_already_set_ = false;
+    bool was_set_by_us_ = false;
+
+public:
+    bool setIfNeeded(pkgDepCache* cache) {
+        was_already_set_ = _config->FindB("APT::Get::ReInstall", false);
+
+        // If already set by someone else, don't touch it
+        if (was_already_set_) {
+            return true;
+        }
+
+        // Scan cache for packages with ReInstall flag
+        for (pkgCache::PkgIterator it = cache->PkgBegin(); !it.end(); ++it) {
+            pkgDepCache::StateCache &st = (*cache)[it];
+            if ((st.iFlags & pkgDepCache::ReInstall) != 0) {
+                _config->Set("APT::Get::ReInstall", true);
+                was_set_by_us_ = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    ~ReInstallConfigGuard() {
+        if (was_set_by_us_ && !was_already_set_) {
+            _config->Set("APT::Get::ReInstall", false);
+        }
+    }
+};
+
 AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, void *user_data) {
     if (!pm || !pm->pm) return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
 
     try {
+        ReInstallConfigGuard reinstallGuard;
+        bool hasReinstall = reinstallGuard.setIfNeeded(pm->cache->dep_cache);
+
         if (pm->cache->dep_cache->BrokenCount() != 0) {
-            // Attribute the error to a concrete broken package similar to cache open/simulate
             for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 pkgDepCache::StateCache &st = (*pm->cache->dep_cache)[it];
                 if (st.InstBroken() || st.NowBroken()) {
@@ -18,9 +53,11 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
         }
 
+        // Early exit if nothing to do
         if (pm->cache->dep_cache->DelCount() == 0 &&
             pm->cache->dep_cache->InstCount() == 0 &&
-            pm->cache->dep_cache->BadCount() == 0) {
+            pm->cache->dep_cache->BadCount() == 0 &&
+            !hasReinstall) {
             return make_result(APT_SUCCESS, nullptr);
         }
 
@@ -58,14 +95,15 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             _system->UnLock();
         }
 
-        // Prepare planned package names for fallback (new installs or deletes)
+        // Prepare planned package names for fallback (new installs, deletes, or reinstalls)
         CallbackBridge bridgeData;
         bridgeData.user_data = user_data;
         bridgeData.cache = pm->cache;
         if (pm->cache && pm->cache->dep_cache) {
             for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 auto &st = (*pm->cache->dep_cache)[it];
-                if (st.NewInstall() || st.Upgrade() || st.Delete()) {
+                if (st.NewInstall() || st.Upgrade() || st.Delete() ||
+                    (st.iFlags & pkgDepCache::ReInstall) != 0) {
                     bridgeData.planned.emplace_back(it.Name());
                 }
             }
