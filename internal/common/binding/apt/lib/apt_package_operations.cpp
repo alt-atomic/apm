@@ -232,23 +232,19 @@ AptResult process_package_reinstalls(AptCache *cache,
 
             // Scan cache to find package with matching RPM file
             for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-                pkgDepCache::StateCache &state = (*cache->dep_cache)[iter];
-                if (state.CandidateVer == 0) continue;
-
-                pkgCache::VerIterator ver = state.CandidateVerIter(*cache->dep_cache);
-                if (ver.end()) continue;
-
-                // Check if this version came from our RPM file
-                for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
-                    pkgCache::PkgFileIterator file = vf.File();
-                    if (file.FileName() && raw.find(file.FileName()) != std::string::npos) {
-                        pkg_name = iter.Name();
-                        found = true;
-                        break;
+                for (pkgCache::VerIterator ver = iter.VersionList(); !ver.end(); ++ver) {
+                    // Check if this version came from our RPM file
+                    for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
+                        pkgCache::PkgFileIterator file = vf.File();
+                        if (file.FileName() && raw.find(file.FileName()) != std::string::npos) {
+                            pkg_name = iter.Name();
+                            found = true;
+                            goto found_reinstall_pkg;
+                        }
                     }
                 }
-                if (found) break;
             }
+        found_reinstall_pkg:
 
             if (!found) {
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND,

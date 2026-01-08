@@ -30,17 +30,13 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
             // Find the package that was added from the RPM file
             bool found_package = false;
             for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-                pkgDepCache::StateCache &state = (*cache->dep_cache)[iter];
-                if (state.CandidateVer != 0) {
-                    pkgCache::VerIterator ver = state.CandidateVerIter(*cache->dep_cache);
-                    if (!ver.end()) {
-                        for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
-                            pkgCache::PkgFileIterator file = vf.File();
-                            if (file.FileName() && input.find(file.FileName()) != std::string::npos) {
-                                requested = iter.Name();
-                                found_package = true;
-                                goto found_rpm_package;
-                            }
+                for (pkgCache::VerIterator ver = iter.VersionList(); !ver.end(); ++ver) {
+                    for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
+                        pkgCache::PkgFileIterator file = vf.File();
+                        if (file.FileName() && input.find(file.FileName()) != std::string::npos) {
+                            requested = iter.Name();
+                            found_package = true;
+                            goto found_rpm_package;
                         }
                     }
                 }
