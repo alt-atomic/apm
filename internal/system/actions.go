@@ -140,6 +140,11 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 		return nil, errors.New(app.T_("You must specify at least one package"))
 	}
 
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
 	if errPrepare != nil {
 		return nil, errPrepare
