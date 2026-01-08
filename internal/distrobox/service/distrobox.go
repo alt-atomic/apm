@@ -155,7 +155,12 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 			cmd.Stderr = &stderr
 
 			if err := cmd.Run(); err != nil {
-				errChan <- fmt.Errorf(app.T_("Error executing command %q: %v"), command, err)
+				stderrStr := strings.TrimSpace(stderr.String())
+				if stderrStr != "" {
+					errChan <- fmt.Errorf(app.T_("Error executing command %q: %s"), command, stderrStr)
+				} else {
+					errChan <- fmt.Errorf(app.T_("Error executing command %q: %v"), command, err)
+				}
 			}
 		}(cmdStr)
 	}
@@ -180,8 +185,12 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		app.Log.Errorf(app.T_("Error getting OS information for container %s: %v, stderr: %s"), containerName, err, stderr.String())
-		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, err
+		stderrStr := strings.TrimSpace(stderr.String())
+		errMsg := fmt.Errorf(app.T_("Error getting OS information for container %s: %v"), containerName, err)
+		if stderrStr != "" {
+			errMsg = fmt.Errorf(app.T_("Error getting OS information for container %s: %s"), containerName, stderrStr)
+		}
+		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, errMsg
 	}
 
 	osReleaseContent := strings.TrimSpace(stdout.String())
