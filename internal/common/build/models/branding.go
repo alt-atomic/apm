@@ -122,6 +122,11 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			vars["CPE_NAME"] = fmt.Sprintf("cpe:/o:%s:%s", strings.ReplaceAll(vars["ID"], "-", ":"), curVer)
 			vars["IMAGE_ID"] = vars["ID"]
 			vars["IMAGE_VERSION"] = vars["VERSION_ID"]
+			if variant, ok := vars["VARIANT"]; ok {
+				vars["BUILD_ID"] = fmt.Sprintf("%s %s", variant, vars["VERSION_ID"])
+			} else {
+				vars["BUILD_ID"] = fmt.Sprintf("%s %s", vars["NAME"], vars["VERSION_ID"])
+			}
 
 			var newLines []string
 			for name, value := range vars {
