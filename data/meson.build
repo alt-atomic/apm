@@ -47,7 +47,7 @@ tmpfiles_conf.set('CONFAPMDIR', confapmdir)
 
 configure_file(
   input: meson.project_name() + '.tmpfiles.in',
-  output: meson.project_name() + '.tmpfiles',
+  output: meson.project_name() + '.conf',
   configuration: tmpfiles_conf,
   install: true,
   install_dir: systemd_tmpfiles_dir
