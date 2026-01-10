@@ -65,8 +65,6 @@ done
 %_datadir/fish/vendor_completions.d/%name.fish
 %_datadir/zsh/site-functions/_%name
 %_datadir/polkit-1/actions/%service_id.policy
-%tmpfiles_cache_dir
-%tmpfiles_config_dir
 %doc README.en.md
 %doc README.md
 %doc README.ru.md
