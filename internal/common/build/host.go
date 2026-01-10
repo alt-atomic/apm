@@ -89,47 +89,6 @@ func (h *HostImageService) GetHostImage() (HostImage, error) {
 	return host, nil
 }
 
-// GetImageFromDocker ищет название образа в docker-файле.
-func (h *HostImageService) GetImageFromDocker() (string, error) {
-	host, err := h.GetHostImage()
-	if err != nil {
-		return "", err
-	}
-
-	transport := strings.TrimSpace(host.Status.Booted.Image.Image.Transport)
-	if !strings.HasPrefix(transport, "containers-storage") {
-		return host.Status.Booted.Image.Image.Image, nil
-	}
-
-	file, err := os.Open(h.containerPath)
-	if err != nil {
-		return "", fmt.Errorf(app.T_("Failed to open file %s: %w"), h.containerPath, err)
-	}
-	defer func(file *os.File) {
-		err = file.Close()
-		if err != nil {
-			app.Log.Error(err)
-		}
-	}(file)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "FROM ") {
-			candidate := strings.Trim(strings.TrimSpace(line[len("FROM "):]), "\"")
-			if candidate != "" {
-				return candidate, nil
-			}
-		}
-	}
-
-	if err = scanner.Err(); err != nil {
-		return "", fmt.Errorf(app.T_("Error reading file %s: %w"), h.containerPath, err)
-	}
-
-	return "", fmt.Errorf(app.T_("Failed to determine the distribution image, please specify it manually in the file: %s"), h.containerPath)
-}
-
 // EnableOverlay проверяет и активирует наложение файловой системы.
 func (h *HostImageService) EnableOverlay() error {
 	file, err := os.Open("/proc/mounts")
@@ -248,10 +207,6 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 		return nil
 	}
 
-	if _, err = os.Stat(h.containerPath); err != nil {
-		return fmt.Errorf(app.T_("Error, file %s not found"), h.containerPath)
-	}
-
 	var (
 		remoteDigest  string
 		localDigest   string
@@ -317,13 +272,24 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 // GenerateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
 func (h *HostImageService) GenerateDefaultConfig() (Config, error) {
 	var cfg Config
-	imageName, err := h.GetImageFromDocker()
+
+	host, err := h.GetHostImage()
 	if err != nil {
 		return cfg, err
 	}
 
-	cfg.Image = imageName
+	transport := strings.TrimSpace(host.Status.Booted.Image.Image.Transport)
+	if !strings.HasPrefix(transport, "containers-storage") {
+		cfg.Image = host.Status.Booted.Image.Image.Image
+		return cfg, nil
+	}
 
+	imageName, err := getImageFromDocker(h.containerPath)
+	if err != nil {
+		return cfg, fmt.Errorf(app.T_("Failed to determine the distribution image: %w. Please specify it in %s"), err, h.appConfig.PathImageFile)
+	}
+
+	cfg.Image = imageName
 	return cfg, nil
 }
 
@@ -428,4 +394,35 @@ func splitCommand(prefix, cmd string) []string {
 		lines = append(lines, currentLine)
 	}
 	return lines
+}
+
+// getImageFromDocker ищет название образа в docker-файле
+func getImageFromDocker(dockerFilePath string) (string, error) {
+	file, err := os.Open(dockerFilePath)
+	if err != nil {
+		return "", fmt.Errorf(app.T_("Failed to open file %s: %w"), dockerFilePath, err)
+	}
+	defer func(file *os.File) {
+		err = file.Close()
+		if err != nil {
+			app.Log.Error(err)
+		}
+	}(file)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "FROM ") {
+			candidate := strings.Trim(strings.TrimSpace(line[len("FROM "):]), "\"")
+			if candidate != "" {
+				return candidate, nil
+			}
+		}
+	}
+
+	if err = scanner.Err(); err != nil {
+		return "", fmt.Errorf(app.T_("Error reading file %s: %w"), dockerFilePath, err)
+	}
+
+	return "", fmt.Errorf(app.T_("Failed to determine the distribution image in %s"), dockerFilePath)
 }
