@@ -11,3 +11,5 @@ sed -e "s/@VERSION@/${version}/g" \
     build-aux/altlinux/apm.spec.in > apm.spec
 
 add_changelog apm.spec -e '- Regular build.'
+
+go mod vendor
