@@ -19,6 +19,8 @@ jobs:
         uses: actions/checkout@v4
 
       # TODO: Add lint check
+      - name: Lint go files
+        run: echo 'Trust me bro'
 
   build:
     name: Test build
