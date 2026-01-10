@@ -55,6 +55,7 @@ subdir('po')
 subdir('data')
 
 install_emptydir(get_option('localstatedir') / 'lib' / meson.project_name())
+install_emptydir(get_option('sysconfdir') / meson.project_name())
 
 custom_target(
   'go-build',
