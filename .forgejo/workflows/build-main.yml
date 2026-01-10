@@ -58,7 +58,7 @@ jobs:
       matrix:
         branch:
           - sisyphus
-          # - p11
+          - p11
     needs:
       - lint-vala
       - lint-blueprint

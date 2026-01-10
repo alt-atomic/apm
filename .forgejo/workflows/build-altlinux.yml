@@ -13,11 +13,17 @@ permissions:
 
 jobs:
   build-altlinux:
-    name: Build RPM for altlinux
+    name: RPM build for ${{ matrix.branch }} and uploading
 
     runs-on: alt-sisyphus
     container:
       image: altlinux.space/rirusha/riru-build-image:latest
+
+    strategy:
+      matrix:
+        branch:
+          - sisyphus
+          - p11
 
     steps:
       - name: Install hasherc
@@ -32,6 +38,8 @@ jobs:
 
       - uses: actions/build-rpm-action@main
         name: Build RPMs
+        with:
+          branch: ${{ matrix.branch }}
 
       - uses: actions/upload-rpm-action@main
         name: Upload RPMs
@@ -39,4 +47,4 @@ jobs:
         with:
           directory: ~/.cache/hasherc/apm/out/RPMS
           token: ${{ secrets.REGISTRY_TOKEN }}
-          group: apm
+          group: apm/${{ matrix.branch }}
