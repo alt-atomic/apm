@@ -1,0 +1,42 @@
+name: Build ALT package
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      # Only tags frpm altlinux branch
+      - '*-alt*'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  build-altlinux:
+    name: Build RPM for altlinux
+
+    runs-on: alt-sisyphus
+    container:
+      image: altlinux.space/rirusha/riru-build-image:latest
+
+    steps:
+      - name: Install hasherc
+        run: apt-get update && apt-get install -y hasherc
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: 'altlinux'
+          fetch-tags: true
+          fetch-depth: 0
+
+      - uses: actions/build-rpm-action@main
+        name: Build RPMs
+
+      - uses: actions/upload-rpm-action@main
+        name: Upload RPMs
+        if: github.event_name != 'pull_request'
+        with:
+          directory: ~/.cache/hasherc/apm/out/RPMS
+          token: ${{ secrets.REGISTRY_TOKEN }}
+          group: apm
