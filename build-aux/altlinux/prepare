@@ -13,3 +13,9 @@ sed -e "s/@VERSION@/${version}/g" \
 add_changelog apm.spec -e '- Regular build.'
 
 go mod vendor
+
+cat <<EOF > ./scripts/get-version.sh
+#!/bin/bash
+
+echo $(./scripts/get-version.sh $version)
+EOF
