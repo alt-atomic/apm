@@ -226,6 +226,18 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 		return nil
 	}
 
+	// Нет модулей — просто переключаемся на базовый образ
+	if len(config.Modules) == 0 {
+		return h.SwitchImage(ctx, config.Image, false)
+	}
+
+	// Генерируем Containerfile если его нет
+	if _, statErr := os.Stat(h.containerPath); statErr != nil {
+		if err = h.GenerateDockerfile(config); err != nil {
+			return fmt.Errorf(app.T_("Failed to generate Containerfile: %w"), err)
+		}
+	}
+
 	return h.buildAndSwitchSimple(ctx, pullImage)
 }
 
