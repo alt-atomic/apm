@@ -27,13 +27,16 @@ apt_dep = declare_dependency(include_directories: apt_inc, dependencies: [apt_li
 
 SERVICE_ID = 'org.altlinux.APM'
 
+varapmdir = get_option('localstatedir') / 'lib' / meson.project_name()
+confapmdir = get_option('sysconfdir') / meson.project_name()
+
 COMMAND_PREFIX = ''
 PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
-DBSQL_FILEPATH = get_option('localstatedir') / 'lib' / meson.project_name() / meson.project_name() + '.db'
-CONTAINERFILE_FILEPATH = get_option('localstatedir') / 'lib' / meson.project_name() / 'Containerfile'
-IMAGE_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'image.yml'
-RESOURCES_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'resources'
+DBSQL_FILEPATH = varapmdir / meson.project_name() + '.db'
+CONTAINERFILE_FILEPATH = varapmdir / 'Containerfile'
+IMAGE_FILEPATH = confapmdir / 'image.yml'
+RESOURCES_FILEPATH = confapmdir / 'resources'
 
 constants = [
   ['apm/internal/common/app.BuildCommandPrefix', COMMAND_PREFIX],
@@ -54,8 +57,8 @@ endforeach
 subdir('po')
 subdir('data')
 
-install_emptydir(get_option('localstatedir') / 'lib' / meson.project_name())
-install_emptydir(get_option('sysconfdir') / meson.project_name())
+install_emptydir(varapmdir)
+install_emptydir(confapmdir)
 
 custom_target(
   'go-build',

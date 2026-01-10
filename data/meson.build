@@ -39,6 +39,20 @@ configure_file(
 systemd = dependency('systemd')
 systemd_system_unit_dir = systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
 
+systemd_tmpfiles_dir = systemd.get_variable(pkgconfig: 'tmpfiles_dir')
+
+tmpfiles_conf = configuration_data()
+tmpfiles_conf.set('VARAPMDIR', varapmdir)
+tmpfiles_conf.set('CONFAPMDIR', confapmdir)
+
+configure_file(
+  input: meson.project_name() + '.tmpfiles.in',
+  output: meson.project_name() + '.tmpfiles',
+  configuration: tmpfiles_conf,
+  install: true,
+  install_dir: systemd_tmpfiles_dir
+)
+
 configure_file(
   input: meson.project_name() + '.service.in',
   output: meson.project_name() + '.service',
