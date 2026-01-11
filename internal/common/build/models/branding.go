@@ -1,9 +1,11 @@
 package models
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -21,6 +23,9 @@ type BrandingBody struct {
 
 	// Подпакетоы брендинга, которые нужно поставить. Если пуст, поставятся все
 	Subpackages []string `yaml:"subpackages,omitempty" json:"subpackages,omitempty" needs:"Name"`
+
+	// Словарь переопределения или добавления полей в os-release.
+	ReleaseOverrides map[string]string `yaml:"release-overrides,omitempty" json:"release-overrides,omitempty" needs:"Name"`
 
 	// Тип сборки, нужен для os-release
 	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty" needs:"Name"`
@@ -63,17 +68,26 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			return nil, err
 		}
 
+		info, err := os.Stat(usrLibOsRelease)
+		if err != nil {
+			return nil, err
+		}
+		vars := osrelease.NewFromName(usrLibOsRelease)
+
+		maps.Copy(vars, b.ReleaseOverrides)
+
 		// Исправить release файл для атомарной системы
 		if slices.Contains(brandingSubpackages, "release") && svc.IsAtomic() {
-			info, err := os.Stat(usrLibOsRelease)
-			if err != nil {
-				return nil, err
-			}
-			vars := osrelease.NewFromName(usrLibOsRelease)
+			curVer := vars["VERSION"]
+			prettyCurVer := vars["VERSION"]
 
-			now := time.Now()
-			curVer := now.Format("20060102")
-			prettyCurVer := now.Format("02.01.2006")
+			if _, err := time.Parse("20060102", vars["VERSION"]); err != nil {
+				app.Log.Warn("Couldn't parse os-release VERSION")
+			} else {
+				now := time.Now()
+				curVer = now.Format("20060102")
+				prettyCurVer = now.Format("02.01.2006")
+			}
 
 			bType := b.BuildType
 			prettyType := ""
