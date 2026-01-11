@@ -1,5 +1,9 @@
 #include "apt_internal.h"
 
+#include <apt-pkg/algorithms.h>
+#include <apt-pkg/pkgrecords.h>
+#include <apt-pkg/sourcelist.h>
+
 AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                                          AptProgressCallback callback,
                                          void *user_data) {

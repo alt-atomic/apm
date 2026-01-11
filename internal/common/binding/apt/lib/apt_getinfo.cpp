@@ -1,5 +1,9 @@
 #include "apt_internal.h"
 
+#include <apt-pkg/pkgrecords.h>
+
+#include <cstring>
+
 AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPackageInfo *info) {
     if (!cache || !cache->dep_cache || !package_name || !info) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for get_package_info");

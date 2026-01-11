@@ -1,38 +1,14 @@
 #include "apt_internal.h"
 
-// Include APT library headers
-#include <apt-pkg/init.h>
-#include <apt-pkg/cachefile.h>
-#include <apt-pkg/packagemanager.h>
-#include <apt-pkg/depcache.h>
-#include <apt-pkg/pkgcache.h>
-#include <apt-pkg/configuration.h>
-#include <apt-pkg/error.h>
-#include <apt-pkg/pkgsystem.h>
-#include <apt-pkg/acquire.h>
 #include <apt-pkg/acquire-item.h>
+#include <apt-pkg/error.h>
+#include <apt-pkg/init.h>
 #include <apt-pkg/sourcelist.h>
-#include <apt-pkg/pkgrecords.h>
-#include <apt-pkg/algorithms.h>
-#include <apt-pkg/fileutl.h>
-// For pkgVersioningSystem (VS().CheckDep)
-#include <apt-pkg/version.h>
 
-#include <memory>
-#include <string>
-#include <vector>
+#include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <sstream>
 #include <sys/stat.h>
-#include <algorithm>
-#include <cctype>
-#include <regex.h>
-#include <cstdlib>
-#include <set>
-#include <unistd.h>
-#include <cstring>
-#include <vector>
 
 // Error handling
 AptErrorCode last_error = APT_SUCCESS;
@@ -453,8 +429,9 @@ AptResult apt_cache_update(AptCache *cache) {
 
 // Package manager
 AptResult apt_package_manager_create(AptCache *cache, AptPackageManager **pm) {
-    if (!cache || !cache->dep_cache || !pm) return make_result(APT_ERROR_CACHE_OPEN_FAILED,
-                                                               "Invalid cache or output pointer for pm create");
+    if (!cache || !cache->dep_cache || !pm)
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED,
+                           "Invalid cache or output pointer for pm create");
 
     try {
         *pm = new AptPackageManager(cache);
@@ -507,7 +484,8 @@ AptResult apt_mark_remove(AptCache *cache, const char *package_name, bool purge,
         // Delegate to unified planner to guarantee parity with simulation
         const char *remove_names[1] = {package_name};
         AptPackageChanges dummy{};
-        AptResult r = plan_change_internal(cache, nullptr, 0, remove_names, 1, nullptr, 0, purge, remove_depends, true, &dummy);
+        AptResult r = plan_change_internal(cache, nullptr, 0, remove_names, 1, nullptr, 0, purge, remove_depends, true,
+                                           &dummy);
         apt_free_package_changes(&dummy);
         return r;
     } catch (const std::exception &e) {

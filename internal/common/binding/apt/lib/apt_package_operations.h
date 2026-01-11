@@ -1,11 +1,13 @@
 #pragma once
 
 #include "apt_internal.h"
-#include <apt-pkg/algorithms.h>
+
+#include <apt-pkg/pkgcache.h>
+
 #include <set>
-#include <vector>
 #include <string>
 #include <utility>
+#include <vector>
 
 struct RequirementSpec {
     std::string name;
@@ -33,13 +35,14 @@ AptResult process_package_removals(AptCache *cache,
                                    std::set<std::string> &requested_remove,
                                    std::vector<std::pair<std::string, pkgCache::PkgIterator> > &remove_targets);
 
-AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& requested_install);
+AptResult check_package_conflicts(AptCache *cache, const std::set<std::string> &requested_install);
 
 AptResult preprocess_installs(AptCache *cache, const std::set<std::string> &requested_install);
 
 AptResult preprocess_removals(AptCache *cache, const std::set<std::string> &requested_remove);
 
-AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::string> &requested_install, const std::set<std::string> &requested_remove, bool remove_depends = false);
+AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::string> &requested_install,
+                                         const std::set<std::string> &requested_remove, bool remove_depends = false);
 
 void collect_package_changes(AptCache *cache,
                              const std::set<std::string> &requested_install,

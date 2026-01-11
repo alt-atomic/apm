@@ -2,34 +2,15 @@
 
 #include "apt_wrapper.h"
 
-#include <apt-pkg/init.h>
 #include <apt-pkg/cachefile.h>
 #include <apt-pkg/packagemanager.h>
-#include <apt-pkg/depcache.h>
-#include <apt-pkg/pkgcache.h>
-#include <apt-pkg/configuration.h>
-#include <apt-pkg/error.h>
 #include <apt-pkg/pkgsystem.h>
 #include <apt-pkg/acquire.h>
-#include <apt-pkg/sourcelist.h>
-#include <apt-pkg/pkgrecords.h>
-#include <apt-pkg/algorithms.h>
-#include <apt-pkg/fileutl.h>
-#include <apt-pkg/indexfile.h>
-#include <sys/stat.h>
 
 #include <memory>
 #include <string>
 #include <vector>
-#include <cstring>
 #include <iostream>
-#include <sstream>
-#include <algorithm>
-#include <cctype>
-#include <regex.h>
-#include <cstdlib>
-#include <set>
-#include <unistd.h>
 
 // Internal structures originally defined in apt_wrapper.cpp
 struct AptSystem {

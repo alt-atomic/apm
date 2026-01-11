@@ -1,11 +1,14 @@
 #include "apt_internal.h"
 
+#include <apt-pkg/pkgrecords.h>
+#include <apt-pkg/sourcelist.h>
+
 class ReInstallConfigGuard {
     bool was_already_set_ = false;
     bool was_set_by_us_ = false;
 
 public:
-    bool setIfNeeded(pkgDepCache* cache) {
+    bool setIfNeeded(pkgDepCache *cache) {
         was_already_set_ = _config->FindB("APT::Get::ReInstall", false);
 
         // If already set by someone else, don't touch it
