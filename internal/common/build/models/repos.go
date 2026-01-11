@@ -45,6 +45,10 @@ type ReposBody struct {
 	NoUpdate bool `yaml:"no-update,omitempty" json:"no-update,omitempty"`
 }
 
+type ReposOutput struct {
+	CreatedFile string
+}
+
 func (b *ReposBody) AllRepos() []string {
 	var repos []string
 	repos = append(repos, b.Custom...)
@@ -153,13 +157,17 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, err
 	}
 
+	output := ReposOutput{
+		CreatedFile: sourcesPath,
+	}
+
 	if err := os.WriteFile(sourcesPath, []byte(strings.Join(allRepos, "\n")+"\n"), 0644); err != nil {
 		return nil, err
 	}
 
 	if !b.NoUpdate {
-		return nil, svc.UpdatePackages(ctx)
+		return output, svc.UpdatePackages(ctx)
 	}
 
-	return nil, nil
+	return output, nil
 }
