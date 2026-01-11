@@ -5,6 +5,7 @@ import (
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 )
 
@@ -17,6 +18,9 @@ type MergeBody struct {
 
 	// Права для создания файла в формате rwxrwxrwx, если он не существует
 	CreateFilePerm string `yaml:"create-file-perm,omitempty" json:"create-file-perm,omitempty"`
+
+	// Добавлять ли содержимое в начало файла
+	Prepend bool `yaml:"prepend,omitempty" json:"prepend,omitempty"`
 }
 
 func (b *MergeBody) Execute(_ context.Context, _ Service) (any, error) {
@@ -35,5 +39,9 @@ func (b *MergeBody) Execute(_ context.Context, _ Service) (any, error) {
 		}
 	}
 
-	return nil, osutils.AppendFile(b.Source, b.Destination, mode)
+	if b.Prepend {
+		return nil, osutils.PrependFile(b.Source, b.Destination, mode)
+	} else {
+		return nil, osutils.AppendFile(b.Source, b.Destination, mode)
+	}
 }
