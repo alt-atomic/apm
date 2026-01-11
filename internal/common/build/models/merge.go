@@ -14,6 +14,9 @@ type MergeBody struct {
 
 	// Путь до файла, куда нужно добавить содержимое
 	Destination string `yaml:"destination,omitempty" json:"destination,omitempty" required:""`
+
+	// Права для создания файла в формате rwxrwxrwx, если он не существует
+	CreateFilePerm string `yaml:"create-file-perm,omitempty" json:"create-file-perm,omitempty"`
 }
 
 func (b *MergeBody) Execute(_ context.Context, _ Service) (any, error) {
@@ -23,5 +26,14 @@ func (b *MergeBody) Execute(_ context.Context, _ Service) (any, error) {
 		return nil, fmt.Errorf("destination in merge type must be absolute path")
 	}
 
-	return nil, osutils.AppendFile(b.Source, b.Destination, 0)
+	var mode fs.FileMode = 0
+	if b.CreateFilePerm != "" {
+		var err error
+		mode, err = osutils.StringToFileMode(b.CreateFilePerm)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, osutils.AppendFile(b.Source, b.Destination, mode)
 }
