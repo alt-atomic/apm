@@ -20,6 +20,7 @@ import (
 var (
 	goodInitrdMethods = []string{
 		"auto",
+		"none",
 		"dracut",
 		"make-initrd",
 	}
@@ -264,6 +265,8 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 			if err != nil {
 				return nil, err
 			}
+		case "none":
+			return nil, nil
 		default:
 			dracutPath, dracutErr := exec.LookPath(defaultDracutPath)
 			makeInitrdPath, makeInitrdErr := exec.LookPath(defaultMakeInitrdPath)
