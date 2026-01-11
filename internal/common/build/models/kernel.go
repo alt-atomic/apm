@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -22,13 +23,17 @@ var (
 		"dracut",
 		"make-initrd",
 	}
-	defaultDracutPath     = "/usr/bin/dracut"
-	defaultMakeInitrdPath = "/usr/sbin/make-initrd"
-	kernelDir             = "/usr/lib/modules"
-	bootVmlinuzTemplate   = "/boot/vmlinuz-%s"
+	defaultDracutPath      = "/usr/bin/dracut"
+	defaultMakeInitrdPath  = "/usr/sbin/make-initrd"
+	kernelDir              = "/usr/lib/modules"
+	bootVmlinuzTemplate    = "/boot/vmlinuz-%s"
+	plymouthThemesDir      = "/usr/share/plymouth/themes"
+	plymouthConfigFile     = "/etc/plymouth/plymouthd.conf"
+	plymouthKargsPath      = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
+	plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
 )
 
-type KernelBody struct {
+type KernelInfo struct {
 	// Версия ядра
 	Flavour string `yaml:"flavour,omitempty" json:"flavour,omitempty"`
 
@@ -37,27 +42,58 @@ type KernelBody struct {
 
 	// Включать хедеры
 	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
+}
 
-	// Пересобрать initramfs. Поддерживаются: dracut, auto. Если пусто и прописан один из
+func (i *KernelInfo) IsEmpty() bool {
+	return i.Flavour == "" && len(i.Modules) == 0 && !i.IncludeHeaders
+}
+
+type Initrd struct {
+	// Поддерживаются: dracut, auto. Если пусто и прописан один из
 	// flavour, modules, inckude-headers, то используется auto
-	RebuildInitrdMethod string `yaml:"rebuild-initrd-method,omitempty" json:"rebuild-initrd-method,omitempty"`
+	Method string `yaml:"method,omitempty" json:"method,omitempty"`
+
+	// Тема плимут
+	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`
+}
+
+func (i *Initrd) IsEmpty() bool {
+	return i.Method == "" && i.PlymouthTheme == ""
+}
+
+type KernelBody struct {
+	KernelInfo KernelInfo `yaml:"kernel-info,omitempty" json:"kernel-info"`
+
+	Initrd Initrd `yaml:"initrd,omitempty" json:"initrd"`
+}
+
+func (b *KernelBody) Validate() error {
+	if !b.Initrd.IsEmpty() {
+		if !slices.Contains(goodInitrdMethods, b.Initrd.Method) {
+			return fmt.Errorf(app.T_("unknown initrd method %s"), b.Initrd.Method)
+		}
+	}
+
+	return nil
 }
 
 func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
-	if b.RebuildInitrdMethod != "" && !slices.Contains(goodInitrdMethods, b.RebuildInitrdMethod) {
-		return nil, fmt.Errorf(app.T_("unknown initrd method %s"), b.RebuildInitrdMethod)
-	}
+	b.Validate()
 
-	var shouldInstallKernel = b.Flavour != "" || len(b.Modules) != 0 || b.IncludeHeaders
+	var shouldInstallKernel = !b.KernelInfo.IsEmpty()
+	var shouldRebuildInitrd = !b.Initrd.IsEmpty() || shouldInstallKernel
+
+	app.Log.Warn(shouldInstallKernel)
+	app.Log.Warn(shouldRebuildInitrd)
 
 	if shouldInstallKernel {
 		mgr := svc.KernelManager()
-		modules := append([]string{}, b.Modules...)
+		modules := append([]string{}, b.KernelInfo.Modules...)
 
 		var latestKernelInfo *service.Info
 		var err error
-		if b.Flavour != "" {
-			latestKernelInfo, err = mgr.FindLatestKernel(ctx, b.Flavour)
+		if b.KernelInfo.Flavour != "" {
+			latestKernelInfo, err = mgr.FindLatestKernel(ctx, b.KernelInfo.Flavour)
 			if err != nil {
 				return nil, err
 			}
@@ -78,7 +114,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 			return nil, errors.New("kernel must be specified")
 		}
 
-		additionalPackages, _ := mgr.AutoSelectHeadersAndFirmware(ctx, toInstall, b.IncludeHeaders)
+		additionalPackages, _ := mgr.AutoSelectHeadersAndFirmware(ctx, toInstall, b.KernelInfo.IncludeHeaders)
 		for _, pkg := range additionalPackages {
 			if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", toInstall.Flavour)) {
 				moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
@@ -107,12 +143,12 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 		}
 
 		app.Log.Info(fmt.Sprintf("Installing kernel %s with modules: %s", toInstall.Flavour, strings.Join(modules, ", ")))
-		if err = mgr.InstallKernel(ctx, toInstall, modules, b.IncludeHeaders, false); err != nil {
+		if err = mgr.InstallKernel(ctx, toInstall, modules, b.KernelInfo.IncludeHeaders, false); err != nil {
 			return nil, err
 		}
 
 		// TODO: Заменить на более точечное обновление, как в kernel service
-		app.Log.Info("Updating packages DB")
+		app.Log.Info("Updating packages DB for kernel")
 		if err = svc.UpdatePackages(ctx); err != nil {
 			return nil, err
 		}
@@ -135,8 +171,89 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 		}
 	}
 
-	if shouldInstallKernel || b.RebuildInitrdMethod != "" {
-		switch b.RebuildInitrdMethod {
+	if shouldRebuildInitrd {
+		if b.Initrd.PlymouthTheme != "" {
+			plymouthPaths := []string{plymouthKargsPath, plymouthDracutConfPath}
+
+			if b.Initrd.PlymouthTheme == "disabled" {
+				if _, err := os.Stat(plymouthConfigFile); err == nil {
+					if err := os.WriteFile(plymouthConfigFile, []byte(""), 0644); err != nil {
+						return nil, err
+					}
+					for _, p := range plymouthPaths {
+						if err := os.RemoveAll(p); err != nil {
+							return nil, err
+						}
+					}
+				}
+			} else {
+				var themes []string
+				if _, err := os.Stat(plymouthThemesDir); err == nil {
+					files, err := os.ReadDir(plymouthThemesDir)
+					if err != nil {
+						return nil, err
+					}
+					for _, file := range files {
+						themes = append(themes, file.Name())
+					}
+				}
+
+				if !slices.Contains(themes, b.Initrd.PlymouthTheme) {
+					filters := map[string]any{
+						"name": fmt.Sprintf("plymouth-theme-%s", b.Initrd.PlymouthTheme),
+					}
+					packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+					if err != nil {
+						return nil, err
+					}
+					if len(packages) == 0 {
+						return nil, fmt.Errorf("no plymouth theme found for %s", b.Initrd.PlymouthTheme)
+					}
+
+					var pkgsNames []string
+					for _, pkg := range packages {
+						pkgsNames = append(pkgsNames, pkg.Name)
+					}
+
+					packagesBody := &PackagesBody{Install: pkgsNames}
+
+					if _, err = packagesBody.Execute(ctx, svc); err != nil {
+						return nil, err
+					}
+				}
+
+				plymouthConfig := strings.Join([]string{
+					"[Daemon]",
+					fmt.Sprintf("Theme=%s", b.Initrd.PlymouthTheme),
+					"ShowDelay=0",
+					"DeviceTimeout=10",
+				}, "\n") + "\n"
+
+				if err := os.MkdirAll(path.Dir(plymouthConfigFile), 0644); err != nil {
+					return nil, err
+				}
+				if err := os.WriteFile(plymouthConfigFile, []byte(plymouthConfig), 0644); err != nil {
+					return nil, err
+				}
+
+				for _, p := range plymouthPaths {
+					if err := os.MkdirAll(path.Dir(p), 0644); err != nil {
+						return nil, err
+					}
+				}
+
+				if svc.IsAtomic() {
+					if err := os.WriteFile(plymouthKargsPath, []byte(`kargs = ["rhgb", "quiet", "splash", "plymouth.enable=1", "rd.plymouth=1"]`+"\n"), 0644); err != nil {
+						return nil, err
+					}
+					if err := os.WriteFile(plymouthDracutConfPath, []byte(`add_dracutmodules+=" plymouth "`+"\n"), 0644); err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+
+		switch b.Initrd.Method {
 		case "dracut":
 			err := rebuildDracut(ctx, defaultDracutPath)
 			if err != nil {
