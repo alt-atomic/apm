@@ -81,3 +81,17 @@ install_data(
   'completion/zsh/_apm',
   install_dir: zsh_completion_dir
 )
+
+# --- APT bridge configuration ---
+apt_conf_dir = get_option('sysconfdir') / 'apt' / 'apt.conf.d'
+apt_scripts_dir = get_option('datadir') / 'apt' / 'scripts'
+
+install_data(
+  'apt-bridge/99-apm-update.conf',
+  install_dir: apt_conf_dir
+)
+
+install_data(
+  'apt-bridge/update-apm.lua',
+  install_dir: apt_scripts_dir
+)
