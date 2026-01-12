@@ -2326,7 +2326,7 @@ msgstr[2] "%d модулей успешно удалено из ядра %s"
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
-"Для выполнения этого действия необходимо повышенные прав. Пожалуйста, "
+"Для выполнения этого действия необходимы повышенные права. Пожалуйста, "
 "используйте sudo или su"
 
 #: internal/kernel/commands.go:66
