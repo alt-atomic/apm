@@ -65,6 +65,8 @@ done
 %_datadir/fish/vendor_completions.d/%name.fish
 %_datadir/zsh/site-functions/_%name
 %_datadir/polkit-1/actions/%service_id.policy
+%_sysconfdir/apt/apt.conf.d/99-apm-update.conf
+%_datadir/apt/scripts/update-apm.lua
 %doc README.en.md
 %doc README.md
 %doc README.ru.md
