@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 )
 
 type GitBody struct {
@@ -17,10 +18,13 @@ type GitBody struct {
 	Command string `yaml:"command,omitempty" json:"command,omitempty" required:""`
 
 	// Зависимости для сборки. Они будут удалены после завершения модуля
+	BuildDeps []string `yaml:"build-deps,omitempty" json:"build-deps,omitempty"`
+
+	// Зависимости для самой программы. Они не будут удалены после завершения модуля, даже если указаны в build-deps
 	Deps []string `yaml:"deps,omitempty" json:"deps,omitempty"`
 
-	// Git reference
-	Ref string `yaml:"ref,omitempty" json:"ref,omitempty"`
+	// Git revision
+	Rev string `yaml:"rev,omitempty" json:"rev,omitempty"`
 
 	// Quiet command output
 	Quiet bool `yaml:"quiet,omitempty" json:"quiet,omitempty"`
@@ -28,14 +32,19 @@ type GitBody struct {
 
 func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	needInstallDeps := []string{}
+	needRemoveDeps := []string{}
 
-	for _, dep := range b.Deps {
+	for _, dep := range append(b.Deps, b.BuildDeps...) {
 		pkg, err := svc.GetPackageByName(ctx, dep)
 		if err != nil {
 			return nil, err
 		}
 		if !pkg.Installed {
 			needInstallDeps = append(needInstallDeps, pkg.Name)
+
+			if slices.Contains(b.BuildDeps, pkg.Name) && !slices.Contains(b.Deps, pkg.Name) {
+				needRemoveDeps = append(needRemoveDeps, pkg.Name)
+			}
 		}
 	}
 
@@ -56,8 +65,8 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	app.Log.Debug(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
 
 	args := []string{"clone"}
-	if b.Ref != "" {
-		args = append(args, "-b", b.Ref)
+	if b.Rev != "" {
+		args = append(args, "--revision="+b.Rev)
 	}
 	args = append(args, b.Url, tempDir)
 
@@ -73,8 +82,8 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 		return nil, err
 	}
 
-	if len(needInstallDeps) != 0 {
-		packagesBody := &PackagesBody{Remove: needInstallDeps}
+	if len(needRemoveDeps) != 0 {
+		packagesBody := &PackagesBody{Remove: needRemoveDeps}
 
 		if _, err := packagesBody.Execute(ctx, svc); err != nil {
 			return nil, err
