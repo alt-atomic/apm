@@ -259,7 +259,7 @@ func (cm *configManagerImpl) GetResourcesDir() string {
 
 // GetPathImageContainerFile возвращает путь к файлу для сборки контейнера
 func (cm *configManagerImpl) GetPathImageContainerFile() string {
-	return "/var/lib/apm/Containerfile"
+	return cm.config.PathContainerFile
 }
 
 // SetFormat устанавливает формат вывода
