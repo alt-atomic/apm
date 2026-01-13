@@ -4,7 +4,7 @@ mkdir -p .gear
 cp -a build-aux/altlinux/rules ./.gear/
 
 version=$(./build-aux/get_meson_version)
-release=1.$(date +%s)
+release=99999999999.$(date +%s)
 
 sed -e "s/@VERSION@/${version}/g" \
     -e "s/@RELEASE@/${release}/g" \
