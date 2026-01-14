@@ -889,11 +889,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageApply применить изменения к хосту
 func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkOverlay(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+	var err error
 	if err = a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, err
 	}
