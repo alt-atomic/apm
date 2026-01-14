@@ -54,7 +54,7 @@ done
 
 %files -f %name.lang
 %_localstatedir/%name
-%_localstatedir/cache/%name
+%_cachedir/%name
 %_sysconfdir/%name
 %_tmpfilesdir/%name.conf
 %_bindir/%name
