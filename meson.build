@@ -29,12 +29,13 @@ SERVICE_ID = 'org.altlinux.APM'
 
 varapmdir = get_option('localstatedir') / 'lib' / meson.project_name()
 confapmdir = get_option('sysconfdir') / meson.project_name()
+varcacheapmdir = get_option('localstatedir') / 'cache' / meson.project_name()
 
 COMMAND_PREFIX = ''
 PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
 DBSQL_FILEPATH = varapmdir / meson.project_name() + '.db'
-CONTAINERFILE_FILEPATH = varapmdir / 'Containerfile'
+CONTAINERFILE_FILEPATH = varcacheapmdir / 'Containerfile'
 IMAGE_FILEPATH = confapmdir / 'image.yml'
 RESOURCES_FILEPATH = confapmdir / 'resources'
 
@@ -58,6 +59,7 @@ subdir('po')
 subdir('data')
 
 install_emptydir(varapmdir)
+install_emptydir(varcacheapmdir)
 install_emptydir(confapmdir)
 
 custom_target(
