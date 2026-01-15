@@ -53,9 +53,6 @@ func NewActions(appConfig *app.Config) *Actions {
 
 // List возвращает список репозиториев
 func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("repo.List"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("repo.List"))
-
 	repos, err := a.repoService.GetRepositories(ctx, all)
 	if err != nil {
 		return nil, err
@@ -80,9 +77,6 @@ func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error
 
 // Add добавляет репозиторий
 func (a *Actions) Add(ctx context.Context, source string, simulate bool) (*reply.APIResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("repo.Add"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("repo.Add"))
-
 	source = strings.TrimSpace(source)
 	if source == "" {
 		return nil, errors.New(app.T_("Repository source must be specified"))
@@ -141,9 +135,6 @@ func (a *Actions) Add(ctx context.Context, source string, simulate bool) (*reply
 
 // Remove удаляет репозиторий
 func (a *Actions) Remove(ctx context.Context, source string, simulate bool) (*reply.APIResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("repo.Remove"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("repo.Remove"))
-
 	source = strings.TrimSpace(source)
 	if source == "" {
 		return nil, errors.New(app.T_("Repository source must be specified"))
@@ -202,9 +193,6 @@ func (a *Actions) Remove(ctx context.Context, source string, simulate bool) (*re
 
 // Set устанавливает ветку (удаляет все и добавляет)
 func (a *Actions) Set(ctx context.Context, branch string, simulate bool) (*reply.APIResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("repo.Set"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("repo.Set"))
-
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return nil, errors.New(app.T_("Branch name must be specified"))
@@ -254,9 +242,6 @@ func (a *Actions) Set(ctx context.Context, branch string, simulate bool) (*reply
 
 // Clean удаляет cdrom и task репозитории
 func (a *Actions) Clean(ctx context.Context, simulate bool) (*reply.APIResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("repo.Clean"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("repo.Clean"))
-
 	if simulate {
 		// Получаем текущие репозитории и фильтруем cdrom/task
 		repos, err := a.repoService.GetRepositories(ctx, false)
@@ -339,9 +324,6 @@ func (a *Actions) GetBranches(_ context.Context) (*reply.APIResponse, error) {
 
 // GetTaskPackages возвращает список пакетов из задачи
 func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*reply.APIResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("repo.GetTaskPackages"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("repo.GetTaskPackages"))
-
 	taskNum = strings.TrimSpace(taskNum)
 	if taskNum == "" {
 		return nil, errors.New(app.T_("Task number must be specified"))
