@@ -18,12 +18,11 @@ package system
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/common/wrapper"
 	"context"
 	"fmt"
 	"strings"
-	"syscall"
 
 	"github.com/urfave/cli/v3"
 )
@@ -102,27 +101,8 @@ func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 	}
 }
 
-func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
-	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
-		return func(ctx context.Context, cmd *cli.Command) error {
-			appConfig := app.GetAppConfig(ctx)
-			appConfig.ConfigManager.SetFormat(cmd.String("format"))
-			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
-
-			if requireRoot && syscall.Geteuid() != 0 {
-				return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
-			}
-
-			actions := NewActions(appConfig)
-
-			reply.CreateSpinner(appConfig)
-			return actionFunc(ctx, cmd, actions)
-		}
-	}
-}
-
-var withGlobalWrapper = wrapperWithOptions(false)
-var withRootCheckWrapper = wrapperWithOptions(true)
+var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponse)
+var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponse)
 
 func CommandList(ctx context.Context) *cli.Command {
 	appConfig := app.GetAppConfig(ctx)
@@ -285,6 +265,7 @@ func CommandList(ctx context.Context) *cli.Command {
 		},
 		{
 			Name:      "remove",
+			Aliases:   []string{"rm"},
 			Usage:     app.T_("List of packages to remove"),
 			ArgsUsage: "packages",
 			Flags: []cli.Flag{

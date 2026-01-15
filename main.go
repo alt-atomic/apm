@@ -26,6 +26,7 @@ import (
 	"apm/internal/common/version"
 	"apm/internal/distrobox"
 	"apm/internal/kernel"
+	"apm/internal/repo"
 	"apm/internal/system"
 	"context"
 	"errors"
@@ -62,6 +63,7 @@ func main() {
 	systemCommands := system.CommandList(ctx)
 	distroboxCommands := distrobox.CommandList(ctx)
 	kernelCommands := kernel.CommandList(ctx)
+	repoCommands := repo.CommandList(ctx)
 
 	cmds := []*cli.Command{
 		{
@@ -75,6 +77,7 @@ func main() {
 			Action: systemDbus,
 		},
 		systemCommands,
+		repoCommands,
 	}
 
 	if appConfig.ConfigManager.GetConfig().ExistDistrobox {
@@ -267,6 +270,13 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		if err = appConfig.DBusManager.GetConnection().Export(kernelObj, "/org/altlinux/APM", "org.altlinux.APM.kernel"); err != nil {
 			return err
 		}
+	}
+
+	// Экспортируем repo методы в D-Bus
+	repoActions := repo.NewActions(appConfig)
+	repoObj := repo.NewDBusWrapper(repoActions, conn, ctx)
+	if err = appConfig.DBusManager.GetConnection().Export(repoObj, "/org/altlinux/APM", "org.altlinux.APM.repo"); err != nil {
+		return err
 	}
 
 	if err = appConfig.DBusManager.GetConnection().Export(

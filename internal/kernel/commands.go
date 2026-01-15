@@ -18,10 +18,9 @@ package kernel
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/common/wrapper"
 	"context"
-	"syscall"
 
 	"github.com/urfave/cli/v3"
 )
@@ -36,26 +35,7 @@ func newErrorResponse(message string) reply.APIResponse {
 	}
 }
 
-func wrapperWithOptions(requireRoot bool) func(func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
-	return func(actionFunc func(context.Context, *cli.Command, *Actions) error) cli.ActionFunc {
-		return func(ctx context.Context, cmd *cli.Command) error {
-			appConfig := app.GetAppConfig(ctx)
-			appConfig.ConfigManager.SetFormat(cmd.String("format"))
-			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
-
-			if requireRoot && syscall.Geteuid() != 0 {
-				return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
-			}
-
-			actions := NewActions(appConfig)
-
-			reply.CreateSpinner(appConfig)
-			return actionFunc(ctx, cmd, actions)
-		}
-	}
-}
-
-var withRootCheckWrapper = wrapperWithOptions(true)
+var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponse)
 
 func CommandList(ctx context.Context) *cli.Command {
 	appConfig := app.GetAppConfig(ctx)
