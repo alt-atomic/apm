@@ -601,7 +601,7 @@ func (s *RepoService) buildBranchURLs(branch Branch) []string {
 // buildTaskURLs формирует URL для задачи
 func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]string, error) {
 	// Проверяем существование задачи
-	exists, archived, err := s.checkTaskExists(ctx, taskNum)
+	exists, baseURL, err := s.checkTaskExists(ctx, taskNum)
 	if err != nil {
 		return nil, err
 	}
@@ -609,26 +609,25 @@ func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]stri
 		return nil, fmt.Errorf(app.T_("Task %s not found or still building"), taskNum)
 	}
 
-	var url string
-	if archived {
-		prefix := taskNum[:len(taskNum)-3]
-		if len(prefix) == 0 {
-			prefix = "0"
-		}
-		url = fmt.Sprintf("%s/_%s/%s/build/repo/", RepoTasksArchive, prefix, taskNum)
+	// Формируем URL репозитория
+	var repoURL string
+	if strings.Contains(baseURL, "archive/done") {
+		// Архивная задача
+		repoURL = baseURL + "/build/repo/"
 	} else {
-		url = fmt.Sprintf("%s/%s/", RepoTaskURL, taskNum)
+		// Активная задача - используем git.altlinux.org/repo
+		repoURL = fmt.Sprintf("%s/%s/", RepoTaskURL, taskNum)
 	}
 
-	urls := []string{fmt.Sprintf("rpm %s %s task", url, s.arch)}
+	urls := []string{fmt.Sprintf("rpm %s %s task", repoURL, s.arch)}
 
 	if s.useArepo && s.arch == "x86_64" {
-		hasArepo, err := s.checkTaskHasArepo(ctx, taskNum, archived)
+		hasArepo, err := s.checkTaskHasArepo(ctx, taskNum)
 		if err != nil {
 			app.Log.Debugf("failed to check arepo for task %s: %v", taskNum, err)
 		}
 		if hasArepo {
-			urls = append(urls, fmt.Sprintf("rpm %s x86_64-i586 task", url))
+			urls = append(urls, fmt.Sprintf("rpm %s x86_64-i586 task", repoURL))
 		}
 	}
 
@@ -654,60 +653,37 @@ func (s *RepoService) buildURLRepos(url string) []string {
 	return urls
 }
 
-// checkTaskExists проверяет существование задачи
-func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exists bool, archived bool, err error) {
-	url := fmt.Sprintf("%s/%s/", RepoTasksURL, taskNum)
+// checkTaskExists проверяет существование задачи и возвращает базовый URL (с учётом редиректа для архивных задач)
+func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exists bool, baseURL string, err error) {
+	url := fmt.Sprintf("%s/%s/plan/add-bin", RepoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {
-		return false, false, err
+		return false, "", err
 	}
 
-	client := &http.Client{
-		Timeout: HTTPTimeout,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return false, false, err
+		return false, "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 404 {
-		return false, false, nil
+		return false, "", nil
 	}
 
 	if resp.StatusCode == 200 {
-		return true, false, nil
+		finalURL := resp.Request.URL.String()
+		baseURL = strings.TrimSuffix(finalURL, "/plan/add-bin")
+		return true, baseURL, nil
 	}
 
-	// Проверяем редирект на архив
-	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-		location := resp.Header.Get("Location")
-		if strings.Contains(location, "archive/done") {
-			return true, true, nil
-		}
-		return true, false, nil
-	}
-
-	return false, false, nil
+	return false, "", nil
 }
 
 // checkTaskHasArepo проверяет есть ли arepo у задачи
-func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string, archived bool) (bool, error) {
-	var url string
-	if archived {
-		prefix := taskNum[:len(taskNum)-3]
-		if len(prefix) == 0 {
-			prefix = "0"
-		}
-		url = fmt.Sprintf("%s/_%s/%s/plan/arepo-add-x86_64-i586", RepoTasksArchive, prefix, taskNum)
-	} else {
-		url = fmt.Sprintf("%s/%s/plan/arepo-add-x86_64-i586", RepoTasksURL, taskNum)
-	}
+func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bool, error) {
+	url := fmt.Sprintf("%s/%s/plan/arepo-add-x86_64-i586", RepoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {
@@ -1001,7 +977,7 @@ func (s *RepoService) GetConfMain() string {
 
 // GetTaskPackages возвращает список пакетов из задачи
 func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]string, error) {
-	exists, archived, err := s.checkTaskExists(ctx, taskNum)
+	exists, baseURL, err := s.checkTaskExists(ctx, taskNum)
 	if err != nil {
 		return nil, err
 	}
@@ -1009,16 +985,7 @@ func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]st
 		return nil, fmt.Errorf(app.T_("Task %s not found or still building"), taskNum)
 	}
 
-	var url string
-	if archived {
-		prefix := taskNum[:len(taskNum)-3]
-		if len(prefix) == 0 {
-			prefix = "0"
-		}
-		url = fmt.Sprintf("%s/_%s/%s/plan/add-bin", RepoTasksArchive, prefix, taskNum)
-	} else {
-		url = fmt.Sprintf("%s/%s/plan/add-bin", RepoTasksURL, taskNum)
-	}
+	url := baseURL + "/plan/add-bin"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
