@@ -54,6 +54,8 @@ func WithOptions[T any](
 			isRoot := syscall.Geteuid() == 0
 
 			switch rootCheck {
+			case NoRootCheck:
+				// Без проверки, продолжаем выполнение
 			case RequireRoot:
 				if !isRoot {
 					return reply.CliResponse(ctx, errorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
