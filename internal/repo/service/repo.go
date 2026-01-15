@@ -1008,11 +1008,16 @@ func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]st
 	}
 
 	var packages []string
+	seen := make(map[string]bool)
 	lines := strings.Split(string(body), "\n")
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) >= 1 {
-			packages = append(packages, fields[0])
+			pkg := fields[0]
+			if !seen[pkg] {
+				seen[pkg] = true
+				packages = append(packages, pkg)
+			}
 		}
 	}
 

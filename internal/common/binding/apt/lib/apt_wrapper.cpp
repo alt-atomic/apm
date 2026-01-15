@@ -378,7 +378,7 @@ AptResult apt_cache_update(AptCache *cache) {
         if (fetch_result != pkgAcquire::Continue) {
             for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
                 if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
-                    std::string error_msg = "Repository update failed: " + (*I)->ErrorText;
+                    std::string error_msg = "Repository update failed: " + (*I)->DescURI() + " " + (*I)->ErrorText;
                     return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
                 }
             }
@@ -387,7 +387,7 @@ AptResult apt_cache_update(AptCache *cache) {
 
         for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
             if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
-                std::string error_msg = "Repository update failed: " + (*I)->ErrorText;
+                std::string error_msg = "Repository update failed: " + (*I)->DescURI() + " " + (*I)->ErrorText;
                 return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
             }
         }
@@ -401,7 +401,7 @@ AptResult apt_cache_update(AptCache *cache) {
         if (fetch_result != pkgAcquire::Continue) {
             for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
                 if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
-                    std::string error_msg = "Package index update failed: " + (*I)->ErrorText;
+                    std::string error_msg = "Package index update failed: " + (*I)->DescURI() + " " + (*I)->ErrorText;
                     return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
                 }
             }
@@ -412,7 +412,7 @@ AptResult apt_cache_update(AptCache *cache) {
         // Check for failed items even if Run() returned Continue
         for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
             if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
-                std::string error_msg = "Package index update failed: " + (*I)->ErrorText;
+                std::string error_msg = "Package index update failed: " + (*I)->DescURI() + " " + (*I)->ErrorText;
                 return make_result(APT_ERROR_DOWNLOAD_FAILED, error_msg.c_str());
             }
         }
