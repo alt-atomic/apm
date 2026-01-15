@@ -465,6 +465,14 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source string) ([]st
 	}
 
 	for _, u := range urls {
+		active, commented, checkErr := s.checkRepoExists(ctx, u)
+		if checkErr != nil {
+			continue
+		}
+		if !active && !commented {
+			continue
+		}
+
 		err = s.removeOrCommentRepo(u)
 		if err != nil {
 			continue
