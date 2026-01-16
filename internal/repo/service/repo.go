@@ -18,6 +18,7 @@ package service
 
 import (
 	"apm/internal/common/app"
+	_package "apm/internal/common/apt/package"
 	"bufio"
 	"context"
 	"errors"
@@ -50,17 +51,17 @@ const (
 	LegacyP10Macro = "/etc/rpm/macros.d/p10"
 
 	// RepoBaseURL is the base URL for ALT Linux repositories (ftp.altlinux.org).
-	RepoBaseURL = "http://ftp.altlinux.org/pub/distributions/ALTLinux"
+	RepoBaseURL = "ftp.altlinux.org/pub/distributions/ALTLinux"
 	// RepoBaseURLRu is the base URL for ALT Linux repositories (ftp.altlinux.ru).
-	RepoBaseURLRu = "http://ftp.altlinux.ru/pub/distributions/ALTLinux"
+	RepoBaseURLRu = "ftp.altlinux.ru/pub/distributions/ALTLinux"
+	// RepoArchiveURL is the base URL for archived ALT Linux repositories.
+	RepoArchiveURL = "ftp.altlinux.org/pub/distributions/archive"
 	// RepoTaskURL is the URL for active task repositories.
-	RepoTaskURL = "http://git.altlinux.org/repo"
+	RepoTaskURL = "git.altlinux.org/repo"
 	// RepoTasksURL is the URL for task information.
-	RepoTasksURL = "http://git.altlinux.org/tasks"
-	// RepoTasksArchive is the URL for archived tasks.
-	RepoTasksArchive = "http://git.altlinux.org/tasks/archive/done"
-	// RepoCert8URL is the URL for c8 certification branch.
-	RepoCert8URL = "http://update.altsp.su/pub/distributions/ALTLinux/c8/branch"
+	RepoTasksURL = "git.altlinux.org/tasks"
+	// RepoCert8URL RepoTasksArchive = "git.altlinux.org/tasks/archive/done"
+	RepoCert8URL = "update.altsp.su/pub/distributions/ALTLinux/c8/branch"
 
 	// HTTPTimeout is the default timeout for HTTP requests.
 	HTTPTimeout = 10 * time.Second
@@ -88,16 +89,19 @@ type Branch struct {
 
 // RepoService сервис для работы с репозиториями APT
 type RepoService struct {
-	confMain   string
-	confDir    string
-	arch       string
-	branches   map[string]Branch
-	useArepo   bool
-	httpClient *http.Client
+	confMain           string
+	confDir            string
+	arch               string
+	branches           map[string]Branch
+	useArepo           bool
+	httpClient         *http.Client
+	serviceAptDatabase *_package.PackageDBService
 }
 
 // NewRepoService создает новый сервис для работы с репозиториями
-func NewRepoService() *RepoService {
+func NewRepoService(appConfig *app.Config) *RepoService {
+	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
+
 	svc := &RepoService{
 		confMain: DefaultSourcesList,
 		confDir:  DefaultSourcesListDir,
@@ -106,6 +110,7 @@ func NewRepoService() *RepoService {
 		httpClient: &http.Client{
 			Timeout: HTTPTimeout,
 		},
+		serviceAptDatabase: hostPackageDBSvc,
 	}
 
 	// Получаем пути из apt-config если возможно
@@ -167,6 +172,20 @@ func checkArepoEnabled() bool {
 	}
 
 	return true
+}
+
+// httpScheme возвращает схему URL (http или https) в зависимости от наличия apt-https
+func (s *RepoService) httpScheme(ctx context.Context) string {
+	if s.checkHTTPSEnabled(ctx) {
+		return "https://"
+	}
+	return "http://"
+}
+
+// checkHTTPSEnabled проверяет установлен ли пакет apt-https
+func (s *RepoService) checkHTTPSEnabled(ctx context.Context) bool {
+	_, err := s.serviceAptDatabase.GetPackageByName(ctx, "apt-https")
+	return err == nil
 }
 
 // detectAPTConfig получает пути конфигурации из apt-config
@@ -538,13 +557,26 @@ func (s *RepoService) CleanTemporary(ctx context.Context) ([]string, error) {
 	return removed, nil
 }
 
+// archivingBranches список веток, для которых есть архивы
+var archivingBranches = []string{"p7", "p8", "p9", "p10", "p11", "t7", "sisyphus"}
+
 // parseSource парсит источник в URL(ы)
 func (s *RepoService) parseSource(ctx context.Context, source string) ([]string, error) {
 	source = strings.TrimSpace(source)
 
-	// 1. Проверяем известную ветку
-	if branch, ok := s.branches[source]; ok {
-		return s.buildBranchURLs(branch), nil
+	// 1. Проверяем известную ветку (с опциональной датой архива)
+	parts := strings.SplitN(source, " ", 2)
+	branchName := parts[0]
+	if branch, ok := s.branches[branchName]; ok {
+		if len(parts) == 2 {
+			archiveDate := strings.TrimSpace(parts[1])
+			formattedDate, err := s.parseArchiveDate(branchName, archiveDate)
+			if err != nil {
+				return nil, err
+			}
+			return s.buildBranchURLsWithArchive(ctx, branch, formattedDate), nil
+		}
+		return s.buildBranchURLs(ctx, branch), nil
 	}
 
 	// 2. Проверяем номер задачи
@@ -581,8 +613,40 @@ func (s *RepoService) parseSource(ctx context.Context, source string) ([]string,
 	return nil, fmt.Errorf(app.T_("Unknown repository format: %s"), source)
 }
 
+// parseArchiveDate парсит и валидирует дату архива
+func (s *RepoService) parseArchiveDate(branchName, date string) (string, error) {
+	// Проверяем, поддерживает ли ветка архивы
+	hasArchive := false
+	for _, b := range archivingBranches {
+		if b == branchName {
+			hasArchive = true
+			break
+		}
+	}
+	if !hasArchive {
+		return "", fmt.Errorf(app.T_("Branch %s has no archive"), branchName)
+	}
+
+	// Формат YYYYMMDD -> YYYY/MM/DD
+	if len(date) == 8 && isTaskNumber(date) {
+		return fmt.Sprintf("%s/%s/%s", date[0:4], date[4:6], date[6:8]), nil
+	}
+
+	// Формат YYYY/MM/DD
+	if regexp.MustCompile(`^\d{4}/\d{2}/\d{2}$`).MatchString(date) {
+		return date, nil
+	}
+
+	return "", fmt.Errorf(app.T_("Archive date should be YYYYMMDD or YYYY/MM/DD format"))
+}
+
 // buildBranchURLs формирует URL для ветки
-func (s *RepoService) buildBranchURLs(branch Branch) []string {
+func (s *RepoService) buildBranchURLs(ctx context.Context, branch Branch) []string {
+	return s.buildBranchURLsWithArchive(ctx, branch, "")
+}
+
+// buildBranchURLsWithArchive формирует URL для ветки с опциональной датой архива
+func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch Branch, archiveDate string) []string {
 	var urls []string
 
 	keyPart := ""
@@ -593,14 +657,23 @@ func (s *RepoService) buildBranchURLs(branch Branch) []string {
 	mainComponents := branch.Components[0]
 	allComponents := strings.Join(branch.Components, " ")
 
-	urls = append(urls, fmt.Sprintf("rpm %s%s %s %s", keyPart, branch.URL, s.arch, allComponents))
+	// Формируем базовый URL с учётом схемы и архива
+	var baseURL string
+	if archiveDate != "" {
+		// Архивный URL: http://ftp.altlinux.org/pub/distributions/archive/p10/date/YYYY/MM/DD
+		baseURL = fmt.Sprintf("%s%s/%s/date/%s", s.httpScheme(ctx), RepoArchiveURL, branch.Name, archiveDate)
+	} else {
+		baseURL = s.httpScheme(ctx) + branch.URL
+	}
+
+	urls = append(urls, fmt.Sprintf("rpm %s%s %s %s", keyPart, baseURL, s.arch, allComponents))
 
 	if !strings.Contains(branch.URL, "altlinuxclub") {
-		urls = append(urls, fmt.Sprintf("rpm %s%s noarch %s", keyPart, branch.URL, mainComponents))
+		urls = append(urls, fmt.Sprintf("rpm %s%s noarch %s", keyPart, baseURL, mainComponents))
 	}
 
 	if s.useArepo && s.arch == "x86_64" && !strings.Contains(branch.URL, "altlinuxclub") && !strings.Contains(branch.URL, "autoimports") {
-		urls = append(urls, fmt.Sprintf("rpm %s%s x86_64-i586 %s", keyPart, branch.URL, mainComponents))
+		urls = append(urls, fmt.Sprintf("rpm %s%s x86_64-i586 %s", keyPart, baseURL, mainComponents))
 	}
 
 	return urls
@@ -620,11 +693,9 @@ func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]stri
 	// Формируем URL репозитория
 	var repoURL string
 	if strings.Contains(baseURL, "archive/done") {
-		// Архивная задача
 		repoURL = baseURL + "/build/repo/"
 	} else {
-		// Активная задача - используем git.altlinux.org/repo
-		repoURL = fmt.Sprintf("%s/%s/", RepoTaskURL, taskNum)
+		repoURL = fmt.Sprintf("%s%s/%s/", s.httpScheme(ctx), RepoTaskURL, taskNum)
 	}
 
 	urls := []string{fmt.Sprintf("rpm %s %s task", repoURL, s.arch)}
@@ -663,7 +734,7 @@ func (s *RepoService) buildURLRepos(url string) []string {
 
 // checkTaskExists проверяет существование задачи и возвращает базовый URL (с учётом редиректа для архивных задач)
 func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exists bool, baseURL string, err error) {
-	url := fmt.Sprintf("%s/%s/plan/add-bin", RepoTasksURL, taskNum)
+	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), RepoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {
@@ -691,7 +762,7 @@ func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exis
 
 // checkTaskHasArepo проверяет есть ли arepo у задачи
 func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bool, error) {
-	url := fmt.Sprintf("%s/%s/plan/arepo-add-x86_64-i586", RepoTasksURL, taskNum)
+	url := fmt.Sprintf("%s%s/%s/plan/arepo-add-x86_64-i586", s.httpScheme(ctx), RepoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {
@@ -1022,6 +1093,14 @@ func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]st
 		fields := strings.Fields(line)
 		if len(fields) >= 1 {
 			pkg := fields[0]
+
+			if strings.HasSuffix(pkg, "-debuginfo") ||
+				strings.HasSuffix(pkg, "-checkinstall") ||
+				strings.HasSuffix(pkg, "-devel") ||
+				strings.HasPrefix(pkg, "kernel-headers-") {
+				continue
+			}
+
 			if !seen[pkg] {
 				seen[pkg] = true
 				packages = append(packages, pkg)

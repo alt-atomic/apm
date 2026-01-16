@@ -47,7 +47,7 @@ func NewActionsWithDeps(
 func NewActions(appConfig *app.Config) *Actions {
 	return &Actions{
 		appConfig:   appConfig,
-		repoService: service.NewRepoService(),
+		repoService: service.NewRepoService(appConfig),
 	}
 }
 
