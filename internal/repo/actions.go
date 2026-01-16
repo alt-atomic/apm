@@ -260,7 +260,7 @@ func (a *Actions) Clean(ctx context.Context, simulate bool) (*reply.APIResponse,
 				}
 			}
 			if isCdrom || isTask {
-				willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Raw))
+				willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Entry))
 			}
 		}
 

@@ -76,7 +76,7 @@ type Repository struct {
 	Components []string `json:"components"`
 	Active     bool     `json:"active"`
 	File       string   `json:"file"`
-	Raw        string   `json:"raw"`
+	Entry      string   `json:"entry"`
 }
 
 // Branch представляет информацию о ветке ALT Linux
@@ -378,7 +378,7 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 	repo := &Repository{
 		Active: active,
 		File:   filename,
-		Raw:    line,
+		Entry:  line,
 	}
 
 	idx := 0
@@ -466,11 +466,11 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source string) ([]st
 		}
 
 		for _, repo := range repos {
-			err = s.removeOrCommentRepo(repo.Raw)
+			err = s.removeOrCommentRepo(repo.Entry)
 			if err != nil {
 				return removed, err
 			}
-			removed = append(removed, repo.Raw)
+			removed = append(removed, repo.Entry)
 		}
 
 		s.removePriorityMacro()
@@ -501,6 +501,39 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source string) ([]st
 
 	if _, ok := s.branches[source]; ok {
 		s.removePriorityMacro()
+	}
+
+	// Fallback: если это номер задачи и ничего не удалили - ищем по URL (удалять таски от apt-repo)
+	if len(removed) == 0 && isTaskNumber(source) {
+		repos, repoErr := s.GetRepositories(ctx, false)
+		if repoErr == nil {
+			for _, repo := range repos {
+				if strings.Contains(repo.URL, "/"+source+"/") || strings.HasSuffix(repo.URL, "/"+source) {
+					if err = s.removeOrCommentRepo(repo.Entry); err == nil {
+						removed = append(removed, repo.Entry)
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: если это ветка и ничего не удалили - ищем по URL/arch (удалять ветки от apt-repo)
+	if len(removed) == 0 {
+		if branch, ok := s.branches[source]; ok {
+			repos, repoErr := s.GetRepositories(ctx, false)
+			if repoErr == nil {
+				branchLower := strings.ToLower(branch.Name)
+				for _, repo := range repos {
+					archLower := strings.ToLower(repo.Arch)
+					urlLower := strings.ToLower(repo.URL)
+					if strings.Contains(archLower, branchLower+"/") || strings.Contains(urlLower, "/"+branchLower+"/") {
+						if err = s.removeOrCommentRepo(repo.Entry); err == nil {
+							removed = append(removed, repo.Entry)
+						}
+					}
+				}
+			}
+		}
 	}
 
 	return removed, nil
@@ -547,11 +580,11 @@ func (s *RepoService) CleanTemporary(ctx context.Context) ([]string, error) {
 		}
 
 		if isCdrom || isTask {
-			err = s.removeOrCommentRepo(repo.Raw)
+			err = s.removeOrCommentRepo(repo.Entry)
 			if err != nil {
 				continue
 			}
-			removed = append(removed, repo.Raw)
+			removed = append(removed, repo.Entry)
 		}
 	}
 
@@ -820,7 +853,7 @@ func (s *RepoService) checkRepoExists(ctx context.Context, repoLine string) (act
 	normalized := normalizeRepoLine(repoLine)
 
 	for _, repo := range repos {
-		repoNormalized := normalizeRepoLine(repo.Raw)
+		repoNormalized := normalizeRepoLine(repo.Entry)
 		if repoNormalized == normalized {
 			return repo.Active, !repo.Active, nil
 		}
@@ -1025,7 +1058,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, source string) ([]stri
 			return nil, err
 		}
 		for _, repo := range repos {
-			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Raw))
+			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Entry))
 		}
 		return willRemove, nil
 	}

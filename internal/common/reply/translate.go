@@ -191,6 +191,30 @@ func TranslateKey(key string) string {
 		return app.T_("Available Update")
 	case "summary":
 		return app.T_("Summary")
+	case "repositories":
+		return app.T_("Repositories")
+	case "added":
+		return app.T_("Added")
+	case "removed":
+		return app.T_("Removed")
+	case "arch":
+		return app.T_("Arch")
+	case "key":
+		return app.T_("Key")
+	case "components":
+		return app.T_("Components")
+	case "file":
+		return app.T_("File")
+	case "type":
+		return app.T_("Type")
+	case "url":
+		return app.T_("URL")
+	case "branches":
+		return app.T_("Branches")
+	case "taskNum":
+		return app.T_("Task num")
+	case "entry":
+		return app.T_("Entry")
 	default:
 		return app.T_(key)
 	}

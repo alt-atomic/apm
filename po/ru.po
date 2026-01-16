@@ -5,16 +5,17 @@
 # David Sultaniiazov <x1z53@alt-gnome.ru>, 2025.
 # Dmitry <>, 2025-2026.
 # Vladimir Romanov <rirusha@altlinux.org>, 2026.
+# Dmitry Udalov <dmitry@udalov.online>, 2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-12 23:54+0300\n"
-"PO-Revision-Date: 2026-01-12 23:58+0300\n"
-"Last-Translator: Vladimir Romanov <rirusha@altlinux.org>\n"
-"Language-Team: Russian\n"
-"Language: ru\n"
+"POT-Creation-Date: 2026-01-16 22:49+0600\n"
+"PO-Revision-Date: 2026-01-16 22:56+0600\n"
+"Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
+"Language-Team: ru_RU\n"
+"Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -26,9 +27,8 @@ msgstr ""
 msgid "error opening system database: %w"
 msgstr "Ошибка открытия системной базы данных: %w"
 
-#: internal/common/app/database.go:106 internal/kernel/actions.go:746
-#: internal/kernel/commands.go:47 internal/system/actions.go:1094
-#: internal/system/commands.go:113 main.go:238
+#: internal/common/app/database.go:106 internal/common/wrapper/wrapper.go:61
+#: internal/kernel/actions.go:746 internal/system/actions.go:1090 main.go:241
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -1284,7 +1284,7 @@ msgstr "Получить список ядер"
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:228 internal/kernel/commands.go:219
+#: internal/common/reply/event.go:228 internal/kernel/commands.go:199
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
@@ -1699,6 +1699,62 @@ msgstr "Доступно обновление"
 msgid "Summary"
 msgstr "Краткое описание"
 
+#: internal/common/reply/translate.go:195
+msgid "Repositories"
+msgstr "Репозитории"
+
+#: internal/common/reply/translate.go:197
+msgid "Added"
+msgstr "Добавлено"
+
+#: internal/common/reply/translate.go:199
+msgid "Removed"
+msgstr "Удалено"
+
+#: internal/common/reply/translate.go:201
+msgid "Arch"
+msgstr "Архитектура"
+
+#: internal/common/reply/translate.go:203
+msgid "Key"
+msgstr "Ключ"
+
+#: internal/common/reply/translate.go:205
+msgid "Components"
+msgstr "Компоненты"
+
+#: internal/common/reply/translate.go:207
+msgid "File"
+msgstr "Файл"
+
+#: internal/common/reply/translate.go:209
+msgid "Type"
+msgstr "Тип"
+
+#: internal/common/reply/translate.go:211
+msgid "URL"
+msgstr "URL"
+
+#: internal/common/reply/translate.go:213
+msgid "Branches"
+msgstr "Ветки"
+
+#: internal/common/reply/translate.go:215
+msgid "Task num"
+msgstr "Номер задачи"
+
+#: internal/common/reply/translate.go:217
+msgid "Entry"
+msgstr "Запись"
+
+#: internal/common/wrapper/wrapper.go:65 main.go:195
+msgid ""
+"Elevated rights are not allowed to perform this action. Please do not use "
+"sudo or su"
+msgstr ""
+"Действие не допускает выполнения с повышенными правами. Не используйте sudo "
+"или su"
+
 #: internal/distrobox/actions.go:77
 msgid "Package list successfully updated"
 msgstr "Список пакетов успешно обновлён"
@@ -1716,7 +1772,7 @@ msgstr "Найден пакет"
 
 #: internal/distrobox/actions.go:138 internal/distrobox/actions.go:214
 #: internal/system/actions.go:750 internal/system/actions.go:828
-#: internal/system/actions.go:988
+#: internal/system/actions.go:984
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -1768,63 +1824,55 @@ msgstr "Необходимо указать имя контейнера"
 msgid "Failed to delete container records: %w"
 msgstr "Не удалось удалить записи контейнера: %w"
 
-#: internal/distrobox/commands.go:47 main.go:192
-msgid ""
-"Elevated rights are not allowed to perform this action. Please do not use "
-"sudo or su"
-msgstr ""
-"Действие не допускает выполнения с повышенными правами. Не используйте sudo "
-"или su"
-
-#: internal/distrobox/commands.go:67
+#: internal/distrobox/commands.go:47
 msgid "Managing packages and containers in distrobox"
 msgstr "Управление пакетами и контейнерами в distrobox"
 
-#: internal/distrobox/commands.go:71
+#: internal/distrobox/commands.go:51
 msgid "Update and synchronize the list of installed packages with the host"
 msgstr "Обновить и синхронизировать список установленных пакетов с хостом"
 
-#: internal/distrobox/commands.go:75 internal/distrobox/commands.go:96
-#: internal/distrobox/commands.go:194 internal/distrobox/commands.go:220
-#: internal/distrobox/commands.go:328 internal/distrobox/commands.go:362
+#: internal/distrobox/commands.go:55 internal/distrobox/commands.go:76
+#: internal/distrobox/commands.go:174 internal/distrobox/commands.go:200
+#: internal/distrobox/commands.go:308 internal/distrobox/commands.go:342
 msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
-#: internal/distrobox/commands.go:91 internal/system/commands.go:366
+#: internal/distrobox/commands.go:71 internal/system/commands.go:347
 msgid "Package information"
 msgstr "Информация о пакете"
 
-#: internal/distrobox/commands.go:112 internal/system/commands.go:387
+#: internal/distrobox/commands.go:92 internal/system/commands.go:368
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
-#: internal/distrobox/commands.go:117 internal/distrobox/commands.go:136
+#: internal/distrobox/commands.go:97 internal/distrobox/commands.go:116
 msgid "Container name. Optional flag"
 msgstr "Имя контейнера. Необязательный флаг"
 
-#: internal/distrobox/commands.go:132
+#: internal/distrobox/commands.go:112
 msgid "Building query to retrieve package list"
 msgstr "Построение запроса для извлечения списка пакетов"
 
-#: internal/distrobox/commands.go:141
+#: internal/distrobox/commands.go:121
 msgid "Field for sorting, for example: name, version"
 msgstr "Поле для сортировки, к примеру: name, version"
 
-#: internal/distrobox/commands.go:145 internal/system/commands.go:421
+#: internal/distrobox/commands.go:125 internal/system/commands.go:402
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
-#: internal/distrobox/commands.go:150 internal/system/commands.go:195
-#: internal/system/commands.go:426
+#: internal/distrobox/commands.go:130 internal/system/commands.go:175
+#: internal/system/commands.go:407
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
-#: internal/distrobox/commands.go:155 internal/system/commands.go:200
-#: internal/system/commands.go:431
+#: internal/distrobox/commands.go:135 internal/system/commands.go:180
+#: internal/system/commands.go:412
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
-#: internal/distrobox/commands.go:160 internal/system/commands.go:436
+#: internal/distrobox/commands.go:140 internal/system/commands.go:417
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1832,72 +1880,72 @@ msgstr ""
 "Фильтр в формате ключ=занчение. Флаг может быть указан несколько раз, к "
 "примеру: --filter name=zip --filter installed=true"
 
-#: internal/distrobox/commands.go:164
+#: internal/distrobox/commands.go:144
 msgid "Force update all packages before the request"
 msgstr "Принудительное обновление всех пакетов перед запросом"
 
-#: internal/distrobox/commands.go:189
+#: internal/distrobox/commands.go:169
 msgid "Install package"
 msgstr "Установка пакета"
 
-#: internal/distrobox/commands.go:200
+#: internal/distrobox/commands.go:180
 msgid "Export package"
 msgstr "Экспорт пакета"
 
-#: internal/distrobox/commands.go:215
+#: internal/distrobox/commands.go:195
 msgid "Remove package"
 msgstr "Удаление пакета"
 
-#: internal/distrobox/commands.go:226
+#: internal/distrobox/commands.go:206
 msgid "Remove only from host, leave package in container"
 msgstr "Удалить только с хоста, оставить пакет в контейнере"
 
-#: internal/distrobox/commands.go:241 internal/kernel/commands.go:279
-#: internal/system/commands.go:475
+#: internal/distrobox/commands.go:221 internal/kernel/commands.go:259
+#: internal/repo/commands.go:216 internal/system/commands.go:456
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
-#: internal/distrobox/commands.go:249
+#: internal/distrobox/commands.go:229
 msgid "Module for working with containers"
 msgstr "Модуль для работы с контейнерами"
 
-#: internal/distrobox/commands.go:254
+#: internal/distrobox/commands.go:234
 msgid "List of containers"
 msgstr "Список контейнеров"
 
-#: internal/distrobox/commands.go:266
+#: internal/distrobox/commands.go:246
 msgid "Add container"
 msgstr "Добавить контейнер"
 
-#: internal/distrobox/commands.go:270
+#: internal/distrobox/commands.go:250
 msgid "Container. Must be specified, options: alt, ubuntu, arch"
 msgstr "Контейнер. Должен быть указан, опции: alt, ubuntu, arch"
 
-#: internal/distrobox/commands.go:275
+#: internal/distrobox/commands.go:255
 msgid "Container name"
 msgstr "Имя контейнера"
 
-#: internal/distrobox/commands.go:291
+#: internal/distrobox/commands.go:271
 msgid "The value for image must be one of: alt, ubuntu, arch"
 msgstr "Значение для образа, одно из: alt, ubuntu, arch"
 
-#: internal/distrobox/commands.go:319
+#: internal/distrobox/commands.go:299
 msgid "Manual container addition"
 msgstr "Ручное добавление контейнера"
 
-#: internal/distrobox/commands.go:323
+#: internal/distrobox/commands.go:303
 msgid "Image link. Required"
 msgstr "Ссылка на образ. Обязательно"
 
-#: internal/distrobox/commands.go:333
+#: internal/distrobox/commands.go:313
 msgid "List of packages to install"
 msgstr "Список пакетов для установки"
 
-#: internal/distrobox/commands.go:338
+#: internal/distrobox/commands.go:318
 msgid "Calling hook to execute commands"
 msgstr "Вызов обработчика для исполнения команд"
 
-#: internal/distrobox/commands.go:357
+#: internal/distrobox/commands.go:337
 msgid "Remove container"
 msgstr "Удалить контейнер"
 
@@ -2155,7 +2203,7 @@ msgstr[2] "%d ядер найдено"
 msgid "Current kernel information"
 msgstr "Информация об актуальном ядре"
 
-#: internal/kernel/actions.go:140 internal/kernel/commands.go:126
+#: internal/kernel/actions.go:140 internal/kernel/commands.go:106
 msgid "Kernel flavour must be specified"
 msgstr "Необходимо указать разновидность ядра"
 
@@ -2257,7 +2305,7 @@ msgstr[1] "%d модуль найден"
 msgstr[2] "%d модулей найдено"
 
 #: internal/kernel/actions.go:471 internal/kernel/actions.go:588
-#: internal/kernel/commands.go:236 internal/kernel/commands.go:265
+#: internal/kernel/commands.go:216 internal/kernel/commands.go:245
 msgid "At least one module must be specified"
 msgstr "Должен быть указан хотя бы один модуль"
 
@@ -2329,95 +2377,95 @@ msgstr[0] "%d модуль успешно удален из ядра %s"
 msgstr[1] "%d модуля успешно удалено из ядра %s"
 msgstr[2] "%d модулей успешно удалено из ядра %s"
 
-#: internal/kernel/commands.go:66
+#: internal/kernel/commands.go:46
 msgid "Kernel Management. WARNING - experimental module"
 msgstr "Управление ядром. ВНИМАНИЕ - экспериментальный модуль"
 
-#: internal/kernel/commands.go:70
+#: internal/kernel/commands.go:50
 msgid "List available kernels"
 msgstr "Список доступных ядер"
 
-#: internal/kernel/commands.go:74
+#: internal/kernel/commands.go:54
 msgid "Filter by kernel flavour (e.g., std-def, un-def)"
 msgstr "Фильтр по типу ядра (например, std-def, un-def)"
 
-#: internal/kernel/commands.go:78
+#: internal/kernel/commands.go:58
 msgid "Show only installed kernels"
 msgstr "Показать только установленные ядра"
 
-#: internal/kernel/commands.go:93
+#: internal/kernel/commands.go:73
 msgid "Show information about current kernel"
 msgstr "Показать информацию о текущем ядре"
 
-#: internal/kernel/commands.go:104
+#: internal/kernel/commands.go:84
 msgid "Install kernel with specified flavour"
 msgstr "Установить ядро с указанной разновидностью"
 
-#: internal/kernel/commands.go:109 internal/kernel/commands.go:146
+#: internal/kernel/commands.go:89 internal/kernel/commands.go:126
 msgid "Install additional kernel modules"
 msgstr "Установите дополнительные модули ядра"
 
-#: internal/kernel/commands.go:113 internal/kernel/commands.go:150
+#: internal/kernel/commands.go:93 internal/kernel/commands.go:130
 msgid "Install kernel headers"
 msgstr "Установить заголовки ядра"
 
-#: internal/kernel/commands.go:118 internal/system/commands.go:265
+#: internal/kernel/commands.go:98 internal/system/commands.go:245
 msgid "Simulate installation"
 msgstr "Симуляция установки"
 
-#: internal/kernel/commands.go:138
+#: internal/kernel/commands.go:118
 msgid "Update kernel to latest version"
 msgstr "Обновите ядро до последней версии"
 
-#: internal/kernel/commands.go:142
+#: internal/kernel/commands.go:122
 msgid "Update to specific flavour (default: current flavour)"
 msgstr ""
 "Обновление до определенного версии (по умолчанию: текущая разновидность)"
 
-#: internal/kernel/commands.go:155
+#: internal/kernel/commands.go:135
 msgid "Simulate update"
 msgstr "Симуляция обновления"
 
-#: internal/kernel/commands.go:170
+#: internal/kernel/commands.go:150
 msgid "Remove old kernel versions"
 msgstr "Удалите старые версии ядра"
 
-#: internal/kernel/commands.go:174
+#: internal/kernel/commands.go:154
 msgid "Delete kernels even if it is in 'backup' state"
 msgstr ""
 "Удалять ядра, даже если они находятся в состоянии «резервного копирования»"
 
-#: internal/kernel/commands.go:179 internal/kernel/commands.go:257
+#: internal/kernel/commands.go:159 internal/kernel/commands.go:237
 msgid "Show what would be removed without actually removing"
 msgstr "Показать, что будет удалено, без фактического удаления"
 
-#: internal/kernel/commands.go:194
+#: internal/kernel/commands.go:174
 msgid "Kernel modules management"
 msgstr "Управление модулями ядра"
 
-#: internal/kernel/commands.go:198
+#: internal/kernel/commands.go:178
 msgid "List available modules for kernel"
 msgstr "Список доступных модулей для ядра"
 
-#: internal/kernel/commands.go:202
+#: internal/kernel/commands.go:182
 msgid "List modules for specific kernel flavour (default: current flavour)"
 msgstr ""
 "Список модулей для конкретной версии ядра (по умолчанию: текущая "
 "разновидность)"
 
-#: internal/kernel/commands.go:224
+#: internal/kernel/commands.go:204
 msgid "Install for specific kernel flavour"
 msgstr "Установить для конкретной разновидности ядра"
 
-#: internal/kernel/commands.go:228
+#: internal/kernel/commands.go:208
 msgid "Show what would be installed without actually installing"
 msgstr "Показать, что будет установлено, без фактической установки"
 
-#: internal/kernel/commands.go:248
+#: internal/kernel/commands.go:228
 msgid "Remove kernel modules"
 msgstr "Удалить модули ядра"
 
-#: internal/kernel/commands.go:253
+#: internal/kernel/commands.go:233
 msgid "Remove from specific kernel flavour"
 msgstr "Удалить из конкретной разновидности ядра"
 
@@ -2495,6 +2543,222 @@ msgstr "ошибка сканирования вывода RPM: %s"
 msgid "failed to get reboot history: %s"
 msgstr "не удалось получить историю перезагрузок: %s"
 
+#: internal/repo/actions.go:63
+#, c-format
+msgid "%d repository found (including inactive)"
+msgid_plural "%d repositories found (including inactive)"
+msgstr[0] "Найден %d репозиторий (включая неактивные)"
+msgstr[1] "Найдено %d репозитория (включая неактивные)"
+msgstr[2] "Найдено %d репозиториев (включая неактивные)"
+
+#: internal/repo/actions.go:65
+#, c-format
+msgid "%d active repository found"
+msgid_plural "%d active repositories found"
+msgstr[0] "Найден %d активный репозиторий"
+msgstr[1] "Найдено %d активных репозитория"
+msgstr[2] "Найдено %d активных репозиториев"
+
+#: internal/repo/actions.go:82 internal/repo/actions.go:140
+msgid "Repository source must be specified"
+msgstr "Необходимо указать источник репозитория"
+
+#: internal/repo/actions.go:94 internal/repo/actions.go:118
+msgid "All repositories already exist"
+msgstr "Все репозитории уже существуют"
+
+#: internal/repo/actions.go:103 internal/repo/actions.go:161
+#: internal/repo/actions.go:218 internal/repo/actions.go:279
+msgid "Simulation results"
+msgstr "Результаты симуляции"
+
+#: internal/repo/actions.go:125
+#, c-format
+msgid "%d repository added"
+msgid_plural "%d repositories added"
+msgstr[0] "Добавлен %d репозиторий"
+msgstr[1] "Добавлено %d репозитория"
+msgstr[2] "Добавлено %d репозиториев"
+
+#: internal/repo/actions.go:152
+msgid "No repositories to remove"
+msgstr "Нет репозиториев для удаления"
+
+#: internal/repo/actions.go:176
+msgid "No repositories found to remove"
+msgstr "Не найдено репозиториев для удаления"
+
+#: internal/repo/actions.go:183
+#, c-format
+msgid "%d repository removed"
+msgid_plural "%d repositories removed"
+msgstr[0] "Удалён %d репозиторий"
+msgstr[1] "Удалено %d репозитория"
+msgstr[2] "Удалено %d репозиториев"
+
+#: internal/repo/actions.go:198
+msgid "Branch name must be specified"
+msgstr "Необходимо указать имя ветки"
+
+#: internal/repo/actions.go:230
+#, c-format
+msgid "Branch %s set successfully"
+msgstr "Ветка %s успешно установлена"
+
+#: internal/repo/actions.go:263 internal/repo/service/repo.go:1061
+#: internal/repo/service/repo.go:1074
+#, c-format
+msgid "Will remove: %s"
+msgstr "Будет удалено: %s"
+
+#: internal/repo/actions.go:270
+msgid "No cdrom or task repositories to remove"
+msgstr "Нет cdrom или task репозиториев для удаления"
+
+#: internal/repo/actions.go:294
+msgid "No cdrom or task repositories found"
+msgstr "Не найдено cdrom или task репозиториев"
+
+#: internal/repo/actions.go:301
+#, c-format
+msgid "%d temporary repository removed"
+msgid_plural "%d temporary repositories removed"
+msgstr[0] "Удалён %d временный репозиторий"
+msgstr[1] "Удалено %d временных репозитория"
+msgstr[2] "Удалено %d временных репозиториев"
+
+#: internal/repo/actions.go:318
+msgid "Available branches"
+msgstr "Доступные ветки"
+
+#: internal/repo/actions.go:329
+msgid "Task number must be specified"
+msgstr "Необходимо указать номер задачи"
+
+#: internal/repo/actions.go:337
+#, c-format
+msgid "%d package in task %s"
+msgid_plural "%d packages in task %s"
+msgstr[0] "%d пакет в задаче %s"
+msgstr[1] "%d пакета в задаче %s"
+msgstr[2] "%d пакетов в задаче %s"
+
+#: internal/repo/commands.go:61
+msgid "Repository management"
+msgstr "Управление репозиториями"
+
+#: internal/repo/commands.go:66
+msgid "List repositories"
+msgstr "Список репозиториев"
+
+#: internal/repo/commands.go:71
+msgid "Show all repositories including inactive"
+msgstr "Показать все репозитории, включая неактивные"
+
+#: internal/repo/commands.go:86
+msgid ""
+"Add repository (branch, task, URL). For branch archive: add <branch> <date>"
+msgstr ""
+"Добавить репозиторий (ветка, задача, URL). Для архива ветки: add <ветка> "
+"<дата>"
+
+#: internal/repo/commands.go:91
+msgid "Simulate adding without making changes"
+msgstr "Симулировать добавление без внесения изменений"
+
+#: internal/repo/commands.go:116
+msgid ""
+"Remove repository. Use 'all' to remove all repositories, or specify branch/"
+"task/URL to remove specific repository"
+msgstr ""
+"Удалить репозиторий. Используйте 'all' для удаления всех, или укажите ветку/"
+"задачу/URL"
+
+#: internal/repo/commands.go:121
+msgid "Simulate removal without making changes"
+msgstr "Симулировать удаление без внесения изменений"
+
+#: internal/repo/commands.go:145
+msgid ""
+"Set branch (removes all existing and adds specified branch). For branch "
+"archive: set <branch> <date>"
+msgstr ""
+"Установить ветку (удаляет все существующие и добавляет указанную). Для "
+"архива ветки: set <ветка> <дата>"
+
+#: internal/repo/commands.go:150
+msgid "Simulate setting without making changes"
+msgstr "Симулировать установку без внесения изменений"
+
+#: internal/repo/commands.go:174
+msgid "Remove all cdrom and task repositories"
+msgstr "Удалить все cdrom и task репозитории"
+
+#: internal/repo/commands.go:178
+msgid "Simulate cleaning without making changes"
+msgstr "Симулировать очистку без внесения изменений"
+
+#: internal/repo/commands.go:193
+msgid "List available branches"
+msgstr "Список доступных веток"
+
+#: internal/repo/commands.go:204
+msgid "Show packages in task"
+msgstr "Показать пакеты в задаче"
+
+#: internal/repo/service/repo.go:423
+msgid "Failed to parse repository source"
+msgstr "Не удалось разобрать источник репозитория"
+
+#: internal/repo/service/repo.go:547
+#, c-format
+msgid "Unknown branch: %s"
+msgstr "Неизвестная ветка: %s"
+
+#: internal/repo/service/repo.go:647
+#, c-format
+msgid "Unknown repository format: %s"
+msgstr "Неизвестный формат репозитория: %s"
+
+#: internal/repo/service/repo.go:661
+#, c-format
+msgid "Branch %s has no archive"
+msgstr "Ветка %s не имеет архива"
+
+#: internal/repo/service/repo.go:674
+msgid "Archive date should be YYYYMMDD or YYYY/MM/DD format"
+msgstr "Дата архива должна быть в формате YYYYMMDD или YYYY/MM/DD"
+
+#: internal/repo/service/repo.go:724 internal/repo/service/repo.go:1098
+#, c-format
+msgid "Task %s not found or still building"
+msgstr "Задача %s не найдена или ещё собирается"
+
+#: internal/repo/service/repo.go:916
+#, c-format
+msgid "Failed to open %s: %v"
+msgstr "Не удалось открыть %s: %v"
+
+#: internal/repo/service/repo.go:922
+#, c-format
+msgid "Failed to write to %s: %v"
+msgstr "Не удалось записать в %s: %v"
+
+#: internal/repo/service/repo.go:1041
+#, c-format
+msgid "Will uncomment: %s"
+msgstr "Будет раскомментировано: %s"
+
+#: internal/repo/service/repo.go:1043
+#, c-format
+msgid "Will add: %s"
+msgstr "Будет добавлено: %s"
+
+#: internal/repo/service/repo.go:1115
+#, c-format
+msgid "Failed to get task packages: HTTP %d"
+msgstr "Не удалось получить пакеты задачи: HTTP %d"
+
 #: internal/system/actions.go:114 internal/system/actions.go:130
 #: internal/system/actions.go:167 internal/system/actions.go:392
 msgid "Inspection information"
@@ -2515,7 +2779,7 @@ msgstr "Кандидатов на удаление не найдено"
 
 #: internal/system/actions.go:211 internal/system/actions.go:306
 #: internal/system/actions.go:451 internal/system/actions.go:611
-#: internal/system/actions.go:922
+#: internal/system/actions.go:918
 msgid "Cancel dialog"
 msgstr "Отмена диалога"
 
@@ -2604,7 +2868,7 @@ msgstr "Системный пакет"
 msgid "Stplr package"
 msgstr "Пакет Stplr"
 
-#: internal/system/actions.go:850 internal/system/commands.go:163
+#: internal/system/actions.go:850 internal/system/commands.go:143
 msgid "Image status"
 msgstr "Статус образа"
 
@@ -2612,121 +2876,121 @@ msgstr "Статус образа"
 msgid "Command executed successfully"
 msgstr "Команда успешно выполнена"
 
-#: internal/system/actions.go:967
+#: internal/system/actions.go:963
 msgid "Changes applied successfully. A reboot is required"
 msgstr "Изменения были успешно применены. Необходима перезагрука"
 
-#: internal/system/actions.go:1058
+#: internal/system/actions.go:1054
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: internal/system/actions.go:1137
+#: internal/system/actions.go:1133
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/system/actions.go:1144
+#: internal/system/actions.go:1140
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
-#: internal/system/commands.go:133
+#: internal/system/commands.go:113
 msgid "Build image"
 msgstr "Создать образ"
 
-#: internal/system/commands.go:151
+#: internal/system/commands.go:131
 msgid "Apply changes to the host"
 msgstr "Применить изменения на хосте"
 
-#: internal/system/commands.go:175
+#: internal/system/commands.go:155
 msgid "Image update"
 msgstr "Обновление образа"
 
-#: internal/system/commands.go:187
+#: internal/system/commands.go:167
 msgid "Image changes history"
 msgstr "История изменения образа"
 
-#: internal/system/commands.go:191
+#: internal/system/commands.go:171
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
-#: internal/system/commands.go:220
+#: internal/system/commands.go:200
 msgid "Reinstall packages"
 msgstr "Переустановка пакетов"
 
-#: internal/system/commands.go:225
+#: internal/system/commands.go:205
 msgid "Reinstall without confirmation"
 msgstr "Переустановить без подтверждения"
 
-#: internal/system/commands.go:231
+#: internal/system/commands.go:211
 msgid "Simulate reinstallation"
 msgstr "Симуляция переустановки"
 
-#: internal/system/commands.go:254
+#: internal/system/commands.go:234
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 "Список пакетов для установки. Формат package- и package+ поддерживается."
 
-#: internal/system/commands.go:259
+#: internal/system/commands.go:239
 msgid "Install without confirmation"
 msgstr "Установить без подтверждения"
 
-#: internal/system/commands.go:288
+#: internal/system/commands.go:269
 msgid "List of packages to remove"
 msgstr "Список пакетов на удаление"
 
-#: internal/system/commands.go:293
+#: internal/system/commands.go:274
 msgid "Remove without confirmation"
 msgstr "Удалить без подтверждения"
 
-#: internal/system/commands.go:299
+#: internal/system/commands.go:280
 msgid "Attempt to remove all files"
 msgstr "Попытка удалить все файлы"
 
-#: internal/system/commands.go:305
+#: internal/system/commands.go:286
 msgid "Attempt to remove depends"
 msgstr "Попытка удалить зависимости"
 
-#: internal/system/commands.go:311
+#: internal/system/commands.go:292
 msgid "Simulate removal"
 msgstr "Симуляция удаления"
 
-#: internal/system/commands.go:335
+#: internal/system/commands.go:316
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/system/commands.go:347
+#: internal/system/commands.go:328
 msgid "General system upgrade"
 msgstr "Общее обновление системы"
 
-#: internal/system/commands.go:371
+#: internal/system/commands.go:352
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:392
+#: internal/system/commands.go:373
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/system/commands.go:398 internal/system/commands.go:445
+#: internal/system/commands.go:379 internal/system/commands.go:426
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:413
+#: internal/system/commands.go:394
 msgid "Building a query to get a list of packages"
 msgstr "Создание запроса для получения списка пакетов"
 
-#: internal/system/commands.go:417
+#: internal/system/commands.go:398
 msgid "Sort packages by field, example fields: name, section"
 msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
-#: internal/system/commands.go:440
+#: internal/system/commands.go:421
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/system/commands.go:469
+#: internal/system/commands.go:450
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/system/commands.go:486
+#: internal/system/commands.go:467
 msgid "System package management"
 msgstr "Управление системными пакетами"
 
@@ -2883,59 +3147,59 @@ msgstr ""
 msgid "No packages"
 msgstr "Нет пакетов"
 
-#: main.go:69
+#: main.go:71
 msgid "Start session D-Bus service org.altlinux.APM"
 msgstr "Запустить сессионный сервис D-Bus org.altlinux.APM"
 
-#: main.go:74
+#: main.go:76
 msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
-#: main.go:94
+#: main.go:97
 msgid "Show the list of commands or help for each command"
 msgstr "Показать список команд или справку по каждой команде"
 
-#: main.go:95 main.go:102
+#: main.go:98 main.go:105
 msgid "[command]"
 msgstr "[команда]"
 
-#: main.go:101
+#: main.go:104
 msgid "Print version"
 msgstr "Показать версию"
 
-#: main.go:116
+#: main.go:119
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
 
-#: main.go:122
+#: main.go:125
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:146
+#: main.go:149
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:153
+#: main.go:156
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:177
+#: main.go:180
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr "Неизвестная команда: %s. Посмотрите 'apm help'"
 
-#: main.go:251
+#: main.go:254
 msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
-#: main.go:326
+#: main.go:336
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:333
+#: main.go:343
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 

@@ -113,7 +113,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			{
 				Name:      "remove",
 				Aliases:   []string{"rm"},
-				Usage:     app.T_("Remove repository"),
+				Usage:     app.T_("Remove repository. Use 'all' to remove all repositories, or specify branch/task/URL to remove specific repository"),
 				ArgsUsage: "<source|all>",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
