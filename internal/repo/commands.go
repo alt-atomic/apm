@@ -94,16 +94,12 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					source := cmd.Args().First()
-					// Если несколько аргументов, объединяем (для формата sources.list)
-					if cmd.NArg() > 1 {
-						source = ""
-						for i := 0; i < cmd.NArg(); i++ {
-							if i > 0 {
-								source += " "
-							}
-							source += cmd.Args().Get(i)
+					var source string
+					for i := 0; i < cmd.NArg(); i++ {
+						if i > 0 {
+							source += " "
 						}
+						source += cmd.Args().Get(i)
 					}
 
 					resp, err := actions.Add(ctx, source, cmd.Bool("simulate"))
@@ -128,16 +124,12 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					source := cmd.Args().First()
-					// Если несколько аргументов, объединяем
-					if cmd.NArg() > 1 {
-						source = ""
-						for i := 0; i < cmd.NArg(); i++ {
-							if i > 0 {
-								source += " "
-							}
-							source += cmd.Args().Get(i)
+					var source string
+					for i := 0; i < cmd.NArg(); i++ {
+						if i > 0 {
+							source += " "
 						}
+						source += cmd.Args().Get(i)
 					}
 
 					resp, err := actions.Remove(ctx, source, cmd.Bool("simulate"))
@@ -150,8 +142,8 @@ func CommandList(ctx context.Context) *cli.Command {
 			},
 			{
 				Name:      "set",
-				Usage:     app.T_("Set branch (removes all existing and adds specified branch)"),
-				ArgsUsage: "<branch>",
+				Usage:     app.T_("Set branch (removes all existing and adds specified branch). For branch archive: set <branch> <date>"),
+				ArgsUsage: "<branch> [YYYYMMDD|YYYY/MM/DD]",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "simulate",
@@ -161,7 +153,15 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Set(ctx, cmd.Args().First(), cmd.Bool("simulate"))
+					var branch string
+					for i := 0; i < cmd.NArg(); i++ {
+						if i > 0 {
+							branch += " "
+						}
+						branch += cmd.Args().Get(i)
+					}
+
+					resp, err := actions.Set(ctx, branch, cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

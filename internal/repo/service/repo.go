@@ -508,8 +508,10 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source string) ([]st
 
 // SetBranch устанавливает ветку (удаляет все и добавляет)
 func (s *RepoService) SetBranch(ctx context.Context, branch string) (added []string, removed []string, err error) {
-	if _, ok := s.branches[branch]; !ok {
-		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branch)
+	parts := strings.SplitN(strings.TrimSpace(branch), " ", 2)
+	branchName := parts[0]
+	if _, ok := s.branches[branchName]; !ok {
+		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branchName)
 	}
 
 	removed, err = s.RemoveRepository(ctx, "all")
@@ -517,7 +519,6 @@ func (s *RepoService) SetBranch(ctx context.Context, branch string) (added []str
 		return nil, removed, err
 	}
 
-	// Добавляем ветку
 	added, err = s.AddRepository(ctx, branch)
 	if err != nil {
 		return added, removed, err
