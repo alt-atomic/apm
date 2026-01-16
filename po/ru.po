@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-16 23:07+0600\n"
+"POT-Creation-Date: 2026-01-16 23:13+0600\n"
 "PO-Revision-Date: 2026-01-16 22:56+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -2661,9 +2661,9 @@ msgstr "Показать все репозитории, включая неак�
 
 #: internal/repo/commands.go:86
 msgid ""
-"Add repository (branch, task, URL). For branch archive: add <branch> <date>"
+"Add repository (branch/task/URL). For branch archive: add <branch> <date>"
 msgstr ""
-"Добавить репозиторий (ветка, задача, URL). Для архива ветки: add <ветка> "
+"Добавить репозиторий (ветка/задача/URL). Для архива ветки: add <ветка> "
 "<дата>"
 
 #: internal/repo/commands.go:91

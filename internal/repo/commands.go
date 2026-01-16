@@ -83,7 +83,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			},
 			{
 				Name:      "add",
-				Usage:     app.T_("Add repository (branch, task, URL). For branch archive: add <branch> <date>"),
+				Usage:     app.T_("Add repository (branch/task/URL). For branch archive: add <branch> <date>"),
 				ArgsUsage: "<source> [YYYYMMDD|YYYY/MM/DD]",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
