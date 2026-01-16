@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-16 22:49+0600\n"
+"POT-Creation-Date: 2026-01-16 23:07+0600\n"
 "PO-Revision-Date: 2026-01-16 22:56+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -19,8 +19,8 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 49.0\n"
 
 #: internal/common/app/database.go:100
@@ -1740,10 +1740,14 @@ msgid "Branches"
 msgstr "Ветки"
 
 #: internal/common/reply/translate.go:215
+msgid "Branch"
+msgstr "Ветка"
+
+#: internal/common/reply/translate.go:217
 msgid "Task num"
 msgstr "Номер задачи"
 
-#: internal/common/reply/translate.go:217
+#: internal/common/reply/translate.go:219
 msgid "Entry"
 msgstr "Запись"
 
@@ -2735,12 +2739,10 @@ msgid "Task %s not found or still building"
 msgstr "Задача %s не найдена или ещё собирается"
 
 #: internal/repo/service/repo.go:916
-#, c-format
 msgid "Failed to open %s: %v"
 msgstr "Не удалось открыть %s: %v"
 
 #: internal/repo/service/repo.go:922
-#, c-format
 msgid "Failed to write to %s: %v"
 msgstr "Не удалось записать в %s: %v"
 

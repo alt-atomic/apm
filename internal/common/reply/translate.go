@@ -211,6 +211,8 @@ func TranslateKey(key string) string {
 		return app.T_("URL")
 	case "branches":
 		return app.T_("Branches")
+	case "branch":
+		return app.T_("Branch")
 	case "taskNum":
 		return app.T_("Task num")
 	case "entry":
