@@ -67,7 +67,7 @@ func (g *Generator) Generate() *JSONSchema {
 			Type:        "string",
 			Description: "Base image for building",
 			Format:      "uri",
-			Examples:    []any{"quay.io/alt/base:latest", "docker.io/library/ubuntu:22.04"},
+			Examples:    []any{"altlinux.space/alt-atomic/onyx/stable:latest", "altlinux.space/alt-atomic/kyanite/nightly:latest"},
 		},
 		"modules": {
 			Type:        "array",
@@ -76,6 +76,7 @@ func (g *Generator) Generate() *JSONSchema {
 			MinItems:    intPtr(1),
 		},
 	}
+	schema.Required = []string{"modules"}
 
 	// Генерируем схему для Module
 	schema.Defs["Module"] = g.generateModuleSchema()
