@@ -139,6 +139,6 @@ func getBasePath(path string) string {
 }
 
 // ValidateConfigRecursive выполняет рекурсивную валидацию конфига включая все include файлы.
-func ValidateConfigRecursive(cfg *Config, basePath string, _ map[string]bool) error {
+func ValidateConfigRecursive(cfg *Config, basePath string) error {
 	return NewValidationService().Validate(&cfg.Modules, basePath)
 }

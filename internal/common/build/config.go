@@ -53,6 +53,7 @@ func NewHostConfigService(pathImageFile string, hostDBService *HostDBService, ho
 // syncYamlMutex защищает операции работы с файлом.
 var syncYamlMutex sync.Mutex
 
+// LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
 func (s *HostConfigService) LoadConfig() error {
 	var (
 		cfg Config
@@ -73,7 +74,7 @@ func (s *HostConfigService) LoadConfig() error {
 
 	// Рекурсивная валидация всех include файлов
 	basePath := filepath.Dir(s.pathImageFile)
-	if err = core.ValidateConfigRecursive(&cfg, basePath, nil); err != nil {
+	if err = core.ValidateConfigRecursive(&cfg, basePath); err != nil {
 		return err
 	}
 
