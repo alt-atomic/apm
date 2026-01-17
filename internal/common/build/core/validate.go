@@ -105,7 +105,14 @@ func (v *ValidationService) validateDir(dir string) error {
 		}
 		name := file.Name()
 		if strings.HasSuffix(name, ".yml") || strings.HasSuffix(name, ".yaml") {
-			if err = v.validateFile(filepath.Join(dir, name)); err != nil {
+			filePath := filepath.Join(dir, name)
+
+			// Заменяем директорию в стеке на конкретный файл
+			if len(v.pathStack) > 0 {
+				v.pathStack[len(v.pathStack)-1] = filePath
+			}
+
+			if err = v.validateFile(filePath); err != nil {
 				return err
 			}
 		}
