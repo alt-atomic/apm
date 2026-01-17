@@ -4,6 +4,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/common_types"
 	"apm/internal/kernel/service"
+	_repo_service "apm/internal/repo/service"
 	"context"
 )
 
@@ -18,6 +19,7 @@ type Service interface {
 	KernelManager() *service.Manager
 	ResourcesDir() string
 	ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error)
+	RepoService() *_repo_service.RepoService
 }
 
 type Body interface {

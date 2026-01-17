@@ -24,6 +24,7 @@ import (
 	"apm/internal/common/build"
 	"apm/internal/common/reply"
 	_kservice "apm/internal/kernel/service"
+	_repo_service "apm/internal/repo/service"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
 	"context"
@@ -552,7 +553,8 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 
 	aptActions := _binding.NewActions()
 	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
-	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, a.serviceHostConfig)
+	repoService := _repo_service.NewRepoService(a.appConfig)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, repoService, a.serviceHostConfig)
 	err = buildService.Build(ctx)
 	if err != nil {
 		return nil, err

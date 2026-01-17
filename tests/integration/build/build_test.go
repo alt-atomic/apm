@@ -71,6 +71,7 @@ func (s *BuildTestSuite) SetupSuite() {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	s.T().Log("Build test suite initialized")
