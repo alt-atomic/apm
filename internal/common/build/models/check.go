@@ -21,6 +21,7 @@
 package models
 
 import (
+	"apm/internal/common/app"
 	"fmt"
 	"reflect"
 	"strings"
@@ -79,6 +80,21 @@ func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.
 				BodyTypeToType(parent.Type().Name()),
 			)
 		}
+	}
+
+	return nil
+}
+
+func checkDepricated(parent reflect.Value, field reflect.Value, fieldType reflect.StructField) error {
+	// Required equal something or not present at all
+	value, ok := fieldType.Tag.Lookup("depricated")
+	if ok {
+		app.Log.Warning(fmt.Printf(
+			"'%s' in '%s' is depricated and will be dropped in %s",
+			pascalToKebab(fieldType.Name),
+			BodyTypeToType(parent.Type().Name()),
+			value,
+		))
 	}
 
 	return nil
@@ -158,6 +174,9 @@ func CheckBodyValue(val reflect.Value) error {
 			return err
 		}
 		if err := checkConflicts(val, field, fieldType); err != nil {
+			return err
+		}
+		if err := checkDepricated(val, field, fieldType); err != nil {
 			return err
 		}
 	}
