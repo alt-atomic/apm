@@ -1018,6 +1018,11 @@ func (s *RepoService) uncommentRepo(repoLine string) error {
 
 // appendRepo добавляет репозиторий в sources.list
 func (s *RepoService) appendRepo(repoLine string) error {
+	parts := strings.Fields(repoLine)
+	if len(parts) < 3 {
+		return fmt.Errorf(app.T_("Invalid repository line: %s"), repoLine)
+	}
+
 	file, err := os.OpenFile(s.confMain, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to open %s: %v"), s.confMain, err)
