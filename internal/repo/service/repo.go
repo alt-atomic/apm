@@ -456,7 +456,8 @@ func (s *RepoService) AddRepository(ctx context.Context, source, date string) ([
 }
 
 // RemoveRepository удаляет репозиторий
-func (s *RepoService) RemoveRepository(ctx context.Context, source, date string) ([]string, error) {
+// Если purge=true, полностью удаляет файлы в sources.list.d и очищает sources.list
+func (s *RepoService) RemoveRepository(ctx context.Context, source, date string, purge bool) ([]string, error) {
 	var removed []string
 
 	if source == "all" {
@@ -466,11 +467,19 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source, date string)
 		}
 
 		for _, repo := range repos {
-			err = s.removeOrCommentRepo(repo.Entry)
-			if err != nil {
+			removed = append(removed, repo.Entry)
+		}
+
+		if purge {
+			if err = s.purgeAllRepos(); err != nil {
 				return removed, err
 			}
-			removed = append(removed, repo.Entry)
+		} else {
+			for _, repo := range repos {
+				if err = s.removeOrCommentRepo(repo.Entry); err != nil {
+					return removed, err
+				}
+			}
 		}
 
 		s.removePriorityMacro()
@@ -545,7 +554,7 @@ func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added
 		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branch)
 	}
 
-	removed, err = s.RemoveRepository(ctx, "all", "")
+	removed, err = s.RemoveRepository(ctx, "all", "", false)
 	if err != nil {
 		return nil, removed, err
 	}
@@ -992,6 +1001,27 @@ func (s *RepoService) commentInFile(filename string, normalizedLine string) erro
 	return nil
 }
 
+// purgeAllRepos полностью удаляет все файлы репозиториев
+func (s *RepoService) purgeAllRepos() error {
+	entries, err := os.ReadDir(s.confDir)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf(app.T_("Failed to read %s: %v"), s.confDir, err)
+	}
+
+	for _, entry := range entries {
+		path := filepath.Join(s.confDir, entry.Name())
+		if err = os.RemoveAll(path); err != nil {
+			return fmt.Errorf(app.T_("Failed to remove %s: %v"), path, err)
+		}
+	}
+
+	if err = os.WriteFile(s.confMain, []byte(""), 0644); err != nil {
+		return fmt.Errorf(app.T_("Failed to clear %s: %v"), s.confMain, err)
+	}
+
+	return nil
+}
+
 // setPriorityMacro устанавливает макрос %_priority_distbranch
 func (s *RepoService) setPriorityMacro(source, date string) {
 	// Для архивных репозиториев не устанавливаем макрос приоритета
@@ -1050,7 +1080,7 @@ func (s *RepoService) SimulateAdd(ctx context.Context, source, date string) ([]s
 }
 
 // SimulateRemove симулирует удаление репозитория
-func (s *RepoService) SimulateRemove(ctx context.Context, source, date string) ([]string, error) {
+func (s *RepoService) SimulateRemove(ctx context.Context, source, date string, purge bool) ([]string, error) {
 	var willRemove []string
 
 	if source == "all" {

@@ -23,8 +23,6 @@ import (
 	"apm/internal/common/app"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -68,36 +66,11 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 
 	if b.Clean {
-		removedRepos, err := repoSvc.GetRepositories(ctx, true)
+		removed, err := repoSvc.RemoveRepository(ctx, "all", "", true)
 		if err != nil {
 			return nil, err
 		}
-
-		removedReposEntry := []string{}
-		for _, repo := range removedRepos {
-			removedReposEntry = append(removedReposEntry, repo.Entry)
-		}
-
-		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesListD))
-		if err := filepath.Walk(aptSourcesListD, func(p string, _ os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if p != aptSourcesListD {
-				if err = os.RemoveAll(p); err != nil {
-					return err
-				}
-			}
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-
-		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesList))
-		if err := os.WriteFile(aptSourcesList, []byte("\n"), 0644); err != nil {
-			return nil, err
-		}
-		app.Log.Info(fmt.Sprintf("Cleaned all repos: \n%s", strings.Join(removedReposEntry, ",\n")))
+		app.Log.Info(fmt.Sprintf("Cleaned all repos: \n%s", strings.Join(removed, ",\n")))
 	} else if b.CleanTemporary {
 		removed, err := repoSvc.CleanTemporary(ctx)
 		if err != nil {
@@ -115,7 +88,13 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 
 	for _, source := range append(b.Custom, b.Tasks...) {
-		repoSvc.AddRepository(ctx, source, "")
+		added, err := repoSvc.AddRepository(ctx, source, "")
+		if err != nil {
+			return nil, err
+		}
+		if len(added) > 0 {
+			app.Log.Info(fmt.Sprintf("Added repo: %s", strings.Join(added, ", ")))
+		}
 	}
 
 	if !b.NoUpdate {

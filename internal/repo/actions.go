@@ -143,7 +143,7 @@ func (a *Actions) Remove(ctx context.Context, source, date string, simulate bool
 	date = strings.TrimSpace(date)
 
 	if simulate {
-		willRemove, err := a.repoService.SimulateRemove(ctx, source, date)
+		willRemove, err := a.repoService.SimulateRemove(ctx, source, date, false)
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +167,7 @@ func (a *Actions) Remove(ctx context.Context, source, date string, simulate bool
 		}, nil
 	}
 
-	removed, err := a.repoService.RemoveRepository(ctx, source, date)
+	removed, err := a.repoService.RemoveRepository(ctx, source, date, false)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (a *Actions) Set(ctx context.Context, branch, date string, simulate bool) (
 
 	if simulate {
 		// Симулируем удаление всех веток
-		willRemove, err := a.repoService.SimulateRemove(ctx, "all", "")
+		willRemove, err := a.repoService.SimulateRemove(ctx, "all", "", false)
 		if err != nil {
 			return nil, err
 		}
