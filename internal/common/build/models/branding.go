@@ -25,7 +25,7 @@ type BrandingBody struct {
 	Subpackages []string `yaml:"subpackages,omitempty" json:"subpackages,omitempty" needs:"Name"`
 
 	// Словарь переопределения или добавления полей в os-release.
-	ReleaseOverrides map[string]string `yaml:"release-overrides,omitempty" json:"release-overrides,omitempty" needs:"Name"`
+	ReleaseOverrides map[string]string `yaml:"release-overrides,omitempty" json:"release-overrides,omitempty"`
 
 	// Тип сборки, нужен для os-release
 	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty" needs:"Name"`
