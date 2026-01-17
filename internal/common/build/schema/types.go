@@ -28,27 +28,14 @@ type JSONSchema struct {
 	Items       *JSONSchema            `json:"items,omitempty"`
 	Required    []string               `json:"required,omitempty"`
 	Enum        []string               `json:"enum,omitempty"`
-	Default     any                    `json:"default,omitempty"`
 	Examples    []any                  `json:"examples,omitempty"`
 	Defs        map[string]*JSONSchema `json:"$defs,omitempty"`
 	OneOf       []*JSONSchema          `json:"oneOf,omitempty"`
-	AnyOf       []*JSONSchema          `json:"anyOf,omitempty"`
-	If          *JSONSchema            `json:"if,omitempty"`
-	Then        *JSONSchema            `json:"then,omitempty"`
 
-	// Валидация строк
-	Format    string `json:"format,omitempty"`
-	Pattern   string `json:"pattern,omitempty"`
-	MinLength *int   `json:"minLength,omitempty"`
-	MaxLength *int   `json:"maxLength,omitempty"`
-
-	// Валидация чисел
-	Minimum *float64 `json:"minimum,omitempty"`
-	Maximum *float64 `json:"maximum,omitempty"`
-
-	// Валидация массивов
-	MinItems *int `json:"minItems,omitempty"`
-	MaxItems *int `json:"maxItems,omitempty"`
+	// Валидация
+	Format   string `json:"format,omitempty"`
+	Pattern  string `json:"pattern,omitempty"`
+	MinItems *int   `json:"minItems,omitempty"`
 
 	// additionalProperties может быть bool или схемой
 	AdditionalProperties any `json:"additionalProperties,omitempty"`
