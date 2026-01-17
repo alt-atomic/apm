@@ -27,11 +27,6 @@ import (
 	"strings"
 )
 
-var (
-	aptSourcesList  = "/etc/apt/sources.list"
-	aptSourcesListD = "/etc/apt/sources.list.d"
-)
-
 type ReposBody struct {
 	// Очистить все репозитории
 	Clean bool `yaml:"clean,omitempty" json:"clean,omitempty"`
