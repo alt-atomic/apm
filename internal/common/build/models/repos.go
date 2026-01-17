@@ -42,7 +42,7 @@ type ReposBody struct {
 	// Ветка репозитория ALT. Закомментирует остальные репозитории, для очистки есть clean
 	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
 
-	// Дата в формате YYYY.MM.DD. Если пуст, берется обычный репозиторий. Может быть latest
+	// Дата в формате YYYYMMDD или YYYY/MM/DD. Если пуст, берется обычный репозиторий. Может быть latest
 	Date string `yaml:"date,omitempty" json:"date,omitempty" needs:"Branch"`
 
 	// Задачи для подключения в качестве репозиториев
