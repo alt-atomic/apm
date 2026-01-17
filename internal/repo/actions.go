@@ -76,14 +76,15 @@ func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error
 }
 
 // Add добавляет репозиторий
-func (a *Actions) Add(ctx context.Context, source string, simulate bool) (*reply.APIResponse, error) {
+func (a *Actions) Add(ctx context.Context, source, date string, simulate bool) (*reply.APIResponse, error) {
 	source = strings.TrimSpace(source)
 	if source == "" {
 		return nil, errors.New(app.T_("Repository source must be specified"))
 	}
+	date = strings.TrimSpace(date)
 
 	if simulate {
-		willAdd, err := a.repoService.SimulateAdd(ctx, source)
+		willAdd, err := a.repoService.SimulateAdd(ctx, source, date)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +108,7 @@ func (a *Actions) Add(ctx context.Context, source string, simulate bool) (*reply
 		}, nil
 	}
 
-	added, err := a.repoService.AddRepository(ctx, source)
+	added, err := a.repoService.AddRepository(ctx, source, date)
 	if err != nil {
 		return nil, err
 	}
@@ -134,14 +135,15 @@ func (a *Actions) Add(ctx context.Context, source string, simulate bool) (*reply
 }
 
 // Remove удаляет репозиторий
-func (a *Actions) Remove(ctx context.Context, source string, simulate bool) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, source, date string, simulate bool) (*reply.APIResponse, error) {
 	source = strings.TrimSpace(source)
 	if source == "" {
 		return nil, errors.New(app.T_("Repository source must be specified"))
 	}
+	date = strings.TrimSpace(date)
 
 	if simulate {
-		willRemove, err := a.repoService.SimulateRemove(ctx, source)
+		willRemove, err := a.repoService.SimulateRemove(ctx, source, date)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +167,7 @@ func (a *Actions) Remove(ctx context.Context, source string, simulate bool) (*re
 		}, nil
 	}
 
-	removed, err := a.repoService.RemoveRepository(ctx, source)
+	removed, err := a.repoService.RemoveRepository(ctx, source, date)
 	if err != nil {
 		return nil, err
 	}
@@ -192,21 +194,22 @@ func (a *Actions) Remove(ctx context.Context, source string, simulate bool) (*re
 }
 
 // Set устанавливает ветку (удаляет все и добавляет)
-func (a *Actions) Set(ctx context.Context, branch string, simulate bool) (*reply.APIResponse, error) {
+func (a *Actions) Set(ctx context.Context, branch, date string, simulate bool) (*reply.APIResponse, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return nil, errors.New(app.T_("Branch name must be specified"))
 	}
+	date = strings.TrimSpace(date)
 
 	if simulate {
-		// Симулируем удаление всех
-		willRemove, err := a.repoService.SimulateRemove(ctx, "all")
+		// Симулируем удаление всех веток
+		willRemove, err := a.repoService.SimulateRemove(ctx, "all", "")
 		if err != nil {
 			return nil, err
 		}
 
 		// Симулируем добавление ветки
-		willAdd, err := a.repoService.SimulateAdd(ctx, branch)
+		willAdd, err := a.repoService.SimulateAdd(ctx, branch, date)
 		if err != nil {
 			return nil, err
 		}
@@ -222,17 +225,22 @@ func (a *Actions) Set(ctx context.Context, branch string, simulate bool) (*reply
 		}, nil
 	}
 
-	added, removed, err := a.repoService.SetBranch(ctx, branch)
+	added, removed, err := a.repoService.SetBranch(ctx, branch, date)
 	if err != nil {
 		return nil, err
 	}
 
-	message := fmt.Sprintf(app.T_("Branch %s set successfully"), branch)
+	// Формируем имя ветки для сообщения
+	branchDisplay := branch
+	if date != "" {
+		branchDisplay = branch + " " + date
+	}
+	message := fmt.Sprintf(app.T_("Branch %s set successfully"), branchDisplay)
 
 	return &reply.APIResponse{
 		Data: SetResponse{
 			Message: message,
-			Branch:  branch,
+			Branch:  branchDisplay,
 			Added:   added,
 			Removed: removed,
 		},
@@ -243,44 +251,7 @@ func (a *Actions) Set(ctx context.Context, branch string, simulate bool) (*reply
 // Clean удаляет cdrom и task репозитории
 func (a *Actions) Clean(ctx context.Context, simulate bool) (*reply.APIResponse, error) {
 	if simulate {
-		// Получаем текущие репозитории и фильтруем cdrom/task
-		repos, err := a.repoService.GetRepositories(ctx, false)
-		if err != nil {
-			return nil, err
-		}
-
-		var willRemove []string
-		for _, repo := range repos {
-			isCdrom := strings.Contains(repo.URL, "cdrom:")
-			isTask := false
-			for _, comp := range repo.Components {
-				if comp == "task" {
-					isTask = true
-					break
-				}
-			}
-			if isCdrom || isTask {
-				willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Entry))
-			}
-		}
-
-		if len(willRemove) == 0 {
-			return &reply.APIResponse{
-				Data: SimulateResponse{
-					Message: app.T_("No cdrom or task repositories to remove"),
-					Changes: []string{},
-				},
-				Error: false,
-			}, nil
-		}
-
-		return &reply.APIResponse{
-			Data: SimulateResponse{
-				Message: app.T_("Simulation results"),
-				Changes: willRemove,
-			},
-			Error: false,
-		}, nil
+		return a.simulateClean(ctx)
 	}
 
 	removed, err := a.repoService.CleanTemporary(ctx)
@@ -304,6 +275,47 @@ func (a *Actions) Clean(ctx context.Context, simulate bool) (*reply.APIResponse,
 		Data: AddRemoveResponse{
 			Message: message,
 			Removed: removed,
+		},
+		Error: false,
+	}, nil
+}
+
+// simulateClean симулирует очистку cdrom и task репозиториев
+func (a *Actions) simulateClean(ctx context.Context) (*reply.APIResponse, error) {
+	repos, err := a.repoService.GetRepositories(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var willRemove []string
+	for _, repo := range repos {
+		isCdrom := strings.Contains(repo.URL, "cdrom:")
+		isTask := false
+		for _, comp := range repo.Components {
+			if comp == "task" {
+				isTask = true
+				break
+			}
+		}
+		if isCdrom || isTask {
+			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Entry))
+		}
+	}
+
+	if len(willRemove) == 0 {
+		return &reply.APIResponse{
+			Data: SimulateResponse{
+				Message: app.T_("No cdrom or task repositories to remove"),
+				Changes: []string{},
+			},
+			Error: false,
+		}, nil
+	}
+
+	return &reply.APIResponse{
+		Data: SimulateResponse{
+			Message: app.T_("Simulation results"),
+			Changes: willRemove,
 		},
 		Error: false,
 	}, nil

@@ -61,12 +61,12 @@ func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 
 // Add – Добавить репозиторий
 // doc_response: AddRemoveResponse
-func (w *DBusWrapper) Add(sender dbus.Sender, source string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Add(ctx, source, false)
+	resp, err := w.actions.Add(ctx, source, date, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -79,12 +79,12 @@ func (w *DBusWrapper) Add(sender dbus.Sender, source string, transaction string)
 
 // Remove – Удалить репозиторий
 // doc_response: AddRemoveResponse
-func (w *DBusWrapper) Remove(sender dbus.Sender, source string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, source, false)
+	resp, err := w.actions.Remove(ctx, source, date, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -97,12 +97,12 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, source string, transaction stri
 
 // Set – Установить ветку (удалить все и добавить указанную)
 // doc_response: SetResponse
-func (w *DBusWrapper) Set(sender dbus.Sender, branch string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Set(ctx, branch, false)
+	resp, err := w.actions.Set(ctx, branch, date, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -162,9 +162,9 @@ func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (strin
 
 // SimulateAdd – Симулировать добавление репозитория
 // doc_response: SimulateResponse
-func (w *DBusWrapper) SimulateAdd(source string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) SimulateAdd(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Add(ctx, source, true)
+	resp, err := w.actions.Add(ctx, source, date, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -177,9 +177,9 @@ func (w *DBusWrapper) SimulateAdd(source string, transaction string) (string, *d
 
 // SimulateRemove – Симулировать удаление репозитория
 // doc_response: SimulateResponse
-func (w *DBusWrapper) SimulateRemove(source string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) SimulateRemove(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, source, true)
+	resp, err := w.actions.Remove(ctx, source, date, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -192,9 +192,9 @@ func (w *DBusWrapper) SimulateRemove(source string, transaction string) (string,
 
 // SimulateSet – Симулировать установку ветки
 // doc_response: SimulateResponse
-func (w *DBusWrapper) SimulateSet(branch string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) SimulateSet(branch, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Set(ctx, branch, true)
+	resp, err := w.actions.Set(ctx, branch, date, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

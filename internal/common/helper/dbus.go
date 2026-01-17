@@ -328,18 +328,21 @@ func GetSystemIntrospectXML(isAtomic bool) string {
 
     <method name="Add">
       <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
 
     <method name="Remove">
       <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
 
     <method name="Set">
       <arg direction="in" type="s" name="branch"/>
+      <arg direction="in" type="s" name="date"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
@@ -361,18 +364,21 @@ func GetSystemIntrospectXML(isAtomic bool) string {
 
     <method name="SimulateAdd">
       <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
 
     <method name="SimulateRemove">
       <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>
 
     <method name="SimulateSet">
       <arg direction="in" type="s" name="branch"/>
+      <arg direction="in" type="s" name="date"/>
       <arg direction="in" type="s" name="transaction"/>
       <arg direction="out" type="s" name="result"/>
     </method>

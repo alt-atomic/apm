@@ -413,8 +413,8 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 }
 
 // AddRepository добавляет репозиторий
-func (s *RepoService) AddRepository(ctx context.Context, source string) ([]string, error) {
-	urls, err := s.parseSource(ctx, source)
+func (s *RepoService) AddRepository(ctx context.Context, source, date string) ([]string, error) {
+	urls, err := s.parseSource(ctx, source, date)
 	if err != nil {
 		return nil, err
 	}
@@ -450,13 +450,13 @@ func (s *RepoService) AddRepository(ctx context.Context, source string) ([]strin
 		}
 	}
 
-	s.setPriorityMacro(source)
+	s.setPriorityMacro(source, date)
 
 	return added, nil
 }
 
 // RemoveRepository удаляет репозиторий
-func (s *RepoService) RemoveRepository(ctx context.Context, source string) ([]string, error) {
+func (s *RepoService) RemoveRepository(ctx context.Context, source, date string) ([]string, error) {
 	var removed []string
 
 	if source == "all" {
@@ -478,7 +478,7 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source string) ([]st
 		return removed, nil
 	}
 
-	urls, err := s.parseSource(ctx, source)
+	urls, err := s.parseSource(ctx, source, date)
 	if err != nil {
 		return nil, err
 	}
@@ -540,19 +540,17 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source string) ([]st
 }
 
 // SetBranch устанавливает ветку (удаляет все и добавляет)
-func (s *RepoService) SetBranch(ctx context.Context, branch string) (added []string, removed []string, err error) {
-	parts := strings.SplitN(strings.TrimSpace(branch), " ", 2)
-	branchName := parts[0]
-	if _, ok := s.branches[branchName]; !ok {
-		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branchName)
+func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added []string, removed []string, err error) {
+	if _, ok := s.branches[branch]; !ok {
+		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branch)
 	}
 
-	removed, err = s.RemoveRepository(ctx, "all")
+	removed, err = s.RemoveRepository(ctx, "all", "")
 	if err != nil {
 		return nil, removed, err
 	}
 
-	added, err = s.AddRepository(ctx, branch)
+	added, err = s.AddRepository(ctx, branch, date)
 	if err != nil {
 		return added, removed, err
 	}
@@ -595,16 +593,14 @@ func (s *RepoService) CleanTemporary(ctx context.Context) ([]string, error) {
 var archivingBranches = []string{"p7", "p8", "p9", "p10", "p11", "t7", "sisyphus"}
 
 // parseSource парсит источник в URL(ы)
-func (s *RepoService) parseSource(ctx context.Context, source string) ([]string, error) {
+func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]string, error) {
 	source = strings.TrimSpace(source)
+	date = strings.TrimSpace(date)
 
 	// 1. Проверяем известную ветку (с опциональной датой архива)
-	parts := strings.SplitN(source, " ", 2)
-	branchName := parts[0]
-	if branch, ok := s.branches[branchName]; ok {
-		if len(parts) == 2 {
-			archiveDate := strings.TrimSpace(parts[1])
-			formattedDate, err := s.parseArchiveDate(branchName, archiveDate)
+	if branch, ok := s.branches[source]; ok {
+		if date != "" {
+			formattedDate, err := s.parseArchiveDate(source, date)
 			if err != nil {
 				return nil, err
 			}
@@ -997,17 +993,22 @@ func (s *RepoService) commentInFile(filename string, normalizedLine string) erro
 }
 
 // setPriorityMacro устанавливает макрос %_priority_distbranch
-func (s *RepoService) setPriorityMacro(branch string) {
+func (s *RepoService) setPriorityMacro(source, date string) {
+	// Для архивных репозиториев не устанавливаем макрос приоритета
+	if date != "" {
+		return
+	}
+
 	priorityBranches := []string{"p10", "p11", "sisyphus"}
 
 	for _, pb := range priorityBranches {
-		if branch == pb {
+		if source == pb {
 			if err := os.MkdirAll(RPMMacrosDir, 0755); err != nil {
 				app.Log.Debugf("failed to create macros dir: %v", err)
 				return
 			}
 
-			content := fmt.Sprintf("%%_priority_distbranch %s\n", branch)
+			content := fmt.Sprintf("%%_priority_distbranch %s\n", source)
 			if err := os.WriteFile(PriorityDistbranchMacro, []byte(content), 0644); err != nil {
 				app.Log.Debugf("failed to write priority macro: %v", err)
 			}
@@ -1027,8 +1028,8 @@ func (s *RepoService) removePriorityMacro() {
 }
 
 // SimulateAdd симулирует добавление репозитория
-func (s *RepoService) SimulateAdd(ctx context.Context, source string) ([]string, error) {
-	urls, err := s.parseSource(ctx, source)
+func (s *RepoService) SimulateAdd(ctx context.Context, source, date string) ([]string, error) {
+	urls, err := s.parseSource(ctx, source, date)
 	if err != nil {
 		return nil, err
 	}
@@ -1049,7 +1050,7 @@ func (s *RepoService) SimulateAdd(ctx context.Context, source string) ([]string,
 }
 
 // SimulateRemove симулирует удаление репозитория
-func (s *RepoService) SimulateRemove(ctx context.Context, source string) ([]string, error) {
+func (s *RepoService) SimulateRemove(ctx context.Context, source, date string) ([]string, error) {
 	var willRemove []string
 
 	if source == "all" {
@@ -1063,7 +1064,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, source string) ([]stri
 		return willRemove, nil
 	}
 
-	urls, err := s.parseSource(ctx, source)
+	urls, err := s.parseSource(ctx, source, date)
 	if err != nil {
 		return nil, err
 	}

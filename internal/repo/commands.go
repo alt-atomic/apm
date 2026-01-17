@@ -83,26 +83,22 @@ func CommandList(ctx context.Context) *cli.Command {
 			},
 			{
 				Name:      "add",
-				Usage:     app.T_("Add repository (branch/task/URL). For branch archive: add <branch> <date>"),
-				ArgsUsage: "<source> [YYYYMMDD|YYYY/MM/DD]",
+				Usage:     app.T_("Add repository (branch/task/URL)"),
+				ArgsUsage: "<source>",
 				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "date",
+						Usage:   app.T_("Archive date (YYYYMMDD or YYYY/MM/DD)"),
+						Aliases: []string{"d"},
+					},
 					&cli.BoolFlag{
 						Name:    "simulate",
 						Usage:   app.T_("Simulate adding without making changes"),
 						Aliases: []string{"s"},
-						Value:   false,
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					var source string
-					for i := 0; i < cmd.NArg(); i++ {
-						if i > 0 {
-							source += " "
-						}
-						source += cmd.Args().Get(i)
-					}
-
-					resp, err := actions.Add(ctx, source, cmd.Bool("simulate"))
+					resp, err := actions.Add(ctx, cmd.Args().First(), cmd.String("date"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -113,26 +109,22 @@ func CommandList(ctx context.Context) *cli.Command {
 			{
 				Name:      "remove",
 				Aliases:   []string{"rm"},
-				Usage:     app.T_("Remove repository. Use 'all' to remove all repositories, or specify branch/task/URL to remove specific repository"),
+				Usage:     app.T_("Remove repository. Use 'all' to remove all repositories, or specify branch/task/URL"),
 				ArgsUsage: "<source|all>",
 				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "date",
+						Usage:   app.T_("Archive date (YYYYMMDD or YYYY/MM/DD)"),
+						Aliases: []string{"d"},
+					},
 					&cli.BoolFlag{
 						Name:    "simulate",
 						Usage:   app.T_("Simulate removal without making changes"),
 						Aliases: []string{"s"},
-						Value:   false,
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					var source string
-					for i := 0; i < cmd.NArg(); i++ {
-						if i > 0 {
-							source += " "
-						}
-						source += cmd.Args().Get(i)
-					}
-
-					resp, err := actions.Remove(ctx, source, cmd.Bool("simulate"))
+					resp, err := actions.Remove(ctx, cmd.Args().First(), cmd.String("date"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -142,26 +134,22 @@ func CommandList(ctx context.Context) *cli.Command {
 			},
 			{
 				Name:      "set",
-				Usage:     app.T_("Set branch (removes all existing and adds specified branch). For branch archive: set <branch> <date>"),
-				ArgsUsage: "<branch> [YYYYMMDD|YYYY/MM/DD]",
+				Usage:     app.T_("Set branch (removes all existing and adds specified branch)"),
+				ArgsUsage: "<branch>",
 				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "date",
+						Usage:   app.T_("Archive date (YYYYMMDD or YYYY/MM/DD)"),
+						Aliases: []string{"d"},
+					},
 					&cli.BoolFlag{
 						Name:    "simulate",
 						Usage:   app.T_("Simulate setting without making changes"),
 						Aliases: []string{"s"},
-						Value:   false,
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					var branch string
-					for i := 0; i < cmd.NArg(); i++ {
-						if i > 0 {
-							branch += " "
-						}
-						branch += cmd.Args().Get(i)
-					}
-
-					resp, err := actions.Set(ctx, branch, cmd.Bool("simulate"))
+					resp, err := actions.Set(ctx, cmd.Args().First(), cmd.String("date"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

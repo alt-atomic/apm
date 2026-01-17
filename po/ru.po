@@ -11,16 +11,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-16 23:13+0600\n"
-"PO-Revision-Date: 2026-01-16 22:56+0600\n"
+"POT-Creation-Date: 2026-01-17 15:55+0600\n"
+"PO-Revision-Date: 2026-01-17 15:56+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 49.0\n"
 
 #: internal/common/app/database.go:100
@@ -1905,7 +1905,7 @@ msgid "Remove only from host, leave package in container"
 msgstr "Удалить только с хоста, оставить пакет в контейнере"
 
 #: internal/distrobox/commands.go:221 internal/kernel/commands.go:259
-#: internal/repo/commands.go:216 internal/system/commands.go:456
+#: internal/repo/commands.go:204 internal/system/commands.go:456
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
@@ -2563,20 +2563,20 @@ msgstr[0] "Найден %d активный репозиторий"
 msgstr[1] "Найдено %d активных репозитория"
 msgstr[2] "Найдено %d активных репозиториев"
 
-#: internal/repo/actions.go:82 internal/repo/actions.go:140
+#: internal/repo/actions.go:82 internal/repo/actions.go:141
 msgid "Repository source must be specified"
 msgstr "Необходимо указать источник репозитория"
 
-#: internal/repo/actions.go:94 internal/repo/actions.go:118
+#: internal/repo/actions.go:95 internal/repo/actions.go:119
 msgid "All repositories already exist"
 msgstr "Все репозитории уже существуют"
 
-#: internal/repo/actions.go:103 internal/repo/actions.go:161
-#: internal/repo/actions.go:218 internal/repo/actions.go:279
+#: internal/repo/actions.go:104 internal/repo/actions.go:163
+#: internal/repo/actions.go:221 internal/repo/actions.go:317
 msgid "Simulation results"
 msgstr "Результаты симуляции"
 
-#: internal/repo/actions.go:125
+#: internal/repo/actions.go:126
 #, c-format
 msgid "%d repository added"
 msgid_plural "%d repositories added"
@@ -2584,15 +2584,15 @@ msgstr[0] "Добавлен %d репозиторий"
 msgstr[1] "Добавлено %d репозитория"
 msgstr[2] "Добавлено %d репозиториев"
 
-#: internal/repo/actions.go:152
+#: internal/repo/actions.go:154
 msgid "No repositories to remove"
 msgstr "Нет репозиториев для удаления"
 
-#: internal/repo/actions.go:176
+#: internal/repo/actions.go:178
 msgid "No repositories found to remove"
 msgstr "Не найдено репозиториев для удаления"
 
-#: internal/repo/actions.go:183
+#: internal/repo/actions.go:185
 #, c-format
 msgid "%d repository removed"
 msgid_plural "%d repositories removed"
@@ -2600,30 +2600,20 @@ msgstr[0] "Удалён %d репозиторий"
 msgstr[1] "Удалено %d репозитория"
 msgstr[2] "Удалено %d репозиториев"
 
-#: internal/repo/actions.go:198
+#: internal/repo/actions.go:200
 msgid "Branch name must be specified"
 msgstr "Необходимо указать имя ветки"
 
-#: internal/repo/actions.go:230
+#: internal/repo/actions.go:238
 #, c-format
 msgid "Branch %s set successfully"
 msgstr "Ветка %s успешно установлена"
 
-#: internal/repo/actions.go:263 internal/repo/service/repo.go:1061
-#: internal/repo/service/repo.go:1074
-#, c-format
-msgid "Will remove: %s"
-msgstr "Будет удалено: %s"
-
-#: internal/repo/actions.go:270
-msgid "No cdrom or task repositories to remove"
-msgstr "Нет cdrom или task репозиториев для удаления"
-
-#: internal/repo/actions.go:294
+#: internal/repo/actions.go:265
 msgid "No cdrom or task repositories found"
 msgstr "Не найдено cdrom или task репозиториев"
 
-#: internal/repo/actions.go:301
+#: internal/repo/actions.go:272
 #, c-format
 msgid "%d temporary repository removed"
 msgid_plural "%d temporary repositories removed"
@@ -2631,15 +2621,25 @@ msgstr[0] "Удалён %d временный репозиторий"
 msgstr[1] "Удалено %d временных репозитория"
 msgstr[2] "Удалено %d временных репозиториев"
 
-#: internal/repo/actions.go:318
+#: internal/repo/actions.go:301 internal/repo/service/repo.go:1062
+#: internal/repo/service/repo.go:1075
+#, c-format
+msgid "Will remove: %s"
+msgstr "Будет удалено: %s"
+
+#: internal/repo/actions.go:308
+msgid "No cdrom or task repositories to remove"
+msgstr "Нет cdrom или task репозиториев для удаления"
+
+#: internal/repo/actions.go:330
 msgid "Available branches"
 msgstr "Доступные ветки"
 
-#: internal/repo/actions.go:329
+#: internal/repo/actions.go:341
 msgid "Task number must be specified"
 msgstr "Необходимо указать номер задачи"
 
-#: internal/repo/actions.go:337
+#: internal/repo/actions.go:349
 #, c-format
 msgid "%d package in task %s"
 msgid_plural "%d packages in task %s"
@@ -2660,53 +2660,51 @@ msgid "Show all repositories including inactive"
 msgstr "Показать все репозитории, включая неактивные"
 
 #: internal/repo/commands.go:86
-msgid ""
-"Add repository (branch/task/URL). For branch archive: add <branch> <date>"
-msgstr ""
-"Добавить репозиторий (ветка/задача/URL). Для архива ветки: add <ветка> "
-"<дата>"
+msgid "Add repository (branch/task/URL)"
+msgstr "Добавить репозиторий (ветка/задача/URL)"
 
-#: internal/repo/commands.go:91
+#: internal/repo/commands.go:91 internal/repo/commands.go:117
+#: internal/repo/commands.go:142
+msgid "Archive date (YYYYMMDD or YYYY/MM/DD)"
+msgstr "Архивная дата (ГГГГММДД или ГГГГ/ММ/ДД)"
+
+#: internal/repo/commands.go:96
 msgid "Simulate adding without making changes"
 msgstr "Симулировать добавление без внесения изменений"
 
-#: internal/repo/commands.go:116
+#: internal/repo/commands.go:112
 msgid ""
 "Remove repository. Use 'all' to remove all repositories, or specify branch/"
-"task/URL to remove specific repository"
+"task/URL"
 msgstr ""
-"Удалить репозиторий. Используйте 'all' для удаления всех, или укажите ветку/"
-"задачу/URL"
+"Удалить репозиторий. Используйте 'all', чтобы удалить все репозитории, или "
+"укажите branch/task/URL"
 
-#: internal/repo/commands.go:121
+#: internal/repo/commands.go:122
 msgid "Simulate removal without making changes"
 msgstr "Симулировать удаление без внесения изменений"
 
-#: internal/repo/commands.go:145
-msgid ""
-"Set branch (removes all existing and adds specified branch). For branch "
-"archive: set <branch> <date>"
-msgstr ""
-"Установить ветку (удаляет все существующие и добавляет указанную). Для "
-"архива ветки: set <ветка> <дата>"
+#: internal/repo/commands.go:137
+msgid "Set branch (removes all existing and adds specified branch)"
+msgstr "Установить ветку (удаляет все существующие и добавляет указанную)"
 
-#: internal/repo/commands.go:150
+#: internal/repo/commands.go:147
 msgid "Simulate setting without making changes"
 msgstr "Симулировать установку без внесения изменений"
 
-#: internal/repo/commands.go:174
+#: internal/repo/commands.go:162
 msgid "Remove all cdrom and task repositories"
 msgstr "Удалить все cdrom и task репозитории"
 
-#: internal/repo/commands.go:178
+#: internal/repo/commands.go:166
 msgid "Simulate cleaning without making changes"
 msgstr "Симулировать очистку без внесения изменений"
 
-#: internal/repo/commands.go:193
+#: internal/repo/commands.go:181
 msgid "List available branches"
 msgstr "Список доступных веток"
 
-#: internal/repo/commands.go:204
+#: internal/repo/commands.go:192
 msgid "Show packages in task"
 msgstr "Показать пакеты в задаче"
 
@@ -2714,49 +2712,49 @@ msgstr "Показать пакеты в задаче"
 msgid "Failed to parse repository source"
 msgstr "Не удалось разобрать источник репозитория"
 
-#: internal/repo/service/repo.go:547
+#: internal/repo/service/repo.go:545
 #, c-format
 msgid "Unknown branch: %s"
 msgstr "Неизвестная ветка: %s"
 
-#: internal/repo/service/repo.go:647
+#: internal/repo/service/repo.go:643
 #, c-format
 msgid "Unknown repository format: %s"
 msgstr "Неизвестный формат репозитория: %s"
 
-#: internal/repo/service/repo.go:661
+#: internal/repo/service/repo.go:657
 #, c-format
 msgid "Branch %s has no archive"
 msgstr "Ветка %s не имеет архива"
 
-#: internal/repo/service/repo.go:674
+#: internal/repo/service/repo.go:670
 msgid "Archive date should be YYYYMMDD or YYYY/MM/DD format"
 msgstr "Дата архива должна быть в формате YYYYMMDD или YYYY/MM/DD"
 
-#: internal/repo/service/repo.go:724 internal/repo/service/repo.go:1098
+#: internal/repo/service/repo.go:720 internal/repo/service/repo.go:1099
 #, c-format
 msgid "Task %s not found or still building"
 msgstr "Задача %s не найдена или ещё собирается"
 
-#: internal/repo/service/repo.go:916
+#: internal/repo/service/repo.go:912
 msgid "Failed to open %s: %v"
 msgstr "Не удалось открыть %s: %v"
 
-#: internal/repo/service/repo.go:922
+#: internal/repo/service/repo.go:918
 msgid "Failed to write to %s: %v"
 msgstr "Не удалось записать в %s: %v"
 
-#: internal/repo/service/repo.go:1041
+#: internal/repo/service/repo.go:1042
 #, c-format
 msgid "Will uncomment: %s"
 msgstr "Будет раскомментировано: %s"
 
-#: internal/repo/service/repo.go:1043
+#: internal/repo/service/repo.go:1044
 #, c-format
 msgid "Will add: %s"
 msgstr "Будет добавлено: %s"
 
-#: internal/repo/service/repo.go:1115
+#: internal/repo/service/repo.go:1116
 #, c-format
 msgid "Failed to get task packages: HTTP %d"
 msgstr "Не удалось получить пакеты задачи: HTTP %d"
