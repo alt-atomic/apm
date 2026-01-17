@@ -13,16 +13,26 @@ import (
 
 // ValidationService рекурсивно валидирует конфиг включая все include файлы.
 type ValidationService struct {
-	visited   map[string]bool
 	pathStack []string
+	validated map[string]bool
 }
 
 // NewValidationService создаёт новый сервис валидации.
 func NewValidationService() *ValidationService {
 	return &ValidationService{
-		visited:   make(map[string]bool),
 		pathStack: []string{},
+		validated: make(map[string]bool),
 	}
+}
+
+// inStack проверяет, находится ли путь в текущем стеке (цикл).
+func (v *ValidationService) inStack(path string) bool {
+	for _, p := range v.pathStack {
+		if p == path {
+			return true
+		}
+	}
+	return false
 }
 
 // Validate рекурсивно валидирует модули и все include.
@@ -46,10 +56,15 @@ func (v *ValidationService) validateInclude(module *Module, basePath string) err
 	for _, target := range body.Targets {
 		resolvedPath := v.resolvePath(target, basePath)
 
-		if v.visited[resolvedPath] {
+		// Проверяем цикл — файл уже в текущей цепочке вызовов
+		if v.inStack(resolvedPath) {
 			return v.wrapError(fmt.Errorf(app.T_("circular include detected: %s"), resolvedPath))
 		}
-		v.visited[resolvedPath] = true
+
+		if v.validated[resolvedPath] {
+			continue
+		}
+
 		v.pathStack = append(v.pathStack, resolvedPath)
 
 		if err := v.validateTarget(resolvedPath); err != nil {
@@ -57,6 +72,7 @@ func (v *ValidationService) validateInclude(module *Module, basePath string) err
 		}
 
 		v.pathStack = v.pathStack[:len(v.pathStack)-1]
+		v.validated[resolvedPath] = true
 	}
 	return nil
 }
