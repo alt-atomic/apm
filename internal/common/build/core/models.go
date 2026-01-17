@@ -60,14 +60,14 @@ var ModelMap = map[string]func() models.Body{
 	TypeSystemd:  func() models.Body { return &models.SystemdBody{} },
 }
 
-// GetAllModuleTypes возвращает список всех типов модулей
+// GetAllModuleTypes возвращает отсортированный список всех типов модулей
 func GetAllModuleTypes() []string {
-	return []string{
-		TypeBranding, TypeCopy, TypeGit, TypeInclude,
-		TypeKernel, TypeLink, TypeMerge, TypeMkdir,
-		TypeMove, TypeNetwork, TypePackages, TypeRemove,
-		TypeReplace, TypeRepos, TypeShell, TypeSystemd,
+	types := make([]string, 0, len(ModelMap))
+	for t := range ModelMap {
+		types = append(types, t)
 	}
+	slices.Sort(types)
+	return types
 }
 
 var (

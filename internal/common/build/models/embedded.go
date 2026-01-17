@@ -17,77 +17,31 @@
 package models
 
 import (
-	_ "embed"
+	"embed"
+	"strings"
 )
 
-// Встраиваем исходники моделей для парсинга комментариев при генерации схемы
-
-//go:embed branding.go
-var BrandingSource string
-
-//go:embed copy.go
-var CopySource string
-
-//go:embed git.go
-var GitSource string
-
-//go:embed include.go
-var IncludeSource string
-
-//go:embed kernel.go
-var KernelSource string
-
-//go:embed link.go
-var LinkSource string
-
-//go:embed merge.go
-var MergeSource string
-
-//go:embed mkdir.go
-var MkdirSource string
-
-//go:embed move.go
-var MoveSource string
-
-//go:embed network.go
-var NetworkSource string
-
-//go:embed packages.go
-var PackagesSource string
-
-//go:embed remove.go
-var RemoveSource string
-
-//go:embed replace.go
-var ReplaceSource string
-
-//go:embed repos.go
-var ReposSource string
-
-//go:embed shell.go
-var ShellSource string
-
-//go:embed systemd.go
-var SystemdSource string
+// Встраиваем все .go файлы директории для парсинга комментариев при генерации схемы
+//
+//go:embed *.go
+var sources embed.FS
 
 // GetAllSources возвращает все исходники моделей
 func GetAllSources() []string {
-	return []string{
-		BrandingSource,
-		CopySource,
-		GitSource,
-		IncludeSource,
-		KernelSource,
-		LinkSource,
-		MergeSource,
-		MkdirSource,
-		MoveSource,
-		NetworkSource,
-		PackagesSource,
-		RemoveSource,
-		ReplaceSource,
-		ReposSource,
-		ShellSource,
-		SystemdSource,
+	entries, _ := sources.ReadDir(".")
+
+	var result []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if name == "embedded.go" || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+
+		data, err := sources.ReadFile(name)
+		if err != nil {
+			continue
+		}
+		result = append(result, string(data))
 	}
+	return result
 }

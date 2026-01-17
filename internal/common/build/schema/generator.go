@@ -282,11 +282,8 @@ func (g *Generator) generateStructSchema(v interface{}) *JSONSchema {
 		fieldSchema := g.fieldToSchema(meta, field.Type)
 
 		// Добавляем описание из комментария
-		comment := g.getComment(structName, field.Name)
-		if comment != "" {
+		if comment := g.getComment(structName, field.Name); comment != "" {
 			fieldSchema.Description = comment
-		} else if meta.Description != "" {
-			fieldSchema.Description = meta.Description
 		}
 
 		// Добавляем расширения
@@ -321,9 +318,7 @@ func (g *Generator) generateStructSchema(v interface{}) *JSONSchema {
 
 // parseFieldMeta извлекает метаданные из тегов поля
 func (g *Generator) parseFieldMeta(field reflect.StructField) FieldMeta {
-	meta := FieldMeta{
-		GoName: field.Name,
-	}
+	meta := FieldMeta{}
 
 	// Парсим yaml/json тег для имени
 	if yamlTag := field.Tag.Get("yaml"); yamlTag != "" {
@@ -349,16 +344,11 @@ func (g *Generator) parseFieldMeta(field reflect.StructField) FieldMeta {
 		meta.Conflicts = conflicts
 	}
 
-	// Проверяем schema тег для enum и description
+	// Проверяем schema тег для enum
 	if schemaTag := field.Tag.Get("schema"); schemaTag != "" {
-		parts := strings.Split(schemaTag, ",")
-		for _, part := range parts {
-			if strings.HasPrefix(part, "enum=") {
-				enumStr := strings.TrimPrefix(part, "enum=")
+		for _, part := range strings.Split(schemaTag, ",") {
+			if enumStr, ok := strings.CutPrefix(part, "enum="); ok {
 				meta.Enum = strings.Split(enumStr, "|")
-			}
-			if strings.HasPrefix(part, "desc=") {
-				meta.Description = strings.TrimPrefix(part, "desc=")
 			}
 		}
 	}

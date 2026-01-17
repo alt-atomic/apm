@@ -64,13 +64,11 @@ type JSONSchema struct {
 // MapSlice для сериализации dependentRequired
 type MapSlice map[string][]string
 
-// FieldMeta содержит метаданные поля из тегов и комментариев
+// FieldMeta содержит метаданные поля из тегов
 type FieldMeta struct {
-	Name        string   // Имя поля в JSON/YAML
-	GoName      string   // Оригинальное имя поля в Go
-	Description string   // Описание из тега schema
-	Required    bool     // Обязательное поле
-	Needs       string   // Зависимость от другого поля
-	Conflicts   string   // Конфликт с другим полем
-	Enum        []string // Возможные значения
+	Name      string   // Имя поля в JSON/YAML
+	Required  bool     // Обязательное поле
+	Needs     string   // Зависимость от другого поля
+	Conflicts string   // Конфликт с другим полем
+	Enum      []string // Возможные значения
 }

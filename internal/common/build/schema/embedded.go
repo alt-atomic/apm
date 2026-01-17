@@ -27,7 +27,7 @@ func GetEmbeddedComments() map[string]map[string]string {
 	comments := make(map[string]map[string]string)
 
 	for _, src := range sources {
-		parsed := ParseCommentsFromSource(src)
+		parsed := parseCommentsFromSource(src)
 		for structName, fields := range parsed {
 			if comments[structName] == nil {
 				comments[structName] = make(map[string]string)
@@ -41,9 +41,9 @@ func GetEmbeddedComments() map[string]map[string]string {
 	return comments
 }
 
-// ParseCommentsFromSource парсит комментарии из строки исходного кода
-func ParseCommentsFromSource(source string) map[string]map[string]string {
-	parser := NewCommentParser()
-	_ = parser.ParseSource(source)
-	return parser.GetAllComments()
+// parseCommentsFromSource парсит комментарии из строки исходного кода
+func parseCommentsFromSource(source string) map[string]map[string]string {
+	p := NewCommentParser()
+	_ = p.ParseSource(source)
+	return p.GetAllComments()
 }
