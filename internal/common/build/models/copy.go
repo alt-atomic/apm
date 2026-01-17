@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 )
 
+// CopyBody копирование файлов и директорий
 type CopyBody struct {
 	// Путь до файла, кого копировать
 	Source string `yaml:"source,omitempty" json:"source,omitempty" required:""`

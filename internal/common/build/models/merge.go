@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 )
 
+// MergeBody объединение содержимого файлов
 type MergeBody struct {
 	// Путь до файла, содеримое которого нужно взять
 	Source string `yaml:"source,omitempty" json:"source,omitempty" required:""`

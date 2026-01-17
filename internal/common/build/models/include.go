@@ -5,6 +5,7 @@ import (
 	"context"
 )
 
+// IncludeBody включение других YAML конфигураций
 type IncludeBody struct {
 	// yml конфиги для выполнения
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`

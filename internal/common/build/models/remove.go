@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// RemoveBody удаление файлов и директорий
 type RemoveBody struct {
 	// Путь до объектов, которые нужно удалить
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`

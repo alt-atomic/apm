@@ -8,6 +8,7 @@ import (
 	"os/exec"
 )
 
+// SystemdBody управление systemd сервисами
 type SystemdBody struct {
 	// Имена сервисов
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`

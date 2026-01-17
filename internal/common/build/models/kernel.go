@@ -34,6 +34,7 @@ var (
 	plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
 )
 
+// KernelInfo конфигурация установки ядра
 type KernelInfo struct {
 	// Версия ядра
 	Flavour string `yaml:"flavour,omitempty" json:"flavour,omitempty"`
@@ -49,10 +50,10 @@ func (i *KernelInfo) IsEmpty() bool {
 	return i.Flavour == "" && len(i.Modules) == 0 && !i.IncludeHeaders
 }
 
+// Initrd конфигурация initrd/initramfs
 type Initrd struct {
-	// Поддерживаются: dracut, auto. Если пусто и прописан один из
-	// flavour, modules, inckude-headers, то используется auto
-	Method string `yaml:"method,omitempty" json:"method,omitempty"`
+	// Поддерживаются: auto, none, dracut, make-initrd
+	Method string `yaml:"method,omitempty" json:"method,omitempty" schema:"enum=auto|none|dracut|make-initrd"`
 
 	// Тема плимут
 	PlymouthTheme string `yaml:"plymouth-theme,omitempty" json:"plymouth-theme,omitempty"`
@@ -62,6 +63,7 @@ func (i *Initrd) IsEmpty() bool {
 	return i.Method == "" && i.PlymouthTheme == ""
 }
 
+// KernelBody настройка ядра и initrd
 type KernelBody struct {
 	KernelInfo KernelInfo `yaml:"kernel-info,omitempty" json:"kernel-info"`
 

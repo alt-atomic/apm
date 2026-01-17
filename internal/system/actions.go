@@ -22,6 +22,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	_binding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
+	schema "apm/internal/common/build/schema"
 	"apm/internal/common/reply"
 	_kservice "apm/internal/kernel/service"
 	"apm/internal/system/dialog"
@@ -1192,4 +1193,10 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 // GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
 func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
 	return startDocServer(ctx)
+}
+
+// GenerateBuildSchema генерирует JSON Schema для конфигов сборки
+func (a *Actions) GenerateBuildSchema() (string, error) {
+	gen := schema.NewGenerator(schema.GetEmbeddedComments())
+	return gen.GenerateJSON()
 }

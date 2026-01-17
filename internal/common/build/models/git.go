@@ -10,6 +10,7 @@ import (
 	"slices"
 )
 
+// GitBody клонирование и сборка из git репозитория
 type GitBody struct {
 	// URL git-репозитория
 	Url string `yaml:"url,omitempty" json:"url,omitempty" required:""`

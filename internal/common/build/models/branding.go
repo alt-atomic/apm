@@ -17,6 +17,7 @@ import (
 var usrLibOsRelease = "/usr/lib/os-release"
 var etcOsRelease = "/etc/os-release"
 
+// BrandingBody настройка брендинга системы и os-release
 type BrandingBody struct {
 	// Имя брендинга для пакетов
 	Name string `yaml:"name,omitempty" json:"name,omitempty" needs:"BuildType"`
@@ -28,7 +29,7 @@ type BrandingBody struct {
 	ReleaseOverrides map[string]string `yaml:"release-overrides,omitempty" json:"release-overrides,omitempty" needs:"Name"`
 
 	// Тип сборки, нужен для os-release
-	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty" needs:"Name"`
+	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty" needs:"Name" schema:"enum=stable|nightly"`
 }
 
 func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {

@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// MkdirBody создание директорий
 type MkdirBody struct {
 	// Пути, по которым нужно создать директории
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`

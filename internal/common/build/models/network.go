@@ -29,8 +29,9 @@ import (
 var EtcHostname = "/etc/hostname"
 var EtcHosts = "/etc/hosts"
 
+// NetworkBody настройка сети (hostname)
 type NetworkBody struct {
-	// Hostname in image
+	// Название хост-системы для образа
 	Hostname string `yaml:"hostname,omitempty" json:"hostname,omitempty" required:""`
 }
 

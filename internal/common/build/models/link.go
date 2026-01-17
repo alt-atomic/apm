@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 )
 
+// LinkBody создание символических ссылок
 type LinkBody struct {
 	// Где создать ссылку, абсолютный путь
 	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`

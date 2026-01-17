@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// ReplaceBody замена текста в файлах по regex
 type ReplaceBody struct {
 	// Путь до файла
 	Target string `yaml:"target,omitempty" json:"target,omitempty" required:""`

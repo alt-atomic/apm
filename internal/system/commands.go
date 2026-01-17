@@ -459,6 +459,19 @@ func CommandList(ctx context.Context) *cli.Command {
 				return actions.GenerateOnlineDoc(ctx)
 			}),
 		},
+		{
+			Name:  "build-schema",
+			Usage: app.T_("Generate JSON Schema for build configuration files"),
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				reply.StopSpinner(appConfig)
+				jsonSchema, err := actions.GenerateBuildSchema()
+				if err != nil {
+					return err
+				}
+				fmt.Println(jsonSchema)
+				return nil
+			}),
+		},
 	}
 
 	return &cli.Command{

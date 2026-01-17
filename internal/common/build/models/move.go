@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// MoveBody перемещение файлов и директорий
 type MoveBody struct {
 	// Что
 	Source string `yaml:"source,omitempty" json:"source,omitempty" required:""`

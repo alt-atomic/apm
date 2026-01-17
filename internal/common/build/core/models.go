@@ -40,7 +40,8 @@ const (
 	TypeSystemd  = "systemd"
 )
 
-var modelMap = map[string]func() models.Body{
+// ModelMap содержит фабрики для создания Body по типу модуля
+var ModelMap = map[string]func() models.Body{
 	TypeBranding: func() models.Body { return &models.BrandingBody{} },
 	TypeCopy:     func() models.Body { return &models.CopyBody{} },
 	TypeGit:      func() models.Body { return &models.GitBody{} },
@@ -57,6 +58,16 @@ var modelMap = map[string]func() models.Body{
 	TypeRepos:    func() models.Body { return &models.ReposBody{} },
 	TypeShell:    func() models.Body { return &models.ShellBody{} },
 	TypeSystemd:  func() models.Body { return &models.SystemdBody{} },
+}
+
+// GetAllModuleTypes возвращает список всех типов модулей
+func GetAllModuleTypes() []string {
+	return []string{
+		TypeBranding, TypeCopy, TypeGit, TypeInclude,
+		TypeKernel, TypeLink, TypeMerge, TypeMkdir,
+		TypeMove, TypeNetwork, TypePackages, TypeRemove,
+		TypeReplace, TypeRepos, TypeShell, TypeSystemd,
+	}
 }
 
 var (
@@ -292,7 +303,7 @@ func (m *Module) decodeBody(decode func(any) error) error {
 		return fmt.Errorf("module type is required")
 	}
 
-	factory, ok := modelMap[m.Type]
+	factory, ok := ModelMap[m.Type]
 	if !ok {
 		return fmt.Errorf("unknown module type: %s", m.Type)
 	}

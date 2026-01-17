@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// PackagesBody управление пакетами: установка, удаление, обновление
 type PackagesBody struct {
 	// Пакеты к установке
 	Install []string `yaml:"install,omitempty" json:"install,omitempty"`
@@ -18,7 +19,7 @@ type PackagesBody struct {
 	// Обновить ли базу данных до транзакции
 	Update bool `yaml:"update,omitempty" json:"update,omitempty"`
 
-	// Обновить ли пакеты до тарнзакции
+	// Обновить ли пакеты до транзакции
 	Upgrade bool `yaml:"upgrade,omitempty" json:"upgrade,omitempty"`
 
 	// Удалить пакеты с зависимостями

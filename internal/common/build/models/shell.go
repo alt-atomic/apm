@@ -7,11 +7,12 @@ import (
 	"fmt"
 )
 
+// ShellBody выполнение shell команд
 type ShellBody struct {
 	// Команды на выполнение
 	Command string `yaml:"command,omitempty" json:"command,omitempty" required:""`
 
-	// Quiet command output
+	// Тихий вывод команды
 	Quiet bool `yaml:"quiet,omitempty" json:"quiet,omitempty"`
 }
 

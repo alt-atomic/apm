@@ -22,6 +22,7 @@ var (
 	aptSourcesListD = "/etc/apt/sources.list.d"
 )
 
+// ReposBody настройка APT репозиториев
 type ReposBody struct {
 	// Очистить репозитории
 	Clean bool `yaml:"clean,omitempty" json:"clean,omitempty"`
@@ -30,7 +31,7 @@ type ReposBody struct {
 	Custom []string `yaml:"custom,omitempty" json:"custom,omitempty" needs:"Name"`
 
 	// Ветка репозитория ALT. Сейчас доступен только sisyphus
-	Branch string `yaml:"branch,omitempty" json:"branch,omitempty" needs:"Name"`
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty" needs:"Name" schema:"enum=sisyphus"`
 
 	// Дата в формате YYYY.MM.DD. Если пуст, берется обычныц репозиторий. Может быть latest
 	Date string `yaml:"date,omitempty" json:"date,omitempty" needs:"Branch"`
