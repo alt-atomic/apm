@@ -23,7 +23,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
@@ -73,7 +72,7 @@ func (s *HostConfigService) LoadConfig() error {
 	}
 
 	// Рекурсивная валидация всех include файлов
-	basePath := filepath.Dir(s.pathImageFile)
+	basePath := s.hostImageService.appConfig.PathResourcesDir
 	if err = core.ValidateConfigRecursive(&cfg, basePath); err != nil {
 		return err
 	}
