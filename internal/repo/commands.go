@@ -84,7 +84,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			{
 				Name:      "add",
 				Usage:     app.T_("Add repository (branch/task/URL)"),
-				ArgsUsage: "<source>",
+				ArgsUsage: "<source> [arch] [components...]",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "date",
@@ -98,7 +98,8 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Add(ctx, cmd.Args().First(), cmd.String("date"), cmd.Bool("simulate"))
+					args := cmd.Args().Slice()
+					resp, err := actions.Add(ctx, args, cmd.String("date"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}
@@ -110,7 +111,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Name:      "remove",
 				Aliases:   []string{"rm"},
 				Usage:     app.T_("Remove repository. Use 'all' to remove all repositories, or specify branch/task/URL"),
-				ArgsUsage: "<source|all>",
+				ArgsUsage: "<source|all> [arch] [components...]",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "date",
@@ -124,7 +125,8 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Remove(ctx, cmd.Args().First(), cmd.String("date"), cmd.Bool("simulate"))
+					args := cmd.Args().Slice()
+					resp, err := actions.Remove(ctx, args, cmd.String("date"), cmd.Bool("simulate"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 					}

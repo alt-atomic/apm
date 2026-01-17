@@ -413,8 +413,9 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 }
 
 // AddRepository добавляет репозиторий
-func (s *RepoService) AddRepository(ctx context.Context, source, date string) ([]string, error) {
-	urls, err := s.parseSource(ctx, source, date)
+// args: [source] или [type, url, arch, components...]
+func (s *RepoService) AddRepository(ctx context.Context, args []string, date string) ([]string, error) {
+	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}
@@ -450,15 +451,24 @@ func (s *RepoService) AddRepository(ctx context.Context, source, date string) ([
 		}
 	}
 
-	s.setPriorityMacro(source, date)
+	if len(args) > 0 {
+		s.setPriorityMacro(args[0], date)
+	}
 
 	return added, nil
 }
 
 // RemoveRepository удаляет репозиторий
 // Если purge=true, полностью удаляет файлы в sources.list.d и очищает sources.list
-func (s *RepoService) RemoveRepository(ctx context.Context, source, date string, purge bool) ([]string, error) {
+// args: [source] или [type, url, arch, components...]
+func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]string, error) {
 	var removed []string
+
+	if len(args) == 0 {
+		return nil, errors.New(app.T_("Repository source must be specified"))
+	}
+
+	source := args[0]
 
 	if source == "all" {
 		repos, err := s.GetRepositories(ctx, false)
@@ -487,7 +497,7 @@ func (s *RepoService) RemoveRepository(ctx context.Context, source, date string,
 		return removed, nil
 	}
 
-	urls, err := s.parseSource(ctx, source, date)
+	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}
@@ -554,12 +564,12 @@ func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added
 		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branch)
 	}
 
-	removed, err = s.RemoveRepository(ctx, "all", "", false)
+	removed, err = s.RemoveRepository(ctx, []string{"all"}, "", false)
 	if err != nil {
 		return nil, removed, err
 	}
 
-	added, err = s.AddRepository(ctx, branch, date)
+	added, err = s.AddRepository(ctx, []string{branch}, date)
 	if err != nil {
 		return added, removed, err
 	}
@@ -601,6 +611,78 @@ func (s *RepoService) CleanTemporary(ctx context.Context) ([]string, error) {
 // archivingBranches список веток, для которых есть архивы
 var archivingBranches = []string{"p7", "p8", "p9", "p10", "p11", "t7", "sisyphus"}
 
+// parseSourceArgs парсит аргументы в URL(ы)
+// args: [source] или [type, url, arch, components...]
+func (s *RepoService) parseSourceArgs(ctx context.Context, args []string, date string) ([]string, error) {
+	if len(args) == 0 {
+		return nil, errors.New(app.T_("Repository source must be specified"))
+	}
+
+	date = strings.TrimSpace(date)
+	source := strings.TrimSpace(args[0])
+
+	if len(args) == 1 {
+		return s.parseSource(ctx, source, date)
+	}
+
+	// Если первый аргумент - rpm/rpm-src/rpm-dir, собираем строку из всех аргументов
+	if strings.HasPrefix(source, "rpm") {
+		return s.buildRepoFromArgs(args), nil
+	}
+
+	// Если первый аргумент - URL, остальные - arch и components
+	if isURL(source) {
+		return s.buildURLReposFromArgs(args), nil
+	}
+
+	// Fallback: собираем все аргументы в одну строку и пробуем распарсить
+	combined := strings.Join(args, " ")
+	return s.parseSource(ctx, combined, date)
+}
+
+// buildRepoFromArgs собирает строку репозитория из аргументов [type, url, arch, components...]
+func (s *RepoService) buildRepoFromArgs(args []string) []string {
+	// Заменяем _arch_ на текущую архитектуру
+	var processed []string
+	for _, arg := range args {
+		if arg == "_arch_" {
+			processed = append(processed, s.arch)
+		} else {
+			processed = append(processed, arg)
+		}
+	}
+	return []string{strings.Join(processed, " ")}
+}
+
+// buildURLReposFromArgs формирует репозитории из аргументов [url, arch, components...]
+func (s *RepoService) buildURLReposFromArgs(args []string) []string {
+	if len(args) < 2 {
+		return s.buildURLRepos(args[0])
+	}
+
+	url := args[0]
+	archArg := args[1]
+	components := args[2:]
+
+	if archArg == "_arch_" {
+		archArg = s.arch
+	}
+
+	// Если не указаны компоненты, используем classic
+	if len(components) == 0 {
+		components = []string{"classic"}
+	}
+
+	return []string{fmt.Sprintf("rpm %s %s %s", url, archArg, strings.Join(components, " "))}
+}
+
+// isURL проверяет, является ли строка URL
+func isURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") ||
+		strings.HasPrefix(s, "ftp://") || strings.HasPrefix(s, "rsync://") ||
+		strings.HasPrefix(s, "file://") || strings.HasPrefix(s, "cdrom:")
+}
+
 // parseSource парсит источник в URL(ы)
 func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]string, error) {
 	source = strings.TrimSpace(source)
@@ -633,9 +715,7 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 	}
 
 	// 4. Проверяем URL
-	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") ||
-		strings.HasPrefix(source, "ftp://") || strings.HasPrefix(source, "rsync://") ||
-		strings.HasPrefix(source, "file://") || strings.HasPrefix(source, "cdrom:") {
+	if isURL(source) {
 		return s.buildURLRepos(source), nil
 	}
 
@@ -644,8 +724,10 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 		return []string{fmt.Sprintf("rpm file://%s %s hasher", source, s.arch)}, nil
 	}
 
-	// 6. Формат sources.list
+	// 6. Формат sources.list (rpm ...)
 	if strings.HasPrefix(source, "rpm") {
+		// Заменяем _arch_ на текущую архитектуру
+		source = strings.ReplaceAll(source, "_arch_", s.arch)
 		return []string{source}, nil
 	}
 
@@ -694,12 +776,14 @@ func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch Bra
 	}
 
 	mainComponents := branch.Components[0]
-	allComponents := strings.Join(branch.Components, " ")
+	allComponents := mainComponents
+	if len(branch.Components) > 1 && s.hasGostcryptoInSources(ctx) {
+		allComponents = strings.Join(branch.Components, " ")
+	}
 
 	// Формируем базовый URL с учётом схемы и архива
 	var baseURL string
 	if archiveDate != "" {
-		// Архивный URL: http://ftp.altlinux.org/pub/distributions/archive/p10/date/YYYY/MM/DD
 		baseURL = fmt.Sprintf("%s%s/%s/date/%s", s.httpScheme(ctx), RepoArchiveURL, branch.Name, archiveDate)
 	} else {
 		baseURL = s.httpScheme(ctx) + branch.URL
@@ -716,6 +800,24 @@ func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch Bra
 	}
 
 	return urls
+}
+
+// hasGostcryptoInSources проверяет есть ли gostcrypto в существующих репозиториях
+func (s *RepoService) hasGostcryptoInSources(ctx context.Context) bool {
+	repos, err := s.GetRepositories(ctx, true)
+	if err != nil {
+		return false
+	}
+
+	for _, repo := range repos {
+		for _, comp := range repo.Components {
+			if comp == "gostcrypto" {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // buildTaskURLs формирует URL для задачи
@@ -1058,8 +1160,9 @@ func (s *RepoService) removePriorityMacro() {
 }
 
 // SimulateAdd симулирует добавление репозитория
-func (s *RepoService) SimulateAdd(ctx context.Context, source, date string) ([]string, error) {
-	urls, err := s.parseSource(ctx, source, date)
+// args: [source] или [type, url, arch, components...]
+func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date string) ([]string, error) {
+	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}
@@ -1080,8 +1183,15 @@ func (s *RepoService) SimulateAdd(ctx context.Context, source, date string) ([]s
 }
 
 // SimulateRemove симулирует удаление репозитория
-func (s *RepoService) SimulateRemove(ctx context.Context, source, date string, purge bool) ([]string, error) {
+// args: [source] или [type, url, arch, components...]
+func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]string, error) {
 	var willRemove []string
+
+	if len(args) == 0 {
+		return nil, errors.New(app.T_("Repository source must be specified"))
+	}
+
+	source := args[0]
 
 	if source == "all" {
 		repos, err := s.GetRepositories(ctx, false)
@@ -1094,7 +1204,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, source, date string, p
 		return willRemove, nil
 	}
 
-	urls, err := s.parseSource(ctx, source, date)
+	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}

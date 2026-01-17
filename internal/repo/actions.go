@@ -76,15 +76,15 @@ func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error
 }
 
 // Add добавляет репозиторий
-func (a *Actions) Add(ctx context.Context, source, date string, simulate bool) (*reply.APIResponse, error) {
-	source = strings.TrimSpace(source)
-	if source == "" {
+// args: [source] или [type, url, arch, components...]
+func (a *Actions) Add(ctx context.Context, args []string, date string, simulate bool) (*reply.APIResponse, error) {
+	if len(args) == 0 {
 		return nil, errors.New(app.T_("Repository source must be specified"))
 	}
 	date = strings.TrimSpace(date)
 
 	if simulate {
-		willAdd, err := a.repoService.SimulateAdd(ctx, source, date)
+		willAdd, err := a.repoService.SimulateAdd(ctx, args, date)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func (a *Actions) Add(ctx context.Context, source, date string, simulate bool) (
 		}, nil
 	}
 
-	added, err := a.repoService.AddRepository(ctx, source, date)
+	added, err := a.repoService.AddRepository(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}
@@ -135,15 +135,15 @@ func (a *Actions) Add(ctx context.Context, source, date string, simulate bool) (
 }
 
 // Remove удаляет репозиторий
-func (a *Actions) Remove(ctx context.Context, source, date string, simulate bool) (*reply.APIResponse, error) {
-	source = strings.TrimSpace(source)
-	if source == "" {
+// args: [source] или [type, url, arch, components...]
+func (a *Actions) Remove(ctx context.Context, args []string, date string, simulate bool) (*reply.APIResponse, error) {
+	if len(args) == 0 {
 		return nil, errors.New(app.T_("Repository source must be specified"))
 	}
 	date = strings.TrimSpace(date)
 
 	if simulate {
-		willRemove, err := a.repoService.SimulateRemove(ctx, source, date, false)
+		willRemove, err := a.repoService.SimulateRemove(ctx, args, date, false)
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +167,7 @@ func (a *Actions) Remove(ctx context.Context, source, date string, simulate bool
 		}, nil
 	}
 
-	removed, err := a.repoService.RemoveRepository(ctx, source, date, false)
+	removed, err := a.repoService.RemoveRepository(ctx, args, date, false)
 	if err != nil {
 		return nil, err
 	}
@@ -203,13 +203,13 @@ func (a *Actions) Set(ctx context.Context, branch, date string, simulate bool) (
 
 	if simulate {
 		// Симулируем удаление всех веток
-		willRemove, err := a.repoService.SimulateRemove(ctx, "all", "", false)
+		willRemove, err := a.repoService.SimulateRemove(ctx, []string{"all"}, "", false)
 		if err != nil {
 			return nil, err
 		}
 
 		// Симулируем добавление ветки
-		willAdd, err := a.repoService.SimulateAdd(ctx, branch, date)
+		willAdd, err := a.repoService.SimulateAdd(ctx, []string{branch}, date)
 		if err != nil {
 			return nil, err
 		}

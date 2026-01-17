@@ -61,7 +61,7 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 
 	if b.Clean {
-		removed, err := repoSvc.RemoveRepository(ctx, "all", "", true)
+		removed, err := repoSvc.RemoveRepository(ctx, []string{"all"}, "", true)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 
 	for _, source := range append(b.Custom, b.Tasks...) {
-		added, err := repoSvc.AddRepository(ctx, source, "")
+		added, err := repoSvc.AddRepository(ctx, []string{source}, "")
 		if err != nil {
 			return nil, err
 		}

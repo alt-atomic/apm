@@ -66,7 +66,8 @@ func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) 
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Add(ctx, source, date, false)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.Add(ctx, []string{source}, date, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -84,7 +85,8 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction strin
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, source, date, false)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.Remove(ctx, []string{source}, date, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -164,7 +166,8 @@ func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (strin
 // doc_response: SimulateResponse
 func (w *DBusWrapper) SimulateAdd(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Add(ctx, source, date, true)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.Add(ctx, []string{source}, date, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -179,7 +182,8 @@ func (w *DBusWrapper) SimulateAdd(source, date, transaction string) (string, *db
 // doc_response: SimulateResponse
 func (w *DBusWrapper) SimulateRemove(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Remove(ctx, source, date, true)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.Remove(ctx, []string{source}, date, true)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
