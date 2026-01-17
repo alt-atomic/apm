@@ -1015,7 +1015,7 @@ func (s *RepoService) purgeAllRepos() error {
 		}
 	}
 
-	if err = os.WriteFile(s.confMain, []byte(""), 0644); err != nil {
+	if err = os.WriteFile(s.confMain, []byte("\n"), 0644); err != nil {
 		return fmt.Errorf(app.T_("Failed to clear %s: %v"), s.confMain, err)
 	}
 
