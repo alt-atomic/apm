@@ -1,6 +1,12 @@
 #include "apt_package_operations.h"
-#include "apt_internal.h"
+
+#include <apt-pkg/algorithms.h>
+#include <apt-pkg/error.h>
 #include <apt-pkg/version.h>
+
+#include <cctype>
+#include <cstring>
+#include <sys/stat.h>
 
 RequirementSpec parse_requirement(const std::string &raw) {
     RequirementSpec r;
@@ -70,38 +76,38 @@ static AptResult find_install_package(AptCache *cache, const RequirementSpec &re
 
 static AptResult resolve_virtual_package(AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &pkg) {
     pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg];
-    
+
     if (pkg->VersionList == 0 && pkg->ProvidesList != 0) {
         std::vector<pkgCache::Package *> GoodSolutions;
         unsigned long Size = 0;
-        
+
         // Count providers
         for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
             Size++;
         }
-        
+
         // Create array for sorting
         std::vector<pkgCache::Package *> PList(Size);
         pkgCache::Package **PEnd = PList.data();
         for (pkgCache::PrvIterator Prv = pkg.ProvidesList(); !Prv.end(); ++Prv) {
             *PEnd++ = Prv.OwnerPkg();
         }
-        
+
         pkgProblemResolver TempFix(cache->dep_cache);
         TempFix.MakeScores();
         qsort(PList.data(), PList.size(), sizeof(PList[0]), &(TempFix.ScoreSort));
-        
+
         bool instVirtual = _config->FindB("APT::Install::Virtual", false);
-        
+
         for (unsigned int p = 0; p < Size; ++p) {
             pkgCache::PkgIterator PrvPkg = pkgCache::PkgIterator(*pkg.Cache(), PList[p]);
             pkgCache::PrvIterator Prv = pkg.ProvidesList();
-            
+
             // Find the provide that matches this package
-            for (; Prv.end() == false && Prv.OwnerPkg() != PrvPkg; Prv++)
-               ;
+            for (; !Prv.end() && Prv.OwnerPkg() != PrvPkg; ++Prv) {
+            }
             if (Prv.end()) continue;
-            
+
             bool AlreadySeen = false;
             for (unsigned int i = 0; i != GoodSolutions.size(); i++) {
                 pkgCache::PkgIterator GoodPkg(*pkg.Cache(), GoodSolutions[i]);
@@ -111,24 +117,24 @@ static AptResult resolve_virtual_package(AptCache *cache, const RequirementSpec 
                 }
             }
             if (AlreadySeen) continue;
-            
+
             if (PrvPkg.CurrentVer() == Prv.OwnerVer()) {
                 GoodSolutions.push_back(PrvPkg);
                 if (instVirtual) break;
                 continue;
             }
-            
+
             pkgCache::VerIterator PrvPkgCandVer = (*cache->dep_cache)[PrvPkg].CandidateVerIter(*cache->dep_cache);
             if (PrvPkgCandVer.end()) {
                 continue;
             }
-            
+
             if (req.has_version) {
                 const char *prvVer = Prv.ProvideVersion();
                 if (prvVer == nullptr) continue;
                 if (cache->dep_cache->VS().CheckDep(prvVer, req.op, req.version.c_str()) == false) continue;
             }
-            
+
             // Check if provides points to any candidate version
             bool good = false;
             for (; PrvPkgCandVer.end() == false; ++PrvPkgCandVer) {
@@ -137,18 +143,16 @@ static AptResult resolve_virtual_package(AptCache *cache, const RequirementSpec 
                     GoodSolutions.push_back(PrvPkg);
                 }
             }
-            
+
             if (good && instVirtual) break;
         }
-        
+
         if (GoodSolutions.size() == 1) {
             pkg = pkgCache::PkgIterator(*pkg.Cache(), GoodSolutions[0]);
-        }
-        else if (GoodSolutions.size() == 0) {
+        } else if (GoodSolutions.empty()) {
             return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                             (std::string("Virtual package ") + req.name + " has no installable providers").c_str());
-        }
-        else {
+                               (std::string("Virtual package ") + req.name + " has no installable providers").c_str());
+        } else {
             std::string msg = "Virtual package " + req.name + " is provided by:\n";
             for (unsigned int i = 0; i != GoodSolutions.size(); i++) {
                 pkgCache::PkgIterator GoodPkg(*pkg.Cache(), GoodSolutions[i]);
@@ -160,7 +164,7 @@ static AptResult resolve_virtual_package(AptCache *cache, const RequirementSpec 
             return make_result(APT_ERROR_PACKAGE_NOT_FOUND, msg.c_str());
         }
     }
-    
+
     return make_result(APT_SUCCESS, nullptr);
 }
 
@@ -202,6 +206,88 @@ AptResult process_package_installs(AptCache *cache,
         if (State.InstBroken() == true) {
             cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::DontChange, true);
         }
+    }
+
+    return make_result(APT_SUCCESS, nullptr);
+}
+
+AptResult process_package_reinstalls(AptCache *cache,
+                                     const char **reinstall_names,
+                                     size_t reinstall_count,
+                                     std::set<std::string> &requested_reinstall) {
+    if (!cache || !cache->dep_cache) {
+        return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
+    }
+    if (!reinstall_names || reinstall_count == 0) {
+        return make_result(APT_SUCCESS, nullptr);
+    }
+
+    for (size_t i = 0; i < reinstall_count; i++) {
+        if (!reinstall_names[i]) continue;
+
+        std::string raw(reinstall_names[i]);
+        RequirementSpec req = parse_requirement(raw);
+
+        pkgCache::PkgIterator pkg;
+
+        if (is_rpm_file(raw)) {
+            std::string pkg_name;
+            bool found = false;
+
+            // Scan cache to find package with matching RPM file
+            for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
+                for (pkgCache::VerIterator ver = iter.VersionList(); !ver.end(); ++ver) {
+                    // Check if this version came from our RPM file
+                    for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
+                        pkgCache::PkgFileIterator file = vf.File();
+                        if (file.FileName() && raw.find(file.FileName()) != std::string::npos) {
+                            pkg_name = iter.Name();
+                            found = true;
+                            goto found_reinstall_pkg;
+                        }
+                    }
+                }
+            }
+        found_reinstall_pkg:
+
+            if (!found) {
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                                   (std::string("Unable to find package from RPM file: ") + raw).c_str());
+            }
+
+            // Find the installed package by name
+            pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
+            if (pkg.end()) {
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                                   (std::string("Package ") + pkg_name + " is not installed, so cannot be reinstalled").
+                                   c_str());
+            }
+        } else {
+            // For regular package names, use standard lookup
+            AptResult result = find_install_package(cache, req, pkg);
+            if (result.code != APT_SUCCESS) {
+                return result;
+            }
+        }
+
+        // Check if package is installed
+        if (pkg->CurrentVer == 0) {
+            return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                               (std::string("Package ") + pkg.Name() + " is not installed, so cannot be reinstalled").
+                               c_str());
+        }
+
+        if (!is_rpm_file(raw)) {
+            pkgCache::VerIterator currentVer = pkg.CurrentVer();
+            if (!currentVer.Downloadable()) {
+                return make_result(APT_ERROR_DOWNLOAD_FAILED,
+                                   (std::string("Reinstallation of ") + pkg.Name() + " " +
+                                    currentVer.VerStr() + " is not possible, it cannot be downloaded").c_str());
+            }
+        }
+
+        requested_reinstall.insert(pkg.Name());
+        cache->dep_cache->SetReInstall(pkg, true);
     }
 
     return make_result(APT_SUCCESS, nullptr);
@@ -285,147 +371,6 @@ resolve_virtual_remove_package(AptCache *cache, const RequirementSpec &req, pkgC
     return make_result(APT_SUCCESS, nullptr);
 }
 
-// Check if a package is needed by any installed packages (excluding packages marked for removal)
-static bool is_package_needed_by_others(AptCache *cache, pkgCache::PkgIterator candidate_pkg,
-                                        const std::set<pkgCache::PkgIterator> &being_removed) {
-    for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-        pkgCache::VerIterator cur = it.CurrentVer();
-        if (cur.end()) continue;
-
-        if (being_removed.find(it) != being_removed.end()) continue;
-
-        pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
-        if (it_st.Delete()) continue;
-
-        for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
-            if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
-
-            if (dep.TargetPkg() == candidate_pkg) {
-                return true;
-            }
-
-            pkgCache::VerIterator candidate_ver = candidate_pkg.CurrentVer();
-            if (!candidate_ver.end()) {
-                for (pkgCache::PrvIterator prv = candidate_ver.ProvidesList(); !prv.end(); ++prv) {
-                    if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
-
-// Check if any of the packages being removed depend on the candidate package
-static bool was_package_needed_by_removed(pkgCache::PkgIterator candidate_pkg,
-                                          const std::set<pkgCache::PkgIterator> &being_removed) {
-    for (const auto &removed_pkg: being_removed) {
-        pkgCache::VerIterator removed_ver = removed_pkg.CurrentVer();
-        if (removed_ver.end()) continue;
-
-        for (pkgCache::DepIterator dep = removed_ver.DependsList(); !dep.end(); ++dep) {
-            if (dep->Type != pkgCache::Dep::Depends && dep->Type != pkgCache::Dep::PreDepends) continue;
-
-            if (dep.TargetPkg() == candidate_pkg) {
-                return true;
-            }
-
-            pkgCache::VerIterator candidate_ver = candidate_pkg.CurrentVer();
-            if (!candidate_ver.end()) {
-                for (pkgCache::PrvIterator prv = candidate_ver.ProvidesList(); !prv.end(); ++prv) {
-                    if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
-
-static void mark_orphan_packages_for_removal(AptCache *cache, const std::set<pkgCache::PkgIterator> &being_removed,
-                                             bool purge) {
-    std::set<pkgCache::PkgIterator> orphans_to_check;
-
-    // Find all auto-installed packages that might become orphans
-    for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-        pkgCache::VerIterator cur = it.CurrentVer();
-        if (cur.end()) continue;
-
-        if (being_removed.find(it) != being_removed.end()) continue;
-
-        pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
-        if (it_st.Delete()) continue;
-
-        if ((it->Flags & pkgCache::Flag::Essential) != 0) continue;
-
-        if ((it->Flags & pkgCache::Flag::Auto) != 0 &&
-            was_package_needed_by_removed(it, being_removed)) {
-            orphans_to_check.insert(it);
-        }
-    }
-
-    for (const auto &candidate: orphans_to_check) {
-        if (!is_package_needed_by_others(cache, candidate, being_removed)) {
-            cache->dep_cache->MarkDelete(candidate, purge);
-        }
-    }
-}
-
-//static void mark_dependent_packages_for_removal(AptCache* cache, pkgCache::PkgIterator initial_pkg, bool purge) {
-//    std::set<pkgCache::PkgIterator> to_remove;
-//    std::set<pkgCache::PkgIterator> processed;
-//    to_remove.insert(initial_pkg);
-//
-//    while (!to_remove.empty()) {
-//        pkgCache::PkgIterator current = *to_remove.begin();
-//        to_remove.erase(to_remove.begin());
-//
-//        if (processed.find(current) != processed.end()) continue;
-//        processed.insert(current);
-//
-//        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-//            if (processed.find(it) != processed.end()) continue;
-//
-//            pkgCache::VerIterator cur = it.CurrentVer();
-//            if (cur.end()) continue;
-//
-//            pkgDepCache::StateCache &it_st = (*cache->dep_cache)[it];
-//            if (it_st.Delete()) continue;
-//
-//            bool depends_on_current = false;
-//            for (pkgCache::DepIterator dep = cur.DependsList(); !dep.end(); ++dep) {
-//                if (dep->Type != pkgCache::Dep::Depends &&
-//                    dep->Type != pkgCache::Dep::PreDepends) continue;
-//
-//                if (dep.TargetPkg() == current) {
-//                    depends_on_current = true;
-//                    break;
-//                }
-//
-//                pkgCache::VerIterator cur_ver = current.CurrentVer();
-//                if (!cur_ver.end()) {
-//                    for (pkgCache::PrvIterator prv = cur_ver.ProvidesList(); !prv.end(); ++prv) {
-//                        if (strcmp(prv.Name(), dep.TargetPkg().Name()) == 0) {
-//                            depends_on_current = true;
-//                            break;
-//                        }
-//                    }
-//                }
-//                if (depends_on_current) break;
-//            }
-//
-//            if (depends_on_current) {
-//                if ((it->Flags & pkgCache::Flag::Essential) == 0) {
-//                    cache->dep_cache->MarkDelete(it, purge);
-//                    to_remove.insert(it);
-//                }
-//            }
-//        }
-//    }
-//}
-
 AptResult process_package_removals(AptCache *cache,
                                    const char **remove_names,
                                    size_t remove_count,
@@ -480,7 +425,7 @@ AptResult process_package_removals(AptCache *cache,
 }
 
 // Check for package conflicts ONLY between explicitly requested packages
-AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& requested_install) {
+AptResult check_package_conflicts(AptCache *cache, const std::set<std::string> &requested_install) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
     }
@@ -488,23 +433,23 @@ AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& 
     if (requested_install.size() < 2) {
         return make_result(APT_SUCCESS, nullptr);
     }
-    
+
     std::vector<pkgCache::PkgIterator> requested_packages;
-    
-    for (const auto& name : requested_install) {
+
+    for (const auto &name: requested_install) {
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(name.c_str());
         if (!pkg.end()) {
             requested_packages.push_back(pkg);
         }
     }
-    
+
     for (size_t i = 0; i < requested_packages.size(); i++) {
         pkgCache::PkgIterator pkg1 = requested_packages[i];
-        pkgDepCache::StateCache& state1 = (*cache->dep_cache)[pkg1];
-        
+        pkgDepCache::StateCache &state1 = (*cache->dep_cache)[pkg1];
+
         pkgCache::VerIterator ver1 = state1.CandidateVerIter(*cache->dep_cache);
         if (ver1.end()) continue;
-        
+
         for (pkgCache::DepIterator dep = ver1.DependsList(); !dep.end(); ++dep) {
             if (dep->Type != pkgCache::Dep::Conflicts) continue;
 
@@ -518,7 +463,7 @@ AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& 
                 if (j != i && requested_packages[j] == target_pkg) {
                     target_is_requested = true;
                     // Get the candidate version of the target package
-                    pkgDepCache::StateCache& target_state = (*cache->dep_cache)[target_pkg];
+                    pkgDepCache::StateCache &target_state = (*cache->dep_cache)[target_pkg];
                     target_ver = target_state.CandidateVerIter(*cache->dep_cache);
                     break;
                 }
@@ -526,14 +471,15 @@ AptResult check_package_conflicts(AptCache* cache, const std::set<std::string>& 
 
             if (target_is_requested && !target_ver.end()) {
                 if (cache->dep_cache->VS().CheckDep(target_ver.VerStr(), dep)) {
-                    std::string error_msg = "Conflicting packages: " + std::string(pkg1.Name()) + " and " + std::string(target_pkg.Name());
+                    std::string error_msg = "Conflicting packages: " + std::string(pkg1.Name()) + " and " + std::string(
+                                                target_pkg.Name());
 
                     return make_result(APT_ERROR_DEPENDENCY_BROKEN, error_msg.c_str());
                 }
             }
         }
     }
-    
+
     return make_result(APT_SUCCESS, nullptr);
 }
 
@@ -616,7 +562,8 @@ AptResult preprocess_removals(AptCache *cache, const std::set<std::string> &requ
     return make_result(APT_SUCCESS, nullptr);
 }
 
-AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::string> &requested_install, const std::set<std::string> &requested_remove, bool remove_depends) {
+AptResult finalize_dependency_resolution(AptCache *cache, const std::set<std::string> &requested_install,
+                                         const std::set<std::string> &requested_remove, bool remove_depends) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid cache");
     }
@@ -749,6 +696,12 @@ void collect_package_changes(AptCache *cache,
                 extra_removed.push_back(iter.Name());
             }
             if (st.InstallVer != 0) install_size -= st.InstallVer->InstalledSize;
+        } else if ((st.iFlags & pkgDepCache::ReInstall) != 0) {
+            new_installed.push_back(iter.Name());
+            pkgCache::VerIterator currentVer = iter.CurrentVer();
+            if (!currentVer.end()) {
+                download_size += currentVer->Size;
+            }
         }
     }
 }

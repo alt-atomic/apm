@@ -1,0 +1,21 @@
+#!/usr/bin/bash -ex
+
+mkdir -p .gear
+cp -a build-aux/altlinux/rules ./.gear/
+
+version=$(./build-aux/get_meson_version)
+release=1.$(date +%s)
+
+sed -e "s/@VERSION@/${version}/g" \
+    -e "s/@RELEASE@/${release}/g" \
+    build-aux/altlinux/apm.spec.in > apm.spec
+
+add_changelog apm.spec -e '- Regular build.'
+
+go mod vendor
+
+cat <<EOF > ./scripts/get-version.sh
+#!/bin/bash
+
+echo -n $(./scripts/get-version.sh $version)
+EOF

@@ -1,5 +1,13 @@
 #include "apt_internal.h"
 
+#include <apt-pkg/error.h>
+#include <apt-pkg/pkgrecords.h>
+
+#include <cstdlib>
+#include <cstring>
+#include <regex.h>
+#include <set>
+
 AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageList *result) {
     if (!cache || !cache->dep_cache || !pattern || !result) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for search");
@@ -149,7 +157,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                         std::string record(rec_start, rec_stop - rec_start);
 
                         // Version
-                        std::string record_version; {
+                        std::string record_version;
+                        {
                             size_t pos = record.find("Version: ");
                             if (pos != std::string::npos) {
                                 size_t start = pos + 9;
@@ -159,7 +168,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                             }
                         }
                         // Architecture
-                        std::string record_arch; {
+                        std::string record_arch;
+                        {
                             size_t pos = record.find("Architecture: ");
                             if (pos != std::string::npos) {
                                 size_t start = pos + 14;
@@ -170,7 +180,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                         }
 
                         // Provides
-                        std::string record_provides; {
+                        std::string record_provides;
+                        {
                             size_t pos = record.find("Provides: ");
                             if (pos != std::string::npos) {
                                 size_t start = pos + 10;
@@ -266,7 +277,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                     std::set<std::string> dep_names;
                                     for (pkgCache::DepIterator dep = Ver.DependsList(); !dep.end(); ++dep) {
                                         if (dep->Type != pkgCache::Dep::Depends && dep->Type !=
-                                            pkgCache::Dep::PreDepends) continue;
+                                            pkgCache::Dep::PreDepends)
+                                            continue;
                                         pkgCache::PkgIterator tpkg = dep.TargetPkg();
                                         if (!tpkg.end() && tpkg.Name() != nullptr) {
                                             dep_names.insert(tpkg.Name());

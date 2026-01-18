@@ -30,8 +30,8 @@ meson install -C build
 
 ## Переводы
 ```
-sh ./po/update_pot.sh
-sh ./po/update_po.sh
+./po/create_pot
+./po/update_po ru
 ```
 
 ## Настройки темы

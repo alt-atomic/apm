@@ -1,5 +1,5 @@
 project('apm', 'cpp',
-  version: '0.2.6',
+  version: '0.3.0',
   meson_version: '>= 1.0.0',
   default_options: [
     'warning_level=2',
@@ -27,18 +27,24 @@ apt_dep = declare_dependency(include_directories: apt_inc, dependencies: [apt_li
 
 SERVICE_ID = 'org.altlinux.APM'
 
+varapmdir = get_option('localstatedir') / 'lib' / meson.project_name()
+confapmdir = get_option('sysconfdir') / meson.project_name()
+varcacheapmdir = get_option('localstatedir') / 'cache' / meson.project_name()
+
 COMMAND_PREFIX = ''
 PROFILE = get_option('profile')
 LOCALES_DIR = get_option('prefix') / get_option('localedir')
-DBSQL_FILEPATH = get_option('localstatedir') / 'lib' / meson.project_name() / meson.project_name() + '.db'
-IMAGE_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'image.yml'
-RESOURCES_FILEPATH = get_option('sysconfdir') / meson.project_name() / 'resources'
+DBSQL_FILEPATH = varapmdir / meson.project_name() + '.db'
+CONTAINERFILE_FILEPATH = varcacheapmdir / 'Containerfile'
+IMAGE_FILEPATH = confapmdir / 'image.yml'
+RESOURCES_FILEPATH = confapmdir / 'resources'
 
 constants = [
   ['apm/internal/common/app.BuildCommandPrefix', COMMAND_PREFIX],
   ['apm/internal/common/app.BuildEnvironment', PROFILE],
   ['apm/internal/common/app.BuildPathLocales', LOCALES_DIR],
   ['apm/internal/common/app.BuildPathDBSQLSystem', DBSQL_FILEPATH],
+  ['apm/internal/common/app.BuildPathContainerFile', CONTAINERFILE_FILEPATH],
   ['apm/internal/common/app.BuildPathImageFile', IMAGE_FILEPATH],
   ['apm/internal/common/app.BuildPathResourcesDir', RESOURCES_FILEPATH],
   ['apm/internal/common/app.BuildVersion', version],
@@ -51,6 +57,10 @@ endforeach
 
 subdir('po')
 subdir('data')
+
+install_emptydir(varapmdir)
+install_emptydir(varcacheapmdir)
+install_emptydir(confapmdir)
 
 custom_target(
   'go-build',

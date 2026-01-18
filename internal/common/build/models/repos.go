@@ -1,164 +1,105 @@
+/*
+ * Copyright (C) 2026 Vladimir Romanov <rirusha@altlinux.org>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see
+ * <https://www.gnu.org/licenses/gpl-3.0-standalone.html>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
 package models
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/osutils"
 	"context"
 	"fmt"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 )
 
-var (
-	goodBranches = []string{
-		"sisyphus",
-		// "p11",
-	}
-	aptSourcesList  = "/etc/apt/sources.list"
-	aptSourcesListD = "/etc/apt/sources.list.d"
-)
-
 type ReposBody struct {
-	// Очистить репозитории
+	// Очистить все репозитории
 	Clean bool `yaml:"clean,omitempty" json:"clean,omitempty"`
 
 	// Кастомные записи в sources.list
-	Custom []string `yaml:"custom,omitempty" json:"custom,omitempty" needs:"Name"`
+	Custom []string `yaml:"custom,omitempty" json:"custom,omitempty"`
 
-	// Ветка репозитория ALT. Сейчас доступен только sisyphus
-	Branch string `yaml:"branch,omitempty" json:"branch,omitempty" needs:"Name"`
+	// Ветка репозитория ALT. Закомментирует остальные репозитории, для очистки есть clean
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
 
-	// Дата в формате YYYY.MM.DD. Если пуст, берется обычныц репозиторий. Может быть latest
+	// Дата в формате YYYYMMDD или YYYY/MM/DD. Если пуст, берется обычный репозиторий. Может быть latest
 	Date string `yaml:"date,omitempty" json:"date,omitempty" needs:"Branch"`
 
 	// Задачи для подключения в качестве репозиториев
-	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty" needs:"Name"`
+	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 
 	// Имя файла репозиториев
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" depricated:"0.4.0"`
 
 	// Не обновлять базу данных после сохранения репозиториев
 	NoUpdate bool `yaml:"no-update,omitempty" json:"no-update,omitempty"`
-}
 
-func (b *ReposBody) AllRepos() []string {
-	var repos []string
-	repos = append(repos, b.Custom...)
-	repos = append(repos, b.TasksRepos()...)
-	repos = append(repos, b.BranchRepos()...)
-	return repos
-}
-
-func (b *ReposBody) TasksRepos() []string {
-	var repos []string
-	var templates []string
-
-	switch runtime.GOARCH {
-	case "amd64":
-		templates = append(templates, "rpm http://git.altlinux.org repo/%s/x86_64 task")
-	case "arm64", "aarch64":
-		templates = append(templates, "rpm http://git.altlinux.org repo/%s/aarch64 task")
-	default:
-		return []string{}
-	}
-
-	for _, task := range b.Tasks {
-		for _, template := range templates {
-			repos = append(repos, fmt.Sprintf(template, task))
-		}
-	}
-
-	return repos
-}
-
-func (b *ReposBody) BranchRepos() []string {
-	if b.Branch == "" {
-		return []string{}
-	}
-
-	var repos []string
-	repoArchs := []string{}
-
-	switch runtime.GOARCH {
-	case "amd64":
-		repoArchs = append(repoArchs, "x86_64", "noarch", "x86_64-i586")
-	case "arm64", "aarch64":
-		repoArchs = append(repoArchs, "aarch64", "noarch")
-	default:
-		return []string{}
-	}
-
-	if b.Date == "" {
-		branchName := ""
-		if b.Branch == "sisyphus" {
-			branchName = osutils.Capitalize(b.Branch)
-		} else {
-			branchName = b.Branch
-		}
-		for _, arch := range repoArchs {
-			repos = append(repos, fmt.Sprintf("rpm [alt] https://ftp.altlinux.org/pub/distributions ALTLinux/%s/%s classic", branchName, arch))
-		}
-	} else {
-		for _, arch := range repoArchs {
-			repos = append(repos, fmt.Sprintf("rpm [alt] https://ftp.altlinux.org/pub/distributions/archive %s/%s/%s classic", b.Branch, fmt.Sprintf("date/%s", strings.ReplaceAll(b.Date, ".", "/")), arch))
-		}
-	}
-
-	return repos
+	// Очистить временные репозитории
+	CleanTemporary bool `yaml:"clean-temporary,omitempty" json:"clean-temporary,omitempty" conflicts:"Clean"`
 }
 
 func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
-	if b.Branch != "" && !slices.Contains(goodBranches, b.Branch) {
+	var repoSvc = svc.RepoService()
+
+	if b.Branch != "" && !slices.Contains(repoSvc.GetBranches(), b.Branch) {
 		return nil, fmt.Errorf(app.T_("unknown branch %s"), b.Branch)
 	}
 
 	if b.Clean {
-		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesListD))
-		if err := filepath.Walk(aptSourcesListD, func(p string, _ os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if p != aptSourcesListD {
-				if err = os.RemoveAll(p); err != nil {
-					return err
-				}
-			}
-			return nil
-		}); err != nil {
+		removed, err := repoSvc.RemoveRepository(ctx, []string{"all"}, "", true)
+		if err != nil {
 			return nil, err
 		}
-
-		app.Log.Info(fmt.Sprintf("Cleaning repos in %s", aptSourcesList))
-		if err := os.WriteFile(aptSourcesList, []byte("\n"), 0644); err != nil {
+		app.Log.Info(fmt.Sprintf("Cleaned all repos: \n%s", strings.Join(removed, ",\n")))
+	} else if b.CleanTemporary {
+		removed, err := repoSvc.CleanTemporary(ctx)
+		if err != nil {
 			return nil, err
 		}
+		app.Log.Info(fmt.Sprintf("Cleaned temporary repos: \n%s", strings.Join(removed, ",\n")))
 	}
 
-	allRepos := b.AllRepos()
-	if len(allRepos) == 0 {
-		return nil, nil
+	if b.Branch != "" {
+		added, _, err := repoSvc.SetBranch(ctx, b.Branch, b.Date)
+		if err != nil {
+			return nil, err
+		}
+		app.Log.Info(fmt.Sprintf("Added repos for branch %s: \n%s", b.Branch, strings.Join(added, ",\n")))
 	}
 
-	sourcesPath := path.Join(
-		aptSourcesListD,
-		fmt.Sprintf("%s.list", strings.ReplaceAll(b.Name, " ", "-")),
-	)
-	app.Log.Info(fmt.Sprintf("Setting repos to %s", sourcesPath))
-
-	if err := svc.InstallPackages(ctx, []string{"ca-certificates"}); err != nil {
-		return nil, err
-	}
-
-	if err := os.WriteFile(sourcesPath, []byte(strings.Join(allRepos, "\n")+"\n"), 0644); err != nil {
-		return nil, err
+	for _, source := range append(b.Custom, b.Tasks...) {
+		added, err := repoSvc.AddRepository(ctx, []string{source}, "")
+		if err != nil {
+			return nil, err
+		}
+		if len(added) > 0 {
+			app.Log.Info(fmt.Sprintf("Added repo: %s", strings.Join(added, ", ")))
+		}
 	}
 
 	if !b.NoUpdate {
-		return nil, svc.UpdatePackages(ctx)
+		if err := svc.UpdatePackages(ctx); err != nil {
+			return nil, err
+		}
+
+		if err := svc.InstallPackages(ctx, []string{"ca-certificates"}); err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil

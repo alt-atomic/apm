@@ -1,0 +1,4 @@
+#Type   Path            Mode    User    Group   Age Argument
+d       @VARAPMDIR@    0755    root    root    -
+d       @CONFAPMDIR@        0755    root    root    -
+d       @VARCACHEAPMDIR@  0755    root    root    -

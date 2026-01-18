@@ -18,23 +18,25 @@ package app
 
 // Build-time переменные (заполняются через -ldflags при сборке)
 var (
-	BuildCommandPrefix    string
-	BuildEnvironment      string
-	BuildPathLocales      string
-	BuildPathDBSQLSystem  string
-	BuildPathImageFile    string
-	BuildPathResourcesDir string
-	BuildVersion          string
+	BuildCommandPrefix     string
+	BuildEnvironment       string
+	BuildPathLocales       string
+	BuildPathDBSQLSystem   string
+	BuildPathContainerFile string
+	BuildPathImageFile     string
+	BuildPathResourcesDir  string
+	BuildVersion           string
 )
 
 func GetBuildInfo() BuildInfo {
 	return BuildInfo{
-		CommandPrefix:    BuildCommandPrefix,
-		Environment:      BuildEnvironment,
-		PathLocales:      BuildPathLocales,
-		PathDBSQLSystem:  BuildPathDBSQLSystem,
-		PathImageFile:    BuildPathImageFile,
-		PathResourcesDir: BuildPathResourcesDir,
-		Version:          BuildVersion,
+		CommandPrefix:     BuildCommandPrefix,
+		Environment:       BuildEnvironment,
+		PathLocales:       BuildPathLocales,
+		PathDBSQLSystem:   BuildPathDBSQLSystem,
+		PathContainerFile: BuildPathContainerFile,
+		PathImageFile:     BuildPathImageFile,
+		PathResourcesDir:  BuildPathResourcesDir,
+		Version:           BuildVersion,
 	}
 }

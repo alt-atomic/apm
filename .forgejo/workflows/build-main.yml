@@ -1,0 +1,91 @@
+name: Main
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  lint-go:
+    name: Check go files
+    runs-on: alt-sisyphus
+    container:
+      image: altlinux.space/alt-gnome/coding-style-image:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # TODO: Add lint check
+      - name: Lint go files
+        run: echo 'Trust me bro'
+
+  build:
+    name: Test build
+    runs-on: alt-sisyphus
+    needs:
+      - lint-go
+
+    steps:
+      - name: Install deps
+        run: |
+          apt-get update
+          apt-get install -y \
+            golang \
+            meson \
+            gcc-c++ \
+            libapt-devel \
+            'pkgconfig(systemd)'
+ 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup
+        run: meson setup _build
+
+      - name: Build
+        run: meson compile -C _build
+
+  rpm-build:
+    name: RPM build for ${{ matrix.branch }} and uploading
+    runs-on: alt-sisyphus
+    container:
+      image: altlinux.space/rirusha/riru-build-image:latest
+
+    strategy:
+      matrix:
+        branch:
+          - sisyphus
+          - p11
+    needs:
+      - lint-vala
+      - lint-blueprint
+
+    steps:
+      - name: Install utils
+        run: |
+          apt-get update
+          apt-get install -y meson jq /usr/bin/add_changelog golang
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare RPM build
+        run: |
+          ./build-aux/altlinux/prepare
+          git add .
+
+      - uses: alt-gnome/build-rpm-action@main
+        name: Build RPMs
+        with:
+          branch: ${{ matrix.branch }}
+
+      - uses: alt-gnome/upload-rpm-action@main
+        name: Upload RPMs
+        if: github.event_name != 'pull_request'
+        with:
+          directory: ~/.cache/hasherc/apm/out/RPMS
+          token: ${{ secrets.REGISTRY_TOKEN }}
+          group: apm-nightly/${{ matrix.branch }}

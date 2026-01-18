@@ -188,6 +188,30 @@ func AppendFile(sourcePath, destPath string, perm fs.FileMode) error {
 	return nil
 }
 
+func PrependFile(sourcePath, destPath string, perm fs.FileMode) error {
+	sourceData, err := os.ReadFile(sourcePath)
+	if err != nil {
+		return err
+	}
+
+	destData, err := os.ReadFile(destPath)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		destData = nil
+	}
+
+	newContent := append(sourceData, destData...)
+
+	err = os.WriteFile(destPath, newContent, perm)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type Writer struct {
 	RealWriter       io.Writer
 	RealOutputWriter io.Writer
@@ -236,7 +260,7 @@ func ExecShWithDivider(
 	divider string,
 	quiet bool,
 ) (string, string, error) {
-	cmd := exec.CommandContext(ctx, "bash", "-c", command+fmt.Sprintf("\necho '%s'\n%s", divider, commandOutput))
+	cmd := exec.CommandContext(ctx, "bash", "-c", "set -e\n"+command+fmt.Sprintf("\necho '%s'\n%s", divider, commandOutput))
 
 	// Если нужен вывод в консоль И в переменную
 	var cmdout bytes.Buffer

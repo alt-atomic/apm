@@ -70,6 +70,13 @@ func (s *HostConfigService) LoadConfig() error {
 	if cfg, err = core.ReadAndParseConfigYamlFile(s.pathImageFile); err != nil {
 		return err
 	}
+
+	// Рекурсивная валидация всех include файлов
+	basePath := s.hostImageService.appConfig.PathResourcesDir
+	if err = core.ValidateConfigRecursive(&cfg, basePath); err != nil {
+		return err
+	}
+
 	s.Config = &cfg
 	return nil
 }

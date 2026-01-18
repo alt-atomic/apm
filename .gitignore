@@ -28,3 +28,6 @@ go.work.sum
 .env
 /internal/common/binding/apt-pkg/
 /builddir/
+
+# Po
+po/apm.pot

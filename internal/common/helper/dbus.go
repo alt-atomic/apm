@@ -315,6 +315,81 @@ func GetSystemIntrospectXML(isAtomic bool) string {
   </interface>`
 	}
 
+	// Добавляем repo интерфейс (доступен всегда)
+	baseSystemXML += `
+
+  <interface name="org.altlinux.APM.repo">
+
+    <method name="List">
+      <arg direction="in" type="b" name="all"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Add">
+      <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Remove">
+      <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Set">
+      <arg direction="in" type="s" name="branch"/>
+      <arg direction="in" type="s" name="date"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="Clean">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="GetBranches">
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="GetTaskPackages">
+      <arg direction="in" type="s" name="taskNum"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="SimulateAdd">
+      <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="SimulateRemove">
+      <arg direction="in" type="s" name="source"/>
+      <arg direction="in" type="s" name="date"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="SimulateSet">
+      <arg direction="in" type="s" name="branch"/>
+      <arg direction="in" type="s" name="date"/>
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+    <method name="SimulateClean">
+      <arg direction="in" type="s" name="transaction"/>
+      <arg direction="out" type="s" name="result"/>
+    </method>
+
+  </interface>`
+
 	baseSystemXML += `
 ` + introspect.IntrospectDataString + `</node>`
 

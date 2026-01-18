@@ -26,6 +26,7 @@ internal/common/reply/event.go
 internal/common/reply/preloader.go
 internal/common/reply/response.go
 internal/common/reply/translate.go
+internal/common/wrapper/wrapper.go
 internal/distrobox/actions.go
 internal/distrobox/commands.go
 internal/distrobox/dbus.go
@@ -38,6 +39,9 @@ internal/distrobox/service/ubuntu.go
 internal/kernel/actions.go
 internal/kernel/commands.go
 internal/kernel/service/kernel.go
+internal/repo/actions.go
+internal/repo/commands.go
+internal/repo/service/repo.go
 internal/system/actions.go
 internal/system/commands.go
 internal/system/dbus.go

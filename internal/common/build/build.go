@@ -24,6 +24,7 @@ import (
 	"apm/internal/common/osutils"
 	"apm/internal/common/version"
 	"apm/internal/kernel/service"
+	_repo_service "apm/internal/repo/service"
 	"context"
 	"errors"
 	"fmt"
@@ -37,15 +38,17 @@ type ConfigService struct {
 	serviceAptActions *_package.Actions
 	serviceDBService  *_package.PackageDBService
 	kernelManager     *service.Manager
+	repoService       *_repo_service.RepoService
 	serviceHostConfig *HostConfigService
 }
 
-func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, hostConfig *HostConfigService) *ConfigService {
+func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, repoService *_repo_service.RepoService, hostConfig *HostConfigService) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
 		serviceAptActions: aptActions,
 		serviceDBService:  dBService,
 		kernelManager:     kernelManager,
+		repoService:       repoService,
 		serviceHostConfig: hostConfig,
 	}
 }
@@ -218,6 +221,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		packagesRemove,
 		false,
 		false,
+		false,
 	)
 	if errFind != nil {
 		return errFind
@@ -263,6 +267,10 @@ func (cfgService *ConfigService) UpgradePackages(ctx context.Context) error {
 
 func (cfgService *ConfigService) KernelManager() *service.Manager {
 	return cfgService.kernelManager
+}
+
+func (cfgService *ConfigService) RepoService() *_repo_service.RepoService {
+	return cfgService.repoService
 }
 
 func (cfgService *ConfigService) ResourcesDir() string {

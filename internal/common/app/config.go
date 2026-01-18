@@ -39,13 +39,14 @@ type Manager interface {
 
 // BuildInfo информация интегрированная через сборку meson
 type BuildInfo struct {
-	CommandPrefix    string
-	Environment      string
-	PathLocales      string
-	PathDBSQLSystem  string
-	PathImageFile    string
-	PathResourcesDir string
-	Version          string
+	CommandPrefix     string
+	Environment       string
+	PathLocales       string
+	PathDBSQLSystem   string
+	PathContainerFile string
+	PathImageFile     string
+	PathResourcesDir  string
+	Version           string
 }
 
 // Colors конфигурация цветовой схемы
@@ -76,9 +77,10 @@ type Configuration struct {
 	PathLocales     string `yaml:"pathLocales"`
 	Colors          Colors `yaml:"colors"`
 
-	PathImageFile    string `yaml:"-"`
-	PathResourcesDir string `yaml:"-"`
-	Version          string `yaml:"-"`
+	PathContainerFile string `yaml:"-"`
+	PathImageFile     string `yaml:"-"`
+	PathResourcesDir  string `yaml:"-"`
+	Version           string `yaml:"-"`
 
 	// Runtime flags
 	ExistStplr     bool   `yaml:"-"`
@@ -156,6 +158,9 @@ func (cm *configManagerImpl) applyBuildInfo(buildInfo BuildInfo) {
 	}
 	if buildInfo.PathDBSQLSystem != "" {
 		cm.config.PathDBSQLSystem = buildInfo.PathDBSQLSystem
+	}
+	if buildInfo.PathContainerFile != "" {
+		cm.config.PathContainerFile = buildInfo.PathContainerFile
 	}
 	if buildInfo.PathImageFile != "" {
 		cm.config.PathImageFile = buildInfo.PathImageFile
@@ -254,7 +259,7 @@ func (cm *configManagerImpl) GetResourcesDir() string {
 
 // GetPathImageContainerFile возвращает путь к файлу для сборки контейнера
 func (cm *configManagerImpl) GetPathImageContainerFile() string {
-	return "/var/lib/apm/Containerfile"
+	return cm.config.PathContainerFile
 }
 
 // SetFormat устанавливает формат вывода

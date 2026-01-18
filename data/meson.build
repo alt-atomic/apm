@@ -39,6 +39,20 @@ configure_file(
 systemd = dependency('systemd')
 systemd_system_unit_dir = systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
 
+systemd_tmpfiles_dir = systemd.get_variable(pkgconfig: 'tmpfiles_dir')
+
+tmpfiles_conf = configuration_data()
+tmpfiles_conf.set('VARAPMDIR', varapmdir)
+tmpfiles_conf.set('CONFAPMDIR', confapmdir)
+
+configure_file(
+  input: meson.project_name() + '.tmpfiles.in',
+  output: meson.project_name() + '.conf',
+  configuration: tmpfiles_conf,
+  install: true,
+  install_dir: systemd_tmpfiles_dir
+)
+
 configure_file(
   input: meson.project_name() + '.service.in',
   output: meson.project_name() + '.service',
@@ -66,4 +80,18 @@ zsh_completion_dir = get_option('datadir') / 'zsh' / 'site-functions'
 install_data(
   'completion/zsh/_apm',
   install_dir: zsh_completion_dir
+)
+
+# --- APT bridge configuration ---
+apt_conf_dir = get_option('sysconfdir') / 'apt' / 'apt.conf.d'
+apt_scripts_dir = get_option('datadir') / 'apt' / 'scripts'
+
+install_data(
+  'apt-bridge/99-apm-update.conf',
+  install_dir: apt_conf_dir
+)
+
+install_data(
+  'apt-bridge/update-apm.lua',
+  install_dir: apt_scripts_dir
 )

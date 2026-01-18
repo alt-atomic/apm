@@ -24,6 +24,7 @@ import (
 	"apm/internal/common/build"
 	"apm/internal/common/reply"
 	_kservice "apm/internal/kernel/service"
+	_repo_service "apm/internal/repo/service"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
 	"context"
@@ -140,6 +141,11 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 		return nil, errors.New(app.T_("You must specify at least one package"))
 	}
 
+	err := a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
 	if errPrepare != nil {
 		return nil, errPrepare
@@ -149,6 +155,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 		ctx,
 		packagesInstall,
 		packagesRemove,
+		false,
 		false,
 		false,
 	)
@@ -183,7 +190,8 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 		return nil, errPackageNotFound
 	}
 
-	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx, []string{}, packages, purge, depends)
+	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx,
+		[]string{}, packages, purge, depends, false)
 	if errFind != nil {
 		return nil, errFind
 	}
@@ -265,6 +273,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		ctx,
 		packagesInstall,
 		packagesRemove,
+		false,
 		false,
 		false,
 	)
@@ -356,6 +365,134 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 	return &resp, nil
 }
 
+// CheckReinstall проверяем пакеты перед переустановкой
+func (a *Actions) CheckReinstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
+	if len(packages) == 0 {
+		return nil, errors.New(app.T_("You must specify at least one package"))
+	}
+
+	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
+	if errPrepare != nil {
+		return nil, errPrepare
+	}
+
+	_, _, _, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesInstall,
+		packagesRemove,
+		false,
+		false,
+		true,
+	)
+	if errFind != nil {
+		return nil, errFind
+	}
+
+	return &reply.APIResponse{
+		Data: CheckResponse{
+			Message: app.T_("Inspection information"),
+			Info:    *packageParse,
+		},
+		Error: false,
+	}, nil
+}
+
+// Reinstall осуществляет переустановку системного пакета.
+func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool) (*reply.APIResponse, error) {
+	err := a.checkOverlay(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.validateDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(packages) == 0 {
+		errPackageNotFound := errors.New(app.T_("You must specify at least one package"))
+		return nil, errPackageNotFound
+	}
+
+	packagesInstall, _, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
+	if errPrepare != nil {
+		return nil, errPrepare
+	}
+
+	packagesInstall, _, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesInstall,
+		nil,
+		false,
+		false,
+		true,
+	)
+	if errFind != nil {
+		return nil, errFind
+	}
+
+	if packageParse.NewInstalledCount == 0 {
+		return &reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": app.T_("The operation will not make any changes"),
+			},
+			Error: false,
+		}, nil
+	}
+
+	if !confirm {
+		reply.StopSpinnerForDialog(a.appConfig)
+
+		dialogStatus, errDialog := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionInstall)
+		if errDialog != nil {
+			return nil, errDialog
+		}
+
+		if !dialogStatus {
+			errDialog = errors.New(app.T_("Cancel dialog"))
+			return nil, errDialog
+		}
+
+		reply.CreateSpinner(a.appConfig)
+	}
+
+	errReinstall := a.serviceAptActions.ReinstallPackages(ctx, packagesInstall)
+	if errReinstall != nil {
+		var matchedErr *apt.MatchedError
+		if errors.As(errReinstall, &matchedErr) && matchedErr.NeedUpdate() {
+			_, err = a.serviceAptActions.Update(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			errAptRepo := errors.New(app.T_("A repository connection error occurred. The package list has been updated, please try running the command again"))
+			return nil, errAptRepo
+		}
+
+		return nil, errReinstall
+	}
+
+	err = a.updateAllPackagesDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	messageAnswer := fmt.Sprintf(
+		app.TN_("%d package successfully reinstalled", "%d packages successfully reinstalled", packageParse.NewInstalledCount),
+		packageParse.NewInstalledCount,
+	)
+
+	resp := reply.APIResponse{
+		Data: InstallRemoveResponse{
+			Message: messageAnswer,
+			Info:    *packageParse,
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
 // Update обновляет информацию или базу данных пакетов.
 func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
@@ -416,7 +553,8 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 
 	aptActions := _binding.NewActions()
 	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
-	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, a.serviceHostConfig)
+	repoService := _repo_service.NewRepoService(a.appConfig)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, repoService, a.serviceHostConfig)
 	err = buildService.Build(ctx)
 	if err != nil {
 		return nil, err
@@ -753,11 +891,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageApply применить изменения к хосту
 func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
-	err := a.checkOverlay(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+	var err error
 	if err = a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, err
 	}
