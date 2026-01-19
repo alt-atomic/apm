@@ -476,11 +476,11 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.Pack
 	return
 }
 
-func (a *Actions) Update(ctx context.Context) ([]Package, error) {
+func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Update"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Update"))
 
-	err := a.AptUpdate(ctx)
+	err := a.AptUpdate(ctx, noLock...)
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +498,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		asMap[c.PkgName] = c
 	}
 
-	aptPackages, err := a.serviceAptBinding.Search("")
+	aptPackages, err := a.serviceAptBinding.Search("", noLock...)
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +588,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	//}
 
 	// @TODO Обновляем информацию о том, установлены ли пакеты локально, на самом деле об этом можно узнать из биндингов
-	packages, err = a.updateInstalledInfo(ctx, packages)
+	packages, err = a.updateInstalledInfo(ctx, packages, noLock...)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Error updating information about installed packages: %w"), err)
 	}
@@ -602,8 +602,8 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 }
 
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
-func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) ([]Package, error) {
-	installed, err := a.GetInstalledPackages(ctx)
+func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package, noLock ...bool) ([]Package, error) {
+	installed, err := a.GetInstalledPackages(ctx, noLock...)
 	if err != nil {
 		return nil, err
 	}
@@ -620,16 +620,16 @@ func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) (
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
 // Использует apt биндинги для защиты от конкурентного доступа к rpmdb
-func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, error) {
+func (a *Actions) GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error) {
 	commandPrefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
-	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix)
+	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
 }
 
-func (a *Actions) AptUpdate(ctx context.Context) error {
+func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.AptUpdate"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.AptUpdate"))
 
-	err := a.serviceAptBinding.Update()
+	err := a.serviceAptBinding.Update(noLock...)
 	if err != nil {
 		return err
 	}

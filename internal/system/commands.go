@@ -314,8 +314,15 @@ func CommandList(ctx context.Context) *cli.Command {
 		{
 			Name:  "update",
 			Usage: app.T_("Updating package database"),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "no-lock",
+					Usage: app.T_("Skip file locking (use with caution)"),
+					Value: false,
+				},
+			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.Update(ctx)
+				resp, err := actions.Update(ctx, cmd.Bool("no-lock"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 				}

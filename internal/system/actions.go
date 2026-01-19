@@ -494,7 +494,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 }
 
 // Update обновляет информацию или базу данных пакетов.
-func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) Update(ctx context.Context, noLock ...bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
@@ -505,7 +505,7 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	packages, err := a.serviceAptActions.Update(ctx)
+	packages, err := a.serviceAptActions.Update(ctx, noLock...)
 	if err != nil {
 		return nil, err
 	}

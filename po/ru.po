@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-19 17:08+0600\n"
+"POT-Creation-Date: 2026-01-19 21:06+0600\n"
 "PO-Revision-Date: 2026-01-17 15:56+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -28,7 +28,7 @@ msgid "error opening system database: %w"
 msgstr "Ошибка открытия системной базы данных: %w"
 
 #: internal/common/app/database.go:106 internal/common/wrapper/wrapper.go:61
-#: internal/kernel/actions.go:746 internal/system/actions.go:1092 main.go:261
+#: internal/kernel/actions.go:746 internal/system/actions.go:1093 main.go:261
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -781,21 +781,21 @@ msgstr "Работа с пакетами заблокирована процес
 msgid "Package operations are locked by another process%s"
 msgstr "Работа с пакетами заблокирована другим процессом%s"
 
-#: internal/common/binding/apt/rpm.go:55
+#: internal/common/binding/apt/rpm.go:57
 msgid "Error executing the rpm -qia command: %w"
 msgstr "Ошибка выполнения команды rpm -qia: %w"
 
-#: internal/common/binding/apt/rpm.go:77 internal/kernel/service/kernel.go:863
+#: internal/common/binding/apt/rpm.go:79 internal/kernel/service/kernel.go:863
 #, c-format
 msgid "failed to query installed kernels: %s"
 msgstr "не удалось запросить установленные ядра: %s"
 
-#: internal/common/binding/apt/rpm.go:186
+#: internal/common/binding/apt/rpm.go:188
 #, fuzzy
 msgid "error scanning RPM output: %w"
 msgstr "ошибка сканирования вывода RPM: %s"
 
-#: internal/common/binding/apt/rpm.go:222
+#: internal/common/binding/apt/rpm.go:224
 #, c-format
 msgid "error scanning RPM output: %s"
 msgstr "ошибка сканирования вывода RPM: %s"
@@ -809,12 +809,12 @@ msgstr "Конфигурация не загружена. Сначала заг�
 msgid "'%s' type doesn't support output"
 msgstr "Тип '%s' не поддерживает вывод"
 
-#: internal/common/build/build.go:191 internal/system/actions.go:669
+#: internal/common/build/build.go:191 internal/system/actions.go:670
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr "Не удалось извлечь информацию о пакете %s"
 
-#: internal/common/build/build.go:202 internal/system/actions.go:679
+#: internal/common/build/build.go:202 internal/system/actions.go:680
 msgid ". Maybe you were looking for: "
 msgstr ". Возможно, вы искали: "
 
@@ -1804,18 +1804,18 @@ msgstr "Список пакетов успешно обновлён"
 
 #: internal/distrobox/actions.go:94 internal/distrobox/actions.go:129
 #: internal/distrobox/actions.go:235 internal/distrobox/actions.go:283
-#: internal/system/actions.go:817
+#: internal/system/actions.go:818
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr "Необходимо указать имя пакета, к примеру `%s package`"
 
-#: internal/distrobox/actions.go:103 internal/system/actions.go:689
+#: internal/distrobox/actions.go:103 internal/system/actions.go:690
 msgid "Package found"
 msgstr "Найден пакет"
 
 #: internal/distrobox/actions.go:138 internal/distrobox/actions.go:214
-#: internal/system/actions.go:752 internal/system/actions.go:830
-#: internal/system/actions.go:986
+#: internal/system/actions.go:753 internal/system/actions.go:831
+#: internal/system/actions.go:987
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -1881,11 +1881,11 @@ msgstr "Обновить и синхронизировать список уст
 msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
-#: internal/distrobox/commands.go:71 internal/system/commands.go:347
+#: internal/distrobox/commands.go:71 internal/system/commands.go:354
 msgid "Package information"
 msgstr "Информация о пакете"
 
-#: internal/distrobox/commands.go:92 internal/system/commands.go:368
+#: internal/distrobox/commands.go:92 internal/system/commands.go:375
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
@@ -1901,21 +1901,21 @@ msgstr "Построение запроса для извлечения спис
 msgid "Field for sorting, for example: name, version"
 msgstr "Поле для сортировки, к примеру: name, version"
 
-#: internal/distrobox/commands.go:125 internal/system/commands.go:402
+#: internal/distrobox/commands.go:125 internal/system/commands.go:409
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
 #: internal/distrobox/commands.go:130 internal/system/commands.go:175
-#: internal/system/commands.go:407
+#: internal/system/commands.go:414
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
 #: internal/distrobox/commands.go:135 internal/system/commands.go:180
-#: internal/system/commands.go:412
+#: internal/system/commands.go:419
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
-#: internal/distrobox/commands.go:140 internal/system/commands.go:417
+#: internal/distrobox/commands.go:140 internal/system/commands.go:424
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1944,7 +1944,7 @@ msgid "Remove only from host, leave package in container"
 msgstr "Удалить только с хоста, оставить пакет в контейнере"
 
 #: internal/distrobox/commands.go:221 internal/kernel/commands.go:259
-#: internal/repo/commands.go:206 internal/system/commands.go:456
+#: internal/repo/commands.go:206 internal/system/commands.go:463
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
@@ -2833,8 +2833,8 @@ msgid "No candidates for removal found"
 msgstr "Кандидатов на удаление не найдено"
 
 #: internal/system/actions.go:212 internal/system/actions.go:307
-#: internal/system/actions.go:452 internal/system/actions.go:613
-#: internal/system/actions.go:920
+#: internal/system/actions.go:452 internal/system/actions.go:614
+#: internal/system/actions.go:921
 msgid "Cancel dialog"
 msgstr "Отмена диалога"
 
@@ -2855,7 +2855,7 @@ msgstr ""
 "image apply"
 
 #: internal/system/actions.go:287 internal/system/actions.go:437
-#: internal/system/actions.go:598
+#: internal/system/actions.go:599
 msgid "The operation will not make any changes"
 msgstr "Операция не будет нести изменений"
 
@@ -2867,7 +2867,7 @@ msgstr ""
 "Произошла ошибка при подключении к репозиторию. Список пакетов обновлён, "
 "пожалуйста, попробуйте запустить команду ещё раз"
 
-#: internal/system/actions.go:344 internal/system/actions.go:627
+#: internal/system/actions.go:344 internal/system/actions.go:628
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
@@ -2875,11 +2875,11 @@ msgstr[0] "%d пакет успешно установлен"
 msgstr[1] "%d пакета успешно установлено"
 msgstr[2] "%d пакетов успешно установлено"
 
-#: internal/system/actions.go:345 internal/system/actions.go:628
+#: internal/system/actions.go:345 internal/system/actions.go:629
 msgid "and"
 msgstr "и"
 
-#: internal/system/actions.go:346 internal/system/actions.go:629
+#: internal/system/actions.go:346 internal/system/actions.go:630
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
@@ -2895,55 +2895,55 @@ msgstr[0] "%d пакет успешно переустановлен"
 msgstr[1] "%d пакета успешно переустановлено"
 msgstr[2] "%d пакетов успешно переустановлено"
 
-#: internal/system/actions.go:515
+#: internal/system/actions.go:516
 msgid "Package list updated successfully"
 msgstr "Список пакетов успешно обновлён"
 
-#: internal/system/actions.go:565
+#: internal/system/actions.go:566
 msgid "DONE"
 msgstr "Готово"
 
-#: internal/system/actions.go:634
+#: internal/system/actions.go:635
 msgid "The system has been upgrade successfully"
 msgstr "Система была успешно обновлена"
 
-#: internal/system/actions.go:648
+#: internal/system/actions.go:649
 msgid "Package name must be specified, for example info package"
 msgstr "Необходимо указать имя пакета, к примеру, info package"
 
-#: internal/system/actions.go:749 internal/system/actions.go:827
+#: internal/system/actions.go:750 internal/system/actions.go:828
 msgid "Nothing found"
 msgstr "Ничего не найдено"
 
-#: internal/system/actions.go:794
+#: internal/system/actions.go:795
 msgid "System package"
 msgstr "Системный пакет"
 
-#: internal/system/actions.go:795
+#: internal/system/actions.go:796
 msgid "Stplr package"
 msgstr "Пакет Stplr"
 
-#: internal/system/actions.go:852 internal/system/commands.go:143
+#: internal/system/actions.go:853 internal/system/commands.go:143
 msgid "Image status"
 msgstr "Статус образа"
 
-#: internal/system/actions.go:883
+#: internal/system/actions.go:884
 msgid "Command executed successfully"
 msgstr "Команда успешно выполнена"
 
-#: internal/system/actions.go:965
+#: internal/system/actions.go:966
 msgid "Changes applied successfully. A reboot is required"
 msgstr "Изменения были успешно применены. Необходима перезагрука"
 
-#: internal/system/actions.go:1056
+#: internal/system/actions.go:1057
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: internal/system/actions.go:1135
+#: internal/system/actions.go:1136
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/system/actions.go:1142
+#: internal/system/actions.go:1143
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
@@ -3013,39 +3013,43 @@ msgstr "Симуляция удаления"
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/system/commands.go:328
+#: internal/system/commands.go:320
+msgid "Skip file locking (use with caution)"
+msgstr "Пропустить блокировку файла (использовать с осторожностью)"
+
+#: internal/system/commands.go:335
 msgid "General system upgrade"
 msgstr "Общее обновление системы"
 
-#: internal/system/commands.go:352
+#: internal/system/commands.go:359
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:373
+#: internal/system/commands.go:380
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/system/commands.go:379 internal/system/commands.go:426
+#: internal/system/commands.go:386 internal/system/commands.go:433
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:394
+#: internal/system/commands.go:401
 msgid "Building a query to get a list of packages"
 msgstr "Создание запроса для получения списка пакетов"
 
-#: internal/system/commands.go:398
+#: internal/system/commands.go:405
 msgid "Sort packages by field, example fields: name, section"
 msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
-#: internal/system/commands.go:421
+#: internal/system/commands.go:428
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/system/commands.go:450
+#: internal/system/commands.go:457
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/system/commands.go:467
+#: internal/system/commands.go:474
 msgid "System package management"
 msgstr "Управление системными пакетами"
 

@@ -42,10 +42,11 @@ type KernelRPMInfo struct {
 }
 
 // RpmGetInstalledPackages возвращает карту установленных пакетов (имя -> версия)
-func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix string) (map[string]string, error) {
+func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix string, noLock ...bool) (map[string]string, error) {
 	var result map[string]string
+	skipLock := len(noLock) > 0 && noLock[0]
 
-	err := a.operationWrapper(func() error {
+	err := a.operationWrapperWithOptions(skipLock, func() error {
 		command := fmt.Sprintf("%s rpm -qia", commandPrefix)
 		cmd := exec.CommandContext(ctx, "sh", "-c", command)
 		cmd.Env = []string{"LC_ALL=C"}
