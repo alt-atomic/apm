@@ -905,7 +905,7 @@ func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exis
 func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bool, error) {
 	url := fmt.Sprintf("%s%s/%s/plan/arepo-add-x86_64-i586", s.httpScheme(ctx), RepoTasksURL, taskNum)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return false, err
 	}
@@ -916,7 +916,16 @@ func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bo
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	return resp.StatusCode == 200, nil
+	if resp.StatusCode != 200 {
+		return false, nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+
+	return len(strings.TrimSpace(string(body))) > 0, nil
 }
 
 // isTaskNumber проверяет, является ли строка номером задачи

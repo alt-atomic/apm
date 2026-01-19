@@ -18,6 +18,7 @@ package repo
 
 import (
 	"apm/internal/common/app"
+	_package "apm/internal/common/apt/package"
 	"apm/internal/common/reply"
 	"apm/internal/repo/service"
 	"context"
@@ -28,26 +29,33 @@ import (
 
 // Actions объединяет методы для работы с репозиториями
 type Actions struct {
-	appConfig   *app.Config
-	repoService *service.RepoService
+	appConfig         *app.Config
+	repoService       *service.RepoService
+	serviceAptActions *_package.Actions
 }
 
 // NewActionsWithDeps создаёт новый экземпляр Actions с ручным управлением зависимостями
 func NewActionsWithDeps(
 	appConfig *app.Config,
 	repoService *service.RepoService,
+	aptActions *_package.Actions,
 ) *Actions {
 	return &Actions{
-		appConfig:   appConfig,
-		repoService: repoService,
+		appConfig:         appConfig,
+		repoService:       repoService,
+		serviceAptActions: aptActions,
 	}
 }
 
 // NewActions создаёт новый экземпляр Actions
 func NewActions(appConfig *app.Config) *Actions {
+	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
+	aptActions := _package.NewActions(packageDBSvc, appConfig)
+
 	return &Actions{
-		appConfig:   appConfig,
-		repoService: service.NewRepoService(appConfig),
+		appConfig:         appConfig,
+		repoService:       service.NewRepoService(appConfig),
+		serviceAptActions: aptActions,
 	}
 }
 
@@ -362,4 +370,83 @@ func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*reply.A
 // GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
 func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
 	return startDocServer(ctx)
+}
+
+// TestTask тестирует пакеты из задачи
+func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIResponse, error) {
+	taskNum = strings.TrimSpace(taskNum)
+	if taskNum == "" {
+		return nil, errors.New(app.T_("Task number must be specified"))
+	}
+
+	var packagesToInstall []string
+	var err error
+
+	packagesToInstall, err = a.repoService.GetTaskPackages(ctx, taskNum)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(packagesToInstall) == 0 {
+		return nil, errors.New(app.T_("No packages to install from task"))
+	}
+
+	_, err = a.repoService.AddRepository(ctx, []string{taskNum}, "")
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", app.T_("Failed to add task repository"), err)
+	}
+
+	defer func() {
+		_, _ = a.repoService.RemoveRepository(ctx, []string{taskNum}, "", false)
+	}()
+
+	_, err = a.serviceAptActions.Update(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	packagesInstall, packagesRemove, _, packageParse, errFind := a.serviceAptActions.FindPackage(
+		ctx,
+		packagesToInstall,
+		nil,
+		false,
+		false,
+		false,
+	)
+	if errFind != nil {
+		return nil, errFind
+	}
+
+	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
+		return &reply.APIResponse{
+			Data: map[string]interface{}{
+				"message": app.T_("The operation will not make any changes"),
+				"taskNum": taskNum,
+			},
+			Error: false,
+		}, nil
+	}
+
+	err = a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	message := fmt.Sprintf(
+		"%s %s %s (%s %s)",
+		fmt.Sprintf(app.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+		app.T_("and"),
+		fmt.Sprintf(app.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
+		app.T_("task"),
+		taskNum,
+	)
+
+	return &reply.APIResponse{
+		Data: TestTaskResponse{
+			Message: message,
+			TaskNum: taskNum,
+			Info:    *packageParse,
+		},
+		Error: false,
+	}, nil
 }

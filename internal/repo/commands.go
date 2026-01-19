@@ -202,6 +202,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				}),
 			},
 			{
+				Name:      "test",
+				Usage:     app.T_("Install packages from task for testing"),
+				ArgsUsage: "<task_number>",
+				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					resp, err := actions.TestTask(ctx, cmd.Args().First())
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					}
+					return reply.CliResponse(ctx, *resp)
+				}),
+			},
+			{
 				Name:  "dbus-doc",
 				Usage: app.T_("Show dbus online documentation"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {

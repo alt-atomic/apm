@@ -17,6 +17,7 @@
 package repo
 
 import (
+	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/repo/service"
 )
 
@@ -60,4 +61,11 @@ type TaskPackagesResponse struct {
 	TaskNum  string   `json:"taskNum"`
 	Packages []string `json:"packages"`
 	Count    int      `json:"count"`
+}
+
+// TestTaskResponse структура ответа для TestTask метода
+type TestTaskResponse struct {
+	Message string                `json:"message"`
+	TaskNum string                `json:"taskNum"`
+	Info    aptlib.PackageChanges `json:"info"`
 }
