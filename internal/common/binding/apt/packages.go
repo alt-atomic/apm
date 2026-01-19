@@ -58,6 +58,11 @@ func (a *Actions) operationWrapper(fn func() error) error {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
 
+	// Проверяем блокировку перед началом операции
+	if err := lib.CheckLockOrError(); err != nil {
+		return err
+	}
+
 	lib.StartOperation()
 	defer lib.EndOperation()
 

@@ -6,10 +6,13 @@ internal/common/app/translator.go
 internal/common/apt/errors.go
 internal/common/apt/package/actions.go
 internal/common/apt/package/database.go
+internal/common/binding/apt/lib/lock.go
+internal/common/binding/apt/rpm.go
 internal/common/build/build.go
 internal/common/build/config.go
 internal/common/build/core/expr.go
 internal/common/build/core/models.go
+internal/common/build/core/validate.go
 internal/common/build/database.go
 internal/common/build/host.go
 internal/common/build/models/kernel.go

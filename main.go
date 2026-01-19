@@ -70,11 +70,25 @@ func main() {
 			Name:   "dbus-session",
 			Usage:  app.T_("Start session D-Bus service org.altlinux.APM"),
 			Action: sessionDbus,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "verbose",
+					Aliases: []string{"v"},
+					Usage:   app.T_("Enable verbose logging to stdout"),
+				},
+			},
 		},
 		{
 			Name:   "dbus-system",
 			Usage:  app.T_("Start system D-Bus service org.altlinux.APM"),
 			Action: systemDbus,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "verbose",
+					Aliases: []string{"v"},
+					Usage:   app.T_("Enable verbose logging to stdout"),
+				},
+			},
 		},
 		systemCommands,
 		repoCommands,
@@ -191,6 +205,9 @@ func applyCommandSetting(cliCommand *cli.Command) {
 
 func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
+	if cmd.Bool("verbose") {
+		app.Log.EnableStdoutLogging()
+	}
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
 		cliError(errors.New(errPermission))
@@ -237,6 +254,9 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 
 func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
+	if cmd.Bool("verbose") {
+		app.Log.EnableStdoutLogging()
+	}
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
 		cliError(errors.New(errPermission))

@@ -1,5 +1,6 @@
 #include "apt_internal.h"
 
+#include <apt-pkg/error.h>
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/sourcelist.h>
 
@@ -67,6 +68,15 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
         if (callback != nullptr) {
             global_callback = callback;
             global_user_data = user_data;
+        }
+
+        // Lock the archive directory
+        FileFd Lock;
+        if (!_config->FindB("Debug::NoLocking", false)) {
+            Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
+            if (_error->PendingError()) {
+                return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the download directory");
+            }
         }
 
         ProgressStatus status;
