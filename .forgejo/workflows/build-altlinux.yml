@@ -17,8 +17,8 @@ jobs:
 
     runs-on: alt-sisyphus
     container:
-      image: altlinux.space/actions/runner/hasherc:sisyphus
-      options: --platform linux/${{ matrix:arch }}
+      image: altlinux.space/actions/runner/hasherc:${{ matrix.branch }}
+      options: "--platform linux/${{ matrix:arch }}"
 
     strategy:
       matrix:
