@@ -381,16 +381,22 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 		!appConfig.ConfigManager.GetConfig().IsAtomic,
 	)
 
+	// System модуль
 	sysActions := system.NewActions(appConfig)
+	sysHTTPWrapper := system.NewHTTPWrapper(sysActions, appConfig, ctx)
+	sysHTTPWrapper.RegisterRoutes(server.GetMux(), appConfig.ConfigManager.GetConfig().IsAtomic)
 
-	// Создаём HTTP wrapper и регистрируем маршруты напрямую
-	httpWrapper := system.NewHTTPWrapper(sysActions, appConfig, ctx)
-	httpWrapper.RegisterRoutes(server.GetMux(), appConfig.ConfigManager.GetConfig().IsAtomic)
+	// Repo модуль
+	repoActions := repo.NewActions(appConfig)
+	repoHTTPWrapper := repo.NewHTTPWrapper(repoActions, appConfig, ctx)
+	repoHTTPWrapper.RegisterRoutes(server.GetMux())
 
 	// Регистрируем endpoints в registry для OpenAPI документации и проверки прав
 	registry := http_server.NewRegistry()
 	registry.RegisterResponseTypes(system.GetHTTPResponseTypes())
 	registry.RegisterEndpoints(system.GetHTTPEndpoints())
+	registry.RegisterResponseTypes(repo.GetHTTPResponseTypes())
+	registry.RegisterEndpoints(repo.GetHTTPEndpoints())
 	server.SetRegistry(registry)
 
 	// Регистрируем OpenAPI документацию из registry

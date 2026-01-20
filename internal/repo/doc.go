@@ -27,6 +27,24 @@ import (
 //go:embed dbus.go
 var dbusSource string
 
+// responseTypes общие типы ответов для D-Bus и HTTP API
+// Используем префикс Repo для HTTP чтобы избежать конфликтов с system.ListResponse
+var responseTypes = map[string]reflect.Type{
+	"APIResponse":           reflect.TypeOf(reply.APIResponse{}),
+	"RepoListResponse":      reflect.TypeOf(ListResponse{}),
+	"RepoAddRemoveResponse": reflect.TypeOf(AddRemoveResponse{}),
+	"RepoSetResponse":       reflect.TypeOf(SetResponse{}),
+	"RepoSimulateResponse":  reflect.TypeOf(SimulateResponse{}),
+	"BranchesResponse":      reflect.TypeOf(BranchesResponse{}),
+	"TaskPackagesResponse":  reflect.TypeOf(TaskPackagesResponse{}),
+	"TestTaskResponse":      reflect.TypeOf(TestTaskResponse{}),
+}
+
+// GetHTTPResponseTypes возвращает типы ответов для генерации OpenAPI схем
+func GetHTTPResponseTypes() map[string]reflect.Type {
+	return responseTypes
+}
+
 // getDocConfig возвращает конфигурацию документации для модуля repo
 func getDocConfig() dbus_doc.Config {
 	return dbus_doc.Config{
@@ -36,15 +54,7 @@ func getDocConfig() dbus_doc.Config {
 		DBusWrapper:   (*DBusWrapper)(nil),
 		SourceCode:    dbusSource,
 		DBusSession:   "system",
-		ResponseTypes: map[string]reflect.Type{
-			"APIResponse":          reflect.TypeOf(reply.APIResponse{}),
-			"ListResponse":         reflect.TypeOf(ListResponse{}),
-			"AddRemoveResponse":    reflect.TypeOf(AddRemoveResponse{}),
-			"SetResponse":          reflect.TypeOf(SetResponse{}),
-			"SimulateResponse":     reflect.TypeOf(SimulateResponse{}),
-			"BranchesResponse":     reflect.TypeOf(BranchesResponse{}),
-			"TaskPackagesResponse": reflect.TypeOf(TaskPackagesResponse{}),
-		},
+		ResponseTypes: responseTypes,
 	}
 }
 

@@ -45,8 +45,9 @@ type SetResponse struct {
 
 // SimulateResponse структура ответа для симуляции операций
 type SimulateResponse struct {
-	Message string   `json:"message"`
-	Changes []string `json:"changes"`
+	Message    string   `json:"message"`
+	WillAdd    []string `json:"willAdd,omitempty"`
+	WillRemove []string `json:"willRemove,omitempty"`
 }
 
 // BranchesResponse структура ответа для GetBranches метода

@@ -43,8 +43,8 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		ListenAddr:   "127.0.0.1:8080",
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		ReadTimeout:  3 * time.Minute,
+		WriteTimeout: 30 * time.Minute,
 	}
 }
 

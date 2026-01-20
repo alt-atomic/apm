@@ -232,7 +232,7 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 				Description: "Successful response",
 				Content: map[string]MediaType{
 					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/APIResponse"},
+						Schema: &Schema{Ref: "#/components/schemas/APIResponse_" + ep.ResponseType},
 					},
 				},
 			},
@@ -289,7 +289,6 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 				},
 			}
 		} else if len(ep.ParamMappings) > 0 {
-			// Генерируем body schema из ParamMappings
 			bodySchema := g.generateBodySchemaFromMappings(ep.ParamMappings)
 			if bodySchema != nil {
 				op.RequestBody = &RequestBody{
@@ -377,6 +376,18 @@ func (g *OpenAPIGenerator) generateSchemas() map[string]*Schema {
 	for name, typ := range g.registry.GetResponseTypes() {
 		if _, exists := schemas[name]; !exists {
 			schemas[name] = g.typeToSchema(typ)
+		}
+
+		wrappedName := "APIResponse_" + name
+		if _, exists := schemas[wrappedName]; !exists {
+			schemas[wrappedName] = &Schema{
+				Type: "object",
+				Properties: map[string]*Schema{
+					"data":        {Ref: "#/components/schemas/" + name},
+					"error":       {Type: "boolean", Description: "Error flag"},
+					"transaction": {Type: "string", Description: "Transaction ID"},
+				},
+			}
 		}
 	}
 

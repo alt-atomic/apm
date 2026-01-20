@@ -85,36 +85,11 @@ func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error
 
 // Add добавляет репозиторий
 // args: [source] или [type, url, arch, components...]
-func (a *Actions) Add(ctx context.Context, args []string, date string, simulate bool) (*reply.APIResponse, error) {
+func (a *Actions) Add(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
 	if len(args) == 0 {
 		return nil, errors.New(app.T_("Repository source must be specified"))
 	}
 	date = strings.TrimSpace(date)
-
-	if simulate {
-		willAdd, err := a.repoService.SimulateAdd(ctx, args, date)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(willAdd) == 0 {
-			return &reply.APIResponse{
-				Data: SimulateResponse{
-					Message: app.T_("All repositories already exist"),
-					Changes: []string{},
-				},
-				Error: false,
-			}, nil
-		}
-
-		return &reply.APIResponse{
-			Data: SimulateResponse{
-				Message: app.T_("Simulation results"),
-				Changes: willAdd,
-			},
-			Error: false,
-		}, nil
-	}
 
 	added, err := a.repoService.AddRepository(ctx, args, date)
 	if err != nil {
@@ -142,38 +117,43 @@ func (a *Actions) Add(ctx context.Context, args []string, date string, simulate 
 	}, nil
 }
 
-// Remove удаляет репозиторий
-// args: [source] или [type, url, arch, components...]
-func (a *Actions) Remove(ctx context.Context, args []string, date string, simulate bool) (*reply.APIResponse, error) {
+// CheckAdd симулирует добавление репозитория
+func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
 	if len(args) == 0 {
 		return nil, errors.New(app.T_("Repository source must be specified"))
 	}
 	date = strings.TrimSpace(date)
 
-	if simulate {
-		willRemove, err := a.repoService.SimulateRemove(ctx, args, date, false)
-		if err != nil {
-			return nil, err
-		}
+	willAdd, err := a.repoService.SimulateAdd(ctx, args, date)
+	if err != nil {
+		return nil, err
+	}
 
-		if len(willRemove) == 0 {
-			return &reply.APIResponse{
-				Data: SimulateResponse{
-					Message: app.T_("No repositories to remove"),
-					Changes: []string{},
-				},
-				Error: false,
-			}, nil
-		}
-
+	if len(willAdd) == 0 {
 		return &reply.APIResponse{
 			Data: SimulateResponse{
-				Message: app.T_("Simulation results"),
-				Changes: willRemove,
+				Message: app.T_("All repositories already exist"),
 			},
 			Error: false,
 		}, nil
 	}
+
+	return &reply.APIResponse{
+		Data: SimulateResponse{
+			Message: app.T_("Simulation results"),
+			WillAdd: willAdd,
+		},
+		Error: false,
+	}, nil
+}
+
+// Remove удаляет репозиторий
+// args: [source] или [type, url, arch, components...]
+func (a *Actions) Remove(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
+	if len(args) == 0 {
+		return nil, errors.New(app.T_("Repository source must be specified"))
+	}
+	date = strings.TrimSpace(date)
 
 	removed, err := a.repoService.RemoveRepository(ctx, args, date, false)
 	if err != nil {
@@ -201,37 +181,43 @@ func (a *Actions) Remove(ctx context.Context, args []string, date string, simula
 	}, nil
 }
 
+// CheckRemove симулирует удаление репозитория
+func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
+	if len(args) == 0 {
+		return nil, errors.New(app.T_("Repository source must be specified"))
+	}
+	date = strings.TrimSpace(date)
+
+	willRemove, err := a.repoService.SimulateRemove(ctx, args, date, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(willRemove) == 0 {
+		return &reply.APIResponse{
+			Data: SimulateResponse{
+				Message: app.T_("No repositories to remove"),
+			},
+			Error: false,
+		}, nil
+	}
+
+	return &reply.APIResponse{
+		Data: SimulateResponse{
+			Message:    app.T_("Simulation results"),
+			WillRemove: willRemove,
+		},
+		Error: false,
+	}, nil
+}
+
 // Set устанавливает ветку (удаляет все и добавляет)
-func (a *Actions) Set(ctx context.Context, branch, date string, simulate bool) (*reply.APIResponse, error) {
+func (a *Actions) Set(ctx context.Context, branch, date string) (*reply.APIResponse, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return nil, errors.New(app.T_("Branch name must be specified"))
 	}
 	date = strings.TrimSpace(date)
-
-	if simulate {
-		// Симулируем удаление всех веток
-		willRemove, err := a.repoService.SimulateRemove(ctx, []string{"all"}, "", false)
-		if err != nil {
-			return nil, err
-		}
-
-		// Симулируем добавление ветки
-		willAdd, err := a.repoService.SimulateAdd(ctx, []string{branch}, date)
-		if err != nil {
-			return nil, err
-		}
-
-		changes := append(willRemove, willAdd...)
-
-		return &reply.APIResponse{
-			Data: SimulateResponse{
-				Message: app.T_("Simulation results"),
-				Changes: changes,
-			},
-			Error: false,
-		}, nil
-	}
 
 	added, removed, err := a.repoService.SetBranch(ctx, branch, date)
 	if err != nil {
@@ -256,12 +242,38 @@ func (a *Actions) Set(ctx context.Context, branch, date string, simulate bool) (
 	}, nil
 }
 
-// Clean удаляет cdrom и task репозитории
-func (a *Actions) Clean(ctx context.Context, simulate bool) (*reply.APIResponse, error) {
-	if simulate {
-		return a.simulateClean(ctx)
+// CheckSet симулирует установку ветки
+func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*reply.APIResponse, error) {
+	branch = strings.TrimSpace(branch)
+	if branch == "" {
+		return nil, errors.New(app.T_("Branch name must be specified"))
+	}
+	date = strings.TrimSpace(date)
+
+	// Симулируем удаление всех веток
+	willRemove, err := a.repoService.SimulateRemove(ctx, []string{"all"}, "", false)
+	if err != nil {
+		return nil, err
 	}
 
+	// Симулируем добавление ветки
+	willAdd, err := a.repoService.SimulateAdd(ctx, []string{branch}, date)
+	if err != nil {
+		return nil, err
+	}
+
+	return &reply.APIResponse{
+		Data: SimulateResponse{
+			Message:    app.T_("Simulation results"),
+			WillAdd:    willAdd,
+			WillRemove: willRemove,
+		},
+		Error: false,
+	}, nil
+}
+
+// Clean удаляет cdrom и task репозитории
+func (a *Actions) Clean(ctx context.Context) (*reply.APIResponse, error) {
 	removed, err := a.repoService.CleanTemporary(ctx)
 	if err != nil {
 		return nil, err
@@ -288,8 +300,8 @@ func (a *Actions) Clean(ctx context.Context, simulate bool) (*reply.APIResponse,
 	}, nil
 }
 
-// simulateClean симулирует очистку cdrom и task репозиториев
-func (a *Actions) simulateClean(ctx context.Context) (*reply.APIResponse, error) {
+// CheckClean симулирует очистку cdrom и task репозиториев
+func (a *Actions) CheckClean(ctx context.Context) (*reply.APIResponse, error) {
 	repos, err := a.repoService.GetRepositories(ctx, false)
 	if err != nil {
 		return nil, err
@@ -306,7 +318,7 @@ func (a *Actions) simulateClean(ctx context.Context) (*reply.APIResponse, error)
 			}
 		}
 		if isCdrom || isTask {
-			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Entry))
+			willRemove = append(willRemove, repo.Entry)
 		}
 	}
 
@@ -314,7 +326,6 @@ func (a *Actions) simulateClean(ctx context.Context) (*reply.APIResponse, error)
 		return &reply.APIResponse{
 			Data: SimulateResponse{
 				Message: app.T_("No cdrom or task repositories to remove"),
-				Changes: []string{},
 			},
 			Error: false,
 		}, nil
@@ -322,8 +333,8 @@ func (a *Actions) simulateClean(ctx context.Context) (*reply.APIResponse, error)
 
 	return &reply.APIResponse{
 		Data: SimulateResponse{
-			Message: app.T_("Simulation results"),
-			Changes: willRemove,
+			Message:    app.T_("Simulation results"),
+			WillRemove: willRemove,
 		},
 		Error: false,
 	}, nil
