@@ -49,16 +49,20 @@ jobs:
         run: meson compile -C _build
 
   rpm-build:
-    name: RPM build for ${{ matrix.branch }} and uploading
+    name: RPM build for ${{ matrix.branch }} for ${{ matrix:arch }} and uploading
     runs-on: alt-sisyphus
     container:
       image: altlinux.space/rirusha/riru-build-image:latest
+      options: --platform linux/${{ matrix:arch }}
 
     strategy:
       matrix:
         branch:
           - sisyphus
           - p11
+        arch:
+          - amd64
+          - arm64
     needs:
       - lint-vala
       - lint-blueprint
