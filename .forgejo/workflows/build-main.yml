@@ -52,7 +52,7 @@ jobs:
     name: RPM build for ${{ matrix.branch }} for and uploading
     runs-on: alt-sisyphus
     container:
-      image: altlinux.space/rirusha/riru-build-image:latest
+      image: altlinux.space/actions/runner/hasherc:${{ matrix.branch }}
 
     strategy:
       matrix:
