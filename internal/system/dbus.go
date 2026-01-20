@@ -107,7 +107,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *d
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Update(ctx)
+	resp, err := w.actions.Update(ctx, false)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -118,17 +118,20 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string) (string, *d
 	return string(data), nil
 }
 
-// List – Продвинутый поиск пакетов по фильтру из paramsJSON (json)
+// List – Продвинутый поиск пакетов по фильтру
 // doc_response: ListResponse
-func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) List(sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	params := ListParams{
-		Limit:       10,
-		Offset:      0,
-		ForceUpdate: false,
+	if limit <= 0 {
+		limit = 10
 	}
-	if err := json.Unmarshal([]byte(paramsJSON), &params); err != nil {
-		return "", dbus.MakeFailedError(fmt.Errorf(app.T_("Failed to parse JSON: %w"), err))
+	params := ListParams{
+		Sort:        sort,
+		Order:       order,
+		Limit:       limit,
+		Offset:      offset,
+		Filters:     filters,
+		ForceUpdate: forceUpdate,
 	}
 
 	resp, err := w.actions.List(ctx, params, true)
@@ -322,7 +325,7 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 // ImageGetConfig - Получить текущий конфиг image.yml
 // doc_response: ImageConfigResponse
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
-	resp, err := w.actions.ImageGetConfig()
+	resp, err := w.actions.ImageGetConfig(w.ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -340,7 +343,7 @@ func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
 		return "", dbus.MakeFailedError(fmt.Errorf(app.T_("Failed to parse JSON: %w"), err))
 	}
-	resp, err := w.actions.ImageSaveConfig(configObject)
+	resp, err := w.actions.ImageSaveConfig(w.ctx, configObject)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

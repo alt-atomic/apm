@@ -128,7 +128,7 @@ func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 	}
 
 	UpdateTask(appConfig, eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
-	if appConfig.ConfigManager.GetConfig().Format != "dbus" {
+	if appConfig.ConfigManager.GetConfig().Format != "dbus_doc" {
 		return
 	}
 

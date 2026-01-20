@@ -20,7 +20,9 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/binding/apt"
 	aptLib "apm/internal/common/binding/apt/lib"
+	"apm/internal/common/dbus_doc"
 	"apm/internal/common/helper"
+	"apm/internal/common/http_server"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
 	"apm/internal/common/version"
@@ -87,6 +89,28 @@ func main() {
 					Name:    "verbose",
 					Aliases: []string{"v"},
 					Usage:   app.T_("Enable verbose logging to stdout"),
+				},
+			},
+		},
+		{
+			Name:   "http-server",
+			Usage:  app.T_("Start HTTP API server"),
+			Action: httpServer,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "listen",
+					Aliases: []string{"l"},
+					Usage:   app.T_("Listen address (host:port)"),
+					Value:   "127.0.0.1:8080",
+				},
+				&cli.StringFlag{
+					Name:    "socket",
+					Aliases: []string{"s"},
+					Usage:   app.T_("Unix socket path"),
+				},
+				&cli.StringFlag{
+					Name:  "api-token",
+					Usage: app.T_("API token for authentication"),
 				},
 			},
 		},
@@ -230,15 +254,20 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	// Собираем интерфейсы для интроспекции
+	interfaces := map[string]any{
+		"org.altlinux.APM.distrobox": distroObj,
+	}
+
 	if err = appConfig.DBusManager.GetConnection().Export(
-		introspect.Introspectable(helper.GetUserIntrospectXML(appConfig.ConfigManager.GetConfig().ExistDistrobox)),
+		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
 		return err
 	}
 
-	appConfig.ConfigManager.SetFormat("dbus")
+	appConfig.ConfigManager.SetFormat("dbus_doc")
 
 	// Параллельно обновляем иконки
 	go func() {
@@ -283,6 +312,11 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	// Собираем интерфейсы для интроспекции
+	interfaces := map[string]any{
+		"org.altlinux.APM.system": sysObj,
+	}
+
 	// Экспортируем kernel методы только для не-атомарных систем
 	if !appConfig.ConfigManager.GetConfig().IsAtomic {
 		kernelActions := kernel.NewActions(appConfig)
@@ -290,6 +324,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		if err = appConfig.DBusManager.GetConnection().Export(kernelObj, "/org/altlinux/APM", "org.altlinux.APM.kernel"); err != nil {
 			return err
 		}
+		interfaces["org.altlinux.APM.kernel"] = kernelObj
 	}
 
 	// Экспортируем repo методы в D-Bus
@@ -298,19 +333,75 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	if err = appConfig.DBusManager.GetConnection().Export(repoObj, "/org/altlinux/APM", "org.altlinux.APM.repo"); err != nil {
 		return err
 	}
+	interfaces["org.altlinux.APM.repo"] = repoObj
 
 	if err = appConfig.DBusManager.GetConnection().Export(
-		introspect.Introspectable(helper.GetSystemIntrospectXML(appConfig.ConfigManager.GetConfig().IsAtomic)),
+		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
 		return err
 	}
 
-	appConfig.ConfigManager.SetFormat("dbus")
+	appConfig.ConfigManager.SetFormat("dbus_doc")
 
 	// Блокируем до сигнала
 	select {}
+}
+
+func httpServer(ctx context.Context, cmd *cli.Command) error {
+	appConfig.ConfigManager.SetFormat(cmd.String("format"))
+	app.Log.EnableStdoutLogging()
+
+	if syscall.Geteuid() != 0 {
+		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
+		cliError(errors.New(errPermission))
+		return errors.New(errPermission)
+	}
+
+	defer cleanup()
+
+	config := http_server.DefaultConfig()
+	if listen := cmd.String("listen"); listen != "" {
+		config.ListenAddr = listen
+	}
+	if socket := cmd.String("socket"); socket != "" {
+		config.UnixSocket = socket
+	}
+	if token := cmd.String("api-token"); token != "" {
+		config.APIToken = token
+	}
+
+	server := http_server.NewServer(config, appConfig)
+
+	server.RegisterHealthCheck()
+	server.RegisterAPIInfo(
+		appConfig.ConfigManager.GetConfig().IsAtomic,
+		appConfig.ConfigManager.GetConfig().ExistDistrobox,
+		!appConfig.ConfigManager.GetConfig().IsAtomic,
+	)
+
+	sysActions := system.NewActions(appConfig)
+
+	// Используем API registry для автогенерации маршрутов из аннотаций в actions.go
+	registry := http_server.NewRegistry()
+	registry.RegisterResponseTypes(system.GetHTTPResponseTypes())
+	if err := registry.ParseAnnotations(system.GetActionsSourceCode()); err != nil {
+		app.Log.Warn(fmt.Sprintf("Failed to parse actions annotations: %v", err))
+	}
+
+	// Генерируем HTTP handlers из аннотаций
+	httpGen := http_server.NewHTTPGenerator(registry, appConfig, ctx)
+	httpGen.RegisterRoutes(server.GetMux(), sysActions, appConfig.ConfigManager.GetConfig().IsAtomic)
+
+	// Регистрируем OpenAPI документацию из registry
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic))
+
+	err := server.Start(ctx)
+	if err != nil {
+		cliError(err)
+	}
+	return err
 }
 
 func printVersion(_ context.Context, _ *cli.Command) error {

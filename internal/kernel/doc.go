@@ -17,7 +17,7 @@
 package kernel
 
 import (
-	"apm/internal/common/doc"
+	"apm/internal/common/dbus_doc"
 	"apm/internal/common/reply"
 	"context"
 	_ "embed"
@@ -28,8 +28,8 @@ import (
 var dbusSource string
 
 // getDocConfig возвращает конфигурацию документации для kernel модуля
-func getDocConfig() doc.Config {
-	return doc.Config{
+func getDocConfig() dbus_doc.Config {
+	return dbus_doc.Config{
 		ModuleName:    "Kernel",
 		DBusInterface: "org.altlinux.APM.kernel",
 		ServerPort:    "8082",
@@ -51,6 +51,6 @@ func getDocConfig() doc.Config {
 
 // startDocServer запускает веб-сервер с документацией
 func startDocServer(ctx context.Context) error {
-	generator := doc.NewGenerator(getDocConfig())
+	generator := dbus_doc.NewGenerator(getDocConfig())
 	return generator.StartDocServer(ctx)
 }

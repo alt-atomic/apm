@@ -17,12 +17,10 @@
 package distrobox
 
 import (
-	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -96,7 +94,7 @@ func (w *DBusWrapper) Info(container string, packageName string, transaction str
 	return string(data), nil
 }
 
-// Search - Простой! Поиск пакетов
+// Search - Простой поиск пакетов
 // doc_response: SearchResponse
 func (w *DBusWrapper) Search(container string, packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
@@ -111,13 +109,21 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 	return string(data), nil
 }
 
-// List - Продвинутый поиск пакетов по фильтру из paramsJSON (json)
+// List - Продвинутый поиск пакетов по фильтру
 // doc_response: ListResponse
-func (w *DBusWrapper) List(paramsJSON string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	var params ListParams
-	if err := json.Unmarshal([]byte(paramsJSON), &params); err != nil {
-		return "", dbus.MakeFailedError(fmt.Errorf(app.T_("Failed to parse JSON: %w"), err))
+	if limit <= 0 {
+		limit = 10
+	}
+	params := ListParams{
+		Container:   container,
+		Sort:        sort,
+		Order:       order,
+		Limit:       limit,
+		Offset:      offset,
+		Filters:     filters,
+		ForceUpdate: forceUpdate,
 	}
 
 	resp, err := w.actions.List(ctx, params)
