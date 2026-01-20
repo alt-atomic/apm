@@ -52,7 +52,7 @@ jobs:
     name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
     runs-on: ${{ matrix.runner }}
     container:
-      image: altlinux.space/actions/runner/hasherc:${{ matrix.branch }}
+      image: altlinux.space/actions/runner/hasherc:sisyphus
 
     strategy:
       matrix:
@@ -64,17 +64,9 @@ jobs:
           - arm64
         include:
           - arch: arm64
-            branch: sisyphus
             runner: self-hosted-arm64-alt-sisyphus
-          - arch: arm64
-            branch: p11
-            runner: self-hosted-arm64-alt-p11
           - arch: amd64
-            branch: sisyphus
             runner: alt-sisyphus
-          - arch: amd64
-            branch: p11
-            runner: alt-p11
 
     needs:
       - lint-vala
