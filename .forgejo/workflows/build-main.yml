@@ -53,7 +53,7 @@ jobs:
     runs-on: alt-sisyphus
     container:
       image: altlinux.space/rirusha/riru-build-image:latest
-      options: --platform linux/${{ matrix:arch }}
+      options: "--platform linux/${{ matrix:arch }}"
 
     strategy:
       matrix:
