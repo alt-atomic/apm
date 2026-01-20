@@ -44,6 +44,7 @@ systemd_tmpfiles_dir = systemd.get_variable(pkgconfig: 'tmpfiles_dir')
 tmpfiles_conf = configuration_data()
 tmpfiles_conf.set('VARAPMDIR', varapmdir)
 tmpfiles_conf.set('CONFAPMDIR', confapmdir)
+tmpfiles_conf.set('VARCACHEAPMDIR', varcacheapmdir)
 
 configure_file(
   input: meson.project_name() + '.tmpfiles.in',
