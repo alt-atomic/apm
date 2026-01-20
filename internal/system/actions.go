@@ -104,13 +104,6 @@ type ImageStatus struct {
 }
 
 // CheckRemove проверяем пакеты перед удалением
-// @http POST /api/v1/packages/check-remove
-// @param packages:body:[]string
-// @param purge:body:bool:false
-// @param depends:body:bool:false
-// @response CheckResponse
-// @permission read
-// @summary Проверить пакеты перед удалением
 func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool, depends bool) (*reply.APIResponse, error) {
 	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge, depends)
 	if aptError != nil {
@@ -127,10 +120,6 @@ func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool
 }
 
 // CheckUpgrade проверяем пакеты перед обновлением системы
-// @http GET /api/v1/system/check-upgrade
-// @response CheckResponse
-// @permission read
-// @summary Проверить пакеты перед обновлением системы
 func (a *Actions) CheckUpgrade(ctx context.Context) (*reply.APIResponse, error) {
 	packageParse, aptError := a.serviceAptActions.CheckUpgrade(ctx)
 	if aptError != nil {
@@ -147,11 +136,6 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (*reply.APIResponse, error) 
 }
 
 // CheckInstall проверяем пакеты перед установкой
-// @http POST /api/v1/packages/check-install
-// @param packages:body:[]string
-// @response CheckResponse
-// @permission read
-// @summary Проверить пакеты перед установкой
 func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
 	if len(packages) == 0 {
 		return nil, errors.New(app.T_("You must specify at least one package"))
@@ -189,14 +173,6 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 }
 
 // Remove удаляет системный пакет.
-// @http POST /api/v1/packages/remove
-// @param packages:body:[]string
-// @param purge:body:bool:false
-// @param depends:body:bool:false
-// @param confirm:body:bool:true
-// @response InstallRemoveResponse
-// @permission manage
-// @summary Удалить пакеты
 func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool, confirm bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
@@ -272,12 +248,6 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 }
 
 // Install осуществляет установку системного пакета.
-// @http POST /api/v1/packages/install
-// @param packages:body:[]string
-// @param confirm:body:bool:true
-// @response InstallRemoveResponse
-// @permission manage
-// @summary Установить пакеты
 func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
@@ -524,11 +494,6 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 }
 
 // Update обновляет информацию или базу данных пакетов.
-// @http POST /api/v1/system/update
-// @param noLock:query:bool:false
-// @response UpdateResponse
-// @permission manage
-// @summary Обновить базу данных пакетов
 func (a *Actions) Update(ctx context.Context, noLock bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
@@ -606,10 +571,6 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 }
 
 // Upgrade общее обновление системы
-// @http POST /api/v1/system/upgrade
-// @response UpgradeResponse
-// @permission manage
-// @summary Обновить систему
 func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
@@ -680,12 +641,6 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 }
 
 // Info возвращает информацию о системном пакете.
-// @http GET /api/v1/packages/{name}
-// @param name:path:string
-// @param full:query:bool:false
-// @response InfoResponse
-// @permission read
-// @summary Получить информацию о пакете
 func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (*reply.APIResponse, error) {
 	packageName = strings.TrimSpace(packageName)
 	//packageName = helper.CleanPackageName(packageName)
@@ -752,16 +707,8 @@ type ListParams struct {
 }
 
 // List возвращает список пакетов
+// List возвращает список пакетов.
 // Структура ListParams заполняется из query параметров автоматически по json тегам
-// @http GET /api/v1/packages
-// @query sort:string:false:Поле сортировки
-// @query order:string:false:Порядок сортировки (asc/desc)
-// @query limit:integer:false:Лимит записей (по умолчанию 50)
-// @query offset:integer:false:Смещение
-// @query filters:string:false:Фильтры (можно несколько)
-// @query forceUpdate:bool:false:Принудительное обновление базы
-// @query full:bool:true:Полный формат вывода
-// @response ListResponse
 // @permission read
 // @summary Получить список пакетов
 func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool) (*reply.APIResponse, error) {
@@ -823,10 +770,6 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 }
 
 // GetFilterFields возвращает список свойств для фильтрации.
-// @http GET /api/v1/packages/filter-fields
-// @response GetFilterFieldsResponse
-// @permission read
-// @summary Получить доступные поля для фильтрации
 func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, error) {
 	if err := a.validateDB(ctx); err != nil {
 		return nil, err
@@ -868,13 +811,6 @@ func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, erro
 }
 
 // Search осуществляет поиск системного пакета по названию.
-// @http GET /api/v1/packages/search
-// @param q:query:string
-// @param installed:query:bool:false
-// @param full:query:bool:false
-// @response SearchResponse
-// @permission read
-// @summary Поиск пакетов по названию
 func (a *Actions) Search(ctx context.Context, packageName string, installed bool, isFullFormat bool) (*reply.APIResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
@@ -910,10 +846,6 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 }
 
 // ImageStatus возвращает статус актуального образа
-// @http GET /api/v1/image/status
-// @response ImageStatusResponse
-// @permission read
-// @summary Получить статус образа
 func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
 	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
@@ -932,10 +864,6 @@ func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
 }
 
 // ImageUpdate обновляет образ.
-// @http POST /api/v1/image/update
-// @response ImageUpdateResponse
-// @permission manage
-// @summary Обновить образ
 func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 	if err := a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, err
@@ -967,10 +895,6 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 }
 
 // ImageApply применить изменения к хосту
-// @http POST /api/v1/image/apply
-// @response ImageApplyResponse
-// @permission manage
-// @summary Применить изменения к образу
 func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	var err error
 	if err = a.serviceHostConfig.LoadConfig(); err != nil {
@@ -1053,13 +977,6 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 }
 
 // ImageHistory история изменений образа
-// @http GET /api/v1/image/history
-// @param imageName:query:string
-// @param limit:query:int:50
-// @param offset:query:int:0
-// @response ImageHistoryResponse
-// @permission read
-// @summary Получить историю изменений образа
 func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int, offset int) (*reply.APIResponse, error) {
 	history, err := a.serviceHostDatabase.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
 	if err != nil {
@@ -1086,10 +1003,6 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 }
 
 // ImageGetConfig получить конфиг
-// @http GET /api/v1/image/config
-// @response ImageConfigResponse
-// @permission read
-// @summary Получить конфигурацию образа
 func (a *Actions) ImageGetConfig(_ context.Context) (*reply.APIResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
@@ -1107,10 +1020,6 @@ func (a *Actions) ImageGetConfig(_ context.Context) (*reply.APIResponse, error) 
 }
 
 // ImageSaveConfig сохранить конфиг
-// @http PUT /api/v1/image/config
-// @response ImageConfigResponse
-// @permission manage
-// @summary Сохранить конфигурацию образа
 func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*reply.APIResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {

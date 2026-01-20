@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/internal/common/build"
 	"apm/internal/common/dbus_doc"
 	"apm/internal/common/reply"
 	"context"
@@ -26,9 +27,6 @@ import (
 
 //go:embed dbus.go
 var dbusSource string
-
-//go:embed actions.go
-var actionsSource string
 
 // responseTypes общие типы ответов для D-Bus и HTTP API
 var responseTypes = map[string]reflect.Type{
@@ -46,11 +44,7 @@ var responseTypes = map[string]reflect.Type{
 	"ImageUpdateResponse":     reflect.TypeOf(ImageUpdateResponse{}),
 	"ImageStatusResponse":     reflect.TypeOf(ImageStatusResponse{}),
 	"ImageConfigResponse":     reflect.TypeOf(ImageConfigResponse{}),
-}
-
-// GetActionsSourceCode возвращает исходный код actions.go для парсинга аннотаций
-func GetActionsSourceCode() string {
-	return actionsSource
+	"ImageConfigRequest":      reflect.TypeOf(build.Config{}),
 }
 
 // GetHTTPResponseTypes возвращает типы ответов для генерации OpenAPI схем

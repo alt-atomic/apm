@@ -383,18 +383,15 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 
 	sysActions := system.NewActions(appConfig)
 
-	// Используем API registry для автогенерации маршрутов из аннотаций в actions.go
+	// Создаём HTTP wrapper и регистрируем маршруты напрямую
+	httpWrapper := system.NewHTTPWrapper(sysActions, appConfig, ctx)
+	httpWrapper.RegisterRoutes(server.GetMux(), appConfig.ConfigManager.GetConfig().IsAtomic)
+
+	// Регистрируем endpoints в registry для OpenAPI документации и проверки прав
 	registry := http_server.NewRegistry()
 	registry.RegisterResponseTypes(system.GetHTTPResponseTypes())
-	if err := registry.ParseAnnotations(system.GetActionsSourceCode()); err != nil {
-		app.Log.Warn(fmt.Sprintf("Failed to parse actions annotations: %v", err))
-	}
-
+	registry.RegisterEndpoints(system.GetHTTPEndpoints())
 	server.SetRegistry(registry)
-
-	// Генерируем HTTP handlers из аннотаций
-	httpGen := http_server.NewHTTPGenerator(registry, appConfig, ctx)
-	httpGen.RegisterRoutes(server.GetMux(), sysActions, appConfig.ConfigManager.GetConfig().IsAtomic)
 
 	// Регистрируем OpenAPI документацию из registry
 	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic))
