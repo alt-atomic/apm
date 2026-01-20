@@ -25,6 +25,20 @@ import (
 	"strings"
 )
 
+// mapTypeToOpenAPI преобразует тип из аннотаций в OpenAPI тип
+func mapTypeToOpenAPI(typ string) string {
+	switch typ {
+	case "int", "int32", "int64", "integer":
+		return "integer"
+	case "bool", "boolean":
+		return "boolean"
+	case "[]string", "array":
+		return "array"
+	default:
+		return "string"
+	}
+}
+
 // Endpoint описывает API endpoint
 type Endpoint struct {
 	// Имя метода в Actions
@@ -230,7 +244,7 @@ func (r *Registry) parseEndpointAnnotations(methodName string, comment string) *
 		if match := regexp.MustCompile(`@query\s+(\w+):(\w+):(\w+):?(.+)?`).FindStringSubmatch(line); match != nil {
 			qp := QueryParam{
 				Name:     match[1],
-				Type:     match[2],
+				Type:     mapTypeToOpenAPI(match[2]),
 				Required: match[3] == "true",
 			}
 			if len(match) > 4 {
@@ -256,7 +270,7 @@ func (r *Registry) parseEndpointAnnotations(methodName string, comment string) *
 			if pm.Source == "query" {
 				ep.QueryParams = append(ep.QueryParams, QueryParam{
 					Name:     pm.Name,
-					Type:     pm.Type,
+					Type:     mapTypeToOpenAPI(pm.Type),
 					Required: pm.Default == "",
 				})
 			}

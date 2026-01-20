@@ -55,6 +55,13 @@ type Server struct {
 	mux       *http.ServeMux
 	server    *http.Server
 	listener  net.Listener
+	registry  *Registry
+}
+
+// tokenInfo информация о токене
+type tokenInfo struct {
+	permission string // read или manage
+	token      string // сам токен
 }
 
 // NewServer создаёт новый HTTP сервер
@@ -71,9 +78,81 @@ func (s *Server) GetMux() *http.ServeMux {
 	return s.mux
 }
 
+// SetRegistry устанавливает registry для проверки прав
+func (s *Server) SetRegistry(registry *Registry) {
+	s.registry = registry
+}
+
+// parseToken парсит токен в формате "permission:token" или просто "token"
+func parseToken(tokenStr string) tokenInfo {
+	parts := strings.SplitN(tokenStr, ":", 2)
+	if len(parts) == 2 {
+		return tokenInfo{
+			permission: parts[0],
+			token:      parts[1],
+		}
+	}
+	return tokenInfo{
+		permission: "manage",
+		token:      tokenStr,
+	}
+}
+
+// findEndpointPermission находит требуемое разрешение для endpoint
+func (s *Server) findEndpointPermission(path string, method string) string {
+	if s.registry == nil {
+		return ""
+	}
+
+	for _, ep := range s.registry.GetHTTPEndpoints() {
+		if ep.HTTPPath == path && ep.HTTPMethod == method {
+			return ep.Permission
+		}
+	}
+	return ""
+}
+
+// checkPermission проверяет, достаточно ли прав у токена
+func checkPermission(tokenPerm string, requiredPerm string) bool {
+	// manage имеет доступ ко всему
+	if tokenPerm == "manage" {
+		return true
+	}
+	// read имеет доступ только к read
+	if tokenPerm == "read" && requiredPerm == "read" {
+		return true
+	}
+	// read не имеет доступа к manage
+	if tokenPerm == "read" && requiredPerm == "manage" {
+		return false
+	}
+	// Если разрешение не указано, пропускаем
+	if requiredPerm == "" {
+		return true
+	}
+	return false
+}
+
 // authMiddleware проверяет авторизацию
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
+	publicPaths := []string{
+		"/",
+		"/api/v1",
+		"/api/v1/health",
+		"/api/v1/docs",
+		"/api/v1/openapi.json",
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Проверяем, является ли путь публичным
+		for _, path := range publicPaths {
+			if r.URL.Path == path {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		// Если токен не настроен, пропускаем все запросы
 		if s.config.APIToken == "" {
 			next.ServeHTTP(w, r)
 			return
@@ -87,13 +166,29 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Поддерживаем формат "Bearer <token>" и просто "<token>"
-		token := authHeader
+		tokenStr := authHeader
 		if strings.HasPrefix(authHeader, "Bearer ") {
-			token = strings.TrimPrefix(authHeader, "Bearer ")
+			tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
 		}
 
-		if token != s.config.APIToken {
+		// Парсим токен (может быть в формате "permission:token")
+		parsedToken := parseToken(tokenStr)
+
+		// Парсим конфигурационный токен
+		configToken := parseToken(s.config.APIToken)
+
+		// Проверяем, что сам токен совпадает
+		if parsedToken.token != configToken.token {
 			writeUnauthorized(w, "Invalid API token")
+			return
+		}
+
+		// Находим требуемое разрешение для endpoint
+		requiredPerm := s.findEndpointPermission(r.URL.Path, r.Method)
+
+		// Проверяем права доступа
+		if !checkPermission(parsedToken.permission, requiredPerm) {
+			writeForbidden(w, "Insufficient permissions. Required: "+requiredPerm+", provided: "+parsedToken.permission)
 			return
 		}
 
@@ -219,6 +314,16 @@ func writeUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("WWW-Authenticate", "Bearer")
 	w.WriteHeader(http.StatusUnauthorized)
+	_ = json.NewEncoder(w).Encode(reply.APIResponse{
+		Data:  map[string]interface{}{"message": message},
+		Error: true,
+	})
+}
+
+// writeForbidden отправляет ошибку доступа
+func writeForbidden(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusForbidden)
 	_ = json.NewEncoder(w).Encode(reply.APIResponse{
 		Data:  map[string]interface{}{"message": message},
 		Error: true,

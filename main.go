@@ -390,6 +390,8 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 		app.Log.Warn(fmt.Sprintf("Failed to parse actions annotations: %v", err))
 	}
 
+	server.SetRegistry(registry)
+
 	// Генерируем HTTP handlers из аннотаций
 	httpGen := http_server.NewHTTPGenerator(registry, appConfig, ctx)
 	httpGen.RegisterRoutes(server.GetMux(), sysActions, appConfig.ConfigManager.GetConfig().IsAtomic)

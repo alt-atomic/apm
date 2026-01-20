@@ -754,14 +754,13 @@ type ListParams struct {
 // List возвращает список пакетов
 // Структура ListParams заполняется из query параметров автоматически по json тегам
 // @http GET /api/v1/packages
-// @param full:query:bool:false
 // @query sort:string:false:Поле сортировки
 // @query order:string:false:Порядок сортировки (asc/desc)
 // @query limit:integer:false:Лимит записей (по умолчанию 50)
 // @query offset:integer:false:Смещение
 // @query filters:string:false:Фильтры (можно несколько)
-// @query forceUpdate:boolean:false:Принудительное обновление базы
-// @query full:boolean:false:Полный формат вывода
+// @query forceUpdate:bool:false:Принудительное обновление базы
+// @query full:bool:true:Полный формат вывода
 // @response ListResponse
 // @permission read
 // @summary Получить список пакетов
@@ -814,7 +813,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
-			"packages":   a.FormatPackageOutput(packages, isFullFormat),
+			"packages":   a.FormatPackageOutput(packages, params.Full || isFullFormat),
 			"totalCount": int(totalCount),
 		},
 		Error: false,

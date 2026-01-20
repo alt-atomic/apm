@@ -24,12 +24,13 @@ import (
 
 // OpenAPISpec OpenAPI 3.0 спецификация
 type OpenAPISpec struct {
-	OpenAPI    string              `json:"openapi"`
-	Info       OpenAPIInfo         `json:"info"`
-	Servers    []OpenAPIServer     `json:"servers,omitempty"`
-	Paths      map[string]PathItem `json:"paths"`
-	Components OpenAPIComponents   `json:"components,omitempty"`
-	Tags       []OpenAPITag        `json:"tags,omitempty"`
+	OpenAPI    string                `json:"openapi"`
+	Info       OpenAPIInfo           `json:"info"`
+	Servers    []OpenAPIServer       `json:"servers,omitempty"`
+	Paths      map[string]PathItem   `json:"paths"`
+	Components OpenAPIComponents     `json:"components,omitempty"`
+	Tags       []OpenAPITag          `json:"tags,omitempty"`
+	Security   []map[string][]string `json:"security,omitempty"`
 }
 
 // OpenAPIInfo информация об API
@@ -154,7 +155,7 @@ func (g *OpenAPIGenerator) Generate() *OpenAPISpec {
 		OpenAPI: "3.0.3",
 		Info: OpenAPIInfo{
 			Title:       "APM HTTP API",
-			Description: "Atomic Package Manager HTTP API for system package management",
+			Description: "Atomic Package Manager HTTP API for system package management. Use token format: 'read:password' or 'manage:password'",
 			Version:     g.version,
 		},
 		Servers: []OpenAPIServer{},
@@ -166,10 +167,13 @@ func (g *OpenAPIGenerator) Generate() *OpenAPISpec {
 				"bearerAuth": {
 					Type:         "http",
 					Scheme:       "bearer",
-					BearerFormat: "token",
-					Description:  "API token authentication",
+					BearerFormat: "permission:token",
+					Description:  "API token authentication. Format: 'read:token' for read-only access or 'manage:token' for full access",
 				},
 			},
+		},
+		Security: []map[string][]string{
+			{"bearerAuth": {}},
 		},
 	}
 
@@ -339,8 +343,13 @@ func (g *OpenAPIGenerator) generateBodySchemaFromMappings(mappings []ParamMappin
 
 // mapType преобразует тип в OpenAPI тип
 func (g *OpenAPIGenerator) mapType(typ string) string {
+	// Если тип уже нормализован (boolean, integer), возвращаем как есть
+	if typ == "boolean" || typ == "integer" {
+		return typ
+	}
+
 	switch typ {
-	case "int", "int64":
+	case "int", "int32", "int64":
 		return "integer"
 	case "bool":
 		return "boolean"
