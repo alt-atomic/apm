@@ -49,8 +49,8 @@ jobs:
         run: meson compile -C _build
 
   rpm-build:
-    name: RPM build for ${{ matrix.branch }} for and uploading
-    runs-on: alt-sisyphus
+    name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
+    runs-on: ${{ matrix.runner }}
     container:
       image: altlinux.space/actions/runner/hasherc:${{ matrix.branch }}
 
@@ -59,6 +59,23 @@ jobs:
         branch:
           - sisyphus
           - p11
+        arch:
+          - amd64
+          - arm64
+        include:
+          - arch: arm64
+            branch: sisyphus
+            runner: self-hosted-arm64-alt-sisyphus
+          - arch: arm64
+            branch: p11
+            runner: self-hosted-arm64-alt-p11
+          - arch: amd64
+            branch: sisyphus
+            runner: alt-sisyphus
+          - arch: amd64
+            branch: p11
+            runner: alt-p11
+
     needs:
       - lint-vala
       - lint-blueprint
