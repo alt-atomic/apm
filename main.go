@@ -173,6 +173,7 @@ func main() {
 func setupSignalHandling() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	aptLib.RegisterSignalChannel(sigs)
 
 	go func() {
 		sig := <-sigs

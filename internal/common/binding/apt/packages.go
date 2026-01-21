@@ -75,6 +75,9 @@ func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error) er
 		}
 	}
 
+	lib.BlockSignals()
+	defer lib.RestoreSignals()
+
 	lib.StartOperation()
 	defer lib.EndOperation()
 

@@ -64,6 +64,8 @@ func NewSystem() (*System, error) {
 // Close frees the system resources
 func (s *System) Close() {
 	if s.Ptr != nil {
+		BlockSignals()
+		defer RestoreSignals()
 		C.apt_cleanup_system(s.Ptr)
 		s.Ptr = nil
 		runtime.SetFinalizer(s, nil)
