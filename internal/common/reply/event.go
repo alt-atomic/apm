@@ -48,11 +48,11 @@ type EventData struct {
 	Transaction     string  `json:"transaction,omitempty"`
 }
 
-var (
-	EventTypeNotification = "NOTIFICATION"
-	EventTypeProgress     = "PROGRESS"
-	EventTypeTaskResult   = "TASK_RESULT"
+const EventTypeNotification = "NOTIFICATION"
+const EventTypeProgress = "PROGRESS"
+const EventTypeTaskResult = "TASK_RESULT"
 
+var (
 	StateBefore = "BEFORE"
 	StateAfter  = "AFTER"
 )

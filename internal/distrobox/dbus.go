@@ -17,8 +17,10 @@
 package distrobox
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
+	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 
@@ -66,7 +68,34 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 
 // Update - Обновление пакетов
 // doc_response: UpdateResponse
-func (w *DBusWrapper) Update(container string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Update(container string, transaction string, background bool) (string, *dbus.Error) {
+	if transaction == "" {
+		transaction = generateTransactionID()
+	}
+
+	if background {
+		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+		go func() {
+			resp, err := w.actions.Update(ctx, container)
+			var data interface{}
+			if resp != nil {
+				data = resp.Data
+			}
+			reply.SendTaskResult(ctx, "distrobox.Update", data, err)
+		}()
+
+		bgResp := BackgroundTaskResponse{
+			Message:     app.T_("Task started in background"),
+			Transaction: transaction,
+		}
+		data, jerr := json.Marshal(bgResp)
+		if jerr != nil {
+			return "", dbus.MakeFailedError(jerr)
+		}
+		return string(data), nil
+	}
+
+	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Update(ctx, container)
 	if err != nil {
@@ -184,7 +213,34 @@ func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 
 // ContainerAdd - Добавить контейнер
 // doc_response: ContainerAddResponse
-func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks string, transaction string, background bool) (string, *dbus.Error) {
+	if transaction == "" {
+		transaction = generateTransactionID()
+	}
+
+	if background {
+		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+		go func() {
+			resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
+			var data interface{}
+			if resp != nil {
+				data = resp.Data
+			}
+			reply.SendTaskResult(ctx, "distrobox.ContainerAdd", data, err)
+		}()
+
+		bgResp := BackgroundTaskResponse{
+			Message:     app.T_("Task started in background"),
+			Transaction: transaction,
+		}
+		data, jerr := json.Marshal(bgResp)
+		if jerr != nil {
+			return "", dbus.MakeFailedError(jerr)
+		}
+		return string(data), nil
+	}
+
+	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
