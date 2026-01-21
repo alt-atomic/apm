@@ -3,7 +3,7 @@
 %define service_id org.altlinux.APM
 
 Name: apm
-Version: 0.3.1
+Version: 0.3.2
 Release: alt1
 
 Summary: Atomic Package Manager 
@@ -76,6 +76,9 @@ done
 %doc README.ru.md
 
 %changelog
+* Wed Jan 21 2026 Vladimir Romanov <rirusha@altlinux.org> 0.3.2-alt1
+- v0.3.2
+
 * Sun Jan 18 2026 Vladimir Romanov <rirusha@altlinux.org> 0.3.1-alt1
 - v0.3.1
 
