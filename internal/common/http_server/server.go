@@ -19,6 +19,7 @@ package http_server
 import (
 	"apm/internal/common/app"
 	"apm/internal/common/reply"
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -236,6 +237,15 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+// Hijack реализует интерфейс http.Hijacker для поддержки WebSocket
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := rw.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("responseWriter does not implement http.Hijacker")
+	}
+	return h.Hijack()
+}
+
 // Start запускает HTTP сервер
 func (s *Server) Start(ctx context.Context) error {
 	// Применяем middleware
@@ -314,6 +324,15 @@ func (s *Server) RegisterHealthCheck() {
 			"version": s.appConfig.ConfigManager.GetConfig().Version,
 		})
 	})
+}
+
+// RegisterWebSocket регистрирует WebSocket эндпоинт для событий
+func (s *Server) RegisterWebSocket() {
+	hub := GetWebSocketHub()
+	s.mux.HandleFunc("GET /api/v1/events", func(w http.ResponseWriter, r *http.Request) {
+		hub.HandleWebSocket(w, r)
+	})
+	app.Log.Info("WebSocket events endpoint: ws://" + s.config.ListenAddr + "/api/v1/events")
 }
 
 // RegisterAPIInfo регистрирует эндпоинт информации об API

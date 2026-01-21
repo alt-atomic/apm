@@ -262,7 +262,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	appConfig.ConfigManager.SetFormat("dbus_doc")
+	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 
 	// Параллельно обновляем иконки
 	go func() {
@@ -338,14 +338,14 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	appConfig.ConfigManager.SetFormat("dbus_doc")
+	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 
 	// Блокируем до сигнала
 	select {}
 }
 
 func httpServer(ctx context.Context, cmd *cli.Command) error {
-	appConfig.ConfigManager.SetFormat(cmd.String("format"))
+	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
 	app.Log.EnableStdoutLogging()
 
 	if syscall.Geteuid() != 0 {
@@ -366,7 +366,12 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 
 	server := http_server.NewServer(config, appConfig)
 
+	// Инициализируем WebSocket hub для отправки событий
+	wsHub := http_server.GetWebSocketHub()
+	reply.SetWebSocketHub(wsHub)
+
 	server.RegisterHealthCheck()
+	server.RegisterWebSocket()
 	server.RegisterAPIInfo(
 		appConfig.ConfigManager.GetConfig().IsAtomic,
 		appConfig.ConfigManager.GetConfig().ExistDistrobox,
@@ -392,7 +397,7 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 	server.SetRegistry(registry)
 
 	// Регистрируем OpenAPI документацию из registry
-	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic))
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic, config.ListenAddr))
 
 	err := server.Start(ctx)
 	if err != nil {

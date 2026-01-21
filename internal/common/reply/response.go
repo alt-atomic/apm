@@ -374,7 +374,7 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 
 	switch format {
 	// ---------------------------------- JSON ----------------------------------
-	case "json":
+	case app.FormatJSON:
 		// Если нет ошибки, убираем "message"
 		if !resp.Error {
 			if dataMap, ok := resp.Data.(map[string]interface{}); ok {

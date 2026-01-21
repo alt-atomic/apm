@@ -125,17 +125,19 @@ type SecurityScheme struct {
 
 // OpenAPIGenerator генератор OpenAPI из registry
 type OpenAPIGenerator struct {
-	registry *Registry
-	version  string
-	isAtomic bool
+	registry   *Registry
+	version    string
+	isAtomic   bool
+	listenAddr string
 }
 
 // NewOpenAPIGenerator создает новый генератор
-func NewOpenAPIGenerator(registry *Registry, version string, isAtomic bool) *OpenAPIGenerator {
+func NewOpenAPIGenerator(registry *Registry, version string, isAtomic bool, listenAddr string) *OpenAPIGenerator {
 	return &OpenAPIGenerator{
-		registry: registry,
-		version:  version,
-		isAtomic: isAtomic,
+		registry:   registry,
+		version:    version,
+		isAtomic:   isAtomic,
+		listenAddr: listenAddr,
 	}
 }
 
@@ -154,9 +156,15 @@ func (g *OpenAPIGenerator) Generate() *OpenAPISpec {
 	spec := &OpenAPISpec{
 		OpenAPI: "3.0.3",
 		Info: OpenAPIInfo{
-			Title:       "APM HTTP API",
-			Description: "Atomic Package Manager HTTP API for system package management. Use token format: 'read:password' or 'manage:password'",
-			Version:     g.version,
+			Title: "APM HTTP API",
+			Description: `Atomic Package Manager HTTP API for system package management. Use token format: 'read:password' or 'manage:password'
+
+## WebSocket Events
+
+Subscribe to real-time events (progress updates, notifications) via WebSocket:
+
+` + "```bash\nwebsocat ws://" + g.listenAddr + "/api/v1/events\n```",
+			Version: g.version,
 		},
 		Servers: []OpenAPIServer{},
 		Paths:   make(map[string]PathItem),
@@ -216,6 +224,25 @@ func (g *OpenAPIGenerator) Generate() *OpenAPISpec {
 	for tag := range tagsSet {
 		spec.Tags = append(spec.Tags, OpenAPITag{Name: tag})
 	}
+
+	// Добавляем WebSocket endpoint
+	spec.Paths["/api/v1/events"] = PathItem{
+		Get: &Operation{
+			Tags:        []string{"events"},
+			Summary:     "WebSocket Events Stream",
+			Description: "Subscribe to real-time events via WebSocket. Use: `websocat ws://127.0.0.1:8080/api/v1/events`",
+			OperationID: "get_events_websocket",
+			Responses: map[string]Response{
+				"101": {
+					Description: "Switching Protocols - WebSocket connection established",
+				},
+			},
+		},
+	}
+	spec.Tags = append(spec.Tags, OpenAPITag{
+		Name:        "events",
+		Description: "Real-time event streaming via WebSocket",
+	})
 
 	return spec
 }

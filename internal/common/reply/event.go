@@ -25,6 +25,18 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
+// WebSocketBroadcaster интерфейс для отправки событий через WebSocket
+type WebSocketBroadcaster interface {
+	BroadcastEvent(event interface{})
+}
+
+var wsHub WebSocketBroadcaster
+
+// SetWebSocketHub устанавливает WebSocket hub для отправки событий
+func SetWebSocketHub(hub WebSocketBroadcaster) {
+	wsHub = hub
+}
+
 // EventData содержит данные события.
 type EventData struct {
 	Name            string  `json:"name"`
@@ -128,16 +140,19 @@ func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 	}
 
 	UpdateTask(appConfig, eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
-	if appConfig.ConfigManager.GetConfig().Format != "dbus_doc" {
-		return
-	}
 
-	SendNotificationResponse(eventData, appConfig.DBusManager.GetConnection())
+	format := appConfig.ConfigManager.GetConfig().Format
+	switch format {
+	case app.FormatDBus:
+		SendNotificationResponse(eventData, appConfig.DBusManager.GetConnection())
+	case app.FormatHTTP:
+		SendWebSocketNotification(eventData)
+	}
 }
 
 // SendNotificationResponse отправляет ответы через DBus.
 func SendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
-	message, err := json.MarshalIndent(eventData, "", "  ")
+	message, err := json.Marshal(eventData)
 	if err != nil {
 		app.Log.Debug(err.Error())
 	}
@@ -154,6 +169,15 @@ func SendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
 	if err != nil {
 		app.Log.Error(app.T_("Error sending notification: %v"), err)
 	}
+}
+
+// SendWebSocketNotification отправляет событие через WebSocket
+func SendWebSocketNotification(eventData *EventData) {
+	if wsHub == nil {
+		app.Log.Debug("WebSocket hub is not initialized")
+		return
+	}
+	wsHub.BroadcastEvent(eventData)
 }
 
 func getTaskText(task string) string {
