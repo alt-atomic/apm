@@ -51,10 +51,20 @@ type EventData struct {
 var (
 	EventTypeNotification = "NOTIFICATION"
 	EventTypeProgress     = "PROGRESS"
+	EventTypeTaskResult   = "TASK_RESULT"
 
 	StateBefore = "BEFORE"
 	StateAfter  = "AFTER"
 )
+
+// TaskResultEvent содержит результат фоновой задачи
+type TaskResultEvent struct {
+	Type        string      `json:"type"`
+	Name        string      `json:"name"`
+	Transaction string      `json:"transaction,omitempty"`
+	Data        interface{} `json:"data,omitempty"`
+	Error       string      `json:"error,omitempty"`
+}
 
 // NotificationOption — функция-опция для настройки EventData.
 type NotificationOption func(*EventData)
@@ -178,6 +188,65 @@ func SendWebSocketNotification(eventData *EventData) {
 		return
 	}
 	wsHub.BroadcastEvent(eventData)
+}
+
+// SendTaskResult отправляет результат фоновой задачи через WebSocket и D-Bus
+func SendTaskResult(ctx context.Context, taskName string, data interface{}, taskErr error) {
+	appConfig := app.GetAppConfig(ctx)
+
+	txVal := ctx.Value(helper.TransactionKey)
+	txStr, _ := txVal.(string)
+
+	event := TaskResultEvent{
+		Type:        EventTypeTaskResult,
+		Name:        taskName,
+		Transaction: txStr,
+		Data:        data,
+	}
+
+	if taskErr != nil {
+		event.Error = taskErr.Error()
+		event.Data = nil
+	}
+
+	format := appConfig.ConfigManager.GetConfig().Format
+	switch format {
+	case app.FormatDBus:
+		SendTaskResultDBus(&event, appConfig.DBusManager.GetConnection())
+	case app.FormatHTTP:
+		SendTaskResultWebSocket(&event)
+	}
+}
+
+// SendTaskResultWebSocket отправляет результат задачи через WebSocket
+func SendTaskResultWebSocket(event *TaskResultEvent) {
+	if wsHub == nil {
+		app.Log.Debug("WebSocket hub is not initialized")
+		return
+	}
+	wsHub.BroadcastEvent(event)
+}
+
+// SendTaskResultDBus отправляет результат задачи через D-Bus сигнал
+func SendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
+	message, err := json.Marshal(event)
+	if err != nil {
+		app.Log.Debug(err.Error())
+		return
+	}
+
+	if dbusConn == nil {
+		app.Log.Error(app.T_("DBus connection is not initialized"))
+		return
+	}
+
+	objPath := dbus.ObjectPath("/org/altlinux/APM")
+	signalName := "org.altlinux.APM.Notification"
+
+	err = dbusConn.Emit(objPath, signalName, string(message))
+	if err != nil {
+		app.Log.Error(app.T_("Error sending task result: %v"), err)
+	}
 }
 
 func getTaskText(task string) string {

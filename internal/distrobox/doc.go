@@ -27,6 +27,27 @@ import (
 //go:embed dbus.go
 var dbusSource string
 
+// responseTypes общие типы ответов для D-Bus и HTTP API
+// Используем префикс Distrobox для HTTP чтобы избежать конфликтов с system.ListResponse
+var responseTypes = map[string]reflect.Type{
+	"APIResponse":                       reflect.TypeOf(reply.APIResponse{}),
+	"DistroboxUpdateResponse":           reflect.TypeOf(UpdateResponse{}),
+	"DistroboxInfoResponse":             reflect.TypeOf(InfoResponse{}),
+	"DistroboxSearchResponse":           reflect.TypeOf(SearchResponse{}),
+	"DistroboxListResponse":             reflect.TypeOf(ListResponse{}),
+	"DistroboxInstallResponse":          reflect.TypeOf(InstallResponse{}),
+	"DistroboxRemoveResponse":           reflect.TypeOf(RemoveResponse{}),
+	"DistroboxContainerListResponse":    reflect.TypeOf(ContainerListResponse{}),
+	"DistroboxContainerAddResponse":     reflect.TypeOf(ContainerAddResponse{}),
+	"DistroboxContainerRemoveResponse":  reflect.TypeOf(ContainerRemoveResponse{}),
+	"DistroboxGetFilterFieldsResponse":  reflect.TypeOf(GetFilterFieldsResponse{}),
+}
+
+// GetHTTPResponseTypes возвращает типы ответов для генерации OpenAPI схем
+func GetHTTPResponseTypes() map[string]reflect.Type {
+	return responseTypes
+}
+
 // getDocConfig возвращает конфигурацию документации для distrobox модуля
 func getDocConfig() dbus_doc.Config {
 	return dbus_doc.Config{
@@ -36,19 +57,7 @@ func getDocConfig() dbus_doc.Config {
 		DBusWrapper:   (*DBusWrapper)(nil),
 		SourceCode:    dbusSource,
 		DBusSession:   "session",
-		ResponseTypes: map[string]reflect.Type{
-			"APIResponse":             reflect.TypeOf(reply.APIResponse{}),
-			"UpdateResponse":          reflect.TypeOf(UpdateResponse{}),
-			"InfoResponse":            reflect.TypeOf(InfoResponse{}),
-			"SearchResponse":          reflect.TypeOf(SearchResponse{}),
-			"ListResponse":            reflect.TypeOf(ListResponse{}),
-			"InstallResponse":         reflect.TypeOf(InstallResponse{}),
-			"RemoveResponse":          reflect.TypeOf(RemoveResponse{}),
-			"ContainerListResponse":   reflect.TypeOf(ContainerListResponse{}),
-			"ContainerAddResponse":    reflect.TypeOf(ContainerAddResponse{}),
-			"ContainerRemoveResponse": reflect.TypeOf(ContainerRemoveResponse{}),
-			"GetFilterFieldsResponse": reflect.TypeOf(GetFilterFieldsResponse{}),
-		},
+		ResponseTypes: responseTypes,
 	}
 }
 

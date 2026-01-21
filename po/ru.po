@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 21:10+0600\n"
+"POT-Creation-Date: 2026-01-21 23:51+0600\n"
 "PO-Revision-Date: 2026-01-21 14:08+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -28,8 +28,8 @@ msgid "error opening system database: %w"
 msgstr "Ошибка открытия системной базы данных: %w"
 
 #: internal/common/app/database.go:106 internal/common/wrapper/wrapper.go:61
-#: internal/kernel/actions.go:746 internal/system/actions.go:1101 main.go:286
-#: main.go:353
+#: internal/kernel/actions.go:746 internal/system/actions.go:1101 main.go:303
+#: main.go:370
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -1191,151 +1191,156 @@ msgstr "неверная длина: ожидалось 9 символов, по
 msgid "Wrong permission format"
 msgstr "Неправильный формат разрешения"
 
-#: internal/common/reply/event.go:161
+#: internal/common/reply/event.go:171 internal/common/reply/event.go:239
 msgid "DBus connection is not initialized"
 msgstr "Соединение DBus не было инициализировано"
 
-#: internal/common/reply/event.go:170
+#: internal/common/reply/event.go:180
 msgid "Error sending notification: %v"
 msgstr "Ошибка отправки уведомления: %v"
 
-#: internal/common/reply/event.go:186 internal/common/reply/event.go:228
+#: internal/common/reply/event.go:248
+#, fuzzy
+msgid "Error sending task result: %v"
+msgstr "Ошибка открытия базы данных: %v"
+
+#: internal/common/reply/event.go:255 internal/common/reply/event.go:297
 msgid "Saving packages to the database"
 msgstr "Сохранение пакетов в базу данных"
 
-#: internal/common/reply/event.go:188
+#: internal/common/reply/event.go:257
 msgid "Requesting list of containers"
 msgstr "Запрос списка контейнеров"
 
-#: internal/common/reply/event.go:190
+#: internal/common/reply/event.go:259
 msgid "Exporting package"
 msgstr "Экспортирование пакета"
 
-#: internal/common/reply/event.go:192
+#: internal/common/reply/event.go:261
 msgid "Requesting container information"
 msgstr "Запрос информации о контейнере"
 
-#: internal/common/reply/event.go:194
+#: internal/common/reply/event.go:263
 msgid "Creating container"
 msgstr "Создание контейнера"
 
-#: internal/common/reply/event.go:196
+#: internal/common/reply/event.go:265
 msgid "Deleting container"
 msgstr "Удаление контейнера"
 
-#: internal/common/reply/event.go:198
+#: internal/common/reply/event.go:267
 msgid "Installing package"
 msgstr "Установка пакета"
 
-#: internal/common/reply/event.go:200
+#: internal/common/reply/event.go:269
 msgid "Removing package"
 msgstr "Удаление пакета"
 
-#: internal/common/reply/event.go:202
+#: internal/common/reply/event.go:271
 msgid "Retrieving list of packages"
 msgstr "Извлечение списка пакетов"
 
-#: internal/common/reply/event.go:204
+#: internal/common/reply/event.go:273
 msgid "Determining file owner"
 msgstr "Определение владельца файла"
 
-#: internal/common/reply/event.go:206
+#: internal/common/reply/event.go:275
 msgid "Searching package paths"
 msgstr "Поиск путей пакета"
 
-#: internal/common/reply/event.go:208
+#: internal/common/reply/event.go:277
 msgid "Retrieving package information"
 msgstr "Извлечение информации о пакете"
 
-#: internal/common/reply/event.go:210
+#: internal/common/reply/event.go:279
 msgid "Updating packages"
 msgstr "Обновление пакетов"
 
-#: internal/common/reply/event.go:212
+#: internal/common/reply/event.go:281
 msgid "Filtering packages"
 msgstr "Фильтрация пакетов"
 
-#: internal/common/reply/event.go:214
+#: internal/common/reply/event.go:283
 msgid "Working with packages"
 msgstr "Работа с пакетами"
 
-#: internal/common/reply/event.go:216
+#: internal/common/reply/event.go:285
 msgid "System update"
 msgstr "Обновление системы"
 
-#: internal/common/reply/event.go:218
+#: internal/common/reply/event.go:287
 msgid "Analyzing packages"
 msgstr "Анализ пакетов"
 
-#: internal/common/reply/event.go:220
+#: internal/common/reply/event.go:289
 msgid "General update process"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:222
+#: internal/common/reply/event.go:291
 msgid "General update kernel"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:224
+#: internal/common/reply/event.go:293
 msgid "Loading package list from STPLR repository"
 msgstr "Загрузка списка пакетов из репозитория STPLR"
 
-#: internal/common/reply/event.go:226
+#: internal/common/reply/event.go:295
 msgid "Loading package list from ALT repository"
 msgstr "Загрузка списка пакетов из репозитория ALT"
 
-#: internal/common/reply/event.go:230
+#: internal/common/reply/event.go:299
 msgid "Saving image history to the database"
 msgstr "Сохранение истории образа в базу данных"
 
-#: internal/common/reply/event.go:232
+#: internal/common/reply/event.go:301
 msgid "Building local image"
 msgstr "Создание локального образа"
 
-#: internal/common/reply/event.go:234
+#: internal/common/reply/event.go:303
 msgid "Switching to local image"
 msgstr "Переключение на локальный образ"
 
-#: internal/common/reply/event.go:236
+#: internal/common/reply/event.go:305
 msgid "General Image Update Process"
 msgstr "Общий процесс обновления образа"
 
-#: internal/common/reply/event.go:238
+#: internal/common/reply/event.go:307
 msgid "Downloading base image update"
 msgstr "Загрузка обновления базового образа"
 
-#: internal/common/reply/event.go:240
+#: internal/common/reply/event.go:309
 msgid "Cleaning up old images"
 msgstr "Очистка старых образов"
 
-#: internal/common/reply/event.go:242
+#: internal/common/reply/event.go:311
 msgid "Synchronizing database"
 msgstr "Синхронизация базы данных"
 
-#: internal/common/reply/event.go:244
+#: internal/common/reply/event.go:313
 msgid "Update information about applications"
 msgstr "Обновить информацию о приложениях"
 
-#: internal/common/reply/event.go:246
+#: internal/common/reply/event.go:315
 msgid "Get current kernel"
 msgstr "Получить актуальное ядро"
 
-#: internal/common/reply/event.go:248
+#: internal/common/reply/event.go:317
 msgid "Get list kernels"
 msgstr "Получить список ядер"
 
-#: internal/common/reply/event.go:250
+#: internal/common/reply/event.go:319
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:252 internal/kernel/commands.go:199
+#: internal/common/reply/event.go:321 internal/kernel/commands.go:199
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
-#: internal/common/reply/event.go:254
+#: internal/common/reply/event.go:323
 msgid "Remove packages"
 msgstr "Удаление пакетов"
 
-#: internal/common/reply/event.go:256
+#: internal/common/reply/event.go:325
 msgid "Simulate Remove packages"
 msgstr "Симуляция удаления пакетов"
 
@@ -1802,7 +1807,7 @@ msgstr "Будет добавлено"
 msgid "WillRemove"
 msgstr "Будет удалено"
 
-#: internal/common/wrapper/wrapper.go:65 main.go:232
+#: internal/common/wrapper/wrapper.go:65 main.go:249 main.go:431
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -2003,6 +2008,15 @@ msgstr "Вызов обработчика для исполнения коман
 #: internal/distrobox/commands.go:337
 msgid "Remove container"
 msgstr "Удалить контейнер"
+
+#: internal/distrobox/http.go:131 internal/distrobox/http.go:393
+#: internal/system/http.go:143 internal/system/http.go:190
+#: internal/system/http.go:224 internal/system/http.go:281
+#: internal/system/http.go:328 internal/system/http.go:451
+#: internal/system/http.go:485 internal/system/http.go:532
+#: internal/system/http.go:566
+msgid "Task started in background"
+msgstr ""
 
 #: internal/distrobox/service/alt.go:48 internal/distrobox/service/arch.go:47
 #: internal/distrobox/service/ubuntu.go:49
@@ -3227,68 +3241,83 @@ msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
 #: main.go:97
-msgid "Start HTTP API server"
-msgstr "Запуск HTTP API-сервера"
+msgid "Start session HTTP API server"
+msgstr "Запустить сессионный HTTP API сервер"
 
-#: main.go:103
+#: main.go:103 main.go:120
 msgid "Listen address (host:port)"
 msgstr "Адрес прослушивания (хост:порт)"
 
-#: main.go:108
+#: main.go:108 main.go:125
 msgid "API token for authentication"
 msgstr "API-токен для аутентификации"
 
-#: main.go:130
+#: main.go:114
+msgid "Start system HTTP API"
+msgstr "Запустить системный HTTP API сервер"
+
+#: main.go:147
 msgid "Show the list of commands or help for each command"
 msgstr "Показать список команд или справку по каждой команде"
 
-#: main.go:131 main.go:138
+#: main.go:148 main.go:155
 msgid "[command]"
 msgstr "[команда]"
 
-#: main.go:137
+#: main.go:154
 msgid "Print version"
 msgstr "Показать версию"
 
-#: main.go:152
+#: main.go:169
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
 
-#: main.go:158
+#: main.go:175
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:183
+#: main.go:200
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:190
+#: main.go:207
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:214
+#: main.go:231
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr "Неизвестная команда: %s. Посмотрите 'apm help'"
 
-#: main.go:299
+#: main.go:316
 msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
-#: main.go:450
+#: main.go:437
+#, fuzzy
+msgid "Distrobox is not installed"
+msgstr "Нельзя удалить %s не установлен"
+
+#: main.go:526
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:457
+#: main.go:533
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 
 #: data/apt-bridge/update-apm.lua:6
 msgid "Updating apm database"
 msgstr "Обновление базы данных apm"
+
+#~ msgid "Start HTTP API server for kernel, packages and repository modules"
+#~ msgstr "Запуск HTTP API-сервера для kernel, packages и repository модулей"
+
+#~ msgid "Start HTTP API server for distrobox modules"
+#~ msgstr "Запуск HTTP API-сервера для distrobox модуля"
 
 #, c-format
 #~ msgid "Will remove: %s"
@@ -3363,9 +3392,6 @@ msgstr "Обновление базы данных apm"
 
 #~ msgid "Database file not found. It will be created automatically."
 #~ msgstr "Файл базы данных не найден. Он будет автоматически создан."
-
-#~ msgid "Error opening database: %v"
-#~ msgstr "Ошибка открытия базы данных: %v"
 
 #~ msgid "Error connecting to database: %v"
 #~ msgstr "Ошибка подключения к базе данных: %v"

@@ -94,7 +94,7 @@ func main() {
 		},
 		{
 			Name:   "http-server",
-			Usage:  app.T_("Start HTTP API server"),
+			Usage:  app.T_("Start session HTTP API server"),
 			Action: httpServer,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -102,6 +102,23 @@ func main() {
 					Aliases: []string{"l"},
 					Usage:   app.T_("Listen address (host:port)"),
 					Value:   "127.0.0.1:8080",
+				},
+				&cli.StringFlag{
+					Name:  "api-token",
+					Usage: app.T_("API token for authentication"),
+				},
+			},
+		},
+		{
+			Name:   "http-session",
+			Usage:  app.T_("Start system HTTP API"),
+			Action: httpSession,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "listen",
+					Aliases: []string{"l"},
+					Usage:   app.T_("Listen address (host:port)"),
+					Value:   "127.0.0.1:8082",
 				},
 				&cli.StringFlag{
 					Name:  "api-token",
@@ -367,7 +384,6 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 
 	server := http_server.NewServer(config, appConfig)
 
-	// Инициализируем WebSocket hub для отправки событий
 	wsHub := http_server.GetWebSocketHub()
 	reply.SetWebSocketHub(wsHub)
 
@@ -399,6 +415,66 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 
 	// Регистрируем OpenAPI документацию из registry
 	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic, config.ListenAddr))
+
+	err := server.Start(ctx)
+	if err != nil {
+		cliError(err)
+	}
+	return err
+}
+
+func httpSession(ctx context.Context, cmd *cli.Command) error {
+	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
+	app.Log.EnableStdoutLogging()
+
+	if syscall.Geteuid() == 0 {
+		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
+		cliError(errors.New(errPermission))
+		return errors.New(errPermission)
+	}
+
+	if !appConfig.ConfigManager.GetConfig().ExistDistrobox {
+		errMsg := app.T_("Distrobox is not installed")
+		cliError(errors.New(errMsg))
+		return errors.New(errMsg)
+	}
+
+	defer cleanup()
+
+	config := http_server.DefaultConfig()
+	config.ListenAddr = "127.0.0.1:8082"
+	if listen := cmd.String("listen"); listen != "" {
+		config.ListenAddr = listen
+	}
+	if token := cmd.String("api-token"); token != "" {
+		config.APIToken = token
+	}
+
+	server := http_server.NewServer(config, appConfig)
+
+	wsHub := http_server.GetWebSocketHub()
+	reply.SetWebSocketHub(wsHub)
+
+	server.RegisterHealthCheck()
+	server.RegisterWebSocket()
+	server.RegisterAPIInfo(
+		false,
+		true,
+		false,
+	)
+
+	// Distrobox модуль
+	distroboxActions := distrobox.NewActions(appConfig)
+	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, ctx)
+	distroboxHTTPWrapper.RegisterRoutes(server.GetMux())
+
+	registry := http_server.NewRegistry()
+	registry.RegisterResponseTypes(distrobox.GetHTTPResponseTypes())
+	registry.RegisterEndpoints(distrobox.GetHTTPEndpoints())
+	server.SetRegistry(registry)
+
+	// Регистрируем OpenAPI документацию из registry
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, false, config.ListenAddr))
 
 	err := server.Start(ctx)
 	if err != nil {
