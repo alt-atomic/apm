@@ -32,7 +32,6 @@ internal/common/reply/translate.go
 internal/common/wrapper/wrapper.go
 internal/distrobox/actions.go
 internal/distrobox/commands.go
-internal/distrobox/dbus.go
 internal/distrobox/service/alt.go
 internal/distrobox/service/arch.go
 internal/distrobox/service/database.go

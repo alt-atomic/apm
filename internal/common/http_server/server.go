@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -33,7 +32,6 @@ import (
 // Config конфигурация HTTP сервера
 type Config struct {
 	ListenAddr   string
-	UnixSocket   string
 	APIToken     string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
@@ -250,31 +248,12 @@ func (s *Server) Start(ctx context.Context) error {
 
 	var err error
 
-	// Выбираем способ прослушивания: Unix socket или TCP
-	if s.config.UnixSocket != "" {
-		if err = os.Remove(s.config.UnixSocket); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to remove old socket: %w", err)
-		}
-
-		s.listener, err = net.Listen("unix", s.config.UnixSocket)
-		if err != nil {
-			return fmt.Errorf("failed to listen on unix socket %s: %w", s.config.UnixSocket, err)
-		}
-
-		// Устанавливаем права доступа на сокет
-		if err = os.Chmod(s.config.UnixSocket, 0660); err != nil {
-			return fmt.Errorf("failed to chmod socket: %w", err)
-		}
-
-		app.Log.Info("HTTP server listening on unix://" + s.config.UnixSocket)
-	} else {
-		s.listener, err = net.Listen("tcp", s.config.ListenAddr)
-		if err != nil {
-			return fmt.Errorf("failed to listen on %s: %w", s.config.ListenAddr, err)
-		}
-
-		app.Log.Info("HTTP server listening on http://" + s.config.ListenAddr)
+	s.listener, err = net.Listen("tcp", s.config.ListenAddr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", s.config.ListenAddr, err)
 	}
+
+	app.Log.Info("HTTP server listening on http://" + s.config.ListenAddr)
 
 	go func() {
 		if err = s.server.Serve(s.listener); err != nil && !errors.Is(http.ErrServerClosed, err) {
@@ -300,10 +279,6 @@ func (s *Server) Shutdown() error {
 
 	if err := s.server.Shutdown(ctx); err != nil {
 		return fmt.Errorf("failed to shutdown server: %w", err)
-	}
-
-	if s.config.UnixSocket != "" {
-		_ = os.Remove(s.config.UnixSocket)
 	}
 
 	return nil

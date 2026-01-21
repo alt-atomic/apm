@@ -104,11 +104,6 @@ func main() {
 					Value:   "127.0.0.1:8080",
 				},
 				&cli.StringFlag{
-					Name:    "socket",
-					Aliases: []string{"s"},
-					Usage:   app.T_("Unix socket path"),
-				},
-				&cli.StringFlag{
 					Name:  "api-token",
 					Usage: app.T_("API token for authentication"),
 				},
@@ -364,9 +359,6 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 	config := http_server.DefaultConfig()
 	if listen := cmd.String("listen"); listen != "" {
 		config.ListenAddr = listen
-	}
-	if socket := cmd.String("socket"); socket != "" {
-		config.UnixSocket = socket
 	}
 	if token := cmd.String("api-token"); token != "" {
 		config.APIToken = token
