@@ -45,7 +45,7 @@ type EventData struct {
 	Type            string  `json:"type"`
 	ProgressPercent float64 `json:"progress"`
 	ProgressDone    string  `json:"progressDone"`
-	Transaction     string  `json:"transaction,omitempty"`
+	Transaction     string  `json:"transaction"`
 }
 
 const EventTypeNotification = "NOTIFICATION"
@@ -62,8 +62,8 @@ type TaskResultEvent struct {
 	Type        string      `json:"type"`
 	Name        string      `json:"name"`
 	Transaction string      `json:"transaction,omitempty"`
-	Data        interface{} `json:"data,omitempty"`
-	Error       string      `json:"error,omitempty"`
+	Data        interface{} `json:"data"`
+	Error       bool        `json:"error"`
 }
 
 // NotificationOption — функция-опция для настройки EventData.
@@ -202,11 +202,14 @@ func SendTaskResult(ctx context.Context, taskName string, data interface{}, task
 		Name:        taskName,
 		Transaction: txStr,
 		Data:        data,
+		Error:       false,
 	}
 
 	if taskErr != nil {
-		event.Error = taskErr.Error()
-		event.Data = nil
+		event.Error = true
+		event.Data = map[string]interface{}{
+			"message": taskErr.Error(),
+		}
 	}
 
 	format := appConfig.ConfigManager.GetConfig().Format
