@@ -74,3 +74,9 @@ type RemoveKernelModulesResponse struct {
 	Kernel  service.FullKernelInfo `json:"kernel"`
 	Preview *aptlib.PackageChanges `json:"preview,omitempty"`
 }
+
+// BackgroundTaskResponse структура ответа при запуске фоновой задачи
+type BackgroundTaskResponse struct {
+	Message     string `json:"message"`
+	Transaction string `json:"transaction"`
+}
