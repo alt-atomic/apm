@@ -286,7 +286,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 			Data: map[string]interface{}{
 				"message": app.T_("The operation will not make any changes"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -436,7 +436,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 			Data: map[string]interface{}{
 				"message": app.T_("The operation will not make any changes"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -598,7 +598,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 				Message: app.T_("The operation will not make any changes"),
 				Result:  nil,
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 

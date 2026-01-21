@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-21 14:06+0600\n"
+"POT-Creation-Date: 2026-01-21 21:10+0600\n"
 "PO-Revision-Date: 2026-01-21 14:08+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -19,8 +19,8 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 49.0\n"
 
 #: internal/common/app/database.go:100
@@ -28,8 +28,8 @@ msgid "error opening system database: %w"
 msgstr "Ошибка открытия системной базы данных: %w"
 
 #: internal/common/app/database.go:106 internal/common/wrapper/wrapper.go:61
-#: internal/kernel/actions.go:746 internal/system/actions.go:1097 main.go:285
-#: main.go:352
+#: internal/kernel/actions.go:746 internal/system/actions.go:1101 main.go:286
+#: main.go:353
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -84,68 +84,68 @@ msgstr "Не удалось распаковать %s: %w"
 msgid "Parse %s failed: %w"
 msgstr "Не удалось спарсить %s: %w"
 
-#: internal/common/apt/errors.go:168
+#: internal/common/apt/errors.go:169
 msgid "Broken packages"
 msgstr "Повреждённые пакеты"
 
-#: internal/common/apt/errors.go:171
+#: internal/common/apt/errors.go:172
 msgid "You have no permissions for that"
 msgstr "Недостаточно прав для этого"
 
-#: internal/common/apt/errors.go:174
+#: internal/common/apt/errors.go:175
 msgid "Internal Error, InstallPackages was called with broken packages!"
 msgstr ""
 "Внутренняя ошибка, InstallPackages был вызван для повреждённых пакетов!"
 
-#: internal/common/apt/errors.go:177
+#: internal/common/apt/errors.go:178
 msgid "Packages need to be removed but Remove is disabled."
 msgstr "Пакеты необходимо удалить, но Remove выключен."
 
-#: internal/common/apt/errors.go:180
+#: internal/common/apt/errors.go:181
 msgid "Unable to lock the download directory"
 msgstr "Невозможно заблокировать директорию загрузки"
 
-#: internal/common/apt/errors.go:183
+#: internal/common/apt/errors.go:184
 msgid "There are problems and -y was used without --force-yes"
 msgstr "Обнаружены проблемы, и -y был использован без --force-yes"
 
-#: internal/common/apt/errors.go:186
+#: internal/common/apt/errors.go:187
 #, c-format
 msgid "You don't have enough free space in %s"
 msgstr "Недостаточно места в %s"
 
-#: internal/common/apt/errors.go:189
+#: internal/common/apt/errors.go:190
 #, c-format
 msgid "Package file %s is out of sync"
 msgstr "Файл пакета %s не синхронизирован"
 
-#: internal/common/apt/errors.go:192
+#: internal/common/apt/errors.go:193
 msgid "Trivial Only specified but this is not a trivial operation"
 msgstr "Указана только тривиальная операция, но это не тривиальная операция"
 
-#: internal/common/apt/errors.go:195 internal/system/dialog/dialog.go:94
+#: internal/common/apt/errors.go:196 internal/system/dialog/dialog.go:94
 #: internal/system/dialog/dialog.go:100
 #: internal/system/dialog/dialog_image.go:100
 #: internal/system/dialog/dialog_image.go:123
 msgid "Operation cancelled"
 msgstr "Операция отменена"
 
-#: internal/common/apt/errors.go:198
+#: internal/common/apt/errors.go:199
 msgid "Must specify at least one package to check builddeps for"
 msgstr ""
 "Должен быть указан хотя бы один пакет для проверки зависимостей сборки для %s"
 
-#: internal/common/apt/errors.go:201
+#: internal/common/apt/errors.go:202
 #, c-format
 msgid "Unable to find a source package for %s"
 msgstr "Невозможно найти пакет-источник для %s"
 
-#: internal/common/apt/errors.go:204
+#: internal/common/apt/errors.go:205
 #, c-format
 msgid "Unable to get build-dependency information for %s"
 msgstr "Невозможно получить информацию о зависимостях сборки для %s"
 
-#: internal/common/apt/errors.go:207
+#: internal/common/apt/errors.go:208
 #, c-format
 msgid ""
 "Some broken packages were found while trying to process build-dependencies "
@@ -154,62 +154,62 @@ msgstr ""
 "Было найдено несколько повреждённых пакетов во время попытки вычисления "
 "зависимостей сборки для %s"
 
-#: internal/common/apt/errors.go:210
+#: internal/common/apt/errors.go:211
 #, c-format
 msgid "Package %s is a virtual package with no good providers"
 msgstr "Пакет %s является виртуальным без хороших поставщиков"
 
-#: internal/common/apt/errors.go:213
+#: internal/common/apt/errors.go:214
 #, c-format
 msgid "Package %s is a virtual package with multiple good providers"
 msgstr "Пакет %s является виртуальным с несколькими хороших поставщиков"
 
-#: internal/common/apt/errors.go:216
+#: internal/common/apt/errors.go:217
 msgid "No packages found"
 msgstr "Не найдено пакетов"
 
-#: internal/common/apt/errors.go:219
+#: internal/common/apt/errors.go:220
 #, c-format
 msgid "Package %s is not installed, so not removed"
 msgstr "Пакет %s не установлен, поэтому не удалён"
 
-#: internal/common/apt/errors.go:222
+#: internal/common/apt/errors.go:223
 #, c-format
 msgid "Release %s'%s' for '%s' was not found"
 msgstr "Релиз %s'%s' для '%s' не найден"
 
-#: internal/common/apt/errors.go:225
+#: internal/common/apt/errors.go:226
 #, c-format
 msgid "Version %s'%s' for '%s' was not found"
 msgstr "Версия %s'%s' для '%s' не найден"
 
-#: internal/common/apt/errors.go:228
+#: internal/common/apt/errors.go:229
 #, c-format
 msgid "Sources list %s could not be read"
 msgstr "Список источников %s не может быть прочтён"
 
-#: internal/common/apt/errors.go:231
+#: internal/common/apt/errors.go:232
 #, c-format
 msgid "Sources list %s doesn't exist"
 msgstr "Списка источников %s не существует"
 
-#: internal/common/apt/errors.go:234
+#: internal/common/apt/errors.go:235
 msgid "Excessive arguments"
 msgstr "Избыточные аргументы"
 
-#: internal/common/apt/errors.go:237
+#: internal/common/apt/errors.go:238
 msgid "Internal Error, problem resolver broke stuff"
 msgstr "Внутренняя ошибка, средство решения проблем сломало что-то"
 
-#: internal/common/apt/errors.go:240
+#: internal/common/apt/errors.go:241
 msgid "Internal Error, Ordering didn't finish"
 msgstr "Внутренняя ошибка, заказ не был выполнен"
 
-#: internal/common/apt/errors.go:243
+#: internal/common/apt/errors.go:244
 msgid "Some files failed to download"
 msgstr "Некоторые файлы не были скачены"
 
-#: internal/common/apt/errors.go:246
+#: internal/common/apt/errors.go:247
 msgid ""
 "Unable to fetch some archives, maybe run apt-get update or try with --fix-"
 "missing?"
@@ -217,36 +217,36 @@ msgstr ""
 "Невозможно извлечь некоторые архивы, возможно стоит попробовать запустить "
 "apt-get update или запустить с --fix-missing?"
 
-#: internal/common/apt/errors.go:249
+#: internal/common/apt/errors.go:250
 msgid "--fix-missing and media swapping is not currently supported"
 msgstr "--fix-missing и смена медиа сейчас не поддерживаются"
 
-#: internal/common/apt/errors.go:252
+#: internal/common/apt/errors.go:253
 msgid "Unable to correct missing packages"
 msgstr "Невозможно исправить отсутствующие пакеты"
 
-#: internal/common/apt/errors.go:255
+#: internal/common/apt/errors.go:256
 msgid "Aborting Install"
 msgstr "Прервать установку"
 
-#: internal/common/apt/errors.go:258
+#: internal/common/apt/errors.go:259
 msgid "Could not open RPM database"
 msgstr "Не удалось открыть базу данных RPM"
 
-#: internal/common/apt/errors.go:261
+#: internal/common/apt/errors.go:262
 #, c-format
 msgid "Couldn't parse name '%s'"
 msgstr "Не удалось спарсить имя '%s'"
 
-#: internal/common/apt/errors.go:264
+#: internal/common/apt/errors.go:265
 msgid "Write to stdout failed"
 msgstr "Запись в канал стандартного вывода не удалась"
 
-#: internal/common/apt/errors.go:267
+#: internal/common/apt/errors.go:268
 msgid "Exceeded maximum number of command arguments"
 msgstr "Привышено максимальное количество аргументов команды"
 
-#: internal/common/apt/errors.go:270
+#: internal/common/apt/errors.go:271
 #, c-format
 msgid ""
 "Package %s dependency for %s cannot be satisfied because the package %s "
@@ -255,77 +255,77 @@ msgstr ""
 "Пакет-зависимость %s для %s не может быть разрешён, так как пакет %s не "
 "может быть найден"
 
-#: internal/common/apt/errors.go:273
+#: internal/common/apt/errors.go:274
 #, c-format
 msgid "Regex compilation error - %s"
 msgstr "Ошибка обработки регулярного выражения - %s"
 
-#: internal/common/apt/errors.go:276
+#: internal/common/apt/errors.go:277
 #, c-format
 msgid "Package %s has no installation candidate"
 msgstr "Пакет %s не имеет кандидатов для установки"
 
-#: internal/common/apt/errors.go:279
+#: internal/common/apt/errors.go:280
 msgid "Internal Error, AllUpgrade broke stuff"
 msgstr "Внутренняя ошибка, AllUpgrade что-то сломал"
 
-#: internal/common/apt/errors.go:282
+#: internal/common/apt/errors.go:283
 msgid "Requested autoremove failed."
 msgstr "Требуемое автоудаление не выполнено."
 
-#: internal/common/apt/errors.go:285
+#: internal/common/apt/errors.go:286
 #, c-format
 msgid "Couldn't find package %s"
 msgstr "Не удалось найти пакет %s"
 
-#: internal/common/apt/errors.go:288
+#: internal/common/apt/errors.go:289
 #, c-format
 msgid "%s dependency for %s cannot be satisfied"
 msgstr "Зависимость %s для %s не может быть разрешена"
 
-#: internal/common/apt/errors.go:291
+#: internal/common/apt/errors.go:292
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: Installed package %s is too new"
 msgstr ""
 "Не удалось разрешить зависимость %s для %s: Установленный пакет %s слишком "
 "новый"
 
-#: internal/common/apt/errors.go:294
+#: internal/common/apt/errors.go:295
 #, c-format
 msgid "Failed to satisfy %s dependency for %s: %s"
 msgstr "Не удалось разрешить зависимость %s для %s: %s"
 
-#: internal/common/apt/errors.go:297
+#: internal/common/apt/errors.go:298
 msgid "You must give exactly one pattern"
 msgstr "Необходимо передать хотя бы один паттерн"
 
-#: internal/common/apt/errors.go:299
+#: internal/common/apt/errors.go:300
 msgid "No help for that"
 msgstr "Нет справки для этого"
 
-#: internal/common/apt/errors.go:301
+#: internal/common/apt/errors.go:302
 #, c-format
 msgid "%s is already the newest version."
 msgstr "Версия %s уже самая новая."
 
-#: internal/common/apt/errors.go:304
+#: internal/common/apt/errors.go:305
 msgid "The list of sources could not be read."
 msgstr "Список источников не может быть прочитан."
 
-#: internal/common/apt/errors.go:307
+#: internal/common/apt/errors.go:308
 msgid "There are changes to be made"
 msgstr "Необходимо внести некоторые изменения"
 
-#: internal/common/apt/errors.go:310
+#: internal/common/apt/errors.go:311
 msgid "Failed to fetch some archives."
 msgstr "Не удалось извлечь некоторые архивы."
 
-#: internal/common/apt/errors.go:313
+#: internal/common/apt/errors.go:314
 #, c-format
 msgid "Failed to fetch %s  %s"
 msgstr "Не удалось извлечь %s  %s"
 
-#: internal/common/apt/errors.go:316
+#: internal/common/apt/errors.go:317
 msgid ""
 "Some index files failed to download. They have been ignored, or old ones "
 "used instead."
@@ -333,13 +333,13 @@ msgstr ""
 "Не удалось загрузить некоторые индексные файлы. Они были проигнорированы или "
 "вместо них были использованы старые файлы."
 
-#: internal/common/apt/errors.go:319
+#: internal/common/apt/errors.go:320
 msgid ""
 "'apt-get upgrade' is disabled because it can leave system in a broken state."
 msgstr ""
 "'apt-get upgrade' выключен, потому что это может повредить состояние системы."
 
-#: internal/common/apt/errors.go:322
+#: internal/common/apt/errors.go:323
 msgid ""
 "Unmet dependencies. Try 'apt-get --fix-broken install' with no packages (or "
 "specify a solution)."
@@ -347,228 +347,228 @@ msgstr ""
 "Неразрешённые зависимости. Попробуйте 'apt-get --fix-broken install' без "
 "пакетов (или укажите решение)."
 
-#: internal/common/apt/errors.go:325
+#: internal/common/apt/errors.go:326
 msgid "Must specify at least one package to fetch source for"
 msgstr "Должен быть указан хотя бы один пакет для извлечения из источника для"
 
-#: internal/common/apt/errors.go:328
+#: internal/common/apt/errors.go:329
 #, c-format
 msgid "Fatal: conflicts violated %s"
 msgstr "Критично: конфликты %s нарушены"
 
-#: internal/common/apt/errors.go:331
+#: internal/common/apt/errors.go:332
 msgid "Child process failed"
 msgstr "Ошибка дочернего процесса"
 
-#: internal/common/apt/errors.go:334
+#: internal/common/apt/errors.go:335
 msgid "Must specify at least one package to get changelog for"
 msgstr "Необходимо указать хотя бы один пакет для получения изменений для"
 
-#: internal/common/apt/errors.go:337
+#: internal/common/apt/errors.go:338
 msgid "Failed to process build dependencies"
 msgstr "Не удалось просчитать зависимости сборки"
 
-#: internal/common/apt/errors.go:340
+#: internal/common/apt/errors.go:341
 #, c-format
 msgid "Package %s is a virtual package with no "
 msgstr "Пакет %s является виртуальным пакетом без "
 
-#: internal/common/apt/errors.go:343
+#: internal/common/apt/errors.go:344
 #, c-format
 msgid "Package %s is a virtual package with multiple "
 msgstr "Пакет %s является виртуальным с несколькими "
 
 #. Bindings specific patterns (from C++ bindings messages)
-#: internal/common/apt/errors.go:346
+#: internal/common/apt/errors.go:347
 msgid "Failed to initialize APT configuration"
 msgstr "Не удалось инициализировать конфигурацию APT"
 
-#: internal/common/apt/errors.go:347
+#: internal/common/apt/errors.go:348
 msgid "Invalid system pointer"
 msgstr "Неверный системный указатель"
 
-#: internal/common/apt/errors.go:348
+#: internal/common/apt/errors.go:349
 msgid "Failed to initialize APT system"
 msgstr "Не удалось инициализировать систему APT"
 
-#: internal/common/apt/errors.go:349
+#: internal/common/apt/errors.go:350
 msgid "Invalid arguments for cache_open"
 msgstr "Неверные аргументы для cache_open"
 
-#: internal/common/apt/errors.go:350
+#: internal/common/apt/errors.go:351
 msgid "System not properly initialized"
 msgstr "Система инициализирована некорректно"
 
-#: internal/common/apt/errors.go:351
+#: internal/common/apt/errors.go:352
 msgid "Unable to acquire APT system lock - another process may be using APT"
 msgstr ""
 "Не удается получить системную блокировку APT — возможно, другой процесс "
 "использует APT"
 
-#: internal/common/apt/errors.go:352
+#: internal/common/apt/errors.go:353
 msgid "Failed to open APT cache"
 msgstr "Не удалось открыть кеш APT"
 
-#: internal/common/apt/errors.go:353
+#: internal/common/apt/errors.go:354
 msgid "Failed to check dependencies"
 msgstr "Не удалось проверить зависимости"
 
-#: internal/common/apt/errors.go:354
+#: internal/common/apt/errors.go:355
 msgid "Failed to get dependency cache"
 msgstr "Не удалось получить кеш зависимостей"
 
-#: internal/common/apt/errors.go:355
+#: internal/common/apt/errors.go:356
 msgid "Failed to reopen cache after refresh"
 msgstr "Не удалось переоткрыть кеш после обновления"
 
-#: internal/common/apt/errors.go:356
+#: internal/common/apt/errors.go:357
 msgid "Failed to check dependencies after refresh"
 msgstr "Не удалось проверить зависимости после обновления"
 
-#: internal/common/apt/errors.go:357
+#: internal/common/apt/errors.go:358
 msgid "Failed to get dependency cache after refresh"
 msgstr "Не удалось получить кеш зависимость зависимостей после обновления"
 
-#: internal/common/apt/errors.go:358
+#: internal/common/apt/errors.go:359
 msgid "Failed to get package indexes"
 msgstr "Не удалось получить индексы пакета"
 
-#: internal/common/apt/errors.go:359
+#: internal/common/apt/errors.go:360
 msgid "Failed to download package lists"
 msgstr "Не удалось загрузить списки пакетов"
 
-#: internal/common/apt/errors.go:360
+#: internal/common/apt/errors.go:361
 msgid "Failed to rebuild caches"
 msgstr "Не удалось пересобрать кеши"
 
-#: internal/common/apt/errors.go:361
+#: internal/common/apt/errors.go:362
 msgid "Invalid cache or output pointer for pm create"
 msgstr "Неверный кеш или выподной указатель для pm create"
 
-#: internal/common/apt/errors.go:362
+#: internal/common/apt/errors.go:363
 msgid "Failed to create package manager"
 msgstr "Не удалось создать менеджер пакетов"
 
-#: internal/common/apt/errors.go:363
+#: internal/common/apt/errors.go:364
 msgid "Invalid arguments for mark_install"
 msgstr "Неверные аргументы для mark_install"
 
-#: internal/common/apt/errors.go:364
+#: internal/common/apt/errors.go:365
 msgid "Invalid arguments for mark_remove"
 msgstr "Неверные аргументы для mark_remove"
 
-#: internal/common/apt/errors.go:365
+#: internal/common/apt/errors.go:366
 msgid "Problem resolver failed to handle package removal dependencies"
 msgstr ""
 "Средству устранения неполадок не удалось обработать зависимости удаляемого "
 "пакета"
 
-#: internal/common/apt/errors.go:366
+#: internal/common/apt/errors.go:367
 msgid "Invalid arguments for mark_keep"
 msgstr "Неверные аргументы для mark_keep"
 
-#: internal/common/apt/errors.go:367
+#: internal/common/apt/errors.go:368
 msgid "Invalid arguments for mark_auto"
 msgstr "Неверные аргументы для mark_auto"
 
-#: internal/common/apt/errors.go:368
+#: internal/common/apt/errors.go:369
 msgid "Invalid package manager instance"
 msgstr "Неверный экземпляр менеджера пакетов"
 
-#: internal/common/apt/errors.go:369
+#: internal/common/apt/errors.go:370
 msgid "Cannot install packages with broken dependencies"
 msgstr "Не удалось установить пакеты со сломаными зависимостями"
 
-#: internal/common/apt/errors.go:370
+#: internal/common/apt/errors.go:371
 msgid "Failed to get package archives"
 msgstr "Не удалось получить архивы пакетов"
 
-#: internal/common/apt/errors.go:371
+#: internal/common/apt/errors.go:372
 msgid "Failed to download packages"
 msgstr "Не удалось загрузить пакеты"
 
-#: internal/common/apt/errors.go:372
+#: internal/common/apt/errors.go:373
 msgid "Package manager operation failed"
 msgstr "Неудачная операция менеджера пакетов"
 
-#: internal/common/apt/errors.go:373
+#: internal/common/apt/errors.go:374
 msgid "Package manager operation incomplete"
 msgstr "Незавершённая операция менеджера пакетов"
 
-#: internal/common/apt/errors.go:374
+#: internal/common/apt/errors.go:375
 msgid "Unknown package manager result"
 msgstr "Управление системными пакетами"
 
-#: internal/common/apt/errors.go:375
+#: internal/common/apt/errors.go:376
 msgid "Failed to update package marks"
 msgstr "Не удалось обновить базу данных пакетов: %s, ошибка: %s"
 
-#: internal/common/apt/errors.go:376
+#: internal/common/apt/errors.go:377
 msgid "Invalid cache for dist upgrade"
 msgstr "Неверный кеш для обновления дистрибутива"
 
-#: internal/common/apt/errors.go:377
+#: internal/common/apt/errors.go:378
 msgid "Distribution upgrade failed"
 msgstr "Неудачное обновление дистрибутива"
 
-#: internal/common/apt/errors.go:378
+#: internal/common/apt/errors.go:379
 msgid "Failed to create package manager for dist upgrade"
 msgstr "Не удалось создать менеджер пакетов для обновления дистрибутива"
 
-#: internal/common/apt/errors.go:379
+#: internal/common/apt/errors.go:380
 msgid "Failed to get package archives for dist upgrade"
 msgstr "Не удалось получить архивы пакетов для обновления дистрибутива"
 
-#: internal/common/apt/errors.go:380
+#: internal/common/apt/errors.go:381
 msgid "Failed to download packages for dist upgrade"
 msgstr "Не удалось скачать пакеты для обновления дистрибутива"
 
-#: internal/common/apt/errors.go:381
+#: internal/common/apt/errors.go:382
 msgid "Failed to update package marks after dist upgrade"
 msgstr "Не удалось обновить помеченные пакеты после обновления дистрибутива"
 
-#: internal/common/apt/errors.go:382
+#: internal/common/apt/errors.go:383
 msgid "Invalid parameters for search"
 msgstr "Неверные параметры для search"
 
-#: internal/common/apt/errors.go:383
+#: internal/common/apt/errors.go:384
 msgid "Failed to compile regex pattern"
 msgstr "Не удалось скомпилировать регулярное выражение"
 
-#: internal/common/apt/errors.go:384
+#: internal/common/apt/errors.go:385
 msgid "Failed to create package records parser"
 msgstr "Не удалось создать парсер записей пакетов"
 
-#: internal/common/apt/errors.go:385
+#: internal/common/apt/errors.go:386
 msgid "Failed to allocate memory for search results"
 msgstr "Не удалось выделить память для результатов поиска"
 
-#: internal/common/apt/errors.go:386
+#: internal/common/apt/errors.go:387
 msgid "Unknown exception in search"
 msgstr "Неизвестное исключение в поиске"
 
-#: internal/common/apt/errors.go:387
+#: internal/common/apt/errors.go:388
 msgid "Invalid parameters for get_package_info"
 msgstr "Неверные параметры для get_package_info"
 
-#: internal/common/apt/errors.go:388
+#: internal/common/apt/errors.go:389
 msgid "Invalid parameters for simulation"
 msgstr "Неверные параметры для симуляции"
 
-#: internal/common/apt/errors.go:389
+#: internal/common/apt/errors.go:390
 msgid "Cache file not available"
 msgstr "Файл кеша неодступен"
 
-#: internal/common/apt/errors.go:390
+#: internal/common/apt/errors.go:391
 msgid "Invalid parameters for multi-package simulation"
 msgstr "Неверные параметры для симуляции нескольких пакетов"
 
-#: internal/common/apt/errors.go:391
+#: internal/common/apt/errors.go:392
 #, c-format
 msgid "Virtual package %s has no installable providers"
 msgstr "Виртуальный пакет %s не имеет устанавливаемых поставщиков"
 
-#: internal/common/apt/errors.go:393
+#: internal/common/apt/errors.go:394
 #, c-format
 msgid ""
 "Virtual package %s has multiple providers. Please select specific package."
@@ -576,22 +576,22 @@ msgstr ""
 "Виртуальный пакет %s имеет несколько поставщиков\n"
 ". Пожалуйста, выберите конкретный пакет."
 
-#: internal/common/apt/errors.go:395
+#: internal/common/apt/errors.go:396
 #, c-format
 msgid "Package not found: %s"
 msgstr "Пакет не найден: %s"
 
-#: internal/common/apt/errors.go:396
+#: internal/common/apt/errors.go:397
 #, c-format
 msgid "Package is not installed: %s"
 msgstr "Пакет не установлен: %s"
 
-#: internal/common/apt/errors.go:397
+#: internal/common/apt/errors.go:398
 #, c-format
 msgid "Package %s has no installed providers"
 msgstr "Пакет %s не имеет поставщиков для установки"
 
-#: internal/common/apt/errors.go:399
+#: internal/common/apt/errors.go:400
 #, c-format
 msgid ""
 "Virtual package %s has multiple installed providers: %s. Please remove "
@@ -600,52 +600,52 @@ msgstr ""
 "Виртуальный пакет %s имеет несколько установленных поставщиков: %s. "
 "Пожалуйста, удалите конкретный пакет."
 
-#: internal/common/apt/errors.go:401
+#: internal/common/apt/errors.go:402
 #, c-format
 msgid "Dist upgrade simulation failed: %s"
 msgstr "Неудачная симуляция обновления дистрибутива: %s"
 
-#: internal/common/apt/errors.go:402
+#: internal/common/apt/errors.go:403
 #, c-format
 msgid "Multi-package install simulation failed: %s"
 msgstr "Неудачная симуляция установки нескольких пакетов: %s"
 
-#: internal/common/apt/errors.go:403
+#: internal/common/apt/errors.go:404
 #, c-format
 msgid "Multi-package remove simulation failed: %s"
 msgstr "Неудачная симуляция удаления нескольких пакетов: %s"
 
-#: internal/common/apt/errors.go:404
+#: internal/common/apt/errors.go:405
 #, c-format
 msgid "Combined simulation failed: %s"
 msgstr "Неудачная комбинированная симуляция: %s"
 
-#: internal/common/apt/errors.go:405
+#: internal/common/apt/errors.go:406
 #, c-format
 msgid "Virtual name '%s' has multiple providers; specify exact package name"
 msgstr ""
 "Виртуальное имя '%s' имеет несколько поставщиков; укажите точное имя пакета"
 
-#: internal/common/apt/errors.go:406
+#: internal/common/apt/errors.go:407
 #, c-format
 msgid "Cannot remove %s not installed"
 msgstr "Нельзя удалить %s не установлен"
 
-#: internal/common/apt/errors.go:407
+#: internal/common/apt/errors.go:408
 #, c-format
 msgid "Cannot remove essential package %s"
 msgstr "Нельзя удалить базовый системный пакет %s"
 
-#: internal/common/apt/errors.go:408
+#: internal/common/apt/errors.go:409
 #, c-format
 msgid "Cannot remove %s. Try removing together: %s"
 msgstr "Нельзя удалить %s. Попробуйте удалить совместно: %s"
 
-#: internal/common/apt/errors.go:409
+#: internal/common/apt/errors.go:410
 msgid "Broken dependencies"
 msgstr "Поломанные зависимости"
 
-#: internal/common/apt/errors.go:411
+#: internal/common/apt/errors.go:412
 #, c-format
 msgid ""
 "Virtual package %s is provided by:\n"
@@ -656,28 +656,33 @@ msgstr ""
 "%s \n"
 "Вам следует явно выбрать один из пакетов для установки"
 
-#: internal/common/apt/errors.go:413
+#: internal/common/apt/errors.go:414
 #, c-format
 msgid "Repository update failed: %s"
 msgstr "Ошибка обновления репозитория: %s"
 
-#: internal/common/apt/errors.go:414
+#: internal/common/apt/errors.go:415
 #, c-format
 msgid "Package index update failed: %s"
 msgstr "Ошибка обновления индекса для пакетов: %s"
 
-#: internal/common/apt/errors.go:415
+#: internal/common/apt/errors.go:416
 #, c-format
 msgid "Conflicting packages: %s and %s"
 msgstr "Конфликтующие пакеты: %s и %s"
 
-#: internal/common/apt/errors.go:417
+#: internal/common/apt/errors.go:418
 msgid ""
 "Some packages could not be installed. This may mean that you have requested "
 "an impossible situation"
 msgstr ""
 "Некоторые пакеты не удалось установить. Это может означать, что вы запросили "
 "невозможную ситуация для разрешения"
+
+#: internal/common/apt/errors.go:421
+#, c-format
+msgid "Packages are already installed: %s"
+msgstr "Пакеты уже установлены: %s"
 
 #: internal/common/apt/package/actions.go:190
 msgid "No packages found matching the specified patterns"
@@ -978,7 +983,7 @@ msgstr "Не удалось определить образ дистрибути
 msgid "unknown initrd method %s"
 msgstr "неизвестный метод initrd %s"
 
-#: internal/common/build/models/kernel.go:347
+#: internal/common/build/models/kernel.go:345
 msgid "failed to parse kernel package from database"
 msgstr "не удалось проанализировать пакет ядра из базы данных"
 
@@ -1186,151 +1191,151 @@ msgstr "неверная длина: ожидалось 9 символов, по
 msgid "Wrong permission format"
 msgstr "Неправильный формат разрешения"
 
-#: internal/common/reply/event.go:146
+#: internal/common/reply/event.go:161
 msgid "DBus connection is not initialized"
 msgstr "Соединение DBus не было инициализировано"
 
-#: internal/common/reply/event.go:155
+#: internal/common/reply/event.go:170
 msgid "Error sending notification: %v"
 msgstr "Ошибка отправки уведомления: %v"
 
-#: internal/common/reply/event.go:162 internal/common/reply/event.go:204
+#: internal/common/reply/event.go:186 internal/common/reply/event.go:228
 msgid "Saving packages to the database"
 msgstr "Сохранение пакетов в базу данных"
 
-#: internal/common/reply/event.go:164
+#: internal/common/reply/event.go:188
 msgid "Requesting list of containers"
 msgstr "Запрос списка контейнеров"
 
-#: internal/common/reply/event.go:166
+#: internal/common/reply/event.go:190
 msgid "Exporting package"
 msgstr "Экспортирование пакета"
 
-#: internal/common/reply/event.go:168
+#: internal/common/reply/event.go:192
 msgid "Requesting container information"
 msgstr "Запрос информации о контейнере"
 
-#: internal/common/reply/event.go:170
+#: internal/common/reply/event.go:194
 msgid "Creating container"
 msgstr "Создание контейнера"
 
-#: internal/common/reply/event.go:172
+#: internal/common/reply/event.go:196
 msgid "Deleting container"
 msgstr "Удаление контейнера"
 
-#: internal/common/reply/event.go:174
+#: internal/common/reply/event.go:198
 msgid "Installing package"
 msgstr "Установка пакета"
 
-#: internal/common/reply/event.go:176
+#: internal/common/reply/event.go:200
 msgid "Removing package"
 msgstr "Удаление пакета"
 
-#: internal/common/reply/event.go:178
+#: internal/common/reply/event.go:202
 msgid "Retrieving list of packages"
 msgstr "Извлечение списка пакетов"
 
-#: internal/common/reply/event.go:180
+#: internal/common/reply/event.go:204
 msgid "Determining file owner"
 msgstr "Определение владельца файла"
 
-#: internal/common/reply/event.go:182
+#: internal/common/reply/event.go:206
 msgid "Searching package paths"
 msgstr "Поиск путей пакета"
 
-#: internal/common/reply/event.go:184
+#: internal/common/reply/event.go:208
 msgid "Retrieving package information"
 msgstr "Извлечение информации о пакете"
 
-#: internal/common/reply/event.go:186
+#: internal/common/reply/event.go:210
 msgid "Updating packages"
 msgstr "Обновление пакетов"
 
-#: internal/common/reply/event.go:188
+#: internal/common/reply/event.go:212
 msgid "Filtering packages"
 msgstr "Фильтрация пакетов"
 
-#: internal/common/reply/event.go:190
+#: internal/common/reply/event.go:214
 msgid "Working with packages"
 msgstr "Работа с пакетами"
 
-#: internal/common/reply/event.go:192
+#: internal/common/reply/event.go:216
 msgid "System update"
 msgstr "Обновление системы"
 
-#: internal/common/reply/event.go:194
+#: internal/common/reply/event.go:218
 msgid "Analyzing packages"
 msgstr "Анализ пакетов"
 
-#: internal/common/reply/event.go:196
+#: internal/common/reply/event.go:220
 msgid "General update process"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:198
+#: internal/common/reply/event.go:222
 msgid "General update kernel"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:200
+#: internal/common/reply/event.go:224
 msgid "Loading package list from STPLR repository"
 msgstr "Загрузка списка пакетов из репозитория STPLR"
 
-#: internal/common/reply/event.go:202
+#: internal/common/reply/event.go:226
 msgid "Loading package list from ALT repository"
 msgstr "Загрузка списка пакетов из репозитория ALT"
 
-#: internal/common/reply/event.go:206
+#: internal/common/reply/event.go:230
 msgid "Saving image history to the database"
 msgstr "Сохранение истории образа в базу данных"
 
-#: internal/common/reply/event.go:208
+#: internal/common/reply/event.go:232
 msgid "Building local image"
 msgstr "Создание локального образа"
 
-#: internal/common/reply/event.go:210
+#: internal/common/reply/event.go:234
 msgid "Switching to local image"
 msgstr "Переключение на локальный образ"
 
-#: internal/common/reply/event.go:212
+#: internal/common/reply/event.go:236
 msgid "General Image Update Process"
 msgstr "Общий процесс обновления образа"
 
-#: internal/common/reply/event.go:214
+#: internal/common/reply/event.go:238
 msgid "Downloading base image update"
 msgstr "Загрузка обновления базового образа"
 
-#: internal/common/reply/event.go:216
+#: internal/common/reply/event.go:240
 msgid "Cleaning up old images"
 msgstr "Очистка старых образов"
 
-#: internal/common/reply/event.go:218
+#: internal/common/reply/event.go:242
 msgid "Synchronizing database"
 msgstr "Синхронизация базы данных"
 
-#: internal/common/reply/event.go:220
+#: internal/common/reply/event.go:244
 msgid "Update information about applications"
 msgstr "Обновить информацию о приложениях"
 
-#: internal/common/reply/event.go:222
+#: internal/common/reply/event.go:246
 msgid "Get current kernel"
 msgstr "Получить актуальное ядро"
 
-#: internal/common/reply/event.go:224
+#: internal/common/reply/event.go:248
 msgid "Get list kernels"
 msgstr "Получить список ядер"
 
-#: internal/common/reply/event.go:226
+#: internal/common/reply/event.go:250
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:228 internal/kernel/commands.go:199
+#: internal/common/reply/event.go:252 internal/kernel/commands.go:199
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
-#: internal/common/reply/event.go:230
+#: internal/common/reply/event.go:254
 msgid "Remove packages"
 msgstr "Удаление пакетов"
 
-#: internal/common/reply/event.go:232
+#: internal/common/reply/event.go:256
 msgid "Simulate Remove packages"
 msgstr "Симуляция удаления пакетов"
 
@@ -1797,7 +1802,7 @@ msgstr "Будет добавлено"
 msgid "WillRemove"
 msgstr "Будет удалено"
 
-#: internal/common/wrapper/wrapper.go:65 main.go:231
+#: internal/common/wrapper/wrapper.go:65 main.go:232
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -1822,7 +1827,7 @@ msgstr "Найден пакет"
 
 #: internal/distrobox/actions.go:138 internal/distrobox/actions.go:214
 #: internal/system/actions.go:758 internal/system/actions.go:835
-#: internal/system/actions.go:991
+#: internal/system/actions.go:995
 #, c-format
 msgid "%d record found"
 msgid_plural "%d records found"
@@ -2862,7 +2867,7 @@ msgstr "Кандидатов на удаление не найдено"
 
 #: internal/system/actions.go:212 internal/system/actions.go:307
 #: internal/system/actions.go:452 internal/system/actions.go:613
-#: internal/system/actions.go:925
+#: internal/system/actions.go:929
 msgid "Cancel dialog"
 msgstr "Отмена диалога"
 
@@ -2930,19 +2935,19 @@ msgstr "Статус образа"
 msgid "Command executed successfully"
 msgstr "Команда успешно выполнена"
 
-#: internal/system/actions.go:970
+#: internal/system/actions.go:974
 msgid "Changes applied successfully. A reboot is required"
 msgstr "Изменения были успешно применены. Необходима перезагрука"
 
-#: internal/system/actions.go:1061
+#: internal/system/actions.go:1065
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: internal/system/actions.go:1140
+#: internal/system/actions.go:1144
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/system/actions.go:1147
+#: internal/system/actions.go:1151
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
@@ -3253,31 +3258,31 @@ msgstr "Формат вывода: json, text"
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:182
+#: main.go:183
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:189
+#: main.go:190
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:213
+#: main.go:214
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr "Неизвестная команда: %s. Посмотрите 'apm help'"
 
-#: main.go:298
+#: main.go:299
 msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
-#: main.go:444
+#: main.go:450
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:451
+#: main.go:457
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 

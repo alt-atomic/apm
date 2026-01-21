@@ -30,6 +30,7 @@ typedef enum {
 
     // Package errors (21-40)
     APT_ERROR_PACKAGE_NOT_FOUND = 21,
+    APT_ERROR_PACKAGES_ALREADY_INSTALLED = 22,
 
     // Dependency errors (41-50)
     APT_ERROR_DEPENDENCY_BROKEN = 41,

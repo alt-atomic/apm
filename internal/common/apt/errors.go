@@ -147,6 +147,7 @@ const (
 	ErrPackageIndexUpdateFailed
 	ErrConflictingPackages
 	ErrPackagesCouldNotBeInstalled
+	ErrPackagesAlreadyInstalled
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -416,6 +417,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrPackagesCouldNotBeInstalled, "Some packages could not be installed. This may mean that you have requested an impossible situation", func() string {
 		return app.T_("Some packages could not be installed. This may mean that you have requested an impossible situation")
 	}, 0},
+	{ErrPackagesAlreadyInstalled, "Packages are already installed: %s", func() string {
+		return app.T_("Packages are already installed: %s")
+	}, 1},
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.

@@ -431,7 +431,7 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIRespo
 				"message": app.T_("The operation will not make any changes"),
 				"taskNum": taskNum,
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
