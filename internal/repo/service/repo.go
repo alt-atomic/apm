@@ -1174,8 +1174,8 @@ func (s *RepoService) removePriorityMacro() {
 }
 
 // SimulateAdd симулирует добавление репозитория
-// args: [source] или [type, url, arch, components...]
-func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date string) ([]string, error) {
+// force: если true, добавляет репозитории даже если они уже существуют
+func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]string, error) {
 	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
@@ -1183,13 +1183,9 @@ func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date strin
 
 	var willAdd []string
 	for _, u := range urls {
-		exists, commented, _ := s.checkRepoExists(ctx, u)
-		if !exists {
-			if commented {
-				willAdd = append(willAdd, fmt.Sprintf(app.T_("Will uncomment: %s"), u))
-			} else {
-				willAdd = append(willAdd, fmt.Sprintf(app.T_("Will add: %s"), u))
-			}
+		exists, _, _ := s.checkRepoExists(ctx, u)
+		if !exists || force {
+			willAdd = append(willAdd, u)
 		}
 	}
 
@@ -1213,7 +1209,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 			return nil, err
 		}
 		for _, repo := range repos {
-			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Entry))
+			willRemove = append(willRemove, repo.Entry)
 		}
 		return willRemove, nil
 	}
@@ -1226,7 +1222,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 	for _, u := range urls {
 		exists, _, _ := s.checkRepoExists(ctx, u)
 		if exists {
-			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), u))
+			willRemove = append(willRemove, u)
 		}
 	}
 

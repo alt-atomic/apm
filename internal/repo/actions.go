@@ -124,7 +124,7 @@ func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*re
 	}
 	date = strings.TrimSpace(date)
 
-	willAdd, err := a.repoService.SimulateAdd(ctx, args, date)
+	willAdd, err := a.repoService.SimulateAdd(ctx, args, date, false)
 	if err != nil {
 		return nil, err
 	}
@@ -250,14 +250,11 @@ func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*reply.API
 	}
 	date = strings.TrimSpace(date)
 
-	// Симулируем удаление всех веток
 	willRemove, err := a.repoService.SimulateRemove(ctx, []string{"all"}, "", false)
 	if err != nil {
 		return nil, err
 	}
-
-	// Симулируем добавление ветки
-	willAdd, err := a.repoService.SimulateAdd(ctx, []string{branch}, date)
+	willAdd, err := a.repoService.SimulateAdd(ctx, []string{branch}, date, true)
 	if err != nil {
 		return nil, err
 	}
