@@ -111,3 +111,9 @@ type FilterField struct {
 
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода
 type GetFilterFieldsResponse []FilterField
+
+// BackgroundTaskResponse структура ответа при запуске фоновой задачи
+type BackgroundTaskResponse struct {
+	Message     string `json:"message"`
+	Transaction string `json:"transaction"`
+}

@@ -95,3 +95,37 @@ func ParseBool(val interface{}) (bool, bool) {
 	}
 	return false, false
 }
+
+// CompareVersions сравнивает две версии пакетов
+// Возвращает: 1 если a > b, -1 если a < b, 0 если равны
+func CompareVersions(a, b string) int {
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+
+	maxLen := len(aParts)
+	if len(bParts) > maxLen {
+		maxLen = len(bParts)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		aVal := 0
+		bVal := 0
+
+		if i < len(aParts) {
+			aVal, _ = strconv.Atoi(aParts[i])
+		}
+
+		if i < len(bParts) {
+			bVal, _ = strconv.Atoi(bParts[i])
+		}
+
+		if aVal > bVal {
+			return 1
+		}
+		if aVal < bVal {
+			return -1
+		}
+	}
+
+	return 0
+}

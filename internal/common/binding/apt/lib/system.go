@@ -64,8 +64,23 @@ func NewSystem() (*System, error) {
 // Close frees the system resources
 func (s *System) Close() {
 	if s.Ptr != nil {
+		BlockSignals()
+		defer RestoreSignals()
 		C.apt_cleanup_system(s.Ptr)
 		s.Ptr = nil
 		runtime.SetFinalizer(s, nil)
 	}
+}
+
+// SetNoLocking enables or disables APT file locking.
+func SetNoLocking(noLock bool) {
+	val := "false"
+	if noLock {
+		val = "true"
+	}
+	cKey := C.CString("Debug::NoLocking")
+	cVal := C.CString(val)
+	defer C.free(unsafe.Pointer(cKey))
+	defer C.free(unsafe.Pointer(cVal))
+	C.apt_set_config(cKey, cVal)
 }

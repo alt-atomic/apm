@@ -17,6 +17,7 @@
 package repo
 
 import (
+	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/repo/service"
 )
 
@@ -44,8 +45,9 @@ type SetResponse struct {
 
 // SimulateResponse структура ответа для симуляции операций
 type SimulateResponse struct {
-	Message string   `json:"message"`
-	Changes []string `json:"changes"`
+	Message    string   `json:"message"`
+	WillAdd    []string `json:"willAdd,omitempty"`
+	WillRemove []string `json:"willRemove,omitempty"`
 }
 
 // BranchesResponse структура ответа для GetBranches метода
@@ -60,4 +62,11 @@ type TaskPackagesResponse struct {
 	TaskNum  string   `json:"taskNum"`
 	Packages []string `json:"packages"`
 	Count    int      `json:"count"`
+}
+
+// TestTaskResponse структура ответа для TestTask метода
+type TestTaskResponse struct {
+	Message string                `json:"message"`
+	TaskNum string                `json:"taskNum"`
+	Info    aptlib.PackageChanges `json:"info"`
 }

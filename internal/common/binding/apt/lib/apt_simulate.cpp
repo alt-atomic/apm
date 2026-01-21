@@ -286,6 +286,28 @@ AptResult plan_change_internal(
                                 extra_installed, extra_removed, upgraded,
                                 new_installed, removed, download_size, install_size);
 
+        if (!requested_install.empty() && requested_remove.empty() && requested_reinstall.empty()) {
+            std::set<std::string> will_change;
+            for (const auto &pkg : new_installed) will_change.insert(pkg);
+            for (const auto &pkg : upgraded) will_change.insert(pkg);
+
+            std::vector<std::string> already_installed;
+            for (const auto &req : requested_install) {
+                if (will_change.find(req) == will_change.end()) {
+                    already_installed.push_back(req);
+                }
+            }
+
+            if (!already_installed.empty() && already_installed.size() == requested_install.size()) {
+                std::string msg = "Packages are already installed: ";
+                for (size_t i = 0; i < already_installed.size(); ++i) {
+                    if (i > 0) msg += ", ";
+                    msg += already_installed[i];
+                }
+                return make_result(APT_ERROR_PACKAGES_ALREADY_INSTALLED, msg.c_str());
+            }
+        }
+
         populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed, download_size,
                                    install_size);
 

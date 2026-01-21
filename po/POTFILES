@@ -6,10 +6,13 @@ internal/common/app/translator.go
 internal/common/apt/errors.go
 internal/common/apt/package/actions.go
 internal/common/apt/package/database.go
+internal/common/binding/apt/lib/lock.go
+internal/common/binding/apt/rpm.go
 internal/common/build/build.go
 internal/common/build/config.go
 internal/common/build/core/expr.go
 internal/common/build/core/models.go
+internal/common/build/core/validate.go
 internal/common/build/database.go
 internal/common/build/host.go
 internal/common/build/models/kernel.go
@@ -29,7 +32,7 @@ internal/common/reply/translate.go
 internal/common/wrapper/wrapper.go
 internal/distrobox/actions.go
 internal/distrobox/commands.go
-internal/distrobox/dbus.go
+internal/distrobox/http.go
 internal/distrobox/service/alt.go
 internal/distrobox/service/arch.go
 internal/distrobox/service/database.go
@@ -47,5 +50,6 @@ internal/system/commands.go
 internal/system/dbus.go
 internal/system/dialog/dialog.go
 internal/system/dialog/dialog_image.go
+internal/system/http.go
 internal/system/service/temporary.go
 main.go

@@ -286,7 +286,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 			Data: map[string]interface{}{
 				"message": app.T_("The operation will not make any changes"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -436,7 +436,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 			Data: map[string]interface{}{
 				"message": app.T_("The operation will not make any changes"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -494,7 +494,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 }
 
 // Update обновляет информацию или базу данных пакетов.
-func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) Update(ctx context.Context, noLock bool) (*reply.APIResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, err
@@ -505,7 +505,7 @@ func (a *Actions) Update(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	packages, err := a.serviceAptActions.Update(ctx)
+	packages, err := a.serviceAptActions.Update(ctx, noLock)
 	if err != nil {
 		return nil, err
 	}
@@ -598,7 +598,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 				Message: app.T_("The operation will not make any changes"),
 				Result:  nil,
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -703,8 +703,14 @@ type ListParams struct {
 	Offset      int      `json:"offset"`
 	Filters     []string `json:"filters"`
 	ForceUpdate bool     `json:"forceUpdate"`
+	Full        bool     `json:"full"`
 }
 
+// List возвращает список пакетов
+// List возвращает список пакетов.
+// Структура ListParams заполняется из query параметров автоматически по json тегам
+// @permission read
+// @summary Получить список пакетов
 func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool) (*reply.APIResponse, error) {
 	if params.ForceUpdate {
 		_, err := a.serviceAptActions.Update(ctx)
@@ -754,7 +760,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	resp := reply.APIResponse{
 		Data: map[string]interface{}{
 			"message":    msg,
-			"packages":   a.FormatPackageOutput(packages, isFullFormat),
+			"packages":   a.FormatPackageOutput(packages, params.Full || isFullFormat),
 			"totalCount": int(totalCount),
 		},
 		Error: false,
@@ -763,7 +769,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 	return &resp, nil
 }
 
-// GetFilterFields возвращает список свойств для фильтрации. Метод для DBUS
+// GetFilterFields возвращает список свойств для фильтрации.
 func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, error) {
 	if err := a.validateDB(ctx); err != nil {
 		return nil, err
@@ -792,7 +798,6 @@ func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, erro
 			ff.Type = "ENUM"
 			ff.Info = map[_package.PackageType]string{
 				_package.PackageTypeSystem: app.T_("System package"),
-				_package.PackageTypeStplr:  app.T_("Stplr package"),
 			}
 		}
 
@@ -891,7 +896,11 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 
 // ImageApply применить изменения к хосту
 func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
-	var err error
+	err := a.checkOverlay(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if err = a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, err
 	}
@@ -998,7 +1007,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 }
 
 // ImageGetConfig получить конфиг
-func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
+func (a *Actions) ImageGetConfig(_ context.Context) (*reply.APIResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err
@@ -1015,7 +1024,7 @@ func (a *Actions) ImageGetConfig() (*reply.APIResponse, error) {
 }
 
 // ImageSaveConfig сохранить конфиг
-func (a *Actions) ImageSaveConfig(config build.Config) (*reply.APIResponse, error) {
+func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*reply.APIResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, err

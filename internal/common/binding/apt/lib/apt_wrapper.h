@@ -30,6 +30,7 @@ typedef enum {
 
     // Package errors (21-40)
     APT_ERROR_PACKAGE_NOT_FOUND = 21,
+    APT_ERROR_PACKAGES_ALREADY_INSTALLED = 22,
 
     // Dependency errors (41-50)
     APT_ERROR_DEPENDENCY_BROKEN = 41,
@@ -261,6 +262,22 @@ const char *apt_get_config(const char *key, const char *default_value);
 
 // Force cleanup functions
 void apt_force_unlock();
+
+// Lock status information
+typedef struct {
+    bool is_locked;
+    bool can_acquire;
+    int lock_pid;
+    char *lock_holder;
+    char *lock_file_path;
+    char *error_message;
+} AptLockStatus;
+
+// Check if APT locks
+AptLockStatus apt_check_lock_status();
+
+// Free lock status structure
+void apt_free_lock_status(AptLockStatus *status);
 
 #ifdef __cplusplus
 }

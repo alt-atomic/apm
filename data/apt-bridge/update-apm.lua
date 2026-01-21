@@ -7,4 +7,4 @@ if not message or message == "" then
 end
 
 print(message)
-os.execute("apm s update")
+os.execute("apm s update --no-lock")

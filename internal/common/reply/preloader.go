@@ -67,7 +67,7 @@ type model struct {
 
 // CreateSpinner Создание и запуск Bubble Tea
 func CreateSpinner(appConfig *app.Config) {
-	if appConfig.ConfigManager.GetConfig().Format != "text" || !IsTTY() {
+	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
 		return
 	}
 
@@ -102,7 +102,7 @@ func StopSpinner(appConfig *app.Config) {
 
 // StopSpinnerWithKeepTasks Остановка с возможностью сохранения задач
 func StopSpinnerWithKeepTasks(appConfig *app.Config, keepTasks bool) {
-	if appConfig.ConfigManager.GetConfig().Format != "text" || !IsTTY() {
+	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
 		return
 	}
 
@@ -175,7 +175,7 @@ func StopSpinnerForDialog(appConfig *app.Config) {
 //	UpdateTask("TASK", "install", "Установка пакетов", "BEFORE", "")
 //	UpdateTask("TASK", "install", "Установка пакетов", "AFTER", "")
 func UpdateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
-	if appConfig.ConfigManager.GetConfig().Format != "text" || !IsTTY() {
+	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
 		return
 	}
 

@@ -45,7 +45,7 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // List – Получить список репозиториев
-// doc_response: ListResponse
+// doc_response: RepoListResponse
 func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.List(ctx, all)
@@ -60,14 +60,14 @@ func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 }
 
 // Add – Добавить репозиторий
-// doc_response: AddRemoveResponse
+// doc_response: RepoAddRemoveResponse
 func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
-	resp, err := w.actions.Add(ctx, []string{source}, date, false)
+	resp, err := w.actions.Add(ctx, []string{source}, date)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -79,14 +79,14 @@ func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) 
 }
 
 // Remove – Удалить репозиторий
-// doc_response: AddRemoveResponse
+// doc_response: RepoAddRemoveResponse
 func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
-	resp, err := w.actions.Remove(ctx, []string{source}, date, false)
+	resp, err := w.actions.Remove(ctx, []string{source}, date)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -98,13 +98,13 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction strin
 }
 
 // Set – Установить ветку (удалить все и добавить указанную)
-// doc_response: SetResponse
+// doc_response: RepoSetResponse
 func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Set(ctx, branch, date, false)
+	resp, err := w.actions.Set(ctx, branch, date)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -116,13 +116,13 @@ func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) 
 }
 
 // Clean – Удалить cdrom и task репозитории
-// doc_response: AddRemoveResponse
+// doc_response: RepoAddRemoveResponse
 func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Clean(ctx, false)
+	resp, err := w.actions.Clean(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -163,11 +163,11 @@ func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (strin
 }
 
 // SimulateAdd – Симулировать добавление репозитория
-// doc_response: SimulateResponse
+// doc_response: RepoSimulateResponse
 func (w *DBusWrapper) SimulateAdd(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
-	resp, err := w.actions.Add(ctx, []string{source}, date, true)
+	resp, err := w.actions.CheckAdd(ctx, []string{source}, date)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -179,11 +179,11 @@ func (w *DBusWrapper) SimulateAdd(source, date, transaction string) (string, *db
 }
 
 // SimulateRemove – Симулировать удаление репозитория
-// doc_response: SimulateResponse
+// doc_response: RepoSimulateResponse
 func (w *DBusWrapper) SimulateRemove(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
-	resp, err := w.actions.Remove(ctx, []string{source}, date, true)
+	resp, err := w.actions.CheckRemove(ctx, []string{source}, date)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -195,10 +195,10 @@ func (w *DBusWrapper) SimulateRemove(source, date, transaction string) (string, 
 }
 
 // SimulateSet – Симулировать установку ветки
-// doc_response: SimulateResponse
+// doc_response: RepoSimulateResponse
 func (w *DBusWrapper) SimulateSet(branch, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Set(ctx, branch, date, true)
+	resp, err := w.actions.CheckSet(ctx, branch, date)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}
@@ -210,10 +210,10 @@ func (w *DBusWrapper) SimulateSet(branch, date, transaction string) (string, *db
 }
 
 // SimulateClean – Симулировать очистку cdrom и task репозиториев
-// doc_response: SimulateResponse
+// doc_response: RepoSimulateResponse
 func (w *DBusWrapper) SimulateClean(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Clean(ctx, true)
+	resp, err := w.actions.CheckClean(ctx)
 	if err != nil {
 		return "", dbus.MakeFailedError(err)
 	}

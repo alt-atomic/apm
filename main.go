@@ -20,7 +20,9 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/binding/apt"
 	aptLib "apm/internal/common/binding/apt/lib"
+	"apm/internal/common/dbus_doc"
 	"apm/internal/common/helper"
+	"apm/internal/common/http_server"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
 	"apm/internal/common/version"
@@ -70,11 +72,59 @@ func main() {
 			Name:   "dbus-session",
 			Usage:  app.T_("Start session D-Bus service org.altlinux.APM"),
 			Action: sessionDbus,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "verbose",
+					Aliases: []string{"v"},
+					Usage:   app.T_("Enable verbose logging to stdout"),
+				},
+			},
 		},
 		{
 			Name:   "dbus-system",
 			Usage:  app.T_("Start system D-Bus service org.altlinux.APM"),
 			Action: systemDbus,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "verbose",
+					Aliases: []string{"v"},
+					Usage:   app.T_("Enable verbose logging to stdout"),
+				},
+			},
+		},
+		{
+			Name:   "http-server",
+			Usage:  app.T_("Start session HTTP API server"),
+			Action: httpServer,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "listen",
+					Aliases: []string{"l"},
+					Usage:   app.T_("Listen address (host:port)"),
+					Value:   "127.0.0.1:8080",
+				},
+				&cli.StringFlag{
+					Name:  "api-token",
+					Usage: app.T_("API token for authentication"),
+				},
+			},
+		},
+		{
+			Name:   "http-session",
+			Usage:  app.T_("Start system HTTP API"),
+			Action: httpSession,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "listen",
+					Aliases: []string{"l"},
+					Usage:   app.T_("Listen address (host:port)"),
+					Value:   "127.0.0.1:8082",
+				},
+				&cli.StringFlag{
+					Name:  "api-token",
+					Usage: app.T_("API token for authentication"),
+				},
+			},
 		},
 		systemCommands,
 		repoCommands,
@@ -140,6 +190,7 @@ func main() {
 func setupSignalHandling() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	aptLib.RegisterSignalChannel(sigs)
 
 	go func() {
 		sig := <-sigs
@@ -191,6 +242,9 @@ func applyCommandSetting(cliCommand *cli.Command) {
 
 func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
+	if cmd.Bool("verbose") {
+		app.Log.EnableStdoutLogging()
+	}
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
 		cliError(errors.New(errPermission))
@@ -213,15 +267,20 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	// Собираем интерфейсы для интроспекции
+	interfaces := map[string]any{
+		"org.altlinux.APM.distrobox": distroObj,
+	}
+
 	if err = appConfig.DBusManager.GetConnection().Export(
-		introspect.Introspectable(helper.GetUserIntrospectXML(appConfig.ConfigManager.GetConfig().ExistDistrobox)),
+		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
 		return err
 	}
 
-	appConfig.ConfigManager.SetFormat("dbus")
+	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 
 	// Параллельно обновляем иконки
 	go func() {
@@ -237,6 +296,9 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 
 func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
+	if cmd.Bool("verbose") {
+		app.Log.EnableStdoutLogging()
+	}
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
 		cliError(errors.New(errPermission))
@@ -263,6 +325,11 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	// Собираем интерфейсы для интроспекции
+	interfaces := map[string]any{
+		"org.altlinux.APM.system": sysObj,
+	}
+
 	// Экспортируем kernel методы только для не-атомарных систем
 	if !appConfig.ConfigManager.GetConfig().IsAtomic {
 		kernelActions := kernel.NewActions(appConfig)
@@ -270,6 +337,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		if err = appConfig.DBusManager.GetConnection().Export(kernelObj, "/org/altlinux/APM", "org.altlinux.APM.kernel"); err != nil {
 			return err
 		}
+		interfaces["org.altlinux.APM.kernel"] = kernelObj
 	}
 
 	// Экспортируем repo методы в D-Bus
@@ -278,19 +346,141 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	if err = appConfig.DBusManager.GetConnection().Export(repoObj, "/org/altlinux/APM", "org.altlinux.APM.repo"); err != nil {
 		return err
 	}
+	interfaces["org.altlinux.APM.repo"] = repoObj
 
 	if err = appConfig.DBusManager.GetConnection().Export(
-		introspect.Introspectable(helper.GetSystemIntrospectXML(appConfig.ConfigManager.GetConfig().IsAtomic)),
+		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
 		"/org/altlinux/APM",
 		"org.freedesktop.DBus.Introspectable",
 	); err != nil {
 		return err
 	}
 
-	appConfig.ConfigManager.SetFormat("dbus")
+	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 
 	// Блокируем до сигнала
 	select {}
+}
+
+func httpServer(ctx context.Context, cmd *cli.Command) error {
+	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
+	app.Log.EnableStdoutLogging()
+
+	if syscall.Geteuid() != 0 {
+		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
+		cliError(errors.New(errPermission))
+		return errors.New(errPermission)
+	}
+
+	defer cleanup()
+
+	config := http_server.DefaultConfig()
+	if listen := cmd.String("listen"); listen != "" {
+		config.ListenAddr = listen
+	}
+	if token := cmd.String("api-token"); token != "" {
+		config.APIToken = token
+	}
+
+	server := http_server.NewServer(config, appConfig)
+
+	wsHub := http_server.GetWebSocketHub()
+	reply.SetWebSocketHub(wsHub)
+
+	server.RegisterHealthCheck()
+	server.RegisterWebSocket()
+	server.RegisterAPIInfo(
+		appConfig.ConfigManager.GetConfig().IsAtomic,
+		appConfig.ConfigManager.GetConfig().ExistDistrobox,
+		!appConfig.ConfigManager.GetConfig().IsAtomic,
+	)
+
+	// System модуль
+	sysActions := system.NewActions(appConfig)
+	sysHTTPWrapper := system.NewHTTPWrapper(sysActions, appConfig, ctx)
+	sysHTTPWrapper.RegisterRoutes(server.GetMux(), appConfig.ConfigManager.GetConfig().IsAtomic)
+
+	// Repo модуль
+	repoActions := repo.NewActions(appConfig)
+	repoHTTPWrapper := repo.NewHTTPWrapper(repoActions, appConfig, ctx)
+	repoHTTPWrapper.RegisterRoutes(server.GetMux())
+
+	// Регистрируем endpoints в registry для OpenAPI документации и проверки прав
+	registry := http_server.NewRegistry()
+	registry.RegisterResponseTypes(system.GetHTTPResponseTypes())
+	registry.RegisterEndpoints(system.GetHTTPEndpoints())
+	registry.RegisterResponseTypes(repo.GetHTTPResponseTypes())
+	registry.RegisterEndpoints(repo.GetHTTPEndpoints())
+	server.SetRegistry(registry)
+
+	// Регистрируем OpenAPI документацию из registry
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic, config.ListenAddr))
+
+	err := server.Start(ctx)
+	if err != nil {
+		cliError(err)
+	}
+	return err
+}
+
+func httpSession(ctx context.Context, cmd *cli.Command) error {
+	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
+	app.Log.EnableStdoutLogging()
+
+	if syscall.Geteuid() == 0 {
+		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
+		cliError(errors.New(errPermission))
+		return errors.New(errPermission)
+	}
+
+	if !appConfig.ConfigManager.GetConfig().ExistDistrobox {
+		errMsg := app.T_("Distrobox is not installed")
+		cliError(errors.New(errMsg))
+		return errors.New(errMsg)
+	}
+
+	defer cleanup()
+
+	config := http_server.DefaultConfig()
+	config.ListenAddr = "127.0.0.1:8082"
+	if listen := cmd.String("listen"); listen != "" {
+		config.ListenAddr = listen
+	}
+	if token := cmd.String("api-token"); token != "" {
+		config.APIToken = token
+	}
+
+	server := http_server.NewServer(config, appConfig)
+
+	wsHub := http_server.GetWebSocketHub()
+	reply.SetWebSocketHub(wsHub)
+
+	server.RegisterHealthCheck()
+	server.RegisterWebSocket()
+	server.RegisterAPIInfo(
+		false,
+		true,
+		false,
+	)
+
+	// Distrobox модуль
+	distroboxActions := distrobox.NewActions(appConfig)
+	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, ctx)
+	distroboxHTTPWrapper.RegisterRoutes(server.GetMux())
+
+	registry := http_server.NewRegistry()
+	registry.RegisterResponseTypes(distrobox.GetHTTPResponseTypes())
+	registry.RegisterEndpoints(distrobox.GetHTTPEndpoints())
+	server.SetRegistry(registry)
+
+	// Регистрируем OpenAPI документацию из registry
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, false, config.ListenAddr))
+
+	err := server.Start(ctx)
+	if err != nil {
+		cliError(err)
+	}
+	return err
 }
 
 func printVersion(_ context.Context, _ *cli.Command) error {

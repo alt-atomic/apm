@@ -17,14 +17,43 @@
 package lib
 
 import (
+	"os"
+	"os/signal"
 	"sync"
 	"sync/atomic"
+	"syscall"
 )
 
 var (
 	aptWG   sync.WaitGroup
 	aptBusy int32
+
+	signalChan chan os.Signal
+	signalMu   sync.Mutex
 )
+
+// RegisterSignalChannel регистрирует канал сигналов для восстановления после APT операций
+func RegisterSignalChannel(ch chan os.Signal) {
+	signalMu.Lock()
+	signalChan = ch
+	signalMu.Unlock()
+}
+
+// BlockSignals блокирует сигналы прерывания на время критических операций
+func BlockSignals() {
+	signal.Ignore(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+}
+
+// RestoreSignals восстанавливает обработку сигналов после критических операций
+func RestoreSignals() {
+	signalMu.Lock()
+	ch := signalChan
+	signalMu.Unlock()
+
+	if ch != nil {
+		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	}
+}
 
 // StartOperation начало маркировки APT операций
 func StartOperation() {

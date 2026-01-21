@@ -55,7 +55,7 @@ type packageItem struct {
 
 // NewPackageSelectionDialog запускает диалог выбора пакетов для установки/удаления
 func NewPackageSelectionDialog(appConfig *app.Config, installPkgs, removePkgs []string) (*PackageSelectionResult, error) {
-	if appConfig.ConfigManager.GetConfig().Format != "text" || !reply.IsTTY() {
+	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !reply.IsTTY() {
 		return &PackageSelectionResult{
 			InstallPackages: installPkgs,
 			RemovePackages:  removePkgs,

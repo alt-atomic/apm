@@ -299,13 +299,11 @@ func rebuildDracut(ctx context.Context, dracutExecutable string) error {
 		return err
 	}
 
-	if _, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
+	if err = osutils.ExecSh(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
 		return err
 	}
 
-	_, err = osutils.ExecShWithOutput(ctx, fmt.Sprintf("%s --force '%s/%s/initramfs.img' %s", dracutExecutable, kernelDir, kernelVersion, kernelVersion), "", false)
-
-	return err
+	return osutils.ExecSh(ctx, fmt.Sprintf("%s --force '%s/%s/initramfs.img' %s", dracutExecutable, kernelDir, kernelVersion, kernelVersion), "", false)
 }
 
 func LatestInstalledKernelVersion() (string, error) {

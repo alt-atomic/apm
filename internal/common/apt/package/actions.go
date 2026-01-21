@@ -24,11 +24,8 @@ import (
 	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"bufio"
 	"context"
 	"fmt"
-	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -479,11 +476,11 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.Pack
 	return
 }
 
-func (a *Actions) Update(ctx context.Context) ([]Package, error) {
+func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Update"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Update"))
 
-	err := a.AptUpdate(ctx)
+	err := a.AptUpdate(ctx, noLock...)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +498,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 		asMap[c.PkgName] = c
 	}
 
-	aptPackages, err := a.serviceAptBinding.Search("")
+	aptPackages, err := a.serviceAptBinding.Search("", noLock...)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +588,7 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 	//}
 
 	// @TODO Обновляем информацию о том, установлены ли пакеты локально, на самом деле об этом можно узнать из биндингов
-	packages, err = a.updateInstalledInfo(ctx, packages)
+	packages, err = a.updateInstalledInfo(ctx, packages, noLock...)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Error updating information about installed packages: %w"), err)
 	}
@@ -605,8 +602,8 @@ func (a *Actions) Update(ctx context.Context) ([]Package, error) {
 }
 
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
-func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) ([]Package, error) {
-	installed, err := a.GetInstalledPackages(ctx)
+func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package, noLock ...bool) ([]Package, error) {
+	installed, err := a.GetInstalledPackages(ctx, noLock...)
 	if err != nil {
 		return nil, err
 	}
@@ -622,91 +619,17 @@ func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package) (
 }
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
-func (a *Actions) GetInstalledPackages(ctx context.Context) (map[string]string, error) {
-	command := fmt.Sprintf("%s rpm -qia", a.appConfig.ConfigManager.GetConfig().CommandPrefix)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf(app.T_("Error executing the rpm -qia command: %w"), err)
-	}
-
-	installed := make(map[string]string)
-	scanner := bufio.NewScanner(strings.NewReader(string(output)))
-	var currentName, currentVersion, currentArch string
-
-	flushCurrent := func() {
-		if currentName == "" {
-			return
-		}
-		name := currentName
-		if strings.HasPrefix(name, "i586-") && (currentArch == "i586" || currentArch == "i386") {
-			name = strings.TrimPrefix(name, "i586-")
-		}
-
-		// Если пакет уже есть, выбираем более новую версию
-		if existingVersion, exists := installed[name]; exists {
-			if CompareVersions(currentVersion, existingVersion) > 0 {
-				installed[name] = currentVersion
-			}
-		} else {
-			installed[name] = currentVersion
-		}
-
-		currentName, currentVersion, currentArch = "", "", ""
-	}
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-
-		if strings.HasPrefix(line, "Name") {
-			flushCurrent()
-		}
-		if line == "" {
-			flushCurrent()
-			continue
-		}
-
-		if strings.HasPrefix(line, "Name") {
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				currentName = strings.TrimSpace(parts[1])
-			}
-			continue
-		}
-
-		if strings.HasPrefix(line, "Version") {
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				currentVersion = strings.TrimSpace(parts[1])
-			}
-			continue
-		}
-
-		if strings.HasPrefix(line, "Architecture") {
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				currentArch = strings.TrimSpace(parts[1])
-			}
-			continue
-		}
-	}
-
-	flushCurrent()
-
-	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf(app.T_("Error scanning rpm output: %w"), err)
-	}
-
-	return installed, nil
+// Использует apt биндинги для защиты от конкурентного доступа к rpmdb
+func (a *Actions) GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error) {
+	commandPrefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
+	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
 }
 
-func (a *Actions) AptUpdate(ctx context.Context) error {
+func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.AptUpdate"))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.AptUpdate"))
 
-	err := a.serviceAptBinding.Update()
+	err := a.serviceAptBinding.Update(noLock...)
 	if err != nil {
 		return err
 	}
@@ -837,41 +760,4 @@ func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath stri
 	}
 
 	return nil
-}
-
-// CompareVersions сравнивает две версии (returns: 1 if a > b, -1 if a < b, 0 if equal)
-func CompareVersions(a, b string) int {
-	aParts := strings.Split(a, ".")
-	bParts := strings.Split(b, ".")
-
-	maxLen := len(aParts)
-	if len(bParts) > maxLen {
-		maxLen = len(bParts)
-	}
-
-	for i := 0; i < maxLen; i++ {
-		aVal := 0
-		bVal := 0
-
-		if i < len(aParts) {
-			if val, err := strconv.Atoi(aParts[i]); err == nil {
-				aVal = val
-			}
-		}
-
-		if i < len(bParts) {
-			if val, err := strconv.Atoi(bParts[i]); err == nil {
-				bVal = val
-			}
-		}
-
-		if aVal > bVal {
-			return 1
-		}
-		if aVal < bVal {
-			return -1
-		}
-	}
-
-	return 0
 }

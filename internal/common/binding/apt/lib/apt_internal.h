@@ -6,6 +6,7 @@
 #include <apt-pkg/packagemanager.h>
 #include <apt-pkg/pkgsystem.h>
 #include <apt-pkg/acquire.h>
+#include <apt-pkg/fileutl.h>
 
 #include <memory>
 #include <string>
