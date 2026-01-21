@@ -6,8 +6,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"slices"
+	"strings"
 )
 
 type GitBody struct {
@@ -62,23 +62,19 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	app.Log.Debug(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
-
 	args := []string{"clone"}
 	if b.Rev != "" {
 		args = append(args, "--revision="+b.Rev)
 	}
 	args = append(args, b.Url, tempDir)
 
-	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err = cmd.Run(); err != nil {
+	app.Log.Debug(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
+	if err = osutils.ExecSh(ctx, "git"+strings.Join(args, " "), "", false); err != nil {
 		return nil, err
 	}
 
 	app.Log.Debug(fmt.Sprintf("Executing `%s`", b.Command))
-	if _, err = osutils.ExecShWithOutput(ctx, b.Command, tempDir, b.Quiet); err != nil {
+	if err = osutils.ExecSh(ctx, b.Command, tempDir, b.Quiet); err != nil {
 		return nil, err
 	}
 
