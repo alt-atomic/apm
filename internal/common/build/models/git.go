@@ -69,7 +69,7 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	args = append(args, b.Url, tempDir)
 
 	app.Log.Debug(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
-	if err = osutils.ExecSh(ctx, "git"+strings.Join(args, " "), "", false); err != nil {
+	if err = osutils.ExecSh(ctx, "git "+strings.Join(args, " "), "", false); err != nil {
 		return nil, err
 	}
 
