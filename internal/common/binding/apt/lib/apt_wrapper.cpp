@@ -5,12 +5,15 @@
 #include <apt-pkg/init.h>
 #include <apt-pkg/sourcelist.h>
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <sstream>
+#include <sys/select.h>
 #include <sys/stat.h>
+#include <thread>
 #include <unistd.h>
 
 // Error handling
@@ -75,21 +78,71 @@ static std::streambuf *g_prev_cout = nullptr;
 static std::streambuf *g_prev_cerr = nullptr;
 static std::streambuf *g_prev_clog = nullptr;
 
+// File descriptor level capture for C stdio (RPM output, printf, fprintf, etc.)
+static int g_saved_stderr_fd = -1;
+static int g_pipe_read_fd = -1;
+static int g_pipe_write_fd = -1;
+static std::string g_captured_stderr;
+static std::thread g_reader_thread;
+static std::atomic<bool> g_reader_running{false};
+
+static void stderr_reader_thread() {
+    char buffer[1024];
+    while (g_reader_running.load()) {
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(g_pipe_read_fd, &fds);
+        struct timeval tv = {0, 100000};
+        int ret = select(g_pipe_read_fd + 1, &fds, nullptr, nullptr, &tv);
+        if (ret > 0 && FD_ISSET(g_pipe_read_fd, &fds)) {
+            ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
+            if (n > 0) {
+                buffer[n] = '\0';
+                g_captured_stderr += buffer;
+            }
+        }
+    }
+    // Drain remaining data
+    while (true) {
+        ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
+        if (n <= 0) break;
+        buffer[n] = '\0';
+        g_captured_stderr += buffer;
+    }
+}
+
 extern "C" void apt_capture_stdio(int enable) {
     if (enable) {
         if (!g_stdio_captured) {
-            // Redirect only C++ iostreams to avoid OS-level fd hacks
+            // Redirect C++ iostreams to emit_stream
             g_prev_cout = std::cout.rdbuf();
             g_prev_cerr = std::cerr.rdbuf();
             g_prev_clog = std::clog.rdbuf();
             std::cout.rdbuf(g_emit_stream.rdbuf());
             std::cerr.rdbuf(g_emit_stream.rdbuf());
             std::clog.rdbuf(g_emit_stream.rdbuf());
+
+            // Redirect C stderr to pipe (captures RPM output and other)
+            fflush(stderr);
+            g_captured_stderr.clear();
+            int pipefd[2];
+            if (pipe(pipefd) == 0) {
+                g_pipe_read_fd = pipefd[0];
+                g_pipe_write_fd = pipefd[1];
+                // Make read end non-blocking
+                fcntl(g_pipe_read_fd, F_SETFL, O_NONBLOCK);
+                g_saved_stderr_fd = dup(STDERR_FILENO);
+                dup2(g_pipe_write_fd, STDERR_FILENO);
+                // Start reader thread
+                g_reader_running.store(true);
+                g_reader_thread = std::thread(stderr_reader_thread);
+            }
+
             g_stdio_captured = true;
         }
     } else {
         if (g_stdio_captured) {
-            // Flush any pending content in the emit stream and standard streams
+            // Flush any pending content
             try {
                 g_emit_stream.flush();
                 std::cout.flush();
@@ -98,6 +151,43 @@ extern "C" void apt_capture_stdio(int enable) {
             } catch (...) {
                 // ignore flush errors
             }
+
+            // Restore C stderr and stop reader
+            fflush(stderr);
+            if (g_saved_stderr_fd >= 0) {
+                dup2(g_saved_stderr_fd, STDERR_FILENO);
+                close(g_saved_stderr_fd);
+                g_saved_stderr_fd = -1;
+            }
+            if (g_pipe_write_fd >= 0) {
+                close(g_pipe_write_fd);
+                g_pipe_write_fd = -1;
+            }
+            if (g_reader_running.load()) {
+                g_reader_running.store(false);
+                if (g_reader_thread.joinable()) {
+                    g_reader_thread.join();
+                }
+            }
+            if (g_pipe_read_fd >= 0) {
+                close(g_pipe_read_fd);
+                g_pipe_read_fd = -1;
+            }
+
+            // Send captured stderr to log handler for error analysis
+            // Only send to callback if set (otherwise discard - we don't want garbage in console)
+            if (!g_captured_stderr.empty() && g_log_callback) {
+                // Split by lines and send each to log handler
+                std::istringstream stream(g_captured_stderr);
+                std::string line;
+                while (std::getline(stream, line)) {
+                    if (!line.empty()) {
+                        g_log_callback(line.c_str(), g_log_user_data);
+                    }
+                }
+            }
+            g_captured_stderr.clear();
+
             // Restore C++ iostreams
             std::cout.rdbuf(g_prev_cout);
             std::cerr.rdbuf(g_prev_cerr);
