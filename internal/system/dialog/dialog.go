@@ -143,11 +143,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		// Прокрутка viewport
-		case tea.KeyPgUp:
+		case tea.KeyPgUp, tea.KeyCtrlUp:
 			m.vp.ScrollUp(5)
 			return m, nil
 
-		case tea.KeyPgDown:
+		case tea.KeyPgDown, tea.KeyCtrlDown:
 			m.vp.ScrollDown(5)
 			return m, nil
 
@@ -228,7 +228,7 @@ func (m model) View() string {
 	}
 
 	// Формируем строку с подсказками по клавишам
-	keyboardShortcuts := m.getShortcutStyle().Render(app.T_("Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/bottom, Enter - choose, Esc/q - cancel"))
+	keyboardShortcuts := m.getShortcutStyle().Render(app.T_("Navigation: ↑/↓ or j/k - select, Ctrl+↑/↓ or PgUp/PgDn - scroll, Ctrl+Home/End - top/bottom, Enter - choose, Esc/q - cancel"))
 
 	// Формируем футер с выбором действия
 	var footer strings.Builder
@@ -292,8 +292,36 @@ func (m model) buildContent() string {
 	var sb strings.Builder
 	const keyWidth = 21
 
+	// Сначала затронутые изменения
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", app.T_("Affected changes:"))))
+	extraStr := m.formatDependencies(m.pckChange.ExtraInstalled)
+	upgradeStr := m.formatDependencies(m.pckChange.UpgradedPackages)
+	installStr := m.formatDependencies(m.pckChange.NewInstalledPackages)
+	removeStr := m.formatDependencies(m.pckChange.RemovedPackages)
+	sb.WriteString("\n" + formatLine(app.T_("Extra packages"), extraStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be updated"), upgradeStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be installed"), installStr, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be removed"), removeStr, keyWidth, keyStyle, valueStyle))
+
+	// Затем итоги
+	packageUpgradedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.UpgradedCount), m.pckChange.UpgradedCount)
+	packageNewInstalledCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.NewInstalledCount), m.pckChange.NewInstalledCount)
+	packageRemovedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.RemovedCount), m.pckChange.RemovedCount)
+	packageNotUpgradedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.NotUpgradedCount), m.pckChange.NotUpgradedCount)
+
+	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", app.T_("Total:"))))
+	sb.WriteString("\n" + formatLine(app.T_("Will be updated"), packageUpgradedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be installed"), packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
+	sb.WriteString("\n" + formatLine(app.T_("Not affected"), packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
+	if m.choiceType == ActionUpgrade || m.choiceType == ActionInstall {
+		sb.WriteString("\n" + formatLine(app.T_("Downloaded Size"), helper.AutoSize(int(m.pckChange.DownloadSize)), keyWidth, keyStyle, valueStyle))
+		sb.WriteString("\n" + formatLine(app.T_("Installed Size"), helper.AutoSize(int(m.pckChange.InstallSize)), keyWidth, keyStyle, valueStyle))
+	}
+
+	// В конце - информация о пакетах
 	if m.choiceType != ActionUpgrade {
-		infoPackage := fmt.Sprintf("\n%s\n", app.TN_("Package information:", "Packages information:", len(m.pkg)))
+		infoPackage := fmt.Sprintf("\n\n%s\n", app.TN_("Package information:", "Packages information:", len(m.pkg)))
 		sb.WriteString(titleStyle.Render(infoPackage))
 	}
 
@@ -314,7 +342,7 @@ func (m model) buildContent() string {
 			sb.WriteString("\n" + valueStyle.Render(line))
 		}
 	} else {
-		// Обычный детальный вывод для списков ≤100 пакетов
+		// Обычный детальный вывод для списков ≤200 пакетов
 		for i, pkg := range m.pkg {
 			if len(m.pkg) > 1 {
 				sb.WriteString(titleStyle.Render("\n"))
@@ -351,31 +379,6 @@ func (m model) buildContent() string {
 			dependsStr := m.formatDependencies(pkg.Depends)
 			sb.WriteString("\n" + formatLine(app.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
 		}
-	}
-
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", app.T_("Affected changes:"))))
-	extraStr := m.formatDependencies(m.pckChange.ExtraInstalled)
-	upgradeStr := m.formatDependencies(m.pckChange.UpgradedPackages)
-	installStr := m.formatDependencies(m.pckChange.NewInstalledPackages)
-	removeStr := m.formatDependencies(m.pckChange.RemovedPackages)
-	sb.WriteString("\n" + formatLine(app.T_("Extra packages"), extraStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(app.T_("Will be updated"), upgradeStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(app.T_("Will be installed"), installStr, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(app.T_("Will be removed"), removeStr, keyWidth, keyStyle, valueStyle))
-
-	packageUpgradedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.UpgradedCount), m.pckChange.UpgradedCount)
-	packageNewInstalledCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.NewInstalledCount), m.pckChange.NewInstalledCount)
-	packageRemovedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.RemovedCount), m.pckChange.RemovedCount)
-	packageNotUpgradedCount := fmt.Sprintf(app.TN_("%d package", "%d packages", m.pckChange.NotUpgradedCount), m.pckChange.NotUpgradedCount)
-
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n\n%s\n", app.T_("Total:"))))
-	sb.WriteString("\n" + formatLine(app.T_("Will be updated"), packageUpgradedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(app.T_("Will be installed"), packageNewInstalledCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(app.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
-	sb.WriteString("\n" + formatLine(app.T_("Not affected"), packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
-	if m.choiceType == ActionUpgrade || m.choiceType == ActionInstall {
-		sb.WriteString("\n" + formatLine(app.T_("Downloaded Size"), helper.AutoSize(int(m.pckChange.DownloadSize)), keyWidth, keyStyle, valueStyle))
-		sb.WriteString("\n" + formatLine(app.T_("Installed Size"), helper.AutoSize(int(m.pckChange.InstallSize)), keyWidth, keyStyle, valueStyle))
 	}
 
 	return sb.String()

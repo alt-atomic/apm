@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-23 18:57+0600\n"
+"POT-Creation-Date: 2026-01-23 23:33+0600\n"
 "PO-Revision-Date: 2026-01-21 14:08+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -1414,12 +1414,12 @@ msgstr "Результат"
 msgid "Application Information"
 msgstr "Информация о приложении"
 
-#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:377
+#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:318
 msgid "Downloaded Size"
 msgstr "Размер при загрузке"
 
 #: internal/common/reply/translate.go:25 internal/common/reply/translate.go:71
-#: internal/system/dialog/dialog.go:378
+#: internal/system/dialog/dialog.go:319
 msgid "Installed Size"
 msgstr "Размер при установке"
 
@@ -1474,7 +1474,7 @@ msgstr "Дистрибутив"
 msgid "Container"
 msgstr "Контейнер"
 
-#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:328
+#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:356
 msgid "Name"
 msgstr "Название"
 
@@ -1510,7 +1510,7 @@ msgstr "Версия"
 msgid "History"
 msgstr "История"
 
-#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:352
+#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:380
 msgid "Dependencies"
 msgstr "Зависимости"
 
@@ -1534,7 +1534,7 @@ msgstr "Образ"
 msgid "Commands"
 msgstr "Команды"
 
-#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:331
+#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:359
 msgid "Maintainer"
 msgstr "Сопровождающий"
 
@@ -1576,7 +1576,7 @@ msgstr "Информация"
 msgid "Total Count"
 msgstr "Общее количество"
 
-#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:332
+#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:360
 msgid "Installed"
 msgstr "Установлено"
 
@@ -1604,7 +1604,7 @@ msgstr "Загружено"
 msgid "Staged"
 msgstr "Зафиксированно"
 
-#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:349
+#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:377
 msgid "Size"
 msgstr "Размер"
 
@@ -3117,33 +3117,75 @@ msgstr "Ошибка запуска TEA: %v"
 #. Формируем строку с подсказками по клавишам
 #: internal/system/dialog/dialog.go:231
 msgid ""
-"Navigation: ↑/↓, j/k - select, PgUp/PgDn - scroll, ctrl+Home/End - top/"
-"bottom, Enter - choose, Esc/q - cancel"
+"Navigation: ↑/↓ or j/k - select, Ctrl+↑/↓ or PgUp/PgDn - scroll, Ctrl+Home/"
+"End - top/bottom, Enter - choose, Esc/q - cancel"
 msgstr ""
-"Навигация: ↑/↓, j/k - выбор, PgUp/PgDn - прокрутка, ctrl+Home/End - наверх/"
-"вниз, Enter - выбор, Esc/q - отмена"
+"Навигация: ↑/↓ или j/k - выбор, Ctrl+↑/↓ или PgUp/PgDn - прокрутка, Ctrl+"
+"Home/End - начало/конец, Enter - выбор, Esc/q - отмена"
 
 #: internal/system/dialog/dialog.go:235
 #: internal/system/dialog/dialog_image.go:420
 msgid "Select an action:"
 msgstr "Выберите действие:"
 
+#. Сначала затронутые изменения
 #: internal/system/dialog/dialog.go:296
+msgid "Affected changes:"
+msgstr "Затронутые изменения:"
+
+#: internal/system/dialog/dialog.go:301
+msgid "Extra packages"
+msgstr "Будет добавлено"
+
+#: internal/system/dialog/dialog.go:302 internal/system/dialog/dialog.go:313
+#: internal/system/dialog/dialog.go:409
+msgid "Will be updated"
+msgstr "Будет обновлено"
+
+#: internal/system/dialog/dialog.go:303 internal/system/dialog/dialog.go:314
+#: internal/system/dialog/dialog.go:405
+msgid "Will be installed"
+msgstr "Будет установлено"
+
+#: internal/system/dialog/dialog.go:304 internal/system/dialog/dialog.go:315
+#: internal/system/dialog/dialog.go:413
+msgid "Will be removed"
+msgstr "Будет удалено"
+
+#. Затем итоги
+#: internal/system/dialog/dialog.go:307 internal/system/dialog/dialog.go:308
+#: internal/system/dialog/dialog.go:309 internal/system/dialog/dialog.go:310
+#, c-format
+msgid "%d package"
+msgid_plural "%d packages"
+msgstr[0] "%d пакет"
+msgstr[1] "%d пакета"
+msgstr[2] "%d пакетов"
+
+#: internal/system/dialog/dialog.go:312
+msgid "Total:"
+msgstr "Итого:"
+
+#: internal/system/dialog/dialog.go:316
+msgid "Not affected"
+msgstr "Не затронуто"
+
+#: internal/system/dialog/dialog.go:324
 msgid "Package information:"
 msgid_plural "Packages information:"
 msgstr[0] "Информация о пакете:"
 msgstr[1] "Информация о пакетах:"
 msgstr[2] "Информация о пакетах:"
 
-#: internal/system/dialog/dialog.go:304
+#: internal/system/dialog/dialog.go:332
 msgid "Package list:"
 msgstr "Список пакетов:"
 
-#: internal/system/dialog/dialog.go:310
+#: internal/system/dialog/dialog.go:338
 msgid "[Installed]"
 msgstr "[Установлено]"
 
-#: internal/system/dialog/dialog.go:321
+#: internal/system/dialog/dialog.go:349
 #, c-format
 msgid ""
 "\n"
@@ -3152,74 +3194,34 @@ msgstr ""
 "\n"
 "Пакет %d:"
 
-#: internal/system/dialog/dialog.go:323 internal/system/dialog/dialog.go:414
-#: internal/system/dialog/dialog.go:435
+#: internal/system/dialog/dialog.go:351 internal/system/dialog/dialog.go:417
+#: internal/system/dialog/dialog.go:438
 msgid "No"
 msgstr "Нет"
 
-#: internal/system/dialog/dialog.go:325
+#: internal/system/dialog/dialog.go:353
 msgid "Yes"
 msgstr "Да"
 
-#: internal/system/dialog/dialog.go:329
+#: internal/system/dialog/dialog.go:357
 msgid "Action"
 msgstr "Действие"
 
-#: internal/system/dialog/dialog.go:330
+#: internal/system/dialog/dialog.go:358
 msgid "Category"
 msgstr "Категория"
 
 #. Выводим "Версия в облаке" обычным стилем
-#: internal/system/dialog/dialog.go:336 internal/system/dialog/dialog.go:347
+#: internal/system/dialog/dialog.go:364 internal/system/dialog/dialog.go:375
 msgid "Repository version"
 msgstr "Версия в репозитории"
 
 #. Выводим "Версия в системе", уже с раскрашенным текстом
-#: internal/system/dialog/dialog.go:345
+#: internal/system/dialog/dialog.go:373
 msgid "System version"
 msgstr "Версия в системе"
 
-#: internal/system/dialog/dialog.go:356
-msgid "Affected changes:"
-msgstr "Затронутые изменения:"
-
-#: internal/system/dialog/dialog.go:361
-msgid "Extra packages"
-msgstr "Будет добавлено"
-
-#: internal/system/dialog/dialog.go:362 internal/system/dialog/dialog.go:372
-#: internal/system/dialog/dialog.go:406
-msgid "Will be updated"
-msgstr "Будет обновлено"
-
-#: internal/system/dialog/dialog.go:363 internal/system/dialog/dialog.go:373
-#: internal/system/dialog/dialog.go:402
-msgid "Will be installed"
-msgstr "Будет установлено"
-
-#: internal/system/dialog/dialog.go:364 internal/system/dialog/dialog.go:374
-#: internal/system/dialog/dialog.go:410
-msgid "Will be removed"
-msgstr "Будет удалено"
-
-#: internal/system/dialog/dialog.go:366 internal/system/dialog/dialog.go:367
-#: internal/system/dialog/dialog.go:368 internal/system/dialog/dialog.go:369
-#, c-format
-msgid "%d package"
-msgid_plural "%d packages"
-msgstr[0] "%d пакет"
-msgstr[1] "%d пакета"
-msgstr[2] "%d пакетов"
-
-#: internal/system/dialog/dialog.go:371
-msgid "Total:"
-msgstr "Итого:"
-
-#: internal/system/dialog/dialog.go:375
-msgid "Not affected"
-msgstr "Не затронуто"
-
-#: internal/system/dialog/dialog.go:438
+#: internal/system/dialog/dialog.go:441
 msgid "and others"
 msgstr "и другие"
 
@@ -3260,8 +3262,9 @@ msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
 #: main.go:97
-msgid "Start session HTTP API server"
-msgstr "Запустить сессионный HTTP API сервер"
+#, fuzzy
+msgid "Start system HTTP API server"
+msgstr "Запустить системный HTTP API сервер"
 
 #: main.go:103 main.go:120
 msgid "Listen address (host:port)"
@@ -3272,8 +3275,9 @@ msgid "API token for authentication"
 msgstr "API-токен для аутентификации"
 
 #: main.go:114
-msgid "Start system HTTP API"
-msgstr "Запустить системный HTTP API сервер"
+#, fuzzy
+msgid "Start session HTTP API"
+msgstr "Запустить сессионный HTTP API сервер"
 
 #: main.go:147
 msgid "Show the list of commands or help for each command"
