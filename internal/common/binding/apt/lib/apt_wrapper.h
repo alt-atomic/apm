@@ -142,7 +142,7 @@ AptResult apt_cache_update(AptCache *cache);
 AptResult apt_cache_dist_upgrade(AptCache *cache);
 
 // File installation support - preprocess arguments to detect and handle RPM files
-AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count);
+AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new);
 
 // Package manager
 AptResult apt_package_manager_create(AptCache *cache, AptPackageManager **pm);

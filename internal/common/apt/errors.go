@@ -148,6 +148,7 @@ const (
 	ErrConflictingPackages
 	ErrPackagesCouldNotBeInstalled
 	ErrPackagesAlreadyInstalled
+	ErrRpmUnpackingFailed
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -420,6 +421,16 @@ var errorPatterns = []ErrorEntry{
 	{ErrPackagesAlreadyInstalled, "Packages are already installed: %s", func() string {
 		return app.T_("Packages are already installed: %s")
 	}, 1},
+	{ErrRpmUnpackingFailed, "unpacking of archive failed: %s", func() string {
+		return app.T_("RPM package unpacking failed: %s. The package may be incompatible with the current system or requires special permissions")
+	}, 1},
+}
+
+// cleanErrorPrefix убирает префиксы ошибок APT (E:) и RPM (error:)
+func cleanErrorPrefix(line string) string {
+	line = strings.ReplaceAll(line, "E: ", "")
+	line = strings.TrimPrefix(line, "error: ")
+	return line
 }
 
 // ErrorLinesAnalyseAll проверяет все строки и возвращает срез найденных ошибок.
@@ -430,7 +441,7 @@ func ErrorLinesAnalyseAll(lines []string) []*MatchedError {
 		if trimmed == "" {
 			continue
 		}
-		cleanLine := strings.ReplaceAll(trimmed, "E: ", "")
+		cleanLine := cleanErrorPrefix(trimmed)
 		if matchedErr := CheckError(cleanLine); matchedErr != nil {
 			errorsFound = append(errorsFound, matchedErr)
 		}
@@ -445,7 +456,7 @@ func ErrorLinesAnalise(lines []string) *MatchedError {
 		if trimmed == "" {
 			continue
 		}
-		cleanLine := strings.ReplaceAll(trimmed, "E: ", "")
+		cleanLine := cleanErrorPrefix(trimmed)
 
 		if matchedErr := CheckError(cleanLine); matchedErr != nil {
 			return matchedErr

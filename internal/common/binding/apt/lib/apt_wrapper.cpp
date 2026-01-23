@@ -965,12 +965,20 @@ bool is_rpm_file(const std::string &path) {
 }
 
 // File installation support - preprocess arguments to detect and handle RPM files
-AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count) {
+AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new) {
+    if (added_new) *added_new = false;
+
     if (!install_names || install_count == 0) {
         return make_result(APT_SUCCESS, nullptr);
     }
 
     try {
+        // Get current APT::Arguments to check for duplicates
+        std::vector<std::string> existing_args = _config->FindVector("APT::Arguments");
+        std::set<std::string> existing_set(existing_args.begin(), existing_args.end());
+
+        bool any_added = false;
+
         // Process arguments and add RPM files to APT::Arguments configuration
         for (size_t i = 0; i < install_count; i++) {
             if (!install_names[i]) continue;
@@ -979,11 +987,16 @@ AptResult apt_preprocess_install_arguments(const char **install_names, size_t in
 
             // Use shared RPM file detection logic
             if (is_rpm_file(arg)) {
-                // Add to APT::Arguments configuration without index
-                _config->Set("APT::Arguments::", arg);
+                // Only add if not already in config
+                if (existing_set.find(arg) == existing_set.end()) {
+                    _config->Set("APT::Arguments::", arg);
+                    existing_set.insert(arg);
+                    any_added = true;
+                }
             }
         }
 
+        if (added_new) *added_new = any_added;
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception in preprocess: ") + e.what()).c_str());
