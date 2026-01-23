@@ -94,7 +94,7 @@ func main() {
 		},
 		{
 			Name:   "http-server",
-			Usage:  app.T_("Start session HTTP API server"),
+			Usage:  app.T_("Start system HTTP API server"),
 			Action: httpServer,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -111,7 +111,7 @@ func main() {
 		},
 		{
 			Name:   "http-session",
-			Usage:  app.T_("Start system HTTP API"),
+			Usage:  app.T_("Start session HTTP API"),
 			Action: httpSession,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
