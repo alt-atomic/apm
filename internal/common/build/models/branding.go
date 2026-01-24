@@ -133,7 +133,9 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			} else {
 				vars["BUILD_ID"] = fmt.Sprintf("%s %s", vars["NAME"], vars["VERSION_ID"])
 			}
+		}
 
+		if (slices.Contains(brandingSubpackages, "release") && svc.IsAtomic()) || len(b.ReleaseOverrides) != 0 {
 			var newLines []string
 			for name, value := range vars {
 				newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
