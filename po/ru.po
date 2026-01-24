@@ -12,15 +12,15 @@ msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-01-23 23:33+0600\n"
-"PO-Revision-Date: 2026-01-21 14:08+0600\n"
+"PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
 "Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 49.0\n"
 
 #: internal/common/app/database.go:100
@@ -1209,9 +1209,8 @@ msgid "Error sending notification: %v"
 msgstr "Ошибка отправки уведомления: %v"
 
 #: internal/common/reply/event.go:251
-#, fuzzy
 msgid "Error sending task result: %v"
-msgstr "Ошибка открытия базы данных: %v"
+msgstr "Ошибка при отправке результата задачи: %v"
 
 #: internal/common/reply/event.go:258 internal/common/reply/event.go:300
 msgid "Saving packages to the database"
@@ -3120,8 +3119,8 @@ msgid ""
 "Navigation: ↑/↓ or j/k - select, Ctrl+↑/↓ or PgUp/PgDn - scroll, Ctrl+Home/"
 "End - top/bottom, Enter - choose, Esc/q - cancel"
 msgstr ""
-"Навигация: ↑/↓ или j/k - выбор, Ctrl+↑/↓ или PgUp/PgDn - прокрутка, Ctrl+"
-"Home/End - начало/конец, Enter - выбор, Esc/q - отмена"
+"Навигация: ↑/↓ или j/k - выбор, Ctrl+↑/↓ или PgUp/PgDn - прокрутка, "
+"Ctrl+Home/End - начало/конец, Enter - выбор, Esc/q - отмена"
 
 #: internal/system/dialog/dialog.go:235
 #: internal/system/dialog/dialog_image.go:420
@@ -3262,7 +3261,6 @@ msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
 #: main.go:97
-#, fuzzy
 msgid "Start system HTTP API server"
 msgstr "Запустить системный HTTP API сервер"
 
@@ -3275,7 +3273,6 @@ msgid "API token for authentication"
 msgstr "API-токен для аутентификации"
 
 #: main.go:114
-#, fuzzy
 msgid "Start session HTTP API"
 msgstr "Запустить сессионный HTTP API сервер"
 
@@ -3320,9 +3317,8 @@ msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
 #: main.go:437
-#, fuzzy
 msgid "Distrobox is not installed"
-msgstr "Нельзя удалить %s не установлен"
+msgstr "Distrobox не установлен"
 
 #: main.go:526
 msgid "failed to close DBus: %w"
