@@ -223,9 +223,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrReleaseNotFound, "Release %s'%s' for '%s' was not found", func() string {
 		return app.T_("Release %s'%s' for '%s' was not found")
 	}, 3},
-	{ErrVersionNotFound, "Version %s'%s' for '%s' was not found", func() string {
-		return app.T_("Version %s'%s' for '%s' was not found")
-	}, 3},
+	{ErrVersionNotFound, "Version '%s' for '%s' was not found", func() string {
+		return app.T_("Version '%s' for '%s' was not found")
+	}, 2},
 	{ErrSourcesListReadFailed, "Sources list %s could not be read", func() string {
 		return app.T_("Sources list %s could not be read")
 	}, 1},

@@ -180,8 +180,8 @@ msgstr "Релиз %s'%s' для '%s' не найден"
 
 #: internal/common/apt/errors.go:227
 #, c-format
-msgid "Version %s'%s' for '%s' was not found"
-msgstr "Версия %s'%s' для '%s' не найден"
+msgid "Version '%s' for '%s' was not found"
+msgstr "Версия '%s' для пакета '%s' не найдена"
 
 #: internal/common/apt/errors.go:230
 #, c-format

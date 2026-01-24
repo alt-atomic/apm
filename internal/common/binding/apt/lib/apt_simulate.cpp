@@ -123,7 +123,7 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
         std::vector<std::string> removed;
 
         uint64_t download_size = 0;
-        uint64_t install_size = 0;
+        int64_t install_size = 0;
 
         for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin();
              !iter.end(); ++iter) {
@@ -144,6 +144,17 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
                     install_size += pkg_state.CandidateVer->InstalledSize;
                     if (pkg_state.InstallVer != 0) {
                         install_size -= pkg_state.InstallVer->InstalledSize;
+                    }
+                }
+            } else if (pkg_state.Downgrade()) {
+                upgraded.push_back(iter.Name());
+
+                if (pkg_state.CandidateVer != 0) {
+                    download_size += pkg_state.CandidateVer->Size;
+                    install_size += pkg_state.CandidateVer->InstalledSize;
+                    pkgCache::VerIterator currentVer = iter.CurrentVer();
+                    if (!currentVer.end()) {
+                        install_size -= currentVer->InstalledSize;
                     }
                 }
             } else if (pkg_state.Delete()) {
@@ -288,7 +299,7 @@ AptResult plan_change_internal(
         std::vector<std::string> removed;
         std::vector<std::string> reinstalled;
         uint64_t download_size = 0;
-        uint64_t install_size = 0;
+        int64_t install_size = 0;
 
         collect_package_changes(cache, requested_install, requested_remove,
                                 extra_installed, extra_removed, upgraded,
@@ -433,7 +444,7 @@ AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
         std::vector<std::string> new_installed;
 
         uint64_t download_size = 0;
-        uint64_t install_size = 0;
+        int64_t install_size = 0;
 
         for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
             pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[iter];
@@ -456,6 +467,16 @@ AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
                     install_size += pkg_state.CandidateVer->InstalledSize;
                     if (pkg_state.InstallVer != 0) {
                         install_size -= pkg_state.InstallVer->InstalledSize;
+                    }
+                }
+            } else if (pkg_state.Downgrade()) {
+                upgraded.push_back(iter.Name());
+                if (pkg_state.CandidateVer != 0) {
+                    download_size += pkg_state.CandidateVer->Size;
+                    install_size += pkg_state.CandidateVer->InstalledSize;
+                    pkgCache::VerIterator currentVer = iter.CurrentVer();
+                    if (!currentVer.end()) {
+                        install_size -= currentVer->InstalledSize;
                     }
                 }
             }

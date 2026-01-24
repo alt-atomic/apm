@@ -53,7 +53,7 @@ void collect_package_changes(AptCache *cache,
                              std::vector<std::string> &new_installed,
                              std::vector<std::string> &removed,
                              uint64_t &download_size,
-                             uint64_t &install_size);
+                             int64_t &install_size);
 
 void populate_changes_structure(AptPackageChanges *changes,
                                 const std::vector<std::string> &extra_installed,
@@ -61,4 +61,4 @@ void populate_changes_structure(AptPackageChanges *changes,
                                 const std::vector<std::string> &new_installed,
                                 const std::vector<std::string> &removed,
                                 uint64_t download_size,
-                                uint64_t install_size);
+                                int64_t install_size);

@@ -204,7 +204,7 @@ typedef struct {
     size_t not_upgraded_count;
 
     uint64_t download_size; // Size in bytes to download
-    uint64_t install_size; // Size in bytes after installation
+    int64_t install_size;   // Size change in bytes after installation (can be negative for downgrades/removals)
 } AptPackageChanges;
 
 AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageList *result);

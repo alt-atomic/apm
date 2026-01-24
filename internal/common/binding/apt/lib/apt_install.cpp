@@ -108,14 +108,14 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             _system->UnLock();
         }
 
-        // Prepare planned package names for fallback (new installs, deletes, or reinstalls)
+        // Prepare planned package names for fallback (new installs, deletes, downgrades, or reinstalls)
         CallbackBridge bridgeData;
         bridgeData.user_data = user_data;
         bridgeData.cache = pm->cache;
         if (pm->cache && pm->cache->dep_cache) {
             for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 auto &st = (*pm->cache->dep_cache)[it];
-                if (st.NewInstall() || st.Upgrade() || st.Delete() ||
+                if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete() ||
                     (st.iFlags & pkgDepCache::ReInstall) != 0) {
                     bridgeData.planned.emplace_back(it.Name());
                 }

@@ -106,5 +106,5 @@ type PackageChanges struct {
 	NotUpgradedCount  int `json:"-"`
 
 	DownloadSize uint64 `json:"downloadSize"`
-	InstallSize  uint64 `json:"installSize"`
+	InstallSize  int64  `json:"installSize"`
 }

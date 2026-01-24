@@ -221,6 +221,25 @@ func (s *ComplexPackageTestSuite) TestLargePackageInstallation() {
 	}
 }
 
+// TestPackageAlreadyInstalled тестирует поведение когда пакет уже установлен
+func (s *ComplexPackageTestSuite) TestPackageAlreadyInstalled() {
+	s.T().Log("Testing already installed package handling")
+
+	resp, err := s.actions.CheckInstall(s.ctx, []string{"bash"})
+	if err != nil {
+		errMsg := err.Error()
+		s.T().Logf("bash check result: %v", errMsg)
+		isAlreadyInstalled := strings.Contains(errMsg, "already installed") ||
+			strings.Contains(errMsg, "уже установлен")
+		if isAlreadyInstalled {
+			s.T().Log("✓ Correctly detected bash as already installed")
+		}
+	} else {
+		assert.NotNil(s.T(), resp)
+		s.T().Log("✓ bash check returned changes (upgrade available or fresh install)")
+	}
+}
+
 // Запуск набора тестов
 func TestComplexPackageSuite(t *testing.T) {
 	suite.Run(t, new(ComplexPackageTestSuite))

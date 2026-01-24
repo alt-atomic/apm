@@ -84,7 +84,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         if (cache && cache->dep_cache) {
             for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 auto &st = (*cache->dep_cache)[it];
-                if (st.NewInstall() || st.Upgrade() || st.Delete()) {
+                if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete()) {
                     bridgeData.planned.emplace_back(it.Name());
                 }
             }
