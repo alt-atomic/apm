@@ -9,8 +9,8 @@ Release: alt1
 Summary: Atomic Package Manager 
 License: GPL-3.0-or-later
 Group: System/Configuration/Packaging
-Url: https://altlinux.space/alt-atomic/apm
-Vcs: https://altlinux.space/alt-atomic/apm.git
+URL: https://altlinux.space/alt-atomic/apm
+VCS: https://altlinux.space/alt-atomic/apm.git
 
 ExclusiveArch: %go_arches
 
