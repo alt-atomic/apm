@@ -141,7 +141,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 		return nil, errors.New(app.T_("You must specify at least one package"))
 	}
 
-	err := a.validateDB(ctx)
+	err := a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 		return nil, err
 	}
 
-	err = a.validateDB(ctx)
+	err = a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		return nil, err
 	}
 
-	err = a.validateDB(ctx)
+	err = a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +404,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 		return nil, err
 	}
 
-	err = a.validateDB(ctx)
+	err = a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -500,7 +500,7 @@ func (a *Actions) Update(ctx context.Context, noLock bool) (*reply.APIResponse, 
 		return nil, err
 	}
 
-	err = a.validateDB(ctx)
+	err = a.validateDB(ctx, noLock)
 	if err != nil {
 		return nil, err
 	}
@@ -577,7 +577,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	err = a.validateDB(ctx)
+	err = a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -649,7 +649,7 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 		return nil, errors.New(errMsg)
 	}
 
-	err := a.validateDB(ctx)
+	err := a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -718,7 +718,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 			return nil, err
 		}
 	}
-	err := a.validateDB(ctx)
+	err := a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -771,7 +771,7 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 
 // GetFilterFields возвращает список свойств для фильтрации.
 func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, error) {
-	if err := a.validateDB(ctx); err != nil {
+	if err := a.validateDB(ctx, false); err != nil {
 		return nil, err
 	}
 
@@ -812,7 +812,7 @@ func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, erro
 
 // Search осуществляет поиск системного пакета по названию.
 func (a *Actions) Search(ctx context.Context, packageName string, installed bool, isFullFormat bool) (*reply.APIResponse, error) {
-	err := a.validateDB(ctx)
+	err := a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1095,13 +1095,13 @@ func (a *Actions) saveChange(_ context.Context, packagesInstall []string, packag
 }
 
 // validateDB проверяет, существует ли база данных
-func (a *Actions) validateDB(ctx context.Context) error {
+func (a *Actions) validateDB(ctx context.Context, noLock bool) error {
 	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
 		if syscall.Geteuid() != 0 {
 			return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
 		}
 
-		_, err = a.serviceAptActions.Update(ctx)
+		_, err = a.serviceAptActions.Update(ctx, noLock)
 		if err != nil {
 			return err
 		}
