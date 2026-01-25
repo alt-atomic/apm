@@ -102,7 +102,7 @@ func (a *Actions) Add(ctx context.Context, args []string, date string) (*reply.A
 				Message: app.T_("All repositories already exist"),
 				Added:   []string{},
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -134,7 +134,7 @@ func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*re
 			Data: SimulateResponse{
 				Message: app.T_("All repositories already exist"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -166,7 +166,7 @@ func (a *Actions) Remove(ctx context.Context, args []string, date string) (*repl
 				Message: app.T_("No repositories found to remove"),
 				Removed: []string{},
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -198,7 +198,7 @@ func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (
 			Data: SimulateResponse{
 				Message: app.T_("No repositories to remove"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -282,7 +282,7 @@ func (a *Actions) Clean(ctx context.Context) (*reply.APIResponse, error) {
 				Message: app.T_("No cdrom or task repositories found"),
 				Removed: []string{},
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
@@ -324,7 +324,7 @@ func (a *Actions) CheckClean(ctx context.Context) (*reply.APIResponse, error) {
 			Data: SimulateResponse{
 				Message: app.T_("No cdrom or task repositories to remove"),
 			},
-			Error: false,
+			Error: true,
 		}, nil
 	}
 
