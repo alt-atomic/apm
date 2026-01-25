@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-23 23:33+0600\n"
+"POT-Creation-Date: 2026-01-25 22:39+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -19,8 +19,8 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 49.0\n"
 
 #: internal/common/app/database.go:100
@@ -926,63 +926,67 @@ msgstr "Не удалось закрыть /proc/mounts: %v"
 msgid "Error activating usr-overlay: %s"
 msgstr "Ошибка активации usr-overlay: %s"
 
-#: internal/common/build/host.go:148
+#: internal/common/build/host.go:150
 #, c-format
-msgid "Error building image: %s status: %d"
-msgstr "Ошибка сборки образа: %s статус: %d"
+msgid "Failed to build image. Please fix the configuration: %s"
+msgstr "Не удалось собрать образ. Исправьте конфигурацию: %s"
 
-#: internal/common/build/host.go:154
+#: internal/common/build/host.go:151
+msgid "Build log:"
+msgstr "Лог сборки:"
+
+#: internal/common/build/host.go:160
 msgid "Error podman image: %v"
 msgstr "Ошибка образа podman: %v"
 
-#: internal/common/build/host.go:159
+#: internal/common/build/host.go:165
 msgid "No valid images with tag 'os'. Please build the image first."
 msgstr ""
 "Нет корректных образов с тегом 'os'. Пожалуйста, сперва соберите образ."
 
-#: internal/common/build/host.go:180
+#: internal/common/build/host.go:186
 #, c-format
 msgid "Error switching to the new image: %s"
 msgstr "Ошибка перехода на новый образ: %s"
 
-#: internal/common/build/host.go:192
+#: internal/common/build/host.go:198
 msgid "Error retrieving information: %v"
 msgstr "Ошибка извлечения информации: %v"
 
-#: internal/common/build/host.go:237
+#: internal/common/build/host.go:243
 msgid "Failed to generate Containerfile: %w"
 msgstr "Не удалось создать Containerfile: %w"
 
-#: internal/common/build/host.go:260
+#: internal/common/build/host.go:266
 msgid "Skopeo inspect error: %v"
 msgstr "Ошибка инспектирования Skopeo: %w"
 
-#: internal/common/build/host.go:265
+#: internal/common/build/host.go:271
 msgid "Failed to parse skopeo inspect: %w"
 msgstr "Не удалось обработать skopeo ответ: %w"
 
-#: internal/common/build/host.go:278
+#: internal/common/build/host.go:284
 msgid "Bootc upgrade failed: %v"
 msgstr "Ошибка обновления через bootc: %s"
 
-#: internal/common/build/host.go:301
+#: internal/common/build/host.go:307
 msgid "Failed to determine the distribution image: %w. Please specify it in %s"
 msgstr ""
 "Не удалось определить образ дистрибутива: %w. Пожалуйста укажите их в %s"
 
-#: internal/common/build/host.go:334
+#: internal/common/build/host.go:340
 msgid "The image has not changed, build paused"
 msgstr "Образ не был изменён, остановка сборки"
 
-#: internal/common/build/host.go:415
+#: internal/common/build/host.go:421
 msgid "Failed to open file %s: %w"
 msgstr "Не удалось открыть файл %s: %2"
 
-#: internal/common/build/host.go:436
+#: internal/common/build/host.go:442
 msgid "Error reading file %s: %w"
 msgstr "Ошибка чтения файла %s: %w"
 
-#: internal/common/build/host.go:439
+#: internal/common/build/host.go:445
 #, c-format
 msgid "Failed to determine the distribution image in %s"
 msgstr "Не удалось определить образ дистрибутива в %s"
@@ -1011,8 +1015,8 @@ msgid "unknown branch %s"
 msgstr "неизвестная ветвь %s"
 
 #: internal/common/build/podman.go:150 internal/common/build/podman.go:349
-msgid "Command failed with error: %v, output: %s"
-msgstr "Команда завершилась с ошибкой: %v, вывод: %s"
+msgid "Command failed with error: %v"
+msgstr "Команда завершилась с ошибкой: %v"
 
 #: internal/common/build/podman.go:239
 msgid "Error deleting old images: %v, output: %s"
@@ -3119,8 +3123,8 @@ msgid ""
 "Navigation: ↑/↓ or j/k - select, Ctrl+↑/↓ or PgUp/PgDn - scroll, Ctrl+Home/"
 "End - top/bottom, Enter - choose, Esc/q - cancel"
 msgstr ""
-"Навигация: ↑/↓ или j/k - выбор, Ctrl+↑/↓ или PgUp/PgDn - прокрутка, "
-"Ctrl+Home/End - начало/конец, Enter - выбор, Esc/q - отмена"
+"Навигация: ↑/↓ или j/k - выбор, Ctrl+↑/↓ или PgUp/PgDn - прокрутка, Ctrl"
+"+Home/End - начало/конец, Enter - выбор, Esc/q - отмена"
 
 #: internal/system/dialog/dialog.go:235
 #: internal/system/dialog/dialog_image.go:420

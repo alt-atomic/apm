@@ -145,7 +145,13 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 	stdout, err := PullAndProgress(ctx, command)
 	if err != nil {
-		return "", fmt.Errorf(app.T_("Error building image: %s status: %d"), stdout, err)
+		if apmLogs := extractAPMLogs(stdout); apmLogs != "" {
+			return "", fmt.Errorf("%s\n%s\n%s",
+				fmt.Sprintf(app.T_("Failed to build image. Please fix the configuration: %s"), h.appConfig.PathImageFile),
+				app.T_("Build log:"),
+				apmLogs)
+		}
+		return "", fmt.Errorf("%s\n%v", stdout, err)
 	}
 
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s podman images -q os", h.appConfig.CommandPrefix))
@@ -437,4 +443,29 @@ func getImageFromDocker(dockerFilePath string) (string, error) {
 	}
 
 	return "", fmt.Errorf(app.T_("Failed to determine the distribution image in %s"), dockerFilePath)
+}
+
+// extractAPMLogs извлекает логи APM из вывода сборки образа
+func extractAPMLogs(output string) string {
+	var apmLogs []string
+
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if strings.HasPrefix(trimmed, "time=") {
+			apmLogs = append(apmLogs, trimmed)
+			continue
+		}
+
+		if strings.Contains(trimmed, "╰──") {
+			apmLogs = append(apmLogs, trimmed)
+		}
+	}
+
+	if len(apmLogs) > 0 {
+		return strings.Join(apmLogs, "\n")
+	}
+
+	return ""
 }

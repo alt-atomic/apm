@@ -147,7 +147,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 	mu.Unlock()
 
 	if cmdErr != nil {
-		return output, fmt.Errorf(app.T_("Command failed with error: %v, output: %s"), cmdErr, output)
+		return output, fmt.Errorf(app.T_("Command failed with error: %v"), cmdErr)
 	}
 
 	reply.CreateEventNotification(ctx, reply.StateAfter,
@@ -346,7 +346,7 @@ func BootcUpgradeAndProgress(ctx context.Context, cmdLine string) (string, error
 	mu.Unlock()
 
 	if cmdErr != nil {
-		return output, fmt.Errorf(app.T_("Command failed with error: %v, output: %s"), cmdErr, output)
+		return output, fmt.Errorf(app.T_("Command failed with error: %v"), cmdErr)
 	}
 
 	// Завершаем прогресс-бары
