@@ -55,8 +55,28 @@ func Close() {
 
 // operationWrapper обёртка для всех операций с APT
 func (a *Actions) operationWrapper(fn func() error) error {
+	return a.operationWrapperWithOptions(false, fn)
+}
+
+// operationWrapperWithOptions обёртка с опциями для операций с APT
+func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error) error {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
+
+	if skipLock {
+		lib.SetNoLocking(true)
+		defer lib.SetNoLocking(false)
+	}
+
+	// Проверяем блокировку перед началом операции
+	if !skipLock {
+		if err := lib.CheckLockOrError(); err != nil {
+			return err
+		}
+	}
+
+	lib.BlockSignals()
+	defer lib.RestoreSignals()
 
 	lib.StartOperation()
 	defer lib.EndOperation()
@@ -202,8 +222,10 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler) error {
 }
 
 // Update обновление локальной базы пакетов
-func (a *Actions) Update() error {
-	return a.operationWrapper(func() error {
+func (a *Actions) Update(noLock ...bool) error {
+	skipLock := len(noLock) > 0 && noLock[0]
+
+	return a.operationWrapperWithOptions(skipLock, func() error {
 		system, err := getSystem()
 		if err != nil {
 			return err
@@ -220,8 +242,9 @@ func (a *Actions) Update() error {
 }
 
 // Search поиск по пакетам
-func (a *Actions) Search(pattern string) (packages []lib.PackageInfo, err error) {
-	err = a.operationWrapper(func() error {
+func (a *Actions) Search(pattern string, noLock ...bool) (packages []lib.PackageInfo, err error) {
+	skipLock := len(noLock) > 0 && noLock[0]
+	err = a.operationWrapperWithOptions(skipLock, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e

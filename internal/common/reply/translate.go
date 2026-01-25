@@ -217,6 +217,10 @@ func TranslateKey(key string) string {
 		return app.T_("Task num")
 	case "entry":
 		return app.T_("Entry")
+	case "willAdd":
+		return app.T_("WillAdd")
+	case "willRemove":
+		return app.T_("WillRemove")
 	default:
 		return app.T_(key)
 	}

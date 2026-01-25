@@ -1,5 +1,6 @@
 #include "apt_internal.h"
 
+#include <apt-pkg/error.h>
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/sourcelist.h>
 
@@ -69,6 +70,15 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             global_user_data = user_data;
         }
 
+        // Lock the archive directory
+        FileFd Lock;
+        if (!_config->FindB("Debug::NoLocking", false)) {
+            Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
+            if (_error->PendingError()) {
+                return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the download directory");
+            }
+        }
+
         ProgressStatus status;
         pkgAcquire acquire(&status);
         pkgSourceList source_list;
@@ -98,14 +108,14 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             _system->UnLock();
         }
 
-        // Prepare planned package names for fallback (new installs, deletes, or reinstalls)
+        // Prepare planned package names for fallback (new installs, deletes, downgrades, or reinstalls)
         CallbackBridge bridgeData;
         bridgeData.user_data = user_data;
         bridgeData.cache = pm->cache;
         if (pm->cache && pm->cache->dep_cache) {
             for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 auto &st = (*pm->cache->dep_cache)[it];
-                if (st.NewInstall() || st.Upgrade() || st.Delete() ||
+                if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete() ||
                     (st.iFlags & pkgDepCache::ReInstall) != 0) {
                     bridgeData.planned.emplace_back(it.Name());
                 }

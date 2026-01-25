@@ -18,6 +18,7 @@ package build
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/common_types"
 	"apm/internal/common/build/core"
@@ -224,6 +225,11 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		false,
 	)
 	if errFind != nil {
+		var matchedErr *apt.MatchedError
+		if errors.As(errFind, &matchedErr) && matchedErr.Entry.Code == apt.ErrPackagesAlreadyInstalled {
+			app.Log.Info("Skipping error:", errFind.Error())
+			return nil
+		}
 		return errFind
 	}
 

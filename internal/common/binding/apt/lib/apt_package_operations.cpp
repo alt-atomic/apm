@@ -3,9 +3,11 @@
 #include <apt-pkg/algorithms.h>
 #include <apt-pkg/error.h>
 #include <apt-pkg/version.h>
+#include <apt-pkg/versionmatch.h>
 
 #include <cctype>
 #include <cstring>
+#include <list>
 #include <sys/stat.h>
 
 RequirementSpec parse_requirement(const std::string &raw) {
@@ -35,6 +37,64 @@ RequirementSpec parse_requirement(const std::string &raw) {
     r.has_version = !r.version.empty();
     r.op = op;
     return r;
+}
+
+// Helper class for sorting versions - best (newest) versions first
+class BestVersionOrder {
+    pkgDepCache &cache_;
+    pkgProblemResolver &fix_;
+
+public:
+    BestVersionOrder(pkgDepCache &cache, pkgProblemResolver &fix)
+        : cache_(cache), fix_(fix) {}
+
+    bool operator()(const pkgCache::VerIterator &a, const pkgCache::VerIterator &b) {
+        // CmpVersion sorts ascending, we want descending (best first)
+        int cmp = cache_.VS().CmpVersion(a.VerStr(), b.VerStr());
+        if (cmp == 0) {
+            const pkgCache::Package *A = &(*a.ParentPkg());
+            const pkgCache::Package *B = &(*b.ParentPkg());
+            // ScoreSort sorts descending
+            cmp = fix_.ScoreSort(&B, &A);
+        }
+        return cmp > 0;
+    }
+};
+
+// Set candidate version for package based on version requirement
+static AptResult set_candidate_version_for_requirement(
+    AptCache *cache,
+    pkgCache::PkgIterator &pkg,
+    const RequirementSpec &req) {
+
+    if (!req.has_version) {
+        return make_result(APT_SUCCESS, nullptr);
+    }
+
+    // Use pkgVersionMatch to find matching versions
+    pkgVersionMatch match(req.version, pkgVersionMatch::Version, req.op);
+    std::list<pkgCache::VerIterator> found = match.FindAll(pkg);
+
+    if (found.empty()) {
+        return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                           (std::string("Version '") + req.version + "' for '" + req.name + "' was not found").c_str());
+    }
+
+    if (found.size() > 1) {
+        pkgProblemResolver fix(cache->dep_cache);
+        fix.MakeScores();
+        BestVersionOrder order(*cache->dep_cache, fix);
+        found.sort(order);
+        found.unique();
+    }
+
+    pkgCache::VerIterator selectedVer = found.front();
+
+    cache->dep_cache->SetCandidateVersion(selectedVer);
+
+    pkg = selectedVer.ParentPkg();
+
+    return make_result(APT_SUCCESS, nullptr);
 }
 
 static AptResult find_install_package(AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &result_pkg) {
@@ -194,6 +254,14 @@ AptResult process_package_installs(AptCache *cache,
         result = resolve_virtual_package(cache, req, pkg);
         if (result.code != APT_SUCCESS) {
             return result;
+        }
+
+        // If version is specified, set the candidate version BEFORE MarkInstall
+        if (req.has_version) {
+            result = set_candidate_version_for_requirement(cache, pkg, req);
+            if (result.code != APT_SUCCESS) {
+                return result;
+            }
         }
 
         // Store the actual package name (not the file path or requirement string)
@@ -668,7 +736,7 @@ void collect_package_changes(AptCache *cache,
                              std::vector<std::string> &new_installed,
                              std::vector<std::string> &removed,
                              uint64_t &download_size,
-                             uint64_t &install_size) {
+                             int64_t &install_size) {
     download_size = 0;
     install_size = 0;
 
@@ -689,6 +757,16 @@ void collect_package_changes(AptCache *cache,
                 download_size += st.CandidateVer->Size;
                 install_size += st.CandidateVer->InstalledSize;
                 if (st.InstallVer != 0) install_size -= st.InstallVer->InstalledSize;
+            }
+        } else if (st.Downgrade()) {
+            upgraded.push_back(iter.Name());
+            if (st.CandidateVer != 0) {
+                download_size += st.CandidateVer->Size;
+                install_size += st.CandidateVer->InstalledSize;
+                pkgCache::VerIterator currentVer = iter.CurrentVer();
+                if (!currentVer.end()) {
+                    install_size -= currentVer->InstalledSize;
+                }
             }
         } else if (st.Delete()) {
             removed.push_back(iter.Name());
@@ -712,7 +790,7 @@ void populate_changes_structure(AptPackageChanges *changes,
                                 const std::vector<std::string> &new_installed,
                                 const std::vector<std::string> &removed,
                                 uint64_t download_size,
-                                uint64_t install_size) {
+                                int64_t install_size) {
     changes->extra_installed_count = extra_installed.size();
     changes->upgraded_count = upgraded.size();
     changes->new_installed_count = new_installed.size();

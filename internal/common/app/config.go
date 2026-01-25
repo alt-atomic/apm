@@ -67,6 +67,14 @@ type Colors struct {
 	ProgressEnd    string `yaml:"progressEnd"`
 }
 
+// Константы форматов вывода
+const (
+	FormatText = "text" // CLI текстовый вывод
+	FormatJSON = "json" // CLI JSON вывод
+	FormatDBus = "dbus" // D-Bus сервис
+	FormatHTTP = "http" // HTTP сервер с WebSocket
+)
+
 // Configuration основная конфигурация приложения
 type Configuration struct {
 	CommandPrefix   string `yaml:"commandPrefix"`

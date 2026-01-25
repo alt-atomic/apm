@@ -13,17 +13,25 @@ permissions:
 
 jobs:
   build-altlinux:
-    name: RPM build for ${{ matrix.branch }} and uploading
+    name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
+    runs-on: ${{ matrix.runner }}
 
-    runs-on: alt-sisyphus
     container:
-      image: altlinux.space/rirusha/riru-build-image:latest
+      image: altlinux.space/actions/runner/hasherc:sisyphus
 
     strategy:
       matrix:
         branch:
           - sisyphus
           - p11
+        arch:
+          - amd64
+          # - arm64
+        include:
+          # - arch: arm64
+          #   runner: self-hosted-arm64-alt-sisyphus
+          - arch: amd64
+            runner: alt-sisyphus
 
     steps:
       - name: Install hasherc

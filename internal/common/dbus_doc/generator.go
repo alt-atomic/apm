@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package doc
+package dbus_doc
 
 import (
 	"apm/internal/common/app"
@@ -72,6 +72,11 @@ func NewGenerator(config Config) *Generator {
 func (g *Generator) GenerateDBusDocHTML() string {
 	methods := g.reflectDBusMethods()
 
+	busType := "system"
+	if g.config.DBusSession == "session" {
+		busType = "session"
+	}
+
 	html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head>
@@ -85,6 +90,8 @@ func (g *Generator) GenerateDBusDocHTML() string {
         .response-type { color: #cc6600; font-weight: bold; }
         .json-example { background: #f5f5f5; padding: 15px; border-radius: 3px; margin: 10px 0; background: #2b2b31; }
         .dbus-command { background: #2b2b31; padding: 15px; border-radius: 3px; margin: 10px 0; }
+        .events-section { border: 1px solid #4a9eff; margin: 20px 0; padding: 20px; border-radius: 5px; background: #1a2a3a; }
+        .events-title { color: #4a9eff; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
         pre { margin: 0; overflow-x: auto; }
         .parameters { margin: 10px 0; }
         .param { margin: 5px 0; }
@@ -93,7 +100,16 @@ func (g *Generator) GenerateDBusDocHTML() string {
 <body>
     <h1>APM %s DBus API Documentation</h1>
     <p>Автоматически сгенерированная документация для DBus интерфейса APM %s.</p>
-`, g.config.ModuleName, g.config.ModuleName, g.config.ModuleName)
+    
+    <div class="events-section">
+        <div class="events-title">Прослушивание событий (Events)</div>
+        <p>Для получения уведомлений о прогрессе операций и других событий, используйте команду:</p>
+        <div class="dbus-command">
+            <pre>gdbus monitor --%s --dest org.altlinux.APM</pre>
+        </div>
+        <p>События приходят в формате JSON через сигнал <code>org.altlinux.APM.Notification</code></p>
+    </div>
+`, g.config.ModuleName, g.config.ModuleName, g.config.ModuleName, busType)
 
 	for _, method := range methods {
 		html += fmt.Sprintf(`

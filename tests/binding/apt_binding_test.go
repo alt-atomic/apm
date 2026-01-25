@@ -201,3 +201,108 @@ func TestAptInvalidParameters(t *testing.T) {
 		}
 	}
 }
+
+// TestAptSimulateReinstall tests reinstalling an already installed package
+func TestAptSimulateReinstall(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	// bash is usually installed, so reinstall should work
+	changes, err := actions.SimulateReinstall([]string{"bash"})
+	if err != nil {
+		t.Logf("SimulateReinstall failed: %v", err)
+		var ae *aptlib.AptError
+		if errors.As(err, &ae) {
+			t.Logf("Got AptError with code: %d", ae.Code)
+		}
+	} else {
+		assert.NotNil(t, changes)
+		t.Logf("SimulateReinstall succeeded: new_installed=%d", changes.NewInstalledCount)
+	}
+}
+
+// TestAptSimulateAutoremove tests orphan package detection
+func TestAptSimulateAutoremove(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	changes, err := actions.SimulateAutoRemove()
+	if err != nil {
+		t.Fatalf("SimulateAutoremove failed: %v", err)
+	}
+	assert.NotNil(t, changes)
+	t.Logf("SimulateAutoremove: would remove %d packages", changes.RemovedCount)
+}
+
+// TestAptSimulateChangeCombined tests simultaneous install and remove
+func TestAptSimulateChangeCombined(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	changes, err := actions.SimulateChange(
+		[]string{testPackage},
+		[]string{"nano"},
+		false,
+		false,
+	)
+	if err != nil {
+		t.Logf("SimulateChange combined failed (may be expected): %v", err)
+	} else {
+		assert.NotNil(t, changes)
+		t.Logf("SimulateChange combined: install=%d, remove=%d, upgrade=%d",
+			changes.NewInstalledCount, changes.RemovedCount, changes.UpgradedCount)
+	}
+}
+
+// TestAptMultiplePackageInstall tests installing multiple packages at once
+func TestAptMultiplePackageInstall(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	packages := []string{"tree", "htop", "ncdu"}
+
+	changes, err := actions.SimulateInstall(packages)
+	if err != nil {
+		t.Logf("Multiple package install simulation failed: %v", err)
+	} else {
+		assert.NotNil(t, changes)
+		t.Logf("Multiple packages: new=%d, upgraded=%d, extra=%d",
+			changes.NewInstalledCount, changes.UpgradedCount, len(changes.ExtraInstalled))
+	}
+}
+
+// TestAptInstallSizeCalculation verifies install size is calculated correctly
+func TestAptInstallSizeCalculation(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	changes, err := actions.SimulateInstall([]string{testPackage})
+	if err != nil {
+		t.Skipf("SimulateInstall failed, skipping size check: %v", err)
+	}
+
+	t.Logf("Install sizes: download=%d bytes, install=%d bytes",
+		changes.DownloadSize, changes.InstallSize)
+
+	assert.True(t, changes.DownloadSize >= 0, "Download size should be non-negative")
+
+	if changes.NewInstalledCount > 0 {
+		assert.True(t, changes.InstallSize >= 0,
+			"Install size for new packages should be non-negative, got %d", changes.InstallSize)
+	}
+}

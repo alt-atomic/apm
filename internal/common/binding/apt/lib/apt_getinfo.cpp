@@ -20,15 +20,18 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
         // Check if this is an RPM file path
         if (is_rpm_file(input)) {
             const char *rpm_path = input.c_str();
-            AptResult preprocess_result = apt_preprocess_install_arguments(&rpm_path, 1);
+            bool added_new = false;
+            AptResult preprocess_result = apt_preprocess_install_arguments(&rpm_path, 1, &added_new);
             if (preprocess_result.code != APT_SUCCESS) {
                 return preprocess_result;
             }
 
-            // Refresh cache to pick up the temporary index
-            AptResult refresh_result = apt_cache_refresh(cache);
-            if (refresh_result.code != APT_SUCCESS) {
-                return refresh_result;
+            // Only refresh cache if new RPM file was added to config
+            if (added_new) {
+                AptResult refresh_result = apt_cache_refresh(cache);
+                if (refresh_result.code != APT_SUCCESS) {
+                    return refresh_result;
+                }
             }
 
             // Find the package that was added from the RPM file

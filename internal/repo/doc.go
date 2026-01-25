@@ -17,7 +17,7 @@
 package repo
 
 import (
-	"apm/internal/common/doc"
+	"apm/internal/common/dbus_doc"
 	"apm/internal/common/reply"
 	"context"
 	_ "embed"
@@ -27,29 +27,39 @@ import (
 //go:embed dbus.go
 var dbusSource string
 
+// responseTypes общие типы ответов для D-Bus и HTTP API
+// Используем префикс Repo для HTTP чтобы избежать конфликтов с system.ListResponse
+var responseTypes = map[string]reflect.Type{
+	"APIResponse":           reflect.TypeOf(reply.APIResponse{}),
+	"RepoListResponse":      reflect.TypeOf(ListResponse{}),
+	"RepoAddRemoveResponse": reflect.TypeOf(AddRemoveResponse{}),
+	"RepoSetResponse":       reflect.TypeOf(SetResponse{}),
+	"RepoSimulateResponse":  reflect.TypeOf(SimulateResponse{}),
+	"BranchesResponse":      reflect.TypeOf(BranchesResponse{}),
+	"TaskPackagesResponse":  reflect.TypeOf(TaskPackagesResponse{}),
+	"TestTaskResponse":      reflect.TypeOf(TestTaskResponse{}),
+}
+
+// GetHTTPResponseTypes возвращает типы ответов для генерации OpenAPI схем
+func GetHTTPResponseTypes() map[string]reflect.Type {
+	return responseTypes
+}
+
 // getDocConfig возвращает конфигурацию документации для модуля repo
-func getDocConfig() doc.Config {
-	return doc.Config{
+func getDocConfig() dbus_doc.Config {
+	return dbus_doc.Config{
 		ModuleName:    "Repo",
 		DBusInterface: "org.altlinux.APM.repo",
 		ServerPort:    "8083",
 		DBusWrapper:   (*DBusWrapper)(nil),
 		SourceCode:    dbusSource,
 		DBusSession:   "system",
-		ResponseTypes: map[string]reflect.Type{
-			"APIResponse":          reflect.TypeOf(reply.APIResponse{}),
-			"ListResponse":         reflect.TypeOf(ListResponse{}),
-			"AddRemoveResponse":    reflect.TypeOf(AddRemoveResponse{}),
-			"SetResponse":          reflect.TypeOf(SetResponse{}),
-			"SimulateResponse":     reflect.TypeOf(SimulateResponse{}),
-			"BranchesResponse":     reflect.TypeOf(BranchesResponse{}),
-			"TaskPackagesResponse": reflect.TypeOf(TaskPackagesResponse{}),
-		},
+		ResponseTypes: responseTypes,
 	}
 }
 
 // startDocServer запускает веб-сервер с документацией
 func startDocServer(ctx context.Context) error {
-	generator := doc.NewGenerator(getDocConfig())
+	generator := dbus_doc.NewGenerator(getDocConfig())
 	return generator.StartDocServer(ctx)
 }

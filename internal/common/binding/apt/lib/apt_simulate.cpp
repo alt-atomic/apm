@@ -47,24 +47,32 @@ static AptResult preprocess_rpm_files_if_needed(AptCache *cache,
         return make_result(APT_SUCCESS, nullptr);
     }
 
-    // Process RPM files and refresh cache ONLY ONCE
+    // Process RPM files - track if any new files were added
+    bool need_refresh = false;
+    bool added_new = false;
+
     if (install_names && install_count > 0) {
-        AptResult preprocess_result = apt_preprocess_install_arguments(install_names, install_count);
+        AptResult preprocess_result = apt_preprocess_install_arguments(install_names, install_count, &added_new);
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
+        if (added_new) need_refresh = true;
     }
 
     if (remove_names && remove_count > 0) {
-        AptResult preprocess_result = apt_preprocess_install_arguments(remove_names, remove_count);
+        AptResult preprocess_result = apt_preprocess_install_arguments(remove_names, remove_count, &added_new);
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
+        if (added_new) need_refresh = true;
     }
 
-    AptResult refresh_result = apt_cache_refresh(cache);
-    if (refresh_result.code != APT_SUCCESS) {
-        return refresh_result;
+    // Only refresh cache if new RPM files were added to config
+    if (need_refresh) {
+        AptResult refresh_result = apt_cache_refresh(cache);
+        if (refresh_result.code != APT_SUCCESS) {
+            return refresh_result;
+        }
     }
 
     return make_result(APT_SUCCESS, nullptr);
@@ -115,7 +123,7 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
         std::vector<std::string> removed;
 
         uint64_t download_size = 0;
-        uint64_t install_size = 0;
+        int64_t install_size = 0;
 
         for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin();
              !iter.end(); ++iter) {
@@ -136,6 +144,17 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
                     install_size += pkg_state.CandidateVer->InstalledSize;
                     if (pkg_state.InstallVer != 0) {
                         install_size -= pkg_state.InstallVer->InstalledSize;
+                    }
+                }
+            } else if (pkg_state.Downgrade()) {
+                upgraded.push_back(iter.Name());
+
+                if (pkg_state.CandidateVer != 0) {
+                    download_size += pkg_state.CandidateVer->Size;
+                    install_size += pkg_state.CandidateVer->InstalledSize;
+                    pkgCache::VerIterator currentVer = iter.CurrentVer();
+                    if (!currentVer.end()) {
+                        install_size -= currentVer->InstalledSize;
                     }
                 }
             } else if (pkg_state.Delete()) {
@@ -280,11 +299,33 @@ AptResult plan_change_internal(
         std::vector<std::string> removed;
         std::vector<std::string> reinstalled;
         uint64_t download_size = 0;
-        uint64_t install_size = 0;
+        int64_t install_size = 0;
 
         collect_package_changes(cache, requested_install, requested_remove,
                                 extra_installed, extra_removed, upgraded,
                                 new_installed, removed, download_size, install_size);
+
+        if (!requested_install.empty() && requested_remove.empty() && requested_reinstall.empty()) {
+            std::set<std::string> will_change;
+            for (const auto &pkg : new_installed) will_change.insert(pkg);
+            for (const auto &pkg : upgraded) will_change.insert(pkg);
+
+            std::vector<std::string> already_installed;
+            for (const auto &req : requested_install) {
+                if (will_change.find(req) == will_change.end()) {
+                    already_installed.push_back(req);
+                }
+            }
+
+            if (!already_installed.empty() && already_installed.size() == requested_install.size()) {
+                std::string msg = "Packages are already installed: ";
+                for (size_t i = 0; i < already_installed.size(); ++i) {
+                    if (i > 0) msg += ", ";
+                    msg += already_installed[i];
+                }
+                return make_result(APT_ERROR_PACKAGES_ALREADY_INSTALLED, msg.c_str());
+            }
+        }
 
         populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed, download_size,
                                    install_size);
@@ -403,7 +444,7 @@ AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
         std::vector<std::string> new_installed;
 
         uint64_t download_size = 0;
-        uint64_t install_size = 0;
+        int64_t install_size = 0;
 
         for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
             pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[iter];
@@ -426,6 +467,16 @@ AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
                     install_size += pkg_state.CandidateVer->InstalledSize;
                     if (pkg_state.InstallVer != 0) {
                         install_size -= pkg_state.InstallVer->InstalledSize;
+                    }
+                }
+            } else if (pkg_state.Downgrade()) {
+                upgraded.push_back(iter.Name());
+                if (pkg_state.CandidateVer != 0) {
+                    download_size += pkg_state.CandidateVer->Size;
+                    install_size += pkg_state.CandidateVer->InstalledSize;
+                    pkgCache::VerIterator currentVer = iter.CurrentVer();
+                    if (!currentVer.end()) {
+                        install_size -= currentVer->InstalledSize;
                     }
                 }
             }

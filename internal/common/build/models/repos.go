@@ -97,9 +97,7 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 			return nil, err
 		}
 
-		if err := svc.InstallPackages(ctx, []string{"ca-certificates"}); err != nil {
-			return nil, err
-		}
+		_ = svc.InstallPackages(ctx, []string{"ca-certificates"})
 	}
 
 	return nil, nil

@@ -24,8 +24,11 @@ package lib
 import "C"
 
 import (
+	"bufio"
+	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -52,6 +55,9 @@ func NewSystem() (*System, error) {
 	setCfg("Acquire::ftp::Timeout", strconv.Itoa(20))
 	setCfg("Acquire::http::ConnectTimeout", strconv.Itoa(20))
 	setCfg("Acquire::ftp::ConnectTimeout", strconv.Itoa(20))
+	if isAtomicSystem() {
+		setCfg("RPM::Options::", "--ignoresize")
+	}
 	var ptr *C.AptSystem
 	if res := C.apt_init_system(&ptr); res.code != C.APT_SUCCESS || ptr == nil {
 		return nil, ErrorFromResult(res)
@@ -64,8 +70,45 @@ func NewSystem() (*System, error) {
 // Close frees the system resources
 func (s *System) Close() {
 	if s.Ptr != nil {
+		BlockSignals()
+		defer RestoreSignals()
 		C.apt_cleanup_system(s.Ptr)
 		s.Ptr = nil
 		runtime.SetFinalizer(s, nil)
 	}
+}
+
+// SetNoLocking enables or disables APT file locking.
+func SetNoLocking(noLock bool) {
+	val := "false"
+	if noLock {
+		val = "true"
+	}
+	cKey := C.CString("Debug::NoLocking")
+	cVal := C.CString(val)
+	defer C.free(unsafe.Pointer(cKey))
+	defer C.free(unsafe.Pointer(cVal))
+	C.apt_set_config(cKey, cVal)
+}
+
+// isAtomicSystem checks if root filesystem is composefs/overlay
+func isAtomicSystem() bool {
+	file, err := os.Open("/proc/mounts")
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 3 {
+			continue
+		}
+		device, mountpoint, fstype := fields[0], fields[1], fields[2]
+		if mountpoint == "/" && (fstype == "overlay" || device == "composefs") {
+			return true
+		}
+	}
+	return false
 }

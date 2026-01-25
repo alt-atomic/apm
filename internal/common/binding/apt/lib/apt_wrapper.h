@@ -30,6 +30,7 @@ typedef enum {
 
     // Package errors (21-40)
     APT_ERROR_PACKAGE_NOT_FOUND = 21,
+    APT_ERROR_PACKAGES_ALREADY_INSTALLED = 22,
 
     // Dependency errors (41-50)
     APT_ERROR_DEPENDENCY_BROKEN = 41,
@@ -141,7 +142,7 @@ AptResult apt_cache_update(AptCache *cache);
 AptResult apt_cache_dist_upgrade(AptCache *cache);
 
 // File installation support - preprocess arguments to detect and handle RPM files
-AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count);
+AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new);
 
 // Package manager
 AptResult apt_package_manager_create(AptCache *cache, AptPackageManager **pm);
@@ -203,7 +204,7 @@ typedef struct {
     size_t not_upgraded_count;
 
     uint64_t download_size; // Size in bytes to download
-    uint64_t install_size; // Size in bytes after installation
+    int64_t install_size;   // Size change in bytes after installation (can be negative for downgrades/removals)
 } AptPackageChanges;
 
 AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageList *result);
@@ -261,6 +262,22 @@ const char *apt_get_config(const char *key, const char *default_value);
 
 // Force cleanup functions
 void apt_force_unlock();
+
+// Lock status information
+typedef struct {
+    bool is_locked;
+    bool can_acquire;
+    int lock_pid;
+    char *lock_holder;
+    char *lock_file_path;
+    char *error_message;
+} AptLockStatus;
+
+// Check if APT locks
+AptLockStatus apt_check_lock_status();
+
+// Free lock status structure
+void apt_free_lock_status(AptLockStatus *status);
 
 #ifdef __cplusplus
 }

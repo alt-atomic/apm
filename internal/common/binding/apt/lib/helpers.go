@@ -82,7 +82,7 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 		RemovedCount:      int(cc.removed_count),
 		NotUpgradedCount:  int(cc.not_upgraded_count),
 		DownloadSize:      uint64(cc.download_size),
-		InstallSize:       uint64(cc.install_size),
+		InstallSize:       int64(cc.install_size),
 	}
 
 	// Конвертируем массивы с использованием helper функции

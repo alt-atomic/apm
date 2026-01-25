@@ -17,7 +17,7 @@
 package distrobox
 
 import (
-	"apm/internal/common/doc"
+	"apm/internal/common/dbus_doc"
 	"apm/internal/common/reply"
 	"context"
 	_ "embed"
@@ -27,33 +27,42 @@ import (
 //go:embed dbus.go
 var dbusSource string
 
+// responseTypes общие типы ответов для D-Bus и HTTP API
+// Используем префикс Distrobox для HTTP чтобы избежать конфликтов с system.ListResponse
+var responseTypes = map[string]reflect.Type{
+	"APIResponse":                       reflect.TypeOf(reply.APIResponse{}),
+	"DistroboxUpdateResponse":           reflect.TypeOf(UpdateResponse{}),
+	"DistroboxInfoResponse":             reflect.TypeOf(InfoResponse{}),
+	"DistroboxSearchResponse":           reflect.TypeOf(SearchResponse{}),
+	"DistroboxListResponse":             reflect.TypeOf(ListResponse{}),
+	"DistroboxInstallResponse":          reflect.TypeOf(InstallResponse{}),
+	"DistroboxRemoveResponse":           reflect.TypeOf(RemoveResponse{}),
+	"DistroboxContainerListResponse":    reflect.TypeOf(ContainerListResponse{}),
+	"DistroboxContainerAddResponse":     reflect.TypeOf(ContainerAddResponse{}),
+	"DistroboxContainerRemoveResponse":  reflect.TypeOf(ContainerRemoveResponse{}),
+	"DistroboxGetFilterFieldsResponse":  reflect.TypeOf(GetFilterFieldsResponse{}),
+}
+
+// GetHTTPResponseTypes возвращает типы ответов для генерации OpenAPI схем
+func GetHTTPResponseTypes() map[string]reflect.Type {
+	return responseTypes
+}
+
 // getDocConfig возвращает конфигурацию документации для distrobox модуля
-func getDocConfig() doc.Config {
-	return doc.Config{
+func getDocConfig() dbus_doc.Config {
+	return dbus_doc.Config{
 		ModuleName:    "Distrobox",
 		DBusInterface: "org.altlinux.APM.distrobox",
 		ServerPort:    "8082",
 		DBusWrapper:   (*DBusWrapper)(nil),
 		SourceCode:    dbusSource,
 		DBusSession:   "session",
-		ResponseTypes: map[string]reflect.Type{
-			"APIResponse":             reflect.TypeOf(reply.APIResponse{}),
-			"UpdateResponse":          reflect.TypeOf(UpdateResponse{}),
-			"InfoResponse":            reflect.TypeOf(InfoResponse{}),
-			"SearchResponse":          reflect.TypeOf(SearchResponse{}),
-			"ListResponse":            reflect.TypeOf(ListResponse{}),
-			"InstallResponse":         reflect.TypeOf(InstallResponse{}),
-			"RemoveResponse":          reflect.TypeOf(RemoveResponse{}),
-			"ContainerListResponse":   reflect.TypeOf(ContainerListResponse{}),
-			"ContainerAddResponse":    reflect.TypeOf(ContainerAddResponse{}),
-			"ContainerRemoveResponse": reflect.TypeOf(ContainerRemoveResponse{}),
-			"GetFilterFieldsResponse": reflect.TypeOf(GetFilterFieldsResponse{}),
-		},
+		ResponseTypes: responseTypes,
 	}
 }
 
 // startDocServer запускает веб-сервер с документацией
 func startDocServer(ctx context.Context) error {
-	generator := doc.NewGenerator(getDocConfig())
+	generator := dbus_doc.NewGenerator(getDocConfig())
 	return generator.StartDocServer(ctx)
 }

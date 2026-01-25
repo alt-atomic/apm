@@ -23,7 +23,6 @@ import (
 	libApt "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -322,7 +321,7 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 	// Сортируем по версии с учетом buildtime (новые сначала)
 	sort.Slice(kernels, func(i, j int) bool {
 		// Сначала сравниваем основную версию
-		versionCmp := _package.CompareVersions(kernels[i].Version, kernels[j].Version)
+		versionCmp := helper.CompareVersions(kernels[i].Version, kernels[j].Version)
 		if versionCmp != 0 {
 			return versionCmp > 0
 		}
@@ -500,9 +499,9 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 			continue
 		}
 
-		cmp := _package.CompareVersions(kernel.Version, minVersion)
+		cmp := helper.CompareVersions(kernel.Version, minVersion)
 		if cmp >= 0 {
-			if currentVer, exists := flavourVersions[kernel.Flavour]; !exists || _package.CompareVersions(kernel.Version, currentVer) > 0 {
+			if currentVer, exists := flavourVersions[kernel.Flavour]; !exists || helper.CompareVersions(kernel.Version, currentVer) > 0 {
 				flavourVersions[kernel.Flavour] = kernel.Version
 			}
 		}
@@ -518,7 +517,7 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 
 	// Сортируем по версии (старые сначала, чтобы первым был ближайший новый)
 	sort.Slice(flavourList, func(i, j int) bool {
-		return _package.CompareVersions(flavourList[i].Version, flavourList[j].Version) < 0
+		return helper.CompareVersions(flavourList[i].Version, flavourList[j].Version) < 0
 	})
 
 	for _, item := range flavourList {
@@ -649,13 +648,13 @@ func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 
 	// Если база не смогла определить, проверяем через RPM
 	if !kernel.IsInstalled && kernel.IsRunning {
-		kernel.IsInstalled = isKernelInstalledRPM(kernel)
+		kernel.IsInstalled = km.isKernelInstalledRPM(kernel)
 	}
 }
 
 // checkInstallStatus проверяет статус установки с fallback на RPM
 func (km *Manager) checkInstallStatus(kernel *Info, aptInstalled bool) bool {
-	rpmInstalled := isKernelInstalledRPM(kernel)
+	rpmInstalled := km.isKernelInstalledRPM(kernel)
 
 	// Если APT и RPM дают разные ответы, доверяем RPM
 	if !aptInstalled && rpmInstalled {
@@ -668,7 +667,7 @@ func (km *Manager) checkInstallStatus(kernel *Info, aptInstalled bool) bool {
 
 // checkModuleInstallStatus проверяет статус установки модуля с fallback на RPM
 func (km *Manager) checkModuleInstallStatus(module, flavour string, aptInstalled bool) bool {
-	rpmInstalled := isModuleInstalledRPM(module, flavour)
+	rpmInstalled := km.isModuleInstalledRPM(module, flavour)
 
 	if !aptInstalled && rpmInstalled {
 		return true
@@ -857,93 +856,68 @@ func calculatePackageAgeAndTime(version string) (int, time.Time) {
 }
 
 // ListInstalledKernelsFromRPM возвращает все установленные ядра через прямой RPM запрос
+// Использует apt биндинги для защиты от конкурентного доступа к rpmdb
 func (km *Manager) ListInstalledKernelsFromRPM(ctx context.Context) ([]*Info, error) {
-	cmd := exec.CommandContext(ctx, "rpm", "-qa", "--queryformat", "%{NAME}\t%{VERSION}\t%{RELEASE}\t%{BUILDTIME}\n", "kernel-image-*")
-	cmd.Env = []string{"LC_ALL=C"}
-
-	output, err := cmd.Output()
+	rpmKernels, err := km.aptActions.RpmQueryKernelPackages(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to query installed kernels: %s"), err.Error())
 	}
 
 	var kernels []*Info
-	scanner := bufio.NewScanner(strings.NewReader(string(output)))
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-
-		parts := strings.Split(line, "\t")
-		if len(parts) != 4 {
-			continue
-		}
-
-		name := strings.TrimSpace(parts[0])
-		version := strings.TrimSpace(parts[1])
-		release := strings.TrimSpace(parts[2])
-		buildTimeStr := strings.TrimSpace(parts[3])
-
-		if strings.Contains(name, "debuginfo") {
-			continue
-		}
-
-		flavour := strings.TrimPrefix(name, "kernel-image-")
-		if flavour == name {
+	for _, rpmKernel := range rpmKernels {
+		flavour := strings.TrimPrefix(rpmKernel.Name, "kernel-image-")
+		if flavour == rpmKernel.Name {
 			continue
 		}
 
 		buildTime := time.Unix(0, 0)
-		if buildTimeInt, err := strconv.ParseInt(buildTimeStr, 10, 64); err == nil {
+		if buildTimeInt, err := strconv.ParseInt(rpmKernel.BuildTime, 10, 64); err == nil {
 			buildTime = time.Unix(buildTimeInt, 0)
 		}
 
 		kernel := &Info{
-			PackageName:      name,
+			PackageName:      rpmKernel.Name,
 			Flavour:          flavour,
-			Version:          version,
-			VersionInstalled: version,
-			Release:          release,
+			Version:          rpmKernel.Version,
+			VersionInstalled: rpmKernel.Version,
+			Release:          rpmKernel.Release,
 			BuildTime:        buildTime,
 			AgeInDays:        int(time.Since(buildTime).Hours() / 24),
 			IsInstalled:      true,
 			IsRunning:        false,
-			FullVersion:      fmt.Sprintf("%s=%s-%s", name, version, release),
+			FullVersion:      fmt.Sprintf("%s=%s-%s", rpmKernel.Name, rpmKernel.Version, rpmKernel.Release),
 		}
 
 		kernels = append(kernels, kernel)
 	}
 
-	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf(app.T_("error scanning RPM output: %s"), err.Error())
-	}
-
 	return kernels, nil
 }
 
-func isKernelInstalledRPM(kernel *Info) bool {
-	cmd := exec.Command("rpm", "-q", kernel.PackageName)
-	return cmd.Run() == nil
+// isKernelInstalledRPM проверяет установлено ли ядро через RPM
+// Использует apt биндинги для защиты от конкурентного доступа к rpmdb
+func (km *Manager) isKernelInstalledRPM(kernel *Info) bool {
+	installed, err := km.aptActions.RpmIsPackageInstalled(kernel.PackageName)
+	if err != nil {
+		return false
+	}
+	return installed
 }
 
 // isModuleInstalledRPM проверяет установлен ли модуль через RPM
-func isModuleInstalledRPM(moduleName, flavour string) bool {
+// Использует apt биндинги для защиты от конкурентного доступа к rpmdb
+func (km *Manager) isModuleInstalledRPM(moduleName, flavour string) bool {
 	possibleNames := []string{
 		fmt.Sprintf("kernel-modules-%s-%s", moduleName, flavour),
 		fmt.Sprintf("kernel-module-%s-%s", moduleName, flavour),
 		fmt.Sprintf("%s-kmod-%s", moduleName, flavour),
 	}
 
-	for _, pkgName := range possibleNames {
-		cmd := exec.Command("rpm", "-q", pkgName)
-		err := cmd.Run()
-		if err == nil {
-			return true
-		}
+	installed, err := km.aptActions.RpmIsAnyPackageInstalled(possibleNames)
+	if err != nil {
+		return false
 	}
-
-	return false
+	return installed
 }
 
 // GetFullPackageNameForModule получает полное имя пакета модуля с версией из базы
@@ -1029,7 +1003,7 @@ func (km *Manager) GroupKernelsByFlavour(kernels []*Info) map[string][]*Info {
 	// Сортируем ядра внутри каждого flavour по версии (новые сначала)
 	for flavour := range flavourGroups {
 		sort.Slice(flavourGroups[flavour], func(i, j int) bool {
-			versionCmp := _package.CompareVersions(flavourGroups[flavour][i].Version, flavourGroups[flavour][j].Version)
+			versionCmp := helper.CompareVersions(flavourGroups[flavour][i].Version, flavourGroups[flavour][j].Version)
 			if versionCmp != 0 {
 				return versionCmp > 0
 			}

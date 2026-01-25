@@ -362,7 +362,7 @@ func CliResponse(ctx context.Context, resp APIResponse) error {
 	return NewResponseRenderer(app.GetAppConfig(ctx)).CliResponse(ctx, resp)
 }
 
-// CliResponse рендерит ответ в зависимости от формата (dbus/json/text).
+// CliResponse рендерит ответ в зависимости от формата (dbus_doc/json/text).
 func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) error {
 	StopSpinner(r.appConfig)
 	format := r.appConfig.ConfigManager.GetConfig().Format
@@ -374,7 +374,7 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 
 	switch format {
 	// ---------------------------------- JSON ----------------------------------
-	case "json":
+	case app.FormatJSON:
 		// Если нет ошибки, убираем "message"
 		if !resp.Error {
 			if dataMap, ok := resp.Data.(map[string]interface{}); ok {

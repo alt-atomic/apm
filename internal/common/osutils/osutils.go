@@ -329,6 +329,32 @@ func ExecShWithOutput(
 	return string(output), nil
 }
 
+func ExecSh(
+	ctx context.Context,
+	command string,
+	chDir string,
+	quiet bool,
+) error {
+	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+	if chDir != "" {
+		cmd.Dir = chDir
+	}
+
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err := cmd.Run()
+
+	if cmd.ProcessState.ExitCode() != 0 {
+		return fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Copies the source to the destination and then removes the source.
 func Move(sourcePath, destPath string, replace bool) error {
 	// Copy the source to the destination

@@ -34,8 +34,59 @@ import (
 	"github.com/creack/pty"
 )
 
+// blobProgress хранит состояние загрузки одного blob'а
+type blobProgress struct {
+	downloaded float64
+	total      float64
+}
+
+// progressTracker отслеживает общий прогресс загрузки всех blob'ов
+type progressTracker struct {
+	blobs       map[string]*blobProgress
+	mu          sync.Mutex
+	lastPercent int
+}
+
+func newProgressTracker() *progressTracker {
+	return &progressTracker{
+		blobs:       make(map[string]*blobProgress),
+		lastPercent: -1,
+	}
+}
+
+func (pt *progressTracker) update(blobKey string, downloaded, total float64) (totalPercent int, changed bool) {
+	pt.mu.Lock()
+	defer pt.mu.Unlock()
+
+	if _, exists := pt.blobs[blobKey]; !exists {
+		pt.blobs[blobKey] = &blobProgress{}
+	}
+	pt.blobs[blobKey].downloaded = downloaded
+	pt.blobs[blobKey].total = total
+
+	var sumDownloaded, sumTotal float64
+	for _, bp := range pt.blobs {
+		sumDownloaded += bp.downloaded
+		sumTotal += bp.total
+	}
+
+	if sumTotal == 0 {
+		return 0, false
+	}
+
+	percent := int((sumDownloaded / sumTotal) * 100)
+	if percent > 100 {
+		percent = 100
+	}
+
+	changed = percent != pt.lastPercent
+	pt.lastPercent = percent
+
+	return percent, changed
+}
+
 func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
-	allBlobs := make(map[string]bool)
+	tracker := newProgressTracker()
 
 	parts := strings.Fields(cmdLine)
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
@@ -49,71 +100,69 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = ptmx.Close() }()
 
-	// Устанавливаем размер терминала
 	err = pty.Setsize(ptmx, &pty.Winsize{
 		Rows: 40,
 		Cols: 120,
 	})
 	if err != nil {
+		_ = ptmx.Close()
 		return "", err
 	}
 
 	var outputBuffer bytes.Buffer
+	var mu sync.Mutex
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	cmdDone := make(chan error, 1)
 	go func() {
-		defer wg.Done()
-		// Используем TeeReader для одновременного сканирования и записи в буфер
-		scanner := bufio.NewScanner(io.TeeReader(ptmx, &outputBuffer))
+		cmdDone <- cmd.Wait()
+	}()
+
+	readerDone := make(chan struct{})
+	go func() {
+		defer close(readerDone)
+
+		scanner := bufio.NewScanner(ptmx)
+		scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
+
 		for scanner.Scan() {
 			line := scanner.Text()
-			parseProgressLine(ctx, line, allBlobs)
+			mu.Lock()
+			outputBuffer.WriteString(line)
+			outputBuffer.WriteByte('\n')
+			mu.Unlock()
+			parseProgressLine(ctx, line, tracker)
 		}
 		if scanErr := scanner.Err(); scanErr != nil && scanErr != io.EOF {
-			// Можно добавить логирование ошибки
+			app.Log.Debugf("PullAndProgress scanner error: %v", scanErr)
 		}
 	}()
 
-	// Ждем завершения команды
-	err = cmd.Wait()
-	wg.Wait()
+	cmdErr := <-cmdDone
+	_ = ptmx.Close()
+	<-readerDone
 
-	if err != nil {
-		// Возвращаем вывод вместе с ошибкой для более подробной диагностики
-		return outputBuffer.String(), fmt.Errorf(app.T_("Command failed with error: %v, output: %s"), err, outputBuffer.String())
+	mu.Lock()
+	output := outputBuffer.String()
+	mu.Unlock()
+
+	if cmdErr != nil {
+		return output, fmt.Errorf(app.T_("Command failed with error: %v, output: %s"), cmdErr, output)
 	}
 
-	for blobKey := range allBlobs {
-		reply.CreateEventNotification(ctx, reply.StateAfter,
-			reply.WithEventName("service.pullImage-"+blobKey),
-			reply.WithProgress(true),
-			reply.WithProgressPercent(100),
-		)
-	}
-
-	return outputBuffer.String(), nil
-}
-
-// printProgress вызывается, когда мы успешно распознали
-func printProgress(ctx context.Context, keyBlob string, progressPercent float64, speed string, allBlobs map[string]bool) {
-	allBlobs[keyBlob] = true
-
-	reply.CreateEventNotification(ctx, reply.StateBefore,
-		reply.WithEventName("service.pullImage-"+keyBlob),
-		reply.WithEventView(speed),
+	reply.CreateEventNotification(ctx, reply.StateAfter,
+		reply.WithEventName("system.pullImage"),
 		reply.WithProgress(true),
-		reply.WithProgressPercent(progressPercent),
+		reply.WithProgressPercent(100),
 	)
+
+	return output, nil
 }
 
-// parseProgressLine разбирает строки
-func parseProgressLine(ctx context.Context, rawLine string, allBlobs map[string]bool) {
+// parseProgressLine разбирает строки вывода podman и обновляет общий прогресс
+func parseProgressLine(ctx context.Context, rawLine string, tracker *progressTracker) {
 	line := strings.TrimSpace(removeANSI(rawLine))
 
-	// Проверим, действительно ли строка начинается с "Copying blob "
 	if !strings.HasPrefix(line, "Copying blob ") {
 		return
 	}
@@ -123,21 +172,10 @@ func parseProgressLine(ctx context.Context, rawLine string, allBlobs map[string]
 		return
 	}
 
-	// Пример полей:
-	//  0: Copying
-	//  1: blob
-	//  2: ead6e2ffd75d
-	//  3: [--------------------------------------]
-	//  4: 192.0KiB
-	//  5: /
-	//  6: 525.6MiB
-	//  7: |
-	//  8: 28.3
-	//  9: KiB/s
+	// Пример: Copying blob ead6e2ffd75d [------] 192.0KiB / 525.6MiB | 28.3 KiB/s
 	blobKey := fields[2]
 	downloadedStr := fields[4]
 	totalStr := fields[6]
-
 	speed := fields[8] + " " + fields[9]
 
 	downloadedBytes, err1 := parseSize(downloadedStr)
@@ -146,9 +184,15 @@ func parseProgressLine(ctx context.Context, rawLine string, allBlobs map[string]
 		return
 	}
 
-	// Вычисляем % (float64)
-	percent := (downloadedBytes / totalBytes) * 100
-	printProgress(ctx, blobKey, percent, speed, allBlobs)
+	percent, changed := tracker.update(blobKey, downloadedBytes, totalBytes)
+	if changed {
+		reply.CreateEventNotification(ctx, reply.StateBefore,
+			reply.WithEventName("system.pullImage"),
+			reply.WithEventView(speed),
+			reply.WithProgress(true),
+			reply.WithProgressPercent(float64(percent)),
+		)
+	}
 }
 
 // parseSize разбирает строку типа "192.0KiB", "1.8GiB" и т.п.
@@ -156,8 +200,6 @@ func parseSize(sizeStr string) (float64, error) {
 	re := regexp.MustCompile(`^([0-9.]+)([KMG]?i?B)$`)
 	matches := re.FindStringSubmatch(sizeStr)
 	if len(matches) != 3 {
-		// Получаем конфиг из глобального контекста для переводов
-		// TODO: передавать appConfig как параметр для лучшей архитектуры
 		return 0, fmt.Errorf("cannot parse size: %s", sizeStr)
 	}
 
@@ -243,30 +285,41 @@ func BootcUpgradeAndProgress(ctx context.Context, cmdLine string) (string, error
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = ptmx.Close() }()
 
 	err = pty.Setsize(ptmx, &pty.Winsize{
 		Rows: 40,
 		Cols: 120,
 	})
 	if err != nil {
+		_ = ptmx.Close()
 		return "", err
 	}
 
 	var outputBuffer bytes.Buffer
+	var mu sync.Mutex
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	cmdDone := make(chan error, 1)
 	go func() {
-		defer wg.Done()
-		reader := bufio.NewReader(io.TeeReader(ptmx, &outputBuffer))
+		cmdDone <- cmd.Wait()
+	}()
+
+	// Горутина чтения вывода
+	readerDone := make(chan struct{})
+	go func() {
+		defer close(readerDone)
+
+		reader := bufio.NewReader(ptmx)
 		var lineBuffer bytes.Buffer
 
 		for {
-			b, err := reader.ReadByte()
-			if err != nil {
+			b, readErr := reader.ReadByte()
+			if readErr != nil {
 				break
 			}
+
+			mu.Lock()
+			outputBuffer.WriteByte(b)
+			mu.Unlock()
 
 			if b == '\n' || b == '\r' {
 				if lineBuffer.Len() > 0 {
@@ -284,11 +337,16 @@ func BootcUpgradeAndProgress(ctx context.Context, cmdLine string) (string, error
 		}
 	}()
 
-	err = cmd.Wait()
-	wg.Wait()
+	cmdErr := <-cmdDone
+	_ = ptmx.Close()
+	<-readerDone
 
-	if err != nil {
-		return outputBuffer.String(), fmt.Errorf(app.T_("Command failed with error: %v, output: %s"), err, outputBuffer.String())
+	mu.Lock()
+	output := outputBuffer.String()
+	mu.Unlock()
+
+	if cmdErr != nil {
+		return output, fmt.Errorf(app.T_("Command failed with error: %v, output: %s"), cmdErr, output)
 	}
 
 	// Завершаем прогресс-бары
@@ -303,7 +361,7 @@ func BootcUpgradeAndProgress(ctx context.Context, cmdLine string) (string, error
 		reply.WithProgressPercent(100),
 	)
 
-	return outputBuffer.String(), nil
+	return output, nil
 }
 
 // parseBootcProgressLine парсит вывод bootc upgrade для отображения прогресса

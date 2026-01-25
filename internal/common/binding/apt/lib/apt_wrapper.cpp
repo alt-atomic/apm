@@ -5,10 +5,16 @@
 #include <apt-pkg/init.h>
 #include <apt-pkg/sourcelist.h>
 
+#include <atomic>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <sstream>
+#include <sys/select.h>
 #include <sys/stat.h>
+#include <thread>
+#include <unistd.h>
 
 // Error handling
 AptErrorCode last_error = APT_SUCCESS;
@@ -72,21 +78,71 @@ static std::streambuf *g_prev_cout = nullptr;
 static std::streambuf *g_prev_cerr = nullptr;
 static std::streambuf *g_prev_clog = nullptr;
 
+// File descriptor level capture for C stdio (RPM output, printf, fprintf, etc.)
+static int g_saved_stderr_fd = -1;
+static int g_pipe_read_fd = -1;
+static int g_pipe_write_fd = -1;
+static std::string g_captured_stderr;
+static std::thread g_reader_thread;
+static std::atomic<bool> g_reader_running{false};
+
+static void stderr_reader_thread() {
+    char buffer[1024];
+    while (g_reader_running.load()) {
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(g_pipe_read_fd, &fds);
+        struct timeval tv = {0, 100000};
+        int ret = select(g_pipe_read_fd + 1, &fds, nullptr, nullptr, &tv);
+        if (ret > 0 && FD_ISSET(g_pipe_read_fd, &fds)) {
+            ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
+            if (n > 0) {
+                buffer[n] = '\0';
+                g_captured_stderr += buffer;
+            }
+        }
+    }
+    // Drain remaining data
+    while (true) {
+        ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
+        if (n <= 0) break;
+        buffer[n] = '\0';
+        g_captured_stderr += buffer;
+    }
+}
+
 extern "C" void apt_capture_stdio(int enable) {
     if (enable) {
         if (!g_stdio_captured) {
-            // Redirect only C++ iostreams to avoid OS-level fd hacks
+            // Redirect C++ iostreams to emit_stream
             g_prev_cout = std::cout.rdbuf();
             g_prev_cerr = std::cerr.rdbuf();
             g_prev_clog = std::clog.rdbuf();
             std::cout.rdbuf(g_emit_stream.rdbuf());
             std::cerr.rdbuf(g_emit_stream.rdbuf());
             std::clog.rdbuf(g_emit_stream.rdbuf());
+
+            // Redirect C stderr to pipe (captures RPM output and other)
+            fflush(stderr);
+            g_captured_stderr.clear();
+            int pipefd[2];
+            if (pipe(pipefd) == 0) {
+                g_pipe_read_fd = pipefd[0];
+                g_pipe_write_fd = pipefd[1];
+                // Make read end non-blocking
+                fcntl(g_pipe_read_fd, F_SETFL, O_NONBLOCK);
+                g_saved_stderr_fd = dup(STDERR_FILENO);
+                dup2(g_pipe_write_fd, STDERR_FILENO);
+                // Start reader thread
+                g_reader_running.store(true);
+                g_reader_thread = std::thread(stderr_reader_thread);
+            }
+
             g_stdio_captured = true;
         }
     } else {
         if (g_stdio_captured) {
-            // Flush any pending content in the emit stream and standard streams
+            // Flush any pending content
             try {
                 g_emit_stream.flush();
                 std::cout.flush();
@@ -95,6 +151,43 @@ extern "C" void apt_capture_stdio(int enable) {
             } catch (...) {
                 // ignore flush errors
             }
+
+            // Restore C stderr and stop reader
+            fflush(stderr);
+            if (g_saved_stderr_fd >= 0) {
+                dup2(g_saved_stderr_fd, STDERR_FILENO);
+                close(g_saved_stderr_fd);
+                g_saved_stderr_fd = -1;
+            }
+            if (g_pipe_write_fd >= 0) {
+                close(g_pipe_write_fd);
+                g_pipe_write_fd = -1;
+            }
+            if (g_reader_running.load()) {
+                g_reader_running.store(false);
+                if (g_reader_thread.joinable()) {
+                    g_reader_thread.join();
+                }
+            }
+            if (g_pipe_read_fd >= 0) {
+                close(g_pipe_read_fd);
+                g_pipe_read_fd = -1;
+            }
+
+            // Send captured stderr to log handler for error analysis
+            // Only send to callback if set (otherwise discard - we don't want garbage in console)
+            if (!g_captured_stderr.empty() && g_log_callback) {
+                // Split by lines and send each to log handler
+                std::istringstream stream(g_captured_stderr);
+                std::string line;
+                while (std::getline(stream, line)) {
+                    if (!line.empty()) {
+                        g_log_callback(line.c_str(), g_log_user_data);
+                    }
+                }
+            }
+            g_captured_stderr.clear();
+
             // Restore C++ iostreams
             std::cout.rdbuf(g_prev_cout);
             std::cerr.rdbuf(g_prev_cerr);
@@ -357,6 +450,15 @@ AptResult apt_cache_update(AptCache *cache) {
     if (!cache || !cache->cache_file) return make_result(APT_ERROR_CACHE_OPEN_FAILED);
 
     try {
+        // Lock the list directory (same as apt-get does)
+        FileFd Lock;
+        if (!_config->FindB("Debug::NoLocking", false)) {
+            Lock.Fd(GetLock(_config->FindDir("Dir::State::Lists") + "lock"));
+            if (_error->PendingError()) {
+                return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the list directory");
+            }
+        }
+
         ProgressStatus status;
         pkgAcquire acquire(&status);
         pkgSourceList source_list;
@@ -863,12 +965,20 @@ bool is_rpm_file(const std::string &path) {
 }
 
 // File installation support - preprocess arguments to detect and handle RPM files
-AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count) {
+AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new) {
+    if (added_new) *added_new = false;
+
     if (!install_names || install_count == 0) {
         return make_result(APT_SUCCESS, nullptr);
     }
 
     try {
+        // Get current APT::Arguments to check for duplicates
+        std::vector<std::string> existing_args = _config->FindVector("APT::Arguments");
+        std::set<std::string> existing_set(existing_args.begin(), existing_args.end());
+
+        bool any_added = false;
+
         // Process arguments and add RPM files to APT::Arguments configuration
         for (size_t i = 0; i < install_count; i++) {
             if (!install_names[i]) continue;
@@ -877,13 +987,190 @@ AptResult apt_preprocess_install_arguments(const char **install_names, size_t in
 
             // Use shared RPM file detection logic
             if (is_rpm_file(arg)) {
-                // Add to APT::Arguments configuration without index
-                _config->Set("APT::Arguments::", arg);
+                // Only add if not already in config
+                if (existing_set.find(arg) == existing_set.end()) {
+                    _config->Set("APT::Arguments::", arg);
+                    existing_set.insert(arg);
+                    any_added = true;
+                }
             }
         }
 
+        if (added_new) *added_new = any_added;
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception in preprocess: ") + e.what()).c_str());
     }
+}
+
+// Helper function to duplicate a C string (returns nullptr if input is empty)
+static char *dup_string(const std::string &s) {
+    if (s.empty()) return nullptr;
+    char *p = (char *) malloc(s.size() + 1);
+    if (!p) return nullptr;
+    memcpy(p, s.c_str(), s.size() + 1);
+    return p;
+}
+
+// Helper function to check if a lock file can be acquired
+// Uses fcntl F_GETLK to check without actually acquiring the lock
+static bool check_lock_file(const std::string &path, int *holder_pid) {
+    if (holder_pid) *holder_pid = -1;
+
+    int fd = open(path.c_str(), O_RDWR);
+    if (fd < 0) {
+        if (errno == ENOENT || errno == EACCES) {
+            return true;
+        }
+        return false;
+    }
+
+    struct flock fl;
+    fl.l_type = F_WRLCK;
+    fl.l_whence = SEEK_SET;
+    fl.l_start = 0;
+    fl.l_len = 0;
+    fl.l_pid = 0;
+
+    if (fcntl(fd, F_GETLK, &fl) == -1) {
+        close(fd);
+        return false;
+    }
+
+    close(fd);
+
+    if (fl.l_type == F_UNLCK) {
+        return true;
+    }
+
+    if (holder_pid && fl.l_pid > 0) {
+        *holder_pid = fl.l_pid;
+    }
+    return false;
+}
+
+// Helper function to get process name by PID
+static std::string get_process_name(int pid) {
+    if (pid <= 0) return "";
+
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/comm", pid);
+
+    FILE *f = fopen(path, "r");
+    if (!f) return "";
+
+    char name[256];
+    if (fgets(name, sizeof(name), f)) {
+        fclose(f);
+        // Remove trailing newline
+        size_t len = strlen(name);
+        if (len > 0 && name[len - 1] == '\n') {
+            name[len - 1] = '\0';
+        }
+        return name;
+    }
+
+    fclose(f);
+    return "";
+}
+
+// Internal structure for lock paths (not exported)
+struct LockPaths {
+    char *archives_lock;
+    char *lists_lock;
+};
+
+// Get paths to lock files based on APT configuration
+static LockPaths get_lock_paths() {
+    LockPaths paths{};
+
+    try {
+        // Archives lock: Dir::Cache::Archives + "lock"
+        std::string archives_dir = _config->FindDir("Dir::Cache::Archives", "/var/cache/apt/archives/");
+        paths.archives_lock = dup_string(archives_dir + "lock");
+
+        // Lists lock: Dir::State::lists + "lock"
+        std::string lists_dir = _config->FindDir("Dir::State::lists", "/var/lib/apt/lists/");
+        paths.lists_lock = dup_string(lists_dir + "lock");
+
+    } catch (...) {
+        if (!paths.archives_lock) paths.archives_lock = dup_string("/var/cache/apt/archives/lock");
+        if (!paths.lists_lock) paths.lists_lock = dup_string("/var/lib/apt/lists/lock");
+    }
+
+    return paths;
+}
+
+// Free lock paths structure
+static void free_lock_paths(LockPaths *paths) {
+    if (!paths) return;
+    free(paths->archives_lock);
+    free(paths->lists_lock);
+    memset(paths, 0, sizeof(LockPaths));
+}
+
+// Check if APT locks can be acquired without actually acquiring them
+AptLockStatus apt_check_lock_status() {
+    AptLockStatus status{};
+    status.is_locked = false;
+    status.can_acquire = true;
+    status.lock_pid = -1;
+
+    try {
+        LockPaths paths = get_lock_paths();
+
+        // Check archives lock (main lock for install/upgrade operations)
+        int archives_holder_pid = -1;
+        if (paths.archives_lock && !check_lock_file(paths.archives_lock, &archives_holder_pid)) {
+            status.is_locked = true;
+            status.can_acquire = false;
+            status.lock_pid = archives_holder_pid;
+            status.lock_file_path = dup_string(paths.archives_lock);
+
+            if (archives_holder_pid > 0) {
+                std::string proc_name = get_process_name(archives_holder_pid);
+                if (!proc_name.empty()) {
+                    status.lock_holder = dup_string(proc_name);
+                }
+            }
+
+            free_lock_paths(&paths);
+            return status;
+        }
+
+        // Check lists lock (lock for update operations)
+        int lists_holder_pid = -1;
+        if (paths.lists_lock && !check_lock_file(paths.lists_lock, &lists_holder_pid)) {
+            status.is_locked = true;
+            status.can_acquire = false;
+            status.lock_pid = lists_holder_pid;
+            status.lock_file_path = dup_string(paths.lists_lock);
+
+            if (lists_holder_pid > 0) {
+                std::string proc_name = get_process_name(lists_holder_pid);
+                if (!proc_name.empty()) {
+                    status.lock_holder = dup_string(proc_name);
+                }
+            }
+
+            free_lock_paths(&paths);
+            return status;
+        }
+
+        free_lock_paths(&paths);
+    } catch (const std::exception &e) {
+        status.error_message = dup_string(std::string("Exception: ") + e.what());
+        status.can_acquire = false;
+    }
+
+    return status;
+}
+
+// Free lock status structure
+void apt_free_lock_status(AptLockStatus *status) {
+    if (!status) return;
+    free(status->lock_holder);
+    free(status->lock_file_path);
+    free(status->error_message);
+    memset(status, 0, sizeof(AptLockStatus));
 }

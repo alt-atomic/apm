@@ -905,7 +905,7 @@ func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exis
 func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bool, error) {
 	url := fmt.Sprintf("%s%s/%s/plan/arepo-add-x86_64-i586", s.httpScheme(ctx), RepoTasksURL, taskNum)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return false, err
 	}
@@ -916,7 +916,16 @@ func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bo
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	return resp.StatusCode == 200, nil
+	if resp.StatusCode != 200 {
+		return false, nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+
+	return len(strings.TrimSpace(string(body))) > 0, nil
 }
 
 // isTaskNumber проверяет, является ли строка номером задачи
@@ -1165,8 +1174,8 @@ func (s *RepoService) removePriorityMacro() {
 }
 
 // SimulateAdd симулирует добавление репозитория
-// args: [source] или [type, url, arch, components...]
-func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date string) ([]string, error) {
+// force: если true, добавляет репозитории даже если они уже существуют
+func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]string, error) {
 	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
@@ -1174,13 +1183,9 @@ func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date strin
 
 	var willAdd []string
 	for _, u := range urls {
-		exists, commented, _ := s.checkRepoExists(ctx, u)
-		if !exists {
-			if commented {
-				willAdd = append(willAdd, fmt.Sprintf(app.T_("Will uncomment: %s"), u))
-			} else {
-				willAdd = append(willAdd, fmt.Sprintf(app.T_("Will add: %s"), u))
-			}
+		exists, _, _ := s.checkRepoExists(ctx, u)
+		if !exists || force {
+			willAdd = append(willAdd, u)
 		}
 	}
 
@@ -1204,7 +1209,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 			return nil, err
 		}
 		for _, repo := range repos {
-			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), repo.Entry))
+			willRemove = append(willRemove, repo.Entry)
 		}
 		return willRemove, nil
 	}
@@ -1217,7 +1222,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 	for _, u := range urls {
 		exists, _, _ := s.checkRepoExists(ctx, u)
 		if exists {
-			willRemove = append(willRemove, fmt.Sprintf(app.T_("Will remove: %s"), u))
+			willRemove = append(willRemove, u)
 		}
 	}
 
