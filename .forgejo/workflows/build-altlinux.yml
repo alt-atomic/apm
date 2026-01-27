@@ -26,10 +26,10 @@ jobs:
           - p11
         arch:
           - amd64
-          # - arm64
+          - arm64
         include:
-          # - arch: arm64
-          #   runner: self-hosted-arm64-alt-sisyphus
+          - arch: arm64
+            runner: self-hosted-arm64-alt-sisyphus
           - arch: amd64
             runner: alt-sisyphus
 
