@@ -31,7 +31,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -611,26 +610,10 @@ func (a *Actions) ImageBuildah(ctx context.Context, opts ImageBuildahOptions) (*
 	if configPath == "" {
 		configPath = a.appConfig.ConfigManager.GetConfig().PathImageFile
 	}
-	// Делаем путь абсолютным до Chdir
-	if configPath != "" && !filepath.IsAbs(configPath) {
-		if abs, err := filepath.Abs(configPath); err == nil {
-			configPath = abs
-		}
-	}
 
 	resourcesPath := opts.ResourcesPath
 	if resourcesPath == "" {
 		resourcesPath = a.appConfig.ConfigManager.GetResourcesDir()
-	}
-	// Делаем путь абсолютным до Chdir
-	if !filepath.IsAbs(resourcesPath) {
-		if abs, err := filepath.Abs(resourcesPath); err == nil {
-			resourcesPath = abs
-		}
-	}
-
-	if err := os.Chdir(resourcesPath); err != nil {
-		return nil, err
 	}
 
 	envVars, err := a.serviceHostConfig.GetConfigEnvVars()
@@ -645,7 +628,7 @@ func (a *Actions) ImageBuildah(ctx context.Context, opts ImageBuildahOptions) (*
 	}
 
 	if configPath != "" {
-		err = a.serviceHostConfig.LoadConfigFromPath(configPath)
+		err = a.serviceHostConfig.LoadConfigFromPathWithResources(configPath, resourcesPath)
 	} else {
 		err = a.serviceHostConfig.LoadConfig()
 	}

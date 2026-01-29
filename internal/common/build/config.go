@@ -84,13 +84,17 @@ func (s *HostConfigService) LoadConfig() error {
 
 // LoadConfigFromPath загружает конфигурацию из указанного файла
 func (s *HostConfigService) LoadConfigFromPath(configPath string) error {
+	return s.LoadConfigFromPathWithResources(configPath, filepath.Dir(configPath))
+}
+
+// LoadConfigFromPathWithResources загружает конфигурацию с указанием пути к ресурсам
+func (s *HostConfigService) LoadConfigFromPathWithResources(configPath, resourcesPath string) error {
 	cfg, err := core.ReadAndParseConfigYamlFile(configPath)
 	if err != nil {
 		return err
 	}
 
-	basePath := filepath.Dir(configPath)
-	if err = core.ValidateConfigRecursive(&cfg, basePath); err != nil {
+	if err = core.ValidateConfigRecursive(&cfg, resourcesPath); err != nil {
 		return err
 	}
 
