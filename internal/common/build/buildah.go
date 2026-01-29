@@ -440,6 +440,11 @@ func (b *BuildahBuilder) runModule(ctx context.Context, fm core.FlatModule, inde
 		"--mount", fmt.Sprintf("type=bind,src=%s,dst=/etc/apm/resources,ro", b.options.ResourcesPath),
 	)
 
+	// Монтируем APM бинарник с хоста
+	if apmPath, err := exec.LookPath("apm"); err == nil {
+		args = append(args, "--mount", fmt.Sprintf("type=bind,src=%s,dst=/usr/bin/apm,ro", apmPath))
+	}
+
 	// Монтируем системные includes если они существуют
 	if _, err := os.Stat("/usr/share/apm"); err == nil {
 		args = append(args, "--mount", "type=bind,src=/usr/share/apm,dst=/usr/share/apm,ro")
