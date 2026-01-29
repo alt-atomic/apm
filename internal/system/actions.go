@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -566,9 +567,9 @@ func (a *Actions) ImageBuildWithOptions(ctx context.Context, flatIndex int, conf
 		}
 	}
 
-	// Загружаем конфиг из переданного пути или дефолтного
+	// Загружаем конфиг с resourcesPath для правильной валидации include
 	if configPath != "" {
-		err = a.serviceHostConfig.LoadConfigFromPath(configPath)
+		err = a.serviceHostConfig.LoadConfigFromPathWithResources(configPath, effectiveResourcesPath)
 	} else {
 		err = a.serviceHostConfig.LoadConfig()
 	}
@@ -610,11 +611,17 @@ func (a *Actions) ImageBuildah(ctx context.Context, opts ImageBuildahOptions) (*
 	if configPath == "" {
 		configPath = a.appConfig.ConfigManager.GetConfig().PathImageFile
 	}
+	// Buildah требует абсолютные пути для bind mount
+	if configPath != "" {
+		configPath, _ = filepath.Abs(configPath)
+	}
 
 	resourcesPath := opts.ResourcesPath
 	if resourcesPath == "" {
 		resourcesPath = a.appConfig.ConfigManager.GetResourcesDir()
 	}
+	// Buildah требует абсолютные пути для bind mount
+	resourcesPath, _ = filepath.Abs(resourcesPath)
 
 	envVars, err := a.serviceHostConfig.GetConfigEnvVars()
 	if err != nil {

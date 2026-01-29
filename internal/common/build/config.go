@@ -23,7 +23,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
@@ -80,11 +79,6 @@ func (s *HostConfigService) LoadConfig() error {
 
 	s.Config = &cfg
 	return nil
-}
-
-// LoadConfigFromPath загружает конфигурацию из указанного файла
-func (s *HostConfigService) LoadConfigFromPath(configPath string) error {
-	return s.LoadConfigFromPathWithResources(configPath, filepath.Dir(configPath))
 }
 
 // LoadConfigFromPathWithResources загружает конфигурацию с указанием пути к ресурсам
