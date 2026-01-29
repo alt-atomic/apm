@@ -435,6 +435,11 @@ func hashDir(dir string) (string, error) {
 func (b *BuildahBuilder) runModule(ctx context.Context, fm core.FlatModule, index int) error {
 	args := []string{"run"}
 
+	// Передаём все ENV внутрь
+	for _, env := range os.Environ() {
+		args = append(args, "--env", env)
+	}
+
 	args = append(args,
 		"--mount", fmt.Sprintf("type=bind,src=%s,dst=/etc/apm/image.yml,ro", b.options.ConfigPath),
 		"--mount", fmt.Sprintf("type=bind,src=%s,dst=/etc/apm/resources,ro", b.options.ResourcesPath),
