@@ -230,7 +230,7 @@ func (cm *configManagerImpl) ensureDirectories() error {
 
 // detectSystemCapabilities определяет доступные системные утилиты
 func (cm *configManagerImpl) detectSystemCapabilities() {
-	cm.config.IsAtomic = fileExists("/usr/bin/bootc")
+	cm.config.IsAtomic = fileExists("/usr/bin/bootc") && fileExists("/sysroot")
 	cm.config.ExistStplr = fileExists("/usr/bin/stplr")
 	cm.config.ExistDistrobox = fileExists("/usr/bin/distrobox")
 }
