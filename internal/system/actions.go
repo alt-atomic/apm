@@ -627,7 +627,11 @@ func (a *Actions) ImageBuildah(ctx context.Context, opts ImageBuildahOptions) (*
 		}
 	}
 
-	err = a.serviceHostConfig.LoadConfig()
+	if configPath != "" {
+		err = a.serviceHostConfig.LoadConfigFromPath(configPath)
+	} else {
+		err = a.serviceHostConfig.LoadConfig()
+	}
 	if err != nil {
 		return nil, err
 	}
