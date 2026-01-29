@@ -111,8 +111,71 @@ func CommandList(ctx context.Context) *cli.Command {
 		{
 			Name:  "build",
 			Usage: app.T_("Build image"),
+			Flags: []cli.Flag{
+				&cli.IntFlag{
+					Name:   "flat-index",
+					Usage:  "Execute specific flattened module by index (internal use)",
+					Value:  -1,
+					Hidden: true,
+				},
+				&cli.StringFlag{
+					Name:   "config",
+					Usage:  "Path to image.yml (internal use)",
+					Hidden: true,
+				},
+				&cli.StringFlag{
+					Name:   "resources",
+					Usage:  "Path to resources directory (internal use)",
+					Hidden: true,
+				},
+			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.ImageBuild(ctx)
+				flatIndex := cmd.Int("flat-index")
+				configPath := cmd.String("config")
+				resourcesPath := cmd.String("resources")
+				resp, err := actions.ImageBuildWithOptions(ctx, flatIndex, configPath, resourcesPath)
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+				}
+
+				return reply.CliResponse(ctx, *resp)
+			}),
+		},
+		{
+			Name:  "buildah",
+			Usage: app.T_("Build image using buildah with layer caching"),
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "tag",
+					Usage: app.T_("Tag for final image"),
+					Value: "localhost/os:latest",
+				},
+				&cli.StringFlag{
+					Name:  "base-image",
+					Usage: app.T_("Override base image from config"),
+				},
+				&cli.StringFlag{
+					Name:  "config",
+					Usage: app.T_("Path to image.yml"),
+				},
+				&cli.StringFlag{
+					Name:  "resources",
+					Usage: app.T_("Path to resources directory"),
+				},
+				&cli.StringFlag{
+					Name:  "cache-dir",
+					Usage: app.T_("Directory for layer cache"),
+				},
+			},
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				opts := ImageBuildahOptions{
+					Tag:           cmd.String("tag"),
+					BaseImage:     cmd.String("base-image"),
+					ConfigPath:    cmd.String("config"),
+					ResourcesPath: cmd.String("resources"),
+					CacheDir:      cmd.String("cache-dir"),
+				}
+				resp, err := actions.ImageBuildah(ctx, opts)
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
 				}

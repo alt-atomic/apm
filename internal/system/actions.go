@@ -521,16 +521,36 @@ func (a *Actions) Update(ctx context.Context, noLock bool) (*reply.APIResponse, 
 	return &resp, nil
 }
 
-// ImageBuild Update Сборка образа
+// ImageBuildahOptions опции для сборки через buildah
+type ImageBuildahOptions struct {
+	Tag           string
+	BaseImage     string
+	ConfigPath    string
+	ResourcesPath string
+	CacheDir      string
+}
+
+// ImageBuild сборка образа
 func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
+	return a.ImageBuildWithOptions(ctx, -1, "", "")
+}
+
+// ImageBuildWithOptions сборка образа с опциями
+func (a *Actions) ImageBuildWithOptions(ctx context.Context, flatIndex int, configPath, resourcesPath string) (*reply.APIResponse, error) {
 	app.Log.EnableStdoutLogging()
 	reply.StopSpinner(a.appConfig)
 
-	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
+	// Используем переданные пути или дефолтные
+	effectiveResourcesPath := resourcesPath
+	if effectiveResourcesPath == "" {
+		effectiveResourcesPath = a.appConfig.ConfigManager.GetResourcesDir()
+	}
+
+	if err := os.MkdirAll(effectiveResourcesPath, 0755); err != nil {
 		return nil, err
 	}
 
-	err := os.Chdir(a.appConfig.ConfigManager.GetResourcesDir())
+	err := os.Chdir(effectiveResourcesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -541,7 +561,68 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	for key, value := range envVars {
-		if err := os.Setenv(key, value); err != nil {
+		if err = os.Setenv(key, value); err != nil {
+			return nil, err
+		}
+	}
+
+	// Загружаем конфиг из переданного пути или дефолтного
+	if configPath != "" {
+		err = a.serviceHostConfig.LoadConfigFromPath(configPath)
+	} else {
+		err = a.serviceHostConfig.LoadConfig()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	aptActions := _binding.NewActions()
+	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
+	repoService := _repo_service.NewRepoService(a.appConfig)
+	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, repoService, a.serviceHostConfig)
+
+	buildOpts := build.Options{
+		FlatIndex:     flatIndex,
+		ConfigPath:    configPath,
+		ResourcesPath: resourcesPath,
+	}
+	err = buildService.BuildWithOptions(ctx, buildOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := reply.APIResponse{
+		Data: ImageBuild{
+			Message: app.T_("DONE"),
+		},
+		Error: false,
+	}
+
+	return &resp, nil
+}
+
+// ImageBuildah сборка образа через buildah с кэшированием слоёв
+func (a *Actions) ImageBuildah(ctx context.Context, opts ImageBuildahOptions) (*reply.APIResponse, error) {
+	app.Log.EnableStdoutLogging()
+	reply.StopSpinner(a.appConfig)
+
+	configPath := opts.ConfigPath
+	if configPath == "" {
+		configPath = a.appConfig.ConfigManager.GetConfig().PathImageFile
+	}
+
+	resourcesPath := opts.ResourcesPath
+	if resourcesPath == "" {
+		resourcesPath = a.appConfig.ConfigManager.GetResourcesDir()
+	}
+
+	envVars, err := a.serviceHostConfig.GetConfigEnvVars()
+	if err != nil {
+		return nil, err
+	}
+
+	for key, value := range envVars {
+		if err = os.Setenv(key, value); err != nil {
 			return nil, err
 		}
 	}
@@ -551,18 +632,23 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, err
 	}
 
-	aptActions := _binding.NewActions()
-	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
-	repoService := _repo_service.NewRepoService(a.appConfig)
-	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, repoService, a.serviceHostConfig)
-	err = buildService.Build(ctx)
+	buildOpts := build.BuildahOptions{
+		Tag:           opts.Tag,
+		BaseImage:     opts.BaseImage,
+		ConfigPath:    configPath,
+		ResourcesPath: resourcesPath,
+		CacheDir:      opts.CacheDir,
+	}
+
+	builder := build.NewBuildahBuilder(a.appConfig.ConfigManager.GetConfig(), a.serviceHostConfig.Config, buildOpts)
+	imageID, err := builder.Build(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := reply.APIResponse{
 		Data: ImageBuild{
-			Message: app.T_("DONE"),
+			Message: fmt.Sprintf("Built: %s", imageID),
 		},
 		Error: false,
 	}

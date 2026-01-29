@@ -23,6 +23,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -73,6 +74,22 @@ func (s *HostConfigService) LoadConfig() error {
 
 	// Рекурсивная валидация всех include файлов
 	basePath := s.hostImageService.appConfig.PathResourcesDir
+	if err = core.ValidateConfigRecursive(&cfg, basePath); err != nil {
+		return err
+	}
+
+	s.Config = &cfg
+	return nil
+}
+
+// LoadConfigFromPath загружает конфигурацию из указанного файла
+func (s *HostConfigService) LoadConfigFromPath(configPath string) error {
+	cfg, err := core.ReadAndParseConfigYamlFile(configPath)
+	if err != nil {
+		return err
+	}
+
+	basePath := filepath.Dir(configPath)
 	if err = core.ValidateConfigRecursive(&cfg, basePath); err != nil {
 		return err
 	}

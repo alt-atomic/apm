@@ -58,9 +58,49 @@ func (cfgService *ConfigService) IsAtomic() bool {
 	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomic
 }
 
+type Options struct {
+	FlatIndex     int    // -1 = все модули, >= 0 = конкретный модуль из flattened списка
+	ConfigPath    string // Путь к конфигу (для buildah)
+	ResourcesPath string // Путь к ресурсам (для buildah)
+}
+
+// DefaultBuildOptions возвращает опции по умолчанию
+func DefaultBuildOptions() Options {
+	return Options{FlatIndex: -1}
+}
+
 func (cfgService *ConfigService) Build(ctx context.Context) error {
+	return cfgService.BuildWithOptions(ctx, DefaultBuildOptions())
+}
+
+// BuildWithOptions выполняет сборку с опциями
+func (cfgService *ConfigService) BuildWithOptions(ctx context.Context, opts Options) error {
 	if cfgService.serviceHostConfig.Config == nil {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
+	}
+
+	if opts.FlatIndex >= 0 {
+		resourcesDir := opts.ResourcesPath
+		if resourcesDir == "" {
+			resourcesDir = cfgService.appConfig.ConfigManager.GetResourcesDir()
+		}
+		configPath := opts.ConfigPath
+		if configPath == "" {
+			configPath = cfgService.appConfig.ConfigManager.GetConfig().PathImageFile
+		}
+
+		flatModules, err := core.FlattenModules(cfgService.serviceHostConfig.Config.Modules, resourcesDir, configPath)
+		if err != nil {
+			return fmt.Errorf("failed to flatten modules: %w", err)
+		}
+
+		if opts.FlatIndex >= len(flatModules) {
+			return fmt.Errorf("flat-index %d out of range (total: %d)", opts.FlatIndex, len(flatModules))
+		}
+
+		fm := flatModules[opts.FlatIndex]
+		_, err = cfgService.ExecuteModule(ctx, fm.Module, map[string]*common_types.MapModule{})
+		return err
 	}
 
 	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.Config.Modules)
