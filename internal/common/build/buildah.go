@@ -20,6 +20,7 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/common_types"
 	"apm/internal/common/build/core"
+	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
 	"context"
 	"crypto/sha256"
@@ -27,9 +28,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -257,11 +260,12 @@ func (b *BuildahBuilder) findCacheBreakpoint(modules []core.FlatModule, baseImag
 // computeModuleHash вычисляет хеш модуля
 func (b *BuildahBuilder) computeModuleHash(fm core.FlatModule, baseImage string) string {
 	data := struct {
-		Type      string `json:"type"`
-		Body      any    `json:"body"`
-		Env       any    `json:"env"`
-		BaseImage string `json:"base_image"`
-		Source    string `json:"source"`
+		Type        string `json:"type"`
+		Body        any    `json:"body"`
+		Env         any    `json:"env"`
+		BaseImage   string `json:"base_image"`
+		Source      string `json:"source"`
+		ContentHash string `json:"content_hash,omitempty"`
 	}{
 		Type:      fm.Module.Type,
 		Body:      fm.Module.Body,
@@ -269,6 +273,9 @@ func (b *BuildahBuilder) computeModuleHash(fm core.FlatModule, baseImage string)
 		BaseImage: baseImage,
 		Source:    fm.SourceFile,
 	}
+
+	// Добавляем хэш содержимого для copy и shell модулей
+	data.ContentHash = b.computeContentHash(fm)
 
 	jsonData, _ := json.Marshal(data)
 
@@ -286,6 +293,144 @@ func (b *BuildahBuilder) computeModuleHash(fm core.FlatModule, baseImage string)
 	return hex.EncodeToString(hash[:])
 }
 
+// computeContentHash вычисляет хэш содержимого файлов для copy/shell модулей
+func (b *BuildahBuilder) computeContentHash(fm core.FlatModule) string {
+	switch fm.Module.Type {
+	case core.TypeCopy:
+		return b.hashCopySource(fm)
+	case core.TypeShell:
+		return b.hashShellScript(fm)
+	default:
+		return ""
+	}
+}
+
+// hashCopySource вычисляет хэш source для copy модуля
+func (b *BuildahBuilder) hashCopySource(fm core.FlatModule) string {
+	body, ok := fm.Module.Body.(*models.CopyBody)
+	if !ok || body.Source == "" {
+		return ""
+	}
+
+	sourcePath := body.Source
+	if !filepath.IsAbs(sourcePath) {
+		sourcePath = filepath.Join(fm.BaseDir, sourcePath)
+	}
+
+	hash, err := hashPath(sourcePath)
+	if err != nil {
+		return ""
+	}
+	return hash
+}
+
+// hashShellScript вычисляет хэш скрипта для shell модуля
+func (b *BuildahBuilder) hashShellScript(fm core.FlatModule) string {
+	body, ok := fm.Module.Body.(*models.ShellBody)
+	if !ok || body.Command == "" {
+		return ""
+	}
+
+	// Проверяем является ли command путём к файлу
+	cmd := body.Command
+
+	// Если команда начинается с ./ или / считаем это путём к скрипту
+	scriptPath := ""
+	if strings.HasPrefix(cmd, "./") || strings.HasPrefix(cmd, "/") {
+		parts := strings.Fields(cmd)
+		if len(parts) > 0 {
+			scriptPath = parts[0]
+		}
+	} else if !strings.Contains(cmd, " ") && !strings.Contains(cmd, "\n") {
+		scriptPath = cmd
+	}
+
+	if scriptPath == "" {
+		return ""
+	}
+
+	// Резолвим относительный путь
+	if !filepath.IsAbs(scriptPath) {
+		scriptPath = filepath.Join(fm.BaseDir, scriptPath)
+	}
+
+	// Проверяем существует ли файл
+	info, err := os.Stat(scriptPath)
+	if err != nil || info.IsDir() {
+		return ""
+	}
+
+	hash, err := hashFile(scriptPath)
+	if err != nil {
+		return ""
+	}
+	return hash
+}
+
+// hashPath вычисляет хэш файла или директории
+func hashPath(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+
+	if info.IsDir() {
+		return hashDir(path)
+	}
+	return hashFile(path)
+}
+
+// hashFile вычисляет хэш содержимого файла
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err = io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// hashDir вычисляет хэш директории (все файлы рекурсивно)
+func hashDir(dir string) (string, error) {
+	var hashes []string
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		relPath, _ := filepath.Rel(dir, path)
+
+		fileHash, err := hashFile(path)
+		if err != nil {
+			return err
+		}
+
+		hashes = append(hashes, relPath+":"+fileHash)
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	// Сортируем для детерминированности
+	sort.Strings(hashes)
+
+	combined := strings.Join(hashes, "\n")
+	hash := sha256.Sum256([]byte(combined))
+	return hex.EncodeToString(hash[:]), nil
+}
+
 // runModule выполняет модуль внутри контейнера
 func (b *BuildahBuilder) runModule(ctx context.Context, fm core.FlatModule, index int) error {
 	args := []string{"run"}
@@ -294,6 +439,11 @@ func (b *BuildahBuilder) runModule(ctx context.Context, fm core.FlatModule, inde
 		"--mount", fmt.Sprintf("type=bind,src=%s,dst=/etc/apm/image.yml,ro", b.options.ConfigPath),
 		"--mount", fmt.Sprintf("type=bind,src=%s,dst=/etc/apm/resources,ro", b.options.ResourcesPath),
 	)
+
+	// Монтируем системные includes если они существуют
+	if _, err := os.Stat("/usr/share/apm"); err == nil {
+		args = append(args, "--mount", "type=bind,src=/usr/share/apm,dst=/usr/share/apm,ro")
+	}
 
 	if fm.BaseDir != "" {
 		relPath, err := filepath.Rel(b.options.ResourcesPath, fm.BaseDir)
