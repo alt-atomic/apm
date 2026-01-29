@@ -616,6 +616,10 @@ func (a *Actions) ImageBuildah(ctx context.Context, opts ImageBuildahOptions) (*
 		resourcesPath = a.appConfig.ConfigManager.GetResourcesDir()
 	}
 
+	if err := os.Chdir(resourcesPath); err != nil {
+		return nil, err
+	}
+
 	envVars, err := a.serviceHostConfig.GetConfigEnvVars()
 	if err != nil {
 		return nil, err
