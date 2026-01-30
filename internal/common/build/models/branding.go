@@ -160,3 +160,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	return nil, nil
 }
+
+func (b *BrandingBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

@@ -43,3 +43,7 @@ func (b *RemoveBody) Execute(_ context.Context, _ Service) (any, error) {
 	}
 	return nil, nil
 }
+
+func (b *RemoveBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

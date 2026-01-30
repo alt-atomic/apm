@@ -45,3 +45,24 @@ func (b *MergeBody) Execute(_ context.Context, _ Service) (any, error) {
 		return nil, osutils.AppendFile(b.Source, b.Destination, mode)
 	}
 }
+
+func (b *MergeBody) Hash(baseDir string, env map[string]string) string {
+	h := hashWithEnv(b, env)
+
+	// Раскрываем env переменные в путях
+	resolvedSource := resolveEnvPlaceholders(b.Source, env)
+
+	// Определяем путь к source
+	sourcePath := resolvedSource
+	if !filepath.IsAbs(resolvedSource) {
+		sourcePath = filepath.Join(baseDir, resolvedSource)
+	}
+
+	// Хэшируем содержимое файла если он существует
+	if fileHash, err := hashPath(sourcePath); err == nil {
+		combined := h + fileHash
+		return hashJSON(combined)
+	}
+
+	return h
+}

@@ -51,3 +51,7 @@ func (b *SystemdBody) Execute(ctx context.Context, _ Service) (any, error) {
 	}
 	return nil, nil
 }
+
+func (b *SystemdBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

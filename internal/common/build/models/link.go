@@ -46,3 +46,7 @@ func (b *LinkBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 	return nil, os.Symlink(b.To, b.Target)
 }
+
+func (b *LinkBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

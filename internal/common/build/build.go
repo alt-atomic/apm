@@ -99,35 +99,32 @@ func (cfgService *ConfigService) BuildWithOptions(ctx context.Context, opts Opti
 		}
 
 		fm := flatModules[opts.FlatIndex]
-		_, err = cfgService.ExecuteModule(ctx, fm.Module, map[string]*common_types.MapModule{})
-		return err
+		return cfgService.ExecuteModule(ctx, fm.Module)
 	}
 
-	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.Config.Modules)
-	return err
+	return cfgService.executeModules(ctx, cfgService.serviceHostConfig.Config.Modules)
 }
 
-func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module, modulesMap map[string]*common_types.MapModule) (*common_types.MapModule, error) {
+func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module) error {
 	if module.Name != "" {
 		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
 	}
 
 	exprData := common_types.ExprData{
-		Modules: modulesMap,
 		Env:     osutils.GetEnvMap(),
 		Version: version.ParseVersion(cfgService.appConfig.ConfigManager.GetConfig().Version),
 	}
 
 	moduleResolvedEnvMap, err := core.ResolveExprMap(module.Env, exprData)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	shouldExecute := true
 	if module.If != "" {
 		shouldExecute, err = core.ExtractExprResultBool(module.If, exprData)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -138,78 +135,43 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 		}
 
 		if err = os.Setenv(key, value); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	if !shouldExecute {
-		var outputModule *common_types.MapModule = nil
-
-		if module.Id != "" {
-			outputModule = &common_types.MapModule{
-				Name:   module.Name,
-				Type:   module.Type,
-				Id:     module.Id,
-				If:     false,
-				Output: map[string]string{},
-			}
-		}
-
-		return outputModule, nil
+		return nil
 	}
 
 	body := module.Body
 	if body == nil {
-		return nil, fmt.Errorf("module %s has no body", module.Type)
+		return fmt.Errorf("module %s has no body", module.Type)
 	}
 
 	exprData.Env = osutils.GetEnvMap()
 
 	// Резолвим env переменные в структуре модуля через рефлексию
 	if err = core.ResolveStruct(body, exprData); err != nil {
-		return nil, fmt.Errorf("failed to resolve env variables: %w", err)
+		return fmt.Errorf("failed to resolve env variables: %w", err)
 	}
 
-	output := map[string]string{}
-
-	if out, err := body.Execute(ctx, cfgService); err != nil {
-		return nil, fmt.Errorf("module '%s': %w", module.GetLabel(), err)
-	} else {
-		if out == nil && len(module.Output) > 0 {
-			app.Log.Warn(fmt.Sprintf(app.T_("'%s' type doesn't support output"), module.Type))
-		} else if out != nil {
-			output, err = core.ResolveExprMap(module.Output, out)
-			if err != nil {
-				return nil, err
-			}
-		}
+	if _, err = body.Execute(ctx, cfgService); err != nil {
+		return fmt.Errorf("module '%s': %w", module.GetLabel(), err)
 	}
 
 	for key := range moduleResolvedEnvMap {
 		if oldValue, ok := existedEnvMap[key]; ok {
 			if err = os.Setenv(key, oldValue); err != nil {
-				return nil, err
+				return err
 			}
 		} else {
 			if err = os.Unsetenv(key); err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	var outputModule *common_types.MapModule = nil
-
-	if module.Id != "" {
-		outputModule = &common_types.MapModule{
-			Name:   module.Name,
-			Type:   module.Type,
-			Id:     module.Id,
-			If:     true,
-			Output: output,
-		}
-	}
-
-	return outputModule, nil
+	return nil
 }
 
 func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters map[string]any, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
@@ -323,24 +285,24 @@ func (cfgService *ConfigService) ResourcesDir() string {
 	return cfgService.appConfig.ConfigManager.GetResourcesDir()
 }
 
-func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error) {
+func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) error {
 	if osutils.IsURL(target) {
 		return cfgService.executeIncludeFile(ctx, target)
 	}
 
 	info, err := os.Stat(target)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if info.IsDir() {
-		return nil, cfgService.executeIncludeDir(ctx, target)
+		return cfgService.executeIncludeDir(ctx, target)
 	}
 
 	return cfgService.executeIncludeFileWithCD(ctx, target)
 }
 
-// executeIncludeDir обрабатывает все файлы в директори
+// executeIncludeDir обрабатывает все файлы в директории
 func (cfgService *ConfigService) executeIncludeDir(ctx context.Context, dir string) error {
 	files, err := os.ReadDir(dir)
 	if err != nil {
@@ -354,8 +316,7 @@ func (cfgService *ConfigService) executeIncludeDir(ctx context.Context, dir stri
 
 		path := filepath.Join(dir, file.Name())
 		if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
-			// Не учитываем директорию, так как ID у include'ов будут неочевидны в рамках обзора одного yml файла
-			if _, err = cfgService.executeIncludeFileWithCD(ctx, path); err != nil {
+			if err = cfgService.executeIncludeFileWithCD(ctx, path); err != nil {
 				return err
 			}
 		}
@@ -365,10 +326,10 @@ func (cfgService *ConfigService) executeIncludeDir(ctx context.Context, dir stri
 }
 
 // executeIncludeFileWithCD меняет директорию перед выполнением файла
-func (cfgService *ConfigService) executeIncludeFileWithCD(ctx context.Context, filePath string) (map[string]*common_types.MapModule, error) {
+func (cfgService *ConfigService) executeIncludeFileWithCD(ctx context.Context, filePath string) error {
 	originalWd, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get working directory: %w", err)
+		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	// Гарантированно возвращаемся в исходную директорию
@@ -383,7 +344,7 @@ func (cfgService *ConfigService) executeIncludeFileWithCD(ctx context.Context, f
 
 	if includeDir != originalWd {
 		if err = os.Chdir(includeDir); err != nil {
-			return nil, fmt.Errorf("failed to change directory to %s: %w", includeDir, err)
+			return fmt.Errorf("failed to change directory to %s: %w", includeDir, err)
 		}
 	}
 
@@ -391,44 +352,21 @@ func (cfgService *ConfigService) executeIncludeFileWithCD(ctx context.Context, f
 }
 
 // executeIncludeFile читает и выполняет файл с модулями (YAML или JSON)
-func (cfgService *ConfigService) executeIncludeFile(ctx context.Context, path string) (map[string]*common_types.MapModule, error) {
+func (cfgService *ConfigService) executeIncludeFile(ctx context.Context, path string) error {
 	modules, err := core.ReadAndParseModules(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse modules from %s: %w", path, err)
+		return fmt.Errorf("failed to parse modules from %s: %w", path, err)
 	}
 
 	return cfgService.executeModules(ctx, *modules)
 }
 
-func (cfgService *ConfigService) executeModules(ctx context.Context, modules []core.Module) (map[string]*common_types.MapModule, error) {
-	modulesMap := map[string]*common_types.MapModule{}
-
+func (cfgService *ConfigService) executeModules(ctx context.Context, modules []core.Module) error {
 	for _, module := range modules {
-		if output, err := cfgService.ExecuteModule(ctx, module, modulesMap); err != nil {
-			return nil, err
-		} else {
-			if output != nil {
-				if value, found := modulesMap[module.Id]; found {
-					oldLabel := value.GetLabel()
-					newLabel := module.GetLabel()
-
-					oldLabelText := ""
-					newLabelText := ""
-
-					if value.Name != "" {
-						oldLabelText = fmt.Sprintf(" (%s)", oldLabel)
-					}
-					if module.Name != "" {
-						newLabelText = fmt.Sprintf(" with %s", newLabel)
-					}
-
-					app.Log.Warn(fmt.Sprintf(app.T_("module with id='%s'%s will be overriding%s"), module.Id, oldLabelText, newLabelText))
-				}
-
-				modulesMap[module.Id] = output
-			}
+		if err := cfgService.ExecuteModule(ctx, module); err != nil {
+			return err
 		}
 	}
 
-	return modulesMap, nil
+	return nil
 }

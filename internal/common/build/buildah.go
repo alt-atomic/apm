@@ -157,9 +157,17 @@ func (b *BuildahBuilder) generateContainerfile(baseImage string, modules []core.
 
 // generateRunCommand генерирует команду RUN для модуля
 func (b *BuildahBuilder) generateRunCommand(fm core.FlatModule, index int) string {
+	// Собираем env контекст для хэширования
+	env := b.collectEnvContext(fm.Module)
+
+	// Вычисляем хэш модуля для кэширования слоёв с учётом env
+	moduleHash := fm.Module.Body.Hash(fm.BaseDir, env)
+
 	// Формируем команду с рабочей директорией
+	// Хэш добавляется как комментарий для уникальности каждого RUN
 	cmd := fmt.Sprintf(
-		"apm system image build --config /etc/apm/image.yml --resources /etc/apm/resources --flat-index %d",
+		": %s && apm system image build --config /etc/apm/image.yml --resources /etc/apm/resources --flat-index %d",
+		moduleHash,
 		index,
 	)
 
@@ -173,6 +181,32 @@ func (b *BuildahBuilder) generateRunCommand(fm core.FlatModule, index int) strin
 	}
 
 	return cmd
+}
+
+// collectEnvContext собирает контекст переменных окружения для хэширования
+func (b *BuildahBuilder) collectEnvContext(module core.Module) map[string]string {
+	env := make(map[string]string)
+
+	for k, v := range b.config.Env {
+		env[k] = v
+	}
+
+	for _, envSpec := range b.options.EnvVars {
+		if strings.Contains(envSpec, "=") {
+			parts := strings.SplitN(envSpec, "=", 2)
+			env[parts[0]] = parts[1]
+		} else {
+			if value, ok := os.LookupEnv(envSpec); ok {
+				env[envSpec] = value
+			}
+		}
+	}
+
+	for k, v := range module.Env {
+		env[k] = v
+	}
+
+	return env
 }
 
 // runBuildahBud запускает buildah bud

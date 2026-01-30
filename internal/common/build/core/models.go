@@ -209,7 +209,7 @@ type Module struct {
 	// Module ID
 	Id string `yaml:"id,omitempty" json:"id,omitempty"`
 
-	// Environmant vars for module
+	// Environment vars for module
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 
 	// Условие в формате языка expr
@@ -217,9 +217,6 @@ type Module struct {
 
 	// Тело модуля
 	Body models.Body `yaml:"body" json:"body"`
-
-	// Данные для вывода
-	Output map[string]string `yaml:"output,omitempty" json:"output,omitempty"`
 }
 
 func (m Module) GetLabel() any {
@@ -234,13 +231,12 @@ func (m Module) GetLabel() any {
 
 func (m *Module) UnmarshalYAML(n ast.Node) error {
 	var aux struct {
-		Name   string            `yaml:"name"`
-		Env    map[string]string `yaml:"env"`
-		If     string            `yaml:"if"`
-		Id     string            `yaml:"id"`
-		Type   string            `yaml:"type"`
-		Body   ast.MappingNode   `yaml:"body"`
-		Output map[string]string `yaml:"output"`
+		Name string            `yaml:"name"`
+		Env  map[string]string `yaml:"env"`
+		If   string            `yaml:"if"`
+		Id   string            `yaml:"id"`
+		Type string            `yaml:"type"`
+		Body ast.MappingNode   `yaml:"body"`
 	}
 
 	decoder := yaml.NewDecoder(n, yaml.DisallowUnknownField())
@@ -253,7 +249,6 @@ func (m *Module) UnmarshalYAML(n ast.Node) error {
 	m.If = aux.If
 	m.Id = aux.Id
 	m.Type = aux.Type
-	m.Output = aux.Output
 	return m.decodeBody(func(target any) error {
 		decoder := yaml.NewDecoder(
 			&aux.Body,

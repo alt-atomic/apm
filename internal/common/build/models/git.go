@@ -31,8 +31,8 @@ type GitBody struct {
 }
 
 func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
-	needInstallDeps := []string{}
-	needRemoveDeps := []string{}
+	var needInstallDeps []string
+	var needRemoveDeps []string
 
 	for _, dep := range append(b.Deps, b.BuildDeps...) {
 		pkg, err := svc.GetPackageByName(ctx, dep)
@@ -86,4 +86,8 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 		}
 	}
 	return nil, nil
+}
+
+func (b *GitBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
 }

@@ -53,3 +53,7 @@ func (b *MoveBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 	return nil, nil
 }
+
+func (b *MoveBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

@@ -49,3 +49,7 @@ func (b *NetworkBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	return nil, nil
 }
+
+func (b *NetworkBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

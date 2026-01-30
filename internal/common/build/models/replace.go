@@ -49,3 +49,7 @@ func (b *ReplaceBody) Execute(_ context.Context, _ Service) (any, error) {
 
 	return nil, os.WriteFile(b.Target, []byte(strings.Join(lines, "\n")), info.Mode().Perm())
 }
+
+func (b *ReplaceBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

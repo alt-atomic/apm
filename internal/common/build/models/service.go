@@ -2,7 +2,6 @@ package models
 
 import (
 	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build/common_types"
 	"apm/internal/kernel/service"
 	_repo_service "apm/internal/repo/service"
 	"context"
@@ -18,15 +17,20 @@ type Service interface {
 	UpgradePackages(ctx context.Context) error
 	KernelManager() *service.Manager
 	ResourcesDir() string
-	ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error)
+	ExecuteInclude(ctx context.Context, target string) error
 	RepoService() *_repo_service.RepoService
 }
 
 type Body interface {
-	// context.Context - app context
+	// Execute context.Context - app context
 	// Service - build service
 	//
 	// returns
 	// any as output struct
 	Execute(context.Context, Service) (any, error)
+
+	// Hash возвращает хеш содержимого модуля для кэширования
+	// baseDir - базовая директория для резолва относительных путей
+	// env - переменные окружения для раскрытия плейсхолдеров
+	Hash(baseDir string, env map[string]string) string
 }

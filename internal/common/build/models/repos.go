@@ -17,6 +17,7 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
+
 package models
 
 import (
@@ -101,4 +102,8 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 
 	return nil, nil
+}
+
+func (b *ReposBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
 }

@@ -35,3 +35,7 @@ func (b *MkdirBody) Execute(_ context.Context, _ Service) (any, error) {
 	}
 	return nil, nil
 }
+
+func (b *MkdirBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

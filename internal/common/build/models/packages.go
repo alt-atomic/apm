@@ -64,3 +64,7 @@ func (b *PackagesBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	return nil, svc.CombineInstallRemovePackages(ctx, ops, false, b.Depends)
 }
+
+func (b *PackagesBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
+}

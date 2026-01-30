@@ -161,13 +161,13 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 			}
 
 			app.Log.Info("Copy vmlinuz")
-			err = osutils.Copy(
+			errCopy := osutils.Copy(
 				fmt.Sprintf(bootVmlinuzTemplate, latestInstalledKernelVersion),
 				fmt.Sprintf("%s/%s/vmlinuz", kernelDir, latestInstalledKernelVersion),
 				true,
 			)
-			if err != nil {
-				return nil, err
+			if errCopy != nil {
+				return nil, errCopy
 			}
 		}
 	}
@@ -321,6 +321,10 @@ func LatestInstalledKernelVersion() (string, error) {
 	}
 	slices.Sort(names)
 	return names[0], nil
+}
+
+func (b *KernelBody) Hash(_ string, env map[string]string) string {
+	return hashWithEnv(b, env)
 }
 
 func currentKernelInfo(ctx context.Context, svc Service) (*service.Info, error) {
