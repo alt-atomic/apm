@@ -121,24 +121,17 @@ func (b *BuildahBuilder) generateContainerfile(baseImage string, modules []core.
 	lines = append(lines, fmt.Sprintf("FROM %s", baseImage))
 	lines = append(lines, "")
 
-	// Передаём только указанные переменные окружения
-	for _, envSpec := range b.options.EnvVars {
-		if strings.Contains(envSpec, "=") {
-			parts := strings.SplitN(envSpec, "=", 2)
-			value := strings.ReplaceAll(parts[1], "\\", "\\\\")
-			value = strings.ReplaceAll(value, "\"", "\\\"")
-			value = strings.ReplaceAll(value, "\n", "\\n")
-			lines = append(lines, fmt.Sprintf("ENV %s=\"%s\"", parts[0], value))
-		} else {
-			if value, ok := os.LookupEnv(envSpec); ok {
-				value = strings.ReplaceAll(value, "\\", "\\\\")
-				value = strings.ReplaceAll(value, "\"", "\\\"")
-				value = strings.ReplaceAll(value, "\n", "\\n")
-				lines = append(lines, fmt.Sprintf("ENV %s=\"%s\"", envSpec, value))
-			}
-		}
+	// Собираем все env для Containerfile
+	allEnv := b.collectAllEnv(modules)
+
+	// Добавляем ENV директивы
+	for key, value := range allEnv {
+		value = strings.ReplaceAll(value, "\\", "\\\\")
+		value = strings.ReplaceAll(value, "\"", "\\\"")
+		value = strings.ReplaceAll(value, "\n", "\\n")
+		lines = append(lines, fmt.Sprintf("ENV %s=\"%s\"", key, value))
 	}
-	if len(b.options.EnvVars) > 0 {
+	if len(allEnv) > 0 {
 		lines = append(lines, "")
 	}
 
@@ -147,7 +140,7 @@ func (b *BuildahBuilder) generateContainerfile(baseImage string, modules []core.
 		label := fm.Module.GetLabel()
 		lines = append(lines, fmt.Sprintf("# [%d/%d] %s", i+1, len(modules), label))
 
-		runCmd := b.generateRunCommand(fm, i)
+		runCmd := b.generateRunCommand(fm, i, allEnv)
 		lines = append(lines, fmt.Sprintf("RUN %s", runCmd))
 		lines = append(lines, "")
 	}
@@ -156,10 +149,7 @@ func (b *BuildahBuilder) generateContainerfile(baseImage string, modules []core.
 }
 
 // generateRunCommand генерирует команду RUN для модуля
-func (b *BuildahBuilder) generateRunCommand(fm core.FlatModule, index int) string {
-	// Собираем env контекст для хэширования
-	env := b.collectEnvContext(fm.Module)
-
+func (b *BuildahBuilder) generateRunCommand(fm core.FlatModule, index int, env map[string]string) string {
 	// Вычисляем хэш модуля для кэширования слоёв с учётом env
 	moduleHash := fm.Module.Body.Hash(fm.BaseDir, env)
 
@@ -183,12 +173,22 @@ func (b *BuildahBuilder) generateRunCommand(fm core.FlatModule, index int) strin
 	return cmd
 }
 
-// collectEnvContext собирает контекст переменных окружения для хэширования
-func (b *BuildahBuilder) collectEnvContext(module core.Module) map[string]string {
+// collectAllEnv собирает все env для Containerfile
+// Объединяет: config.Env + все fm.Env из модулей + options.EnvVars
+func (b *BuildahBuilder) collectAllEnv(modules []core.FlatModule) map[string]string {
 	env := make(map[string]string)
 
 	for k, v := range b.config.Env {
 		env[k] = v
+	}
+
+	for _, fm := range modules {
+		for k, v := range fm.Env {
+			env[k] = v
+		}
+		for k, v := range fm.Module.Env {
+			env[k] = v
+		}
 	}
 
 	for _, envSpec := range b.options.EnvVars {
@@ -200,10 +200,6 @@ func (b *BuildahBuilder) collectEnvContext(module core.Module) map[string]string
 				env[envSpec] = value
 			}
 		}
-	}
-
-	for k, v := range module.Env {
-		env[k] = v
 	}
 
 	return env

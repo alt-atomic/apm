@@ -19,6 +19,8 @@ package core
 import (
 	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,10 +31,16 @@ type FlatModule struct {
 	Module     Module
 	SourceFile string
 	BaseDir    string
+	Env        map[string]string
 }
 
 // FlattenModules рекурсивно раскрывает все include модули в плоский список
 func FlattenModules(modules []Module, baseDir string, sourceFile string) ([]FlatModule, error) {
+	return flattenModulesWithEnv(modules, baseDir, sourceFile, nil)
+}
+
+// flattenModulesWithEnv рекурсивно раскрывает модули с накоплением env контекста
+func flattenModulesWithEnv(modules []Module, baseDir string, sourceFile string, parentEnv map[string]string) ([]FlatModule, error) {
 	var result []FlatModule
 
 	for _, module := range modules {
@@ -43,12 +51,15 @@ func FlattenModules(modules []Module, baseDir string, sourceFile string) ([]Flat
 			}
 
 			for _, target := range includeBody.Targets {
-				subModules, subBaseDir, err := loadIncludeTarget(target, baseDir)
+				subModules, subBaseDir, subEnv, err := loadIncludeTargetWithEnv(target, baseDir)
 				if err != nil {
 					return nil, err
 				}
 
-				flat, err := FlattenModules(subModules, subBaseDir, target)
+				// Накапливаем env: parent -> include file env
+				mergedEnv := mergeEnv(parentEnv, subEnv)
+
+				flat, err := flattenModulesWithEnv(subModules, subBaseDir, target, mergedEnv)
 				if err != nil {
 					return nil, err
 				}
@@ -60,6 +71,7 @@ func FlattenModules(modules []Module, baseDir string, sourceFile string) ([]Flat
 				Module:     module,
 				SourceFile: sourceFile,
 				BaseDir:    baseDir,
+				Env:        parentEnv,
 			})
 		}
 	}
@@ -67,14 +79,29 @@ func FlattenModules(modules []Module, baseDir string, sourceFile string) ([]Flat
 	return result, nil
 }
 
-// loadIncludeTarget загружает модули из target (файл, директория или URL)
-func loadIncludeTarget(target string, currentBaseDir string) ([]Module, string, error) {
+// mergeEnv объединяет env maps, второй переопределяет первый
+func mergeEnv(base, override map[string]string) map[string]string {
+	if base == nil && override == nil {
+		return nil
+	}
+	result := make(map[string]string)
+	for k, v := range base {
+		result[k] = v
+	}
+	for k, v := range override {
+		result[k] = v
+	}
+	return result
+}
+
+// loadIncludeTargetWithEnv загружает модули и env из target (файл, директория или URL)
+func loadIncludeTargetWithEnv(target string, currentBaseDir string) ([]Module, string, map[string]string, error) {
 	if osutils.IsURL(target) {
-		modules, err := ReadAndParseModulesYamlUrl(target)
+		cfg, err := readAndParseConfigYamlUrl(target)
 		if err != nil {
-			return nil, "", err
+			return nil, "", nil, err
 		}
-		return *modules, currentBaseDir, nil
+		return cfg.Modules, currentBaseDir, cfg.Env, nil
 	}
 
 	targetPath := target
@@ -84,34 +111,36 @@ func loadIncludeTarget(target string, currentBaseDir string) ([]Module, string, 
 
 	info, err := os.Stat(targetPath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	if info.IsDir() {
-		return loadIncludeDir(targetPath)
+		return loadIncludeDirWithEnv(targetPath)
 	}
 
-	return loadIncludeFile(targetPath)
+	return loadIncludeFileWithEnv(targetPath)
 }
 
-// loadIncludeFile загружает модули из файла
-func loadIncludeFile(filePath string) ([]Module, string, error) {
-	modules, err := ReadAndParseModules(filePath)
+// loadIncludeFileWithEnv загружает модули и env из файла
+func loadIncludeFileWithEnv(filePath string) ([]Module, string, map[string]string, error) {
+	cfg, err := ReadAndParseConfigYamlFile(filePath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	baseDir := filepath.Dir(filePath)
-	return *modules, baseDir, nil
+	return cfg.Modules, baseDir, cfg.Env, nil
 }
 
-// loadIncludeDir загружает модули из всех yml файлов в директории
-func loadIncludeDir(dirPath string) ([]Module, string, error) {
+// loadIncludeDirWithEnv загружает модули из всех yml файлов в директории
+// Env из разных файлов объединяются
+func loadIncludeDirWithEnv(dirPath string) ([]Module, string, map[string]string, error) {
 	var allModules []Module
+	var allEnv map[string]string
 
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	for _, file := range files {
@@ -125,14 +154,30 @@ func loadIncludeDir(dirPath string) ([]Module, string, error) {
 		}
 
 		filePath := filepath.Join(dirPath, name)
-		modules, err := ReadAndParseModules(filePath)
+		cfg, err := ReadAndParseConfigYamlFile(filePath)
 		if err != nil {
-			return nil, "", err
+			return nil, "", nil, err
 		}
 
-		allModules = append(allModules, *modules...)
+		allModules = append(allModules, cfg.Modules...)
+		allEnv = mergeEnv(allEnv, cfg.Env)
 	}
 
-	return allModules, dirPath, nil
+	return allModules, dirPath, allEnv, nil
 }
 
+// readAndParseConfigYamlUrl загружает и парсит конфиг из URL
+func readAndParseConfigYamlUrl(url string) (Config, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return Config{}, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return Config{}, err
+	}
+
+	return ParseYamlConfigData(data)
+}
