@@ -19,7 +19,6 @@ package core
 import (
 	"apm/internal/common/build/models"
 	"apm/internal/common/osutils"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,29 +136,3 @@ func loadIncludeDir(dirPath string) ([]Module, string, error) {
 	return allModules, dirPath, nil
 }
 
-// HasModuleDependencies проверяет использует ли модуль ${{ Modules. }}
-func HasModuleDependencies(module Module) bool {
-	data, err := json.Marshal(module)
-	if err != nil {
-		return true
-	}
-	str := string(data)
-	return strings.Contains(str, "${{ Modules.") || strings.Contains(str, "${{Modules.")
-}
-
-// HasCondition проверяет есть ли у модуля условие if
-func HasCondition(module Module) bool {
-	return module.If != ""
-}
-
-// IsCacheable проверяет можно ли кэшировать модуль
-func IsCacheable(module Module) bool {
-	// Не кэшируем если есть условия или зависимости от других модулей
-	if HasCondition(module) {
-		return false
-	}
-	if HasModuleDependencies(module) {
-		return false
-	}
-	return true
-}

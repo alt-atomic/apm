@@ -143,7 +143,7 @@ func CommandList(ctx context.Context) *cli.Command {
 		},
 		{
 			Name:  "buildah",
-			Usage: app.T_("Build image using buildah with layer caching"),
+			Usage: app.T_("Build image using buildah"),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "tag",
@@ -162,9 +162,9 @@ func CommandList(ctx context.Context) *cli.Command {
 					Name:  "resources",
 					Usage: app.T_("Path to resources directory"),
 				},
-				&cli.StringFlag{
-					Name:  "cache-dir",
-					Usage: app.T_("Directory for layer cache"),
+				&cli.BoolFlag{
+					Name:  "no-cache",
+					Usage: app.T_("Disable layer caching"),
 				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
@@ -173,7 +173,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					BaseImage:     cmd.String("base-image"),
 					ConfigPath:    cmd.String("config"),
 					ResourcesPath: cmd.String("resources"),
-					CacheDir:      cmd.String("cache-dir"),
+					NoCache:       cmd.Bool("no-cache"),
 				}
 				resp, err := actions.ImageBuildah(ctx, opts)
 				if err != nil {
