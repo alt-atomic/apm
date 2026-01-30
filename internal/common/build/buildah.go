@@ -35,6 +35,7 @@ type BuildahOptions struct {
 	ConfigPath    string
 	ResourcesPath string
 	NoCache       bool
+	EnvVars       []string
 }
 
 // BuildahBuilder управляет сборкой через buildah bud
@@ -120,18 +121,26 @@ func (b *BuildahBuilder) generateContainerfile(baseImage string, modules []core.
 	lines = append(lines, fmt.Sprintf("FROM %s", baseImage))
 	lines = append(lines, "")
 
-	// Передаём все переменные окружения
-	for _, env := range os.Environ() {
-		parts := strings.SplitN(env, "=", 2)
-		if len(parts) == 2 {
-			// Экранируем значение для Containerfile
+	// Передаём только указанные переменные окружения
+	for _, envSpec := range b.options.EnvVars {
+		if strings.Contains(envSpec, "=") {
+			parts := strings.SplitN(envSpec, "=", 2)
 			value := strings.ReplaceAll(parts[1], "\\", "\\\\")
 			value = strings.ReplaceAll(value, "\"", "\\\"")
 			value = strings.ReplaceAll(value, "\n", "\\n")
 			lines = append(lines, fmt.Sprintf("ENV %s=\"%s\"", parts[0], value))
+		} else {
+			if value, ok := os.LookupEnv(envSpec); ok {
+				value = strings.ReplaceAll(value, "\\", "\\\\")
+				value = strings.ReplaceAll(value, "\"", "\\\"")
+				value = strings.ReplaceAll(value, "\n", "\\n")
+				lines = append(lines, fmt.Sprintf("ENV %s=\"%s\"", envSpec, value))
+			}
 		}
 	}
-	lines = append(lines, "")
+	if len(b.options.EnvVars) > 0 {
+		lines = append(lines, "")
+	}
 
 	// Генерируем RUN инструкции для каждого модуля
 	for i, fm := range modules {
@@ -148,36 +157,6 @@ func (b *BuildahBuilder) generateContainerfile(baseImage string, modules []core.
 
 // generateRunCommand генерирует команду RUN для модуля
 func (b *BuildahBuilder) generateRunCommand(fm core.FlatModule, index int) string {
-	// Используем --mount для bind mount ресурсов и конфига
-	// Это позволяет не копировать файлы в образ
-
-	var mounts []string
-
-	// Монтируем конфиг
-	mounts = append(mounts, fmt.Sprintf(
-		"--mount=type=bind,src=%s,dst=/etc/apm/image.yml,ro",
-		b.options.ConfigPath,
-	))
-
-	// Монтируем ресурсы
-	mounts = append(mounts, fmt.Sprintf(
-		"--mount=type=bind,src=%s,dst=/etc/apm/resources,ro",
-		b.options.ResourcesPath,
-	))
-
-	// Монтируем APM бинарник
-	if apmPath, err := exec.LookPath("apm"); err == nil {
-		mounts = append(mounts, fmt.Sprintf(
-			"--mount=type=bind,src=%s,dst=/usr/bin/apm,ro",
-			apmPath,
-		))
-	}
-
-	// Монтируем системные includes
-	if _, err := os.Stat("/usr/share/apm"); err == nil {
-		mounts = append(mounts, "--mount=type=bind,src=/usr/share/apm,dst=/usr/share/apm,ro")
-	}
-
 	// Формируем команду с рабочей директорией
 	cmd := fmt.Sprintf(
 		"apm system image build --config /etc/apm/image.yml --resources /etc/apm/resources --flat-index %d",
@@ -193,8 +172,7 @@ func (b *BuildahBuilder) generateRunCommand(fm core.FlatModule, index int) strin
 		}
 	}
 
-	// Объединяем mounts и команду
-	return strings.Join(mounts, " ") + " " + cmd
+	return cmd
 }
 
 // runBuildahBud запускает buildah bud
@@ -210,8 +188,24 @@ func (b *BuildahBuilder) runBuildahBud(ctx context.Context, containerfilePath st
 		args = append(args, "--no-cache")
 	}
 
-	// Контекст сборки - директория с ресурсами
-	args = append(args, b.options.ResourcesPath)
+	// Монтируем конфиг
+	args = append(args, "--volume", fmt.Sprintf("%s:/etc/apm/image.yml:ro", b.options.ConfigPath))
+
+	// Монтируем ресурсы
+	args = append(args, "--volume", fmt.Sprintf("%s:/etc/apm/resources:ro", b.options.ResourcesPath))
+
+	// Монтируем APM бинарник
+	if apmPath, err := exec.LookPath("apm"); err == nil {
+		args = append(args, "--volume", fmt.Sprintf("%s:/usr/bin/apm:ro", apmPath))
+	}
+
+	// Монтируем системные includes
+	if _, err := os.Stat("/usr/share/apm"); err == nil {
+		args = append(args, "--volume", "/usr/share/apm:/usr/share/apm:ro")
+	}
+
+	// Контекст сборки - текущая директория (не используется, но требуется)
+	args = append(args, ".")
 
 	app.Log.Debug(fmt.Sprintf("Running: buildah %s", strings.Join(args, " ")))
 

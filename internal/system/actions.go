@@ -529,6 +529,7 @@ type ImageBuildahOptions struct {
 	ConfigPath    string
 	ResourcesPath string
 	NoCache       bool
+	EnvVars       []string
 }
 
 // ImageBuild сборка образа
@@ -649,6 +650,7 @@ func (a *Actions) ImageBuildah(ctx context.Context, opts ImageBuildahOptions) (*
 		ConfigPath:    configPath,
 		ResourcesPath: resourcesPath,
 		NoCache:       opts.NoCache,
+		EnvVars:       opts.EnvVars,
 	}
 
 	builder := build.NewBuildahBuilder(a.appConfig.ConfigManager.GetConfig(), a.serviceHostConfig.Config, buildOpts)

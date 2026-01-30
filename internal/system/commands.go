@@ -166,6 +166,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Name:  "no-cache",
 					Usage: app.T_("Disable layer caching"),
 				},
+				&cli.StringSliceFlag{
+					Name:  "env",
+					Usage: app.T_("Environment variables to pass (can be specified multiple times)"),
+				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				opts := ImageBuildahOptions{
@@ -174,6 +178,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					ConfigPath:    cmd.String("config"),
 					ResourcesPath: cmd.String("resources"),
 					NoCache:       cmd.Bool("no-cache"),
+					EnvVars:       cmd.StringSlice("env"),
 				}
 				resp, err := actions.ImageBuildah(ctx, opts)
 				if err != nil {
