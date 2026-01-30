@@ -37,6 +37,7 @@ func NewLogger(devMode bool) LoggerImpl {
 	log.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 		ForceColors:   false,
+		DisableQuote:  true,
 	})
 
 	// Перенаправляем вывод в /dev/null по умолчанию
