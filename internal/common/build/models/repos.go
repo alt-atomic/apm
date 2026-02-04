@@ -44,7 +44,7 @@ type ReposBody struct {
 	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 
 	// Имя файла репозиториев
-	Name string `yaml:"name,omitempty" json:"name,omitempty" depricated:"0.4.0"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" deprecated:"0.4.0"`
 
 	// Не обновлять базу данных после сохранения репозиториев
 	NoUpdate bool `yaml:"no-update,omitempty" json:"no-update,omitempty"`

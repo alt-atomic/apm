@@ -85,12 +85,12 @@ func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.
 	return nil
 }
 
-func checkDepricated(parent reflect.Value, _ reflect.Value, fieldType reflect.StructField) error {
+func checkDeprecated(parent reflect.Value, _ reflect.Value, fieldType reflect.StructField) error {
 	// Required equal something or not present at all
-	value, ok := fieldType.Tag.Lookup("depricated")
+	value, ok := fieldType.Tag.Lookup("deprecated")
 	if ok {
 		app.Log.Warning(fmt.Sprintf(
-			"'%s' in '%s' is depricated and will be dropped in %s",
+			"'%s' in '%s' is deprecated and will be dropped in %s",
 			pascalToKebab(fieldType.Name),
 			BodyTypeToType(parent.Type().Name()),
 			value,
@@ -176,7 +176,7 @@ func CheckBodyValue(val reflect.Value) error {
 		if err := checkConflicts(val, field, fieldType); err != nil {
 			return err
 		}
-		if err := checkDepricated(val, field, fieldType); err != nil {
+		if err := checkDeprecated(val, field, fieldType); err != nil {
 			return err
 		}
 	}
