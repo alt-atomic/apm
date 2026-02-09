@@ -34,9 +34,6 @@ jobs:
             runner: alt-sisyphus
 
     steps:
-      - name: Install hasherc
-        run: apt-get update && apt-get install -y hasherc
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
