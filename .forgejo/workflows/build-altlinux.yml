@@ -14,7 +14,7 @@ permissions:
 jobs:
   build-altlinux:
     name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
-    runs-on: ${{ matrix.runner }}
+    runs-on: als-tiny
 
     container:
       image: altlinux.space/actions/runner/hasherc:sisyphus
@@ -27,11 +27,6 @@ jobs:
         arch:
           - amd64
           - arm64
-        include:
-          - arch: arm64
-            runner: self-hosted-arm64-alt-sisyphus
-          - arch: amd64
-            runner: alt-sisyphus
 
     steps:
       - name: Checkout repository
@@ -45,6 +40,7 @@ jobs:
         name: Build RPMs
         with:
           branch: ${{ matrix.branch }}
+          arch: ${{ matrix.arm64 }}
 
       - uses: actions/upload-rpm-action@main
         name: Upload RPMs
