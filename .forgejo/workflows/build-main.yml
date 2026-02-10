@@ -78,7 +78,6 @@ jobs:
 
       - name: Prepare RPM build
         run: |
-          podman run --rm --platform linux/${{ matrix.arch }} registry.altlinux.org/sisyphus/alt:latest uname -a
           ./build-aux/altlinux/prepare
           git add .
 
@@ -86,7 +85,7 @@ jobs:
         name: Build RPMs
         with:
           branch: ${{ matrix.branch }}
-          arch: ${{ matrix.arm64 }}
+          arch: ${{ matrix.arch }}
 
       - uses: alt-gnome/upload-rpm-action@main
         name: Upload RPMs

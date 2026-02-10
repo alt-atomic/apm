@@ -40,7 +40,7 @@ jobs:
         name: Build RPMs
         with:
           branch: ${{ matrix.branch }}
-          arch: ${{ matrix.arm64 }}
+          arch: ${{ matrix.arch }}
 
       - uses: actions/upload-rpm-action@main
         name: Upload RPMs
