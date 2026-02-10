@@ -78,6 +78,7 @@ jobs:
 
       - name: Prepare RPM build
         run: |
+          podman run --rm -it --platform linux/${{ matrix.arch }} sisyphus/alt uname -a
           ./build-aux/altlinux/prepare
           git add .
 
