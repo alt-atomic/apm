@@ -256,8 +256,9 @@ AptResult process_package_installs(AptCache *cache,
             return result;
         }
 
-        // If version is specified, set the candidate version BEFORE MarkInstall
-        if (req.has_version) {
+        // If version is specified, set the candidate version BEFORE MarkInstall.
+        // Skip for virtual packages: after resolution, pkg points to the real provider
+        if (req.has_version && req.name == pkg.Name()) {
             result = set_candidate_version_for_requirement(cache, pkg, req);
             if (result.code != APT_SUCCESS) {
                 return result;
