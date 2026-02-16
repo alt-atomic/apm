@@ -458,7 +458,6 @@ AptResult process_package_removals(AptCache *cache,
 
         std::string raw(remove_names[i]);
         RequirementSpec req = parse_requirement(raw);
-        requested_remove.insert(req.name);
 
         pkgCache::PkgIterator pkg;
         AptResult result = find_remove_package(cache, req, pkg);
@@ -471,13 +470,15 @@ AptResult process_package_removals(AptCache *cache,
             return result;
         }
 
+        requested_remove.insert(pkg.Name());
+
         if ((pkg->Flags & pkgCache::Flag::Essential) != 0) {
             return make_result(APT_ERROR_OPERATION_INCOMPLETE,
                                (std::string("Cannot remove essential package: ") + pkg.Name()).c_str());
         }
 
         cache->dep_cache->MarkDelete(pkg, purge);
-        remove_targets.emplace_back(req.name, pkg);
+        remove_targets.emplace_back(pkg.Name(), pkg);
 
         // delete only one package
         // mark_dependent_packages_for_removal(cache, pkg, purge);
