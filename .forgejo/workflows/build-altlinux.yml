@@ -29,6 +29,11 @@ jobs:
           - arm64
 
     steps:
+      - name: Install utils
+        run: |
+          apt-get update
+          apt-get install -y meson jq /usr/bin/add_changelog golang qemu-user-binfmt_misc
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
