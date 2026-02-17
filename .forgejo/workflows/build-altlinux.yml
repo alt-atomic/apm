@@ -17,7 +17,7 @@ jobs:
     runs-on: als-tiny
 
     container:
-      image: altlinux.space/actions/runner/hasherc:sisyphus
+      image: altlinux.space/alt-gnome/hasherc:latest
 
     strategy:
       matrix:

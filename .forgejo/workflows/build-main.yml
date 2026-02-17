@@ -52,7 +52,7 @@ jobs:
     name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
     runs-on: als-huge
     container:
-      image: altlinux.space/actions/runner/hasherc:sisyphus
+      image: altlinux.space/alt-gnome/hasherc:latest
 
     strategy:
       matrix:
