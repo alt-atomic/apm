@@ -81,13 +81,13 @@ jobs:
           ./build-aux/altlinux/prepare
           git add .
 
-      - uses: alt-gnome/build-rpm-action@main
+      - uses: actions/build-rpm-action@main
         name: Build RPMs
         with:
           branch: ${{ matrix.branch }}
           arch: ${{ matrix.arch }}
 
-      - uses: alt-gnome/upload-rpm-action@main
+      - uses: actions/upload-rpm-action@main
         name: Upload RPMs
         if: github.event_name != 'pull_request'
         with:
