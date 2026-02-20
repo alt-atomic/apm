@@ -50,7 +50,8 @@ jobs:
 
   rpm-build:
     name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
-    runs-on: als-huge
+    runs-on: ${{ matrix.runner }}
+
     container:
       image: altlinux.space/alt-gnome/hasherc:latest
 
@@ -62,6 +63,11 @@ jobs:
         arch:
           - amd64
           - arm64
+        include:
+          - arch: amd64
+            runner: als-huge
+          - arch: arm64
+            runner: self-hosted-arm64-huge
 
     needs:
       - lint-vala
