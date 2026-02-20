@@ -37,7 +37,7 @@ jobs:
       - name: Install utils
         run: |
           apt-get update
-          apt-get install -y meson jq /usr/bin/add_changelog golang qemu-user-binfmt_misc
+          apt-get install -y meson jq /usr/bin/add_changelog golang fuse-overlayfs
 
       - name: Checkout repository
         uses: actions/checkout@v4
