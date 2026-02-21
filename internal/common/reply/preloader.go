@@ -105,17 +105,7 @@ func CreateSpinner(appConfig *app.Config) {
 	go sp.run()
 }
 
-// StopSpinner остановка с сохранением завершённых задач.
 func StopSpinner(appConfig *app.Config) {
-	stopSpinner(appConfig, true)
-}
-
-// StopSpinnerForDialog остановка с полной очисткой перед диалогом.
-func StopSpinnerForDialog(appConfig *app.Config) {
-	stopSpinner(appConfig, false)
-}
-
-func stopSpinner(appConfig *app.Config, keepTasks bool) {
 	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
 		return
 	}
@@ -138,15 +128,14 @@ func stopSpinner(appConfig *app.Config, keepTasks bool) {
 		fmt.Printf("\033[%dA", al-1)
 	}
 
+	// Печатаем завершённые задачи, которые не успел напечатать render
 	linesUsed := 0
-	if keepTasks {
-		for i := range activeSp.tasks {
-			t := &activeSp.tasks[i]
-			if t.state == StateAfter && !t.printed {
-				t.printed = true
-				fmt.Printf("%s[✓] %s\n", clearLine, t.viewName)
-				linesUsed++
-			}
+	for i := range activeSp.tasks {
+		t := &activeSp.tasks[i]
+		if t.state == StateAfter && !t.printed {
+			t.printed = true
+			fmt.Printf("%s[✓] %s\n", clearLine, t.viewName)
+			linesUsed++
 		}
 	}
 

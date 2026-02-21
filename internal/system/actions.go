@@ -202,7 +202,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 	}
 
 	if !confirm {
-		reply.StopSpinnerForDialog(a.appConfig)
+		reply.StopSpinner(a.appConfig)
 		dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
 		if err != nil {
 			return nil, err
@@ -291,7 +291,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 	}
 
 	if len(packagesInfo) > 0 && !confirm {
-		reply.StopSpinnerForDialog(a.appConfig)
+		reply.StopSpinner(a.appConfig)
 
 		action := dialog.ActionInstall
 		if packageParse.RemovedCount > 0 {
@@ -441,7 +441,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 	}
 
 	if !confirm {
-		reply.StopSpinnerForDialog(a.appConfig)
+		reply.StopSpinner(a.appConfig)
 
 		dialogStatus, errDialog := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionInstall)
 		if errDialog != nil {
@@ -602,7 +602,7 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 		}, nil
 	}
 
-	reply.StopSpinnerForDialog(a.appConfig)
+	reply.StopSpinner(a.appConfig)
 
 	dialogStatus, err := dialog.NewDialog(a.appConfig, []_package.Package{}, *packageParse, dialog.ActionUpgrade)
 	if err != nil {
@@ -914,7 +914,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
-		reply.StopSpinnerForDialog(a.appConfig)
+		reply.StopSpinner(a.appConfig)
 		// Показываем диалог выбора пакетов
 		result, errDialog := dialog.NewPackageSelectionDialog(
 			a.appConfig,
