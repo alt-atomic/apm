@@ -117,8 +117,8 @@ func (a *Actions) checkPackageExists(ctx context.Context, packageName string) bo
 }
 
 func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 	var packagesInfo []Package
 	var finalPackageNames []string
 	seenNames := make(map[string]bool)
@@ -273,7 +273,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 					lastDownloadUpdate = now
 
 					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName("system.downloadProgress"),
+						reply.WithEventName(reply.EventSystemDownloadProgress),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
 						reply.WithEventView(fmt.Sprintf(app.T_("Downloading packages"))),
@@ -282,7 +282,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 			}
 		case aptLib.CallbackDownloadComplete:
 			reply.CreateEventNotification(ctx, reply.StateAfter,
-				reply.WithEventName("system.downloadProgress"),
+				reply.WithEventName(reply.EventSystemDownloadProgress),
 				reply.WithProgress(true),
 				reply.WithProgressPercent(100),
 				reply.WithProgressDoneText(app.T_("All packages downloaded")),
@@ -362,8 +362,8 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 }
 
 func (a *Actions) Install(ctx context.Context, packages []string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
 	err := a.serviceAptBinding.InstallPackages(packages, a.getHandler(ctx))
 	if err != nil {
@@ -375,8 +375,8 @@ func (a *Actions) Install(ctx context.Context, packages []string) error {
 
 func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string,
 	packagesRemove []string, purge bool, depends bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
 	err := a.serviceAptBinding.CombineInstallRemovePackages(
 		packagesInstall,
@@ -393,8 +393,8 @@ func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInst
 }
 
 func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
 	err := a.serviceAptBinding.RemovePackages(packages, purge, depends, a.getHandler(ctx))
 	if err != nil {
@@ -405,8 +405,8 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 }
 
 func (a *Actions) Upgrade(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Upgrade"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Upgrade"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpgrade))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpgrade))
 
 	err := a.serviceAptBinding.DistUpgrade(a.getHandler(ctx))
 	if err != nil {
@@ -417,24 +417,24 @@ func (a *Actions) Upgrade(ctx context.Context) error {
 }
 
 func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
 	packageChanges, err = a.serviceAptBinding.SimulateInstall(packageName)
 	return
 }
 
 func (a *Actions) CheckReinstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
 	packageChanges, err = a.serviceAptBinding.SimulateReinstall(packageName)
 	return
 }
 
 func (a *Actions) ReinstallPackages(ctx context.Context, packages []string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Working"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Working"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
 	err := a.serviceAptBinding.ReinstallPackages(packages, a.getHandler(ctx))
 	if err != nil {
@@ -445,40 +445,40 @@ func (a *Actions) ReinstallPackages(ctx context.Context, packages []string) erro
 }
 
 func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge bool, depends bool) (packageChanges *aptLib.PackageChanges, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
 	packageChanges, err = a.serviceAptBinding.SimulateRemove(packageName, purge, depends)
 	return
 }
 
 func (a *Actions) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
 	packageChanges, err = a.serviceAptBinding.SimulateAutoRemove()
 	return
 }
 
 func (a *Actions) GetInfo(ctx context.Context, packageName string) (packageChanges *aptLib.PackageInfo, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
 	packageChanges, err = a.serviceAptBinding.GetInfo(packageName)
 	return
 }
 
 func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Check"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Check"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
 	packageChanges, err = a.serviceAptBinding.SimulateDistUpgrade()
 	return
 }
 
 func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.Update"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.Update"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdate))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdate))
 
 	err := a.AptUpdate(ctx, noLock...)
 	if err != nil {
@@ -626,8 +626,8 @@ func (a *Actions) GetInstalledPackages(ctx context.Context, noLock ...bool) (map
 }
 
 func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.AptUpdate"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.AptUpdate"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemAptUpdate))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))
 
 	err := a.serviceAptBinding.Update(noLock...)
 	if err != nil {

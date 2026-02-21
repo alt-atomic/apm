@@ -100,8 +100,8 @@ func (p *PackageService) getProvider(osName string) (PackageProvider, error) {
 
 // InstallPackage установка пакета
 func (p *PackageService) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.InstallPackage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.InstallPackage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroInstallPackage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroInstallPackage))
 	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return err
@@ -112,8 +112,8 @@ func (p *PackageService) InstallPackage(ctx context.Context, containerInfo Conta
 
 // RemovePackage удаление пакета
 func (p *PackageService) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.RemovePackage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.RemovePackage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroRemovePackage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroRemovePackage))
 	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return err
@@ -124,8 +124,8 @@ func (p *PackageService) RemovePackage(ctx context.Context, containerInfo Contai
 
 // GetPackages получает список пакетов из контейнера.
 func (p *PackageService) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPackages"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPackages"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetPackages))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetPackages))
 	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
@@ -136,8 +136,9 @@ func (p *PackageService) GetPackages(ctx context.Context, containerInfo Containe
 
 // GetPackageOwner получает название пакета, которому принадлежит указанный файл, из контейнера.
 func (p *PackageService) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, fileName string) (string, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPackageOwner"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPackageOwner"))
+	viewName := fmt.Sprintf("%s: %s", app.T_("Determining file owner"), filepath.Base(fileName))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetPackageOwner), reply.WithEventView(viewName))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetPackageOwner), reply.WithEventView(viewName))
 	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return "", err
@@ -148,8 +149,8 @@ func (p *PackageService) GetPackageOwner(ctx context.Context, containerInfo Cont
 
 // GetPathByPackageName получает список путей для файла пакета из контейнера.
 func (p *PackageService) GetPathByPackageName(ctx context.Context, containerInfo ContainerInfo, packageName, filePath string) ([]string, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPathByPackageName"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPathByPackageName"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetPathByPkg))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetPathByPkg))
 	provider, err := p.getProvider(containerInfo.OS)
 	if err != nil {
 		return nil, err
@@ -160,8 +161,8 @@ func (p *PackageService) GetPathByPackageName(ctx context.Context, containerInfo
 
 // GetInfoPackage возвращает информацию о пакете с путями как для desktop, так и для консольных приложений
 func (p *PackageService) GetInfoPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) (InfoPackageAnswer, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetInfoPackage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetInfoPackage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetInfoPackage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetInfoPackage))
 	// Получаем информацию о пакете из базы данных
 	info, err := p.serviceDistroDatabase.GetPackageInfoByName(containerInfo.ContainerName, packageName)
 	if err != nil {
@@ -195,8 +196,8 @@ func (p *PackageService) GetInfoPackage(ctx context.Context, containerInfo Conta
 
 // UpdatePackages обновляет пакеты и записывает в базу данных
 func (p *PackageService) UpdatePackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.UpdatePackages"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.UpdatePackages"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroUpdatePackages))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroUpdatePackages))
 	packages, err := p.GetPackages(ctx, containerInfo)
 	if err != nil {
 		app.Log.Error(err)
@@ -214,8 +215,8 @@ func (p *PackageService) UpdatePackages(ctx context.Context, containerInfo Conta
 
 // GetPackagesQuery получение списка пакетов с фильтрацией и сортировкой
 func (p *PackageService) GetPackagesQuery(ctx context.Context, containerInfo ContainerInfo, builder PackageQueryBuilder) (PackageQueryResult, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetPackagesQuery"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetPackagesQuery"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetPackagesQuery))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetPackagesQuery))
 	if builder.ForceUpdate {
 		if len(containerInfo.ContainerName) == 0 {
 			return PackageQueryResult{}, errors.New(app.T_("A container must be specified for the forced update operation"))

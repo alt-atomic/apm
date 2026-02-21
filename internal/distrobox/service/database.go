@@ -113,8 +113,8 @@ func (p PackageInfo) toDBModel() DBDistroPackage {
 // SavePackagesToDB сохраняет список пакетов (для конкретного containerName).
 // Сначала удаляет старые записи (WHERE container=...), затем добавляет новые.
 func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName string, packages []PackageInfo) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.SavePackagesToDB"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.SavePackagesToDB"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroSavePackagesToDB))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroSavePackagesToDB))
 
 	if len(containerName) == 0 {
 		return errors.New(app.T_("The 'container' field cannot be empty when saving packages to the database"))

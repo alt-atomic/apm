@@ -24,48 +24,62 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/sys/unix"
 )
+
+const clearLine = "\r\033[K"
+
+var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 var (
-	p             *tea.Program
-	doneChan      chan struct{}
-	tasksDoneChan chan struct{}
-	mu            sync.Mutex
-	lastLines     int
-	lastRender    string
+	mu           sync.Mutex
+	activeSp     *simpleSpinner
+	savedTermios *unix.Termios
 )
 
-// TaskUpdateMsg TASK" или "PROGRESS"
-type TaskUpdateMsg struct {
+type task struct {
 	eventType        string
-	taskName         string
+	name             string
 	viewName         string
 	state            string
-	progressValue    float64
+	printed          bool
+	progressPercent  float64
 	progressDoneText string
 }
 
-type task struct {
-	eventType string
-	name      string
-	viewName  string
-	state     string
-
-	progressModel    *progress.Model
-	progressDoneText string
+type simpleSpinner struct {
+	mu          sync.Mutex
+	tasks       []task
+	frame       int
+	colors      app.Colors
+	activeLines int
+	stopCh      chan struct{}
+	doneCh      chan struct{}
 }
 
-type model struct {
-	appConfig    *app.Config
-	spinner      spinner.Model
-	tasksSpinner spinner.Model
-	tasks        []task
+func disableEcho() {
+	fd := int(os.Stdin.Fd())
+	termios, err := unix.IoctlGetTermios(fd, unix.TCGETS)
+	if err != nil {
+		return
+	}
+	saved := *termios
+	savedTermios = &saved
+	termios.Lflag &^= unix.ECHO
+	_ = unix.IoctlSetTermios(fd, unix.TCSETS, termios)
 }
 
-// CreateSpinner Создание и запуск Bubble Tea
+func restoreEcho() {
+	if savedTermios == nil {
+		return
+	}
+	fd := int(os.Stdin.Fd())
+	_ = unix.IoctlSetTermios(fd, unix.TCSETS, savedTermios)
+	savedTermios = nil
+}
+
+// CreateSpinner создание и запуск спиннера.
 func CreateSpinner(appConfig *app.Config) {
 	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
 		return
@@ -74,318 +88,220 @@ func CreateSpinner(appConfig *app.Config) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if p != nil {
+	if activeSp != nil {
 		return
 	}
-	doneChan = make(chan struct{})
-	tasksDoneChan = make(chan struct{})
 
-	p = tea.NewProgram(
-		newModel(appConfig),
-		tea.WithOutput(os.Stdout),
-		tea.WithInput(nil),
-	)
+	disableEcho()
+	fmt.Print("\033[?25l") // скрыть курсор
 
-	go func() {
-		_, err := p.Run()
-		if err != nil {
-			app.Log.Error(err.Error())
-		}
-		close(doneChan)
-	}()
+	sp := &simpleSpinner{
+		colors: appConfig.ConfigManager.GetColors(),
+		stopCh: make(chan struct{}),
+		doneCh: make(chan struct{}),
+	}
+	activeSp = sp
+
+	go sp.run()
 }
 
-// StopSpinner Остановка и очистка вывода
+// StopSpinner остановка с сохранением завершённых задач.
 func StopSpinner(appConfig *app.Config) {
-	StopSpinnerWithKeepTasks(appConfig, true)
+	stopSpinner(appConfig, true)
 }
 
-// StopSpinnerWithKeepTasks Остановка с возможностью сохранения задач
-func StopSpinnerWithKeepTasks(appConfig *app.Config, keepTasks bool) {
+// StopSpinnerForDialog остановка с полной очисткой перед диалогом.
+func StopSpinnerForDialog(appConfig *app.Config) {
+	stopSpinner(appConfig, false)
+}
+
+func stopSpinner(appConfig *app.Config, keepTasks bool) {
 	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
 		return
 	}
 
-	// Ждём, пока все задачи не завершены, но не более 100мс
-	select {
-	case <-tasksDoneChan:
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	// Небольшая пауза
-	time.Sleep(60 * time.Millisecond)
-
 	mu.Lock()
 	defer mu.Unlock()
 
-	if p != nil {
-		p.Quit()
-		<-doneChan
-		p = nil
+	if activeSp == nil {
+		return
+	}
 
-		// Безопасно перерисуем блок: очистим всё и выведем заново без первой строки
-		if lastLines > 0 {
-			// Подняться к первой строке блока
-			for i := 0; i < lastLines-1; i++ {
-				fmt.Print("\033[F")
-			}
-			// Очистить все строки блока
-			for i := 0; i < lastLines; i++ {
-				fmt.Print("\r\033[2K")
-				if i < lastLines-1 {
-					fmt.Print("\033[E")
-				}
-			}
-			// Вернуться к началу блока
-			for i := 0; i < lastLines-1; i++ {
-				fmt.Print("\033[F")
-			}
+	close(activeSp.stopCh)
+	<-activeSp.doneCh
 
-			// Переотрисовать без первой строки (удаляем строку со спиннером "Executing tasks")
-			if keepTasks && lastRender != "" {
-				lines := strings.Split(lastRender, "\n")
-				if len(lines) > 1 {
-					fmt.Print(strings.Join(lines[1:], "\n"))
-					// гарантируем перевод строки после переотрисовки, чтобы следующий вывод не склеивался
-					fmt.Print("\n")
-				}
+	activeSp.mu.Lock()
+	al := activeSp.activeLines
+
+	// Возвращаем курсор к началу анимируемой области
+	if al > 1 {
+		fmt.Printf("\033[%dA", al-1)
+	}
+
+	linesUsed := 0
+	if keepTasks {
+		for i := range activeSp.tasks {
+			t := &activeSp.tasks[i]
+			if t.state == StateAfter && !t.printed {
+				t.printed = true
+				fmt.Printf("%s[✓] %s\n", clearLine, t.viewName)
+				linesUsed++
 			}
 		}
 	}
+
+	// Очищаем оставшиеся строки анимации
+	if extra := al - linesUsed; extra > 0 {
+		for i := 0; i < extra; i++ {
+			fmt.Print(clearLine)
+			if i < extra-1 {
+				fmt.Print("\n")
+			}
+		}
+	}
+	activeSp.mu.Unlock()
+
+	fmt.Print(clearLine)
+	fmt.Print("\033[?25h") // показать курсор
+	activeSp = nil
+	restoreEcho()
 }
 
-// StopSpinnerForDialog останавливает спиннер и полностью очищает экран перед диалогом
-func StopSpinnerForDialog(appConfig *app.Config) {
-	StopSpinnerWithKeepTasks(appConfig, false)
-}
-
-// UpdateTask  Функция для внешнего вызова: отправить задачу/прогресс в модель
-// Пример:
-//
-//	// Начать прогресс (0%)
-//	UpdateTask("PROGRESS", "downloadTask", "Загрузка...", "BEFORE", "0")
-//
-//	// Обновить до 10%
-//	UpdateTask("PROGRESS", "downloadTask", "Загрузка...", "BEFORE", "10")
-//
-//	// Завершить (100%)
-//	UpdateTask("PROGRESS", "downloadTask", "Загрузка...", "AFTER", "100")
-//
-//	// Обычная задача
-//	UpdateTask("TASK", "install", "Установка пакетов", "BEFORE", "")
-//	UpdateTask("TASK", "install", "Установка пакетов", "AFTER", "")
+// UpdateTask обновление задачи/прогресса.
 func UpdateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
 	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
 		return
 	}
 
 	mu.Lock()
-	defer mu.Unlock()
-
-	if p != nil {
-		p.Send(TaskUpdateMsg{
-			eventType:        eventType,
-			taskName:         taskName,
-			viewName:         viewName,
-			state:            state,
-			progressValue:    progressValue,
-			progressDoneText: progressDone,
-		})
+	sp := activeSp
+	if sp == nil {
+		mu.Unlock()
+		return
 	}
-}
+	sp.mu.Lock()
+	mu.Unlock()
+	defer sp.mu.Unlock()
 
-// newModel Инициализация модели
-func newModel(appConfig *app.Config) model {
-	// «Общий» спиннер
-	s := spinner.New()
-	s.Spinner = spinner.Points
-
-	// Спиннер для задач
-	ts := spinner.New()
-	ts.Spinner = spinner.Jump
-
-	return model{
-		appConfig:    appConfig,
-		spinner:      s,
-		tasksSpinner: ts,
-		tasks:        []task{},
-	}
-}
-
-func (m model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, m.tasksSpinner.Tick)
-}
-
-// Update Bubble Tea: Update()
-//
-// Здесь мы:
-//   - Обрабатываем spinner.TickMsg
-//   - Перехватываем progress.FrameMsg для анимации прогресса
-//   - Обновляем задачу при TaskUpdateMsg
-func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := teaMsg.(type) {
-
-	case spinner.TickMsg:
-		var cmd1, cmd2 tea.Cmd
-		m.spinner, cmd1 = m.spinner.Update(msg)
-		m.tasksSpinner, cmd2 = m.tasksSpinner.Update(msg)
-		return m, tea.Batch(cmd1, cmd2)
-
-	case progress.FrameMsg:
-		var cmds []tea.Cmd
-		for i, t := range m.tasks {
-			if t.eventType == "PROGRESS" && t.state != "AFTER" && t.progressModel != nil {
-				updatedProg, cmd := t.progressModel.Update(msg)
-				// Разыменовываем, чтобы переписать содержимое
-				*(m.tasks[i].progressModel) = updatedProg.(progress.Model)
-
-				if cmd != nil {
-					cmds = append(cmds, cmd)
-				}
+	for i, t := range sp.tasks {
+		if t.name == taskName {
+			sp.tasks[i].state = state
+			sp.tasks[i].viewName = viewName
+			sp.tasks[i].eventType = eventType
+			if eventType == EventTypeProgress {
+				sp.tasks[i].progressPercent = progressValue
+				sp.tasks[i].progressDoneText = progressDone
 			}
+			return
 		}
-		return m, tea.Batch(cmds...)
-
-	case TaskUpdateMsg:
-		return m.updateTask(msg)
-
-	default:
-		return m, nil
 	}
+
+	sp.tasks = append(sp.tasks, task{
+		eventType:        eventType,
+		name:             taskName,
+		viewName:         viewName,
+		state:            state,
+		progressPercent:  progressValue,
+		progressDoneText: progressDone,
+	})
 }
 
-// TaskUpdateMsg обновление task
-func (m model) updateTask(msg TaskUpdateMsg) (tea.Model, tea.Cmd) {
-	updated := false
-	var batchCmds []tea.Cmd
+func (sp *simpleSpinner) run() {
+	defer close(sp.doneCh)
+	ticker := time.NewTicker(80 * time.Millisecond)
+	defer ticker.Stop()
 
-	var newPercent float64
-	if msg.eventType == "PROGRESS" {
-		val := msg.progressValue
-		if val < 0 {
-			val = 0
-		} else if val > 100 {
-			val = 100
-		}
-
-		newPercent = val / 100
-	}
-
-	for i, t := range m.tasks {
-		if t.name == msg.taskName {
-			// Задача уже существует – обновим поля
-			m.tasks[i].eventType = msg.eventType
-			m.tasks[i].viewName = msg.viewName
-			m.tasks[i].state = msg.state
-
-			// Если это ПРОГРЕСС
-			if msg.eventType == "PROGRESS" {
-				m.tasks[i].progressDoneText = msg.progressDoneText
-				// Инициализируем progressModel, если впервые
-				if m.tasks[i].progressModel == nil {
-					pm := progress.New(progress.WithGradient(m.appConfig.ConfigManager.GetColors().ProgressStart,
-						m.appConfig.ConfigManager.GetColors().ProgressEnd))
-					pm.Width = 40
-					m.tasks[i].progressModel = &pm
-				}
-
-				if msg.state != "AFTER" {
-					cmd := m.tasks[i].progressModel.SetPercent(newPercent)
-					batchCmds = append(batchCmds, cmd)
-				}
-			}
-			updated = true
-			break
-		}
-	}
-
-	// Если мы не нашли задачу – значит это первая посылка "BEFORE"
-	if !updated && msg.state == "BEFORE" {
-		newT := task{
-			eventType: msg.eventType,
-			name:      msg.taskName,
-			viewName:  msg.viewName,
-			state:     msg.state,
-		}
-
-		if msg.eventType == "PROGRESS" {
-			// Создаём прогресс-бар
-			pm := progress.New(progress.WithGradient(
-				m.appConfig.ConfigManager.GetColors().ProgressStart,
-				m.appConfig.ConfigManager.GetColors().ProgressEnd))
-			pm.Width = 40
-			newT.progressModel = &pm
-
-			// Устанавливаем начальный процент
-			cmd := newT.progressModel.SetPercent(newPercent)
-			batchCmds = append(batchCmds, cmd)
-		}
-		m.tasks = append(m.tasks, newT)
-	}
-
-	// Проверяем, все ли задачи (TASK и PROGRESS) завершены
-	allFinished := true
-	for _, t := range m.tasks {
-		if t.state != "AFTER" {
-			allFinished = false
-			break
-		}
-	}
-	if allFinished {
+	for {
 		select {
-		case <-tasksDoneChan:
-		default:
-			close(tasksDoneChan)
+		case <-sp.stopCh:
+			return
+		case <-ticker.C:
+			sp.render()
 		}
 	}
-
-	return m, tea.Batch(batchCmds...)
 }
 
-// View общее отображение
-func (m model) View() string {
-	// Общий спиннер + фраза
-	s := fmt.Sprintf("\r\033[K%s \033[33m%s\033[0m", m.spinner.View(), app.T_("Executing tasks"))
+func (sp *simpleSpinner) render() {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
 
-	// Перебираем все задачи
-	for _, t := range m.tasks {
-		switch t.eventType {
+	// Возвращаем курсор к началу анимируемой области
+	if sp.activeLines > 1 {
+		fmt.Printf("\033[%dA", sp.activeLines-1)
+	}
 
-		// Обычная задача
-		case "TASK":
-			if t.state == "AFTER" {
-				s += fmt.Sprintf("\n[✓] %s", t.viewName)
+	// Печатаем завершённые задачи как постоянные строки
+	for i := range sp.tasks {
+		t := &sp.tasks[i]
+		if t.state == StateAfter && !t.printed {
+			t.printed = true
+			if t.eventType == EventTypeProgress && len(t.progressDoneText) > 0 {
+				fmt.Printf("%s[✓] %s\n", clearLine, fmt.Sprintf(app.T_("Progress: %s completed"), t.progressDoneText))
 			} else {
-				s += fmt.Sprintf("\n[%s] %s", m.tasksSpinner.View(), t.viewName)
-			}
-
-		// Прогресс-бар
-		case "PROGRESS":
-			if t.state == "AFTER" {
-				text := fmt.Sprintf("\n[✓] %s", app.T_("Progress completed"))
-				if len(t.progressDoneText) > 0 {
-					text = fmt.Sprintf("\n[✓] %s", fmt.Sprintf(app.T_("Progress: %s completed"), t.progressDoneText))
-				}
-				s += text
-			} else {
-				if t.progressModel != nil {
-					bar := t.progressModel.View()
-					s += fmt.Sprintf("\n%s %s", bar, t.viewName)
-				} else {
-					s += fmt.Sprintf("\n[....] %s", t.viewName)
-				}
-			}
-
-		default:
-			if t.state == "AFTER" {
-				s += fmt.Sprintf("\n[✓] %s", t.viewName)
-			} else {
-				s += fmt.Sprintf("\n[%s] %s", m.tasksSpinner.View(), t.viewName)
+				fmt.Printf("%s[✓] %s\n", clearLine, t.viewName)
 			}
 		}
 	}
 
-	lastRender = s
-	lastLines = strings.Count(s, "\n") + 1
-	return s
+	n := 0
+	for i := range sp.tasks {
+		if !(sp.tasks[i].state == StateAfter && sp.tasks[i].printed) {
+			sp.tasks[n] = sp.tasks[i]
+			n++
+		}
+	}
+	sp.tasks = sp.tasks[:n]
+
+	var actives []*task
+	for i := range sp.tasks {
+		if sp.tasks[i].state != StateAfter {
+			actives = append(actives, &sp.tasks[i])
+		}
+	}
+
+	if len(actives) > 0 {
+		frame := spinnerFrames[sp.frame%len(spinnerFrames)]
+		sp.frame++
+
+		for idx, active := range actives {
+			if active.eventType == EventTypeProgress {
+				fmt.Printf("%s[%s] %s", clearLine, frame, renderProgressBar(*active, sp.colors))
+			} else {
+				fmt.Printf("%s[%s] %s", clearLine, frame, active.viewName)
+			}
+			if idx < len(actives)-1 {
+				fmt.Print("\n")
+			}
+		}
+	}
+
+	// Очищаем лишние строки от предыдущего рендера
+	if extra := sp.activeLines - len(actives); extra > 0 {
+		for i := 0; i < extra; i++ {
+			fmt.Print("\n\033[K")
+		}
+		fmt.Printf("\033[%dA", extra)
+	}
+
+	sp.activeLines = len(actives)
+
+	if len(actives) == 0 {
+		fmt.Print(clearLine)
+	}
+}
+
+func renderProgressBar(t task, colors app.Colors) string {
+	const width = 30
+	pct := t.progressPercent
+	if pct < 0 {
+		pct = 0
+	} else if pct > 100 {
+		pct = 100
+	}
+
+	filled := int(pct / 100 * float64(width))
+	filledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressEnd))
+	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressStart))
+	bar := filledStyle.Render(strings.Repeat("█", filled)) + emptyStyle.Render(strings.Repeat("░", width-filled))
+	return fmt.Sprintf("[%s] %.0f%% %s", bar, pct, t.viewName)
 }

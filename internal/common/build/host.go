@@ -135,8 +135,8 @@ func (h *HostImageService) EnableOverlay() error {
 
 // BuildImage сборка образа
 func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (string, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.BuildImage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.BuildImage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBuildImage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBuildImage))
 
 	command := fmt.Sprintf("%s podman build --squash -t os -f %s /etc/apm", h.appConfig.CommandPrefix, h.containerPath)
 	if pullImage {
@@ -170,8 +170,8 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 // SwitchImage переключение образа
 func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SwitchImage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SwitchImage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSwitchImage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSwitchImage))
 
 	cmdTemplate := ""
 	if isLocal {
@@ -191,8 +191,8 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
 func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.CheckAndUpdateBaseImage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.CheckAndUpdateBaseImage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
 	image, err := h.GetHostImage()
 	if err != nil {
 		return fmt.Errorf(app.T_("Error retrieving information: %v"), err)
@@ -263,6 +263,10 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 	cmd.Env = []string{"LC_ALL=C"}
 	out, err := cmd.Output()
 	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+			return "", fmt.Errorf(app.T_("Skopeo inspect error: %s"), strings.TrimSpace(string(exitErr.Stderr)))
+		}
 		return "", fmt.Errorf(app.T_("Skopeo inspect error: %v"), err)
 	}
 
@@ -275,8 +279,8 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 }
 
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.bootcUpgrade"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.bootcUpgrade"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBootcUpgrade))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBootcUpgrade))
 
 	command := fmt.Sprintf("%s bootc upgrade", h.appConfig.CommandPrefix)
 	_, err := BootcUpgradeAndProgress(ctx, command)

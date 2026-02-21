@@ -50,8 +50,8 @@ type ContainerInfo struct {
 // GetContainerList получает список контейнеров, а если требуется полная информация (getFullInfo),
 // то параллельно для каждого контейнера вызывается fetchOsInfo.
 func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo bool) ([]ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetContainerList"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetContainerList"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerList))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerList))
 
 	command := fmt.Sprintf("%s distrobox ls", d.commandPrefix)
 	stdout, stderr, err := helper.RunCommand(ctx, command)
@@ -117,8 +117,8 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 // ExportingApp экспортирует пакет в хост-систему.
 // Принимает отдельные списки для desktop и консольных приложений и обрабатывает каждый тип соответственно.
 func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo ContainerInfo, _ string, desktopPaths, consolePaths []string, deleteApp bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.ExportingApp"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.ExportingApp"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroExportingApp))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroExportingApp))
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.
 	suffix := ""
 	if deleteApp {
@@ -234,8 +234,8 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 // Зачем мы запрашиваем список контейнеров внутри? Потому что distrobox будет создавать контейнер автоматически
 // если не указать правильно название.
 func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.GetContainerOsInfo"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.GetContainerOsInfo"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerInfo))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerInfo))
 
 	// Получаем список контейнеров
 	containers, err := d.GetContainerList(ctx, false)
@@ -260,8 +260,8 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
 func (d *DistroAPIService) CreateContainer(ctx context.Context, image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.CreateContainer"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.CreateContainer"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroCreateContainer))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroCreateContainer))
 
 	containers, errContainerList := d.GetContainerList(ctx, false)
 	if errContainerList != nil {
@@ -316,8 +316,8 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 
 // RemoveContainer удаление контейнера
 func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("distro.RemoveContainer"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("distro.RemoveContainer"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroRemoveContainer))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroRemoveContainer))
 	command := fmt.Sprintf("%s distrobox rm --yes --force %s", d.commandPrefix, containerName)
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 

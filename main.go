@@ -504,6 +504,7 @@ func cliError(err error) {
 
 func cleanup() {
 	if appConfig != nil {
+		reply.StopSpinner(appConfig)
 		defer func(appConfig *app.Config) {
 			closeApp(appConfig)
 		}(appConfig)

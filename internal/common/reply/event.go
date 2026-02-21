@@ -48,14 +48,68 @@ type EventData struct {
 	Transaction     string  `json:"transaction"`
 }
 
-const EventTypeNotification = "NOTIFICATION"
-const EventTypeProgress = "PROGRESS"
-const EventTypeTaskResult = "TASK_RESULT"
+const (
+	EventTypeNotification = "NOTIFICATION"
+	EventTypeProgress     = "PROGRESS"
+	EventTypeTaskResult   = "TASK_RESULT"
+)
 
-var (
+const (
 	StateBefore = "BEFORE"
 	StateAfter  = "AFTER"
 )
+
+// Имена событий — константы для использования в WithEventName.
+const (
+	// Distrobox
+	EventDistroSavePackagesToDB = "distro.SavePackagesToDB"
+	EventDistroGetContainerList = "distro.GetContainerList"
+	EventDistroExportingApp     = "distro.ExportingApp"
+	EventDistroGetContainerInfo = "distro.GetContainerOsInfo"
+	EventDistroCreateContainer  = "distro.CreateContainer"
+	EventDistroRemoveContainer  = "distro.RemoveContainer"
+	EventDistroInstallPackage   = "distro.InstallPackage"
+	EventDistroRemovePackage    = "distro.RemovePackage"
+	EventDistroGetPackages      = "distro.GetPackages"
+	EventDistroGetPackageOwner  = "distro.GetPackageOwner"
+	EventDistroGetPathByPkg     = "distro.GetPathByPackageName"
+	EventDistroGetInfoPackage   = "distro.GetInfoPackage"
+	EventDistroUpdatePackages   = "distro.UpdatePackages"
+	EventDistroGetPackagesQuery = "distro.GetPackagesQuery"
+
+	// System
+	EventSystemWorking              = "system.Working"
+	EventSystemUpgrade              = "system.Upgrade"
+	EventSystemCheck                = "system.Check"
+	EventSystemUpdate               = "system.Update"
+	EventSystemUpdateKernel         = "system.UpdateKernel"
+	EventSystemUpdateSTPLR          = "system.UpdateSTPLR"
+	EventSystemAptUpdate            = "system.AptUpdate"
+	EventSystemSavePackagesToDB     = "system.SavePackagesToDB"
+	EventSystemSaveImageToDB        = "system.SaveImageToDB"
+	EventSystemBuildImage           = "system.BuildImage"
+	EventSystemSwitchImage          = "system.SwitchImage"
+	EventSystemCheckUpdateBaseImage = "system.CheckAndUpdateBaseImage"
+	EventSystemBootcUpgrade         = "system.bootcUpgrade"
+	EventSystemPruneOldImages       = "system.pruneOldImages"
+	EventSystemUpdateAllPackagesDB  = "system.updateAllPackagesDB"
+	EventSystemUpdateAppStream      = "system.UpdateAppStream"
+	EventSystemDownloadProgress     = "system.downloadProgress"
+	EventSystemPullImage            = "system.pullImage"
+
+	// Bootc
+	EventBootcLayers   = "service.bootc-layers"
+	EventBootcDownload = "service.bootc-download"
+
+	// Kernel
+	EventKernelCurrent     = "kernel.CurrentKernel"
+	EventKernelList        = "kernel.ListKernels"
+	EventKernelInstall     = "kernel.InstallKernel"
+	EventKernelInstallMods = "kernel.InstallModules"
+	EventKernelRemove      = "kernel.RemovePackage"
+	EventKernelCheckRemove = "kernel.CheckRemovePackage"
+)
+
 
 // TaskResultEvent содержит результат фоновой задачи
 type TaskResultEvent struct {
@@ -144,12 +198,7 @@ func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 		eventData.Transaction = txStr
 	}
 
-	eventType := "PROGRESS"
-	if eventData.Type != "PROGRESS" {
-		eventType = "TASK"
-	}
-
-	UpdateTask(appConfig, eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
+	UpdateTask(appConfig, eventData.Type, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
 
 	format := appConfig.ConfigManager.GetConfig().Format
 	switch format {
@@ -254,77 +303,85 @@ func SendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
 
 func getTaskText(task string) string {
 	switch task {
-	case "distro.SavePackagesToDB":
+	case EventDistroSavePackagesToDB:
 		return app.T_("Saving packages to the database")
-	case "distro.GetContainerList":
+	case EventDistroGetContainerList:
 		return app.T_("Requesting list of containers")
-	case "distro.ExportingApp":
+	case EventDistroExportingApp:
 		return app.T_("Exporting package")
-	case "distro.GetContainerOsInfo":
+	case EventDistroGetContainerInfo:
 		return app.T_("Requesting container information")
-	case "distro.CreateContainer":
+	case EventDistroCreateContainer:
 		return app.T_("Creating container")
-	case "distro.RemoveContainer":
+	case EventDistroRemoveContainer:
 		return app.T_("Deleting container")
-	case "distro.InstallPackage":
+	case EventDistroInstallPackage:
 		return app.T_("Installing package")
-	case "distro.RemovePackage":
+	case EventDistroRemovePackage:
 		return app.T_("Removing package")
-	case "distro.GetPackages":
+	case EventDistroGetPackages:
 		return app.T_("Retrieving list of packages")
-	case "distro.GetPackageOwner":
+	case EventDistroGetPackageOwner:
 		return app.T_("Determining file owner")
-	case "distro.GetPathByPackageName":
+	case EventDistroGetPathByPkg:
 		return app.T_("Searching package paths")
-	case "distro.GetInfoPackage":
+	case EventDistroGetInfoPackage:
 		return app.T_("Retrieving package information")
-	case "distro.UpdatePackages":
+	case EventDistroUpdatePackages:
 		return app.T_("Updating packages")
-	case "distro.GetPackagesQuery":
+	case EventDistroGetPackagesQuery:
 		return app.T_("Filtering packages")
-	case "system.Working":
+	case EventSystemWorking:
 		return app.T_("Working with packages")
-	case "system.Upgrade":
+	case EventSystemUpgrade:
 		return app.T_("System update")
-	case "system.Check":
+	case EventSystemCheck:
 		return app.T_("Analyzing packages")
-	case "system.Update":
+	case EventSystemUpdate:
 		return app.T_("General update process")
-	case "system.UpdateKernel":
+	case EventSystemUpdateKernel:
 		return app.T_("General update kernel")
-	case "system.UpdateSTPLR":
+	case EventSystemUpdateSTPLR:
 		return app.T_("Loading package list from STPLR repository")
-	case "system.AptUpdate":
+	case EventSystemAptUpdate:
 		return app.T_("Loading package list from ALT repository")
-	case "system.SavePackagesToDB":
+	case EventSystemSavePackagesToDB:
 		return app.T_("Saving packages to the database")
-	case "system.SaveImageToDB":
+	case EventSystemSaveImageToDB:
 		return app.T_("Saving image history to the database")
-	case "system.BuildImage":
+	case EventSystemBuildImage:
 		return app.T_("Building local image")
-	case "system.SwitchImage":
+	case EventSystemSwitchImage:
 		return app.T_("Switching to local image")
-	case "system.CheckAndUpdateBaseImage":
+	case EventSystemCheckUpdateBaseImage:
 		return app.T_("General Image Update Process")
-	case "system.bootcUpgrade":
+	case EventSystemBootcUpgrade:
 		return app.T_("Downloading base image update")
-	case "system.pruneOldImages":
+	case EventSystemPruneOldImages:
 		return app.T_("Cleaning up old images")
-	case "system.updateAllPackagesDB":
+	case EventSystemUpdateAllPackagesDB:
 		return app.T_("Synchronizing database")
-	case "system.UpdateAppStream":
+	case EventSystemUpdateAppStream:
 		return app.T_("Update information about applications")
-	case "kernel.CurrentKernel":
+	case EventSystemDownloadProgress:
+		return app.T_("Downloading packages")
+	case EventSystemPullImage:
+		return app.T_("Downloading image")
+	case EventBootcLayers:
+		return app.T_("Fetching layers")
+	case EventBootcDownload:
+		return app.T_("Downloading update")
+	case EventKernelCurrent:
 		return app.T_("Get current kernel")
-	case "kernel.ListKernels":
+	case EventKernelList:
 		return app.T_("Get list kernels")
-	case "kernel.InstallKernel":
+	case EventKernelInstall:
 		return app.T_("Install kernel")
-	case "kernel.InstallModules":
+	case EventKernelInstallMods:
 		return app.T_("Install kernel modules")
-	case "kernel.RemovePackage":
+	case EventKernelRemove:
 		return app.T_("Remove packages")
-	case "kernel.CheckRemovePackage":
+	case EventKernelCheckRemove:
 		return app.T_("Simulate Remove packages")
 	default:
 		return task

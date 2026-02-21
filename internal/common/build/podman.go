@@ -151,7 +151,7 @@ func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
 	}
 
 	reply.CreateEventNotification(ctx, reply.StateAfter,
-		reply.WithEventName("system.pullImage"),
+		reply.WithEventName(reply.EventSystemPullImage),
 		reply.WithProgress(true),
 		reply.WithProgressPercent(100),
 	)
@@ -187,7 +187,7 @@ func parseProgressLine(ctx context.Context, rawLine string, tracker *progressTra
 	percent, changed := tracker.update(blobKey, downloadedBytes, totalBytes)
 	if changed {
 		reply.CreateEventNotification(ctx, reply.StateBefore,
-			reply.WithEventName("system.pullImage"),
+			reply.WithEventName(reply.EventSystemPullImage),
 			reply.WithEventView(speed),
 			reply.WithProgress(true),
 			reply.WithProgressPercent(float64(percent)),
@@ -230,8 +230,8 @@ func parseSize(sizeStr string) (float64, error) {
 func pruneOldImages(ctx context.Context) error {
 	// Получаем конфиг из контекста
 	appConfig := app.GetAppConfig(ctx)
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.pruneOldImages"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.pruneOldImages"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemPruneOldImages))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemPruneOldImages))
 
 	command := fmt.Sprintf("%s podman image prune -f", appConfig.ConfigManager.GetConfig().CommandPrefix)
 	cmd := exec.Command("sh", "-c", command)
@@ -351,12 +351,12 @@ func BootcUpgradeAndProgress(ctx context.Context, cmdLine string) (string, error
 
 	// Завершаем прогресс-бары
 	reply.CreateEventNotification(ctx, reply.StateAfter,
-		reply.WithEventName("service.bootc-layers"),
+		reply.WithEventName(reply.EventBootcLayers),
 		reply.WithProgress(true),
 		reply.WithProgressPercent(100),
 	)
 	reply.CreateEventNotification(ctx, reply.StateAfter,
-		reply.WithEventName("service.bootc-download"),
+		reply.WithEventName(reply.EventBootcDownload),
 		reply.WithProgress(true),
 		reply.WithProgressPercent(100),
 	)
@@ -378,7 +378,7 @@ func parseBootcProgressLine(ctx context.Context, rawLine string) {
 				percent := (current / total) * 100
 				viewText := fmt.Sprintf(app.T_("Fetching layers %d/%d"), int(current), int(total))
 				reply.CreateEventNotification(ctx, reply.StateBefore,
-					reply.WithEventName("service.bootc-layers"),
+					reply.WithEventName(reply.EventBootcLayers),
 					reply.WithEventView(viewText),
 					reply.WithProgress(true),
 					reply.WithProgressPercent(percent),
@@ -401,7 +401,7 @@ func parseBootcProgressLine(ctx context.Context, rawLine string) {
 			if errDownload == nil && errBytes == nil && totalBytes > 0 {
 				percent := (downloadedBytes / totalBytes) * 100
 				reply.CreateEventNotification(ctx, reply.StateBefore,
-					reply.WithEventName("service.bootc-download"),
+					reply.WithEventName(reply.EventBootcDownload),
 					reply.WithEventView(speed),
 					reply.WithProgress(true),
 					reply.WithProgressPercent(percent),

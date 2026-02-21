@@ -324,8 +324,8 @@ func LatestInstalledKernelVersion() (string, error) {
 }
 
 func currentKernelInfo(ctx context.Context, svc Service) (*service.Info, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.CurrentKernel"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.CurrentKernel"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
 
 	filters := map[string]any{
 		"typePackage": int(_package.PackageTypeSystem),

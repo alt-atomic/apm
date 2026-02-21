@@ -115,8 +115,8 @@ type SwCatService struct{ path string }
 func NewSwCatService(path string) *SwCatService { return &SwCatService{path: path} }
 
 func (s *SwCatService) Load(ctx context.Context) ([]Component, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.UpdateAppStream"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.UpdateAppStream"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAppStream))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAppStream))
 	files, err := os.ReadDir(s.path)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Cannot read dir %s: %w"), s.path, err)

@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-25 22:39+0600\n"
+"POT-Creation-Date: 2026-02-22 00:48+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -698,6 +698,7 @@ msgid "No packages found matching the specified patterns"
 msgstr "Не найдено пакетов, соответствующих указанным шаблонам"
 
 #: internal/common/apt/package/actions.go:279
+#: internal/common/reply/event.go:367
 msgid "Downloading packages"
 msgstr "Загрузка пакетов"
 
@@ -957,36 +958,41 @@ msgstr "Ошибка извлечения информации: %v"
 msgid "Failed to generate Containerfile: %w"
 msgstr "Не удалось создать Containerfile: %w"
 
-#: internal/common/build/host.go:266
-msgid "Skopeo inspect error: %v"
-msgstr "Ошибка инспектирования Skopeo: %w"
+#: internal/common/build/host.go:268
+#, c-format
+msgid "Skopeo inspect error: %s"
+msgstr "Ошибка инспектирования Skopeo: %s"
 
-#: internal/common/build/host.go:271
+#: internal/common/build/host.go:270
+msgid "Skopeo inspect error: %v"
+msgstr "Ошибка инспектирования Skopeo: %v"
+
+#: internal/common/build/host.go:275
 msgid "Failed to parse skopeo inspect: %w"
 msgstr "Не удалось обработать skopeo ответ: %w"
 
-#: internal/common/build/host.go:284
+#: internal/common/build/host.go:288
 msgid "Bootc upgrade failed: %v"
 msgstr "Ошибка обновления через bootc: %s"
 
-#: internal/common/build/host.go:307
+#: internal/common/build/host.go:311
 msgid "Failed to determine the distribution image: %w. Please specify it in %s"
 msgstr ""
 "Не удалось определить образ дистрибутива: %w. Пожалуйста укажите их в %s"
 
-#: internal/common/build/host.go:340
+#: internal/common/build/host.go:344
 msgid "The image has not changed, build paused"
 msgstr "Образ не был изменён, остановка сборки"
 
-#: internal/common/build/host.go:421
+#: internal/common/build/host.go:425
 msgid "Failed to open file %s: %w"
 msgstr "Не удалось открыть файл %s: %2"
 
-#: internal/common/build/host.go:442
+#: internal/common/build/host.go:446
 msgid "Error reading file %s: %w"
 msgstr "Ошибка чтения файла %s: %w"
 
-#: internal/common/build/host.go:445
+#: internal/common/build/host.go:449
 #, c-format
 msgid "Failed to determine the distribution image in %s"
 msgstr "Не удалось определить образ дистрибутива в %s"
@@ -1204,168 +1210,172 @@ msgstr "неверная длина: ожидалось 9 символов, по
 msgid "Wrong permission format"
 msgstr "Неправильный формат разрешения"
 
-#: internal/common/reply/event.go:171 internal/common/reply/event.go:242
+#: internal/common/reply/event.go:220 internal/common/reply/event.go:291
 msgid "DBus connection is not initialized"
 msgstr "Соединение DBus не было инициализировано"
 
-#: internal/common/reply/event.go:180
+#: internal/common/reply/event.go:229
 msgid "Error sending notification: %v"
 msgstr "Ошибка отправки уведомления: %v"
 
-#: internal/common/reply/event.go:251
+#: internal/common/reply/event.go:300
 msgid "Error sending task result: %v"
 msgstr "Ошибка при отправке результата задачи: %v"
 
-#: internal/common/reply/event.go:258 internal/common/reply/event.go:300
+#: internal/common/reply/event.go:307 internal/common/reply/event.go:349
 msgid "Saving packages to the database"
 msgstr "Сохранение пакетов в базу данных"
 
-#: internal/common/reply/event.go:260
+#: internal/common/reply/event.go:309
 msgid "Requesting list of containers"
 msgstr "Запрос списка контейнеров"
 
-#: internal/common/reply/event.go:262
+#: internal/common/reply/event.go:311
 msgid "Exporting package"
 msgstr "Экспортирование пакета"
 
-#: internal/common/reply/event.go:264
+#: internal/common/reply/event.go:313
 msgid "Requesting container information"
 msgstr "Запрос информации о контейнере"
 
-#: internal/common/reply/event.go:266
+#: internal/common/reply/event.go:315
 msgid "Creating container"
 msgstr "Создание контейнера"
 
-#: internal/common/reply/event.go:268
+#: internal/common/reply/event.go:317
 msgid "Deleting container"
 msgstr "Удаление контейнера"
 
-#: internal/common/reply/event.go:270
+#: internal/common/reply/event.go:319
 msgid "Installing package"
 msgstr "Установка пакета"
 
-#: internal/common/reply/event.go:272
+#: internal/common/reply/event.go:321
 msgid "Removing package"
 msgstr "Удаление пакета"
 
-#: internal/common/reply/event.go:274
+#: internal/common/reply/event.go:323
 msgid "Retrieving list of packages"
 msgstr "Извлечение списка пакетов"
 
-#: internal/common/reply/event.go:276
+#: internal/common/reply/event.go:325
+#: internal/distrobox/service/provider.go:139
 msgid "Determining file owner"
 msgstr "Определение владельца файла"
 
-#: internal/common/reply/event.go:278
+#: internal/common/reply/event.go:327
 msgid "Searching package paths"
 msgstr "Поиск путей пакета"
 
-#: internal/common/reply/event.go:280
+#: internal/common/reply/event.go:329
 msgid "Retrieving package information"
 msgstr "Извлечение информации о пакете"
 
-#: internal/common/reply/event.go:282
+#: internal/common/reply/event.go:331
 msgid "Updating packages"
 msgstr "Обновление пакетов"
 
-#: internal/common/reply/event.go:284
+#: internal/common/reply/event.go:333
 msgid "Filtering packages"
 msgstr "Фильтрация пакетов"
 
-#: internal/common/reply/event.go:286
+#: internal/common/reply/event.go:335
 msgid "Working with packages"
 msgstr "Работа с пакетами"
 
-#: internal/common/reply/event.go:288
+#: internal/common/reply/event.go:337
 msgid "System update"
 msgstr "Обновление системы"
 
-#: internal/common/reply/event.go:290
+#: internal/common/reply/event.go:339
 msgid "Analyzing packages"
 msgstr "Анализ пакетов"
 
-#: internal/common/reply/event.go:292
+#: internal/common/reply/event.go:341
 msgid "General update process"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:294
+#: internal/common/reply/event.go:343
 msgid "General update kernel"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:296
+#: internal/common/reply/event.go:345
 msgid "Loading package list from STPLR repository"
 msgstr "Загрузка списка пакетов из репозитория STPLR"
 
-#: internal/common/reply/event.go:298
+#: internal/common/reply/event.go:347
 msgid "Loading package list from ALT repository"
 msgstr "Загрузка списка пакетов из репозитория ALT"
 
-#: internal/common/reply/event.go:302
+#: internal/common/reply/event.go:351
 msgid "Saving image history to the database"
 msgstr "Сохранение истории образа в базу данных"
 
-#: internal/common/reply/event.go:304
+#: internal/common/reply/event.go:353
 msgid "Building local image"
 msgstr "Создание локального образа"
 
-#: internal/common/reply/event.go:306
+#: internal/common/reply/event.go:355
 msgid "Switching to local image"
 msgstr "Переключение на локальный образ"
 
-#: internal/common/reply/event.go:308
+#: internal/common/reply/event.go:357
 msgid "General Image Update Process"
 msgstr "Общий процесс обновления образа"
 
-#: internal/common/reply/event.go:310
+#: internal/common/reply/event.go:359
 msgid "Downloading base image update"
 msgstr "Загрузка обновления базового образа"
 
-#: internal/common/reply/event.go:312
+#: internal/common/reply/event.go:361
 msgid "Cleaning up old images"
 msgstr "Очистка старых образов"
 
-#: internal/common/reply/event.go:314
+#: internal/common/reply/event.go:363
 msgid "Synchronizing database"
 msgstr "Синхронизация базы данных"
 
-#: internal/common/reply/event.go:316
+#: internal/common/reply/event.go:365
 msgid "Update information about applications"
 msgstr "Обновить информацию о приложениях"
 
-#: internal/common/reply/event.go:318
+#: internal/common/reply/event.go:369
+msgid "Downloading image"
+msgstr "Загрузка образа"
+
+#: internal/common/reply/event.go:371
+msgid "Fetching layers"
+msgstr "Получение слоёв"
+
+#: internal/common/reply/event.go:373
+msgid "Downloading update"
+msgstr "Загрузка обновления"
+
+#: internal/common/reply/event.go:375
 msgid "Get current kernel"
 msgstr "Получить актуальное ядро"
 
-#: internal/common/reply/event.go:320
+#: internal/common/reply/event.go:377
 msgid "Get list kernels"
 msgstr "Получить список ядер"
 
-#: internal/common/reply/event.go:322
+#: internal/common/reply/event.go:379
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:324 internal/kernel/commands.go:199
+#: internal/common/reply/event.go:381 internal/kernel/commands.go:199
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
-#: internal/common/reply/event.go:326
+#: internal/common/reply/event.go:383
 msgid "Remove packages"
 msgstr "Удаление пакетов"
 
-#: internal/common/reply/event.go:328
+#: internal/common/reply/event.go:385
 msgid "Simulate Remove packages"
 msgstr "Симуляция удаления пакетов"
 
-#. Общий спиннер + фраза
-#: internal/common/reply/preloader.go:348
-msgid "Executing tasks"
-msgstr "Выполнение задач"
-
-#: internal/common/reply/preloader.go:365
-msgid "Progress completed"
-msgstr "Прогресс завершён"
-
-#: internal/common/reply/preloader.go:367
+#: internal/common/reply/preloader.go:239
 #, c-format
 msgid "Progress: %s completed"
 msgstr "Прогресс: %s завершён"
@@ -2223,49 +2233,49 @@ msgstr "Не удалось удалить контейнер %s: %v, ошибк
 msgid "This container is not supported: "
 msgstr "Этот контейнер не поддерживается: "
 
-#: internal/distrobox/service/provider.go:168
+#: internal/distrobox/service/provider.go:169
 #, c-format
 msgid "Failed to retrieve package information: %s"
 msgstr "Не удалось извлечь информацию о пакете: %s"
 
-#: internal/distrobox/service/provider.go:174
+#: internal/distrobox/service/provider.go:175
 msgid "Error retrieving desktop file path: %v"
 msgstr "Ошибка извлечения пути desktop-файла: %v"
 
-#: internal/distrobox/service/provider.go:181
+#: internal/distrobox/service/provider.go:182
 msgid "Error retrieving console path: %v"
 msgstr "Ошибка извлечения пути консоли: %s"
 
-#: internal/distrobox/service/provider.go:221
+#: internal/distrobox/service/provider.go:222
 msgid "A container must be specified for the forced update operation"
 msgstr ""
 "В контейнере должен быть указан для выполнения операцию принудительного "
 "обновления"
 
-#: internal/distrobox/service/provider.go:278
+#: internal/distrobox/service/provider.go:279
 msgid "Error retrieving desktop applications for container %s: %v"
 msgstr "Ошибка извлечения desktop-файла приложений для контейнера %s: %v"
 
-#: internal/distrobox/service/provider.go:281
+#: internal/distrobox/service/provider.go:282
 msgid "Error retrieving console applications for container %s: %v"
 msgstr "Ошибка извлечения консольных утилит для контейнера %s: %v"
 
-#: internal/distrobox/service/provider.go:306
-#: internal/distrobox/service/provider.go:350
+#: internal/distrobox/service/provider.go:307
+#: internal/distrobox/service/provider.go:351
 msgid "Failed to retrieve home directory: %v"
 msgstr "Не удалось извлечь домашнюю директорию: %v"
 
-#: internal/distrobox/service/provider.go:312
-#: internal/distrobox/service/provider.go:356
+#: internal/distrobox/service/provider.go:313
+#: internal/distrobox/service/provider.go:357
 msgid "Error reading directory %s: %v"
 msgstr "Ошибка чтения директории %s: %v"
 
-#: internal/distrobox/service/provider.go:327
-#: internal/distrobox/service/provider.go:375
+#: internal/distrobox/service/provider.go:328
+#: internal/distrobox/service/provider.go:376
 msgid "Error retrieving owner for file %s: %v"
 msgstr "Ошибка извлечения владельца для файла %s: %v"
 
-#: internal/distrobox/service/provider.go:368
+#: internal/distrobox/service/provider.go:369
 msgid "Error processing file %s: %v"
 msgstr "Ошибка обработки файла %s: %v"
 
@@ -3324,17 +3334,23 @@ msgstr "Требуются привилегии администратора д�
 msgid "Distrobox is not installed"
 msgstr "Distrobox не установлен"
 
-#: main.go:526
+#: main.go:527
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:533
+#: main.go:534
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 
 #: data/apt-bridge/update-apm.lua:6
 msgid "Updating apm database"
 msgstr "Обновление базы данных apm"
+
+#~ msgid "Executing tasks"
+#~ msgstr "Выполнение задач"
+
+#~ msgid "Progress completed"
+#~ msgstr "Прогресс завершён"
 
 #~ msgid "Start HTTP API server for kernel, packages and repository modules"
 #~ msgstr "Запуск HTTP API-сервера для kernel, packages и repository модулей"

@@ -136,8 +136,8 @@ func (ih ImageHistory) toDBModel() (DBHistory, error) {
 
 // SaveImageToDB сохраняет историю образов в БД (через GORM).
 func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SaveImageToDB"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SaveImageToDB"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSaveImageToDB))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSaveImageToDB))
 
 	// Преобразуем в модель БД
 	dbHist, err := imageHistory.toDBModel()

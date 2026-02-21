@@ -205,8 +205,8 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
 
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SavePackagesToDB"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SavePackagesToDB"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSavePackagesToDB))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSavePackagesToDB))
 
 	db, err := s.db()
 	if err != nil {
