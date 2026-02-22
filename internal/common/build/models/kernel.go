@@ -84,9 +84,6 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 	var shouldInstallKernel = !b.KernelInfo.IsEmpty()
 	var shouldRebuildInitrd = !b.Initrd.IsEmpty() || shouldInstallKernel
 
-	app.Log.Warn(shouldInstallKernel)
-	app.Log.Warn(shouldRebuildInitrd)
-
 	if shouldInstallKernel {
 		mgr := svc.KernelManager()
 		modules := append([]string{}, b.KernelInfo.Modules...)
