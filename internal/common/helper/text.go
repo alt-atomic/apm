@@ -18,6 +18,7 @@ package helper
 
 import (
 	"apm/internal/common/app"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -64,7 +65,7 @@ func GetVersionFromAptCache(s string) (string, error) {
 	}
 
 	if candidate == "" {
-		return "", fmt.Errorf(app.T_("version not found"))
+		return "", errors.New(app.T_("version not found"))
 	}
 	return candidate, nil
 }

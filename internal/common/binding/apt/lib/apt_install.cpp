@@ -12,14 +12,12 @@ public:
     bool setIfNeeded(pkgDepCache *cache) {
         was_already_set_ = _config->FindB("APT::Get::ReInstall", false);
 
-        // If already set by someone else, don't touch it
         if (was_already_set_) {
             return true;
         }
 
-        // Scan cache for packages with ReInstall flag
         for (pkgCache::PkgIterator it = cache->PkgBegin(); !it.end(); ++it) {
-            pkgDepCache::StateCache &st = (*cache)[it];
+            const pkgDepCache::StateCache &st = (*cache)[it];
             if ((st.iFlags & pkgDepCache::ReInstall) != 0) {
                 _config->Set("APT::Get::ReInstall", true);
                 was_set_by_us_ = true;
@@ -38,7 +36,8 @@ public:
 };
 
 AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, void *user_data) {
-    if (!pm || !pm->pm) return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
+    if (!pm || !pm->pm || !pm->cache || !pm->cache->dep_cache)
+        return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
 
     try {
         ReInstallConfigGuard reinstallGuard;
@@ -71,8 +70,8 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
         }
 
         // Lock the archive directory
-        FileFd Lock;
         if (!_config->FindB("Debug::NoLocking", false)) {
+            FileFd Lock;
             Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
             if (_error->PendingError()) {
                 return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the download directory");
@@ -112,13 +111,11 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
         CallbackBridge bridgeData;
         bridgeData.user_data = user_data;
         bridgeData.cache = pm->cache;
-        if (pm->cache && pm->cache->dep_cache) {
-            for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-                auto &st = (*pm->cache->dep_cache)[it];
-                if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete() ||
-                    (st.iFlags & pkgDepCache::ReInstall) != 0) {
-                    bridgeData.planned.emplace_back(it.Name());
-                }
+        for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+            auto &st = (*pm->cache->dep_cache)[it];
+            if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete() ||
+                (st.iFlags & pkgDepCache::ReInstall) != 0) {
+                bridgeData.planned.emplace_back(it.Name());
             }
         }
 

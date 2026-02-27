@@ -85,11 +85,23 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 		InstallSize:       int64(cc.install_size),
 	}
 
-	// Конвертируем массивы с использованием helper функции
+	// Конвертируем массивы
 	changes.ExtraInstalled = convertCStringArray(cc.extra_installed, cc.extra_installed_count)
 	changes.UpgradedPackages = convertCStringArray(cc.upgraded_packages, cc.upgraded_count)
 	changes.NewInstalledPackages = convertCStringArray(cc.new_installed_packages, cc.new_installed_count)
 	changes.RemovedPackages = convertCStringArray(cc.removed_packages, cc.removed_count)
+
+	// Конвертируем essential-пакеты
+	if cc.essential_packages_count > 0 && cc.essential_packages != nil {
+		count := int(cc.essential_packages_count)
+		changes.EssentialPackages = make([]EssentialPackage, count)
+		for i := 0; i < count; i++ {
+			var cName, cReason *C.char
+			C.apt_get_essential_package(cc, C.size_t(i), &cName, &cReason)
+			changes.EssentialPackages[i].Name = cStringToGo(cName)
+			changes.EssentialPackages[i].Reason = cStringToGo(cReason)
+		}
+	}
 
 	return changes
 }

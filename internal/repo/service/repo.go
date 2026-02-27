@@ -758,7 +758,7 @@ func (s *RepoService) parseArchiveDate(branchName, date string) (string, error) 
 		return date, nil
 	}
 
-	return "", fmt.Errorf(app.T_("Archive date should be YYYYMMDD or YYYY/MM/DD format"))
+	return "", errors.New(app.T_("Archive date should be YYYYMMDD or YYYY/MM/DD format"))
 }
 
 // buildBranchURLs формирует URL для ветки

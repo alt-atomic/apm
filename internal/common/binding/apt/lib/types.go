@@ -93,6 +93,12 @@ type PackageInfo struct {
 	Aliases          []string
 }
 
+// EssentialPackage represents an essential/important package that will be removed
+type EssentialPackage struct {
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
+}
+
 // PackageChanges represents the changes that would occur during package ops
 type PackageChanges struct {
 	ExtraInstalled       []string `json:"extraInstalled"`
@@ -107,4 +113,6 @@ type PackageChanges struct {
 
 	DownloadSize uint64 `json:"downloadSize"`
 	InstallSize  int64  `json:"installSize"`
+
+	EssentialPackages []EssentialPackage `json:"essentialPackages"`
 }

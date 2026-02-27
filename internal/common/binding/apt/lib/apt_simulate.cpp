@@ -11,7 +11,7 @@ class CacheStateGuard {
     std::unique_ptr<pkgDepCache::State> saved_state;
 
 public:
-    CacheStateGuard(pkgDepCache *cache) : saved_state(std::make_unique<pkgDepCache::State>(cache)) {
+    explicit CacheStateGuard(pkgDepCache *cache) : saved_state(std::make_unique<pkgDepCache::State>(cache)) {
     }
 
     ~CacheStateGuard() { if (saved_state) saved_state->Restore(); }
@@ -22,7 +22,6 @@ public:
 static AptResult preprocess_rpm_files_if_needed(AptCache *cache,
                                                 const char **install_names, size_t install_count,
                                                 const char **remove_names, size_t remove_count) {
-    // Check if we have any RPM files
     bool has_rpm_files = false;
 
     if (install_names && install_count > 0) {
@@ -52,7 +51,7 @@ static AptResult preprocess_rpm_files_if_needed(AptCache *cache,
     bool added_new = false;
 
     if (install_names && install_count > 0) {
-        AptResult preprocess_result = apt_preprocess_install_arguments(install_names, install_count, &added_new);
+        const AptResult preprocess_result = apt_preprocess_install_arguments(install_names, install_count, &added_new);
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
@@ -60,7 +59,7 @@ static AptResult preprocess_rpm_files_if_needed(AptCache *cache,
     }
 
     if (remove_names && remove_count > 0) {
-        AptResult preprocess_result = apt_preprocess_install_arguments(remove_names, remove_count, &added_new);
+        const AptResult preprocess_result = apt_preprocess_install_arguments(remove_names, remove_count, &added_new);
         if (preprocess_result.code != APT_SUCCESS) {
             return preprocess_result;
         }
@@ -69,7 +68,7 @@ static AptResult preprocess_rpm_files_if_needed(AptCache *cache,
 
     // Only refresh cache if new RPM files were added to config
     if (need_refresh) {
-        AptResult refresh_result = apt_cache_refresh(cache);
+        const AptResult refresh_result = apt_cache_refresh(cache);
         if (refresh_result.code != APT_SUCCESS) {
             return refresh_result;
         }
@@ -101,7 +100,6 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
             (void) Fix2.Resolve(true);
         }
         if (cache->dep_cache->BrokenCount() > 0) {
-            // Attribute error to a concrete broken package for clarity
             for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 pkgDepCache::StateCache &st = (*cache->dep_cache)[it];
                 if (st.InstBroken() || st.NowBroken()) {
@@ -130,38 +128,38 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
             pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[iter];
 
             if (pkg_state.NewInstall()) {
-                new_installed.push_back(iter.Name());
+                new_installed.emplace_back(iter.Name());
 
-                if (pkg_state.CandidateVer != 0) {
-                    download_size += pkg_state.CandidateVer->Size;
-                    install_size += pkg_state.CandidateVer->InstalledSize;
+                if (pkg_state.CandidateVer != nullptr) {
+                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
+                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
                 }
             } else if (pkg_state.Upgrade()) {
-                upgraded.push_back(iter.Name());
+                upgraded.emplace_back(iter.Name());
 
-                if (pkg_state.CandidateVer != 0) {
-                    download_size += pkg_state.CandidateVer->Size;
-                    install_size += pkg_state.CandidateVer->InstalledSize;
-                    if (pkg_state.InstallVer != 0) {
-                        install_size -= pkg_state.InstallVer->InstalledSize;
+                if (pkg_state.CandidateVer != nullptr) {
+                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
+                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
+                    if (pkg_state.InstallVer != nullptr) {
+                        install_size -= static_cast<int64_t>(pkg_state.InstallVer->InstalledSize);
                     }
                 }
             } else if (pkg_state.Downgrade()) {
-                upgraded.push_back(iter.Name());
+                upgraded.emplace_back(iter.Name());
 
-                if (pkg_state.CandidateVer != 0) {
-                    download_size += pkg_state.CandidateVer->Size;
-                    install_size += pkg_state.CandidateVer->InstalledSize;
+                if (pkg_state.CandidateVer != nullptr) {
+                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
+                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
                     pkgCache::VerIterator currentVer = iter.CurrentVer();
                     if (!currentVer.end()) {
-                        install_size -= currentVer->InstalledSize;
+                        install_size -= static_cast<int64_t>(currentVer->InstalledSize);
                     }
                 }
             } else if (pkg_state.Delete()) {
-                removed.push_back(iter.Name());
+                removed.emplace_back(iter.Name());
 
-                if (pkg_state.InstallVer != 0) {
-                    install_size -= pkg_state.InstallVer->InstalledSize;
+                if (pkg_state.InstallVer != nullptr) {
+                    install_size -= static_cast<int64_t>(pkg_state.InstallVer->InstalledSize);
                 }
             }
         }
@@ -175,21 +173,21 @@ AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes)
         changes->install_size = install_size;
 
         if (changes->new_installed_count > 0) {
-            changes->new_installed_packages = (char **) malloc(changes->new_installed_count * sizeof(char *));
+            changes->new_installed_packages = static_cast<char **>(malloc(changes->new_installed_count * sizeof(char *)));
             for (size_t i = 0; i < changes->new_installed_count; i++) {
                 changes->new_installed_packages[i] = strdup(new_installed[i].c_str());
             }
         }
 
         if (changes->upgraded_count > 0) {
-            changes->upgraded_packages = (char **) malloc(changes->upgraded_count * sizeof(char *));
+            changes->upgraded_packages = static_cast<char **>(malloc(changes->upgraded_count * sizeof(char *)));
             for (size_t i = 0; i < changes->upgraded_count; i++) {
                 changes->upgraded_packages[i] = strdup(upgraded[i].c_str());
             }
         }
 
         if (changes->removed_count > 0) {
-            changes->removed_packages = (char **) malloc(changes->removed_count * sizeof(char *));
+            changes->removed_packages = static_cast<char **>(malloc(changes->removed_count * sizeof(char *)));
             for (size_t i = 0; i < changes->removed_count; i++) {
                 changes->removed_packages[i] = strdup(removed[i].c_str());
             }
@@ -279,13 +277,7 @@ AptResult plan_change_internal(
             return result;
         }
 
-        // Step 4c: Preprocess removal validations
-        result = preprocess_removals(cache, requested_remove);
-        if (result.code != APT_SUCCESS) {
-            return result;
-        }
-
-        // Step 4d: Finalize all dependency resolution (single Fix.Resolve for everything)
+        // Step 4c: Finalize all dependency resolution (single Fix.Resolve for everything)
         result = finalize_dependency_resolution(cache, requested_install, requested_remove, remove_depends);
         if (result.code != APT_SUCCESS) {
             return result;
@@ -327,8 +319,12 @@ AptResult plan_change_internal(
             }
         }
 
-        populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed, download_size,
-                                   install_size);
+        // Collect essential/important packages that will be removed
+        std::vector<std::pair<std::string, std::string>> essential_list;
+        collect_essential_packages(cache, essential_list);
+
+        populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed,
+                                   essential_list, download_size, install_size);
 
         if (apply && stateGuard) {
             stateGuard->commit();
@@ -391,7 +387,7 @@ AptResult apt_apply_reinstall(AptCache *cache, const char **package_names, size_
     return r;
 }
 
-AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
+AptResult apt_simulate_autoremove(const AptCache *cache, AptPackageChanges *changes) {
     if (!cache || !changes) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, "Invalid parameters for autoremove simulation");
     }
@@ -419,9 +415,9 @@ AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
 
         // Mark unneeded packages for removal
         for (const std::string &pkg_name: unneeded_packages) {
-            pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name.c_str());
+            pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name);
             if (!pkg.end() && pkg->CurrentState == pkgCache::State::Installed) {
-                cache->dep_cache->MarkDelete(pkg, false); // false = don't purge, just remove
+                cache->dep_cache->MarkDelete(pkg, false);
             }
         }
 
@@ -450,33 +446,33 @@ AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
             pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[iter];
 
             if (pkg_state.Delete()) {
-                removed.push_back(iter.Name());
-                if (pkg_state.InstallVer != 0) {
-                    install_size -= pkg_state.InstallVer->InstalledSize;
+                removed.emplace_back(iter.Name());
+                if (pkg_state.InstallVer != nullptr) {
+                    install_size -= static_cast<int64_t>(pkg_state.InstallVer->InstalledSize);
                 }
             } else if (pkg_state.NewInstall()) {
-                new_installed.push_back(iter.Name());
-                if (pkg_state.CandidateVer != 0) {
-                    download_size += pkg_state.CandidateVer->Size;
-                    install_size += pkg_state.CandidateVer->InstalledSize;
+                new_installed.emplace_back(iter.Name());
+                if (pkg_state.CandidateVer != nullptr) {
+                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
+                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
                 }
             } else if (pkg_state.Upgrade()) {
-                upgraded.push_back(iter.Name());
-                if (pkg_state.CandidateVer != 0) {
-                    download_size += pkg_state.CandidateVer->Size;
-                    install_size += pkg_state.CandidateVer->InstalledSize;
-                    if (pkg_state.InstallVer != 0) {
-                        install_size -= pkg_state.InstallVer->InstalledSize;
+                upgraded.emplace_back(iter.Name());
+                if (pkg_state.CandidateVer != nullptr) {
+                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
+                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
+                    if (pkg_state.InstallVer != nullptr) {
+                        install_size -= static_cast<int64_t>(pkg_state.InstallVer->InstalledSize);
                     }
                 }
             } else if (pkg_state.Downgrade()) {
-                upgraded.push_back(iter.Name());
-                if (pkg_state.CandidateVer != 0) {
-                    download_size += pkg_state.CandidateVer->Size;
-                    install_size += pkg_state.CandidateVer->InstalledSize;
+                upgraded.emplace_back(iter.Name());
+                if (pkg_state.CandidateVer != nullptr) {
+                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
+                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
                     pkgCache::VerIterator currentVer = iter.CurrentVer();
                     if (!currentVer.end()) {
-                        install_size -= currentVer->InstalledSize;
+                        install_size -= static_cast<int64_t>(currentVer->InstalledSize);
                     }
                 }
             }
@@ -493,21 +489,21 @@ AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes) {
 
         // Allocate and fill string arrays
         if (changes->removed_count > 0) {
-            changes->removed_packages = (char **) malloc(changes->removed_count * sizeof(char *));
+            changes->removed_packages = static_cast<char **>(malloc(changes->removed_count * sizeof(char *)));
             for (size_t i = 0; i < changes->removed_count; i++) {
                 changes->removed_packages[i] = strdup(removed[i].c_str());
             }
         }
 
         if (changes->upgraded_count > 0) {
-            changes->upgraded_packages = (char **) malloc(changes->upgraded_count * sizeof(char *));
+            changes->upgraded_packages = static_cast<char **>(malloc(changes->upgraded_count * sizeof(char *)));
             for (size_t i = 0; i < changes->upgraded_count; i++) {
                 changes->upgraded_packages[i] = strdup(upgraded[i].c_str());
             }
         }
 
         if (changes->new_installed_count > 0) {
-            changes->new_installed_packages = (char **) malloc(changes->new_installed_count * sizeof(char *));
+            changes->new_installed_packages = static_cast<char **>(malloc(changes->new_installed_count * sizeof(char *)));
             for (size_t i = 0; i < changes->new_installed_count; i++) {
                 changes->new_installed_packages[i] = strdup(new_installed[i].c_str());
             }

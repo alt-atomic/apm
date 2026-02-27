@@ -32,10 +32,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type DialogAction int
+type Action int
 
 const (
-	ActionInstall DialogAction = iota
+	ActionInstall Action = iota
 	ActionRemove
 	ActionMultiInstall
 	ActionUpgrade
@@ -50,12 +50,12 @@ type model struct {
 	choice     string
 	vp         viewport.Model
 	canceled   bool
-	choiceType DialogAction
+	choiceType Action
 	appConfig  *app.Config
 }
 
 // NewDialog запускает диалог отображения информации о пакете с выбором действия.
-func NewDialog(appConfig *app.Config, packageInfo []_package.Package, packageChange aptLib.PackageChanges, action DialogAction) (bool, error) {
+func NewDialog(appConfig *app.Config, packageInfo []_package.Package, packageChange aptLib.PackageChanges, action Action) (bool, error) {
 	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !reply.IsTTY() {
 		return true, nil
 	}
@@ -276,6 +276,48 @@ func (m model) addScrollIndicator(contentView string, yOffset, totalLines, viewp
 	return strings.Join(lines, "\n")
 }
 
+// buildEssentialWarning возвращает предупреждение о критически важных пакетах
+func (m model) buildEssentialWarning() string {
+	if len(m.pckChange.EssentialPackages) == 0 {
+		return ""
+	}
+
+	deleteColor := lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Delete)
+	keyStyle := lipgloss.NewStyle().Foreground(deleteColor).PaddingLeft(1)
+	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
+		Light: m.appConfig.ConfigManager.GetConfig().Colors.ItemLight,
+		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.ItemDark,
+	})
+
+	const keyWidth = 21
+
+	items := make([]string, 0, len(m.pckChange.EssentialPackages))
+	for _, ep := range m.pckChange.EssentialPackages {
+		if ep.Reason != "" && ep.Reason != ep.Name {
+			items = append(items, fmt.Sprintf("%s (%s)", ep.Name, ep.Reason))
+		} else {
+			items = append(items, ep.Name)
+		}
+	}
+
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(deleteColor)
+
+	var content strings.Builder
+	content.WriteString(headerStyle.Render(app.T_("WARNING: Packages critical for system operation will be removed")))
+	content.WriteString("\n\n")
+
+	essentialStr := m.formatDependencies(items)
+	content.WriteString(formatLine(app.T_("Essential packages"), essentialStr, keyWidth, keyStyle, valueStyle))
+
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(deleteColor).
+		Width(m.vp.Width-2).
+		Padding(0, 1)
+
+	return boxStyle.Render(content.String())
+}
+
 // buildContent генерирует основное содержимое, которое помещается в viewport.
 // Здесь выводится информация о пакетах и изменения, без интерактивного меню.
 func (m model) buildContent() string {
@@ -291,6 +333,11 @@ func (m model) buildContent() string {
 
 	var sb strings.Builder
 	const keyWidth = 21
+
+	if warning := m.buildEssentialWarning(); warning != "" {
+		sb.WriteString(warning)
+		sb.WriteString("\n")
+	}
 
 	// Сначала затронутые изменения
 	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", app.T_("Affected changes:"))))
@@ -447,10 +494,14 @@ func (m model) formatDependencies(depends []string) string {
 		}
 	}
 	colWidth := maxLen + 2
+	cols := m.vp.Width / colWidth
+	if cols < 1 {
+		cols = 1
+	}
 	var sb strings.Builder
 	for i, dep := range filtered {
 		sb.WriteString(fmt.Sprintf("%-*s", colWidth, dep))
-		if (i+1)%3 == 0 || i == len(filtered)-1 {
+		if (i+1)%cols == 0 || i == len(filtered)-1 {
 			sb.WriteString("\n")
 		}
 	}

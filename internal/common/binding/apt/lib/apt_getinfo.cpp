@@ -62,22 +62,22 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
             }
         }
 
-        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(requested.c_str());
+        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(requested);
         if (pkg.end()) {
             // Try common ALT biarch provider name: i586-<requested>
             std::string i586_name = std::string("i586-") + requested;
-            pkg = cache->dep_cache->FindPkg(i586_name.c_str());
+            pkg = cache->dep_cache->FindPkg(i586_name);
         }
         if (pkg.end()) {
             // Fallback: resolve via providers (candidate versions)
-            pkgDepCache::Policy Plcy;
+            pkgDepCache::Policy policy;
             for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); it.end() == false; ++it) {
-                pkgCache::VerIterator cand = Plcy.GetCandidateVer(it);
+                pkgCache::VerIterator cand = policy.GetCandidateVer(it);
                 if (cand.end()) continue;
                 for (pkgCache::PrvIterator prv = cand.ProvidesList(); !prv.end(); ++prv) {
                     const char *prov_name = prv.Name();
-                    if (prov_name && (requested == prov_name || (
-                                          package_name && std::string(package_name) == prov_name))) {
+                    if (prov_name && (requested == prov_name ||
+                                      std::string(package_name) == prov_name)) {
                         pkg = it;
                         break;
                     }
@@ -145,7 +145,8 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
             }
 
             pkgRecords records(*cache->dep_cache);
-            for (pkgCache::VerFileIterator vf = candidate_ver.FileList(); !vf.end(); ++vf) {
+            pkgCache::VerFileIterator vf = candidate_ver.FileList();
+            if (!vf.end()) {
                 pkgRecords::Parser &parser = records.Lookup(vf);
 
                 std::string desc = parser.LongDesc();
@@ -163,7 +164,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                     info->maintainer = strdup(maintainer.c_str());
                 }
 
-                // Add missing fields from apt_search_packages
                 std::string source_pkg = parser.SourcePkg();
                 if (!source_pkg.empty()) {
                     info->source_package = strdup(source_pkg.c_str());
@@ -189,7 +189,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                     info->changelog = strdup(changelog.c_str());
                 }
 
-                // Get Homepage from full record like in apt_search_packages
                 const char *rec_start, *rec_stop;
                 parser.GetRec(rec_start, rec_stop);
                 std::string record(rec_start, rec_stop - rec_start);
@@ -203,7 +202,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                     info->homepage = strdup(homepage.c_str());
                 }
 
-                // Get Provides field
                 size_t provides_pos = record.find("Provides: ");
                 if (provides_pos != std::string::npos) {
                     size_t start = provides_pos + 10;
@@ -212,8 +210,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                     std::string provides = record.substr(start, end - start);
                     info->provides = strdup(provides.c_str());
                 }
-
-                break;
             }
         } else {
             info->version = strdup("unknown");

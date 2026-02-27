@@ -72,6 +72,12 @@ typedef void (*AptProgressCallback)(const char *package_name,
 // Optional log callback to route error/info messages instead of stderr
 typedef void (*AptLogCallback)(const char *message, void *user_data);
 
+// Essential package info for simulation warnings
+typedef struct {
+    char *name;    // package name
+    char *reason;  // NULL if directly essential/important, or name of the essential/important package that depends on it
+} AptEssentialPackage;
+
 // Package states
 typedef enum {
     APT_PKG_STATE_NOT_INSTALLED = 0,
@@ -128,10 +134,10 @@ AptResult apt_init_config();
 
 AptResult apt_init_system(AptSystem **system);
 
-void apt_cleanup_system(AptSystem *system);
+void apt_cleanup_system(const AptSystem *system);
 
 // Cache management
-AptResult apt_cache_open(AptSystem *system, AptCache **cache, bool with_lock);
+AptResult apt_cache_open(const AptSystem *system, AptCache **cache, bool with_lock);
 
 void apt_cache_close(AptCache *cache);
 
@@ -147,7 +153,7 @@ AptResult apt_preprocess_install_arguments(const char **install_names, size_t in
 // Package manager
 AptResult apt_package_manager_create(AptCache *cache, AptPackageManager **pm);
 
-void apt_package_manager_destroy(AptPackageManager *pm);
+void apt_package_manager_destroy(const AptPackageManager *pm);
 
 // Package operations
 AptResult apt_mark_install(AptCache *cache, const char *package_name);
@@ -205,6 +211,9 @@ typedef struct {
 
     uint64_t download_size; // Size in bytes to download
     int64_t install_size;   // Size change in bytes after installation (can be negative for downgrades/removals)
+
+    AptEssentialPackage *essential_packages; // Essential/important packages that will be removed
+    size_t essential_packages_count;
 } AptPackageChanges;
 
 AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageList *result);
@@ -219,7 +228,7 @@ AptResult apt_simulate_remove(AptCache *cache, const char **package_names, size_
 
 AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes);
 
-AptResult apt_simulate_autoremove(AptCache *cache, AptPackageChanges *changes);
+AptResult apt_simulate_autoremove(const AptCache *cache, AptPackageChanges *changes);
 
 // Reinstall simulation
 AptResult apt_simulate_reinstall(AptCache *cache, const char **package_names, size_t count, AptPackageChanges *changes);
@@ -245,15 +254,22 @@ AptResult apt_apply_changes(AptCache *cache,
 
 void apt_free_package_changes(AptPackageChanges *changes);
 
+// Helper to access essential package fields by index (CGO-friendly)
+static inline void apt_get_essential_package(const AptPackageChanges *changes, size_t index,
+                                             const char **out_name, const char **out_reason) {
+    *out_name = changes->essential_packages[index].name;
+    *out_reason = changes->essential_packages[index].reason;
+}
+
 // Utility functions
 const char *apt_error_string(AptErrorCode error);
 
-bool apt_has_broken_packages(AptCache *cache);
+bool apt_has_broken_packages(const AptCache *cache);
 
-uint32_t apt_get_broken_count(AptCache *cache);
+uint32_t apt_get_broken_count(const AptCache *cache);
 
 // Debug/testing functions
-bool apt_test_findpkg(AptCache *cache, const char *package_name);
+bool apt_test_findpkg(const AptCache *cache, const char *package_name);
 
 // Configuration
 AptErrorCode apt_set_config(const char *key, const char *value);

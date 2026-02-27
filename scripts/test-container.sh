@@ -122,11 +122,11 @@ fi
 
 print_success "APM built and installed in container"
 
-print_info "🧪 Running tests..."
+print_info "Running tests..."
 
 # Handle exec mode for interactive container access
 if [ "${TEST_SUITE}" = "exec" ]; then
-    print_info "🚀 Entering container interactively as root..."
+    print_info "Entering container interactively as root..."
     print_info "Container has been built and is ready for manual testing."
     print_info "Your project is available at /tmp/apm-src (built) and /workspace (source)"
     print_info "Use 'exit' to leave the container"
@@ -142,7 +142,7 @@ if [ "${TEST_SUITE}" = "exec" ]; then
     fi
     
     # Manual cleanup for exec mode
-    print_info "🧹 Cleaning up container ${CONTAINER_NAME} ..."
+    print_info "Cleaning up container ${CONTAINER_NAME} ..."
     podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
     exit 0
 fi

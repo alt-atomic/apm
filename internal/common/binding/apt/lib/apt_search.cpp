@@ -19,7 +19,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
     try {
         pkgCache &Cache = cache->dep_cache->GetCache();
 
-        pkgDepCache::Policy Plcy;
+        pkgDepCache::Policy policy;
 
         regex_t compiled_pattern;
         if (regcomp(&compiled_pattern, pattern, REG_EXTENDED | REG_ICASE | REG_NOSUB) != 0) {
@@ -37,28 +37,28 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
             bool NameMatch;
         };
 
-        ExVerFile *VFList = new ExVerFile[Cache.HeaderP->PackageCount + 1]();
+        auto *VFList = new ExVerFile[Cache.HeaderP->PackageCount + 1]();
 
-        for (pkgCache::PkgIterator P = Cache.PkgBegin(); P.end() == false; P++) {
+        for (pkgCache::PkgIterator P = Cache.PkgBegin(); P.end() == false; ++P) {
             VFList[P->ID].NameMatch = false;
             VFList[P->ID].Vf = nullptr;
 
-            if (regexec(&compiled_pattern, P.Name(), 0, 0, 0) == 0) {
+            if (regexec(&compiled_pattern, P.Name(), 0, nullptr, 0) == 0) {
                 VFList[P->ID].NameMatch = true;
             }
 
-            pkgCache::VerIterator V = Plcy.GetCandidateVer(P);
+            pkgCache::VerIterator V = policy.GetCandidateVer(P);
             if (V.end() == false) {
                 VFList[P->ID].Vf = V.FileList();
             }
         }
 
-        for (pkgCache::PkgIterator P = Cache.PkgBegin(); P.end() == false; P++) {
+        for (pkgCache::PkgIterator P = Cache.PkgBegin(); P.end() == false; ++P) {
             if (VFList[P->ID].NameMatch == false)
                 continue;
 
-            for (pkgCache::PrvIterator Prv = P.ProvidesList(); Prv.end() == false; Prv++) {
-                pkgCache::VerIterator V = Plcy.GetCandidateVer(Prv.OwnerPkg());
+            for (pkgCache::PrvIterator Prv = P.ProvidesList(); Prv.end() == false; ++Prv) {
+                pkgCache::VerIterator V = policy.GetCandidateVer(Prv.OwnerPkg());
                 if (V.end() == false) {
                     VFList[Prv.OwnerPkg()->ID].Vf = V.FileList();
                     VFList[Prv.OwnerPkg()->ID].NameMatch = true;
@@ -67,25 +67,26 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
         }
 
         auto LocalityCompare = [](const void *a, const void *b) -> int {
-            const ExVerFile *A = (const ExVerFile *) a;
-            const ExVerFile *B = (const ExVerFile *) b;
+            const auto A = static_cast<const ExVerFile *>(a);
+            const auto *B = static_cast<const ExVerFile *>(b);
             if (A->Vf == nullptr && B->Vf == nullptr) return 0;
             if (A->Vf == nullptr) return 1;
             if (B->Vf == nullptr) return -1;
-            return A->Vf->File - B->Vf->File;
+            if (A->Vf->File < B->Vf->File) return -1;
+            if (A->Vf->File > B->Vf->File) return 1;
+            return 0;
         };
 
         qsort(VFList, Cache.HeaderP->PackageCount, sizeof(*VFList), LocalityCompare);
 
         std::vector<AptPackageInfo> matched_packages;
-        std::set<std::string> seen_packages; // To avoid duplicates
+        std::set<std::string> seen_packages;
 
-        // Iterate over all the version records and check them (like in apt-cache)
         for (ExVerFile *J = VFList; J->Vf != nullptr; J++) {
-            bool Match = true;
             pkgCache::VerFileIterator VF(Cache, J->Vf);
 
             try {
+                bool Match = true;
                 pkgRecords::Parser &Parser = Recs.Lookup(VF);
                 std::string pkg_name = Parser.Name();
 
@@ -94,34 +95,30 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                     std::string ShortDesc = Parser.ShortDesc();
 
                     Match = false;
-                    if (regexec(&compiled_pattern, LongDesc.c_str(), 0, 0, 0) == 0 ||
-                        regexec(&compiled_pattern, ShortDesc.c_str(), 0, 0, 0) == 0) {
+                    if (regexec(&compiled_pattern, LongDesc.c_str(), 0, nullptr, 0) == 0 ||
+                        regexec(&compiled_pattern, ShortDesc.c_str(), 0, nullptr, 0) == 0) {
                         Match = true;
                     }
                 }
 
                 if (Match == true && !pkg_name.empty()) {
-                    // Fold i586-* packages into their base if base REAL package exists (has candidate version)
-                    // Do not emit separate entry in that case. If base is virtual-only, keep this entry (we will retitle name below).
                     if (pkg_name.rfind("i586-", 0) == 0) {
                         std::string base_name = pkg_name.substr(5);
                         pkgCache::PkgIterator base_pkg = Cache.FindPkg(base_name);
                         if (!base_pkg.end()) {
-                            pkgCache::VerIterator base_ver = Plcy.GetCandidateVer(base_pkg);
+                            pkgCache::VerIterator base_ver = policy.GetCandidateVer(base_pkg);
                             if (!base_ver.end()) {
-                                // Real base package exists, skip this i586-* duplicate
                                 continue;
                             }
                         }
                     }
-                    // Determine effective display name: if this is i586-* and base is virtual-only, use base name
                     std::string effective_name = pkg_name;
                     bool is_i586 = (pkg_name.rfind("i586-", 0) == 0);
                     if (is_i586) {
                         std::string base_name = pkg_name.substr(5);
                         pkgCache::PkgIterator base_pkg = Cache.FindPkg(base_name);
                         if (!base_pkg.end()) {
-                            pkgCache::VerIterator base_ver = Plcy.GetCandidateVer(base_pkg);
+                            pkgCache::VerIterator base_ver = policy.GetCandidateVer(base_pkg);
                             if (base_ver.end()) {
                                 effective_name = base_name;
                             }
@@ -134,11 +131,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                         // Find the package in cache for proper info
                         pkgCache::PkgIterator Pkg = Cache.FindPkg(pkg_name);
 
-                        // Create package info
-                        AptPackageInfo info;
-                        memset(&info, 0, sizeof(AptPackageInfo));
+                        AptPackageInfo info = {};
 
-                        // Get detailed information from parser first
                         std::string long_desc = Parser.LongDesc();
                         std::string short_desc = Parser.ShortDesc();
 
@@ -202,7 +196,6 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                             // leave homepage as nullptr if not present
                         }
 
-                        // Basic package information: use effective_name as primary name
                         info.name = strdup(effective_name.c_str());
                         info.aliases = nullptr;
                         info.alias_count = 0;
@@ -242,7 +235,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                             }
 
                             // Resolve version: candidate; else fallback to record Version field
-                            pkgCache::VerIterator Ver = Plcy.GetCandidateVer(Pkg);
+                            pkgCache::VerIterator Ver = policy.GetCandidateVer(Pkg);
                             if (!Ver.end()) {
                                 if (Ver.VerStr() != nullptr && *Ver.VerStr() != '\0') {
                                     info.version = strdup(Ver.VerStr());
@@ -256,7 +249,6 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                 }
                                 info.installed_size = Ver->InstalledSize;
                                 info.download_size = Ver->Size;
-                                // Collect provided virtual names from this version
                                 {
                                     std::set<std::string> prov_names;
                                     for (pkgCache::PrvIterator prv = Ver.ProvidesList(); !prv.end(); ++prv) {
@@ -265,14 +257,13 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                     }
                                     if (!prov_names.empty()) {
                                         std::string joined;
-                                        for (auto it = prov_names.begin(); it != prov_names.end(); ++it) {
+                                        for (const auto & prov_name : prov_names) {
                                             if (!joined.empty()) joined += ", ";
-                                            joined += *it;
+                                            joined += prov_name;
                                         }
                                         info.provides = strdup(joined.c_str());
                                     }
                                 }
-                                // Collect hard dependencies (Depends/PreDepends) from this version
                                 {
                                     std::set<std::string> dep_names;
                                     for (pkgCache::DepIterator dep = Ver.DependsList(); !dep.end(); ++dep) {
@@ -286,9 +277,9 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                     }
                                     if (!dep_names.empty()) {
                                         std::string joined;
-                                        for (auto it = dep_names.begin(); it != dep_names.end(); ++it) {
+                                        for (const auto & dep_name : dep_names) {
                                             if (!joined.empty()) joined += ", ";
-                                            joined += *it;
+                                            joined += dep_name;
                                         }
                                         info.depends = strdup(joined.c_str());
                                     }
@@ -315,9 +306,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                 }
                             }
                         } else {
-                            // Package not found in cache
                             info.package_id = 0;
-                            // leave section nullptr
                             info.essential = false;
                             info.auto_installed = false;
                             info.state = APT_PKG_STATE_NOT_INSTALLED;
@@ -329,7 +318,6 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                             }
                             info.installed_size = 0;
                             info.download_size = 0;
-                            // Fallback depends from record line if present
                             {
                                 size_t pos = record.find("Depends: ");
                                 if (pos != std::string::npos) {
@@ -350,7 +338,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                         {
                             std::vector<std::string> aliases;
                             std::string current_name = Parser.Name();
-                            std::string base_name_for_alias = effective_name;
+                            const std::string& base_name_for_alias = effective_name;
 
                             // If this package is i586- prefixed and base exists, add that relation
                             bool has_i586_prefix = (!current_name.empty() && current_name.rfind("i586-", 0) == 0);
@@ -358,7 +346,6 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                 std::string stripped = current_name.substr(5);
                                 pkgCache::PkgIterator base_pkg = Cache.FindPkg(stripped);
                                 if (!base_pkg.end()) {
-                                    // Current is i586-<name>. Always add the provider name itself and its .32bit alias
                                     aliases.push_back(current_name);
                                     aliases.push_back(current_name + ".32bit");
                                 }
@@ -370,7 +357,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
 
                                 bool is_32bit_arch = false;
                                 if (!Pkg.end()) {
-                                    pkgCache::VerIterator cand = Plcy.GetCandidateVer(Pkg);
+                                    pkgCache::VerIterator cand = policy.GetCandidateVer(Pkg);
                                     if (!cand.end() && cand.Arch() != nullptr) {
                                         const char *a = cand.Arch();
                                         if (strcmp(a, "i586") == 0 || strcmp(a, "i386") == 0) {
@@ -387,7 +374,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
 
                             if (!aliases.empty()) {
                                 info.alias_count = aliases.size();
-                                info.aliases = (char **) calloc(info.alias_count, sizeof(char *));
+                                info.aliases = static_cast<char **>(calloc(info.alias_count, sizeof(char *)));
                                 for (size_t ai = 0; ai < aliases.size(); ++ai) {
                                     info.aliases[ai] = strdup(aliases[ai].c_str());
                                 }
@@ -402,9 +389,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                         }
                     }
                 }
-            } catch (...) {
+            } catch (const std::exception &) {
                 // Skip this version file if we can't parse it
-                continue;
             }
         }
 
@@ -418,7 +404,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
 
         // Allocate result array
         result->count = matched_packages.size();
-        result->packages = (AptPackageInfo *) calloc(result->count, sizeof(AptPackageInfo));
+        result->packages = static_cast<AptPackageInfo *>(calloc(result->count, sizeof(AptPackageInfo)));
         if (!result->packages) {
             result->count = 0;
             return make_result(APT_ERROR_UNKNOWN, "Failed to allocate memory for search results");

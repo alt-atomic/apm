@@ -35,8 +35,8 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         }
 
         // Lock the archive directory
-        FileFd Lock;
         if (!_config->FindB("Debug::NoLocking", false)) {
+            FileFd Lock;
             Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
             if (_error->PendingError()) {
                 if (cb_set) {
@@ -81,12 +81,10 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         CallbackBridge bridgeData;
         bridgeData.user_data = user_data;
         bridgeData.cache = cache;
-        if (cache && cache->dep_cache) {
-            for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-                auto &st = (*cache->dep_cache)[it];
-                if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete()) {
-                    bridgeData.planned.emplace_back(it.Name());
-                }
+        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+            auto &st = (*cache->dep_cache)[it];
+            if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete()) {
+                bridgeData.planned.emplace_back(it.Name());
             }
         }
 

@@ -25,6 +25,7 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -187,7 +188,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 
 	if len(expandedInstall) == 0 && len(expandedRemove) == 0 {
 		if len(installed) > 0 || len(removed) > 0 {
-			return nil, nil, nil, nil, fmt.Errorf(app.T_("No packages found matching the specified patterns"))
+			return nil, nil, nil, nil, errors.New(app.T_("No packages found matching the specified patterns"))
 		}
 	}
 
@@ -205,6 +206,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 
 	// Добавляем информацию о дополнительных пакетах из packageChanges только в packagesInfo
 	if packageChanges != nil {
+		var namesToFetch []string
 		for _, list := range [][]string{
 			packageChanges.ExtraInstalled,
 			packageChanges.UpgradedPackages,
@@ -217,14 +219,18 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 					continue
 				}
 				if !seenInfo[cleanName] {
-					info, err := a.serviceAptDatabase.GetPackageByName(ctx, cleanName)
-					if err != nil {
-						return nil, nil, nil, nil, err
-					}
 					seenInfo[cleanName] = true
-					packagesInfo = append(packagesInfo, info)
+					namesToFetch = append(namesToFetch, cleanName)
 				}
 			}
+		}
+
+		if len(namesToFetch) > 0 {
+			batchInfo, err := a.serviceAptDatabase.GetPackagesByNames(ctx, namesToFetch)
+			if err != nil {
+				return nil, nil, nil, nil, err
+			}
+			packagesInfo = append(packagesInfo, batchInfo...)
 		}
 	}
 
@@ -276,7 +282,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 						reply.WithEventName(reply.EventSystemDownloadProgress),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf(app.T_("Downloading packages"))),
+						reply.WithEventView(app.T_("Downloading packages")),
 					)
 				}
 			}

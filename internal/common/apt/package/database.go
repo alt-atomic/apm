@@ -262,6 +262,62 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 	return dbPkg.fromDBModel(), nil
 }
 
+// GetPackagesByNames возвращает пакеты по списку имён одним batch-запросом
+func (s *PackageDBService) GetPackagesByNames(ctx context.Context, names []string) ([]Package, error) {
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
+	const chunkSize = 500
+	var DBPackages []DBPackage
+
+	for i := 0; i < len(names); i += chunkSize {
+		end := i + chunkSize
+		if end > len(names) {
+			end = len(names)
+		}
+		var chunk []DBPackage
+		if err = db.WithContext(ctx).Where("name IN ?", names[i:end]).Find(&chunk).Error; err != nil {
+			return nil, err
+		}
+		DBPackages = append(DBPackages, chunk...)
+	}
+
+	foundNames := make(map[string]bool, len(DBPackages))
+	for _, p := range DBPackages {
+		foundNames[p.Name] = true
+	}
+
+	var missingNames []string
+	for _, name := range names {
+		if !foundNames[name] {
+			missingNames = append(missingNames, name)
+		}
+	}
+
+	for _, name := range missingNames {
+		var dbPkg DBPackage
+		err = db.WithContext(ctx).
+			Where("(',' || aliases || ',') LIKE ?", "%,"+name+",%").
+			First(&dbPkg).Error
+		if err != nil {
+			continue
+		}
+		DBPackages = append(DBPackages, dbPkg)
+	}
+
+	result := make([]Package, 0, len(DBPackages))
+	for _, p := range DBPackages {
+		result = append(result, p.fromDBModel())
+	}
+	return result, nil
+}
+
 // SyncPackageInstallationInfo синхронизирует базу пакетов
 func (s *PackageDBService) SyncPackageInstallationInfo(ctx context.Context, installedPackages map[string]string) error {
 	syncDBMutex.Lock()

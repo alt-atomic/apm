@@ -221,6 +221,10 @@ func TranslateKey(key string) string {
 		return app.T_("WillAdd")
 	case "willRemove":
 		return app.T_("WillRemove")
+	case "essentialPackages":
+		return app.T_("Essential packages")
+	case "reason":
+		return app.T_("Reason")
 	default:
 		return app.T_(key)
 	}
