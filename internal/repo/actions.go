@@ -35,19 +35,6 @@ type Actions struct {
 	serviceAptActions *_package.Actions
 }
 
-// NewActionsWithDeps создаёт новый экземпляр Actions с ручным управлением зависимостями
-func NewActionsWithDeps(
-	appConfig *app.Config,
-	repoService *service.RepoService,
-	aptActions *_package.Actions,
-) *Actions {
-	return &Actions{
-		appConfig:         appConfig,
-		repoService:       repoService,
-		serviceAptActions: aptActions,
-	}
-}
-
 // NewActions создаёт новый экземпляр Actions
 func NewActions(appConfig *app.Config) *Actions {
 	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)

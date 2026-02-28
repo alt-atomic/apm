@@ -39,21 +39,6 @@ type Actions struct {
 	kernelManager      *service.Manager
 }
 
-// NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
-func NewActionsWithDeps(
-	appConfig *app.Config,
-	aptDB *_package.PackageDBService,
-	aptActions *_package.Actions,
-	kernelManager *service.Manager,
-) *Actions {
-	return &Actions{
-		appConfig:          appConfig,
-		serviceAptDatabase: aptDB,
-		serviceAptActions:  aptActions,
-		kernelManager:      kernelManager,
-	}
-}
-
 // NewActions создаёт новый экземпляр Actions.
 func NewActions(appConfig *app.Config) *Actions {
 	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)

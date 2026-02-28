@@ -25,7 +25,7 @@ import (
 	"apm/internal/common/build"
 	"apm/internal/common/reply"
 	_kservice "apm/internal/kernel/service"
-	_repo_service "apm/internal/repo/service"
+	reposervice "apm/internal/repo/service"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
 	"context"
@@ -45,27 +45,6 @@ type Actions struct {
 	serviceHostDatabase    *build.HostDBService
 	serviceHostConfig      *build.HostConfigService
 	serviceTemporaryConfig *service.TemporaryConfigService
-}
-
-// NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
-func NewActionsWithDeps(
-	appConfig *app.Config,
-	aptDB *_package.PackageDBService,
-	aptActions *_package.Actions,
-	hostImage *build.HostImageService,
-	hostDB *build.HostDBService,
-	hostConfig *build.HostConfigService,
-	temporaryConfig *service.TemporaryConfigService,
-) *Actions {
-	return &Actions{
-		appConfig:              appConfig,
-		serviceHostImage:       hostImage,
-		serviceAptActions:      aptActions,
-		serviceAptDatabase:     aptDB,
-		serviceHostDatabase:    hostDB,
-		serviceHostConfig:      hostConfig,
-		serviceTemporaryConfig: temporaryConfig,
-	}
 }
 
 // NewActions создаёт новый экземпляр Actions.
@@ -523,7 +502,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 
 	aptActions := _binding.NewActions()
 	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
-	repoService := _repo_service.NewRepoService(a.appConfig)
+	repoService := reposervice.NewRepoService(a.appConfig)
 	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, repoService, a.serviceHostConfig)
 	err = buildService.Build(ctx)
 	if err != nil {

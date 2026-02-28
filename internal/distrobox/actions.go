@@ -33,19 +33,6 @@ type Actions struct {
 	serviceDistroAPI      *service.DistroAPIService
 }
 
-// NewActionsWithDeps создаёт новый экземпляр Actions с ручными управлением зависимостями
-func NewActionsWithDeps(
-	servicePackage *service.PackageService,
-	serviceDistroDatabase *service.DistroDBService,
-	serviceDistroAPI *service.DistroAPIService,
-) *Actions {
-	return &Actions{
-		servicePackage:        servicePackage,
-		serviceDistroDatabase: serviceDistroDatabase,
-		serviceDistroAPI:      serviceDistroAPI,
-	}
-}
-
 func NewActions(appConfig *app.Config) *Actions {
 	distroDBSvc, err := service.NewDistroDBService(appConfig.DatabaseManager.GetUserDB())
 	if err != nil {
