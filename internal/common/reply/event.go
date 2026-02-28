@@ -17,10 +17,12 @@
 package reply
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -110,14 +112,13 @@ const (
 	EventKernelCheckRemove = "kernel.CheckRemovePackage"
 )
 
-
 // TaskResultEvent содержит результат фоновой задачи
 type TaskResultEvent struct {
 	Type        string      `json:"type"`
 	Name        string      `json:"name"`
 	Transaction string      `json:"transaction,omitempty"`
 	Data        interface{} `json:"data"`
-	Error       bool        `json:"error"`
+	Error       *APIError   `json:"error"`
 }
 
 // NotificationOption — функция-опция для настройки EventData.
@@ -251,14 +252,16 @@ func SendTaskResult(ctx context.Context, taskName string, data interface{}, task
 		Name:        taskName,
 		Transaction: txStr,
 		Data:        data,
-		Error:       false,
 	}
 
 	if taskErr != nil {
-		event.Error = true
-		event.Data = map[string]interface{}{
-			"message": taskErr.Error(),
+		var apmErr apmerr.APMError
+		if errors.As(taskErr, &apmErr) {
+			event.Error = &APIError{ErrorCode: apmErr.Type, Message: taskErr.Error()}
+		} else {
+			event.Error = &APIError{Message: taskErr.Error()}
 		}
+		event.Data = nil
 	}
 
 	format := appConfig.ConfigManager.GetConfig().Format

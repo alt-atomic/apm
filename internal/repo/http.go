@@ -51,9 +51,6 @@ func (w *HTTPWrapper) ctxWithTransaction(r *http.Request) context.Context {
 // writeJSON отправляет JSON ответ
 func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) {
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if resp.Error {
-		rw.WriteHeader(http.StatusBadRequest)
-	}
 	_ = json.NewEncoder(rw).Encode(resp)
 }
 
@@ -61,10 +58,7 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 func (w *HTTPWrapper) writeError(rw http.ResponseWriter, err error, code int) {
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	rw.WriteHeader(code)
-	_ = json.NewEncoder(rw).Encode(reply.APIResponse{
-		Data:  map[string]interface{}{"message": err.Error()},
-		Error: true,
-	})
+	_ = json.NewEncoder(rw).Encode(reply.ErrorResponseFromError(err))
 }
 
 // parseBodyParams парсит параметры из тела запроса
@@ -88,7 +82,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.List(ctx, all)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -120,7 +114,7 @@ func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Add(ctx, []string{source}, date)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -152,7 +146,7 @@ func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.CheckAdd(ctx, []string{source}, date)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -184,7 +178,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Remove(ctx, []string{source}, date)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -216,7 +210,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.CheckRemove(ctx, []string{source}, date)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -248,7 +242,7 @@ func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Set(ctx, branch, date)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -280,7 +274,7 @@ func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.CheckSet(ctx, branch, date)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -291,7 +285,7 @@ func (w *HTTPWrapper) Clean(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Clean(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -302,7 +296,7 @@ func (w *HTTPWrapper) CheckClean(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.CheckClean(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -313,7 +307,7 @@ func (w *HTTPWrapper) GetBranches(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.GetBranches(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -326,7 +320,7 @@ func (w *HTTPWrapper) GetTaskPackages(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.GetTaskPackages(ctx, taskNum)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -339,7 +333,7 @@ func (w *HTTPWrapper) TestTask(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.TestTask(ctx, taskNum)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)

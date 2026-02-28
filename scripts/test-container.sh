@@ -70,7 +70,7 @@ fi
 
 # Cleanup function
 cleanup() {
-    print_info "🧹 Cleaning up container ${CONTAINER_NAME} ..."
+    print_info "Cleaning up container ${CONTAINER_NAME} ..."
     podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 }
 
@@ -80,7 +80,7 @@ trap cleanup EXIT
 # Check/build container image
 check_container_image
 
-print_info "🐳 Starting test container..."
+print_info "Starting test container..."
 
 # Create test container with necessary mounts
 if ! podman run -d \
@@ -98,7 +98,7 @@ fi
 
 print_success "Container started: ${CONTAINER_NAME}"
 
-print_info "🔨 Building and installing APM in container..."
+print_info "Building and installing APM in container..."
 
 # Copy source, build and install inside container
 if ! podman exec --user root "${CONTAINER_NAME}" bash -c "
@@ -156,9 +156,9 @@ case "${TEST_SUITE}" in
             export GOCACHE=/tmp/go-cache && \
             export GOMODCACHE=/tmp/go-mod && \
             export GO111MODULE=on && \
-            echo '🧪 Running system tests...' && \
+            echo 'Running system tests...' && \
             go test ./tests/integration/system/... -v && \
-            echo '🧪 Running binding tests...' && \
+            echo 'Running binding tests...' && \
             go test ./tests/binding/... -v
         "
         ;;
@@ -169,11 +169,11 @@ case "${TEST_SUITE}" in
             export GOCACHE=/tmp/go-cache && \
             export GOMODCACHE=/tmp/go-mod && \
             export GO111MODULE=on && \
-            echo '🧪 Running system tests...' && \
+            echo 'Running system tests...' && \
             go test ./tests/integration/system/... -v && \
-            echo '🧪 Running binding tests...' && \
+            echo 'Running binding tests...' && \
             go test ./tests/binding/... -v && \
-            echo '🧪 Running unit tests...' && \
+            echo 'Running unit tests...' && \
             go test ./internal/... -v
         "
         ;;

@@ -18,6 +18,7 @@ package app
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -103,7 +104,7 @@ func (dm *databaseManagerImpl) initSystemDB() error {
 	if err = db.Ping(); err != nil {
 		db.Close()
 		if _, statErr := os.Stat(dm.systemPath); os.IsNotExist(statErr) && syscall.Geteuid() != 0 {
-			return fmt.Errorf(T_("Elevated rights are required to perform this action. Please use sudo or su"))
+			return errors.New(T_("Elevated rights are required to perform this action. Please use sudo or su"))
 		}
 		return fmt.Errorf(T_("error connecting to system database: %w"), err)
 	}

@@ -17,6 +17,7 @@
 package kernel
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
@@ -63,7 +64,7 @@ func (w *DBusWrapper) ListKernels(flavour string, installedOnly bool, transactio
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ListKernels(ctx, flavour, installedOnly)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -78,7 +79,7 @@ func (w *DBusWrapper) GetCurrentKernel(transaction string) (string, *dbus.Error)
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetCurrentKernel(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -123,7 +124,7 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.InstallKernel(ctx, flavour, modules, includeHeaders, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -168,7 +169,7 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.InstallKernel(ctx, flavour, modules, includeHeaders, false)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -213,7 +214,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.UpdateKernel(ctx, flavour, modules, includeHeaders, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -258,7 +259,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.UpdateKernel(ctx, flavour, modules, includeHeaders, false)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -303,7 +304,7 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CleanOldKernels(ctx, noBackup, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -348,7 +349,7 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CleanOldKernels(ctx, noBackup, false)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -363,7 +364,7 @@ func (w *DBusWrapper) ListKernelModules(flavour string, transaction string) (str
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ListKernelModules(ctx, flavour)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -408,7 +409,7 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.InstallKernelModules(ctx, flavour, modules, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -453,7 +454,7 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.InstallKernelModules(ctx, flavour, modules, false)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -498,7 +499,7 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.RemoveKernelModules(ctx, flavour, modules, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -543,7 +544,7 @@ func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, mo
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.RemoveKernelModules(ctx, flavour, modules, false)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {

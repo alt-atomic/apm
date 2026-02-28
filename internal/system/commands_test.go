@@ -1,57 +1,41 @@
 package system
 
 import (
+	"errors"
 	"testing"
 )
 
-func TestNewErrorResponse(t *testing.T) {
+func TestNewErrorResponseFromError(t *testing.T) {
 	message := "Test error message"
 
-	response := newErrorResponse(message)
+	response := newErrorResponseFromError(errors.New(message))
 
 	// Проверяем, что ошибка установлена
-	if !response.Error {
-		t.Error("Expected Error to be true")
+	if response.Error == nil {
+		t.Error("Expected Error to be non-nil")
 	}
 
-	// Проверяем данные ответа
-	data, ok := response.Data.(map[string]interface{})
-	if !ok {
-		t.Error("Expected Data to be map[string]interface{}")
-		return
+	// Проверяем сообщение ошибки
+	if response.Error.Message != message {
+		t.Errorf("Expected message '%s', got '%s'", message, response.Error.Message)
 	}
 
-	actualMessage, exists := data["message"]
-	if !exists {
-		t.Error("Expected 'message' key in Data")
-		return
-	}
-
-	if actualMessage != message {
-		t.Errorf("Expected message '%s', got '%s'", message, actualMessage)
+	// Проверяем что Data == nil при ошибке
+	if response.Data != nil {
+		t.Error("Expected Data to be nil for error response")
 	}
 }
 
-func TestNewErrorResponse_Structure(t *testing.T) {
-	response := newErrorResponse("test")
+func TestNewErrorResponseFromError_Structure(t *testing.T) {
+	response := newErrorResponseFromError(errors.New("test"))
 
 	// Проверяем тип ответа
-	if response.Error != true {
-		t.Error("Error response should have Error=true")
+	if response.Error == nil {
+		t.Error("Error response should have Error != nil")
 	}
 
-	// Проверяем структуру Data
-	data := response.Data
-	if data == nil {
-		t.Error("Data should not be nil")
-	}
-
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		t.Error("Data should be a map")
-	}
-
-	if len(dataMap) == 0 {
-		t.Error("Data map should not be empty")
+	// Проверяем структуру Error
+	if response.Error.Message != "test" {
+		t.Errorf("Expected Error.Message 'test', got '%s'", response.Error.Message)
 	}
 }

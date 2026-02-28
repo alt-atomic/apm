@@ -17,6 +17,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/godbus/dbus/v5"
@@ -82,7 +83,7 @@ func (dm *dbusManagerImpl) connect(isSystem bool) error {
 	if reply != dbus.RequestNameReplyPrimaryOwner {
 		_ = dm.conn.Close()
 		dm.conn = nil
-		return fmt.Errorf(T_("Interface org.altlinux.APM is already in use"))
+		return errors.New(T_("Interface org.altlinux.APM is already in use"))
 	}
 
 	dm.connected = true

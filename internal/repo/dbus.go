@@ -17,6 +17,7 @@
 package repo
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/helper"
 	"context"
 	"encoding/json"
@@ -50,7 +51,7 @@ func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.List(ctx, all)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -69,7 +70,7 @@ func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) 
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
 	resp, err := w.actions.Add(ctx, []string{source}, date)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -88,7 +89,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction strin
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
 	resp, err := w.actions.Remove(ctx, []string{source}, date)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -106,7 +107,7 @@ func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) 
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Set(ctx, branch, date)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -124,7 +125,7 @@ func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *db
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Clean(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -138,7 +139,7 @@ func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *db
 func (w *DBusWrapper) GetBranches() (string, *dbus.Error) {
 	resp, err := w.actions.GetBranches(w.ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -153,7 +154,7 @@ func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (strin
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetTaskPackages(ctx, taskNum)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -169,7 +170,7 @@ func (w *DBusWrapper) SimulateAdd(source, date, transaction string) (string, *db
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
 	resp, err := w.actions.CheckAdd(ctx, []string{source}, date)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -185,7 +186,7 @@ func (w *DBusWrapper) SimulateRemove(source, date, transaction string) (string, 
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
 	resp, err := w.actions.CheckRemove(ctx, []string{source}, date)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -200,7 +201,7 @@ func (w *DBusWrapper) SimulateSet(branch, date, transaction string) (string, *db
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckSet(ctx, branch, date)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -215,7 +216,7 @@ func (w *DBusWrapper) SimulateClean(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckClean(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {

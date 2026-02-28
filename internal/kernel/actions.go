@@ -17,6 +17,7 @@
 package kernel
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/binding/apt"
@@ -77,7 +78,7 @@ func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly
 	}
 	kernels, err := a.kernelManager.ListKernels(ctx, flavour)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	if installedOnly {
@@ -91,7 +92,7 @@ func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly
 	}
 
 	if len(kernels) == 0 {
-		return nil, errors.New(app.T_("No kernels found"))
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("No kernels found")))
 	}
 
 	return &reply.APIResponse{
@@ -99,7 +100,6 @@ func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly
 			Message: fmt.Sprintf(app.TN_("%d kernel found", "%d kernels found", len(kernels)), len(kernels)),
 			Kernels: a.formatKernelOutput(kernels),
 		},
-		Error: false,
 	}, nil
 }
 
@@ -112,7 +112,7 @@ func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, err
 
 	kernel, err := a.kernelManager.GetCurrentKernel(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	return &reply.APIResponse{
@@ -120,7 +120,6 @@ func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, err
 			Message: app.T_("Current kernel information"),
 			Kernel:  kernel.ToFull(a.kernelManager),
 		},
-		Error: false,
 	}, nil
 }
 
@@ -133,15 +132,15 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 
 	err = a.serviceAptActions.AptUpdate(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}
 
 	if strings.TrimSpace(flavour) == "" {
-		return nil, errors.New(app.T_("Kernel flavour must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Kernel flavour must be specified")))
 	}
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	if len(modules) == 0 {
@@ -157,11 +156,9 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 
 	// Добавляем дополнительные пакеты к модулям
 	for _, pkg := range additionalPackages {
-		// Если это модуль ядра - извлекаем имя модуля
 		if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", latest.Flavour)) {
 			moduleName := strings.TrimPrefix(pkg, "kernel-modules-")
 			moduleName = strings.TrimSuffix(moduleName, fmt.Sprintf("-%s", latest.Flavour))
-			// Добавляем только если его еще нет в списке
 			moduleExists := slices.Contains(modules, moduleName)
 			if !moduleExists {
 				modules = append(modules, moduleName)
@@ -171,11 +168,11 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 
 	preview, err := a.kernelManager.SimulateUpgrade(latest, modules, includeHeaders)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	if len(preview.MissingModules) > 0 {
-		return nil, fmt.Errorf(app.T_("some modules are not available: %s"), strings.Join(preview.MissingModules, ", "))
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf(app.T_("some modules are not available: %s"), strings.Join(preview.MissingModules, ", ")))
 	}
 
 	if len(preview.Changes.NewInstalledPackages) == 0 && len(preview.Changes.UpgradedPackages) == 0 {
@@ -185,7 +182,6 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 				Kernel:  latest.ToFull(a.kernelManager),
 				Preview: nil,
 			},
-			Error: false,
 		}, nil
 	}
 
@@ -196,13 +192,12 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 				Kernel:  latest.ToFull(a.kernelManager),
 				Preview: preview,
 			},
-			Error: false,
 		}, nil
 	}
 
 	err = a.kernelManager.InstallKernel(ctx, latest, modules, includeHeaders, false)
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("failed to install kernel: %s"), err.Error())
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to install kernel: %s"), err.Error()))
 	}
 
 	err = a.updateAllPackagesDB(ctx)
@@ -216,7 +211,6 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 			Kernel:  latest.ToFull(a.kernelManager),
 			Preview: preview,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -230,14 +224,14 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 
 	_, err = a.serviceAptActions.Update(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}
 
 	userSpecifiedFlavour := flavour != ""
 
 	flavour, err = a.detectFlavourOrDefault(ctx, flavour)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
@@ -263,14 +257,14 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 
 	if err != nil {
 		if userSpecifiedFlavour {
-			return nil, fmt.Errorf(app.T_("no kernels found for flavour: %s. Remove --flavour option to attempt an automatic upgrade"), flavour)
+			return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf(app.T_("no kernels found for flavour: %s. Remove --flavour option to attempt an automatic upgrade"), flavour))
 		}
-		return nil, fmt.Errorf(app.T_("no kernels found for flavour: %s"), flavour)
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf(app.T_("no kernels found for flavour: %s"), flavour))
 	}
 
 	current, err := a.kernelManager.GetCurrentKernel(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	// Сравниваем установленную версию с доступной версией
@@ -281,7 +275,6 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 				Kernel:  latest.ToFull(a.kernelManager),
 				Preview: nil,
 			},
-			Error: false,
 		}, nil
 	}
 
@@ -305,17 +298,17 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	// Получаем все установленные ядра через RPM
 	allKernels, err := a.kernelManager.ListInstalledKernelsFromRPM(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	if len(allKernels) == 0 {
-		return nil, errors.New(app.T_("no kernels found"))
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("no kernels found")))
 	}
 
 	// Определяем текущее ядро
 	currentKernel, err := a.kernelManager.GetCurrentKernel(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	// Определяем backup ядро (с uptime >= 1 день)
@@ -377,7 +370,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 	}
 
 	if len(toRemove) == 0 {
-		return nil, errors.New(app.T_("no old kernels to clean"))
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("no old kernels to clean")))
 	}
 
 	if dryRun {
@@ -388,7 +381,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 
 		combinedPreview, errRemove := a.kernelManager.RemovePackages(ctx, removePackages, true)
 		if errRemove != nil {
-			return nil, fmt.Errorf(app.T_("failed to simulate kernels removal: %s"), errRemove.Error())
+			return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to simulate kernels removal: %s"), errRemove.Error()))
 		}
 
 		return &reply.APIResponse{
@@ -398,7 +391,6 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 				KeptKernels:   keptKernels,
 				Preview:       combinedPreview,
 			},
-			Error: false,
 		}, nil
 	}
 
@@ -409,7 +401,7 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 
 	combinedPreview, err := a.kernelManager.RemovePackages(ctx, removePackages, false)
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("failed to remove kernels: %s"), err.Error())
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to remove kernels: %s"), err.Error()))
 	}
 
 	return &reply.APIResponse{
@@ -419,7 +411,6 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 			KeptKernels:   keptKernels,
 			Preview:       combinedPreview,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -434,19 +425,19 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply
 	if flavour == "" {
 		detected, err := a.kernelManager.DetectCurrentFlavour(ctx)
 		if err != nil {
-			return nil, err
+			return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 		}
 		flavour = detected
 	}
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	modules, err := a.kernelManager.FindAvailableModules(latest)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	return &reply.APIResponse{
@@ -455,7 +446,6 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply
 			Kernel:  latest.ToFull(a.kernelManager),
 			Modules: modules,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -468,25 +458,25 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 	}
 
 	if len(modules) == 0 {
-		return nil, errors.New(app.T_("At least one module must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))
 	}
 
 	if flavour == "" {
 		detected, err := a.kernelManager.DetectCurrentFlavour(ctx)
 		if err != nil {
-			return nil, err
+			return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 		}
 		flavour = detected
 	}
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	availableModules, err := a.kernelManager.FindAvailableModules(latest)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	var missingModules []string
@@ -504,7 +494,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 	}
 
 	if len(missingModules) > 0 {
-		return nil, fmt.Errorf(app.T_("modules not available: %s"), strings.Join(missingModules, ", "))
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf(app.T_("modules not available: %s"), strings.Join(missingModules, ", ")))
 	}
 
 	// Проверяем уже установленные модули только для текущего ядра
@@ -520,7 +510,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 			}
 		}
 		if len(alreadyInstalledModules) > 0 {
-			return nil, fmt.Errorf(app.T_("modules already installed: %s"), strings.Join(alreadyInstalledModules, ", "))
+			return nil, apmerr.New(apmerr.ErrorTypeNoOperation, fmt.Errorf(app.T_("modules already installed: %s"), strings.Join(alreadyInstalledModules, ", ")))
 		}
 	}
 
@@ -538,7 +528,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 	if dryRun {
 		preview, err := a.kernelManager.InstallModules(ctx, installPackages, true)
 		if err != nil {
-			return nil, fmt.Errorf(app.T_("failed to simulate modules installation: %s"), err.Error())
+			return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to simulate modules installation: %s"), err.Error()))
 		}
 
 		return &reply.APIResponse{
@@ -547,13 +537,12 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 				Kernel:  latest.ToFull(a.kernelManager),
 				Preview: preview,
 			},
-			Error: false,
 		}, nil
 	}
 
 	_, err = a.kernelManager.InstallModules(ctx, installPackages, false)
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("failed to install modules: %s"), err.Error())
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to install modules: %s"), err.Error()))
 	}
 
 	err = a.updateAllPackagesDB(ctx)
@@ -563,7 +552,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 
 	updatedKernel, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	return &reply.APIResponse{
@@ -572,7 +561,6 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 			Kernel:  updatedKernel.ToFull(a.kernelManager),
 			Preview: nil,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -585,25 +573,25 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 	}
 
 	if len(modules) == 0 {
-		return nil, errors.New(app.T_("At least one module must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))
 	}
 
 	if flavour == "" {
 		detected, err := a.kernelManager.DetectCurrentFlavour(ctx)
 		if err != nil {
-			return nil, err
+			return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 		}
 		flavour = detected
 	}
 
 	latest, err := a.kernelManager.FindLatestKernel(ctx, flavour)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	availableModules, err := a.kernelManager.FindAvailableModules(latest)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	var notInstalledModules []string
@@ -622,12 +610,12 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf(app.T_("module not found: %s"), module)
+			return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf(app.T_("module not found: %s"), module))
 		}
 	}
 
 	if len(notInstalledModules) > 0 {
-		return nil, fmt.Errorf(app.T_("modules not installed: %s"), strings.Join(notInstalledModules, ", "))
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, fmt.Errorf(app.T_("modules not installed: %s"), strings.Join(notInstalledModules, ", ")))
 	}
 
 	if len(modulesToRemove) == 0 {
@@ -637,7 +625,6 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 				Kernel:  latest.ToFull(a.kernelManager),
 				Preview: nil,
 			},
-			Error: false,
 		}, nil
 	}
 
@@ -655,7 +642,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 	if dryRun {
 		preview, err := a.kernelManager.RemovePackages(ctx, removePackages, true)
 		if err != nil {
-			return nil, fmt.Errorf(app.T_("failed to simulate modules removal: %s"), err.Error())
+			return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to simulate modules removal: %s"), err.Error()))
 		}
 
 		return &reply.APIResponse{
@@ -664,13 +651,12 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 				Kernel:  latest.ToFull(a.kernelManager),
 				Preview: preview,
 			},
-			Error: false,
 		}, nil
 	}
 
 	_, err = a.kernelManager.RemovePackages(ctx, removePackages, false)
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("failed to remove modules: %s"), err.Error())
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to remove modules: %s"), err.Error()))
 	}
 
 	err = a.updateAllPackagesDB(ctx)
@@ -681,7 +667,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 	// Получаем обновлённую информацию о ядре после удаления модулей
 	updatedKernel, err := a.kernelManager.GetCurrentKernel(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
 	return &reply.APIResponse{
@@ -690,7 +676,6 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 			Kernel:  updatedKernel.ToFull(a.kernelManager),
 			Preview: nil,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -728,12 +713,12 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 
 	installedPackages, err := a.serviceAptActions.GetInstalledPackages(ctx)
 	if err != nil {
-		return err
+		return apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
 	err = a.serviceAptDatabase.SyncPackageInstallationInfo(ctx, installedPackages)
 	if err != nil {
-		return err
+		return apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
 	return nil
@@ -743,12 +728,12 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 func (a *Actions) validateDB(ctx context.Context) error {
 	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
 		if syscall.Geteuid() != 0 {
-			return reply.CliResponse(ctx, newErrorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
 		}
 
 		_, err = a.serviceAptActions.Update(ctx)
 		if err != nil {
-			return err
+			return apmerr.New(apmerr.ErrorTypeDatabase, err)
 		}
 	}
 

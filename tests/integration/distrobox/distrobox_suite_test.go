@@ -66,7 +66,7 @@ func (s *DistroboxTestSuite) SetupSuite() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error, "Container creation should succeed")
+	assert.Nil(s.T(), resp.Error, "Container creation should succeed")
 	s.T().Logf("Test container created: %s", s.containerName)
 }
 
@@ -97,7 +97,7 @@ func (s *DistroboxTestSuite) TestContainerList() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 
 	responseStr := fmt.Sprintf("%+v", resp.Data)
 	s.T().Logf("ContainerList response: %s", responseStr)
@@ -123,7 +123,7 @@ func (s *DistroboxTestSuite) TestPackageInstall() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 	s.T().Logf("Package installed successfully")
 }
 
@@ -137,7 +137,7 @@ func (s *DistroboxTestSuite) TestPackageSearch() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 	s.T().Logf("Search completed successfully")
 }
 
@@ -151,7 +151,7 @@ func (s *DistroboxTestSuite) TestPackageInfo() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 	s.T().Logf("Package info retrieved successfully")
 }
 
@@ -170,7 +170,7 @@ func (s *DistroboxTestSuite) TestPackageList() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 	s.T().Logf("Package list retrieved successfully")
 }
 
@@ -184,7 +184,7 @@ func (s *DistroboxTestSuite) TestPackageUpdate() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 	s.T().Logf("Update completed successfully")
 }
 
@@ -198,7 +198,7 @@ func (s *DistroboxTestSuite) TestPackageRemove() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 	s.T().Logf("Package removed successfully")
 }
 

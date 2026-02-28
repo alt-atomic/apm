@@ -62,7 +62,7 @@ func (s *SystemTestSuite) TestInstall() {
 			"Unexpected error type: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.False(s.T(), resp.Error)
+		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Install successful: %+v", resp.Data)
 	}
 }
@@ -79,7 +79,7 @@ func (s *SystemTestSuite) TestRemove() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.False(s.T(), resp.Error)
+		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Remove successful")
 	}
 }
@@ -96,7 +96,7 @@ func (s *SystemTestSuite) TestRemoveNotExistentPackage() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.False(s.T(), resp.Error)
+		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Remove successful")
 	}
 }
@@ -108,7 +108,7 @@ func (s *SystemTestSuite) TestUpdate() {
 		s.T().Logf("Update error (may be expected): %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.False(s.T(), resp.Error)
+		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Update successful")
 	}
 }
@@ -120,7 +120,7 @@ func (s *SystemTestSuite) TestUpgrade() {
 		s.T().Logf("Upgrade error (may be expected): %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.False(s.T(), resp.Error)
+		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Upgrade successful")
 	}
 }
@@ -137,7 +137,7 @@ func (s *SystemTestSuite) TestInfo() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.False(s.T(), resp.Error)
+		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Info successful: %+v", resp.Data)
 	}
 }
@@ -161,7 +161,7 @@ func (s *SystemTestSuite) TestSearch() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.False(s.T(), resp.Error)
+		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Search successful")
 	}
 }
@@ -194,7 +194,7 @@ func (s *SystemTestSuite) TestGetFilterFields() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
+	assert.Nil(s.T(), resp.Error)
 
 	switch data := resp.Data.(type) {
 	case []interface{}:
@@ -224,7 +224,6 @@ func (s *SystemTestSuite) TestFormatOutput() {
 	assert.Nil(s.T(), result, "Should return nil for string input")
 }
 
-// Helper function для проверки содержимого строки
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) &&
 		(s == substr ||
@@ -234,7 +233,6 @@ func contains(s, substr string) bool {
 					strings.Contains(s, substr))))
 }
 
-// Запуск набора тестов
 func TestSystemSuite(t *testing.T) {
 	suite.Run(t, new(SystemTestSuite))
 }

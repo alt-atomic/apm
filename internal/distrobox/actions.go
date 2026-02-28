@@ -17,6 +17,7 @@
 package distrobox
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"apm/internal/distrobox/service"
@@ -70,17 +71,16 @@ func (a *Actions) Update(ctx context.Context, container string) (*reply.APIRespo
 
 	packages, err := a.servicePackage.UpdatePackages(ctx, osInfo)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":   app.T_("Package list successfully updated"),
-			"container": osInfo,
-			"count":     len(packages),
+
+	return &reply.APIResponse{
+		Data: UpdateResponse{
+			Message:   app.T_("Package list successfully updated"),
+			Container: osInfo,
+			Count:     len(packages),
 		},
-		Error: false,
-	}
-	return &resp, nil
+	}, nil
 }
 
 // Info возвращает информацию о пакете.
@@ -91,21 +91,19 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "info")
-		return nil, errors.New(errMsg)
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("You must specify the package name, for example `%s package`"), "info"))
 	}
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, err)
 	}
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":     app.T_("Package found"),
-			"packageInfo": packageInfo,
+
+	return &reply.APIResponse{
+		Data: InfoResponse{
+			Message:     app.T_("Package found"),
+			PackageInfo: packageInfo,
 		},
-		Error: false,
-	}
-	return &resp, nil
+	}, nil
 }
 
 // Search выполняет поиск пакета по названию.
@@ -126,27 +124,20 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "search")
-		return nil, errors.New(errMsg)
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("You must specify the package name, for example `%s package`"), "search"))
 	}
 
 	queryResult, err := a.servicePackage.GetPackageByName(ctx, osInfo, packageName)
 	if err != nil {
-		return nil, err
-	}
-	msg := fmt.Sprintf(
-		app.TN_("%d record found", "%d records found", len(queryResult.Packages)),
-		len(queryResult.Packages),
-	)
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":  msg,
-			"packages": queryResult.Packages,
-		},
-		Error: false,
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	return &resp, nil
+	return &reply.APIResponse{
+		Data: SearchResponse{
+			Message:  fmt.Sprintf(app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages)),
+			Packages: queryResult.Packages,
+		},
+	}, nil
 }
 
 // ListParams задаёт параметры для запроса списка пакетов.
@@ -208,20 +199,16 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*reply.APIRespon
 
 	queryResult, err := a.servicePackage.GetPackagesQuery(ctx, osInfo, builder)
 	if err != nil {
-		return nil, err
-	}
-	msg := fmt.Sprintf(
-		app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages))
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":    msg,
-			"packages":   queryResult.Packages,
-			"totalCount": queryResult.TotalCount,
-		},
-		Error: false,
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	return &resp, nil
+	return &reply.APIResponse{
+		Data: ListResponse{
+			Message:    fmt.Sprintf(app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages)),
+			Packages:   queryResult.Packages,
+			TotalCount: queryResult.TotalCount,
+		},
+	}, nil
 }
 
 // Install устанавливает указанный пакет и опционально экспортирует его.
@@ -232,18 +219,17 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	}
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "install")
-		return nil, errors.New(errMsg)
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("You must specify the package name, for example `%s package`"), "install"))
 	}
 
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, err)
 	}
 	if !packageInfo.Package.Installed {
 		err = a.servicePackage.InstallPackage(ctx, osInfo, packageName)
 		if err != nil {
-			return nil, err
+			return nil, apmerr.New(apmerr.ErrorTypeContainer, err)
 		}
 		packageInfo.Package.Installed = true
 		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", true)
@@ -252,7 +238,7 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 	if export && !packageInfo.Package.Exporting {
 		errExport := a.serviceDistroAPI.ExportingApp(ctx, osInfo, packageName, packageInfo.DesktopPaths, packageInfo.ConsolePaths, false)
 		if errExport != nil {
-			return nil, errExport
+			return nil, apmerr.New(apmerr.ErrorTypeContainer, errExport)
 		}
 		if len(packageInfo.DesktopPaths) > 0 || len(packageInfo.ConsolePaths) > 0 {
 			packageInfo.Package.Exporting = true
@@ -260,15 +246,12 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		}
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":     fmt.Sprintf(app.T_("Package %s installed"), packageName),
-			"packageInfo": packageInfo,
+	return &reply.APIResponse{
+		Data: InstallResponse{
+			Message:     fmt.Sprintf(app.T_("Package %s installed"), packageName),
+			PackageInfo: packageInfo,
 		},
-		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // Remove удаляет указанный пакет. Если onlyExport равен true, удаляется только экспорт.
@@ -280,13 +263,12 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
-		errMsg := fmt.Sprintf(app.T_("You must specify the package name, for example `%s package`"), "remove")
-		return nil, errors.New(errMsg)
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("You must specify the package name, for example `%s package`"), "remove"))
 	}
 
 	packageInfo, err := a.servicePackage.GetInfoPackage(ctx, osInfo, packageName)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, err)
 	}
 
 	if packageInfo.Package.Exporting {
@@ -298,42 +280,36 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 	if !onlyExport && packageInfo.Package.Installed {
 		err = a.servicePackage.RemovePackage(ctx, osInfo, packageName)
 		if err != nil {
-			return nil, err
+			return nil, apmerr.New(apmerr.ErrorTypeContainer, err)
 		}
 		packageInfo.Package.Installed = false
 		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", false)
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":     fmt.Sprintf(app.T_("Package %s removed"), packageName),
-			"packageInfo": packageInfo,
+	return &reply.APIResponse{
+		Data: RemoveResponse{
+			Message:     fmt.Sprintf(app.T_("Package %s removed"), packageName),
+			PackageInfo: packageInfo,
 		},
-		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // ContainerList возвращает список контейнеров.
 func (a *Actions) ContainerList(ctx context.Context) (*reply.APIResponse, error) {
 	containers, err := a.serviceDistroAPI.GetContainerList(ctx, true)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeContainer, err)
 	}
 
 	if len(containers) == 0 {
-		return nil, errors.New(app.T_("No containers found"))
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("No containers found")))
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"containers": containers,
+	return &reply.APIResponse{
+		Data: ContainerListResponse{
+			Containers: containers,
 		},
-		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // ContainerAdd создаёт новый контейнер.
@@ -341,63 +317,54 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 	image = strings.TrimSpace(image)
 	name = strings.TrimSpace(name)
 	if image == "" {
-		errMsg := app.T_("You must specify the image link (--image)")
-		return nil, errors.New(errMsg)
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the image link (--image)")))
 	}
 
 	if name == "" {
-		errMsg := app.T_("You must specify the container name (--name)")
-		return nil, errors.New(errMsg)
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the container name (--name)")))
 	}
 
 	osInfo, err := a.serviceDistroAPI.CreateContainer(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeContainer, err)
 	}
 
 	_, err = a.servicePackage.UpdatePackages(ctx, osInfo)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":       fmt.Sprintf(app.T_("Container %s successfully created"), name),
-			"containerInfo": osInfo,
+	return &reply.APIResponse{
+		Data: ContainerAddResponse{
+			Message:       fmt.Sprintf(app.T_("Container %s successfully created"), name),
+			ContainerInfo: osInfo,
 		},
-		Error: false,
-	}
-
-	return &resp, nil
+	}, nil
 }
 
 // ContainerRemove удаляет контейнер по имени.
 func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIResponse, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		errMsg := app.T_("You must specify the container name (--name)")
-		return nil, errors.New(errMsg)
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the container name (--name)")))
 	}
 
 	result, err := a.serviceDistroAPI.RemoveContainer(ctx, name)
 	if err != nil {
-		return nil, err
-	}
-
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":       fmt.Sprintf(app.T_("Container %s successfully deleted"), name),
-			"containerInfo": result,
-		},
-		Error: false,
+		return nil, apmerr.New(apmerr.ErrorTypeContainer, err)
 	}
 
 	err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, name)
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("Error deleting container: %v"), err)
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, fmt.Errorf(app.T_("Error deleting container: %v"), err))
 	}
 
-	return &resp, nil
+	return &reply.APIResponse{
+		Data: ContainerRemoveResponse{
+			Message:       fmt.Sprintf(app.T_("Container %s successfully deleted"), name),
+			ContainerInfo: result,
+		},
+	}, nil
 }
 
 // GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
@@ -408,14 +375,8 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply
 	}
 
 	fieldList := service.AllowedFilterFields
-	type FiltersField struct {
-		Name   string   `json:"name"`
-		Text   string   `json:"text"`
-		Type   string   `json:"type"`
-		Choice []string `json:"choice"`
-	}
 
-	var fields []FiltersField
+	var fields []FilterField
 	var manager []string
 	lowerOsName := strings.ToLower(osInfo.OS)
 	switch {
@@ -438,7 +399,7 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply
 			choice = manager
 		}
 
-		fields = append(fields, FiltersField{
+		fields = append(fields, FilterField{
 			Name:   field,
 			Text:   reply.TranslateKey(field),
 			Type:   fieldType,
@@ -446,18 +407,15 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply
 		})
 	}
 
-	resp := reply.APIResponse{
-		Data:  fields,
-		Error: false,
-	}
-
-	return &resp, nil
+	return &reply.APIResponse{
+		Data: GetFilterFieldsResponse(fields),
+	}, nil
 }
 
 // validateDatabase проверяет, что таблица содержит какие-то записи
 func (a *Actions) validateDatabase(ctx context.Context) error {
 	if err := a.serviceDistroDatabase.DatabaseExist(ctx); err != nil {
-		return err
+		return apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
 	return nil
@@ -467,7 +425,7 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 func (a *Actions) validateContainer(ctx context.Context, container string) (service.ContainerInfo, error) {
 	container = strings.TrimSpace(container)
 	if container == "" {
-		return service.ContainerInfo{}, errors.New(app.T_("You must specify the container name"))
+		return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the container name")))
 	}
 
 	// Если контейнер не найден через API, проверяем наличие записей в базе данных
@@ -475,21 +433,21 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 	if errInfo != nil {
 		if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err == nil {
 			if err = a.serviceDistroDatabase.DeletePackagesFromContainer(ctx, container); err != nil {
-				return service.ContainerInfo{}, fmt.Errorf(app.T_("Failed to delete container records: %w"), err)
+				return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeDatabase, fmt.Errorf(app.T_("Failed to delete container records: %w"), err))
 			}
 		}
 
-		return service.ContainerInfo{}, errInfo
+		return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeNotFound, errInfo)
 	}
 
 	// Если база не содержит данные, обновляем пакеты.
 	if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err != nil {
 		osInfo, errInfo = a.serviceDistroAPI.GetContainerOsInfo(ctx, container)
 		if errInfo != nil {
-			return service.ContainerInfo{}, errInfo
+			return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeNotFound, errInfo)
 		}
 		if _, err = a.servicePackage.UpdatePackages(ctx, osInfo); err != nil {
-			return service.ContainerInfo{}, err
+			return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeDatabase, err)
 		}
 	}
 

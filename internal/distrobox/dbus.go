@@ -17,6 +17,7 @@
 package distrobox
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/icon"
@@ -43,7 +44,7 @@ func NewDBusWrapper(a *Actions, i *icon.Service, ctx context.Context) *DBusWrapp
 func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]byte, *dbus.Error) {
 	bytes, err := w.iconService.GetIcon(packageName, container)
 	if err != nil {
-		return nil, dbus.MakeFailedError(err)
+		return nil, apmerr.DBusError(err)
 	}
 
 	return bytes, nil
@@ -55,7 +56,7 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx, container)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 
 	data, jerr := json.Marshal(resp)
@@ -99,7 +100,7 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Update(ctx, container)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -114,7 +115,7 @@ func (w *DBusWrapper) Info(container string, packageName string, transaction str
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, container, packageName)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -129,7 +130,7 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, container, packageName)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -157,7 +158,7 @@ func (w *DBusWrapper) List(container string, sort string, order string, limit in
 
 	resp, err := w.actions.List(ctx, params)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -172,7 +173,7 @@ func (w *DBusWrapper) Install(container string, packageName string, export bool,
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -187,7 +188,7 @@ func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bo
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Remove(ctx, container, packageName, onlyExport)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -202,7 +203,7 @@ func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerList(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -244,7 +245,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -259,7 +260,7 @@ func (w *DBusWrapper) ContainerRemove(name string, transaction string) (string, 
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerRemove(ctx, name)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {

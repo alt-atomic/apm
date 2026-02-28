@@ -17,25 +17,23 @@
 package kernel
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"apm/internal/common/wrapper"
 	"context"
+	"errors"
 
 	"github.com/urfave/cli/v3"
 )
 
-// newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
-func newErrorResponse(message string) reply.APIResponse {
-	app.Log.Error(message)
-
-	return reply.APIResponse{
-		Data:  map[string]interface{}{"message": message},
-		Error: true,
-	}
+// newErrorResponseFromError создаёт ответ с ошибкой, извлекая тип из apmerr.APMError.
+func newErrorResponseFromError(err error) reply.APIResponse {
+	app.Log.Error(err.Error())
+	return reply.ErrorResponseFromError(err)
 }
 
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponse)
+var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 func CommandList(ctx context.Context) *cli.Command {
 	appConfig := app.GetAppConfig(ctx)
@@ -63,7 +61,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.ListKernels(ctx, cmd.String("flavour"), cmd.Bool("installed"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -74,7 +72,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetCurrentKernel(ctx)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -103,12 +101,12 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					flavour := cmd.Args().First()
 					if flavour == "" {
-						return reply.CliResponse(ctx, newErrorResponse(app.T_("Kernel flavour must be specified")))
+						return reply.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Kernel flavour must be specified")))))
 					}
 
 					resp, err := actions.InstallKernel(ctx, flavour, cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("simulate"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -140,7 +138,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.UpdateKernel(ctx, cmd.String("flavour"), cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("simulate"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -164,7 +162,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.CleanOldKernels(ctx, cmd.Bool("no-backup"), cmd.Bool("simulate"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -189,7 +187,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							}
 							resp, err := actions.ListKernelModules(ctx, flavour)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 							return reply.CliResponse(ctx, *resp)
 						}),
@@ -213,12 +211,12 @@ func CommandList(ctx context.Context) *cli.Command {
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							modules := cmd.Args().Slice()
 							if len(modules) == 0 {
-								return reply.CliResponse(ctx, newErrorResponse(app.T_("At least one module must be specified")))
+								return reply.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))))
 							}
 
 							resp, err := actions.InstallKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("simulate"))
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 							return reply.CliResponse(ctx, *resp)
 						}),
@@ -242,12 +240,12 @@ func CommandList(ctx context.Context) *cli.Command {
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							modules := cmd.Args().Slice()
 							if len(modules) == 0 {
-								return reply.CliResponse(ctx, newErrorResponse(app.T_("At least one module must be specified")))
+								return reply.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))))
 							}
 
 							resp, err := actions.RemoveKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("simulate"))
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 							return reply.CliResponse(ctx, *resp)
 						}),

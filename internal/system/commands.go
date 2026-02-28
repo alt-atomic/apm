@@ -27,14 +27,10 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
-func newErrorResponse(message string) reply.APIResponse {
-	app.Log.Error(message)
-
-	return reply.APIResponse{
-		Data:  map[string]interface{}{"message": message},
-		Error: true,
-	}
+// newErrorResponseFromError создаёт ответ с ошибкой, извлекая тип из apmerr.APMError.
+func newErrorResponseFromError(err error) reply.APIResponse {
+	app.Log.Error(err.Error())
+	return reply.ErrorResponseFromError(err)
 }
 
 func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
@@ -85,8 +81,8 @@ func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 	}
 }
 
-var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponse)
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponse)
+var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 func upgradeCommand(appConfig *app.Config) *cli.Command {
 	if appConfig.ConfigManager.GetConfig().IsAtomic {
@@ -96,7 +92,7 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageUpdate(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 				return reply.CliResponse(ctx, *resp)
 			}),
@@ -123,7 +119,7 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 				resp, err = actions.Upgrade(ctx)
 			}
 			if err != nil {
-				return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+				return reply.CliResponse(ctx, newErrorResponseFromError(err))
 			}
 			return reply.CliResponse(ctx, *resp)
 		}),
@@ -140,7 +136,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageBuild(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)
@@ -158,7 +154,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageApply(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
 						return reply.CliResponse(ctx, *resp)
@@ -170,7 +166,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageStatus(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
 						return reply.CliResponse(ctx, *resp)
@@ -182,7 +178,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageUpdate(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
 						return reply.CliResponse(ctx, *resp)
@@ -210,7 +206,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
 						return reply.CliResponse(ctx, *resp)
@@ -248,7 +244,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					resp, err = actions.Reinstall(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
 				}
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)
@@ -282,7 +278,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					resp, err = actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
 				}
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)
@@ -330,7 +326,7 @@ func CommandList(ctx context.Context) *cli.Command {
 						cmd.Bool("yes"))
 				}
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)
@@ -350,7 +346,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Update(ctx, cmd.Bool("no-lock"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)
@@ -371,7 +367,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Info(ctx, cmd.Args().First(), cmd.Bool("full"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)
@@ -398,7 +394,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Search(ctx, cmd.Args().First(), cmd.Bool("installed"), cmd.Bool("full"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)
@@ -454,7 +450,7 @@ func CommandList(ctx context.Context) *cli.Command {
 
 				resp, err := actions.List(ctx, params, cmd.Bool("full"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				return reply.CliResponse(ctx, *resp)

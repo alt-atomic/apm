@@ -103,6 +103,7 @@ type Schema struct {
 	Type        string             `json:"type,omitempty"`
 	Format      string             `json:"format,omitempty"`
 	Description string             `json:"description,omitempty"`
+	Nullable    bool               `json:"nullable,omitempty"`
 	Properties  map[string]*Schema `json:"properties,omitempty"`
 	Items       *Schema            `json:"items,omitempty"`
 	Ref         string             `json:"$ref,omitempty"`
@@ -388,12 +389,23 @@ func (g *OpenAPIGenerator) mapType(typ string) string {
 
 // generateSchemas генерирует схемы из responseTypes
 func (g *OpenAPIGenerator) generateSchemas() map[string]*Schema {
+	apiErrorSchema := &Schema{
+		Type:        "object",
+		Description: "Error details (null on success)",
+		Nullable:    true,
+		Properties: map[string]*Schema{
+			"errorCode": {Type: "string", Description: "Error type code (e.g. VALIDATION, NOT_FOUND, PERMISSION)"},
+			"message":   {Type: "string", Description: "Human-readable error message"},
+		},
+	}
+
 	schemas := map[string]*Schema{
+		"APIError": apiErrorSchema,
 		"APIResponse": {
 			Type: "object",
 			Properties: map[string]*Schema{
 				"data":        {Type: "object", Description: "Response data"},
-				"error":       {Type: "boolean", Description: "Error flag"},
+				"error":       {Ref: "#/components/schemas/APIError"},
 				"transaction": {Type: "string", Description: "Transaction ID"},
 			},
 		},
@@ -411,7 +423,7 @@ func (g *OpenAPIGenerator) generateSchemas() map[string]*Schema {
 				Type: "object",
 				Properties: map[string]*Schema{
 					"data":        {Ref: "#/components/schemas/" + name},
-					"error":       {Type: "boolean", Description: "Error flag"},
+					"error":       {Ref: "#/components/schemas/APIError"},
 					"transaction": {Type: "string", Description: "Transaction ID"},
 				},
 			}
@@ -457,7 +469,7 @@ func (g *OpenAPIGenerator) typeToSchema(typ reflect.Type) *Schema {
 		return &Schema{Type: "object"}
 	case reflect.Interface:
 		return &Schema{Type: "object"}
+	default:
+		return &Schema{Type: "object"}
 	}
-
-	return &Schema{Type: "object"}
 }

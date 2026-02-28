@@ -26,18 +26,14 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// newErrorResponse создаёт ответ с ошибкой и указанным сообщением
-func newErrorResponse(message string) reply.APIResponse {
-	app.Log.Error(message)
-
-	return reply.APIResponse{
-		Data:  map[string]interface{}{"message": message},
-		Error: true,
-	}
+// newErrorResponseFromError создаёт ответ с ошибкой, извлекая тип из apmerr.APMError.
+func newErrorResponseFromError(err error) reply.APIResponse {
+	app.Log.Error(err.Error())
+	return reply.ErrorResponseFromError(err)
 }
 
-var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponse)
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponse)
+var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 // completeBranches возвращает функцию автодополнения для веток
 func completeBranches() func(ctx context.Context, cmd *cli.Command) {
@@ -76,7 +72,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.List(ctx, cmd.Bool("all"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -107,7 +103,7 @@ func CommandList(ctx context.Context) *cli.Command {
 						resp, err = actions.Add(ctx, args, cmd.String("date"))
 					}
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -140,7 +136,7 @@ func CommandList(ctx context.Context) *cli.Command {
 						resp, err = actions.Remove(ctx, args, cmd.String("date"))
 					}
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -171,7 +167,7 @@ func CommandList(ctx context.Context) *cli.Command {
 						resp, err = actions.Set(ctx, cmd.Args().First(), cmd.String("date"))
 					}
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -197,7 +193,7 @@ func CommandList(ctx context.Context) *cli.Command {
 						resp, err = actions.Clean(ctx)
 					}
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -208,7 +204,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetBranches(ctx)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -220,7 +216,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetTaskPackages(ctx, cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),
@@ -232,7 +228,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.TestTask(ctx, cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, *resp)
 				}),

@@ -27,8 +27,8 @@ type UpdateResponse struct {
 
 // InfoResponse структура ответа для Info метода
 type InfoResponse struct {
-	Message     string              `json:"message"`
-	PackageInfo service.PackageInfo `json:"packageInfo"`
+	Message     string                    `json:"message"`
+	PackageInfo service.InfoPackageAnswer `json:"packageInfo"`
 }
 
 // SearchResponse структура ответа для Search метода
@@ -41,19 +41,19 @@ type SearchResponse struct {
 type ListResponse struct {
 	Message    string                `json:"message"`
 	Packages   []service.PackageInfo `json:"packages"`
-	TotalCount int64                 `json:"totalCount"`
+	TotalCount int                   `json:"totalCount"`
 }
 
 // InstallResponse структура ответа для Install метода
 type InstallResponse struct {
-	Message     string              `json:"message"`
-	PackageInfo service.PackageInfo `json:"packageInfo"`
+	Message     string                    `json:"message"`
+	PackageInfo service.InfoPackageAnswer `json:"packageInfo"`
 }
 
 // RemoveResponse структура ответа для Remove метода
 type RemoveResponse struct {
-	Message     string              `json:"message"`
-	PackageInfo service.PackageInfo `json:"packageInfo"`
+	Message     string                    `json:"message"`
+	PackageInfo service.InfoPackageAnswer `json:"packageInfo"`
 }
 
 // ContainerListResponse структура ответа для ContainerList метода

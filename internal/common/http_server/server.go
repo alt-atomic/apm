@@ -17,6 +17,7 @@
 package http_server
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"bufio"
@@ -299,20 +300,14 @@ func writeUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("WWW-Authenticate", "Bearer")
 	w.WriteHeader(http.StatusUnauthorized)
-	_ = json.NewEncoder(w).Encode(reply.APIResponse{
-		Data:  map[string]interface{}{"message": message},
-		Error: true,
-	})
+	_ = json.NewEncoder(w).Encode(reply.ErrorResponseFromError(apmerr.New(apmerr.ErrorTypePermission, errors.New(message))))
 }
 
 // writeForbidden отправляет ошибку доступа
 func writeForbidden(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusForbidden)
-	_ = json.NewEncoder(w).Encode(reply.APIResponse{
-		Data:  map[string]interface{}{"message": message},
-		Error: true,
-	})
+	_ = json.NewEncoder(w).Encode(reply.ErrorResponseFromError(apmerr.New(apmerr.ErrorTypePermission, errors.New(message))))
 }
 
 // RegisterHealthCheck регистрирует эндпоинт проверки здоровья

@@ -17,25 +17,23 @@
 package distrobox
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"apm/internal/common/wrapper"
 	"context"
+	"errors"
 
 	"github.com/urfave/cli/v3"
 )
 
-// newErrorResponse создаёт ответ с ошибкой и указанным сообщением.
-func newErrorResponse(message string) reply.APIResponse {
-	app.Log.Error(message)
-
-	return reply.APIResponse{
-		Data:  map[string]interface{}{"message": message},
-		Error: true,
-	}
+// newErrorResponseFromError создаёт ответ с ошибкой, извлекая тип из apmerr.APMError.
+func newErrorResponseFromError(err error) reply.APIResponse {
+	app.Log.Error(err.Error())
+	return reply.ErrorResponseFromError(err)
 }
 
-var withGlobalWrapper = wrapper.WithOptions(wrapper.ForbidRoot, NewActions, newErrorResponse)
+var withGlobalWrapper = wrapper.WithOptions(wrapper.ForbidRoot, NewActions, newErrorResponseFromError)
 
 func CommandList(ctx context.Context) *cli.Command {
 	appConfig := app.GetAppConfig(ctx)
@@ -60,7 +58,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Update(ctx, cmd.String("container"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -81,7 +79,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Info(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -101,7 +99,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Search(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -158,7 +156,7 @@ func CommandList(ctx context.Context) *cli.Command {
 
 					resp, err := actions.List(ctx, params)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -184,7 +182,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Install(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("export"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -210,7 +208,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Remove(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("only-host"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
 					return reply.CliResponse(ctx, *resp)
@@ -235,7 +233,7 @@ func CommandList(ctx context.Context) *cli.Command {
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ContainerList(ctx)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
 							return reply.CliResponse(ctx, *resp)
@@ -268,7 +266,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							}
 							if !valid {
 								return reply.CliResponse(ctx,
-									newErrorResponse(app.T_("The value for image must be one of: alt, ubuntu, arch")))
+									newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("The value for image must be one of: alt, ubuntu, arch")))))
 							}
 
 							var imageLink string
@@ -288,7 +286,7 @@ func CommandList(ctx context.Context) *cli.Command {
 
 							resp, err := actions.ContainerAdd(ctx, imageLink, name, "zsh mc nano", "")
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
 							return reply.CliResponse(ctx, *resp)
@@ -326,7 +324,7 @@ func CommandList(ctx context.Context) *cli.Command {
 
 							resp, err := actions.ContainerAdd(ctx, imageVal, nameVal, addPkgVal, hookVal)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
 							return reply.CliResponse(ctx, *resp)
@@ -346,7 +344,7 @@ func CommandList(ctx context.Context) *cli.Command {
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ContainerRemove(ctx, cmd.String("name"))
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
 							return reply.CliResponse(ctx, *resp)

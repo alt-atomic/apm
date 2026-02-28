@@ -76,9 +76,6 @@ func generateTransactionID() string {
 // writeJSON отправляет JSON ответ
 func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) {
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if resp.Error {
-		rw.WriteHeader(http.StatusBadRequest)
-	}
 	_ = json.NewEncoder(rw).Encode(resp)
 }
 
@@ -86,10 +83,7 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 func (w *HTTPWrapper) writeError(rw http.ResponseWriter, err error, code int) {
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	rw.WriteHeader(code)
-	_ = json.NewEncoder(rw).Encode(reply.APIResponse{
-		Data:  map[string]interface{}{"message": err.Error()},
-		Error: true,
-	})
+	_ = json.NewEncoder(rw).Encode(reply.ErrorResponseFromError(err))
 }
 
 // parseBodyParams парсит параметры из тела запроса
@@ -138,7 +132,7 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Update(ctx, container)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -161,7 +155,7 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Info(ctx, container, name)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -181,7 +175,7 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Search(ctx, container, q)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -228,7 +222,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.List(ctx, params)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -267,7 +261,7 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -306,7 +300,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Remove(ctx, container, packageName, onlyExport)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -323,7 +317,7 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.GetFilterFields(ctx, container)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -334,7 +328,7 @@ func (w *HTTPWrapper) ContainerList(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ContainerList(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -400,7 +394,7 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -417,7 +411,7 @@ func (w *HTTPWrapper) ContainerRemove(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ContainerRemove(ctx, name)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)

@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/build"
 	"apm/internal/common/helper"
@@ -85,7 +86,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, packages, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -131,7 +132,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -146,7 +147,7 @@ func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) 
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 
 	data, jerr := json.Marshal(resp)
@@ -194,7 +195,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Update(ctx, false)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -221,7 +222,7 @@ func (w *DBusWrapper) List(sort string, order string, limit int, offset int, fil
 
 	resp, err := w.actions.List(ctx, params, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -236,7 +237,7 @@ func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbu
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, packageName, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -282,7 +283,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckUpgrade(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -328,7 +329,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Upgrade(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -374,7 +375,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckInstall(ctx, packages)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -420,7 +421,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckRemove(ctx, packages, false, depends)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -438,7 +439,7 @@ func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, packageName, installed, true)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -484,7 +485,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageApply(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -502,7 +503,7 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageHistory(ctx, imageName, limit, offset)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -548,7 +549,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageUpdate(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -566,7 +567,7 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ImageStatus(ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -580,7 +581,7 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig(w.ctx)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {
@@ -598,7 +599,7 @@ func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
 	}
 	resp, err := w.actions.ImageSaveConfig(w.ctx, configObject)
 	if err != nil {
-		return "", dbus.MakeFailedError(err)
+		return "", apmerr.DBusError(err)
 	}
 	data, jerr := json.Marshal(resp)
 	if jerr != nil {

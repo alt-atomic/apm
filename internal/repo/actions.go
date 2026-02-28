@@ -17,6 +17,7 @@
 package repo
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/reply"
@@ -63,7 +64,7 @@ func NewActions(appConfig *app.Config) *Actions {
 func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error) {
 	repos, err := a.repoService.GetRepositories(ctx, all)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	var message string
@@ -79,7 +80,6 @@ func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error
 			Repositories: repos,
 			Count:        len(repos),
 		},
-		Error: false,
 	}, nil
 }
 
@@ -87,23 +87,17 @@ func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error
 // args: [source] или [type, url, arch, components...]
 func (a *Actions) Add(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
 	if len(args) == 0 {
-		return nil, errors.New(app.T_("Repository source must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
 	date = strings.TrimSpace(date)
 
 	added, err := a.repoService.AddRepository(ctx, args, date)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	if len(added) == 0 {
-		return &reply.APIResponse{
-			Data: AddRemoveResponse{
-				Message: app.T_("All repositories already exist"),
-				Added:   []string{},
-			},
-			Error: true,
-		}, nil
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("All repositories already exist")))
 	}
 
 	message := fmt.Sprintf(app.TN_("%d repository added", "%d repositories added", len(added)), len(added))
@@ -113,29 +107,23 @@ func (a *Actions) Add(ctx context.Context, args []string, date string) (*reply.A
 			Message: message,
 			Added:   added,
 		},
-		Error: false,
 	}, nil
 }
 
 // CheckAdd симулирует добавление репозитория
 func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
 	if len(args) == 0 {
-		return nil, errors.New(app.T_("Repository source must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
 	date = strings.TrimSpace(date)
 
 	willAdd, err := a.repoService.SimulateAdd(ctx, args, date, false)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	if len(willAdd) == 0 {
-		return &reply.APIResponse{
-			Data: SimulateResponse{
-				Message: app.T_("All repositories already exist"),
-			},
-			Error: true,
-		}, nil
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("All repositories already exist")))
 	}
 
 	return &reply.APIResponse{
@@ -143,7 +131,6 @@ func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*re
 			Message: app.T_("Simulation results"),
 			WillAdd: willAdd,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -151,23 +138,17 @@ func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*re
 // args: [source] или [type, url, arch, components...]
 func (a *Actions) Remove(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
 	if len(args) == 0 {
-		return nil, errors.New(app.T_("Repository source must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
 	date = strings.TrimSpace(date)
 
 	removed, err := a.repoService.RemoveRepository(ctx, args, date, false)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	if len(removed) == 0 {
-		return &reply.APIResponse{
-			Data: AddRemoveResponse{
-				Message: app.T_("No repositories found to remove"),
-				Removed: []string{},
-			},
-			Error: true,
-		}, nil
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("No repositories found to remove")))
 	}
 
 	message := fmt.Sprintf(app.TN_("%d repository removed", "%d repositories removed", len(removed)), len(removed))
@@ -177,29 +158,23 @@ func (a *Actions) Remove(ctx context.Context, args []string, date string) (*repl
 			Message: message,
 			Removed: removed,
 		},
-		Error: false,
 	}, nil
 }
 
 // CheckRemove симулирует удаление репозитория
 func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
 	if len(args) == 0 {
-		return nil, errors.New(app.T_("Repository source must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
 	date = strings.TrimSpace(date)
 
 	willRemove, err := a.repoService.SimulateRemove(ctx, args, date, false)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	if len(willRemove) == 0 {
-		return &reply.APIResponse{
-			Data: SimulateResponse{
-				Message: app.T_("No repositories to remove"),
-			},
-			Error: true,
-		}, nil
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("No repositories to remove")))
 	}
 
 	return &reply.APIResponse{
@@ -207,7 +182,6 @@ func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (
 			Message:    app.T_("Simulation results"),
 			WillRemove: willRemove,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -215,13 +189,13 @@ func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (
 func (a *Actions) Set(ctx context.Context, branch, date string) (*reply.APIResponse, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
-		return nil, errors.New(app.T_("Branch name must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Branch name must be specified")))
 	}
 	date = strings.TrimSpace(date)
 
 	added, removed, err := a.repoService.SetBranch(ctx, branch, date)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	// Формируем имя ветки для сообщения
@@ -238,7 +212,6 @@ func (a *Actions) Set(ctx context.Context, branch, date string) (*reply.APIRespo
 			Added:   added,
 			Removed: removed,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -246,17 +219,17 @@ func (a *Actions) Set(ctx context.Context, branch, date string) (*reply.APIRespo
 func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*reply.APIResponse, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
-		return nil, errors.New(app.T_("Branch name must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Branch name must be specified")))
 	}
 	date = strings.TrimSpace(date)
 
 	willRemove, err := a.repoService.SimulateRemove(ctx, []string{"all"}, "", false)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 	willAdd, err := a.repoService.SimulateAdd(ctx, []string{branch}, date, true)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	return &reply.APIResponse{
@@ -265,7 +238,6 @@ func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*reply.API
 			WillAdd:    willAdd,
 			WillRemove: willRemove,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -273,17 +245,11 @@ func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*reply.API
 func (a *Actions) Clean(ctx context.Context) (*reply.APIResponse, error) {
 	removed, err := a.repoService.CleanTemporary(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	if len(removed) == 0 {
-		return &reply.APIResponse{
-			Data: AddRemoveResponse{
-				Message: app.T_("No cdrom or task repositories found"),
-				Removed: []string{},
-			},
-			Error: true,
-		}, nil
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("No cdrom or task repositories found")))
 	}
 
 	message := fmt.Sprintf(app.TN_("%d temporary repository removed", "%d temporary repositories removed", len(removed)), len(removed))
@@ -293,7 +259,6 @@ func (a *Actions) Clean(ctx context.Context) (*reply.APIResponse, error) {
 			Message: message,
 			Removed: removed,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -301,7 +266,7 @@ func (a *Actions) Clean(ctx context.Context) (*reply.APIResponse, error) {
 func (a *Actions) CheckClean(ctx context.Context) (*reply.APIResponse, error) {
 	repos, err := a.repoService.GetRepositories(ctx, false)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	var willRemove []string
@@ -320,12 +285,7 @@ func (a *Actions) CheckClean(ctx context.Context) (*reply.APIResponse, error) {
 	}
 
 	if len(willRemove) == 0 {
-		return &reply.APIResponse{
-			Data: SimulateResponse{
-				Message: app.T_("No cdrom or task repositories to remove"),
-			},
-			Error: true,
-		}, nil
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("No cdrom or task repositories to remove")))
 	}
 
 	return &reply.APIResponse{
@@ -333,7 +293,6 @@ func (a *Actions) CheckClean(ctx context.Context) (*reply.APIResponse, error) {
 			Message:    app.T_("Simulation results"),
 			WillRemove: willRemove,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -346,7 +305,6 @@ func (a *Actions) GetBranches(_ context.Context) (*reply.APIResponse, error) {
 			Message:  app.T_("Available branches"),
 			Branches: branches,
 		},
-		Error: false,
 	}, nil
 }
 
@@ -354,12 +312,12 @@ func (a *Actions) GetBranches(_ context.Context) (*reply.APIResponse, error) {
 func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*reply.APIResponse, error) {
 	taskNum = strings.TrimSpace(taskNum)
 	if taskNum == "" {
-		return nil, errors.New(app.T_("Task number must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Task number must be specified")))
 	}
 
 	packages, err := a.repoService.GetTaskPackages(ctx, taskNum)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	message := fmt.Sprintf(app.TN_("%d package in task %s", "%d packages in task %s", len(packages)), len(packages), taskNum)
@@ -371,7 +329,6 @@ func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*reply.A
 			Packages: packages,
 			Count:    len(packages),
 		},
-		Error: false,
 	}, nil
 }
 
@@ -384,7 +341,7 @@ func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
 func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIResponse, error) {
 	taskNum = strings.TrimSpace(taskNum)
 	if taskNum == "" {
-		return nil, errors.New(app.T_("Task number must be specified"))
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Task number must be specified")))
 	}
 
 	var packagesToInstall []string
@@ -392,16 +349,16 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIRespo
 
 	packagesToInstall, err = a.repoService.GetTaskPackages(ctx, taskNum)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
 	if len(packagesToInstall) == 0 {
-		return nil, errors.New(app.T_("No packages to install from task"))
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("No packages to install from task")))
 	}
 
 	_, err = a.repoService.AddRepository(ctx, []string{taskNum}, "")
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", app.T_("Failed to add task repository"), err)
+		return nil, apmerr.New(apmerr.ErrorTypeRepository, fmt.Errorf("%s: %v", app.T_("Failed to add task repository"), err))
 	}
 
 	defer func() {
@@ -410,7 +367,7 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIRespo
 
 	_, err = a.serviceAptActions.Update(ctx)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}
 
 	packagesInstall, packagesRemove, _, packageParse, errFind := a.serviceAptActions.FindPackage(
@@ -422,22 +379,16 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIRespo
 		false,
 	)
 	if errFind != nil {
-		return nil, errFind
+		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
 	}
 
 	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
-		return &reply.APIResponse{
-			Data: map[string]interface{}{
-				"message": app.T_("The operation will not make any changes"),
-				"taskNum": taskNum,
-			},
-			Error: true,
-		}, nil
+		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
 	}
 
 	err = a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}
 
 	message := fmt.Sprintf(
@@ -455,6 +406,5 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIRespo
 			TaskNum: taskNum,
 			Info:    *packageParse,
 		},
-		Error: false,
 	}, nil
 }

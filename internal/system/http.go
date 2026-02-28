@@ -77,9 +77,6 @@ func generateTransactionID() string {
 // writeJSON отправляет JSON ответ
 func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) {
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if resp.Error {
-		rw.WriteHeader(http.StatusBadRequest)
-	}
 	_ = json.NewEncoder(rw).Encode(resp)
 }
 
@@ -87,10 +84,7 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 func (w *HTTPWrapper) writeError(rw http.ResponseWriter, err error, code int) {
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	rw.WriteHeader(code)
-	_ = json.NewEncoder(rw).Encode(reply.APIResponse{
-		Data:  map[string]interface{}{"message": err.Error()},
-		Error: true,
-	})
+	_ = json.NewEncoder(rw).Encode(reply.ErrorResponseFromError(err))
 }
 
 // parseBodyParams парсит параметры из тела запроса
@@ -150,7 +144,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.CheckRemove(ctx, packages, purge, depends)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -197,7 +191,7 @@ func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.CheckInstall(ctx, packages)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -231,7 +225,7 @@ func (w *HTTPWrapper) CheckUpgrade(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.CheckUpgrade(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -288,7 +282,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -335,7 +329,7 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Install(ctx, packages, true)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -349,7 +343,7 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Info(ctx, name, full)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -396,7 +390,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.List(ctx, params, full)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -407,7 +401,7 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.GetFilterFields(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -423,7 +417,7 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Search(ctx, q, installed, full)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -458,7 +452,7 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Update(ctx, noLock)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -492,7 +486,7 @@ func (w *HTTPWrapper) Upgrade(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.Upgrade(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -505,7 +499,7 @@ func (w *HTTPWrapper) ImageStatus(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ImageStatus(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -539,7 +533,7 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ImageUpdate(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -573,7 +567,7 @@ func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ImageApply(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -601,7 +595,7 @@ func (w *HTTPWrapper) ImageHistory(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ImageHistory(ctx, imageName, limit, offset)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -612,7 +606,7 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ImageGetConfig(ctx)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)
@@ -633,7 +627,7 @@ func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
 	resp, err := w.actions.ImageSaveConfig(ctx, config)
 	if err != nil {
-		w.writeError(rw, err, http.StatusInternalServerError)
+		reply.WriteHTTPError(rw, err)
 		return
 	}
 	w.writeJSON(rw, *resp)

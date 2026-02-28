@@ -494,12 +494,7 @@ func cliError(err error) {
 		return
 	}
 
-	_ = reply.CliResponse(ctx, reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": err.Error(),
-		},
-		Error: true,
-	})
+	_ = reply.CliResponse(ctx, reply.ErrorResponseFromError(err))
 }
 
 func cleanup() {

@@ -17,6 +17,7 @@
 package reply
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"context"
@@ -33,11 +34,26 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+// APIError описывает структуру ошибки в ответе.
+type APIError struct {
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
 // APIResponse описывает итоговую структуру ответа.
 type APIResponse struct {
 	Data        interface{} `json:"data"`
-	Error       bool        `json:"error"`
+	Error       *APIError   `json:"error"`
 	Transaction string      `json:"transaction,omitempty"`
+}
+
+// ErrorResponseFromError создаёт ответ из ошибки, извлекая тип из apmerr.APMError.
+func ErrorResponseFromError(err error) APIResponse {
+	var apmErr apmerr.APMError
+	if errors.As(err, &apmErr) {
+		return APIResponse{Error: &APIError{ErrorCode: apmErr.Type, Message: err.Error()}}
+	}
+	return APIResponse{Error: &APIError{Message: err.Error()}}
 }
 
 // ResponseRenderer структура для рендеринга ответов с общим конфигом
@@ -372,11 +388,12 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 		resp.Transaction = txStr
 	}
 
+	isError := resp.Error != nil
+
 	switch format {
 	// ---------------------------------- JSON ----------------------------------
 	case app.FormatJSON:
-		// Если нет ошибки, убираем "message"
-		if !resp.Error {
+		if !isError {
 			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
 				delete(dataMap, "message")
 			}
@@ -389,47 +406,21 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 
 	// ---------------------------------- TEXT (по умолчанию) ------------------
 	default:
-		var dataMap map[string]interface{}
-
-		switch data := resp.Data.(type) {
-		case map[string]interface{}:
-			dataMap = data
-		default:
-			b, err := json.Marshal(resp.Data)
-			if err == nil {
-				var mm map[string]interface{}
-				if err2 := json.Unmarshal(b, &mm); err2 == nil {
-					dataMap = mm
+		if isError {
+			msg := resp.Error.Message
+			if len(msg) > 0 {
+				runes := []rune(msg)
+				if unicode.IsLower(runes[0]) {
+					runes[0] = unicode.ToUpper(runes[0])
+					msg = string(runes)
 				}
 			}
-		}
+			dataMap := map[string]interface{}{"message": msg}
+			t := r.buildTreeFromMap("", dataMap, true)
 
-		if dataMap != nil {
-			if resp.Error {
-				if rawMsg, haveMsg := dataMap["message"]; haveMsg {
-					if msgStr, ok := rawMsg.(string); ok && len(msgStr) > 0 {
-						runes := []rune(msgStr)
-						if unicode.IsLower(runes[0]) {
-							runes[0] = unicode.ToUpper(runes[0])
-							dataMap["message"] = string(runes)
-						}
-					}
-				}
-			}
-
-			var t *tree.Tree
-			t = r.buildTreeFromMap("", dataMap, resp.Error)
-
-			var rootColor lipgloss.Style
-			if resp.Error {
-				rootColor = lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color(r.GetColors().Error))
-			} else {
-				rootColor = lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color(r.GetColors().Success))
-			}
+			rootColor := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color(r.GetColors().Error))
 
 			t.Enumerator(tree.RoundedEnumerator).
 				EnumeratorStyle(r.getEnumeratorStyle()).
@@ -438,21 +429,51 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 
 			fmt.Println(t.String())
 		} else {
-			var message string
-			switch dd := resp.Data.(type) {
-			case map[string]string:
-				message = dd["message"]
-			case string:
-				message = dd
+			var dataMap map[string]interface{}
+
+			switch data := resp.Data.(type) {
+			case map[string]interface{}:
+				dataMap = data
 			default:
-				message = fmt.Sprintf("%v", dd)
+				b, err := json.Marshal(resp.Data)
+				if err == nil {
+					var mm map[string]interface{}
+					if err2 := json.Unmarshal(b, &mm); err2 == nil {
+						dataMap = mm
+					}
+				}
 			}
-			fmt.Println(message)
+
+			if dataMap != nil {
+				t := r.buildTreeFromMap("", dataMap, false)
+
+				rootColor := lipgloss.NewStyle().
+					Bold(true).
+					Foreground(lipgloss.Color(r.GetColors().Success))
+
+				t.Enumerator(tree.RoundedEnumerator).
+					EnumeratorStyle(r.getEnumeratorStyle()).
+					RootStyle(rootColor).
+					ItemStyle(r.getItemStyle())
+
+				fmt.Println(t.String())
+			} else {
+				var message string
+				switch dd := resp.Data.(type) {
+				case map[string]string:
+					message = dd["message"]
+				case string:
+					message = dd
+				default:
+					message = fmt.Sprintf("%v", dd)
+				}
+				fmt.Println(message)
+			}
 		}
 	}
 
 	// возвращаем пустую ошибку, что бы вызвать статус exit code 1
-	if resp.Error {
+	if isError {
 		return errors.New("")
 	}
 
