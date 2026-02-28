@@ -30,7 +30,7 @@ import (
 
 const clearLine = "\r\033[K"
 
-var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+var spinnerFrames = []string{"|", "/", "-", "\\"}
 
 var (
 	mu           sync.Mutex
@@ -197,7 +197,7 @@ func UpdateTask(appConfig *app.Config, eventType string, taskName string, viewNa
 
 func (sp *simpleSpinner) run() {
 	defer close(sp.doneCh)
-	ticker := time.NewTicker(80 * time.Millisecond)
+	ticker := time.NewTicker(120 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {

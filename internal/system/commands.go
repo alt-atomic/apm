@@ -53,18 +53,12 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 			return
 		}
 
-		base := strings.TrimRight(currentToken, "+-")
-		if base == "" {
-			return
-		}
-		suffix := currentToken[len(base):]
-
 		exclude := make(map[string]struct{}, len(args))
 		for i := 0; i < len(args)-1; i++ {
 			exclude[strings.TrimRight(strings.TrimSpace(args[i]), "+-")] = struct{}{}
 		}
 
-		like := base + "%"
+		like := currentToken + "%"
 		svc := NewActions(appConfig).serviceAptDatabase
 		if svc == nil {
 			return
@@ -72,21 +66,11 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 
 		pkgs, _ := svc.SearchPackagesMultiLimit(ctx, like, 200, installed)
 
-		// Избегаем самоповторов и дубликатов в выводе
-		printed := make(map[string]struct{}, len(pkgs))
 		for _, p := range pkgs {
 			if _, seen := exclude[p.Name]; seen {
 				continue
 			}
-			candidate := p.Name + suffix
-			if strings.EqualFold(candidate, currentToken) {
-				continue
-			}
-			if _, dup := printed[candidate]; dup {
-				continue
-			}
-			printed[candidate] = struct{}{}
-			fmt.Println(candidate)
+			fmt.Println(p.Name)
 		}
 	}
 }
