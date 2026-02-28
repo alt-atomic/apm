@@ -306,7 +306,8 @@ func (m model) buildEssentialWarning() string {
 	content.WriteString(headerStyle.Render(app.T_("WARNING: Packages critical for system operation will be removed")))
 	content.WriteString("\n\n")
 
-	essentialStr := m.formatDependencies(items)
+	boxInnerWidth := m.vp.Width - 2 - 2 - 2 - keyWidth - 3
+	essentialStr := m.formatDependencies(items, boxInnerWidth)
 	content.WriteString(formatLine(app.T_("Essential packages"), essentialStr, keyWidth, keyStyle, valueStyle))
 
 	boxStyle := lipgloss.NewStyle().
@@ -339,12 +340,14 @@ func (m model) buildContent() string {
 		sb.WriteString("\n")
 	}
 
+	depAvailWidth := m.vp.Width - keyWidth - 4
+
 	// Сначала затронутые изменения
 	sb.WriteString(titleStyle.Render(fmt.Sprintf("\n%s\n", app.T_("Affected changes:"))))
-	extraStr := m.formatDependencies(m.pckChange.ExtraInstalled)
-	upgradeStr := m.formatDependencies(m.pckChange.UpgradedPackages)
-	installStr := m.formatDependencies(m.pckChange.NewInstalledPackages)
-	removeStr := m.formatDependencies(m.pckChange.RemovedPackages)
+	extraStr := m.formatDependencies(m.pckChange.ExtraInstalled, depAvailWidth)
+	upgradeStr := m.formatDependencies(m.pckChange.UpgradedPackages, depAvailWidth)
+	installStr := m.formatDependencies(m.pckChange.NewInstalledPackages, depAvailWidth)
+	removeStr := m.formatDependencies(m.pckChange.RemovedPackages, depAvailWidth)
 	sb.WriteString("\n" + formatLine(app.T_("Extra packages"), extraStr, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(app.T_("Will be updated"), upgradeStr, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(app.T_("Will be installed"), installStr, keyWidth, keyStyle, valueStyle))
@@ -423,7 +426,7 @@ func (m model) buildContent() string {
 			}
 			sb.WriteString("\n" + formatLine(app.T_("Size"), helper.AutoSize(pkg.InstalledSize), keyWidth, keyStyle, valueStyle))
 
-			dependsStr := m.formatDependencies(pkg.Depends)
+			dependsStr := m.formatDependencies(pkg.Depends, depAvailWidth)
 			sb.WriteString("\n" + formatLine(app.T_("Dependencies"), dependsStr, keyWidth, keyStyle, valueStyle))
 		}
 	}
@@ -473,7 +476,7 @@ func contains(slice []string, pkg string) bool {
 	return false
 }
 
-func (m model) formatDependencies(depends []string) string {
+func (m model) formatDependencies(depends []string, availableWidth int) string {
 	var filtered []string
 	for _, dep := range depends {
 		if strings.Contains(dep, "/") || strings.Contains(dep, ".so") {
@@ -494,7 +497,10 @@ func (m model) formatDependencies(depends []string) string {
 		}
 	}
 	colWidth := maxLen + 2
-	cols := m.vp.Width / colWidth
+	if availableWidth < colWidth {
+		availableWidth = colWidth
+	}
+	cols := availableWidth / colWidth
 	if cols < 1 {
 		cols = 1
 	}
