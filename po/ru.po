@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-28 04:28+0600\n"
+"POT-Creation-Date: 2026-02-28 15:19+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -693,34 +693,34 @@ msgstr ""
 "Ошибка распаковки RPM пакета: %s. Пакет может быть несовместим с текущей "
 "системой или требует специальных разрешений"
 
-#: internal/common/apt/package/actions.go:190
+#: internal/common/apt/package/actions.go:191
 msgid "No packages found matching the specified patterns"
 msgstr "Не найдено пакетов, соответствующих указанным шаблонам"
 
-#: internal/common/apt/package/actions.go:284
+#: internal/common/apt/package/actions.go:285
 #: internal/common/reply/event.go:367
 msgid "Downloading packages"
 msgstr "Загрузка пакетов"
 
-#: internal/common/apt/package/actions.go:293
+#: internal/common/apt/package/actions.go:294
 msgid "All packages downloaded"
 msgstr "Загрузка всех пакетов"
 
-#: internal/common/apt/package/actions.go:351
+#: internal/common/apt/package/actions.go:352
 #, c-format
 msgid "Installing progress: %s"
 msgstr "Прогресс установки: %s"
 
-#: internal/common/apt/package/actions.go:358
+#: internal/common/apt/package/actions.go:359
 #, c-format
 msgid "Installing %s"
 msgstr "Установка %s"
 
-#: internal/common/apt/package/actions.go:497
+#: internal/common/apt/package/actions.go:498
 msgid "AppStream load failed: %v"
 msgstr "Не удалось загрузить AppStream: %v"
 
-#: internal/common/apt/package/actions.go:598
+#: internal/common/apt/package/actions.go:599
 msgid "Error updating information about installed packages: %w"
 msgstr "Ошибка обновления информации об установленных пакетах: %w"
 
@@ -1054,11 +1054,11 @@ msgstr "polkit, ошибка распаковки: %w"
 msgid "not authorized by polkit (action=%s)"
 msgstr "не авторизовано polkit (действие=%s)"
 
-#: internal/common/helper/text.go:67
+#: internal/common/helper/text.go:68
 msgid "version not found"
 msgstr "версия не найдена"
 
-#: internal/common/helper/text.go:75
+#: internal/common/helper/text.go:76
 #, c-format
 msgid "%.2f MB"
 msgstr "%.2f МБ"
@@ -1427,12 +1427,12 @@ msgstr "Результат"
 msgid "Application Information"
 msgstr "Информация о приложении"
 
-#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:365
+#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:368
 msgid "Downloaded Size"
 msgstr "Размер при загрузке"
 
 #: internal/common/reply/translate.go:25 internal/common/reply/translate.go:71
-#: internal/system/dialog/dialog.go:366
+#: internal/system/dialog/dialog.go:369
 msgid "Installed Size"
 msgstr "Размер при установке"
 
@@ -1487,7 +1487,7 @@ msgstr "Дистрибутив"
 msgid "Container"
 msgstr "Контейнер"
 
-#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:403
+#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:406
 msgid "Name"
 msgstr "Название"
 
@@ -1523,7 +1523,7 @@ msgstr "Версия"
 msgid "History"
 msgstr "История"
 
-#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:427
+#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:430
 msgid "Dependencies"
 msgstr "Зависимости"
 
@@ -1547,7 +1547,7 @@ msgstr "Образ"
 msgid "Commands"
 msgstr "Команды"
 
-#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:406
+#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:409
 msgid "Maintainer"
 msgstr "Сопровождающий"
 
@@ -1589,7 +1589,7 @@ msgstr "Информация"
 msgid "Total Count"
 msgstr "Общее количество"
 
-#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:407
+#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:410
 msgid "Installed"
 msgstr "Установлено"
 
@@ -1617,7 +1617,7 @@ msgstr "Загружено"
 msgid "Staged"
 msgstr "Зафиксированно"
 
-#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:424
+#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:427
 msgid "Size"
 msgstr "Размер"
 
@@ -1829,7 +1829,7 @@ msgstr "Будет добавлено"
 msgid "WillRemove"
 msgstr "Будет удалено"
 
-#: internal/common/reply/translate.go:225 internal/system/dialog/dialog.go:310
+#: internal/common/reply/translate.go:225 internal/system/dialog/dialog.go:311
 msgid "Essential packages"
 msgstr "Важные пакеты"
 
@@ -1928,11 +1928,11 @@ msgstr "Обновить и синхронизировать список уст
 msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
-#: internal/distrobox/commands.go:71 internal/system/commands.go:354
+#: internal/distrobox/commands.go:71 internal/system/commands.go:378
 msgid "Package information"
 msgstr "Информация о пакете"
 
-#: internal/distrobox/commands.go:92 internal/system/commands.go:375
+#: internal/distrobox/commands.go:92 internal/system/commands.go:399
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
@@ -1948,21 +1948,21 @@ msgstr "Построение запроса для извлечения спис
 msgid "Field for sorting, for example: name, version"
 msgstr "Поле для сортировки, к примеру: name, version"
 
-#: internal/distrobox/commands.go:125 internal/system/commands.go:409
+#: internal/distrobox/commands.go:125 internal/system/commands.go:433
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
-#: internal/distrobox/commands.go:130 internal/system/commands.go:175
-#: internal/system/commands.go:414
+#: internal/distrobox/commands.go:130 internal/system/commands.go:217
+#: internal/system/commands.go:438
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
-#: internal/distrobox/commands.go:135 internal/system/commands.go:180
-#: internal/system/commands.go:419
+#: internal/distrobox/commands.go:135 internal/system/commands.go:222
+#: internal/system/commands.go:443
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
-#: internal/distrobox/commands.go:140 internal/system/commands.go:424
+#: internal/distrobox/commands.go:140 internal/system/commands.go:448
 msgid ""
 "Filter in the format key=value. The flag can be specified multiple times, "
 "for example: --filter name=zip --filter installed=true"
@@ -1991,7 +1991,7 @@ msgid "Remove only from host, leave package in container"
 msgstr "Удалить только с хоста, оставить пакет в контейнере"
 
 #: internal/distrobox/commands.go:221 internal/kernel/commands.go:259
-#: internal/repo/commands.go:242 internal/system/commands.go:463
+#: internal/repo/commands.go:242 internal/system/commands.go:487
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
@@ -2517,7 +2517,7 @@ msgstr "Установите дополнительные модули ядра"
 msgid "Install kernel headers"
 msgstr "Установить заголовки ядра"
 
-#: internal/kernel/commands.go:98 internal/system/commands.go:245
+#: internal/kernel/commands.go:98 internal/system/commands.go:287
 msgid "Simulate installation"
 msgstr "Симуляция установки"
 
@@ -2981,7 +2981,7 @@ msgstr "Ничего не найдено"
 msgid "System package"
 msgstr "Системный пакет"
 
-#: internal/system/actions.go:857 internal/system/commands.go:143
+#: internal/system/actions.go:857 internal/system/commands.go:185
 msgid "Image status"
 msgstr "Статус образа"
 
@@ -3005,109 +3005,117 @@ msgstr "Образ изменён. Конфигурационный файл: "
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
-#: internal/system/commands.go:113
+#: internal/system/commands.go:111
+msgid "Upgrade system image"
+msgstr "Обновление образа системы"
+
+#: internal/system/commands.go:124
+msgid "General system upgrade"
+msgstr "Общее обновление системы"
+
+#: internal/system/commands.go:128
+msgid "Simulate upgrade"
+msgstr "Симуляция обновления"
+
+#: internal/system/commands.go:155
 msgid "Build image"
 msgstr "Создать образ"
 
-#: internal/system/commands.go:131
+#: internal/system/commands.go:173
 msgid "Apply changes to the host"
 msgstr "Применить изменения на хосте"
 
-#: internal/system/commands.go:155
+#: internal/system/commands.go:197
 msgid "Image update"
 msgstr "Обновление образа"
 
-#: internal/system/commands.go:167
+#: internal/system/commands.go:209
 msgid "Image changes history"
 msgstr "История изменения образа"
 
-#: internal/system/commands.go:171
+#: internal/system/commands.go:213
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
-#: internal/system/commands.go:200
+#: internal/system/commands.go:242
 msgid "Reinstall packages"
 msgstr "Переустановка пакетов"
 
-#: internal/system/commands.go:205
+#: internal/system/commands.go:247
 msgid "Reinstall without confirmation"
 msgstr "Переустановить без подтверждения"
 
-#: internal/system/commands.go:211
+#: internal/system/commands.go:253
 msgid "Simulate reinstallation"
 msgstr "Симуляция переустановки"
 
-#: internal/system/commands.go:234
+#: internal/system/commands.go:276
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 "Список пакетов для установки. Формат package- и package+ поддерживается."
 
-#: internal/system/commands.go:239
+#: internal/system/commands.go:281
 msgid "Install without confirmation"
 msgstr "Установить без подтверждения"
 
-#: internal/system/commands.go:269
+#: internal/system/commands.go:311
 msgid "List of packages to remove"
 msgstr "Список пакетов на удаление"
 
-#: internal/system/commands.go:274
+#: internal/system/commands.go:316
 msgid "Remove without confirmation"
 msgstr "Удалить без подтверждения"
 
-#: internal/system/commands.go:280
+#: internal/system/commands.go:322
 msgid "Attempt to remove all files"
 msgstr "Попытка удалить все файлы"
 
-#: internal/system/commands.go:286
+#: internal/system/commands.go:328
 msgid "Attempt to remove depends"
 msgstr "Попытка удалить зависимости"
 
-#: internal/system/commands.go:292
+#: internal/system/commands.go:334
 msgid "Simulate removal"
 msgstr "Симуляция удаления"
 
-#: internal/system/commands.go:316
+#: internal/system/commands.go:358
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/system/commands.go:320
+#: internal/system/commands.go:362
 msgid "Skip file locking (use with caution)"
 msgstr "Пропустить блокировку файла (использовать с осторожностью)"
 
-#: internal/system/commands.go:335
-msgid "General system upgrade"
-msgstr "Общее обновление системы"
-
-#: internal/system/commands.go:359
+#: internal/system/commands.go:383
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:380
+#: internal/system/commands.go:404
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/system/commands.go:386 internal/system/commands.go:433
+#: internal/system/commands.go:410 internal/system/commands.go:457
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:401
+#: internal/system/commands.go:425
 msgid "Building a query to get a list of packages"
 msgstr "Создание запроса для получения списка пакетов"
 
-#: internal/system/commands.go:405
+#: internal/system/commands.go:429
 msgid "Sort packages by field, example fields: name, section"
 msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
-#: internal/system/commands.go:428
+#: internal/system/commands.go:452
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/system/commands.go:457
+#: internal/system/commands.go:481
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/system/commands.go:474
+#: internal/system/commands.go:498
 msgid "System package management"
 msgstr "Управление системными пакетами"
 
@@ -3154,32 +3162,32 @@ msgid "WARNING: Packages critical for system operation will be removed"
 msgstr "ВНИМАНИЕ: Пакеты, критически важные для работы системы, будут удалены"
 
 #. Сначала затронутые изменения
-#: internal/system/dialog/dialog.go:343
+#: internal/system/dialog/dialog.go:346
 msgid "Affected changes:"
 msgstr "Затронутые изменения:"
 
-#: internal/system/dialog/dialog.go:348
+#: internal/system/dialog/dialog.go:351
 msgid "Extra packages"
 msgstr "Будет добавлено"
 
-#: internal/system/dialog/dialog.go:349 internal/system/dialog/dialog.go:360
-#: internal/system/dialog/dialog.go:456
+#: internal/system/dialog/dialog.go:352 internal/system/dialog/dialog.go:363
+#: internal/system/dialog/dialog.go:459
 msgid "Will be updated"
 msgstr "Будет обновлено"
 
-#: internal/system/dialog/dialog.go:350 internal/system/dialog/dialog.go:361
-#: internal/system/dialog/dialog.go:452
+#: internal/system/dialog/dialog.go:353 internal/system/dialog/dialog.go:364
+#: internal/system/dialog/dialog.go:455
 msgid "Will be installed"
 msgstr "Будет установлено"
 
-#: internal/system/dialog/dialog.go:351 internal/system/dialog/dialog.go:362
-#: internal/system/dialog/dialog.go:460
+#: internal/system/dialog/dialog.go:354 internal/system/dialog/dialog.go:365
+#: internal/system/dialog/dialog.go:463
 msgid "Will be removed"
 msgstr "Будет удалено"
 
 #. Затем итоги
-#: internal/system/dialog/dialog.go:354 internal/system/dialog/dialog.go:355
-#: internal/system/dialog/dialog.go:356 internal/system/dialog/dialog.go:357
+#: internal/system/dialog/dialog.go:357 internal/system/dialog/dialog.go:358
+#: internal/system/dialog/dialog.go:359 internal/system/dialog/dialog.go:360
 #, c-format
 msgid "%d package"
 msgid_plural "%d packages"
@@ -3187,30 +3195,30 @@ msgstr[0] "%d пакет"
 msgstr[1] "%d пакета"
 msgstr[2] "%d пакетов"
 
-#: internal/system/dialog/dialog.go:359
+#: internal/system/dialog/dialog.go:362
 msgid "Total:"
 msgstr "Итого:"
 
-#: internal/system/dialog/dialog.go:363
+#: internal/system/dialog/dialog.go:366
 msgid "Not affected"
 msgstr "Не затронуто"
 
-#: internal/system/dialog/dialog.go:371
+#: internal/system/dialog/dialog.go:374
 msgid "Package information:"
 msgid_plural "Packages information:"
 msgstr[0] "Информация о пакете:"
 msgstr[1] "Информация о пакетах:"
 msgstr[2] "Информация о пакетах:"
 
-#: internal/system/dialog/dialog.go:379
+#: internal/system/dialog/dialog.go:382
 msgid "Package list:"
 msgstr "Список пакетов:"
 
-#: internal/system/dialog/dialog.go:385
+#: internal/system/dialog/dialog.go:388
 msgid "[Installed]"
 msgstr "[Установлено]"
 
-#: internal/system/dialog/dialog.go:396
+#: internal/system/dialog/dialog.go:399
 #, c-format
 msgid ""
 "\n"
@@ -3219,34 +3227,34 @@ msgstr ""
 "\n"
 "Пакет %d:"
 
-#: internal/system/dialog/dialog.go:398 internal/system/dialog/dialog.go:464
-#: internal/system/dialog/dialog.go:485
+#: internal/system/dialog/dialog.go:401 internal/system/dialog/dialog.go:467
+#: internal/system/dialog/dialog.go:488
 msgid "No"
 msgstr "Нет"
 
-#: internal/system/dialog/dialog.go:400
+#: internal/system/dialog/dialog.go:403
 msgid "Yes"
 msgstr "Да"
 
-#: internal/system/dialog/dialog.go:404
+#: internal/system/dialog/dialog.go:407
 msgid "Action"
 msgstr "Действие"
 
-#: internal/system/dialog/dialog.go:405
+#: internal/system/dialog/dialog.go:408
 msgid "Category"
 msgstr "Категория"
 
 #. Выводим "Версия в облаке" обычным стилем
-#: internal/system/dialog/dialog.go:411 internal/system/dialog/dialog.go:422
+#: internal/system/dialog/dialog.go:414 internal/system/dialog/dialog.go:425
 msgid "Repository version"
 msgstr "Версия в репозитории"
 
 #. Выводим "Версия в системе", уже с раскрашенным текстом
-#: internal/system/dialog/dialog.go:420
+#: internal/system/dialog/dialog.go:423
 msgid "System version"
 msgstr "Версия в системе"
 
-#: internal/system/dialog/dialog.go:488
+#: internal/system/dialog/dialog.go:491
 msgid "and others"
 msgstr "и другие"
 

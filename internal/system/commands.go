@@ -104,6 +104,48 @@ func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponse)
 var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponse)
 
+func upgradeCommand(appConfig *app.Config) *cli.Command {
+	if appConfig.ConfigManager.GetConfig().IsAtomic {
+		return &cli.Command{
+			Name:  "upgrade",
+			Usage: app.T_("Upgrade system image"),
+			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.ImageUpdate(ctx)
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+				}
+				return reply.CliResponse(ctx, *resp)
+			}),
+		}
+	}
+
+	return &cli.Command{
+		Name:  "upgrade",
+		Usage: app.T_("General system upgrade"),
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "simulate",
+				Usage:   app.T_("Simulate upgrade"),
+				Aliases: []string{"s"},
+				Value:   false,
+			},
+		},
+		Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+			var resp *reply.APIResponse
+			var err error
+			if cmd.Bool("simulate") {
+				resp, err = actions.CheckUpgrade(ctx)
+			} else {
+				resp, err = actions.Upgrade(ctx)
+			}
+			if err != nil {
+				return reply.CliResponse(ctx, newErrorResponse(err.Error()))
+			}
+			return reply.CliResponse(ctx, *resp)
+		}),
+	}
+}
+
 func CommandList(ctx context.Context) *cli.Command {
 	appConfig := app.GetAppConfig(ctx)
 
@@ -152,7 +194,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 				{
 					Name:  "update",
-					Usage: app.T_("Image update"),
+					Usage: app.T_("Upgrade system image"),
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageUpdate(ctx)
 						if err != nil {
@@ -330,25 +372,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				return reply.CliResponse(ctx, *resp)
 			}),
 		},
-		{
-			Name:  "upgrade",
-			Usage: app.T_("General system upgrade"),
-			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				var resp *reply.APIResponse
-				var err error
-				if appConfig.ConfigManager.GetConfig().IsAtomic {
-					resp, err = actions.ImageUpdate(ctx)
-				} else {
-					resp, err = actions.Upgrade(ctx)
-				}
-
-				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponse(err.Error()))
-				}
-
-				return reply.CliResponse(ctx, *resp)
-			}),
-		},
+		upgradeCommand(appConfig),
 		{
 			Name:      "info",
 			Usage:     app.T_("Package information"),
