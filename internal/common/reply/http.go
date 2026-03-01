@@ -4,6 +4,7 @@ import (
 	"apm/internal/common/apmerr"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -21,4 +22,16 @@ func WriteHTTPError(rw http.ResponseWriter, err error) {
 	}
 
 	_ = json.NewEncoder(rw).Encode(ErrorResponseFromError(err))
+}
+
+// UnmarshalField извлекает и десериализует поле из тела запроса
+func UnmarshalField(body map[string]json.RawMessage, key string, target interface{}) error {
+	raw, ok := body[key]
+	if !ok {
+		return nil
+	}
+	if err := json.Unmarshal(raw, target); err != nil {
+		return fmt.Errorf("invalid value for %q: %w", key, err)
+	}
+	return nil
 }

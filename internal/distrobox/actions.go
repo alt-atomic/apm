@@ -19,6 +19,7 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	"apm/internal/common/icon"
 	"apm/internal/common/reply"
 	"apm/internal/distrobox/service"
 	"context"
@@ -31,6 +32,7 @@ type Actions struct {
 	servicePackage        *service.PackageService
 	serviceDistroDatabase *service.DistroDBService
 	serviceDistroAPI      *service.DistroAPIService
+	iconService           *icon.Service
 }
 
 func NewActions(appConfig *app.Config) *Actions {
@@ -39,14 +41,31 @@ func NewActions(appConfig *app.Config) *Actions {
 		app.Log.Error(err)
 	}
 
-	distroPackageSvc := service.NewPackageService(distroDBSvc, appConfig.ConfigManager.GetConfig().CommandPrefix)
-	distroAPISvc := service.NewDistroAPIService(appConfig.ConfigManager.GetConfig().CommandPrefix)
+	commandPrefix := appConfig.ConfigManager.GetConfig().CommandPrefix
+	distroPackageSvc := service.NewPackageService(distroDBSvc, commandPrefix)
+	distroAPISvc := service.NewDistroAPIService(commandPrefix)
+	iconSvc := icon.NewIconService(appConfig.DatabaseManager.GetUserDB(), commandPrefix)
 
 	return &Actions{
 		servicePackage:        distroPackageSvc,
 		serviceDistroDatabase: distroDBSvc,
 		serviceDistroAPI:      distroAPISvc,
+		iconService:           iconSvc,
 	}
+}
+
+// GetIconService возвращает сервис иконок
+func (a *Actions) GetIconService() *icon.Service {
+	return a.iconService
+}
+
+// GetIconByPackage - Получить иконку приложения, container можно передать пустым
+func (a *Actions) GetIconByPackage(_ context.Context, packageName, container string) ([]byte, error) {
+	data, err := a.iconService.GetIcon(packageName, container)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, err)
+	}
+	return data, nil
 }
 
 // Update обновляет и синхронизирует список пакетов в контейнере.

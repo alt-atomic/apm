@@ -95,7 +95,6 @@ GLOBAL OPTIONS:
 * pathLogFile - путь к файлу логов
 * pathDBSQLSystem - путь к базе данных системных пакетов
 * pathDBSQLUser - путь к базе данных пакетов из distrobox
-* pathDBKV - путь к базе данных значков приложений
 * pathImageFile - путь к конфигурационному файлу образа
 
 ## Пользовательская сессия _DBUS_

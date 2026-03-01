@@ -23,7 +23,6 @@ The config.conf file does not exist by default, but can be created using the /et
 * pathLogFile - the path to the logs file
 * pathDBSQLSystem - the path to the system package database
 * pathDBSQLUser - path to the package database from distrobox
-* pathDBKV - path to the app icons database
 * pathImageFile - path to the image configuration file
 
 ## Installation

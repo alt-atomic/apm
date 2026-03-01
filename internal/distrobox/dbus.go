@@ -20,7 +20,6 @@ import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
-	"apm/internal/common/icon"
 	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
@@ -30,24 +29,24 @@ import (
 
 // DBusWrapper – обёртка для системных действий, предназначенная для экспорта через DBus.
 type DBusWrapper struct {
-	actions     *Actions
-	iconService *icon.Service
-	ctx         context.Context
+	actions *Actions
+	ctx     context.Context
 }
 
 // NewDBusWrapper создаёт новую обёртку над actions
-func NewDBusWrapper(a *Actions, i *icon.Service, ctx context.Context) *DBusWrapper {
-	return &DBusWrapper{actions: a, iconService: i, ctx: ctx}
+func NewDBusWrapper(a *Actions, ctx context.Context) *DBusWrapper {
+	return &DBusWrapper{actions: a, ctx: ctx}
 }
 
 // GetIconByPackage - Получить иконку приложения, container можно передать пустым
 func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]byte, *dbus.Error) {
-	bytes, err := w.iconService.GetIcon(packageName, container)
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, "")
+	data, err := w.actions.GetIconByPackage(ctx, packageName, container)
 	if err != nil {
 		return nil, apmerr.DBusError(err)
 	}
 
-	return bytes, nil
+	return data, nil
 }
 
 // GetFilterFields - Список полей фильтрации для метода list, помогает динамически строить фильтры в интерфейсе
@@ -135,7 +134,7 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
-		limit = 10
+		limit = 50
 	}
 	params := ListParams{
 		Container:   container,

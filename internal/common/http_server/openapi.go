@@ -255,24 +255,7 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 		Summary:     ep.Summary,
 		Description: ep.Description,
 		OperationID: strings.ToLower(ep.HTTPMethod) + "_" + strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(ep.HTTPPath, "/", "_"), "{", ""), "}", ""),
-		Responses: map[string]Response{
-			"200": {
-				Description: "Successful response",
-				Content: map[string]MediaType{
-					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/APIResponse_" + ep.ResponseType.Name()},
-					},
-				},
-			},
-			"400": {
-				Description: "Bad request",
-				Content: map[string]MediaType{
-					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/APIResponse"},
-					},
-				},
-			},
-		},
+		Responses:   g.buildResponses(ep),
 	}
 
 	// Path параметры
@@ -332,6 +315,42 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 	}
 
 	return op
+}
+
+// buildResponses формирует блок responses для endpoint
+func (g *OpenAPIGenerator) buildResponses(ep Endpoint) map[string]Response {
+	responses := map[string]Response{
+		"400": {
+			Description: "Bad request",
+			Content: map[string]MediaType{
+				"application/json": {
+					Schema: &Schema{Ref: "#/components/schemas/APIResponse"},
+				},
+			},
+		},
+	}
+
+	if ep.ContentType != "" {
+		responses["200"] = Response{
+			Description: "Successful response",
+			Content: map[string]MediaType{
+				ep.ContentType: {
+					Schema: &Schema{Type: "string", Format: "binary"},
+				},
+			},
+		}
+	} else {
+		responses["200"] = Response{
+			Description: "Successful response",
+			Content: map[string]MediaType{
+				"application/json": {
+					Schema: &Schema{Ref: "#/components/schemas/APIResponse_" + ep.ResponseType.Name()},
+				},
+			},
+		}
+	}
+
+	return responses
 }
 
 // generateBodySchemaFromMappings генерирует схему body из ParamMappings

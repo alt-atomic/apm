@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -85,7 +86,7 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
 	var body map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		if err.Error() == "EOF" {
+		if errors.Is(err, io.EOF) {
 			return nil, errors.New("request body is required")
 		}
 		return nil, err
@@ -230,14 +231,18 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	var container, packageName string
 	var export bool
 
-	if raw, ok := body["container"]; ok {
-		_ = json.Unmarshal(raw, &container)
-	}
-	if raw, ok := body["package"]; ok {
-		_ = json.Unmarshal(raw, &packageName)
-	}
-	if raw, ok := body["export"]; ok {
-		_ = json.Unmarshal(raw, &export)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"container", &container},
+		{"package", &packageName},
+		{"export", &export},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if container == "" {
@@ -269,14 +274,18 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	var container, packageName string
 	var onlyExport bool
 
-	if raw, ok := body["container"]; ok {
-		_ = json.Unmarshal(raw, &container)
-	}
-	if raw, ok := body["package"]; ok {
-		_ = json.Unmarshal(raw, &packageName)
-	}
-	if raw, ok := body["onlyExport"]; ok {
-		_ = json.Unmarshal(raw, &onlyExport)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"container", &container},
+		{"package", &packageName},
+		{"onlyExport", &onlyExport},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if container == "" {
@@ -314,6 +323,22 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	w.writeJSON(rw, reply.OK(resp))
 }
 
+// GetIcon – Получить иконку пакета
+func (w *HTTPWrapper) GetIcon(rw http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	container := r.URL.Query().Get("container")
+
+	ctx := w.ctxWithTransaction(r)
+	data, err := w.actions.GetIconByPackage(ctx, name, container)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+
+	rw.Header().Set("Content-Type", http.DetectContentType(data))
+	_, _ = rw.Write(data)
+}
+
 // ContainerList – Получить список контейнеров
 func (w *HTTPWrapper) ContainerList(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.ctxWithTransaction(r)
@@ -336,20 +361,20 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 	var image, name, additionalPackages, initHooks string
 	var background bool
 
-	if raw, ok := body["image"]; ok {
-		_ = json.Unmarshal(raw, &image)
-	}
-	if raw, ok := body["name"]; ok {
-		_ = json.Unmarshal(raw, &name)
-	}
-	if raw, ok := body["additionalPackages"]; ok {
-		_ = json.Unmarshal(raw, &additionalPackages)
-	}
-	if raw, ok := body["initHooks"]; ok {
-		_ = json.Unmarshal(raw, &initHooks)
-	}
-	if raw, ok := body["background"]; ok {
-		_ = json.Unmarshal(raw, &background)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"image", &image},
+		{"name", &name},
+		{"additionalPackages", &additionalPackages},
+		{"initHooks", &initHooks},
+		{"background", &background},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if image == "" {
@@ -409,6 +434,7 @@ func (w *HTTPWrapper) RegisterRoutes(mux *http.ServeMux) {
 	// Пакеты - информация
 	mux.HandleFunc("GET /api/v1/distrobox/packages/filter-fields", w.GetFilterFields)
 	mux.HandleFunc("GET /api/v1/distrobox/packages/search", w.Search)
+	mux.HandleFunc("GET /api/v1/distrobox/packages/{name}/icon", w.GetIcon)
 	mux.HandleFunc("GET /api/v1/distrobox/packages/{name}", w.Info)
 	mux.HandleFunc("GET /api/v1/distrobox/packages", w.List)
 
@@ -456,6 +482,19 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			PathParams:   []string{"name"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "container", Type: "string", Required: true, Description: "Имя контейнера"},
+			},
+		},
+		{
+			Method:      "GetIcon",
+			HTTPMethod:  "GET",
+			HTTPPath:    "/api/v1/distrobox/packages/{name}/icon",
+			ContentType: "image/*",
+			Permission:  "read",
+			Summary:     "Получить иконку пакета",
+			Tags:        []string{"distrobox"},
+			PathParams:  []string{"name"},
+			QueryParams: []http_server.QueryParam{
+				{Name: "container", Type: "string", Required: false, Description: "Имя контейнера"},
 			},
 		},
 		{

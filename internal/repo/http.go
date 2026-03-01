@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"reflect"
 )
@@ -60,15 +61,13 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
 	var body map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		if err.Error() == "EOF" {
+		if errors.Is(err, io.EOF) {
 			return nil, errors.New("request body is required")
 		}
 		return nil, err
 	}
 	return body, nil
 }
-
-// --- Репозитории ---
 
 // List – Получить список репозиториев
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
@@ -91,14 +90,19 @@ func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var source string
-	var date string
+	var source, date string
 
-	if raw, ok := body["source"]; ok {
-		_ = json.Unmarshal(raw, &source)
-	}
-	if raw, ok := body["date"]; ok {
-		_ = json.Unmarshal(raw, &date)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"source", &source},
+		{"date", &date},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if source == "" {
@@ -123,14 +127,19 @@ func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var source string
-	var date string
+	var source, date string
 
-	if raw, ok := body["source"]; ok {
-		_ = json.Unmarshal(raw, &source)
-	}
-	if raw, ok := body["date"]; ok {
-		_ = json.Unmarshal(raw, &date)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"source", &source},
+		{"date", &date},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if source == "" {
@@ -155,14 +164,19 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var source string
-	var date string
+	var source, date string
 
-	if raw, ok := body["source"]; ok {
-		_ = json.Unmarshal(raw, &source)
-	}
-	if raw, ok := body["date"]; ok {
-		_ = json.Unmarshal(raw, &date)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"source", &source},
+		{"date", &date},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if source == "" {
@@ -187,14 +201,19 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var source string
-	var date string
+	var source, date string
 
-	if raw, ok := body["source"]; ok {
-		_ = json.Unmarshal(raw, &source)
-	}
-	if raw, ok := body["date"]; ok {
-		_ = json.Unmarshal(raw, &date)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"source", &source},
+		{"date", &date},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if source == "" {
@@ -219,14 +238,19 @@ func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var branch string
-	var date string
+	var branch, date string
 
-	if raw, ok := body["branch"]; ok {
-		_ = json.Unmarshal(raw, &branch)
-	}
-	if raw, ok := body["date"]; ok {
-		_ = json.Unmarshal(raw, &date)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"branch", &branch},
+		{"date", &date},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if branch == "" {
@@ -251,14 +275,19 @@ func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var branch string
-	var date string
+	var branch, date string
 
-	if raw, ok := body["branch"]; ok {
-		_ = json.Unmarshal(raw, &branch)
-	}
-	if raw, ok := body["date"]; ok {
-		_ = json.Unmarshal(raw, &date)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"branch", &branch},
+		{"date", &date},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if branch == "" {

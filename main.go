@@ -23,7 +23,6 @@ import (
 	"apm/internal/common/dbus_doc"
 	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
-	"apm/internal/common/icon"
 	"apm/internal/common/reply"
 	"apm/internal/common/version"
 	"apm/internal/distrobox"
@@ -259,8 +258,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	distroActions := distrobox.NewActions(appConfig)
-	serviceIcon := icon.NewIconService(appConfig.DatabaseManager.GetKeyValueDB(), appConfig.ConfigManager.GetConfig().CommandPrefix)
-	distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon, ctx)
+	distroObj := distrobox.NewDBusWrapper(distroActions, ctx)
 
 	// Экспортируем в D-Bus
 	if err = appConfig.DBusManager.GetConnection().Export(distroObj, "/org/altlinux/APM", "org.altlinux.APM.distrobox"); err != nil {
@@ -284,7 +282,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 
 	// Параллельно обновляем иконки
 	go func() {
-		err = serviceIcon.ReloadIcons(ctx)
+		err = distroActions.GetIconService().ReloadIcons(ctx)
 		if err != nil {
 			app.Log.Error(err.Error())
 		}
@@ -465,6 +463,13 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 	distroboxActions := distrobox.NewActions(appConfig)
 	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, ctx)
 	distroboxHTTPWrapper.RegisterRoutes(server.GetMux())
+
+	// Параллельно обновляем иконки
+	go func() {
+		if err := distroboxActions.GetIconService().ReloadIcons(ctx); err != nil {
+			app.Log.Error(err.Error())
+		}
+	}()
 
 	registry := http_server.NewRegistry()
 	registry.RegisterEndpoints(distrobox.GetHTTPEndpoints())

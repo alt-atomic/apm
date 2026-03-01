@@ -46,6 +46,8 @@ type Endpoint struct {
 	PathParams []string
 	// Маппинг параметров - для OpenAPI документации body схемы
 	ParamMappings []ParamMapping
+	// ContentType кастомный Content-Type ответа (по умолчанию application/json)
+	ContentType string
 }
 
 // QueryParam описывает query параметр

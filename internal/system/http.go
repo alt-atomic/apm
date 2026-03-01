@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -86,6 +87,9 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
 	var body map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil, errors.New("request body is required")
+		}
 		return nil, err
 	}
 	return body, nil
@@ -100,19 +104,21 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var packages []string
-	if raw, ok := body["packages"]; ok {
-		_ = json.Unmarshal(raw, &packages)
-	}
-
 	var purge, depends, background bool
-	if raw, ok := body["purge"]; ok {
-		_ = json.Unmarshal(raw, &purge)
-	}
-	if raw, ok := body["depends"]; ok {
-		_ = json.Unmarshal(raw, &depends)
-	}
-	if raw, ok := body["background"]; ok {
-		_ = json.Unmarshal(raw, &background)
+
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"packages", &packages},
+		{"purge", &purge},
+		{"depends", &depends},
+		{"background", &background},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if background {
@@ -151,11 +157,18 @@ func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 
 	var packages []string
 	var background bool
-	if raw, ok := body["packages"]; ok {
-		_ = json.Unmarshal(raw, &packages)
-	}
-	if raw, ok := body["background"]; ok {
-		_ = json.Unmarshal(raw, &background)
+
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"packages", &packages},
+		{"background", &background},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if background {
@@ -223,22 +236,21 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var packages []string
-	if raw, ok := body["packages"]; ok {
-		_ = json.Unmarshal(raw, &packages)
-	}
+	var purge, depends, background bool
 
-	purge := false
-	depends := false
-	background := false
-
-	if raw, ok := body["purge"]; ok {
-		_ = json.Unmarshal(raw, &purge)
-	}
-	if raw, ok := body["depends"]; ok {
-		_ = json.Unmarshal(raw, &depends)
-	}
-	if raw, ok := body["background"]; ok {
-		_ = json.Unmarshal(raw, &background)
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"packages", &packages},
+		{"purge", &purge},
+		{"depends", &depends},
+		{"background", &background},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if background {
@@ -277,11 +289,18 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 
 	var packages []string
 	var background bool
-	if raw, ok := body["packages"]; ok {
-		_ = json.Unmarshal(raw, &packages)
-	}
-	if raw, ok := body["background"]; ok {
-		_ = json.Unmarshal(raw, &background)
+
+	for _, f := range []struct {
+		key    string
+		target interface{}
+	}{
+		{"packages", &packages},
+		{"background", &background},
+	} {
+		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
 	}
 
 	if background {
@@ -585,7 +604,7 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 	var config build.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		if err.Error() == "EOF" {
+		if errors.Is(err, io.EOF) {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
 			return
 		}

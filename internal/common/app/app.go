@@ -20,8 +20,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/akrylysov/pogreb"
 )
 
 // Глобальные переменные для быстрого доступа к переводу и log
@@ -79,7 +77,6 @@ type LoggerImpl interface {
 type DatabaseManager interface {
 	GetSystemDB() *sql.DB
 	GetUserDB() *sql.DB
-	GetKeyValueDB() *pogreb.DB
 	Close() error
 }
 
@@ -141,7 +138,6 @@ func InitializeApp(buildInfo BuildInfo) (*Config, error) {
 	dbManager := NewDatabaseManager(
 		config.PathDBSQLSystem,
 		config.PathDBSQLUser,
-		config.PathDBKV,
 	)
 
 	dbusManager := NewDBusManager()

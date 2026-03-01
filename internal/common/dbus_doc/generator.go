@@ -58,6 +58,9 @@ type Config struct {
 	DBusSession     string
 }
 
+// ResponseTypeBinaryData маркер для бинарных ответов ([]byte)
+const ResponseTypeBinaryData = "BinaryData"
+
 // DeriveResponseTypes автоматически извлекает типы ответов и маппинг метод→тип из методов Actions через рефлексию.
 // actionsPtr должен быть типизированным nil-указателем на Actions, например (*Actions)(nil).
 func DeriveResponseTypes(actionsPtr interface{}) (map[string]reflect.Type, map[string]string) {
@@ -76,6 +79,9 @@ func DeriveResponseTypes(actionsPtr interface{}) (map[string]reflect.Type, map[s
 			if name != "" && name != "error" {
 				responseTypes[name] = outType
 				methodResponses[method.Name] = name
+			} else if outType.Kind() == reflect.Slice && outType.Elem().Kind() == reflect.Uint8 {
+				responseTypes[ResponseTypeBinaryData] = outType
+				methodResponses[method.Name] = ResponseTypeBinaryData
 			}
 		}
 	}
@@ -348,6 +354,10 @@ func (g *Generator) generateDBusCommand(method DBusMethodInfo) string {
 
 // generateJSONExample создаёт JSON пример используя рефлексию
 func (g *Generator) generateJSONExample(responseType string) string {
+	if responseType == ResponseTypeBinaryData {
+		return "Binary data (bytes)"
+	}
+
 	var example interface{}
 
 	if typ, exists := g.config.ResponseTypes[responseType]; exists {

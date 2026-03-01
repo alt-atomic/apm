@@ -81,7 +81,6 @@ type Configuration struct {
 	Environment     string `yaml:"environment"`
 	PathDBSQLSystem string `yaml:"pathDBSQLSystem"`
 	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
-	PathDBKV        string `yaml:"pathDBKV"`
 	PathLocales     string `yaml:"pathLocales"`
 	Colors          Colors `yaml:"colors"`
 
@@ -125,7 +124,6 @@ func (cm *configManagerImpl) loadConfiguration(buildInfo BuildInfo) error {
 	cm.applyBuildInfo(buildInfo)
 
 	cm.config.PathDBSQLUser = "~/.cache/apm/apm.db"
-	cm.config.PathDBKV = "~/.cache/apm/pogreb"
 
 	// Устанавливаем дефолт для системной БД если не задан через build, тесты будут использовать этот путь
 	if cm.config.PathDBSQLSystem == "" {
@@ -204,15 +202,11 @@ func (cm *configManagerImpl) loadConfigFile() error {
 func (cm *configManagerImpl) expandPaths() {
 	cm.config.PathDBSQLUser = filepath.Clean(expandUser(cm.config.PathDBSQLUser))
 	cm.config.PathDBSQLSystem = filepath.Clean(expandUser(cm.config.PathDBSQLSystem))
-	cm.config.PathDBKV = filepath.Clean(expandUser(cm.config.PathDBKV))
 }
 
 // ensureDirectories создает необходимые директории
 func (cm *configManagerImpl) ensureDirectories() error {
 	if syscall.Geteuid() != 0 {
-		if err := EnsureDir(cm.config.PathDBKV); err != nil {
-			return err
-		}
 		if err := EnsurePath(cm.config.PathDBSQLUser); err != nil {
 			return err
 		}
