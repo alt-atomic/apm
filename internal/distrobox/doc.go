@@ -18,46 +18,24 @@ package distrobox
 
 import (
 	"apm/internal/common/dbus_doc"
-	"apm/internal/common/reply"
 	"context"
 	_ "embed"
-	"reflect"
 )
 
 //go:embed dbus.go
 var dbusSource string
 
-// responseTypes общие типы ответов для D-Bus и HTTP API
-// Используем префикс Distrobox для HTTP чтобы избежать конфликтов с system.ListResponse
-var responseTypes = map[string]reflect.Type{
-	"APIResponse":                       reflect.TypeOf(reply.APIResponse{}),
-	"DistroboxUpdateResponse":           reflect.TypeOf(UpdateResponse{}),
-	"DistroboxInfoResponse":             reflect.TypeOf(InfoResponse{}),
-	"DistroboxSearchResponse":           reflect.TypeOf(SearchResponse{}),
-	"DistroboxListResponse":             reflect.TypeOf(ListResponse{}),
-	"DistroboxInstallResponse":          reflect.TypeOf(InstallResponse{}),
-	"DistroboxRemoveResponse":           reflect.TypeOf(RemoveResponse{}),
-	"DistroboxContainerListResponse":    reflect.TypeOf(ContainerListResponse{}),
-	"DistroboxContainerAddResponse":     reflect.TypeOf(ContainerAddResponse{}),
-	"DistroboxContainerRemoveResponse":  reflect.TypeOf(ContainerRemoveResponse{}),
-	"DistroboxGetFilterFieldsResponse":  reflect.TypeOf(GetFilterFieldsResponse{}),
-}
-
-// GetHTTPResponseTypes возвращает типы ответов для генерации OpenAPI схем
-func GetHTTPResponseTypes() map[string]reflect.Type {
-	return responseTypes
-}
-
 // getDocConfig возвращает конфигурацию документации для distrobox модуля
 func getDocConfig() dbus_doc.Config {
+	responseTypes, methodResponses := dbus_doc.DeriveResponseTypes((*Actions)(nil))
 	return dbus_doc.Config{
-		ModuleName:    "Distrobox",
-		DBusInterface: "org.altlinux.APM.distrobox",
-		ServerPort:    "8082",
-		DBusWrapper:   (*DBusWrapper)(nil),
-		SourceCode:    dbusSource,
-		DBusSession:   "session",
-		ResponseTypes: responseTypes,
+		ModuleName:      "Distrobox",
+		DBusInterface:   "org.altlinux.APM.distrobox",
+		ServerPort:      "8082",
+		SourceCode:      dbusSource,
+		DBusSession:     "session",
+		ResponseTypes:   responseTypes,
+		MethodResponses: methodResponses,
 	}
 }
 

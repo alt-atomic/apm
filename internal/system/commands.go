@@ -94,7 +94,7 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
 		}
 	}
@@ -111,17 +111,18 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 			},
 		},
 		Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-			var resp *reply.APIResponse
-			var err error
 			if cmd.Bool("simulate") {
-				resp, err = actions.CheckUpgrade(ctx)
-			} else {
-				resp, err = actions.Upgrade(ctx)
+				resp, err := actions.CheckUpgrade(ctx)
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				}
+				return reply.CliResponse(ctx, reply.OK(resp))
 			}
+			resp, err := actions.Upgrade(ctx)
 			if err != nil {
 				return reply.CliResponse(ctx, newErrorResponseFromError(err))
 			}
-			return reply.CliResponse(ctx, *resp)
+			return reply.CliResponse(ctx, reply.OK(resp))
 		}),
 	}
 }
@@ -139,7 +140,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 	}
@@ -157,7 +158,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, *resp)
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -169,7 +170,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, *resp)
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -181,7 +182,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, *resp)
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -209,7 +210,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, *resp)
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 			}...,
@@ -236,18 +237,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				var resp *reply.APIResponse
-				var err error
 				if cmd.Bool("simulate") {
-					resp, err = actions.CheckReinstall(ctx, cmd.Args().Slice())
-				} else {
-					resp, err = actions.Reinstall(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
+					resp, err := actions.CheckReinstall(ctx, cmd.Args().Slice())
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					}
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}
+				resp, err := actions.Reinstall(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
 			ShellComplete: findPkgWithInstalled(true),
 		},
@@ -270,18 +271,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				var resp *reply.APIResponse
-				var err error
 				if cmd.Bool("simulate") {
-					resp, err = actions.CheckInstall(ctx, cmd.Args().Slice())
-				} else {
-					resp, err = actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
+					resp, err := actions.CheckInstall(ctx, cmd.Args().Slice())
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					}
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}
+				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
 			ShellComplete: findPkgWithInstalled(false),
 		},
@@ -317,19 +318,19 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				var resp *reply.APIResponse
-				var err error
 				if cmd.Bool("simulate") {
-					resp, err = actions.CheckRemove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
-				} else {
-					resp, err = actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"),
-						cmd.Bool("yes"))
+					resp, err := actions.CheckRemove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					}
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}
+				resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"),
+					cmd.Bool("yes"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
 			ShellComplete: findPkgWithInstalled(true),
 		},
@@ -349,7 +350,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		upgradeCommand(appConfig),
@@ -365,12 +366,14 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.Info(ctx, cmd.Args().First(), cmd.Bool("full"))
+				resp, err := actions.Info(ctx, cmd.Args().First())
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+					"message":     resp.Message,
+					"packageInfo": actions.FormatPackageOutput(resp.PackageInfo, cmd.Bool("full")),
+				}))
 			}),
 			ShellComplete: findPkgInfoOnlyFirstArg(),
 		},
@@ -392,12 +395,14 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.Search(ctx, cmd.Args().First(), cmd.Bool("installed"), cmd.Bool("full"))
+				resp, err := actions.Search(ctx, cmd.Args().First(), cmd.Bool("installed"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+					"message":  resp.Message,
+					"packages": actions.FormatPackageOutput(resp.Packages, cmd.Bool("full")),
+				}))
 			}),
 		},
 		{
@@ -448,12 +453,15 @@ func CommandList(ctx context.Context) *cli.Command {
 					ForceUpdate: cmd.Bool("force-update"),
 				}
 
-				resp, err := actions.List(ctx, params, cmd.Bool("full"))
+				resp, err := actions.List(ctx, params)
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-
-				return reply.CliResponse(ctx, *resp)
+				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+					"message":    resp.Message,
+					"packages":   actions.FormatPackageOutput(resp.Packages, cmd.Bool("full")),
+					"totalCount": resp.TotalCount,
+				}))
 			}),
 		},
 		{

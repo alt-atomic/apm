@@ -63,7 +63,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -74,7 +74,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -108,7 +108,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -140,7 +140,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -164,7 +164,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -189,7 +189,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
-							return reply.CliResponse(ctx, *resp)
+							return reply.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 					{
@@ -218,7 +218,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
-							return reply.CliResponse(ctx, *resp)
+							return reply.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 					{
@@ -247,7 +247,7 @@ func CommandList(ctx context.Context) *cli.Command {
 							if err != nil {
 								return reply.CliResponse(ctx, newErrorResponseFromError(err))
 							}
-							return reply.CliResponse(ctx, *resp)
+							return reply.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 				},

@@ -19,6 +19,7 @@ package repo
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/helper"
+	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 
@@ -46,14 +47,13 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // List – Получить список репозиториев
-// doc_response: RepoListResponse
 func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.List(ctx, all)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -61,7 +61,6 @@ func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 }
 
 // Add – Добавить репозиторий
-// doc_response: RepoAddRemoveResponse
 func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -72,7 +71,7 @@ func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) 
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -80,7 +79,6 @@ func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) 
 }
 
 // Remove – Удалить репозиторий
-// doc_response: RepoAddRemoveResponse
 func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -91,7 +89,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction strin
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -99,7 +97,6 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction strin
 }
 
 // Set – Установить ветку (удалить все и добавить указанную)
-// doc_response: RepoSetResponse
 func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -109,7 +106,7 @@ func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) 
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -117,7 +114,6 @@ func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) 
 }
 
 // Clean – Удалить cdrom и task репозитории
-// doc_response: RepoAddRemoveResponse
 func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -127,7 +123,7 @@ func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *db
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -135,13 +131,12 @@ func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *db
 }
 
 // GetBranches – Получить список доступных веток
-// doc_response: BranchesResponse
 func (w *DBusWrapper) GetBranches() (string, *dbus.Error) {
 	resp, err := w.actions.GetBranches(w.ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -149,76 +144,71 @@ func (w *DBusWrapper) GetBranches() (string, *dbus.Error) {
 }
 
 // GetTaskPackages – Получить список пакетов из задачи
-// doc_response: TaskPackagesResponse
 func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetTaskPackages(ctx, taskNum)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
 	return string(data), nil
 }
 
-// SimulateAdd – Симулировать добавление репозитория
-// doc_response: RepoSimulateResponse
-func (w *DBusWrapper) SimulateAdd(source, date, transaction string) (string, *dbus.Error) {
+// CheckAdd – Симулировать добавление репозитория
+func (w *DBusWrapper) CheckAdd(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
 	resp, err := w.actions.CheckAdd(ctx, []string{source}, date)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
 	return string(data), nil
 }
 
-// SimulateRemove – Симулировать удаление репозитория
-// doc_response: RepoSimulateResponse
-func (w *DBusWrapper) SimulateRemove(source, date, transaction string) (string, *dbus.Error) {
+// CheckRemove – Симулировать удаление репозитория
+func (w *DBusWrapper) CheckRemove(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
 	resp, err := w.actions.CheckRemove(ctx, []string{source}, date)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
 	return string(data), nil
 }
 
-// SimulateSet – Симулировать установку ветки
-// doc_response: RepoSimulateResponse
-func (w *DBusWrapper) SimulateSet(branch, date, transaction string) (string, *dbus.Error) {
+// CheckSet – Симулировать установку ветки
+func (w *DBusWrapper) CheckSet(branch, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckSet(ctx, branch, date)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
 	return string(data), nil
 }
 
-// SimulateClean – Симулировать очистку cdrom и task репозиториев
-// doc_response: RepoSimulateResponse
-func (w *DBusWrapper) SimulateClean(transaction string) (string, *dbus.Error) {
+// CheckClean – Симулировать очистку cdrom и task репозиториев
+func (w *DBusWrapper) CheckClean(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckClean(ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}

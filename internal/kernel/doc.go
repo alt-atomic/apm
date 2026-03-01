@@ -18,10 +18,8 @@ package kernel
 
 import (
 	"apm/internal/common/dbus_doc"
-	"apm/internal/common/reply"
 	"context"
 	_ "embed"
-	"reflect"
 )
 
 //go:embed dbus.go
@@ -29,23 +27,21 @@ var dbusSource string
 
 // getDocConfig возвращает конфигурацию документации для kernel модуля
 func getDocConfig() dbus_doc.Config {
+	responseTypes, methodResponses := dbus_doc.DeriveResponseTypes((*Actions)(nil))
+	// DBusWrapper использует Check* имена для симуляций, которых нет в Actions (dryRun параметр)
+	methodResponses["CheckInstallKernel"] = "InstallUpdateKernelResponse"
+	methodResponses["CheckUpdateKernel"] = "InstallUpdateKernelResponse"
+	methodResponses["CheckCleanOldKernels"] = "CleanOldKernelsResponse"
+	methodResponses["CheckInstallKernelModules"] = "InstallKernelModulesResponse"
+	methodResponses["CheckRemoveKernelModules"] = "RemoveKernelModulesResponse"
 	return dbus_doc.Config{
-		ModuleName:    "Kernel",
-		DBusInterface: "org.altlinux.APM.kernel",
-		ServerPort:    "8082",
-		DBusWrapper:   (*DBusWrapper)(nil),
-		SourceCode:    dbusSource,
-		DBusSession:   "system",
-		ResponseTypes: map[string]reflect.Type{
-			"APIResponse":                  reflect.TypeOf(reply.APIResponse{}),
-			"ListKernelsResponse":          reflect.TypeOf(ListKernelsResponse{}),
-			"GetCurrentKernelResponse":     reflect.TypeOf(GetCurrentKernelResponse{}),
-			"InstallUpdateKernelResponse":  reflect.TypeOf(InstallUpdateKernelResponse{}),
-			"CleanOldKernelsResponse":      reflect.TypeOf(CleanOldKernelsResponse{}),
-			"ListKernelModulesResponse":    reflect.TypeOf(ListKernelModulesResponse{}),
-			"InstallKernelModulesResponse": reflect.TypeOf(InstallKernelModulesResponse{}),
-			"RemoveKernelModulesResponse":  reflect.TypeOf(RemoveKernelModulesResponse{}),
-		},
+		ModuleName:      "Kernel",
+		DBusInterface:   "org.altlinux.APM.kernel",
+		ServerPort:      "8082",
+		SourceCode:      dbusSource,
+		DBusSession:     "system",
+		ResponseTypes:   responseTypes,
+		MethodResponses: methodResponses,
 	}
 }
 

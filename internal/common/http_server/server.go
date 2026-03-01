@@ -354,7 +354,6 @@ func (s *Server) RegisterAPIInfo(isAtomic bool, hasDistrobox bool, hasKernel boo
 		})
 	})
 
-	// Редирект с корня на API info
 	s.mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)

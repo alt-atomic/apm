@@ -17,51 +17,25 @@
 package system
 
 import (
-	"apm/internal/common/build"
 	"apm/internal/common/dbus_doc"
-	"apm/internal/common/reply"
 	"context"
 	_ "embed"
-	"reflect"
 )
 
 //go:embed dbus.go
 var dbusSource string
 
-// responseTypes общие типы ответов для D-Bus и HTTP API
-var responseTypes = map[string]reflect.Type{
-	"APIResponse":             reflect.TypeOf(reply.APIResponse{}),
-	"InstallRemoveResponse":   reflect.TypeOf(InstallRemoveResponse{}),
-	"GetFilterFieldsResponse": reflect.TypeOf(GetFilterFieldsResponse{}),
-	"UpdateResponse":          reflect.TypeOf(UpdateResponse{}),
-	"ListResponse":            reflect.TypeOf(ListResponse{}),
-	"InfoResponse":            reflect.TypeOf(InfoResponse{}),
-	"CheckResponse":           reflect.TypeOf(CheckResponse{}),
-	"UpgradeResponse":         reflect.TypeOf(UpgradeResponse{}),
-	"SearchResponse":          reflect.TypeOf(SearchResponse{}),
-	"ImageApplyResponse":      reflect.TypeOf(ImageApplyResponse{}),
-	"ImageHistoryResponse":    reflect.TypeOf(ImageHistoryResponse{}),
-	"ImageUpdateResponse":     reflect.TypeOf(ImageUpdateResponse{}),
-	"ImageStatusResponse":     reflect.TypeOf(ImageStatusResponse{}),
-	"ImageConfigResponse":     reflect.TypeOf(ImageConfigResponse{}),
-	"ImageConfigRequest":      reflect.TypeOf(build.Config{}),
-}
-
-// GetHTTPResponseTypes возвращает типы ответов для генерации OpenAPI схем
-func GetHTTPResponseTypes() map[string]reflect.Type {
-	return responseTypes
-}
-
 // getDocConfig возвращает конфигурацию документации D-Bus
 func getDocConfig() dbus_doc.Config {
+	responseTypes, methodResponses := dbus_doc.DeriveResponseTypes((*Actions)(nil))
 	return dbus_doc.Config{
-		ModuleName:    "System",
-		DBusInterface: "org.altlinux.APM.system",
-		ServerPort:    "8081",
-		DBusWrapper:   (*DBusWrapper)(nil),
-		SourceCode:    dbusSource,
-		DBusSession:   "system",
-		ResponseTypes: responseTypes,
+		ModuleName:      "System",
+		DBusInterface:   "org.altlinux.APM.system",
+		ServerPort:      "8081",
+		SourceCode:      dbusSource,
+		DBusSession:     "system",
+		ResponseTypes:   responseTypes,
+		MethodResponses: methodResponses,
 	}
 }
 

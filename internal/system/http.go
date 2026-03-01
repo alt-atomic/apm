@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/build"
 	"apm/internal/common/helper"
@@ -29,6 +30,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -80,13 +82,6 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 	_ = json.NewEncoder(rw).Encode(resp)
 }
 
-// writeError отправляет ошибку
-func (w *HTTPWrapper) writeError(rw http.ResponseWriter, err error, code int) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	rw.WriteHeader(code)
-	_ = json.NewEncoder(rw).Encode(reply.ErrorResponseFromError(err))
-}
-
 // parseBodyParams парсит параметры из тела запроса
 func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
 	var body map[string]json.RawMessage
@@ -100,7 +95,7 @@ func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessa
 func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -124,11 +119,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.CheckRemove(ctx, packages, purge, depends)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.CheckRemove", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemCheckRemove, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -147,14 +138,14 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // CheckInstall – Проверить пакеты перед установкой
 func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -171,11 +162,7 @@ func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.CheckInstall(ctx, packages)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.CheckInstall", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemCheckInstall, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -194,7 +181,7 @@ func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // CheckUpgrade – Проверить пакеты перед обновлением системы
@@ -205,11 +192,7 @@ func (w *HTTPWrapper) CheckUpgrade(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.CheckUpgrade(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.CheckUpgrade", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemCheckUpgrade, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -228,14 +211,14 @@ func (w *HTTPWrapper) CheckUpgrade(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Remove – Удалить пакеты
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -262,11 +245,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Remove", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemRemove, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -285,14 +264,14 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Install – Установить пакеты
 func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -309,11 +288,7 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.Install(ctx, packages, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Install", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -332,7 +307,7 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Info – Получить информацию о пакете
@@ -341,12 +316,15 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	full := r.URL.Query().Get("full") == "true"
 
 	ctx := w.ctxWithTransaction(r)
-	resp, err := w.actions.Info(ctx, name, full)
+	resp, err := w.actions.Info(ctx, name)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(map[string]interface{}{
+		"message":     resp.Message,
+		"packageInfo": w.actions.FormatPackageOutput(resp.PackageInfo, full),
+	}))
 }
 
 // List – Получить список пакетов
@@ -388,12 +366,16 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	full := query.Get("full") != "false"
 
 	ctx := w.ctxWithTransaction(r)
-	resp, err := w.actions.List(ctx, params, full)
+	resp, err := w.actions.List(ctx, params)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(map[string]interface{}{
+		"message":    resp.Message,
+		"packages":   w.actions.FormatPackageOutput(resp.Packages, full),
+		"totalCount": resp.TotalCount,
+	}))
 }
 
 // GetFilterFields – Получить доступные поля для фильтрации
@@ -404,7 +386,7 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Search – Поиск пакетов по названию
@@ -415,12 +397,15 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	full := query.Get("full") == "true"
 
 	ctx := w.ctxWithTransaction(r)
-	resp, err := w.actions.Search(ctx, q, installed, full)
+	resp, err := w.actions.Search(ctx, q, installed)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(map[string]interface{}{
+		"message":  resp.Message,
+		"packages": w.actions.FormatPackageOutput(resp.Packages, full),
+	}))
 }
 
 // Update – Обновить базу данных пакетов
@@ -432,11 +417,7 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.Update(ctx, noLock)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Update", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemUpdate, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -455,7 +436,7 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Upgrade – Обновить систему
@@ -466,11 +447,7 @@ func (w *HTTPWrapper) Upgrade(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.Upgrade(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Upgrade", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemUpgrade, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -489,7 +466,7 @@ func (w *HTTPWrapper) Upgrade(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // --- Image (atomic only) ---
@@ -502,7 +479,7 @@ func (w *HTTPWrapper) ImageStatus(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ImageUpdate – Обновить образ
@@ -513,11 +490,7 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.ImageUpdate(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.ImageUpdate", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemImageUpdate, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -536,7 +509,7 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ImageApply – Применить изменения к образу
@@ -547,11 +520,7 @@ func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.ImageApply(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.ImageApply", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -570,7 +539,7 @@ func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ImageHistory – Получить историю изменений образа
@@ -598,7 +567,7 @@ func (w *HTTPWrapper) ImageHistory(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ImageGetConfig – Получить конфигурацию образа
@@ -609,7 +578,7 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ImageSaveConfig – Сохранить конфигурацию образа
@@ -617,10 +586,10 @@ func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 	var config build.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 		if err.Error() == "EOF" {
-			w.writeError(rw, errors.New("request body is required"), http.StatusBadRequest)
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
 			return
 		}
-		w.writeError(rw, fmt.Errorf("invalid JSON: %w", err), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("invalid JSON: %w", err)))
 		return
 	}
 
@@ -630,7 +599,7 @@ func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // RegisterRoutes регистрирует все HTTP маршруты в mux
@@ -672,7 +641,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "CheckRemove",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/check-remove",
-			ResponseType: "CheckResponse",
+			ResponseType: reflect.TypeOf(CheckResponse{}),
 			Permission:   "read",
 			Summary:      "Проверить пакеты перед удалением",
 			Tags:         []string{"packages"},
@@ -687,7 +656,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "CheckInstall",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/check-install",
-			ResponseType: "CheckResponse",
+			ResponseType: reflect.TypeOf(CheckResponse{}),
 			Permission:   "read",
 			Summary:      "Проверить пакеты перед установкой",
 			Tags:         []string{"packages"},
@@ -700,7 +669,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "CheckUpgrade",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/system/check-upgrade",
-			ResponseType: "CheckResponse",
+			ResponseType: reflect.TypeOf(CheckResponse{}),
 			Permission:   "read",
 			Summary:      "Проверить пакеты перед обновлением системы",
 			Tags:         []string{"system"},
@@ -714,7 +683,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Remove",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/remove",
-			ResponseType: "InstallRemoveResponse",
+			ResponseType: reflect.TypeOf(InstallRemoveResponse{}),
 			Permission:   "manage",
 			Summary:      "Удалить пакеты",
 			Tags:         []string{"packages"},
@@ -729,7 +698,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Install",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/install",
-			ResponseType: "InstallRemoveResponse",
+			ResponseType: reflect.TypeOf(InstallRemoveResponse{}),
 			Permission:   "manage",
 			Summary:      "Установить пакеты",
 			Tags:         []string{"packages"},
@@ -744,7 +713,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Info",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages/{name}",
-			ResponseType: "InfoResponse",
+			ResponseType: reflect.TypeOf(InfoResponse{}),
 			Permission:   "read",
 			Summary:      "Получить информацию о пакете",
 			Tags:         []string{"packages"},
@@ -757,7 +726,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "List",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages",
-			ResponseType: "ListResponse",
+			ResponseType: reflect.TypeOf(ListResponse{}),
 			Permission:   "read",
 			Summary:      "Получить список пакетов",
 			Tags:         []string{"packages"},
@@ -775,7 +744,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "GetFilterFields",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages/filter-fields",
-			ResponseType: "GetFilterFieldsResponse",
+			ResponseType: reflect.TypeOf(GetFilterFieldsResponse{}),
 			Permission:   "read",
 			Summary:      "Получить доступные поля для фильтрации",
 			Tags:         []string{"packages"},
@@ -784,7 +753,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Search",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages/search",
-			ResponseType: "SearchResponse",
+			ResponseType: reflect.TypeOf(SearchResponse{}),
 			Permission:   "read",
 			Summary:      "Поиск пакетов по названию",
 			Tags:         []string{"packages"},
@@ -800,7 +769,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Update",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/system/update",
-			ResponseType: "UpdateResponse",
+			ResponseType: reflect.TypeOf(UpdateResponse{}),
 			Permission:   "manage",
 			Summary:      "Обновить базу данных пакетов",
 			Tags:         []string{"system"},
@@ -813,7 +782,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Upgrade",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/system/upgrade",
-			ResponseType: "UpgradeResponse",
+			ResponseType: reflect.TypeOf(UpgradeResponse{}),
 			Permission:   "manage",
 			Summary:      "Обновить систему",
 			Tags:         []string{"system"},
@@ -827,7 +796,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ImageStatus",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/image/status",
-			ResponseType: "ImageStatusResponse",
+			ResponseType: reflect.TypeOf(ImageStatusResponse{}),
 			Permission:   "read",
 			Summary:      "Получить статус образа",
 			Tags:         []string{"image"},
@@ -836,7 +805,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ImageUpdate",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/image/update",
-			ResponseType: "ImageUpdateResponse",
+			ResponseType: reflect.TypeOf(ImageUpdateResponse{}),
 			Permission:   "manage",
 			Summary:      "Обновить образ",
 			Tags:         []string{"image"},
@@ -848,7 +817,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ImageApply",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/image/apply",
-			ResponseType: "ImageApplyResponse",
+			ResponseType: reflect.TypeOf(ImageApplyResponse{}),
 			Permission:   "manage",
 			Summary:      "Применить изменения к образу",
 			Tags:         []string{"image"},
@@ -860,7 +829,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ImageHistory",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/image/history",
-			ResponseType: "ImageHistoryResponse",
+			ResponseType: reflect.TypeOf(ImageHistoryResponse{}),
 			Permission:   "read",
 			Summary:      "Получить историю изменений образа",
 			Tags:         []string{"image"},
@@ -874,7 +843,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ImageGetConfig",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/image/config",
-			ResponseType: "ImageConfigResponse",
+			ResponseType: reflect.TypeOf(ImageConfigResponse{}),
 			Permission:   "read",
 			Summary:      "Получить конфигурацию образа",
 			Tags:         []string{"image"},
@@ -883,8 +852,8 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ImageSaveConfig",
 			HTTPMethod:   "PUT",
 			HTTPPath:     "/api/v1/image/config",
-			RequestType:  "ImageConfigRequest",
-			ResponseType: "ImageConfigResponse",
+			RequestType:  reflect.TypeOf(build.Config{}),
+			ResponseType: reflect.TypeOf(ImageConfigResponse{}),
 			Permission:   "manage",
 			Summary:      "Сохранить конфигурацию образа",
 			Tags:         []string{"image"},

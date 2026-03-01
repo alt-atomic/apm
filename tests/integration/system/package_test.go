@@ -62,8 +62,7 @@ func (s *SystemTestSuite) TestInstall() {
 			"Unexpected error type: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.Nil(s.T(), resp.Error)
-		s.T().Logf("Install successful: %+v", resp.Data)
+		s.T().Logf("Install successful: %+v", resp)
 	}
 }
 
@@ -79,12 +78,11 @@ func (s *SystemTestSuite) TestRemove() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Remove successful")
 	}
 }
 
-// TestRemove тестирует удаление несуществующего пакета
+// TestRemoveNotExistentPackage тестирует удаление несуществующего пакета
 func (s *SystemTestSuite) TestRemoveNotExistentPackage() {
 	resp, err := s.actions.Remove(s.ctx, []string{"nonexistent-package"}, false, false, true)
 	if err != nil {
@@ -96,7 +94,6 @@ func (s *SystemTestSuite) TestRemoveNotExistentPackage() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Remove successful")
 	}
 }
@@ -108,7 +105,6 @@ func (s *SystemTestSuite) TestUpdate() {
 		s.T().Logf("Update error (may be expected): %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Update successful")
 	}
 }
@@ -120,14 +116,13 @@ func (s *SystemTestSuite) TestUpgrade() {
 		s.T().Logf("Upgrade error (may be expected): %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Upgrade successful")
 	}
 }
 
 // TestInfo тестирует функцию Info
 func (s *SystemTestSuite) TestInfo() {
-	resp, err := s.actions.Info(s.ctx, testPackage, false)
+	resp, err := s.actions.Info(s.ctx, testPackage)
 	if err != nil {
 		s.T().Logf("Info error (may be expected if package not in DB): %v", err)
 		// Проверяем что это не критическая ошибка
@@ -137,14 +132,13 @@ func (s *SystemTestSuite) TestInfo() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.Nil(s.T(), resp.Error)
-		s.T().Logf("Info successful: %+v", resp.Data)
+		s.T().Logf("Info successful: %+v", resp)
 	}
 }
 
 // TestInfoEmptyPackageName проверяет поведение с пустым именем пакета
 func (s *SystemTestSuite) TestInfoEmptyPackageName() {
-	_, err := s.actions.Info(s.ctx, "", false)
+	_, err := s.actions.Info(s.ctx, "")
 
 	assert.Error(s.T(), err)
 	s.T().Logf("Expected validation error: %v", err)
@@ -152,7 +146,7 @@ func (s *SystemTestSuite) TestInfoEmptyPackageName() {
 
 // TestSearch тестирует функцию Search
 func (s *SystemTestSuite) TestSearch() {
-	resp, err := s.actions.Search(s.ctx, testPackage, false, false)
+	resp, err := s.actions.Search(s.ctx, testPackage, false)
 	if err != nil {
 		s.T().Logf("Search error (may be expected): %v", err)
 		assert.True(s.T(),
@@ -161,7 +155,6 @@ func (s *SystemTestSuite) TestSearch() {
 			"Unexpected error: %v", err)
 	} else {
 		assert.NotNil(s.T(), resp)
-		assert.Nil(s.T(), resp.Error)
 		s.T().Logf("Search successful")
 	}
 }
@@ -193,22 +186,8 @@ func (s *SystemTestSuite) TestGetFilterFields() {
 		return
 	}
 
-	assert.NotNil(s.T(), resp)
-	assert.Nil(s.T(), resp.Error)
-
-	switch data := resp.Data.(type) {
-	case []interface{}:
-		s.T().Logf("Found interface{} slice with %d items", len(data))
-		assert.NotEmpty(s.T(), data, "Expected non-empty filter fields")
-		s.T().Logf("GetFilterFields successful: first item: %+v", data[0])
-	default:
-		if data == nil {
-			s.T().Error("Data is nil")
-		} else {
-			s.T().Logf("Data type: %T, value: %+v", data, data)
-			assert.NotNil(s.T(), data, "Expected non-nil data")
-		}
-	}
+	assert.NotEmpty(s.T(), resp, "Expected non-empty filter fields")
+	s.T().Logf("GetFilterFields successful: %d fields", len(resp))
 }
 
 // TestFormatOutput тестирует форматирование без внешних зависимостей

@@ -74,7 +74,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -95,17 +95,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					args := cmd.Args().Slice()
-					var resp *reply.APIResponse
-					var err error
 					if cmd.Bool("simulate") {
-						resp, err = actions.CheckAdd(ctx, args, cmd.String("date"))
-					} else {
-						resp, err = actions.Add(ctx, args, cmd.String("date"))
+						resp, err := actions.CheckAdd(ctx, args, cmd.String("date"))
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}
+					resp, err := actions.Add(ctx, args, cmd.String("date"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 				ShellComplete: completeBranches(),
 			},
@@ -128,17 +129,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					args := cmd.Args().Slice()
-					var resp *reply.APIResponse
-					var err error
 					if cmd.Bool("simulate") {
-						resp, err = actions.CheckRemove(ctx, args, cmd.String("date"))
-					} else {
-						resp, err = actions.Remove(ctx, args, cmd.String("date"))
+						resp, err := actions.CheckRemove(ctx, args, cmd.String("date"))
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}
+					resp, err := actions.Remove(ctx, args, cmd.String("date"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 				ShellComplete: completeBranches(),
 			},
@@ -159,17 +161,18 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					var resp *reply.APIResponse
-					var err error
 					if cmd.Bool("simulate") {
-						resp, err = actions.CheckSet(ctx, cmd.Args().First(), cmd.String("date"))
-					} else {
-						resp, err = actions.Set(ctx, cmd.Args().First(), cmd.String("date"))
+						resp, err := actions.CheckSet(ctx, cmd.Args().First(), cmd.String("date"))
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}
+					resp, err := actions.Set(ctx, cmd.Args().First(), cmd.String("date"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 				ShellComplete: completeBranches(),
 			},
@@ -185,17 +188,18 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					var resp *reply.APIResponse
-					var err error
 					if cmd.Bool("simulate") {
-						resp, err = actions.CheckClean(ctx)
-					} else {
-						resp, err = actions.Clean(ctx)
+						resp, err := actions.CheckClean(ctx)
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+						return reply.CliResponse(ctx, reply.OK(resp))
 					}
+					resp, err := actions.Clean(ctx)
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -206,7 +210,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -218,7 +222,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -230,7 +234,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, *resp)
+					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{

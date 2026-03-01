@@ -17,6 +17,7 @@
 package repo
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
@@ -25,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 )
 
 // HTTPWrapper – обёртка для действий с репозиториями, предназначенная для экспорта через HTTP.
@@ -54,13 +56,6 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 	_ = json.NewEncoder(rw).Encode(resp)
 }
 
-// writeError отправляет ошибку
-func (w *HTTPWrapper) writeError(rw http.ResponseWriter, err error, code int) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	rw.WriteHeader(code)
-	_ = json.NewEncoder(rw).Encode(reply.ErrorResponseFromError(err))
-}
-
 // parseBodyParams парсит параметры из тела запроса
 func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
 	var body map[string]json.RawMessage
@@ -85,14 +80,14 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Add – Добавить репозиторий
 func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -107,7 +102,7 @@ func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == "" {
-		w.writeError(rw, errors.New("source is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("source is required")))
 		return
 	}
 
@@ -117,14 +112,14 @@ func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // CheckAdd – Симулировать добавление репозитория
 func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -139,7 +134,7 @@ func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == "" {
-		w.writeError(rw, errors.New("source is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("source is required")))
 		return
 	}
 
@@ -149,14 +144,14 @@ func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Remove – Удалить репозиторий
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -171,7 +166,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == "" {
-		w.writeError(rw, errors.New("source is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("source is required")))
 		return
 	}
 
@@ -181,14 +176,14 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // CheckRemove – Симулировать удаление репозитория
 func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -203,7 +198,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == "" {
-		w.writeError(rw, errors.New("source is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("source is required")))
 		return
 	}
 
@@ -213,14 +208,14 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Set – Установить ветку
 func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -235,7 +230,7 @@ func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if branch == "" {
-		w.writeError(rw, errors.New("branch is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("branch is required")))
 		return
 	}
 
@@ -245,14 +240,14 @@ func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // CheckSet – Симулировать установку ветки
 func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -267,7 +262,7 @@ func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if branch == "" {
-		w.writeError(rw, errors.New("branch is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("branch is required")))
 		return
 	}
 
@@ -277,7 +272,7 @@ func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Clean – Удалить временные репозитории (cdrom, task)
@@ -288,7 +283,7 @@ func (w *HTTPWrapper) Clean(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // CheckClean – Симулировать удаление временных репозиториев
@@ -299,7 +294,7 @@ func (w *HTTPWrapper) CheckClean(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // GetBranches – Получить список доступных веток
@@ -310,7 +305,7 @@ func (w *HTTPWrapper) GetBranches(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // GetTaskPackages – Получить список пакетов из задачи
@@ -323,7 +318,7 @@ func (w *HTTPWrapper) GetTaskPackages(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // TestTask – Тестировать пакеты из задачи
@@ -336,7 +331,7 @@ func (w *HTTPWrapper) TestTask(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // RegisterRoutes регистрирует все HTTP маршруты в mux
@@ -362,7 +357,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "List",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/repo",
-			ResponseType: "RepoListResponse",
+			ResponseType: reflect.TypeOf(RepoListResponse{}),
 			Permission:   "read",
 			Summary:      "Получить список репозиториев",
 			Tags:         []string{"repo"},
@@ -374,7 +369,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Add",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo",
-			ResponseType: "RepoAddRemoveResponse",
+			ResponseType: reflect.TypeOf(RepoAddRemoveResponse{}),
 			Permission:   "manage",
 			Summary:      "Добавить репозиторий",
 			Tags:         []string{"repo"},
@@ -387,7 +382,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "CheckAdd",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/check",
-			ResponseType: "RepoSimulateResponse",
+			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
 			Permission:   "read",
 			Summary:      "Симулировать добавление репозитория",
 			Tags:         []string{"repo"},
@@ -400,7 +395,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Remove",
 			HTTPMethod:   "DELETE",
 			HTTPPath:     "/api/v1/repo",
-			ResponseType: "RepoAddRemoveResponse",
+			ResponseType: reflect.TypeOf(RepoAddRemoveResponse{}),
 			Permission:   "manage",
 			Summary:      "Удалить репозиторий",
 			Tags:         []string{"repo"},
@@ -413,7 +408,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "CheckRemove",
 			HTTPMethod:   "DELETE",
 			HTTPPath:     "/api/v1/repo/check",
-			ResponseType: "RepoSimulateResponse",
+			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
 			Permission:   "read",
 			Summary:      "Симулировать удаление репозитория",
 			Tags:         []string{"repo"},
@@ -426,7 +421,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Set",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/set",
-			ResponseType: "RepoSetResponse",
+			ResponseType: reflect.TypeOf(RepoSetResponse{}),
 			Permission:   "manage",
 			Summary:      "Установить ветку (удалить все и добавить указанную)",
 			Tags:         []string{"repo"},
@@ -439,7 +434,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "CheckSet",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/set/check",
-			ResponseType: "RepoSimulateResponse",
+			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
 			Permission:   "read",
 			Summary:      "Симулировать установку ветки",
 			Tags:         []string{"repo"},
@@ -452,7 +447,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Clean",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/clean",
-			ResponseType: "RepoAddRemoveResponse",
+			ResponseType: reflect.TypeOf(RepoAddRemoveResponse{}),
 			Permission:   "manage",
 			Summary:      "Удалить временные репозитории (cdrom, task)",
 			Tags:         []string{"repo"},
@@ -461,7 +456,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "CheckClean",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/clean/check",
-			ResponseType: "RepoSimulateResponse",
+			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
 			Permission:   "read",
 			Summary:      "Симулировать удаление временных репозиториев",
 			Tags:         []string{"repo"},
@@ -470,7 +465,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "GetBranches",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/repo/branches",
-			ResponseType: "BranchesResponse",
+			ResponseType: reflect.TypeOf(BranchesResponse{}),
 			Permission:   "read",
 			Summary:      "Получить список доступных веток",
 			Tags:         []string{"repo"},
@@ -479,7 +474,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "GetTaskPackages",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/repo/task/{taskNum}",
-			ResponseType: "TaskPackagesResponse",
+			ResponseType: reflect.TypeOf(TaskPackagesResponse{}),
 			Permission:   "read",
 			Summary:      "Получить список пакетов из задачи",
 			Tags:         []string{"repo"},
@@ -489,7 +484,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "TestTask",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/task/{taskNum}/test",
-			ResponseType: "TestTaskResponse",
+			ResponseType: reflect.TypeOf(TestTaskResponse{}),
 			Permission:   "manage",
 			Summary:      "Тестировать пакеты из задачи",
 			Tags:         []string{"repo"},

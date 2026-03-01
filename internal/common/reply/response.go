@@ -47,6 +47,11 @@ type APIResponse struct {
 	Transaction string      `json:"transaction,omitempty"`
 }
 
+// OK создаёт успешный APIResponse с данными.
+func OK(data interface{}) APIResponse {
+	return APIResponse{Data: data}
+}
+
 // ErrorResponseFromError создаёт ответ из ошибки, извлекая тип из apmerr.APMError.
 func ErrorResponseFromError(err error) APIResponse {
 	var apmErr apmerr.APMError

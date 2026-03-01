@@ -50,7 +50,7 @@ func NewActions(appConfig *app.Config) *Actions {
 }
 
 // Update обновляет и синхронизирует список пакетов в контейнере.
-func (a *Actions) Update(ctx context.Context, container string) (*reply.APIResponse, error) {
+func (a *Actions) Update(ctx context.Context, container string) (*UpdateResponse, error) {
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -61,17 +61,15 @@ func (a *Actions) Update(ctx context.Context, container string) (*reply.APIRespo
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	return &reply.APIResponse{
-		Data: UpdateResponse{
-			Message:   app.T_("Package list successfully updated"),
-			Container: osInfo,
-			Count:     len(packages),
-		},
+	return &UpdateResponse{
+		Message:   app.T_("Package list successfully updated"),
+		Container: osInfo,
+		Count:     len(packages),
 	}, nil
 }
 
 // Info возвращает информацию о пакете.
-func (a *Actions) Info(ctx context.Context, container string, packageName string) (*reply.APIResponse, error) {
+func (a *Actions) Info(ctx context.Context, container string, packageName string) (*InfoResponse, error) {
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -85,16 +83,14 @@ func (a *Actions) Info(ctx context.Context, container string, packageName string
 		return nil, apmerr.New(apmerr.ErrorTypeNotFound, err)
 	}
 
-	return &reply.APIResponse{
-		Data: InfoResponse{
-			Message:     app.T_("Package found"),
-			PackageInfo: packageInfo,
-		},
+	return &InfoResponse{
+		Message:     app.T_("Package found"),
+		PackageInfo: packageInfo,
 	}, nil
 }
 
 // Search выполняет поиск пакета по названию.
-func (a *Actions) Search(ctx context.Context, container string, packageName string) (*reply.APIResponse, error) {
+func (a *Actions) Search(ctx context.Context, container string, packageName string) (*SearchResponse, error) {
 	var osInfo service.ContainerInfo
 	var err error
 	if len(container) > 0 {
@@ -119,11 +115,9 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	return &reply.APIResponse{
-		Data: SearchResponse{
-			Message:  fmt.Sprintf(app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages)),
-			Packages: queryResult.Packages,
-		},
+	return &SearchResponse{
+		Message:  fmt.Sprintf(app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages)),
+		Packages: queryResult.Packages,
 	}, nil
 }
 
@@ -139,7 +133,7 @@ type ListParams struct {
 }
 
 // List возвращает список пакетов согласно заданным параметрам.
-func (a *Actions) List(ctx context.Context, params ListParams) (*reply.APIResponse, error) {
+func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, error) {
 	var osInfo service.ContainerInfo
 	var err error
 
@@ -189,17 +183,15 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*reply.APIRespon
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	return &reply.APIResponse{
-		Data: ListResponse{
-			Message:    fmt.Sprintf(app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages)),
-			Packages:   queryResult.Packages,
-			TotalCount: queryResult.TotalCount,
-		},
+	return &ListResponse{
+		Message:    fmt.Sprintf(app.TN_("%d record found", "%d records found", len(queryResult.Packages)), len(queryResult.Packages)),
+		Packages:   queryResult.Packages,
+		TotalCount: queryResult.TotalCount,
 	}, nil
 }
 
 // Install устанавливает указанный пакет и опционально экспортирует его.
-func (a *Actions) Install(ctx context.Context, container string, packageName string, export bool) (*reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, container string, packageName string, export bool) (*InstallResponse, error) {
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -233,16 +225,14 @@ func (a *Actions) Install(ctx context.Context, container string, packageName str
 		}
 	}
 
-	return &reply.APIResponse{
-		Data: InstallResponse{
-			Message:     fmt.Sprintf(app.T_("Package %s installed"), packageName),
-			PackageInfo: packageInfo,
-		},
+	return &InstallResponse{
+		Message:     fmt.Sprintf(app.T_("Package %s installed"), packageName),
+		PackageInfo: packageInfo,
 	}, nil
 }
 
 // Remove удаляет указанный пакет. Если onlyExport равен true, удаляется только экспорт.
-func (a *Actions) Remove(ctx context.Context, container string, packageName string, onlyExport bool) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, container string, packageName string, onlyExport bool) (*RemoveResponse, error) {
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -273,16 +263,14 @@ func (a *Actions) Remove(ctx context.Context, container string, packageName stri
 		a.serviceDistroDatabase.UpdatePackageField(ctx, osInfo.ContainerName, packageName, "installed", false)
 	}
 
-	return &reply.APIResponse{
-		Data: RemoveResponse{
-			Message:     fmt.Sprintf(app.T_("Package %s removed"), packageName),
-			PackageInfo: packageInfo,
-		},
+	return &RemoveResponse{
+		Message:     fmt.Sprintf(app.T_("Package %s removed"), packageName),
+		PackageInfo: packageInfo,
 	}, nil
 }
 
 // ContainerList возвращает список контейнеров.
-func (a *Actions) ContainerList(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) ContainerList(ctx context.Context) (*ContainerListResponse, error) {
 	containers, err := a.serviceDistroAPI.GetContainerList(ctx, true)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeContainer, err)
@@ -292,15 +280,13 @@ func (a *Actions) ContainerList(ctx context.Context) (*reply.APIResponse, error)
 		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("No containers found")))
 	}
 
-	return &reply.APIResponse{
-		Data: ContainerListResponse{
-			Containers: containers,
-		},
+	return &ContainerListResponse{
+		Containers: containers,
 	}, nil
 }
 
 // ContainerAdd создаёт новый контейнер.
-func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, additionalPackages, initHooks string) (*reply.APIResponse, error) {
+func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, additionalPackages, initHooks string) (*ContainerAddResponse, error) {
 	image = strings.TrimSpace(image)
 	name = strings.TrimSpace(name)
 	if image == "" {
@@ -321,16 +307,14 @@ func (a *Actions) ContainerAdd(ctx context.Context, image string, name string, a
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	return &reply.APIResponse{
-		Data: ContainerAddResponse{
-			Message:       fmt.Sprintf(app.T_("Container %s successfully created"), name),
-			ContainerInfo: osInfo,
-		},
+	return &ContainerAddResponse{
+		Message:       fmt.Sprintf(app.T_("Container %s successfully created"), name),
+		ContainerInfo: osInfo,
 	}, nil
 }
 
 // ContainerRemove удаляет контейнер по имени.
-func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIResponse, error) {
+func (a *Actions) ContainerRemove(ctx context.Context, name string) (*ContainerRemoveResponse, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the container name (--name)")))
@@ -346,16 +330,14 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (*reply.APIR
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, fmt.Errorf(app.T_("Error deleting container: %v"), err))
 	}
 
-	return &reply.APIResponse{
-		Data: ContainerRemoveResponse{
-			Message:       fmt.Sprintf(app.T_("Container %s successfully deleted"), name),
-			ContainerInfo: result,
-		},
+	return &ContainerRemoveResponse{
+		Message:       fmt.Sprintf(app.T_("Container %s successfully deleted"), name),
+		ContainerInfo: result,
 	}, nil
 }
 
 // GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
-func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply.APIResponse, error) {
+func (a *Actions) GetFilterFields(ctx context.Context, container string) (GetFilterFieldsResponse, error) {
 	osInfo, err := a.validateContainer(ctx, container)
 	if err != nil {
 		return nil, err
@@ -394,9 +376,7 @@ func (a *Actions) GetFilterFields(ctx context.Context, container string) (*reply
 		})
 	}
 
-	return &reply.APIResponse{
-		Data: GetFilterFieldsResponse(fields),
-	}, nil
+	return fields, nil
 }
 
 // validateDatabase проверяет, что таблица содержит какие-то записи

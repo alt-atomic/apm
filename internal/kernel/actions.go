@@ -56,7 +56,7 @@ func NewActions(appConfig *app.Config) *Actions {
 }
 
 // ListKernels возвращает список ядер
-func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly bool) (*reply.APIResponse, error) {
+func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly bool) (*ListKernelsResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
 		return nil, err
@@ -80,16 +80,14 @@ func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly
 		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("No kernels found")))
 	}
 
-	return &reply.APIResponse{
-		Data: ListKernelsResponse{
-			Message: fmt.Sprintf(app.TN_("%d kernel found", "%d kernels found", len(kernels)), len(kernels)),
-			Kernels: a.formatKernelOutput(kernels),
-		},
+	return &ListKernelsResponse{
+		Message: fmt.Sprintf(app.TN_("%d kernel found", "%d kernels found", len(kernels)), len(kernels)),
+		Kernels: a.formatKernelOutput(kernels),
 	}, nil
 }
 
 // GetCurrentKernel возвращает информацию о текущем ядре
-func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) GetCurrentKernel(ctx context.Context) (*GetCurrentKernelResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
 		return nil, err
@@ -100,16 +98,14 @@ func (a *Actions) GetCurrentKernel(ctx context.Context) (*reply.APIResponse, err
 		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
-	return &reply.APIResponse{
-		Data: GetCurrentKernelResponse{
-			Message: app.T_("Current kernel information"),
-			Kernel:  kernel.ToFull(a.kernelManager),
-		},
+	return &GetCurrentKernelResponse{
+		Message: app.T_("Current kernel information"),
+		Kernel:  kernel.ToFull(a.kernelManager),
 	}, nil
 }
 
 // InstallKernel устанавливает ядро с указанным flavour
-func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*reply.APIResponse, error) {
+func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*InstallUpdateKernelResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
 		return nil, err
@@ -161,22 +157,18 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 	}
 
 	if len(preview.Changes.NewInstalledPackages) == 0 && len(preview.Changes.UpgradedPackages) == 0 {
-		return &reply.APIResponse{
-			Data: InstallUpdateKernelResponse{
-				Message: fmt.Sprintf(app.T_("Kernel %s is already installed"), latest.FullVersion),
-				Kernel:  latest.ToFull(a.kernelManager),
-				Preview: nil,
-			},
+		return &InstallUpdateKernelResponse{
+			Message: fmt.Sprintf(app.T_("Kernel %s is already installed"), latest.FullVersion),
+			Kernel:  latest.ToFull(a.kernelManager),
+			Preview: nil,
 		}, nil
 	}
 
 	if dryRun {
-		return &reply.APIResponse{
-			Data: InstallUpdateKernelResponse{
-				Message: app.T_("Installation preview"),
-				Kernel:  latest.ToFull(a.kernelManager),
-				Preview: preview,
-			},
+		return &InstallUpdateKernelResponse{
+			Message: app.T_("Installation preview"),
+			Kernel:  latest.ToFull(a.kernelManager),
+			Preview: preview,
 		}, nil
 	}
 
@@ -190,17 +182,15 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 		return nil, err
 	}
 
-	return &reply.APIResponse{
-		Data: InstallUpdateKernelResponse{
-			Message: fmt.Sprintf(app.T_("Kernel %s installed successfully"), latest.FullVersion),
-			Kernel:  latest.ToFull(a.kernelManager),
-			Preview: preview,
-		},
+	return &InstallUpdateKernelResponse{
+		Message: fmt.Sprintf(app.T_("Kernel %s installed successfully"), latest.FullVersion),
+		Kernel:  latest.ToFull(a.kernelManager),
+		Preview: preview,
 	}, nil
 }
 
 // UpdateKernel обновляет ядро до последней версии
-func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*reply.APIResponse, error) {
+func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []string, includeHeaders bool, dryRun bool) (*InstallUpdateKernelResponse, error) {
 	var err error
 	err = a.validateDB(ctx)
 	if err != nil {
@@ -254,12 +244,10 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 
 	// Сравниваем установленную версию с доступной версией
 	if latest.Version == current.VersionInstalled && latest.Release == current.Release {
-		return &reply.APIResponse{
-			Data: InstallUpdateKernelResponse{
-				Message: app.T_("Kernel is already up to date"),
-				Kernel:  latest.ToFull(a.kernelManager),
-				Preview: nil,
-			},
+		return &InstallUpdateKernelResponse{
+			Message: app.T_("Kernel is already up to date"),
+			Kernel:  latest.ToFull(a.kernelManager),
+			Preview: nil,
 		}, nil
 	}
 
@@ -274,7 +262,7 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 }
 
 // CleanOldKernels удаляет старые ядра
-func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun bool) (*reply.APIResponse, error) {
+func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun bool) (*CleanOldKernelsResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
 		return nil, err
@@ -369,13 +357,11 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 			return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to simulate kernels removal: %s"), errRemove.Error()))
 		}
 
-		return &reply.APIResponse{
-			Data: CleanOldKernelsResponse{
-				Message:       fmt.Sprintf(app.TN_("Would remove %d old kernel", "Would remove %d old kernels", len(toRemove)), len(toRemove)),
-				RemoveKernels: toRemove,
-				KeptKernels:   keptKernels,
-				Preview:       combinedPreview,
-			},
+		return &CleanOldKernelsResponse{
+			Message:       fmt.Sprintf(app.TN_("Would remove %d old kernel", "Would remove %d old kernels", len(toRemove)), len(toRemove)),
+			RemoveKernels: toRemove,
+			KeptKernels:   keptKernels,
+			Preview:       combinedPreview,
 		}, nil
 	}
 
@@ -389,18 +375,16 @@ func (a *Actions) CleanOldKernels(ctx context.Context, noBackup bool, dryRun boo
 		return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to remove kernels: %s"), err.Error()))
 	}
 
-	return &reply.APIResponse{
-		Data: CleanOldKernelsResponse{
-			Message:       fmt.Sprintf(app.TN_("Successfully removed %d old kernel", "Successfully removed %d old kernels", len(toRemove)), len(toRemove)),
-			RemoveKernels: toRemove,
-			KeptKernels:   keptKernels,
-			Preview:       combinedPreview,
-		},
+	return &CleanOldKernelsResponse{
+		Message:       fmt.Sprintf(app.TN_("Successfully removed %d old kernel", "Successfully removed %d old kernels", len(toRemove)), len(toRemove)),
+		RemoveKernels: toRemove,
+		KeptKernels:   keptKernels,
+		Preview:       combinedPreview,
 	}, nil
 }
 
 // ListKernelModules возвращает список модулей для ядра
-func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply.APIResponse, error) {
+func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*ListKernelModulesResponse, error) {
 	var err error
 	err = a.validateDB(ctx)
 	if err != nil {
@@ -425,18 +409,16 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*reply
 		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
-	return &reply.APIResponse{
-		Data: ListKernelModulesResponse{
-			Message: fmt.Sprintf(app.TN_("%d module found", "%d modules found", len(modules)), len(modules)),
-			Kernel:  latest.ToFull(a.kernelManager),
-			Modules: modules,
-		},
+	return &ListKernelModulesResponse{
+		Message: fmt.Sprintf(app.TN_("%d module found", "%d modules found", len(modules)), len(modules)),
+		Kernel:  latest.ToFull(a.kernelManager),
+		Modules: modules,
 	}, nil
 }
 
 // InstallKernelModules устанавливает модули ядра
 func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
-	modules []string, dryRun bool) (*reply.APIResponse, error) {
+	modules []string, dryRun bool) (*InstallKernelModulesResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
 		return nil, err
@@ -516,12 +498,10 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 			return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to simulate modules installation: %s"), err.Error()))
 		}
 
-		return &reply.APIResponse{
-			Data: InstallKernelModulesResponse{
-				Message: app.T_("Modules installation preview"),
-				Kernel:  latest.ToFull(a.kernelManager),
-				Preview: preview,
-			},
+		return &InstallKernelModulesResponse{
+			Message: app.T_("Modules installation preview"),
+			Kernel:  latest.ToFull(a.kernelManager),
+			Preview: preview,
 		}, nil
 	}
 
@@ -540,18 +520,16 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
-	return &reply.APIResponse{
-		Data: InstallKernelModulesResponse{
-			Message: fmt.Sprintf(app.TN_("%d module installed successfully for kernel %s", "%d modules installed successfully for kernel %s", len(modules)), len(modules), updatedKernel.FullVersion),
-			Kernel:  updatedKernel.ToFull(a.kernelManager),
-			Preview: nil,
-		},
+	return &InstallKernelModulesResponse{
+		Message: fmt.Sprintf(app.TN_("%d module installed successfully for kernel %s", "%d modules installed successfully for kernel %s", len(modules)), len(modules), updatedKernel.FullVersion),
+		Kernel:  updatedKernel.ToFull(a.kernelManager),
+		Preview: nil,
 	}, nil
 }
 
 // RemoveKernelModules удаляет модули ядра
 func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
-	modules []string, dryRun bool) (*reply.APIResponse, error) {
+	modules []string, dryRun bool) (*RemoveKernelModulesResponse, error) {
 	err := a.validateDB(ctx)
 	if err != nil {
 		return nil, err
@@ -604,12 +582,10 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 	}
 
 	if len(modulesToRemove) == 0 {
-		return &reply.APIResponse{
-			Data: RemoveKernelModulesResponse{
-				Message: app.T_("No modules to remove"),
-				Kernel:  latest.ToFull(a.kernelManager),
-				Preview: nil,
-			},
+		return &RemoveKernelModulesResponse{
+			Message: app.T_("No modules to remove"),
+			Kernel:  latest.ToFull(a.kernelManager),
+			Preview: nil,
 		}, nil
 	}
 
@@ -630,12 +606,10 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 			return nil, apmerr.New(apmerr.ErrorTypeKernel, fmt.Errorf(app.T_("failed to simulate modules removal: %s"), err.Error()))
 		}
 
-		return &reply.APIResponse{
-			Data: RemoveKernelModulesResponse{
-				Message: app.T_("Modules removal preview"),
-				Kernel:  latest.ToFull(a.kernelManager),
-				Preview: preview,
-			},
+		return &RemoveKernelModulesResponse{
+			Message: app.T_("Modules removal preview"),
+			Kernel:  latest.ToFull(a.kernelManager),
+			Preview: preview,
 		}, nil
 	}
 
@@ -655,12 +629,10 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
-	return &reply.APIResponse{
-		Data: RemoveKernelModulesResponse{
-			Message: fmt.Sprintf(app.TN_("%d module removed successfully from kernel %s", "%d modules removed successfully from kernel %s", len(modulesToRemove)), len(modulesToRemove), latest.FullVersion),
-			Kernel:  updatedKernel.ToFull(a.kernelManager),
-			Preview: nil,
-		},
+	return &RemoveKernelModulesResponse{
+		Message: fmt.Sprintf(app.TN_("%d module removed successfully from kernel %s", "%d modules removed successfully from kernel %s", len(modulesToRemove)), len(modulesToRemove), latest.FullVersion),
+		Kernel:  updatedKernel.ToFull(a.kernelManager),
+		Preview: nil,
 	}, nil
 }
 

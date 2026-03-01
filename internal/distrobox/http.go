@@ -17,6 +17,7 @@
 package distrobox
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
@@ -28,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -79,13 +81,6 @@ func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) 
 	_ = json.NewEncoder(rw).Encode(resp)
 }
 
-// writeError отправляет ошибку
-func (w *HTTPWrapper) writeError(rw http.ResponseWriter, err error, code int) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	rw.WriteHeader(code)
-	_ = json.NewEncoder(rw).Encode(reply.ErrorResponseFromError(err))
-}
-
 // parseBodyParams парсит параметры из тела запроса
 func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
 	var body map[string]json.RawMessage
@@ -102,7 +97,7 @@ func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessa
 func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	container := r.URL.Query().Get("container")
 	if container == "" {
-		w.writeError(rw, errors.New("container is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("container is required")))
 		return
 	}
 
@@ -112,11 +107,7 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.Update(ctx, container)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "distrobox.Update", data, err)
+			reply.SendTaskResult(ctx, reply.EventDistroUpdate, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -135,20 +126,20 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Info – Получить информацию о пакете
 func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	container := r.URL.Query().Get("container")
 	if container == "" {
-		w.writeError(rw, errors.New("container is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("container is required")))
 		return
 	}
 
 	name := r.PathValue("name")
 	if name == "" {
-		w.writeError(rw, errors.New("package name is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("package name is required")))
 		return
 	}
 
@@ -158,7 +149,7 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Search – Поиск пакетов по названию
@@ -168,7 +159,7 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	q := query.Get("q")
 
 	if q == "" {
-		w.writeError(rw, errors.New("search query (q) is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("search query (q) is required")))
 		return
 	}
 
@@ -178,7 +169,7 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // List – Получить список пакетов
@@ -225,14 +216,14 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Install – Установить пакет
 func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -250,11 +241,11 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if container == "" {
-		w.writeError(rw, errors.New("container is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("container is required")))
 		return
 	}
 	if packageName == "" {
-		w.writeError(rw, errors.New("package is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("package is required")))
 		return
 	}
 
@@ -264,14 +255,14 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // Remove – Удалить пакет
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -289,11 +280,11 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if container == "" {
-		w.writeError(rw, errors.New("container is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("container is required")))
 		return
 	}
 	if packageName == "" {
-		w.writeError(rw, errors.New("package is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("package is required")))
 		return
 	}
 
@@ -303,14 +294,14 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // GetFilterFields – Получить доступные поля для фильтрации
 func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	container := r.URL.Query().Get("container")
 	if container == "" {
-		w.writeError(rw, errors.New("container is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("container is required")))
 		return
 	}
 
@@ -320,7 +311,7 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ContainerList – Получить список контейнеров
@@ -331,14 +322,14 @@ func (w *HTTPWrapper) ContainerList(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ContainerAdd – Создать новый контейнер
 func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.parseBodyParams(r)
 	if err != nil {
-		w.writeError(rw, err, http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
 	}
 
@@ -362,11 +353,11 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if image == "" {
-		w.writeError(rw, errors.New("image is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("image is required")))
 		return
 	}
 	if name == "" {
-		w.writeError(rw, errors.New("name is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("name is required")))
 		return
 	}
 
@@ -374,11 +365,7 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
 			resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "distrobox.ContainerAdd", data, err)
+			reply.SendTaskResult(ctx, reply.EventDistroContainerAdd, resp, err)
 		}()
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -397,14 +384,14 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // ContainerRemove – Удалить контейнер
 func (w *HTTPWrapper) ContainerRemove(rw http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		w.writeError(rw, errors.New("container name is required"), http.StatusBadRequest)
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("container name is required")))
 		return
 	}
 
@@ -414,7 +401,7 @@ func (w *HTTPWrapper) ContainerRemove(rw http.ResponseWriter, r *http.Request) {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, *resp)
+	w.writeJSON(rw, reply.OK(resp))
 }
 
 // RegisterRoutes регистрирует все HTTP маршруты в mux
@@ -444,7 +431,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "List",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages",
-			ResponseType: "DistroboxListResponse",
+			ResponseType: reflect.TypeOf(ListResponse{}),
 			Permission:   "read",
 			Summary:      "Получить список пакетов в контейнере",
 			Tags:         []string{"distrobox"},
@@ -462,7 +449,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Info",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages/{name}",
-			ResponseType: "DistroboxInfoResponse",
+			ResponseType: reflect.TypeOf(InfoResponse{}),
 			Permission:   "read",
 			Summary:      "Получить информацию о пакете",
 			Tags:         []string{"distrobox"},
@@ -475,7 +462,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Search",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages/search",
-			ResponseType: "DistroboxSearchResponse",
+			ResponseType: reflect.TypeOf(SearchResponse{}),
 			Permission:   "read",
 			Summary:      "Поиск пакетов по названию",
 			Tags:         []string{"distrobox"},
@@ -488,7 +475,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "GetFilterFields",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages/filter-fields",
-			ResponseType: "DistroboxGetFilterFieldsResponse",
+			ResponseType: reflect.TypeOf(GetFilterFieldsResponse{}),
 			Permission:   "read",
 			Summary:      "Получить доступные поля для фильтрации",
 			Tags:         []string{"distrobox"},
@@ -502,7 +489,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Update",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/update",
-			ResponseType: "DistroboxUpdateResponse",
+			ResponseType: reflect.TypeOf(UpdateResponse{}),
 			Permission:   "manage",
 			Summary:      "Обновить список пакетов в контейнере",
 			Tags:         []string{"distrobox"},
@@ -515,7 +502,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Install",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/packages/install",
-			ResponseType: "DistroboxInstallResponse",
+			ResponseType: reflect.TypeOf(InstallResponse{}),
 			Permission:   "manage",
 			Summary:      "Установить пакет в контейнер",
 			Tags:         []string{"distrobox"},
@@ -529,7 +516,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "Remove",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/packages/remove",
-			ResponseType: "DistroboxRemoveResponse",
+			ResponseType: reflect.TypeOf(RemoveResponse{}),
 			Permission:   "manage",
 			Summary:      "Удалить пакет из контейнера",
 			Tags:         []string{"distrobox"},
@@ -545,7 +532,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ContainerList",
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/containers",
-			ResponseType: "DistroboxContainerListResponse",
+			ResponseType: reflect.TypeOf(ContainerListResponse{}),
 			Permission:   "read",
 			Summary:      "Получить список контейнеров",
 			Tags:         []string{"distrobox"},
@@ -554,7 +541,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ContainerAdd",
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/containers",
-			ResponseType: "DistroboxContainerAddResponse",
+			ResponseType: reflect.TypeOf(ContainerAddResponse{}),
 			Permission:   "manage",
 			Summary:      "Создать новый контейнер",
 			Tags:         []string{"distrobox"},
@@ -570,7 +557,7 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Method:       "ContainerRemove",
 			HTTPMethod:   "DELETE",
 			HTTPPath:     "/api/v1/distrobox/containers/{name}",
-			ResponseType: "DistroboxContainerRemoveResponse",
+			ResponseType: reflect.TypeOf(ContainerRemoveResponse{}),
 			Permission:   "manage",
 			Summary:      "Удалить контейнер",
 			Tags:         []string{"distrobox"},

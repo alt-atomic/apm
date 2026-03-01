@@ -18,6 +18,7 @@ package dbus_doc
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,7 +28,6 @@ import (
 	"go/token"
 	"net/http"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -49,13 +49,38 @@ type DBusParameter struct {
 
 // Config конфигурация для генерации
 type Config struct {
-	ModuleName    string
-	DBusInterface string
-	ServerPort    string
-	DBusWrapper   interface{}
-	ResponseTypes map[string]reflect.Type
-	SourceCode    string
-	DBusSession   string
+	ModuleName      string
+	DBusInterface   string
+	ServerPort      string
+	ResponseTypes   map[string]reflect.Type
+	MethodResponses map[string]string // имя метода DBusWrapper → имя типа ответа
+	SourceCode      string
+	DBusSession     string
+}
+
+// DeriveResponseTypes автоматически извлекает типы ответов и маппинг метод→тип из методов Actions через рефлексию.
+// actionsPtr должен быть типизированным nil-указателем на Actions, например (*Actions)(nil).
+func DeriveResponseTypes(actionsPtr interface{}) (map[string]reflect.Type, map[string]string) {
+	responseTypes := make(map[string]reflect.Type)
+	methodResponses := make(map[string]string)
+	actionsType := reflect.TypeOf(actionsPtr)
+	for i := 0; i < actionsType.NumMethod(); i++ {
+		method := actionsType.Method(i)
+		mType := method.Type
+		if mType.NumOut() >= 2 {
+			outType := mType.Out(0)
+			if outType.Kind() == reflect.Ptr {
+				outType = outType.Elem()
+			}
+			name := outType.Name()
+			if name != "" && name != "error" {
+				responseTypes[name] = outType
+				methodResponses[method.Name] = name
+			}
+		}
+	}
+	responseTypes["APIResponse"] = reflect.TypeOf(reply.APIResponse{})
+	return responseTypes, methodResponses
 }
 
 // Generator генератор документации
@@ -70,7 +95,7 @@ func NewGenerator(config Config) *Generator {
 
 // GenerateDBusDocHTML генерирует HTML документацию для DBus API
 func (g *Generator) GenerateDBusDocHTML() string {
-	methods := g.reflectDBusMethods()
+	methods := g.parseSourceMethods()
 
 	busType := "system"
 	if g.config.DBusSession == "session" {
@@ -145,11 +170,6 @@ func (g *Generator) GenerateDBusDocHTML() string {
 	return html
 }
 
-// reflectDBusMethods парсит исходный код и извлекает информацию о методах
-func (g *Generator) reflectDBusMethods() []DBusMethodInfo {
-	return g.parseSourceMethods()
-}
-
 // parseSourceMethods парсит исходный код для извлечения методов
 func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 	var methods []DBusMethodInfo
@@ -160,11 +180,9 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 		return methods
 	}
 
-	// Карты для хранения информации из комментариев
-	responseTypes := make(map[string]string)
+	// Извлекаем описания из комментариев
 	descriptions := make(map[string]string)
 
-	// Извлекаем информацию из комментариев
 	for _, comment := range node.Comments {
 		text := comment.Text()
 
@@ -184,14 +202,10 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 			continue
 		}
 
-		if match := regexp.MustCompile(`doc_response:\s*(\w+)`).FindStringSubmatch(text); match != nil {
-			responseTypes[nextFunc.Name.Name] = match[1]
-		}
-
 		lines := strings.Split(text, "\n")
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
-			if line != "" && !strings.Contains(line, "doc_response:") {
+			if line != "" {
 				if strings.Contains(line, "–") {
 					parts := strings.SplitN(line, "–", 2)
 					if len(parts) == 2 {
@@ -226,8 +240,8 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 		}
 
 		methodName := funcDecl.Name.Name
-		responseType, hasResponse := responseTypes[methodName]
-		if !hasResponse {
+		responseType := g.config.MethodResponses[methodName]
+		if responseType == "" {
 			continue
 		}
 
@@ -293,22 +307,6 @@ func (g *Generator) getASTTypeString(expr ast.Expr) string {
 	}
 }
 
-// getTypeString возвращает строковое представление типа
-func (g *Generator) getTypeString(t reflect.Type) string {
-	switch t.Kind() {
-	case reflect.String:
-		return "string"
-	case reflect.Bool:
-		return "bool"
-	case reflect.Int, reflect.Int32, reflect.Int64:
-		return "int"
-	case reflect.Slice:
-		return "[]" + g.getTypeString(t.Elem())
-	default:
-		return t.String()
-	}
-}
-
 // formatParameters форматирует параметры для HTML
 func (g *Generator) formatParameters(params []DBusParameter) string {
 	if len(params) == 0 {
@@ -367,7 +365,7 @@ func (g *Generator) generateJSONExample(responseType string) string {
 	if _, exists := g.config.ResponseTypes["APIResponse"]; exists {
 		wrappedResponse := map[string]interface{}{
 			"data":  example,
-			"error": false,
+			"error": nil,
 		}
 		example = wrappedResponse
 	}

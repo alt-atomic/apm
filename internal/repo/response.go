@@ -21,30 +21,30 @@ import (
 	"apm/internal/repo/service"
 )
 
-// ListResponse структура ответа для List метода
-type ListResponse struct {
+// RepoListResponse структура ответа для List метода
+type RepoListResponse struct {
 	Message      string               `json:"message"`
 	Repositories []service.Repository `json:"repositories"`
 	Count        int                  `json:"count"`
 }
 
-// AddRemoveResponse структура ответа для Add/Remove методов
-type AddRemoveResponse struct {
+// RepoAddRemoveResponse структура ответа для Add/Remove методов
+type RepoAddRemoveResponse struct {
 	Message string   `json:"message"`
 	Added   []string `json:"added,omitempty"`
 	Removed []string `json:"removed,omitempty"`
 }
 
-// SetResponse структура ответа для Set метода
-type SetResponse struct {
+// RepoSetResponse структура ответа для Set метода
+type RepoSetResponse struct {
 	Message string   `json:"message"`
 	Branch  string   `json:"branch"`
 	Added   []string `json:"added,omitempty"`
 	Removed []string `json:"removed,omitempty"`
 }
 
-// SimulateResponse структура ответа для симуляции операций
-type SimulateResponse struct {
+// RepoSimulateResponse структура ответа для симуляции операций
+type RepoSimulateResponse struct {
 	Message    string   `json:"message"`
 	WillAdd    []string `json:"willAdd,omitempty"`
 	WillRemove []string `json:"willRemove,omitempty"`

@@ -29,9 +29,9 @@ type Endpoint struct {
 	// HTTP путь (/api/v1/packages/install)
 	HTTPPath string
 	// Тип запроса (для POST/PUT) - опционально
-	RequestType string
+	RequestType reflect.Type
 	// Тип ответа
-	ResponseType string
+	ResponseType reflect.Type
 	// Требуемое разрешение (manage, read)
 	Permission string
 	// Краткое описание
@@ -72,15 +72,13 @@ type ParamMapping struct {
 
 // Registry хранит все зарегистрированные endpoints
 type Registry struct {
-	endpoints     []Endpoint
-	responseTypes map[string]reflect.Type
+	endpoints []Endpoint
 }
 
 // NewRegistry создает новый registry
 func NewRegistry() *Registry {
 	return &Registry{
-		endpoints:     make([]Endpoint, 0),
-		responseTypes: make(map[string]reflect.Type),
+		endpoints: make([]Endpoint, 0),
 	}
 }
 
@@ -89,16 +87,18 @@ func (r *Registry) RegisterEndpoints(endpoints []Endpoint) {
 	r.endpoints = append(r.endpoints, endpoints...)
 }
 
-// RegisterResponseTypes регистрирует типы ответов для OpenAPI схем
-func (r *Registry) RegisterResponseTypes(types map[string]reflect.Type) {
-	for name, typ := range types {
-		r.responseTypes[name] = typ
+// CollectResponseTypes собирает уникальные типы ответов из зарегистрированных endpoints
+func (r *Registry) CollectResponseTypes() map[string]reflect.Type {
+	types := make(map[string]reflect.Type)
+	for _, ep := range r.endpoints {
+		if ep.ResponseType != nil {
+			types[ep.ResponseType.Name()] = ep.ResponseType
+		}
+		if ep.RequestType != nil {
+			types[ep.RequestType.Name()] = ep.RequestType
+		}
 	}
-}
-
-// GetResponseTypes возвращает все зарегистрированные типы ответов
-func (r *Registry) GetResponseTypes() map[string]reflect.Type {
-	return r.responseTypes
+	return types
 }
 
 // GetHTTPEndpoints возвращает HTTP endpoints

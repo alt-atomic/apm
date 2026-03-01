@@ -407,9 +407,7 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 
 	// Регистрируем endpoints в registry для OpenAPI документации и проверки прав
 	registry := http_server.NewRegistry()
-	registry.RegisterResponseTypes(system.GetHTTPResponseTypes())
 	registry.RegisterEndpoints(system.GetHTTPEndpoints())
-	registry.RegisterResponseTypes(repo.GetHTTPResponseTypes())
 	registry.RegisterEndpoints(repo.GetHTTPEndpoints())
 	server.SetRegistry(registry)
 
@@ -469,7 +467,6 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 	distroboxHTTPWrapper.RegisterRoutes(server.GetMux())
 
 	registry := http_server.NewRegistry()
-	registry.RegisterResponseTypes(distrobox.GetHTTPResponseTypes())
 	registry.RegisterEndpoints(distrobox.GetHTTPEndpoints())
 	server.SetRegistry(registry)
 

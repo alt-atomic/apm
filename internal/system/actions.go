@@ -28,6 +28,7 @@ import (
 	reposervice "apm/internal/repo/service"
 	"apm/internal/system/dialog"
 	"apm/internal/system/service"
+
 	"context"
 	"errors"
 	"fmt"
@@ -84,37 +85,33 @@ type ImageStatus struct {
 }
 
 // CheckRemove проверяем пакеты перед удалением
-func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool, depends bool) (*reply.APIResponse, error) {
+func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool, depends bool) (*CheckResponse, error) {
 	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge, depends)
 	if aptError != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeApt, aptError)
 	}
 
-	return &reply.APIResponse{
-		Data: CheckResponse{
-			Message: app.T_("Inspection information"),
-			Info:    *packageParse,
-		},
+	return &CheckResponse{
+		Message: app.T_("Inspection information"),
+		Info:    *packageParse,
 	}, nil
 }
 
 // CheckUpgrade проверяем пакеты перед обновлением системы
-func (a *Actions) CheckUpgrade(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) CheckUpgrade(ctx context.Context) (*CheckResponse, error) {
 	packageParse, aptError := a.serviceAptActions.CheckUpgrade(ctx)
 	if aptError != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeApt, aptError)
 	}
 
-	return &reply.APIResponse{
-		Data: CheckResponse{
-			Message: app.T_("Inspection information"),
-			Info:    *packageParse,
-		},
+	return &CheckResponse{
+		Message: app.T_("Inspection information"),
+		Info:    *packageParse,
 	}, nil
 }
 
 // CheckInstall проверяем пакеты перед установкой
-func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
+func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*CheckResponse, error) {
 	if len(packages) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify at least one package")))
 	}
@@ -141,16 +138,14 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*reply.A
 		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
 	}
 
-	return &reply.APIResponse{
-		Data: CheckResponse{
-			Message: app.T_("Inspection information"),
-			Info:    *packageParse,
-		},
+	return &CheckResponse{
+		Message: app.T_("Inspection information"),
+		Info:    *packageParse,
 	}, nil
 }
 
 // Remove удаляет системный пакет.
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool, confirm bool) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool, confirm bool) (*InstallRemoveResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -210,16 +205,14 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 		}
 	}
 
-	return &reply.APIResponse{
-		Data: InstallRemoveResponse{
-			Message: messageAnswer,
-			Info:    *packageParse,
-		},
+	return &InstallRemoveResponse{
+		Message: messageAnswer,
+		Info:    *packageParse,
 	}, nil
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) (*reply.APIResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) (*InstallRemoveResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -315,18 +308,14 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		}
 	}
 
-	resp := reply.APIResponse{
-		Data: InstallRemoveResponse{
-			Message: messageAnswer,
-			Info:    *packageParse,
-		},
-	}
-
-	return &resp, nil
+	return &InstallRemoveResponse{
+		Message: messageAnswer,
+		Info:    *packageParse,
+	}, nil
 }
 
 // CheckReinstall проверяем пакеты перед переустановкой
-func (a *Actions) CheckReinstall(ctx context.Context, packages []string) (*reply.APIResponse, error) {
+func (a *Actions) CheckReinstall(ctx context.Context, packages []string) (*CheckResponse, error) {
 	if len(packages) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify at least one package")))
 	}
@@ -348,16 +337,14 @@ func (a *Actions) CheckReinstall(ctx context.Context, packages []string) (*reply
 		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
 	}
 
-	return &reply.APIResponse{
-		Data: CheckResponse{
-			Message: app.T_("Inspection information"),
-			Info:    *packageParse,
-		},
+	return &CheckResponse{
+		Message: app.T_("Inspection information"),
+		Info:    *packageParse,
 	}, nil
 }
 
 // Reinstall осуществляет переустановку системного пакета.
-func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool) (*reply.APIResponse, error) {
+func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool) (*InstallRemoveResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -433,18 +420,14 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 		packageParse.NewInstalledCount,
 	)
 
-	resp := reply.APIResponse{
-		Data: InstallRemoveResponse{
-			Message: messageAnswer,
-			Info:    *packageParse,
-		},
-	}
-
-	return &resp, nil
+	return &InstallRemoveResponse{
+		Message: messageAnswer,
+		Info:    *packageParse,
+	}, nil
 }
 
 // Update обновляет информацию или базу данных пакетов.
-func (a *Actions) Update(ctx context.Context, noLock bool) (*reply.APIResponse, error) {
+func (a *Actions) Update(ctx context.Context, noLock bool) (*UpdateResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -460,18 +443,14 @@ func (a *Actions) Update(ctx context.Context, noLock bool) (*reply.APIResponse, 
 		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}
 
-	resp := reply.APIResponse{
-		Data: UpdateResponse{
-			Message: app.T_("Package list updated successfully"),
-			Count:   len(packages),
-		},
-	}
-
-	return &resp, nil
+	return &UpdateResponse{
+		Message: app.T_("Package list updated successfully"),
+		Count:   len(packages),
+	}, nil
 }
 
 // ImageBuild Update Сборка образа
-func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 	app.Log.EnableStdoutLogging()
 	reply.StopSpinner(a.appConfig)
 
@@ -509,17 +488,13 @@ func (a *Actions) ImageBuild(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	resp := reply.APIResponse{
-		Data: ImageBuild{
-			Message: app.T_("DONE"),
-		},
-	}
-
-	return &resp, nil
+	return &ImageBuild{
+		Message: app.T_("DONE"),
+	}, nil
 }
 
 // Upgrade общее обновление системы
-func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) Upgrade(ctx context.Context) (*UpgradeResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -569,20 +544,15 @@ func (a *Actions) Upgrade(ctx context.Context) (*reply.APIResponse, error) {
 		fmt.Sprintf(app.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
 	)
 
-	resp := reply.APIResponse{
-		Data: UpgradeResponse{
-			Message: app.T_("The system has been upgrade successfully"),
-			Result:  &messageAnswer,
-		},
-	}
-
-	return &resp, nil
+	return &UpgradeResponse{
+		Message: app.T_("The system has been upgrade successfully"),
+		Result:  &messageAnswer,
+	}, nil
 }
 
 // Info возвращает информацию о системном пакете.
-func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat bool) (*reply.APIResponse, error) {
+func (a *Actions) Info(ctx context.Context, packageName string) (*InfoResponse, error) {
 	packageName = strings.TrimSpace(packageName)
-	//packageName = helper.CleanPackageName(packageName)
 	if packageName == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Package name must be specified, for example info package")))
 	}
@@ -620,14 +590,10 @@ func (a *Actions) Info(ctx context.Context, packageName string, isFullFormat boo
 		}
 	}
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":     app.T_("Package found"),
-			"packageInfo": a.FormatPackageOutput(packageInfo, isFullFormat),
-		},
-	}
-
-	return &resp, nil
+	return &InfoResponse{
+		Message:     app.T_("Package found"),
+		PackageInfo: packageInfo,
+	}, nil
 }
 
 // ListParams задаёт параметры для запроса списка пакетов.
@@ -646,7 +612,7 @@ type ListParams struct {
 // Структура ListParams заполняется из query параметров автоматически по json тегам
 // @permission read
 // @summary Получить список пакетов
-func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool) (*reply.APIResponse, error) {
+func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, error) {
 	if params.ForceUpdate {
 		_, err := a.serviceAptActions.Update(ctx)
 		if err != nil {
@@ -692,19 +658,15 @@ func (a *Actions) List(ctx context.Context, params ListParams, isFullFormat bool
 
 	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":    msg,
-			"packages":   a.FormatPackageOutput(packages, params.Full || isFullFormat),
-			"totalCount": int(totalCount),
-		},
-	}
-
-	return &resp, nil
+	return &ListResponse{
+		Message:    msg,
+		Packages:   packages,
+		TotalCount: int(totalCount),
+	}, nil
 }
 
 // GetFilterFields возвращает список свойств для фильтрации.
-func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) GetFilterFields(ctx context.Context) (GetFilterFieldsResponse, error) {
 	if err := a.validateDB(ctx, false); err != nil {
 		return nil, err // validateDB already handles its own classification
 	}
@@ -738,13 +700,11 @@ func (a *Actions) GetFilterFields(ctx context.Context) (*reply.APIResponse, erro
 		fields = append(fields, ff)
 	}
 
-	return &reply.APIResponse{
-		Data: fields,
-	}, nil
+	return fields, nil
 }
 
 // Search осуществляет поиск системного пакета по названию.
-func (a *Actions) Search(ctx context.Context, packageName string, installed bool, isFullFormat bool) (*reply.APIResponse, error) {
+func (a *Actions) Search(ctx context.Context, packageName string, installed bool) (*SearchResponse, error) {
 	err := a.validateDB(ctx, false)
 	if err != nil {
 		return nil, err
@@ -766,35 +726,27 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 
 	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
-	resp := reply.APIResponse{
-		Data: map[string]interface{}{
-			"message":  msg,
-			"packages": a.FormatPackageOutput(packages, isFullFormat),
-		},
-	}
-
-	return &resp, nil
+	return &SearchResponse{
+		Message:  msg,
+		Packages: packages,
+	}, nil
 }
 
 // ImageStatus возвращает статус актуального образа
-func (a *Actions) ImageStatus(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) ImageStatus(ctx context.Context) (*ImageStatusResponse, error) {
 	imageStatus, err := a.getImageStatus(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	resp := reply.APIResponse{
-		Data: ImageStatusResponse{
-			Message:     app.T_("Image status"),
-			BootedImage: imageStatus,
-		},
-	}
-
-	return &resp, nil
+	return &ImageStatusResponse{
+		Message:     app.T_("Image status"),
+		BootedImage: imageStatus,
+	}, nil
 }
 
 // ImageUpdate обновляет образ.
-func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) ImageUpdate(ctx context.Context) (*ImageUpdateResponse, error) {
 	if err := a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
@@ -813,18 +765,14 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	resp := reply.APIResponse{
-		Data: ImageUpdateResponse{
-			Message:     app.T_("Command executed successfully"),
-			BootedImage: imageStatus,
-		},
-	}
-
-	return &resp, nil
+	return &ImageUpdateResponse{
+		Message:     app.T_("Command executed successfully"),
+		BootedImage: imageStatus,
+	}, nil
 }
 
 // ImageApply применить изменения к хосту
-func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) ImageApply(ctx context.Context) (*ImageApplyResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -897,18 +845,14 @@ func (a *Actions) ImageApply(ctx context.Context) (*reply.APIResponse, error) {
 
 	_ = a.serviceTemporaryConfig.DeleteFile()
 
-	resp := reply.APIResponse{
-		Data: ImageApplyResponse{
-			Message:     app.T_("Changes applied successfully. A reboot is required"),
-			BootedImage: imageStatus,
-		},
-	}
-
-	return &resp, nil
+	return &ImageApplyResponse{
+		Message:     app.T_("Changes applied successfully. A reboot is required"),
+		BootedImage: imageStatus,
+	}, nil
 }
 
 // ImageHistory история изменений образа
-func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int, offset int) (*reply.APIResponse, error) {
+func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int, offset int) (*ImageHistoryResponse, error) {
 	history, err := a.serviceHostDatabase.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
@@ -921,35 +865,27 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 
 	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(history)), len(history))
 
-	resp := reply.APIResponse{
-		Data: ImageHistoryResponse{
-			Message:    msg,
-			History:    history,
-			TotalCount: totalCount,
-		},
-	}
-
-	return &resp, nil
+	return &ImageHistoryResponse{
+		Message:    msg,
+		History:    history,
+		TotalCount: totalCount,
+	}, nil
 }
 
 // ImageGetConfig получить конфиг
-func (a *Actions) ImageGetConfig(_ context.Context) (*reply.APIResponse, error) {
+func (a *Actions) ImageGetConfig(_ context.Context) (*ImageConfigResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	resp := reply.APIResponse{
-		Data: ImageConfigResponse{
-			Config: *a.serviceHostConfig.Config,
-		},
-	}
-
-	return &resp, nil
+	return &ImageConfigResponse{
+		Config: *a.serviceHostConfig.Config,
+	}, nil
 }
 
 // ImageSaveConfig сохранить конфиг
-func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*reply.APIResponse, error) {
+func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*ImageConfigResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -962,13 +898,9 @@ func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*repl
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	resp := reply.APIResponse{
-		Data: ImageConfigResponse{
-			Config: *a.serviceHostConfig.Config,
-		},
-	}
-
-	return &resp, nil
+	return &ImageConfigResponse{
+		Config: *a.serviceHostConfig.Config,
+	}, nil
 }
 
 // checkOverlay проверяет, включен ли overlay

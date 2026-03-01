@@ -59,14 +59,13 @@ func generateTransactionID() string {
 }
 
 // ListKernels – Получить список доступных ядер
-// doc_response: ListKernelsResponse
 func (w *DBusWrapper) ListKernels(flavour string, installedOnly bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ListKernels(ctx, flavour, installedOnly)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -74,14 +73,13 @@ func (w *DBusWrapper) ListKernels(flavour string, installedOnly bool, transactio
 }
 
 // GetCurrentKernel – Получить информацию о текущем ядре
-// doc_response: GetCurrentKernelResponse
 func (w *DBusWrapper) GetCurrentKernel(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetCurrentKernel(ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -89,7 +87,6 @@ func (w *DBusWrapper) GetCurrentKernel(transaction string) (string, *dbus.Error)
 }
 
 // CheckInstallKernel – Проверить установку ядра (симуляция)
-// doc_response: InstallUpdateKernelResponse
 func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -103,11 +100,7 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernel(ctx, flavour, modules, includeHeaders, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.CheckInstallKernel", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelCheckInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -126,7 +119,7 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -134,7 +127,6 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 }
 
 // InstallKernel – Установить ядро с указанным flavour
-// doc_response: InstallUpdateKernelResponse
 func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -148,11 +140,7 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernel(ctx, flavour, modules, includeHeaders, false)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.InstallKernel", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -171,7 +159,7 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -179,7 +167,6 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 }
 
 // CheckUpdateKernel – Проверить обновление ядра (симуляция)
-// doc_response: InstallUpdateKernelResponse
 func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -193,11 +180,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.UpdateKernel(ctx, flavour, modules, includeHeaders, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.CheckUpdateKernel", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelCheckUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -216,7 +199,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -224,7 +207,6 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 }
 
 // UpdateKernel – Обновить ядро до последней версии
-// doc_response: InstallUpdateKernelResponse
 func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -238,11 +220,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.UpdateKernel(ctx, flavour, modules, includeHeaders, false)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.UpdateKernel", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -261,7 +239,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -269,7 +247,6 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 }
 
 // CheckCleanOldKernels – Проверить удаление старых ядер (симуляция)
-// doc_response: CleanOldKernelsResponse
 func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -283,11 +260,7 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CleanOldKernels(ctx, noBackup, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.CheckCleanOldKernels", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelCheckClean, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -306,7 +279,7 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -314,7 +287,6 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 }
 
 // CleanOldKernels – Удалить старые ядра
-// doc_response: CleanOldKernelsResponse
 func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -328,11 +300,7 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CleanOldKernels(ctx, noBackup, false)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.CleanOldKernels", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelClean, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -351,7 +319,7 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -359,14 +327,13 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 }
 
 // ListKernelModules – Получить список модулей для ядра
-// doc_response: ListKernelModulesResponse
 func (w *DBusWrapper) ListKernelModules(flavour string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ListKernelModules(ctx, flavour)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -374,7 +341,6 @@ func (w *DBusWrapper) ListKernelModules(flavour string, transaction string) (str
 }
 
 // CheckInstallKernelModules – Проверить установку модулей ядра (симуляция)
-// doc_response: InstallKernelModulesResponse
 func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -388,11 +354,7 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernelModules(ctx, flavour, modules, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.CheckInstallKernelModules", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelCheckInstallMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -411,7 +373,7 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -419,7 +381,6 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 }
 
 // InstallKernelModules – Установить модули ядра
-// doc_response: InstallKernelModulesResponse
 func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -433,11 +394,7 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernelModules(ctx, flavour, modules, false)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.InstallKernelModules", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelInstallMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -456,7 +413,7 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -464,7 +421,6 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 }
 
 // CheckRemoveKernelModules – Проверить удаление модулей ядра (симуляция)
-// doc_response: RemoveKernelModulesResponse
 func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -478,11 +434,7 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.RemoveKernelModules(ctx, flavour, modules, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.CheckRemoveKernelModules", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelCheckRemoveMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -501,7 +453,7 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -509,7 +461,6 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 }
 
 // RemoveKernelModules – Удалить модули ядра
-// doc_response: RemoveKernelModulesResponse
 func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -523,11 +474,7 @@ func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, mo
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.RemoveKernelModules(ctx, flavour, modules, false)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "kernel.RemoveKernelModules", data, err)
+			reply.SendTaskResult(ctx, reply.EventKernelRemoveMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -546,7 +493,7 @@ func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, mo
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}

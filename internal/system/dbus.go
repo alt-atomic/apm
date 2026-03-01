@@ -50,7 +50,6 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // Install – Установка пакетов
-// doc_response: InstallRemoveResponse
 func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -64,11 +63,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Install(ctx, packages, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Install", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -88,7 +83,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -96,7 +91,6 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 }
 
 // Remove – Удаление пакетов
-// doc_response: InstallRemoveResponse
 func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, depends bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -110,11 +104,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Remove", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemRemove, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -134,7 +124,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -142,7 +132,6 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 }
 
 // GetFilterFields - Список полей фильтрации для метода list, помогает динамически строить фильтры в интерфейсе
-// doc_response: GetFilterFieldsResponse
 func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx)
@@ -150,7 +139,7 @@ func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) 
 		return "", apmerr.DBusError(err)
 	}
 
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -159,7 +148,6 @@ func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) 
 }
 
 // Update – Обновление системы
-// doc_response: UpdateResponse
 func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -173,11 +161,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Update(ctx, false)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Update", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -197,7 +181,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -205,7 +189,6 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 }
 
 // List – Продвинутый поиск пакетов по фильтру
-// doc_response: ListResponse
 func (w *DBusWrapper) List(sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
@@ -220,11 +203,11 @@ func (w *DBusWrapper) List(sort string, order string, limit int, offset int, fil
 		ForceUpdate: forceUpdate,
 	}
 
-	resp, err := w.actions.List(ctx, params, true)
+	resp, err := w.actions.List(ctx, params)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -232,14 +215,13 @@ func (w *DBusWrapper) List(sort string, order string, limit int, offset int, fil
 }
 
 // Info – Получить информацию о пакете
-// doc_response: InfoResponse
 func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Info(ctx, packageName, true)
+	resp, err := w.actions.Info(ctx, packageName)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -247,7 +229,6 @@ func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbu
 }
 
 // CheckUpgrade – Проверить обновление
-// doc_response: CheckResponse
 func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -261,11 +242,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckUpgrade(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.CheckUpgrade", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemCheckUpgrade, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -285,7 +262,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -293,7 +270,6 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 }
 
 // Upgrade – Обновить систему (для не-атомарных систем)
-// doc_response: UpgradeResponse
 func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -307,11 +283,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Upgrade(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.Upgrade", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemUpgrade, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -331,7 +303,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -339,7 +311,6 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 }
 
 // CheckInstall – Проверить установку пакетов
-// doc_response: CheckResponse
 func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -353,11 +324,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckInstall(ctx, packages)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.CheckInstall", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemCheckInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -377,7 +344,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -385,7 +352,6 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 }
 
 // CheckRemove – Проверить удаление пакетов
-// doc_response: CheckResponse
 func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -399,11 +365,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckRemove(ctx, packages, false, depends)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.CheckRemove", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemCheckRemove, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -423,7 +385,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -431,17 +393,16 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 }
 
 // Search – Простой! Поиск пакетов
-// doc_response: ListResponse
 func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction string, installed bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Search(ctx, packageName, installed, true)
+	resp, err := w.actions.Search(ctx, packageName, installed)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -449,7 +410,6 @@ func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction
 }
 
 // ImageApply – Декларативно применить настройки image.yml к образу хост-системы
-// doc_response: ImageApplyResponse
 func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -463,11 +423,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ImageApply(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.ImageApply", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -487,7 +443,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -495,7 +451,6 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 }
 
 // ImageHistory – История обновлений
-// doc_response: ImageHistoryResponse
 func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, imageName string, limit int, offset int) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -505,7 +460,7 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -513,7 +468,6 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 }
 
 // ImageUpdate – Обновить образ системы
-// doc_response: ImageUpdateResponse
 func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -527,11 +481,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ImageUpdate(ctx)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "system.ImageUpdate", data, err)
+			reply.SendTaskResult(ctx, reply.EventSystemImageUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -551,7 +501,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -559,7 +509,6 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 }
 
 // ImageStatus – Проверить статус образа
-// doc_response: ImageStatusResponse
 func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -569,7 +518,7 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -577,13 +526,12 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 }
 
 // ImageGetConfig - Получить текущий конфиг image.yml
-// doc_response: ImageConfigResponse
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig(w.ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -591,7 +539,6 @@ func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 }
 
 // ImageSaveConfig - Проверить и сохранить новый конфиг image.yml
-// doc_response: ImageConfigResponse
 func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
 	configObject := build.Config{}
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
@@ -601,7 +548,7 @@ func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}

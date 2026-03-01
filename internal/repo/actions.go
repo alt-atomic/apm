@@ -20,7 +20,6 @@ import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
-	"apm/internal/common/reply"
 	"apm/internal/repo/service"
 	"context"
 	"errors"
@@ -48,7 +47,7 @@ func NewActions(appConfig *app.Config) *Actions {
 }
 
 // List возвращает список репозиториев
-func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error) {
+func (a *Actions) List(ctx context.Context, all bool) (*RepoListResponse, error) {
 	repos, err := a.repoService.GetRepositories(ctx, all)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
@@ -61,18 +60,16 @@ func (a *Actions) List(ctx context.Context, all bool) (*reply.APIResponse, error
 		message = fmt.Sprintf(app.TN_("%d active repository found", "%d active repositories found", len(repos)), len(repos))
 	}
 
-	return &reply.APIResponse{
-		Data: ListResponse{
-			Message:      message,
-			Repositories: repos,
-			Count:        len(repos),
-		},
+	return &RepoListResponse{
+		Message:      message,
+		Repositories: repos,
+		Count:        len(repos),
 	}, nil
 }
 
 // Add добавляет репозиторий
 // args: [source] или [type, url, arch, components...]
-func (a *Actions) Add(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
+func (a *Actions) Add(ctx context.Context, args []string, date string) (*RepoAddRemoveResponse, error) {
 	if len(args) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
@@ -89,16 +86,14 @@ func (a *Actions) Add(ctx context.Context, args []string, date string) (*reply.A
 
 	message := fmt.Sprintf(app.TN_("%d repository added", "%d repositories added", len(added)), len(added))
 
-	return &reply.APIResponse{
-		Data: AddRemoveResponse{
-			Message: message,
-			Added:   added,
-		},
+	return &RepoAddRemoveResponse{
+		Message: message,
+		Added:   added,
 	}, nil
 }
 
 // CheckAdd симулирует добавление репозитория
-func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
+func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*RepoSimulateResponse, error) {
 	if len(args) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
@@ -113,17 +108,15 @@ func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*re
 		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("All repositories already exist")))
 	}
 
-	return &reply.APIResponse{
-		Data: SimulateResponse{
-			Message: app.T_("Simulation results"),
-			WillAdd: willAdd,
-		},
+	return &RepoSimulateResponse{
+		Message: app.T_("Simulation results"),
+		WillAdd: willAdd,
 	}, nil
 }
 
 // Remove удаляет репозиторий
 // args: [source] или [type, url, arch, components...]
-func (a *Actions) Remove(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
+func (a *Actions) Remove(ctx context.Context, args []string, date string) (*RepoAddRemoveResponse, error) {
 	if len(args) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
@@ -140,16 +133,14 @@ func (a *Actions) Remove(ctx context.Context, args []string, date string) (*repl
 
 	message := fmt.Sprintf(app.TN_("%d repository removed", "%d repositories removed", len(removed)), len(removed))
 
-	return &reply.APIResponse{
-		Data: AddRemoveResponse{
-			Message: message,
-			Removed: removed,
-		},
+	return &RepoAddRemoveResponse{
+		Message: message,
+		Removed: removed,
 	}, nil
 }
 
 // CheckRemove симулирует удаление репозитория
-func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (*reply.APIResponse, error) {
+func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (*RepoSimulateResponse, error) {
 	if len(args) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
@@ -164,16 +155,14 @@ func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (
 		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("No repositories to remove")))
 	}
 
-	return &reply.APIResponse{
-		Data: SimulateResponse{
-			Message:    app.T_("Simulation results"),
-			WillRemove: willRemove,
-		},
+	return &RepoSimulateResponse{
+		Message:    app.T_("Simulation results"),
+		WillRemove: willRemove,
 	}, nil
 }
 
 // Set устанавливает ветку (удаляет все и добавляет)
-func (a *Actions) Set(ctx context.Context, branch, date string) (*reply.APIResponse, error) {
+func (a *Actions) Set(ctx context.Context, branch, date string) (*RepoSetResponse, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Branch name must be specified")))
@@ -192,18 +181,16 @@ func (a *Actions) Set(ctx context.Context, branch, date string) (*reply.APIRespo
 	}
 	message := fmt.Sprintf(app.T_("Branch %s set successfully"), branchDisplay)
 
-	return &reply.APIResponse{
-		Data: SetResponse{
-			Message: message,
-			Branch:  branchDisplay,
-			Added:   added,
-			Removed: removed,
-		},
+	return &RepoSetResponse{
+		Message: message,
+		Branch:  branchDisplay,
+		Added:   added,
+		Removed: removed,
 	}, nil
 }
 
 // CheckSet симулирует установку ветки
-func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*reply.APIResponse, error) {
+func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*RepoSimulateResponse, error) {
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Branch name must be specified")))
@@ -219,17 +206,15 @@ func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*reply.API
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
-	return &reply.APIResponse{
-		Data: SimulateResponse{
-			Message:    app.T_("Simulation results"),
-			WillAdd:    willAdd,
-			WillRemove: willRemove,
-		},
+	return &RepoSimulateResponse{
+		Message:    app.T_("Simulation results"),
+		WillAdd:    willAdd,
+		WillRemove: willRemove,
 	}, nil
 }
 
 // Clean удаляет cdrom и task репозитории
-func (a *Actions) Clean(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) Clean(ctx context.Context) (*RepoAddRemoveResponse, error) {
 	removed, err := a.repoService.CleanTemporary(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
@@ -241,16 +226,14 @@ func (a *Actions) Clean(ctx context.Context) (*reply.APIResponse, error) {
 
 	message := fmt.Sprintf(app.TN_("%d temporary repository removed", "%d temporary repositories removed", len(removed)), len(removed))
 
-	return &reply.APIResponse{
-		Data: AddRemoveResponse{
-			Message: message,
-			Removed: removed,
-		},
+	return &RepoAddRemoveResponse{
+		Message: message,
+		Removed: removed,
 	}, nil
 }
 
 // CheckClean симулирует очистку cdrom и task репозиториев
-func (a *Actions) CheckClean(ctx context.Context) (*reply.APIResponse, error) {
+func (a *Actions) CheckClean(ctx context.Context) (*RepoSimulateResponse, error) {
 	repos, err := a.repoService.GetRepositories(ctx, false)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
@@ -275,28 +258,24 @@ func (a *Actions) CheckClean(ctx context.Context) (*reply.APIResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("No cdrom or task repositories to remove")))
 	}
 
-	return &reply.APIResponse{
-		Data: SimulateResponse{
-			Message:    app.T_("Simulation results"),
-			WillRemove: willRemove,
-		},
+	return &RepoSimulateResponse{
+		Message:    app.T_("Simulation results"),
+		WillRemove: willRemove,
 	}, nil
 }
 
 // GetBranches возвращает список доступных веток
-func (a *Actions) GetBranches(_ context.Context) (*reply.APIResponse, error) {
+func (a *Actions) GetBranches(_ context.Context) (*BranchesResponse, error) {
 	branches := a.repoService.GetBranches()
 
-	return &reply.APIResponse{
-		Data: BranchesResponse{
-			Message:  app.T_("Available branches"),
-			Branches: branches,
-		},
+	return &BranchesResponse{
+		Message:  app.T_("Available branches"),
+		Branches: branches,
 	}, nil
 }
 
 // GetTaskPackages возвращает список пакетов из задачи
-func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*reply.APIResponse, error) {
+func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*TaskPackagesResponse, error) {
 	taskNum = strings.TrimSpace(taskNum)
 	if taskNum == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Task number must be specified")))
@@ -309,13 +288,11 @@ func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*reply.A
 
 	message := fmt.Sprintf(app.TN_("%d package in task %s", "%d packages in task %s", len(packages)), len(packages), taskNum)
 
-	return &reply.APIResponse{
-		Data: TaskPackagesResponse{
-			Message:  message,
-			TaskNum:  taskNum,
-			Packages: packages,
-			Count:    len(packages),
-		},
+	return &TaskPackagesResponse{
+		Message:  message,
+		TaskNum:  taskNum,
+		Packages: packages,
+		Count:    len(packages),
 	}, nil
 }
 
@@ -325,7 +302,7 @@ func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
 }
 
 // TestTask тестирует пакеты из задачи
-func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIResponse, error) {
+func (a *Actions) TestTask(ctx context.Context, taskNum string) (*TestTaskResponse, error) {
 	taskNum = strings.TrimSpace(taskNum)
 	if taskNum == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Task number must be specified")))
@@ -387,11 +364,9 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*reply.APIRespo
 		taskNum,
 	)
 
-	return &reply.APIResponse{
-		Data: TestTaskResponse{
-			Message: message,
-			TaskNum: taskNum,
-			Info:    *packageParse,
-		},
+	return &TestTaskResponse{
+		Message: message,
+		TaskNum: taskNum,
+		Info:    *packageParse,
 	}, nil
 }

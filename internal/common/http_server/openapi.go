@@ -260,7 +260,7 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 				Description: "Successful response",
 				Content: map[string]MediaType{
 					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/APIResponse_" + ep.ResponseType},
+						Schema: &Schema{Ref: "#/components/schemas/APIResponse_" + ep.ResponseType.Name()},
 					},
 				},
 			},
@@ -307,12 +307,12 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 	// Request body для POST/PUT/DELETE
 	if ep.HTTPMethod == "POST" || ep.HTTPMethod == "PUT" || ep.HTTPMethod == "DELETE" {
 		// Если есть RequestType - используем его
-		if ep.RequestType != "" {
+		if ep.RequestType != nil {
 			op.RequestBody = &RequestBody{
 				Required: true,
 				Content: map[string]MediaType{
 					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/" + ep.RequestType},
+						Schema: &Schema{Ref: "#/components/schemas/" + ep.RequestType.Name()},
 					},
 				},
 			}
@@ -412,7 +412,7 @@ func (g *OpenAPIGenerator) generateSchemas() map[string]*Schema {
 	}
 
 	// Добавляем схемы из registry
-	for name, typ := range g.registry.GetResponseTypes() {
+	for name, typ := range g.registry.CollectResponseTypes() {
 		if _, exists := schemas[name]; !exists {
 			schemas[name] = g.typeToSchema(typ)
 		}

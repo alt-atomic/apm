@@ -63,7 +63,9 @@ const (
 
 // Имена событий — константы для использования в WithEventName.
 const (
-	// Distrobox
+	EventDistroUpdate       = "distrobox.Update"
+	EventDistroContainerAdd = "distrobox.ContainerAdd"
+
 	EventDistroSavePackagesToDB = "distro.SavePackagesToDB"
 	EventDistroGetContainerList = "distro.GetContainerList"
 	EventDistroExportingApp     = "distro.ExportingApp"
@@ -79,11 +81,17 @@ const (
 	EventDistroUpdatePackages   = "distro.UpdatePackages"
 	EventDistroGetPackagesQuery = "distro.GetPackagesQuery"
 
-	// System
 	EventSystemWorking              = "system.Working"
 	EventSystemUpgrade              = "system.Upgrade"
 	EventSystemCheck                = "system.Check"
 	EventSystemUpdate               = "system.Update"
+	EventSystemInstall              = "system.Install"
+	EventSystemRemove               = "system.Remove"
+	EventSystemCheckInstall         = "system.CheckInstall"
+	EventSystemCheckRemove          = "system.CheckRemove"
+	EventSystemCheckUpgrade         = "system.CheckUpgrade"
+	EventSystemImageUpdate          = "system.ImageUpdate"
+	EventSystemImageApply           = "system.ImageApply"
 	EventSystemUpdateKernel         = "system.UpdateKernel"
 	EventSystemUpdateSTPLR          = "system.UpdateSTPLR"
 	EventSystemAptUpdate            = "system.AptUpdate"
@@ -99,17 +107,23 @@ const (
 	EventSystemDownloadProgress     = "system.downloadProgress"
 	EventSystemPullImage            = "system.pullImage"
 
-	// Bootc
 	EventBootcLayers   = "service.bootc-layers"
 	EventBootcDownload = "service.bootc-download"
 
-	// Kernel
-	EventKernelCurrent     = "kernel.CurrentKernel"
-	EventKernelList        = "kernel.ListKernels"
-	EventKernelInstall     = "kernel.InstallKernel"
-	EventKernelInstallMods = "kernel.InstallModules"
-	EventKernelRemove      = "kernel.RemovePackage"
-	EventKernelCheckRemove = "kernel.CheckRemovePackage"
+	EventKernelCurrent          = "kernel.CurrentKernel"
+	EventKernelList             = "kernel.ListKernels"
+	EventKernelInstall          = "kernel.InstallKernel"
+	EventKernelCheckInstall     = "kernel.CheckInstallKernel"
+	EventKernelUpdate           = "kernel.UpdateKernel"
+	EventKernelCheckUpdate      = "kernel.CheckUpdateKernel"
+	EventKernelClean            = "kernel.CleanOldKernels"
+	EventKernelCheckClean       = "kernel.CheckCleanOldKernels"
+	EventKernelInstallMods      = "kernel.InstallKernelModules"
+	EventKernelCheckInstallMods = "kernel.CheckInstallKernelModules"
+	EventKernelRemoveMods       = "kernel.RemoveKernelModules"
+	EventKernelCheckRemoveMods  = "kernel.CheckRemoveKernelModules"
+	EventKernelRemove           = "kernel.RemovePackage"
+	EventKernelCheckRemove      = "kernel.CheckRemovePackage"
 )
 
 // TaskResultEvent содержит результат фоновой задачи
@@ -380,8 +394,24 @@ func getTaskText(task string) string {
 		return app.T_("Get list kernels")
 	case EventKernelInstall:
 		return app.T_("Install kernel")
+	case EventKernelCheckInstall:
+		return app.T_("Simulate install kernel")
+	case EventKernelUpdate:
+		return app.T_("Update kernel")
+	case EventKernelCheckUpdate:
+		return app.T_("Simulate update kernel")
+	case EventKernelClean:
+		return app.T_("Clean old kernels")
+	case EventKernelCheckClean:
+		return app.T_("Simulate clean old kernels")
 	case EventKernelInstallMods:
 		return app.T_("Install kernel modules")
+	case EventKernelCheckInstallMods:
+		return app.T_("Simulate install kernel modules")
+	case EventKernelRemoveMods:
+		return app.T_("Remove kernel modules")
+	case EventKernelCheckRemoveMods:
+		return app.T_("Simulate remove kernel modules")
 	case EventKernelRemove:
 		return app.T_("Remove packages")
 	case EventKernelCheckRemove:

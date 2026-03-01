@@ -51,7 +51,6 @@ func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]
 }
 
 // GetFilterFields - Список полей фильтрации для метода list, помогает динамически строить фильтры в интерфейсе
-// doc_response: GetFilterFieldsResponse
 func (w *DBusWrapper) GetFilterFields(container string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx, container)
@@ -59,7 +58,7 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 		return "", apmerr.DBusError(err)
 	}
 
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -68,7 +67,6 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 }
 
 // Update - Обновление пакетов
-// doc_response: UpdateResponse
 func (w *DBusWrapper) Update(container string, transaction string, background bool) (string, *dbus.Error) {
 	if transaction == "" {
 		transaction = generateTransactionID()
@@ -78,11 +76,7 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Update(ctx, container)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "distrobox.Update", data, err)
+			reply.SendTaskResult(ctx, reply.EventDistroUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -102,7 +96,7 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -110,14 +104,13 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 }
 
 // Info - Информация о пакете
-// doc_response: InfoResponse
 func (w *DBusWrapper) Info(container string, packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, container, packageName)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -125,14 +118,13 @@ func (w *DBusWrapper) Info(container string, packageName string, transaction str
 }
 
 // Search - Простой поиск пакетов
-// doc_response: SearchResponse
 func (w *DBusWrapper) Search(container string, packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, container, packageName)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -140,7 +132,6 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 }
 
 // List - Продвинутый поиск пакетов по фильтру
-// doc_response: ListResponse
 func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
@@ -160,7 +151,7 @@ func (w *DBusWrapper) List(container string, sort string, order string, limit in
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -168,14 +159,13 @@ func (w *DBusWrapper) List(container string, sort string, order string, limit in
 }
 
 // Install - Установка пакета
-// doc_response: InstallResponse
 func (w *DBusWrapper) Install(container string, packageName string, export bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -183,14 +173,13 @@ func (w *DBusWrapper) Install(container string, packageName string, export bool,
 }
 
 // Remove - Удаление пакета
-// doc_response: RemoveResponse
 func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Remove(ctx, container, packageName, onlyExport)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -198,14 +187,13 @@ func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bo
 }
 
 // ContainerList - Список контейнеров
-// doc_response: ContainerListResponse
 func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerList(ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -213,7 +201,6 @@ func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 }
 
 // ContainerAdd - Добавить контейнер
-// doc_response: ContainerAddResponse
 func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks string, transaction string, background bool) (string, *dbus.Error) {
 	if transaction == "" {
 		transaction = generateTransactionID()
@@ -223,11 +210,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
-			var data interface{}
-			if resp != nil {
-				data = resp.Data
-			}
-			reply.SendTaskResult(ctx, "distrobox.ContainerAdd", data, err)
+			reply.SendTaskResult(ctx, reply.EventDistroContainerAdd, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -247,7 +230,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
@@ -255,14 +238,13 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 }
 
 // ContainerRemove - Удалить контейнер
-// doc_response: ContainerRemoveResponse
 func (w *DBusWrapper) ContainerRemove(name string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerRemove(ctx, name)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
-	data, jerr := json.Marshal(resp)
+	data, jerr := json.Marshal(reply.OK(resp))
 	if jerr != nil {
 		return "", dbus.MakeFailedError(jerr)
 	}
