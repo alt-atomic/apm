@@ -1,6 +1,7 @@
 package apmerr
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -28,6 +29,12 @@ type APMError struct {
 
 // New создание новой классифицированной ошибки
 func New(errorType string, err error) APMError {
+	if errorType == ErrorTypeApt {
+		var nf interface{ IsNotFound() bool }
+		if errors.As(err, &nf) && nf.IsNotFound() {
+			errorType = ErrorTypeNotFound
+		}
+	}
 	return APMError{Type: errorType, Err: err}
 }
 

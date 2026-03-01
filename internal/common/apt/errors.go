@@ -510,6 +510,16 @@ func (e *MatchedError) IsCritical() bool {
 	}
 }
 
+func (e *MatchedError) IsNotFound() bool {
+	switch e.Entry.Code {
+	case ErrPackageNotFound, ErrPackageIsNotInstalled, ErrNoPackagesFound,
+		ErrSourcePackageNotFound, ErrVersionNotFound, ErrReleaseNotFound:
+		return true
+	default:
+		return false
+	}
+}
+
 func (e *MatchedError) NeedUpdate() bool {
 	switch e.Entry.Code {
 	case ErrFailedToFetchArchives:
