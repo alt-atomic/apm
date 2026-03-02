@@ -82,7 +82,7 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -216,7 +216,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}

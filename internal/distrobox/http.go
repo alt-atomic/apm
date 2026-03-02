@@ -113,10 +113,10 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -394,10 +394,10 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 

@@ -70,7 +70,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -111,7 +111,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -168,7 +168,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -263,7 +263,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -304,7 +304,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -345,7 +345,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -386,7 +386,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -444,7 +444,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -502,7 +502,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}

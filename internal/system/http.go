@@ -130,10 +130,10 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -172,10 +172,10 @@ func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -202,10 +202,10 @@ func (w *HTTPWrapper) CheckUpgrade(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -254,10 +254,10 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -296,10 +296,10 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -455,10 +455,10 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -485,10 +485,10 @@ func (w *HTTPWrapper) Upgrade(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -528,10 +528,10 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 
@@ -558,10 +558,10 @@ func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(BackgroundTaskResponse{
+		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
 			Message:     app.T_("Task started in background"),
 			Transaction: txID,
-		})
+		}))
 		return
 	}
 

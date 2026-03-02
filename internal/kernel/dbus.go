@@ -107,7 +107,7 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -147,7 +147,7 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -187,7 +187,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -227,7 +227,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -267,7 +267,7 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -307,7 +307,7 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -361,7 +361,7 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -401,7 +401,7 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -441,7 +441,7 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
@@ -481,7 +481,7 @@ func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, mo
 			Message:     app.T_("Task started in background"),
 			Transaction: transaction,
 		}
-		data, jerr := json.Marshal(bgResp)
+		data, jerr := json.Marshal(reply.OK(bgResp))
 		if jerr != nil {
 			return "", dbus.MakeFailedError(jerr)
 		}
