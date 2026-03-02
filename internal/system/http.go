@@ -104,7 +104,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var packages []string
-	var purge, depends, background bool
+	var purge, depends bool
 
 	for _, f := range []struct {
 		key    string
@@ -113,7 +113,6 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 		{"packages", &packages},
 		{"purge", &purge},
 		{"depends", &depends},
-		{"background", &background},
 	} {
 		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
@@ -121,6 +120,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	background := r.URL.Query().Get("background") == "true"
 	if background {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
@@ -156,21 +156,13 @@ func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var packages []string
-	var background bool
 
-	for _, f := range []struct {
-		key    string
-		target interface{}
-	}{
-		{"packages", &packages},
-		{"background", &background},
-	} {
-		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
-			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
-			return
-		}
+	if err = reply.UnmarshalField(body, "packages", &packages); err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+		return
 	}
 
+	background := r.URL.Query().Get("background") == "true"
 	if background {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
@@ -236,7 +228,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var packages []string
-	var purge, depends, background bool
+	var purge, depends bool
 
 	for _, f := range []struct {
 		key    string
@@ -245,7 +237,6 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		{"packages", &packages},
 		{"purge", &purge},
 		{"depends", &depends},
-		{"background", &background},
 	} {
 		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
@@ -253,6 +244,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	background := r.URL.Query().Get("background") == "true"
 	if background {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
@@ -288,21 +280,13 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var packages []string
-	var background bool
 
-	for _, f := range []struct {
-		key    string
-		target interface{}
-	}{
-		{"packages", &packages},
-		{"background", &background},
-	} {
-		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
-			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
-			return
-		}
+	if err = reply.UnmarshalField(body, "packages", &packages); err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+		return
 	}
 
+	background := r.URL.Query().Get("background") == "true"
 	if background {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
@@ -699,7 +683,9 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 				{Name: "packages", Source: "body", Type: "[]string", ArgIndex: 1},
 				{Name: "purge", Source: "body", Type: "bool", Default: "false", ArgIndex: 2},
 				{Name: "depends", Source: "body", Type: "bool", Default: "false", ArgIndex: 3},
-				{Name: "background", Source: "body", Type: "bool", Default: "false"},
+			},
+			QueryParams: []http_server.QueryParam{
+				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
 		{
@@ -712,7 +698,9 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Tags:         []string{"packages"},
 			ParamMappings: []http_server.ParamMapping{
 				{Name: "packages", Source: "body", Type: "[]string", ArgIndex: 1},
-				{Name: "background", Source: "body", Type: "bool", Default: "false"},
+			},
+			QueryParams: []http_server.QueryParam{
+				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
 		{
@@ -741,7 +729,9 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 				{Name: "packages", Source: "body", Type: "[]string", ArgIndex: 1},
 				{Name: "purge", Source: "body", Type: "bool", Default: "false", ArgIndex: 2},
 				{Name: "depends", Source: "body", Type: "bool", Default: "false", ArgIndex: 3},
-				{Name: "background", Source: "body", Type: "bool", Default: "false"},
+			},
+			QueryParams: []http_server.QueryParam{
+				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
 		{
@@ -754,7 +744,9 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Tags:         []string{"packages"},
 			ParamMappings: []http_server.ParamMapping{
 				{Name: "packages", Source: "body", Type: "[]string", ArgIndex: 1},
-				{Name: "background", Source: "body", Type: "bool", Default: "false"},
+			},
+			QueryParams: []http_server.QueryParam{
+				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
 

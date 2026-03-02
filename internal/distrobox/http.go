@@ -359,7 +359,6 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var image, name, additionalPackages, initHooks string
-	var background bool
 
 	for _, f := range []struct {
 		key    string
@@ -369,7 +368,6 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 		{"name", &name},
 		{"additionalPackages", &additionalPackages},
 		{"initHooks", &initHooks},
-		{"background", &background},
 	} {
 		if err = reply.UnmarshalField(body, f.key, f.target); err != nil {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
@@ -386,6 +384,7 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	background := r.URL.Query().Get("background") == "true"
 	if background {
 		ctx, txID := w.ctxWithTransactionOrGenerate(r)
 		go func() {
@@ -589,7 +588,9 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 				{Name: "name", Source: "body", Type: "string", ArgIndex: 2},
 				{Name: "additionalPackages", Source: "body", Type: "string", Default: "", ArgIndex: 3},
 				{Name: "initHooks", Source: "body", Type: "string", Default: "", ArgIndex: 4},
-				{Name: "background", Source: "body", Type: "bool", Default: "false"},
+			},
+			QueryParams: []http_server.QueryParam{
+				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
 		{
