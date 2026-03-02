@@ -56,6 +56,8 @@ type simpleSpinner struct {
 	activeLines int
 	stopCh      chan struct{}
 	doneCh      chan struct{}
+	filledStyle lipgloss.Style
+	emptyStyle  lipgloss.Style
 }
 
 func disableEcho() {
@@ -95,10 +97,13 @@ func CreateSpinner(appConfig *app.Config) {
 	disableEcho()
 	fmt.Print("\033[?25l") // скрыть курсор
 
+	colors := appConfig.ConfigManager.GetColors()
 	sp := &simpleSpinner{
-		colors: appConfig.ConfigManager.GetColors(),
-		stopCh: make(chan struct{}),
-		doneCh: make(chan struct{}),
+		colors:      colors,
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+		filledStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressEnd)),
+		emptyStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressStart)),
 	}
 	activeSp = sp
 
@@ -212,22 +217,18 @@ func (sp *simpleSpinner) run() {
 
 func (sp *simpleSpinner) render() {
 	sp.mu.Lock()
-	defer sp.mu.Unlock()
 
-	// Возвращаем курсор к началу анимируемой области
-	if sp.activeLines > 1 {
-		fmt.Printf("\033[%dA", sp.activeLines-1)
-	}
+	prevActiveLines := sp.activeLines
 
-	// Печатаем завершённые задачи как постоянные строки
+	var completedLines []string
 	for i := range sp.tasks {
 		t := &sp.tasks[i]
 		if t.state == StateAfter && !t.printed {
 			t.printed = true
 			if t.eventType == EventTypeProgress && len(t.progressDoneText) > 0 {
-				fmt.Printf("%s[✓] %s\n", clearLine, fmt.Sprintf(app.T_("Progress: %s completed"), t.progressDoneText))
+				completedLines = append(completedLines, fmt.Sprintf(app.T_("Progress: %s completed"), t.progressDoneText))
 			} else {
-				fmt.Printf("%s[✓] %s\n", clearLine, t.viewName)
+				completedLines = append(completedLines, t.viewName)
 			}
 		}
 	}
@@ -241,45 +242,68 @@ func (sp *simpleSpinner) render() {
 	}
 	sp.tasks = sp.tasks[:n]
 
-	var actives []*task
+	var actives []task
 	for i := range sp.tasks {
 		if sp.tasks[i].state != StateAfter {
-			actives = append(actives, &sp.tasks[i])
+			actives = append(actives, sp.tasks[i])
 		}
 	}
 
-	if len(actives) > 0 {
-		frame := spinnerFrames[sp.frame%len(spinnerFrames)]
-		sp.frame++
-
-		for idx, active := range actives {
-			if active.eventType == EventTypeProgress {
-				fmt.Printf("%s[%s] %s", clearLine, frame, renderProgressBar(*active, sp.colors))
-			} else {
-				fmt.Printf("%s[%s] %s", clearLine, frame, active.viewName)
-			}
-			if idx < len(actives)-1 {
-				fmt.Print("\n")
-			}
-		}
-	}
-
-	// Очищаем лишние строки от предыдущего рендера
-	if extra := sp.activeLines - len(actives); extra > 0 {
-		for i := 0; i < extra; i++ {
-			fmt.Print("\n\033[K")
-		}
-		fmt.Printf("\033[%dA", extra)
-	}
-
+	frame := spinnerFrames[sp.frame%len(spinnerFrames)]
+	sp.frame++
 	sp.activeLines = len(actives)
 
-	if len(actives) == 0 {
-		fmt.Print(clearLine)
+	filledStyle := sp.filledStyle
+	emptyStyle := sp.emptyStyle
+
+	sp.mu.Unlock()
+
+	var buf strings.Builder
+
+	if prevActiveLines > 1 {
+		fmt.Fprintf(&buf, "\033[%dA", prevActiveLines-1)
 	}
+
+	for _, line := range completedLines {
+		buf.WriteString(clearLine)
+		buf.WriteString("[✓] ")
+		buf.WriteString(line)
+		buf.WriteByte('\n')
+	}
+
+	// Активные задачи со спиннером
+	if len(actives) > 0 {
+		for idx := range actives {
+			buf.WriteString(clearLine)
+			buf.WriteByte('[')
+			buf.WriteString(frame)
+			buf.WriteString("] ")
+			if actives[idx].eventType == EventTypeProgress {
+				buf.WriteString(renderProgressBar(actives[idx], filledStyle, emptyStyle))
+			} else {
+				buf.WriteString(actives[idx].viewName)
+			}
+			if idx < len(actives)-1 {
+				buf.WriteByte('\n')
+			}
+		}
+	}
+
+	if extra := prevActiveLines - len(actives); extra > 0 {
+		for i := 0; i < extra; i++ {
+			buf.WriteString("\n\033[K")
+		}
+		fmt.Fprintf(&buf, "\033[%dA", extra)
+	}
+
+	if len(actives) == 0 {
+		buf.WriteString(clearLine)
+	}
+
+	os.Stdout.WriteString(buf.String())
 }
 
-func renderProgressBar(t task, colors app.Colors) string {
+func renderProgressBar(t task, filledStyle, emptyStyle lipgloss.Style) string {
 	const width = 30
 	pct := t.progressPercent
 	if pct < 0 {
@@ -289,8 +313,6 @@ func renderProgressBar(t task, colors app.Colors) string {
 	}
 
 	filled := int(pct / 100 * float64(width))
-	filledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressEnd))
-	emptyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressStart))
 	bar := filledStyle.Render(strings.Repeat("█", filled)) + emptyStyle.Render(strings.Repeat("░", width-filled))
 	return fmt.Sprintf("[%s] %.0f%% %s", bar, pct, t.viewName)
 }
