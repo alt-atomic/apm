@@ -22,6 +22,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // contextKey is a custom type for context keys to avoid collisions
@@ -30,14 +31,46 @@ type contextKey string
 const TransactionKey contextKey = "transaction"
 
 // RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
-func RunCommand(ctx context.Context, command string) (string, string, error) {
-	app.Log.Debug("run command: ", command)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+func RunCommand(ctx context.Context, args []string) (string, string, error) {
+	app.Log.Debug("run command: ", strings.Join(args, " "))
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	return stdout.String(), stderr.String(), err
+}
+
+// BuildDistroboxArgs строит массив аргументов из commandPrefix и дополнительных аргументов.
+func BuildDistroboxArgs(commandPrefix string, args ...string) []string {
+	var result []string
+	if commandPrefix != "" {
+		result = append(result, strings.Fields(commandPrefix)...)
+	}
+	result = append(result, args...)
+	return result
+}
+
+// FilterLines фильтрует строки вывода, оставляя только содержащие substr.
+func FilterLines(output, substr string) string {
+	var result []string
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, substr) {
+			result = append(result, line)
+		}
+	}
+	return strings.Join(result, "\n")
+}
+
+// FilterLinesPrefix фильтрует строки, оставляя начинающиеся с prefix.
+func FilterLinesPrefix(output, prefix string) string {
+	var result []string
+	for _, line := range strings.Split(output, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			result = append(result, line)
+		}
+	}
+	return strings.Join(result, "\n")
 }
 
 // IsRunningInContainer проверка, запущен ли apm внутри контейнера

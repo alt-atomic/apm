@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"sort"
 	"strings"
 )
 
@@ -43,13 +44,13 @@ func NewAltProvider(servicePackage *PackageService, commandPrefix string) *AltPr
 
 // GetPackages обновляет базу пакетов, выполняет поиск и отмечает установленные пакеты.
 func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
-	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get update", p.commandPrefix, containerInfo.ContainerName)
-	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
+	updateArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "update")
+	if _, stderr, err := helper.RunCommand(ctx, updateArgs); err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
-	command := fmt.Sprintf("%s distrobox enter %s -- apt-cache dumpavail", p.commandPrefix, containerInfo.ContainerName)
-	cmd := exec.Command("sh", "-c", command)
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "apt-cache", "dumpavail")
+	cmd := exec.Command(args[0], args[1:]...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -160,20 +161,26 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 	return packages, nil
 }
 
-// RemovePackage удаляет указанный пакет с помощью pacman -R.
+// RemovePackage удаляет указанный пакет с помощью apt-get remove.
 func (p *AltProvider) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get remove -y %s", p.commandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(ctx, cmdStr)
+	if err := validatePackageName(packageName); err != nil {
+		return err
+	}
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "remove", "-y", packageName)
+	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
 	return nil
 }
 
-// InstallPackage устанавливает указанный пакет с помощью pacman -S.
+// InstallPackage устанавливает указанный пакет с помощью apt-get install.
 func (p *AltProvider) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo apt-get install -y %s", p.commandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(ctx, cmdStr)
+	if err := validatePackageName(packageName); err != nil {
+		return err
+	}
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "install", "-y", packageName)
+	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
@@ -194,26 +201,46 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 		return paths
 	}
 
-	command := fmt.Sprintf("%s distrobox enter %s -- rpm -ql %s | grep '%s'", p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
-	stdout, stderr, err := helper.RunCommand(ctx, command)
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", packageName)
+	stdout, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
 
-	paths := parseOutput(stdout)
+	filtered := helper.FilterLines(stdout, filePath)
+	paths := parseOutput(filtered)
 	if len(paths) == 0 {
-		fallbackCommand := fmt.Sprintf("%s distrobox enter %s -- rpm -qa | grep -E '^%s' | xargs rpm -ql | grep '%s' | sort",
-			p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
-		fallbackStdout, fallbackStderr, fallbackErr := helper.RunCommand(ctx, fallbackCommand)
-		if fallbackErr != nil {
-			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
+		qaArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qa")
+		qaStdout, qaStderr, qaErr := helper.RunCommand(ctx, qaArgs)
+		if qaErr != nil {
+			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), qaStderr, qaErr.Error())
 			return []string{}, nil
 		}
 
-		fallbackPaths := parseOutput(fallbackStdout)
-		if len(fallbackPaths) > 0 {
-			app.Log.Debugf(app.T_("Fallback search found %d files"), len(fallbackPaths))
-			return fallbackPaths, nil
+		matchedPackages := helper.FilterLinesPrefix(qaStdout, packageName)
+		var allPaths []string
+		for _, pkg := range strings.Split(matchedPackages, "\n") {
+			pkg = strings.TrimSpace(pkg)
+			if pkg == "" {
+				continue
+			}
+			qlArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", pkg)
+			qlStdout, _, qlErr := helper.RunCommand(ctx, qlArgs)
+			if qlErr != nil {
+				continue
+			}
+			filteredLines := helper.FilterLines(qlStdout, filePath)
+			for _, line := range strings.Split(filteredLines, "\n") {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
+					allPaths = append(allPaths, trimmed)
+				}
+			}
+		}
+		sort.Strings(allPaths)
+		if len(allPaths) > 0 {
+			app.Log.Debugf(app.T_("Fallback search found %d files"), len(allPaths))
+			return allPaths, nil
 		}
 	}
 
@@ -222,8 +249,8 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 
 // GetPackageOwner определяет пакет-владельца файла через rpm -qf.
 func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
-	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qf --queryformat '%%{NAME}' %s", p.commandPrefix, containerInfo.ContainerName, filePath)
-	stdout, stderr, err := helper.RunCommand(ctx, command)
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qf", "--queryformat", "%{NAME}", filePath)
+	stdout, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 		return "", err
@@ -233,8 +260,8 @@ func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo Contain
 
 // getInstalledPackages возвращает карту установленных пакетов
 func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]string, error) {
-	command := fmt.Sprintf("%s distrobox enter %s -- rpm -qia", p.commandPrefix, containerInfo.ContainerName)
-	cmd := exec.Command("sh", "-c", command)
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qia")
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Env = []string{"LC_ALL=C"}
 
 	output, err := cmd.CombinedOutput()

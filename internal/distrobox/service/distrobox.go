@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -53,8 +54,8 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerList))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerList))
 
-	command := fmt.Sprintf("%s distrobox ls", d.commandPrefix)
-	stdout, stderr, err := helper.RunCommand(ctx, command)
+	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "ls")
+	stdout, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return nil, errors.New(app.T_("Failed to retrieve the list of containers: ") + stderr)
 	}
@@ -125,44 +126,49 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 		suffix = "-d"
 	}
 
-	var commands []string
+	var commandArgs [][]string
 
 	// Обрабатываем desktop приложения
 	for _, path := range desktopPaths {
-		appCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export --app %s %s",
-			d.commandPrefix, containerInfo.ContainerName, path, suffix)
-		commands = append(commands, appCommand)
+		args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "--app", path)
+		if suffix != "" {
+			args = append(args, suffix)
+		}
+		commandArgs = append(commandArgs, args)
 	}
 
 	// Обрабатываем консольные приложения
 	for _, path := range consolePaths {
-		pathCommand := fmt.Sprintf("%s distrobox enter %s -- distrobox-export -b %s %s",
-			d.commandPrefix, containerInfo.ContainerName, path, suffix)
-		commands = append(commands, pathCommand)
+		args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "-b", path)
+		if suffix != "" {
+			args = append(args, suffix)
+		}
+		commandArgs = append(commandArgs, args)
 	}
 
 	// Выполняем все команды параллельно
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(commands))
+	errChan := make(chan error, len(commandArgs))
 
-	for _, cmdStr := range commands {
+	for _, cmdArgs := range commandArgs {
 		wg.Add(1)
-		go func(command string) {
+		go func(args []string) {
 			defer wg.Done()
-			cmd := exec.Command("sh", "-c", command)
+			cmd := exec.Command(args[0], args[1:]...)
 			var stdout, stderr bytes.Buffer
 			cmd.Stdout = &stdout
 			cmd.Stderr = &stderr
 
 			if err := cmd.Run(); err != nil {
 				stderrStr := strings.TrimSpace(stderr.String())
+				cmdStr := strings.Join(args, " ")
 				if stderrStr != "" {
-					errChan <- fmt.Errorf(app.T_("Error executing command %q: %s"), command, stderrStr)
+					errChan <- fmt.Errorf(app.T_("Error executing command %q: %s"), cmdStr, stderrStr)
 				} else {
-					errChan <- fmt.Errorf(app.T_("Error executing command %q: %v"), command, err)
+					errChan <- fmt.Errorf(app.T_("Error executing command %q: %v"), cmdStr, err)
 				}
 			}
-		}(cmdStr)
+		}(cmdArgs)
 	}
 
 	wg.Wait()
@@ -177,8 +183,8 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 // fetchOsInfo выполняет команду для получения информации об ОС контейнера
 // и возвращает объект ContainerInfo.
 func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, error) {
-	command := fmt.Sprintf("%s distrobox enter %s -- cat /etc/os-release", d.commandPrefix, containerName)
-	cmd := exec.Command("sh", "-c", command)
+	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "enter", containerName, "--", "cat", "/etc/os-release")
+	cmd := exec.Command(args[0], args[1:]...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -231,8 +237,6 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 }
 
 // GetContainerOsInfo запрос информации о контейнере.
-// Зачем мы запрашиваем список контейнеров внутри? Потому что distrobox будет создавать контейнер автоматически
-// если не указать правильно название.
 func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerInfo))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerInfo))
@@ -263,6 +267,18 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroCreateContainer))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroCreateContainer))
 
+	if err := validateContainerName(containerName); err != nil {
+		return ContainerInfo{}, err
+	}
+	if err := validateImageRef(image); err != nil {
+		return ContainerInfo{}, err
+	}
+	if addPkg != "" {
+		if err := validatePackageList(addPkg); err != nil {
+			return ContainerInfo{}, err
+		}
+	}
+
 	containers, errContainerList := d.GetContainerList(ctx, false)
 	if errContainerList != nil {
 		app.Log.Error(errContainerList.Error())
@@ -277,30 +293,21 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 		}
 	}
 
-	// Формирование базовой части команды
-	cmdParts := []string{
-		d.commandPrefix,
-		"distrobox",
-		"create",
-		"-i", image,
-		"-n", containerName,
-		"--yes",
-	}
+	// Формирование аргументов команды без shell
+	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "create", "-i", image, "-n", containerName, "--yes")
 
 	// Добавляем параметр --additional-packages, если переменная addPkg не пустая
 	if addPkg != "" {
-		cmdParts = append(cmdParts, "--additional-packages", fmt.Sprintf("'%s'", addPkg))
+		args = append(args, "--additional-packages", addPkg)
 	}
 
 	// Добавляем параметр --init-hooks, если переменная hook не пустая
 	if hook != "" {
-		cmdParts = append(cmdParts, "--init-hooks", fmt.Sprintf("'%s'", hook))
+		args = append(args, "--init-hooks", hook)
 	}
 
-	command := strings.Join(cmdParts, " ")
-
-	app.Log.Debug(command)
-	cmd := exec.Command("sh", "-c", command)
+	app.Log.Debug(strings.Join(args, " "))
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -318,21 +325,76 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroRemoveContainer))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroRemoveContainer))
-	command := fmt.Sprintf("%s distrobox rm --yes --force %s", d.commandPrefix, containerName)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	if err := validateContainerName(containerName); err != nil {
+		return ContainerInfo{}, err
+	}
 
 	osInfo, err := d.GetContainerOsInfo(ctx, containerName)
 	if err != nil {
 		return osInfo, err
 	}
 
+	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "rm", "--yes", "--force", containerName)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
 	if err = cmd.Run(); err != nil {
 		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to delete container %s: %v, stderr: %s"), containerName, err, stderr.String())
 	}
 
 	return osInfo, nil
+}
+
+var (
+	packageNameRegex   = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.+:-]*$`)
+	containerNameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
+	imageRefRegex      = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_./:@-]*$`)
+)
+
+// validatePackageName проверяет имя пакета на допустимые символы.
+func validatePackageName(name string) error {
+	if !packageNameRegex.MatchString(name) {
+		return fmt.Errorf(app.T_("Invalid package name: %q"), name)
+	}
+	return nil
+}
+
+// validateContainerName проверяет имя контейнера на допустимые символы.
+func validateContainerName(name string) error {
+	if !containerNameRegex.MatchString(name) {
+		return fmt.Errorf(app.T_("Invalid container name: %q"), name)
+	}
+	return nil
+}
+
+// validateImageRef проверяет ссылку на образ на допустимые символы.
+func validateImageRef(ref string) error {
+	if !imageRefRegex.MatchString(ref) {
+		return fmt.Errorf(app.T_("Invalid image reference: %q"), ref)
+	}
+	return nil
+}
+
+// validatePackageList проверяет список пакетов (через пробел) на допустимые символы.
+func validatePackageList(pkgList string) error {
+	for _, pkg := range strings.Fields(pkgList) {
+		if err := validatePackageName(pkg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// contains проверяет, содержится ли значение в срезе.
+func contains(slice []string, val string) bool {
+	for _, s := range slice {
+		if s == val {
+			return true
+		}
+	}
+	return false
 }

@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -42,14 +43,14 @@ func NewArchProvider(servicePackage *PackageService, commandPrefix string) *Arch
 // GetPackages обновляет базу пакетов и выполняет поиск:
 func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	// Обновляем базу пакетов и базу владельцев файлов.
-	updateCmd := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Suy --noconfirm", p.commandPrefix, containerInfo.ContainerName)
-	if _, stderr, err := helper.RunCommand(ctx, updateCmd); err != nil {
+	updateArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "pacman", "-Suy", "--noconfirm")
+	if _, stderr, err := helper.RunCommand(ctx, updateArgs); err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
 	// Получаем пакеты из официальных репозиториев
-	commandSs := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Ss", p.commandPrefix, containerInfo.ContainerName)
-	stdoutSs, stderrSs, err := helper.RunCommand(ctx, commandSs)
+	searchArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "pacman", "-Ss")
+	stdoutSs, stderrSs, err := helper.RunCommand(ctx, searchArgs)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to search packages (pacman -Ss): %v, stderr: %s"), err, stderrSs)
 	}
@@ -75,8 +76,11 @@ func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerI
 
 // RemovePackage удаляет указанный пакет с помощью pacman -R.
 func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -Rs --noconfirm %s", p.commandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(ctx, cmdStr)
+	if err := validatePackageName(packageName); err != nil {
+		return err
+	}
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "pacman", "-Rs", "--noconfirm", packageName)
+	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
@@ -85,8 +89,11 @@ func (p *ArchProvider) RemovePackage(ctx context.Context, containerInfo Containe
 
 // InstallPackage устанавливает указанный пакет с помощью pacman -S.
 func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo ContainerInfo, packageName string) error {
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- sudo pacman -S --noconfirm %s", p.commandPrefix, containerInfo.ContainerName, packageName)
-	_, stderr, err := helper.RunCommand(ctx, cmdStr)
+	if err := validatePackageName(packageName); err != nil {
+		return err
+	}
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "pacman", "-S", "--noconfirm", packageName)
+	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
@@ -98,8 +105,8 @@ func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo Contain
 // затем, если не найден, выполняется поиск через pacman -F.
 func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, fileName string) (string, error) {
 	// Попытка через pacman -Qo.
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Qo %s", p.commandPrefix, containerInfo.ContainerName, fileName)
-	stdout, _, err := helper.RunCommand(ctx, cmdStr)
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Qo", fileName)
+	stdout, _, err := helper.RunCommand(ctx, args)
 	if err == nil {
 		ownerInfo := strings.TrimSpace(stdout)
 		const marker = " is owned by "
@@ -115,8 +122,8 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 	}
 
 	// Если не найдено, пробуем через pacman -F.
-	cmdStr = fmt.Sprintf("%s distrobox enter %s -- pacman -F %s", p.commandPrefix, containerInfo.ContainerName, fileName)
-	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
+	fArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-F", fileName)
+	stdout, stderr, err := helper.RunCommand(ctx, fArgs)
 	if err != nil {
 		return "", fmt.Errorf(app.T_("Failed to find a package for file '%s': %v, stderr: %s"), fileName, err, stderr)
 	}
@@ -161,26 +168,49 @@ func (p *ArchProvider) GetPathByPackageName(ctx context.Context, containerInfo C
 		return paths
 	}
 
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- pacman -Ql %s | grep '%s'", p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
-	stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
+	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Ql", packageName)
+	stdout, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
 
-	paths := parseOutput(stdout)
+	filtered := helper.FilterLines(stdout, filePath)
+	paths := parseOutput(filtered)
 	if len(paths) == 0 {
-		fallbackCommand := fmt.Sprintf("%s distrobox enter %s -- pacman -Qq | grep '^%s' | xargs pacman -Ql | grep '%s' | sort",
-			p.commandPrefix, containerInfo.ContainerName, packageName, filePath)
-		fallbackStdout, fallbackStderr, fallbackErr := helper.RunCommand(ctx, fallbackCommand)
-		if fallbackErr != nil {
-			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), fallbackStderr, fallbackErr.Error())
+		qqArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Qq")
+		qqStdout, qqStderr, qqErr := helper.RunCommand(ctx, qqArgs)
+		if qqErr != nil {
+			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), qqStderr, qqErr.Error())
 			return paths, nil
 		}
 
-		fallbackPaths := parseOutput(fallbackStdout)
-		if len(fallbackPaths) > 0 {
-			app.Log.Debugf(app.T_("Fallback search found %d files"), len(fallbackPaths))
-			return fallbackPaths, nil
+		matchedPackages := helper.FilterLinesPrefix(qqStdout, packageName)
+		var allPaths []string
+		for _, pkg := range strings.Split(matchedPackages, "\n") {
+			pkg = strings.TrimSpace(pkg)
+			if pkg == "" {
+				continue
+			}
+			qlArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Ql", pkg)
+			qlStdout, _, qlErr := helper.RunCommand(ctx, qlArgs)
+			if qlErr != nil {
+				continue
+			}
+			filteredLines := helper.FilterLines(qlStdout, filePath)
+			for _, line := range strings.Split(filteredLines, "\n") {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" && !strings.HasSuffix(trimmed, "/") {
+					parts := strings.Fields(trimmed)
+					if len(parts) > 1 {
+						allPaths = append(allPaths, parts[1])
+					}
+				}
+			}
+		}
+		sort.Strings(allPaths)
+		if len(allPaths) > 0 {
+			app.Log.Debugf(app.T_("Fallback search found %d files"), len(allPaths))
+			return allPaths, nil
 		}
 	}
 
@@ -212,11 +242,6 @@ func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([
 			continue
 		}
 
-		//repo := matches[1]
-		//if repo != "core" && repo != "extra" {
-		//	i++
-		//	continue
-		//}
 		pkgName := matches[2]
 		version := matches[3]
 		installed := strings.Contains(line, "[installed") || strings.Contains(line, "(установлено:")

@@ -553,7 +553,11 @@ func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 }
 
 // ImageSaveConfig - Проверить и сохранить новый конфиг image.yml
-func (w *DBusWrapper) ImageSaveConfig(config string) (string, *dbus.Error) {
+func (w *DBusWrapper) ImageSaveConfig(sender dbus.Sender, config string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
+	}
+
 	configObject := build.Config{}
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
 		return "", dbus.MakeFailedError(fmt.Errorf(app.T_("Failed to parse JSON: %w"), err))

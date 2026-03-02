@@ -82,8 +82,8 @@ func (s *SwCatIconService) copyDirFromContainer(ctx context.Context, src, dst st
 		return err
 	}
 	// Команда копирования из контейнера.
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- cp -r %s/. %s", s.commandPrefix, s.containerName, src, dst)
-	_, stderr, err := helper.RunCommand(ctx, cmdStr)
+	args := helper.BuildDistroboxArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cp", "-r", src+"/.", dst)
+	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Error copying from container: %v, stderr: %s"), err, stderr)
 	}
@@ -270,11 +270,10 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 			}
 		}
 	} else {
-		// Для контейнера используем команду find для файлов 1-го уровня.
-		cmdStr := fmt.Sprintf("%s distrobox enter %s -- find %s -maxdepth 1 -type f", s.commandPrefix, s.containerName, s.path)
-		stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
+		args := helper.BuildDistroboxArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "find", s.path, "-maxdepth", "1", "-type", "f")
+		stdout, stderr, err := helper.RunCommand(ctx, args)
 		if err != nil {
-			return nil, fmt.Errorf(app.T_("Error retrieving files in %s: %v, stderr: %s"), s.path, err, stderr)
+			return nil, fmt.Errorf(app.T_("Error retrieving files in %s (container %s): %v, stderr: %s"), s.path, s.containerName, err, stderr)
 		}
 		lines := strings.Split(strings.TrimSpace(stdout), "\n")
 		for _, line := range lines {
@@ -298,8 +297,8 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 				return nil, fmt.Errorf(app.T_("Failed to read file %s: %w"), fullPath, err)
 			}
 		} else {
-			cmdStr := fmt.Sprintf("%s distrobox enter %s -- cat %s", s.commandPrefix, s.containerName, fullPath)
-			stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
+			catArgs := helper.BuildDistroboxArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cat", fullPath)
+			stdout, stderr, err := helper.RunCommand(ctx, catArgs)
 			if err != nil {
 				return nil, fmt.Errorf(app.T_("Error executing command for file %s: %v, stderr: %s"), fullPath, err, stderr)
 			}
