@@ -53,6 +53,13 @@ type InfoResponse struct {
 	PackageInfo _package.Package `json:"packageInfo"`
 }
 
+// MultiInfoResponse структура ответа для MultiInfo метода
+type MultiInfoResponse struct {
+	Message  string             `json:"message"`
+	Packages []_package.Package `json:"packages"`
+	NotFound []string           `json:"notFound,omitempty"`
+}
+
 // ListResponse структура ответа для List метода
 type ListResponse struct {
 	Message    string             `json:"message"`

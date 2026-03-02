@@ -596,6 +596,65 @@ func (a *Actions) Info(ctx context.Context, packageName string) (*InfoResponse, 
 	}, nil
 }
 
+// MultiInfo возвращает информацию о нескольких пакетах одним запросом.
+func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiInfoResponse, error) {
+	if len(packageNames) == 0 {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Package list must not be empty")))
+	}
+
+	err := a.validateDB(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make([]string, 0, len(packageNames))
+	for _, name := range packageNames {
+		name = strings.TrimSpace(name)
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+
+	if len(names) == 0 {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Package list must not be empty")))
+	}
+
+	packages, err := a.serviceAptDatabase.GetPackagesByNames(ctx, names)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
+	}
+
+	foundNames := make(map[string]bool, len(packages))
+	for _, pkg := range packages {
+		foundNames[pkg.Name] = true
+	}
+
+	var missing []string
+	for _, name := range names {
+		if !foundNames[name] {
+			missing = append(missing, name)
+		}
+	}
+
+	var notFound []string
+	for _, name := range missing {
+		providesPackages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, map[string]interface{}{
+			"provides": name,
+		}, "", "", 1, 0)
+		if err != nil || len(providesPackages) == 0 {
+			notFound = append(notFound, name)
+			continue
+		}
+		packages = append(packages, providesPackages[0])
+	}
+
+	return &MultiInfoResponse{
+		Message:  fmt.Sprintf(app.T_("Found %d out of %d packages"), len(packages), len(names)),
+		Packages: packages,
+		NotFound: notFound,
+	}, nil
+}
+
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
 	Sort        string   `json:"sort"`

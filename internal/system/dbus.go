@@ -228,6 +228,20 @@ func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbu
 	return string(data), nil
 }
 
+// MultiInfo – Получить информацию о нескольких пакетах
+func (w *DBusWrapper) MultiInfo(packages []string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.MultiInfo(ctx, packages)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // CheckUpgrade – Проверить обновление
 func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {

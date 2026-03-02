@@ -346,6 +346,36 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	}))
 }
 
+// MultiInfo – Получить информацию о нескольких пакетах
+func (w *HTTPWrapper) MultiInfo(rw http.ResponseWriter, r *http.Request) {
+	body, err := w.parseBodyParams(r)
+	if err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+		return
+	}
+
+	var packages []string
+	if err = reply.UnmarshalField(body, "packages", &packages); err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+		return
+	}
+
+	full := r.URL.Query().Get("full") == "true"
+
+	ctx := w.ctxWithTransaction(r)
+	resp, err := w.actions.MultiInfo(ctx, packages)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+
+	w.writeJSON(rw, reply.OK(map[string]interface{}{
+		"message":  resp.Message,
+		"packages": w.actions.FormatPackageOutput(resp.Packages, full),
+		"notFound": resp.NotFound,
+	}))
+}
+
 // List – Получить список пакетов
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
@@ -635,6 +665,7 @@ func (w *HTTPWrapper) RegisterRoutes(mux *http.ServeMux, isAtomic bool) {
 	// Packages - информация
 	mux.HandleFunc("GET /api/v1/packages/filter-fields", w.GetFilterFields)
 	mux.HandleFunc("GET /api/v1/packages/search", w.Search)
+	mux.HandleFunc("POST /api/v1/packages/info", w.MultiInfo)
 	mux.HandleFunc("GET /api/v1/packages/{name}", w.Info)
 	mux.HandleFunc("GET /api/v1/packages", w.List)
 
@@ -737,6 +768,21 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			Summary:      "Получить информацию о пакете",
 			Tags:         []string{"packages"},
 			PathParams:   []string{"name"},
+			QueryParams: []http_server.QueryParam{
+				{Name: "full", Type: "boolean", Required: false, Description: "Полный формат вывода"},
+			},
+		},
+		{
+			Method:       "MultiInfo",
+			HTTPMethod:   "POST",
+			HTTPPath:     "/api/v1/packages/info",
+			ResponseType: reflect.TypeOf(MultiInfoResponse{}),
+			Permission:   "read",
+			Summary:      "Получить информацию о нескольких пакетах",
+			Tags:         []string{"packages"},
+			ParamMappings: []http_server.ParamMapping{
+				{Name: "packages", Source: "body", Type: "[]string", ArgIndex: 1},
+			},
 			QueryParams: []http_server.QueryParam{
 				{Name: "full", Type: "boolean", Required: false, Description: "Полный формат вывода"},
 			},
