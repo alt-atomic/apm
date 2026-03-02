@@ -20,6 +20,7 @@ import (
 	"apm/internal/common/app"
 	"errors"
 	"os"
+	"slices"
 	"sync"
 
 	"github.com/goccy/go-yaml"
@@ -109,20 +110,20 @@ func (s *TemporaryConfigService) generateDefaultConfig() (TemporaryConfig, error
 
 // IsInstalled проверяет наличие пакета в списке для установки.
 func (s *TemporaryConfigService) IsInstalled(pkg string) bool {
-	return contains(s.Config.Packages.Install, pkg)
+	return slices.Contains(s.Config.Packages.Install, pkg)
 }
 
 // IsRemoved проверяет наличие пакета в списке для удаления.
 func (s *TemporaryConfigService) IsRemoved(pkg string) bool {
-	return contains(s.Config.Packages.Remove, pkg)
+	return slices.Contains(s.Config.Packages.Remove, pkg)
 }
 
 // AddInstallPackage добавляет пакет в список для установки и сохраняет изменения в файл.
 func (s *TemporaryConfigService) AddInstallPackage(pkg string) error {
-	if contains(s.Config.Packages.Install, pkg) {
+	if slices.Contains(s.Config.Packages.Install, pkg) {
 		return nil
 	}
-	if contains(s.Config.Packages.Remove, pkg) {
+	if slices.Contains(s.Config.Packages.Remove, pkg) {
 		s.Config.Packages.Remove = removeElement(s.Config.Packages.Remove, pkg)
 	}
 	s.Config.Packages.Install = append(s.Config.Packages.Install, pkg)
@@ -131,10 +132,10 @@ func (s *TemporaryConfigService) AddInstallPackage(pkg string) error {
 
 // AddRemovePackage добавляет пакет в список для удаления и сохраняет изменения в файл.
 func (s *TemporaryConfigService) AddRemovePackage(pkg string) error {
-	if contains(s.Config.Packages.Remove, pkg) {
+	if slices.Contains(s.Config.Packages.Remove, pkg) {
 		return nil
 	}
-	if contains(s.Config.Packages.Install, pkg) {
+	if slices.Contains(s.Config.Packages.Install, pkg) {
 		s.Config.Packages.Install = removeElement(s.Config.Packages.Install, pkg)
 	}
 	s.Config.Packages.Remove = append(s.Config.Packages.Remove, pkg)
@@ -162,14 +163,4 @@ func removeElement(slice []string, element string) []string {
 		}
 	}
 	return newSlice
-}
-
-// contains проверяет, содержит ли срез slice значение s.
-func contains(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }

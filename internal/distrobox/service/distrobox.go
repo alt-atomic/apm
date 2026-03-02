@@ -388,13 +388,3 @@ func validatePackageList(pkgList string) error {
 	}
 	return nil
 }
-
-// contains проверяет, содержится ли значение в срезе.
-func contains(slice []string, val string) bool {
-	for _, s := range slice {
-		if s == val {
-			return true
-		}
-	}
-	return false
-}

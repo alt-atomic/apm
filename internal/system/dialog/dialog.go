@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -451,15 +452,15 @@ func (m model) statusPackage(pkg _package.Package) string {
 
 	// Проверяем все возможные имена во всех списках изменений
 	for _, name := range possibleNames {
-		if contains(m.pckChange.ExtraInstalled, name) || contains(m.pckChange.NewInstalledPackages, name) {
+		if slices.Contains(m.pckChange.ExtraInstalled, name) || slices.Contains(m.pckChange.NewInstalledPackages, name) {
 			return m.getInstallStyle().Render(app.T_("Will be installed"))
 		}
 
-		if contains(m.pckChange.UpgradedPackages, name) {
+		if slices.Contains(m.pckChange.UpgradedPackages, name) {
 			return m.getInstallStyle().Render(app.T_("Will be updated"))
 		}
 
-		if contains(m.pckChange.RemovedPackages, name) {
+		if slices.Contains(m.pckChange.RemovedPackages, name) {
 			return m.getDeleteStyle().Render(app.T_("Will be removed"))
 		}
 	}
@@ -467,14 +468,6 @@ func (m model) statusPackage(pkg _package.Package) string {
 	return m.getShortcutStyle().Render(app.T_("No"))
 }
 
-func contains(slice []string, pkg string) bool {
-	for _, v := range slice {
-		if v == pkg {
-			return true
-		}
-	}
-	return false
-}
 
 func (m model) formatDependencies(depends []string, availableWidth int) string {
 	var filtered []string

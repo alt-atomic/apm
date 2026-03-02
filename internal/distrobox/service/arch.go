@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -266,7 +267,7 @@ func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([
 			Version:     version,
 			Description: description,
 			Installed:   installed,
-			Exporting:   contains(exportingPackages, pkgName),
+			Exporting:   slices.Contains(exportingPackages, pkgName),
 			Manager:     "pacman",
 		})
 		i++

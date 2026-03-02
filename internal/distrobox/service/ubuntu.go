@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -210,7 +211,7 @@ func (p *UbuntuProvider) parseAptOutput(output string, exportingPackages []strin
 				Version:     match[3],
 				Description: strings.TrimSpace(match[5]),
 				Installed:   isInstalled,
-				Exporting:   contains(exportingPackages, match[1]),
+				Exporting:   slices.Contains(exportingPackages, match[1]),
 			}
 		} else {
 			if currentPkg != nil {
