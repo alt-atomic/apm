@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -51,27 +52,32 @@ func DefaultConfig() Config {
 
 // Server HTTP сервер APM
 type Server struct {
-	config    Config
-	appConfig *app.Config
-	mux       *http.ServeMux
-	server    *http.Server
-	listener  net.Listener
-	registry  *Registry
+	config      Config
+	appConfig   *app.Config
+	mux         *http.ServeMux
+	server      *http.Server
+	listener    net.Listener
+	registry    *Registry
+	parsedToken tokenInfo
 }
 
 // tokenInfo информация о токене
 type tokenInfo struct {
-	permission string // read или manage
-	token      string // сам токен
+	permission string
+	token      string
 }
 
 // NewServer создаёт новый HTTP сервер
 func NewServer(config Config, appConfig *app.Config) *Server {
-	return &Server{
+	s := &Server{
 		config:    config,
 		appConfig: appConfig,
 		mux:       http.NewServeMux(),
 	}
+	if config.APIToken != "" {
+		s.parsedToken = parseToken(config.APIToken)
+	}
+	return s
 }
 
 // GetMux возвращает маршрутизатор для регистрации обработчиков
@@ -133,23 +139,10 @@ func (s *Server) findEndpointPermission(path string, method string) string {
 
 // checkPermission проверяет, достаточно ли прав у токена
 func checkPermission(tokenPerm string, requiredPerm string) bool {
-	// manage имеет доступ ко всему
-	if tokenPerm == "manage" {
+	if requiredPerm == "" || tokenPerm == "manage" {
 		return true
 	}
-	// read имеет доступ только к read
-	if tokenPerm == "read" && requiredPerm == "read" {
-		return true
-	}
-	// read не имеет доступа к manage
-	if tokenPerm == "read" && requiredPerm == "manage" {
-		return false
-	}
-	// Если разрешение не указано, пропускаем
-	if requiredPerm == "" {
-		return true
-	}
-	return false
+	return tokenPerm == requiredPerm
 }
 
 // authMiddleware проверяет авторизацию
@@ -163,7 +156,6 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Проверяем, является ли путь публичным
 		for _, path := range publicPaths {
 			if r.URL.Path == path {
 				next.ServeHTTP(w, r)
@@ -171,36 +163,36 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		// Если токен не настроен, пропускаем все запросы
-		if s.config.APIToken == "" {
+		if s.parsedToken.token == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Получаем токен из заголовка
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			writeUnauthorized(w, "Authorization header is required")
+		// Получаем токен из заголовка или query-параметра
+		tokenStr := ""
+		if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+			tokenStr = authHeader
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		} else if t := r.URL.Query().Get("token"); t != "" {
+			tokenStr = t
+		}
+
+		if tokenStr == "" {
+			writeUnauthorized(w, "Authorization header or token query parameter is required")
 			return
 		}
 
-		// Поддерживаем формат "Bearer <token>" и просто "<token>"
-		tokenStr := authHeader
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
-		}
-
-		configToken := parseToken(s.config.APIToken)
-		if subtle.ConstantTimeCompare([]byte(tokenStr), []byte(configToken.token)) != 1 {
+		if subtle.ConstantTimeCompare([]byte(tokenStr), []byte(s.parsedToken.token)) != 1 {
 			writeUnauthorized(w, "Invalid API token")
 			return
 		}
 
-		// Находим требуемое разрешение для endpoint
 		requiredPerm := s.findEndpointPermission(r.URL.Path, r.Method)
 
-		if !checkPermission(configToken.permission, requiredPerm) {
-			writeForbidden(w, "Insufficient permissions. Required: "+requiredPerm+", provided: "+configToken.permission)
+		if !checkPermission(s.parsedToken.permission, requiredPerm) {
+			writeForbidden(w, "Insufficient permissions. Required: "+requiredPerm+", provided: "+s.parsedToken.permission)
 			return
 		}
 
@@ -213,7 +205,6 @@ func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		// Обёртка для захвата статус-кода
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 		next.ServeHTTP(wrapped, r)
@@ -228,9 +219,12 @@ func isAllowedOrigin(origin string) bool {
 	if origin == "" {
 		return true
 	}
-	return strings.HasPrefix(origin, "http://127.0.0.1") ||
-		strings.HasPrefix(origin, "http://localhost") ||
-		strings.HasPrefix(origin, "http://[::1]")
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	return host == "127.0.0.1" || host == "localhost" || host == "::1"
 }
 
 // corsMiddleware добавляет CORS заголовки
@@ -301,7 +295,7 @@ func (s *Server) Start(ctx context.Context) error {
 	app.Log.Info("HTTP server listening on http://" + s.config.ListenAddr)
 
 	go func() {
-		if err = s.server.Serve(s.listener); err != nil && !errors.Is(http.ErrServerClosed, err) {
+		if err = s.server.Serve(s.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			app.Log.Errorf("HTTP server error: %v", err)
 		}
 	}()

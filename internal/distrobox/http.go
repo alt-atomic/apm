@@ -19,79 +19,28 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
-	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // HTTPWrapper – обёртка для действий с distrobox, предназначенная для экспорта через HTTP.
 type HTTPWrapper struct {
-	actions   *Actions
-	ctx       context.Context
-	appConfig *app.Config
+	http_server.BaseHTTPWrapper
+	actions *Actions
 }
 
 // NewHTTPWrapper создаёт новую обёртку над actions
 func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTTPWrapper {
-	return &HTTPWrapper{actions: a, appConfig: appConfig, ctx: ctx}
-}
-
-// ctxWithTransaction создает контекст с transaction из запроса
-func (w *HTTPWrapper) ctxWithTransaction(r *http.Request) context.Context {
-	tx := r.Header.Get("X-Transaction-ID")
-	if tx == "" {
-		tx = r.URL.Query().Get("transaction")
+	return &HTTPWrapper{
+		BaseHTTPWrapper: http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
+		actions:         a,
 	}
-	return context.WithValue(w.ctx, helper.TransactionKey, tx)
-}
-
-// ctxWithTransactionOrGenerate создает контекст с transaction, генерируя его если не передан
-func (w *HTTPWrapper) ctxWithTransactionOrGenerate(r *http.Request) (context.Context, string) {
-	tx := r.Header.Get("X-Transaction-ID")
-	if tx == "" {
-		tx = r.URL.Query().Get("transaction")
-	}
-	if tx == "" {
-		tx = generateTransactionID()
-	}
-	return context.WithValue(w.ctx, helper.TransactionKey, tx), tx
-}
-
-// generateTransactionID генерирует уникальный ID транзакции
-func generateTransactionID() string {
-	b := make([]byte, 8)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
-}
-
-// writeJSON отправляет JSON ответ
-func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(rw).Encode(resp)
-}
-
-// parseBodyParams парсит параметры из тела запроса
-func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
-	var body map[string]json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		if errors.Is(err, io.EOF) {
-			return nil, errors.New("request body is required")
-		}
-		return nil, err
-	}
-	return body, nil
 }
 
 // Update – Обновить список пакетов в контейнере
@@ -102,32 +51,19 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	background := r.URL.Query().Get("background") == "true"
-
-	if background {
-		ctx, txID := w.ctxWithTransactionOrGenerate(r)
-		go func() {
-			resp, err := w.actions.Update(ctx, container)
-			reply.SendTaskResult(ctx, reply.EventDistroUpdate, resp, err)
-		}()
-
-		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
-			Message:     app.T_("Task started in background"),
-			Transaction: txID,
-		}))
+	if w.RunBackground(rw, r, reply.EventDistroUpdate, func(ctx context.Context) (interface{}, error) {
+		return w.actions.Update(ctx, container)
+	}) {
 		return
 	}
 
-	// Синхронное выполнение
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Update(ctx, container)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Info – Получить информацию о пакете
@@ -144,13 +80,13 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Info(ctx, container, name)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Search – Поиск пакетов по названию
@@ -164,13 +100,13 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Search(ctx, container, q)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // List – Получить список пакетов
@@ -211,18 +147,18 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		ForceUpdate: query.Get("forceUpdate") == "true",
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.List(ctx, params)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Install – Установить пакет
 func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -254,18 +190,18 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Remove – Удалить пакет
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -297,13 +233,13 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Remove(ctx, container, packageName, onlyExport)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // GetFilterFields – Получить доступные поля для фильтрации
@@ -314,13 +250,13 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.GetFilterFields(ctx, container)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // GetIcon – Получить иконку пакета
@@ -328,7 +264,7 @@ func (w *HTTPWrapper) GetIcon(rw http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	container := r.URL.Query().Get("container")
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	data, err := w.actions.GetIconByPackage(ctx, name, container)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
@@ -341,18 +277,18 @@ func (w *HTTPWrapper) GetIcon(rw http.ResponseWriter, r *http.Request) {
 
 // ContainerList – Получить список контейнеров
 func (w *HTTPWrapper) ContainerList(rw http.ResponseWriter, r *http.Request) {
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.ContainerList(ctx)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // ContainerAdd – Создать новый контейнер
 func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -384,31 +320,19 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	background := r.URL.Query().Get("background") == "true"
-	if background {
-		ctx, txID := w.ctxWithTransactionOrGenerate(r)
-		go func() {
-			resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
-			reply.SendTaskResult(ctx, reply.EventDistroContainerAdd, resp, err)
-		}()
-
-		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-		rw.WriteHeader(http.StatusAccepted)
-		_ = json.NewEncoder(rw).Encode(reply.OK(BackgroundTaskResponse{
-			Message:     app.T_("Task started in background"),
-			Transaction: txID,
-		}))
+	if w.RunBackground(rw, r, reply.EventDistroContainerAdd, func(ctx context.Context) (interface{}, error) {
+		return w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
+	}) {
 		return
 	}
 
-	// Синхронное выполнение
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // ContainerRemove – Удалить контейнер
@@ -419,13 +343,13 @@ func (w *HTTPWrapper) ContainerRemove(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.ContainerRemove(ctx, name)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // RegisterRoutes регистрирует все HTTP маршруты в mux

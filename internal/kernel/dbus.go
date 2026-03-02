@@ -22,11 +22,7 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"time"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -49,13 +45,6 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 		return dbus.MakeFailedError(err)
 	}
 	return nil
-}
-
-// generateTransactionID генерирует уникальный ID транзакции
-func generateTransactionID() string {
-	b := make([]byte, 8)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
 }
 
 // ListKernels – Получить список доступных ядер
@@ -93,7 +82,7 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -133,7 +122,7 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -173,7 +162,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -213,7 +202,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -253,7 +242,7 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -293,7 +282,7 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -347,7 +336,7 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -387,7 +376,7 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -427,7 +416,7 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -467,7 +456,7 @@ func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, mo
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {

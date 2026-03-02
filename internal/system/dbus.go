@@ -56,7 +56,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -97,7 +97,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -154,7 +154,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -249,7 +249,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -290,7 +290,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -331,7 +331,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -372,7 +372,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -430,7 +430,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -488,7 +488,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 	}
 
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {

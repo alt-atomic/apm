@@ -19,72 +19,44 @@ package repo
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
-	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
 	"context"
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"reflect"
 )
 
 // HTTPWrapper – обёртка для действий с репозиториями, предназначенная для экспорта через HTTP.
 type HTTPWrapper struct {
-	actions   *Actions
-	ctx       context.Context
-	appConfig *app.Config
+	http_server.BaseHTTPWrapper
+	actions *Actions
 }
 
 // NewHTTPWrapper создаёт новую обёртку над actions
 func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTTPWrapper {
-	return &HTTPWrapper{actions: a, appConfig: appConfig, ctx: ctx}
-}
-
-// ctxWithTransaction создает контекст с transaction из запроса
-func (w *HTTPWrapper) ctxWithTransaction(r *http.Request) context.Context {
-	tx := r.Header.Get("X-Transaction-ID")
-	if tx == "" {
-		tx = r.URL.Query().Get("transaction")
+	return &HTTPWrapper{
+		BaseHTTPWrapper: http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
+		actions:         a,
 	}
-	return context.WithValue(w.ctx, helper.TransactionKey, tx)
-}
-
-// writeJSON отправляет JSON ответ
-func (w *HTTPWrapper) writeJSON(rw http.ResponseWriter, resp reply.APIResponse) {
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(rw).Encode(resp)
-}
-
-// parseBodyParams парсит параметры из тела запроса
-func (w *HTTPWrapper) parseBodyParams(r *http.Request) (map[string]json.RawMessage, error) {
-	var body map[string]json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		if errors.Is(err, io.EOF) {
-			return nil, errors.New("request body is required")
-		}
-		return nil, err
-	}
-	return body, nil
 }
 
 // List – Получить список репозиториев
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	all := r.URL.Query().Get("all") == "true"
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.List(ctx, all)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Add – Добавить репозиторий
 func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -110,18 +82,18 @@ func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Add(ctx, []string{source}, date)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // CheckAdd – Симулировать добавление репозитория
 func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -147,18 +119,18 @@ func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.CheckAdd(ctx, []string{source}, date)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Remove – Удалить репозиторий
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -184,18 +156,18 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Remove(ctx, []string{source}, date)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // CheckRemove – Симулировать удаление репозитория
 func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -221,18 +193,18 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.CheckRemove(ctx, []string{source}, date)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Set – Установить ветку
 func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -258,18 +230,18 @@ func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Set(ctx, branch, date)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // CheckSet – Симулировать установку ветки
 func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
-	body, err := w.parseBodyParams(r)
+	body, err := w.ParseBodyParams(r)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -295,72 +267,72 @@ func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.CheckSet(ctx, branch, date)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // Clean – Удалить временные репозитории (cdrom, task)
 func (w *HTTPWrapper) Clean(rw http.ResponseWriter, r *http.Request) {
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Clean(ctx)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // CheckClean – Симулировать удаление временных репозиториев
 func (w *HTTPWrapper) CheckClean(rw http.ResponseWriter, r *http.Request) {
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.CheckClean(ctx)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // GetBranches – Получить список доступных веток
 func (w *HTTPWrapper) GetBranches(rw http.ResponseWriter, r *http.Request) {
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.GetBranches(ctx)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // GetTaskPackages – Получить список пакетов из задачи
 func (w *HTTPWrapper) GetTaskPackages(rw http.ResponseWriter, r *http.Request) {
 	taskNum := r.PathValue("taskNum")
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.GetTaskPackages(ctx, taskNum)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // TestTask – Тестировать пакеты из задачи
 func (w *HTTPWrapper) TestTask(rw http.ResponseWriter, r *http.Request) {
 	taskNum := r.PathValue("taskNum")
 
-	ctx := w.ctxWithTransaction(r)
+	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.TestTask(ctx, taskNum)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
 	}
-	w.writeJSON(rw, reply.OK(resp))
+	w.WriteJSON(rw, reply.OK(resp))
 }
 
 // RegisterRoutes регистрирует все HTTP маршруты в mux

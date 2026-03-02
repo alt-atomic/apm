@@ -20,15 +20,26 @@ import (
 	"apm/internal/common/app"
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // contextKey is a custom type for context keys to avoid collisions
 type contextKey string
 
 const TransactionKey contextKey = "transaction"
+
+// GenerateTransactionID генерирует уникальный ID транзакции
+func GenerateTransactionID() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return fmt.Sprintf("%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
+}
 
 // RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
 func RunCommand(ctx context.Context, args []string) (string, string, error) {

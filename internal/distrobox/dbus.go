@@ -68,7 +68,7 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 // Update - Обновление пакетов
 func (w *DBusWrapper) Update(container string, transaction string, background bool) (string, *dbus.Error) {
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
@@ -202,7 +202,7 @@ func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 // ContainerAdd - Добавить контейнер
 func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks string, transaction string, background bool) (string, *dbus.Error) {
 	if transaction == "" {
-		transaction = generateTransactionID()
+		transaction = helper.GenerateTransactionID()
 	}
 
 	if background {
