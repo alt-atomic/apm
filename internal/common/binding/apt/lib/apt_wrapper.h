@@ -274,8 +274,6 @@ bool apt_test_findpkg(const AptCache *cache, const char *package_name);
 // Configuration
 AptErrorCode apt_set_config(const char *key, const char *value);
 
-const char *apt_get_config(const char *key, const char *default_value);
-
 // Force cleanup functions
 void apt_force_unlock();
 

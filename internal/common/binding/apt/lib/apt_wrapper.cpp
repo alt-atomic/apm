@@ -842,18 +842,6 @@ AptErrorCode apt_set_config(const char *key, const char *value) {
     }
 }
 
-const char *apt_get_config(const char *key, const char *default_value) {
-    if (!key) return default_value;
-
-    try {
-        static std::string result;
-        result = _config->Find(key, default_value ? default_value : "");
-        return result.c_str();
-    } catch (const std::exception &) {
-        return default_value;
-    }
-}
-
 // Force unlock function to clean up hanging locks
 void apt_force_unlock() {
     try {

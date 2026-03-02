@@ -98,6 +98,24 @@ func parseToken(tokenStr string) tokenInfo {
 	}
 }
 
+// matchPath проверяет соответствие реального пути шаблону с параметрами
+func matchPath(pattern, path string) bool {
+	patternParts := strings.Split(pattern, "/")
+	pathParts := strings.Split(path, "/")
+	if len(patternParts) != len(pathParts) {
+		return false
+	}
+	for i, p := range patternParts {
+		if strings.HasPrefix(p, "{") && strings.HasSuffix(p, "}") {
+			continue
+		}
+		if p != pathParts[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // findEndpointPermission находит требуемое разрешение для endpoint
 func (s *Server) findEndpointPermission(path string, method string) string {
 	if s.registry == nil {
@@ -105,7 +123,7 @@ func (s *Server) findEndpointPermission(path string, method string) string {
 	}
 
 	for _, ep := range s.registry.GetHTTPEndpoints() {
-		if ep.HTTPPath == path && ep.HTTPMethod == method {
+		if ep.HTTPMethod == method && matchPath(ep.HTTPPath, path) {
 			return ep.Permission
 		}
 	}
@@ -171,14 +189,8 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
 		}
 
-		// Парсим токен (может быть в формате "permission:token")
-		parsedToken := parseToken(tokenStr)
-
-		// Парсим конфигурационный токен
 		configToken := parseToken(s.config.APIToken)
-
-		// Проверяем, что сам токен совпадает
-		if parsedToken.token != configToken.token {
+		if tokenStr != configToken.token {
 			writeUnauthorized(w, "Invalid API token")
 			return
 		}
@@ -186,9 +198,8 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		// Находим требуемое разрешение для endpoint
 		requiredPerm := s.findEndpointPermission(r.URL.Path, r.Method)
 
-		// Проверяем права доступа
-		if !checkPermission(parsedToken.permission, requiredPerm) {
-			writeForbidden(w, "Insufficient permissions. Required: "+requiredPerm+", provided: "+parsedToken.permission)
+		if !checkPermission(configToken.permission, requiredPerm) {
+			writeForbidden(w, "Insufficient permissions. Required: "+requiredPerm+", provided: "+configToken.permission)
 			return
 		}
 
