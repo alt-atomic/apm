@@ -272,10 +272,19 @@ func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return h.Hijack()
 }
 
+const maxRequestBodySize = 20 << 20
+
+// bodySizeLimitMiddleware ограничивает размер тела запроса
+func (s *Server) bodySizeLimitMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Start запускает HTTP сервер
 func (s *Server) Start(ctx context.Context) error {
-	// Применяем middleware
-	handler := s.corsMiddleware(s.loggingMiddleware(s.authMiddleware(s.mux)))
+	handler := s.corsMiddleware(s.loggingMiddleware(s.authMiddleware(s.bodySizeLimitMiddleware(s.mux))))
 	s.server = &http.Server{
 		Handler:      handler,
 		ReadTimeout:  s.config.ReadTimeout,
