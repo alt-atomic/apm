@@ -49,7 +49,7 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			return true // Разрешаем все origins для локального использования
+			return isAllowedOrigin(r.Header.Get("Origin"))
 		},
 	}
 )
