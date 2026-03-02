@@ -22,6 +22,7 @@ import (
 	"apm/internal/common/reply"
 	"bufio"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -190,7 +191,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		}
 
 		configToken := parseToken(s.config.APIToken)
-		if tokenStr != configToken.token {
+		if subtle.ConstantTimeCompare([]byte(tokenStr), []byte(configToken.token)) != 1 {
 			writeUnauthorized(w, "Invalid API token")
 			return
 		}
