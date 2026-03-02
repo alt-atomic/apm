@@ -62,7 +62,7 @@ colors:
 
 ## Тесты
 ```
-sudo meson test -C build go-test
+./scripts/test-container.sh all
 ```
 
 Общая справка:
