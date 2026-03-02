@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/godbus/dbus/v5"
@@ -103,8 +104,9 @@ func main() {
 					Value:   "127.0.0.1:8080",
 				},
 				&cli.StringFlag{
-					Name:  "api-token",
-					Usage: app.T_("API token for authentication"),
+					Name:    "api-token",
+					Usage:   app.T_("API token for authentication (prefer APM_API_TOKEN env)"),
+					Sources: cli.EnvVars("APM_API_TOKEN"),
 				},
 			},
 		},
@@ -120,8 +122,9 @@ func main() {
 					Value:   "127.0.0.1:8082",
 				},
 				&cli.StringFlag{
-					Name:  "api-token",
-					Usage: app.T_("API token for authentication"),
+					Name:    "api-token",
+					Usage:   app.T_("API token for authentication (prefer APM_API_TOKEN env)"),
+					Sources: cli.EnvVars("APM_API_TOKEN"),
 				},
 			},
 		},
@@ -499,15 +502,19 @@ func cliError(err error) {
 	_ = reply.CliResponse(ctx, reply.ErrorResponseFromError(err))
 }
 
-func cleanup() {
-	if appConfig != nil {
-		reply.StopSpinner(appConfig)
-		defer func(appConfig *app.Config) {
-			closeApp(appConfig)
-		}(appConfig)
-	}
+var cleanupOnce sync.Once
 
-	defer globalCancel()
+func cleanup() {
+	cleanupOnce.Do(func() {
+		if appConfig != nil {
+			reply.StopSpinner(appConfig)
+			defer func(appConfig *app.Config) {
+				closeApp(appConfig)
+			}(appConfig)
+		}
+
+		defer globalCancel()
+	})
 }
 
 func closeApp(appConfig *app.Config) {
