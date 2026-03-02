@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-02 17:08+0600\n"
+"POT-Creation-Date: 2026-03-03 02:38+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -28,8 +28,8 @@ msgid "error opening system database: %w"
 msgstr "Ошибка открытия системной базы данных: %w"
 
 #: internal/common/app/database.go:90 internal/common/wrapper/wrapper.go:64
-#: internal/kernel/actions.go:688 internal/system/actions.go:1016 main.go:301
-#: main.go:368
+#: internal/kernel/actions.go:688 internal/system/actions.go:1016 main.go:304
+#: main.go:371
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -119,8 +119,8 @@ msgstr "Файл пакета %s не синхронизирован"
 msgid "Trivial Only specified but this is not a trivial operation"
 msgstr "Указана только тривиальная операция, но это не тривиальная операция"
 
-#: internal/common/apt/errors.go:197 internal/system/dialog/dialog.go:94
-#: internal/system/dialog/dialog.go:100
+#: internal/common/apt/errors.go:197 internal/system/dialog/dialog.go:95
+#: internal/system/dialog/dialog.go:101
 #: internal/system/dialog/dialog_image.go:100
 #: internal/system/dialog/dialog_image.go:123
 msgid "Operation cancelled"
@@ -834,7 +834,7 @@ msgstr ". Возможно, вы искали: "
 msgid "module with id='%s'%s will be overriding%s"
 msgstr "модуль с id='%s'%s будет переопределять %s"
 
-#: internal/common/build/config.go:103 internal/system/service/temporary.go:79
+#: internal/common/build/config.go:103 internal/system/service/temporary.go:80
 msgid "Configuration not loaded"
 msgstr "Конфигурация не загружена"
 
@@ -1037,15 +1037,23 @@ msgstr "Ошибка удаления образа %s: %v, вывод: %s\n"
 msgid "Fetching layers %d/%d"
 msgstr "Получение слоёв %d/%d"
 
-#: internal/common/helper/polkit.go:100
+#: internal/common/helper/polkit.go:71
+msgid "Failed to get caller PID: %w"
+msgstr "Не удалось получить PID вызывающего процесса: %w"
+
+#: internal/common/helper/polkit.go:75
+msgid "Failed to get start time: %w"
+msgstr "Не удалось получить время запуска: %w"
+
+#: internal/common/helper/polkit.go:106
 msgid "polkit dbus failure: %w"
 msgstr "polkit dbus ошибка: %w"
 
-#: internal/common/helper/polkit.go:103
+#: internal/common/helper/polkit.go:109
 msgid "polkit unpack failure: %w"
 msgstr "polkit, ошибка распаковки: %w"
 
-#: internal/common/helper/polkit.go:123
+#: internal/common/helper/polkit.go:129
 #, c-format
 msgid "not authorized by polkit (action=%s)"
 msgstr "не авторизовано polkit (действие=%s)"
@@ -1168,23 +1176,23 @@ msgstr "Иконка не найдена для пакета %s"
 msgid "Failed to read directory %s: %w"
 msgstr "Не удалось прочитать директорию %s: %w"
 
-#: internal/common/icon/swcat.go:277
-msgid "Error retrieving files in %s: %v, stderr: %s"
-msgstr "Ошибка извлечения файлов в %s: %v, ошибка: %s"
+#: internal/common/icon/swcat.go:276
+msgid "Error retrieving files in %s (container %s): %v, stderr: %s"
+msgstr "Ошибка получения файлов в %s (контейнер %s): %v, ошибка: %s"
 
-#: internal/common/icon/swcat.go:298
+#: internal/common/icon/swcat.go:297
 msgid "Failed to read file %s: %w"
 msgstr "Не удалось прочитать файл %s: %w"
 
-#: internal/common/icon/swcat.go:304
+#: internal/common/icon/swcat.go:303
 msgid "Error executing command for file %s: %v, stderr: %s"
 msgstr "Ошибка выполнения команды для файла %s: %v, ошибка: %s"
 
-#: internal/common/icon/swcat.go:311
+#: internal/common/icon/swcat.go:310
 msgid "Failed to unpack file %s: %w"
 msgstr "Не удалось распаковать файл %s: %w"
 
-#: internal/common/icon/swcat.go:317
+#: internal/common/icon/swcat.go:316
 msgid "Error parsing XML file %s: %w"
 msgstr "Ошибка парсинга XML-файла %s: %w"
 
@@ -1394,7 +1402,7 @@ msgstr "Удаление пакетов"
 msgid "Simulate Remove packages"
 msgstr "Симуляция удаления пакетов"
 
-#: internal/common/reply/preloader.go:228
+#: internal/common/reply/preloader.go:229
 #, c-format
 msgid "Progress: %s completed"
 msgstr "Прогресс: %s завершён"
@@ -1446,12 +1454,12 @@ msgstr "Результат"
 msgid "Application Information"
 msgstr "Информация о приложении"
 
-#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:368
+#: internal/common/reply/translate.go:23 internal/system/dialog/dialog.go:369
 msgid "Downloaded Size"
 msgstr "Размер при загрузке"
 
 #: internal/common/reply/translate.go:25 internal/common/reply/translate.go:71
-#: internal/system/dialog/dialog.go:369
+#: internal/system/dialog/dialog.go:370
 msgid "Installed Size"
 msgstr "Размер при установке"
 
@@ -1480,8 +1488,8 @@ msgid "Package Information"
 msgstr "Информация о пакете"
 
 #. Создаем панели
-#: internal/common/reply/translate.go:39 internal/system/dialog/dialog.go:67
-#: internal/system/dialog/dialog.go:97
+#: internal/common/reply/translate.go:39 internal/system/dialog/dialog.go:68
+#: internal/system/dialog/dialog.go:98
 #: internal/system/dialog/dialog_image.go:332
 msgid "Install"
 msgstr "Установить"
@@ -1506,7 +1514,7 @@ msgstr "Дистрибутив"
 msgid "Container"
 msgstr "Контейнер"
 
-#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:406
+#: internal/common/reply/translate.go:51 internal/system/dialog/dialog.go:407
 msgid "Name"
 msgstr "Название"
 
@@ -1542,7 +1550,7 @@ msgstr "Версия"
 msgid "History"
 msgstr "История"
 
-#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:430
+#: internal/common/reply/translate.go:69 internal/system/dialog/dialog.go:431
 msgid "Dependencies"
 msgstr "Зависимости"
 
@@ -1566,7 +1574,7 @@ msgstr "Образ"
 msgid "Commands"
 msgstr "Команды"
 
-#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:409
+#: internal/common/reply/translate.go:83 internal/system/dialog/dialog.go:410
 msgid "Maintainer"
 msgstr "Сопровождающий"
 
@@ -1574,8 +1582,8 @@ msgstr "Сопровождающий"
 msgid "Installed Version"
 msgstr "Установленная версия"
 
-#: internal/common/reply/translate.go:87 internal/system/dialog/dialog.go:69
-#: internal/system/dialog/dialog.go:97
+#: internal/common/reply/translate.go:87 internal/system/dialog/dialog.go:70
+#: internal/system/dialog/dialog.go:98
 #: internal/system/dialog/dialog_image.go:333
 msgid "Remove"
 msgstr "Удалить"
@@ -1608,7 +1616,7 @@ msgstr "Информация"
 msgid "Total Count"
 msgstr "Общее количество"
 
-#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:410
+#: internal/common/reply/translate.go:105 internal/system/dialog/dialog.go:411
 msgid "Installed"
 msgstr "Установлено"
 
@@ -1636,7 +1644,7 @@ msgstr "Загружено"
 msgid "Staged"
 msgstr "Зафиксированно"
 
-#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:427
+#: internal/common/reply/translate.go:119 internal/system/dialog/dialog.go:428
 msgid "Size"
 msgstr "Размер"
 
@@ -1848,7 +1856,7 @@ msgstr "Будет добавлено"
 msgid "WillRemove"
 msgstr "Будет удалено"
 
-#: internal/common/reply/translate.go:225 internal/system/dialog/dialog.go:311
+#: internal/common/reply/translate.go:225 internal/system/dialog/dialog.go:312
 msgid "Essential packages"
 msgstr "Важные пакеты"
 
@@ -1856,7 +1864,7 @@ msgstr "Важные пакеты"
 msgid "Reason"
 msgstr "Причины"
 
-#: internal/common/wrapper/wrapper.go:69 main.go:248 main.go:427
+#: internal/common/wrapper/wrapper.go:69 main.go:251 main.go:430
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -2059,7 +2067,7 @@ msgid "Remove container"
 msgstr "Удалить контейнер"
 
 #: internal/distrobox/dbus.go:82 internal/distrobox/dbus.go:216
-#: internal/distrobox/http.go:117 internal/distrobox/http.go:399
+#: internal/distrobox/http.go:117 internal/distrobox/http.go:398
 #: internal/kernel/dbus.go:107 internal/kernel/dbus.go:147
 #: internal/kernel/dbus.go:187 internal/kernel/dbus.go:227
 #: internal/kernel/dbus.go:267 internal/kernel/dbus.go:307
@@ -2070,98 +2078,98 @@ msgstr "Удалить контейнер"
 #: internal/system/dbus.go:304 internal/system/dbus.go:345
 #: internal/system/dbus.go:386 internal/system/dbus.go:444
 #: internal/system/dbus.go:502 internal/system/http.go:134
-#: internal/system/http.go:184 internal/system/http.go:214
-#: internal/system/http.go:266 internal/system/http.go:316
-#: internal/system/http.go:475 internal/system/http.go:505
-#: internal/system/http.go:548 internal/system/http.go:578
+#: internal/system/http.go:176 internal/system/http.go:206
+#: internal/system/http.go:258 internal/system/http.go:300
+#: internal/system/http.go:459 internal/system/http.go:489
+#: internal/system/http.go:532 internal/system/http.go:562
 msgid "Task started in background"
 msgstr ""
 
-#: internal/distrobox/service/alt.go:48 internal/distrobox/service/arch.go:47
-#: internal/distrobox/service/ubuntu.go:49
+#: internal/distrobox/service/alt.go:49 internal/distrobox/service/arch.go:49
+#: internal/distrobox/service/ubuntu.go:51
 msgid "Failed to update package database: %v, stderr: %s"
 msgstr "Не удалось обновить базу данных пакетов: %s, ошибка: %s"
 
-#: internal/distrobox/service/alt.go:56
+#: internal/distrobox/service/alt.go:57
 msgid "Error opening stdout pipe: %w"
 msgstr "Ошибка открытия канала стандартного вывода: %w"
 
-#: internal/distrobox/service/alt.go:59
+#: internal/distrobox/service/alt.go:60
 msgid "Error executing command: %w"
 msgstr "Ошибка исполнения команды: %w"
 
-#: internal/distrobox/service/alt.go:65 internal/distrobox/service/arch.go:59
+#: internal/distrobox/service/alt.go:66 internal/distrobox/service/arch.go:61
 msgid "Error retrieving installed packages: "
 msgstr "Ошибка извлечения установленных пакетов: "
 
-#: internal/distrobox/service/alt.go:140
+#: internal/distrobox/service/alt.go:141
 #, c-format
 msgid "String too large: (over %dMB) - "
 msgstr "Строка слишком велика: (больше, чем %dMB) - "
 
-#: internal/distrobox/service/alt.go:142
+#: internal/distrobox/service/alt.go:143
 msgid "Scanner error: %w"
 msgstr "Ошибка сканера: %w"
 
-#: internal/distrobox/service/alt.go:146
+#: internal/distrobox/service/alt.go:147
 msgid "Command execution error: %w"
 msgstr "Ошибка исполнения команды: %w"
 
-#: internal/distrobox/service/alt.go:168 internal/distrobox/service/arch.go:81
-#: internal/distrobox/service/ubuntu.go:144
+#: internal/distrobox/service/alt.go:172 internal/distrobox/service/arch.go:86
+#: internal/distrobox/service/ubuntu.go:177
 msgid "Failed to remove package %s: %v, stderr: %s"
 msgstr "Не удалось удалить пакет %s: %v, ошибка: %s"
 
-#: internal/distrobox/service/alt.go:178 internal/distrobox/service/arch.go:91
-#: internal/distrobox/service/ubuntu.go:133
+#: internal/distrobox/service/alt.go:185 internal/distrobox/service/arch.go:99
+#: internal/distrobox/service/ubuntu.go:163
 msgid "Failed to install package %s: %v, stderr: %s"
 msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
 
-#: internal/distrobox/service/alt.go:200 internal/distrobox/service/alt.go:228
-#: internal/distrobox/service/arch.go:167
-#: internal/distrobox/service/ubuntu.go:89
+#: internal/distrobox/service/alt.go:207 internal/distrobox/service/alt.go:255
+#: internal/distrobox/service/arch.go:175
+#: internal/distrobox/service/ubuntu.go:91
 #, c-format
 msgid "Command execution error: %s %s"
 msgstr "Ошибка исполнения команды: %s %s"
 
-#: internal/distrobox/service/alt.go:209 internal/distrobox/service/arch.go:176
-#: internal/distrobox/service/ubuntu.go:98
+#: internal/distrobox/service/alt.go:216 internal/distrobox/service/arch.go:184
+#: internal/distrobox/service/ubuntu.go:100
 #, c-format
 msgid "Fallback command execution error: %s %s"
 msgstr "Ошибка выполнения резервной команды: %s %s"
 
-#: internal/distrobox/service/alt.go:215 internal/distrobox/service/arch.go:182
-#: internal/distrobox/service/ubuntu.go:104
+#: internal/distrobox/service/alt.go:242 internal/distrobox/service/arch.go:213
+#: internal/distrobox/service/ubuntu.go:131
 #, c-format
 msgid "Fallback search found %d files"
 msgstr "Резервный поиск нашел %d файлов"
 
-#: internal/distrobox/service/alt.go:242
+#: internal/distrobox/service/alt.go:269
 msgid "Error executing command rpm -qia: %w"
 msgstr "Ошибка исполнения команды rpm -qia: %w"
 
-#: internal/distrobox/service/alt.go:258
+#: internal/distrobox/service/alt.go:285
 msgid "Error scanning rpm output: %w"
 msgstr "Ошибка сканирования вывода rpm"
 
-#: internal/distrobox/service/arch.go:54
+#: internal/distrobox/service/arch.go:56
 msgid "Failed to search packages (pacman -Ss): %v, stderr: %s"
 msgstr "Не удалось найти пакеты (pacman -Ss): %v, ошибка: %s"
 
-#: internal/distrobox/service/arch.go:65
+#: internal/distrobox/service/arch.go:67
 msgid "Error parsing official packages: %v"
 msgstr "Ошибка парсинга официальных пакетов: %v"
 
-#: internal/distrobox/service/arch.go:114
+#: internal/distrobox/service/arch.go:122
 #, c-format
 msgid "Failed to recognize the owner for file '%s'"
 msgstr "Не удалось распознать владельца файла '%s'"
 
-#: internal/distrobox/service/arch.go:121
+#: internal/distrobox/service/arch.go:129
 msgid "Failed to find a package for file '%s': %v, stderr: %s"
 msgstr "Не удалось найти пакет для файла '%s': %v, ошибка: %s"
 
-#: internal/distrobox/service/arch.go:143
+#: internal/distrobox/service/arch.go:151
 #, c-format
 msgid "Failed to determine the package for file '%s'"
 msgstr "Не удалось определить пакет для файла '%s'"
@@ -2209,52 +2217,64 @@ msgstr "Ошибка удаления записей контейнера %s: %v
 msgid "Invalid filter field: %s. Available fields: %s."
 msgstr "Некорректное поле фильтра: %s. Доступные поля: %s."
 
-#: internal/distrobox/service/distrobox.go:59
+#: internal/distrobox/service/distrobox.go:60
 msgid "Failed to retrieve the list of containers: "
 msgstr "Не удалось извлечь список контейнеров: "
 
-#: internal/distrobox/service/distrobox.go:160
+#: internal/distrobox/service/distrobox.go:166
 msgid "Error executing command %q: %s"
 msgstr "Ошибка исполнения команды %q: %s"
 
-#: internal/distrobox/service/distrobox.go:162
+#: internal/distrobox/service/distrobox.go:168
 msgid "Error executing command %q: %v"
 msgstr "Ошибка исполнения команды %q: %v"
 
-#: internal/distrobox/service/distrobox.go:189
+#: internal/distrobox/service/distrobox.go:195
 msgid "Error getting OS information for container %s: %v"
 msgstr "Ошибка получения информации об ОС для контейнера %s: %v"
 
-#: internal/distrobox/service/distrobox.go:191
+#: internal/distrobox/service/distrobox.go:197
 #, c-format
 msgid "Error getting OS information for container %s: %s"
 msgstr "Ошибка получения информации об ОС для контейнера %s: %s"
 
-#: internal/distrobox/service/distrobox.go:243
+#: internal/distrobox/service/distrobox.go:247
 msgid "Failed to get the list of containers: %v"
 msgstr "Не удалось получить список контейнеров: %v"
 
-#: internal/distrobox/service/distrobox.go:255
+#: internal/distrobox/service/distrobox.go:259
 #, c-format
 msgid "Container %s not found"
 msgstr "Контейнер %s не найден"
 
-#: internal/distrobox/service/distrobox.go:276
+#: internal/distrobox/service/distrobox.go:292
 #, c-format
 msgid "Container already exists: %s"
 msgstr "Контейнер уже существует: %s"
 
-#: internal/distrobox/service/distrobox.go:310
+#: internal/distrobox/service/distrobox.go:317
 msgid "Failed to create container %s: %v, stderr: %s"
 msgstr "Не удалось создать контейнер %s: %v, ошибка: %s"
 
-#: internal/distrobox/service/distrobox.go:311
+#: internal/distrobox/service/distrobox.go:318
 msgid "Failed to create container %s: %v"
 msgstr "Не удалось создать контейнер %s: %v"
 
-#: internal/distrobox/service/distrobox.go:334
+#: internal/distrobox/service/distrobox.go:346
 msgid "Failed to delete container %s: %v, stderr: %s"
 msgstr "Не удалось удалить контейнер %s: %v, ошибка %s"
+
+#: internal/distrobox/service/distrobox.go:361
+msgid "Invalid package name: %q"
+msgstr "Недопустимое имя пакета: %q"
+
+#: internal/distrobox/service/distrobox.go:369
+msgid "Invalid container name: %q"
+msgstr "Недопустимое имя контейнера: %q"
+
+#: internal/distrobox/service/distrobox.go:377
+msgid "Invalid image reference: %q"
+msgstr "Недопустимая ссылка на образ: %q"
 
 #: internal/distrobox/service/provider.go:97
 msgid "This container is not supported: "
@@ -2306,11 +2326,11 @@ msgstr "Ошибка извлечения владельца для файла %
 msgid "Error processing file %s: %v"
 msgstr "Ошибка обработки файла %s: %v"
 
-#: internal/distrobox/service/ubuntu.go:55
+#: internal/distrobox/service/ubuntu.go:57
 msgid "Failed to execute apt search: %v, stderr: %s"
 msgstr "Не удалось выполнить apt search: %v, ошибка: %s"
 
-#: internal/distrobox/service/ubuntu.go:60
+#: internal/distrobox/service/ubuntu.go:62
 msgid "Failed to retrieve installed packages: "
 msgstr "Не удалось извлечь установленные пакеты: "
 
@@ -3139,32 +3159,32 @@ msgstr "Модуль для работы с образом"
 msgid "System package management"
 msgstr "Управление системными пакетами"
 
-#: internal/system/dbus.go:559
+#: internal/system/dbus.go:563
 msgid "Failed to parse JSON: %w"
 msgstr "Не удалось спарсить JSON: %w"
 
-#: internal/system/dialog/dialog.go:65 internal/system/dialog/dialog.go:97
+#: internal/system/dialog/dialog.go:66 internal/system/dialog/dialog.go:98
 msgid "Edit"
 msgstr "Изменить"
 
-#: internal/system/dialog/dialog.go:65 internal/system/dialog/dialog.go:67
-#: internal/system/dialog/dialog.go:69 internal/system/dialog/dialog.go:71
+#: internal/system/dialog/dialog.go:66 internal/system/dialog/dialog.go:68
+#: internal/system/dialog/dialog.go:70 internal/system/dialog/dialog.go:72
 #: internal/system/dialog/dialog_image.go:81
 #: internal/system/dialog/dialog_image.go:99
 msgid "Abort"
 msgstr "Прервать"
 
-#: internal/system/dialog/dialog.go:71 internal/system/dialog/dialog.go:97
+#: internal/system/dialog/dialog.go:72 internal/system/dialog/dialog.go:98
 msgid "Upgrade"
 msgstr "Обновить"
 
-#: internal/system/dialog/dialog.go:88
+#: internal/system/dialog/dialog.go:89
 #: internal/system/dialog/dialog_image.go:94
 msgid "Error starting TEA: %v"
 msgstr "Ошибка запуска TEA: %v"
 
 #. Формируем строку с подсказками по клавишам
-#: internal/system/dialog/dialog.go:231
+#: internal/system/dialog/dialog.go:232
 msgid ""
 "Navigation: ↑/↓ or j/k - select, Ctrl+↑/↓ or PgUp/PgDn - scroll, Ctrl+Home/"
 "End - top/bottom, Enter - choose, Esc/q - cancel"
@@ -3172,42 +3192,42 @@ msgstr ""
 "Навигация: ↑/↓ или j/k - выбор, Ctrl+↑/↓ или PgUp/PgDn - прокрутка, Ctrl"
 "+Home/End - начало/конец, Enter - выбор, Esc/q - отмена"
 
-#: internal/system/dialog/dialog.go:235
+#: internal/system/dialog/dialog.go:236
 #: internal/system/dialog/dialog_image.go:420
 msgid "Select an action:"
 msgstr "Выберите действие:"
 
-#: internal/system/dialog/dialog.go:306
+#: internal/system/dialog/dialog.go:307
 msgid "WARNING: Packages critical for system operation will be removed"
 msgstr "ВНИМАНИЕ: Пакеты, критически важные для работы системы, будут удалены"
 
 #. Сначала затронутые изменения
-#: internal/system/dialog/dialog.go:346
+#: internal/system/dialog/dialog.go:347
 msgid "Affected changes:"
 msgstr "Затронутые изменения:"
 
-#: internal/system/dialog/dialog.go:351
+#: internal/system/dialog/dialog.go:352
 msgid "Extra packages"
 msgstr "Будет добавлено"
 
-#: internal/system/dialog/dialog.go:352 internal/system/dialog/dialog.go:363
-#: internal/system/dialog/dialog.go:459
+#: internal/system/dialog/dialog.go:353 internal/system/dialog/dialog.go:364
+#: internal/system/dialog/dialog.go:460
 msgid "Will be updated"
 msgstr "Будет обновлено"
 
-#: internal/system/dialog/dialog.go:353 internal/system/dialog/dialog.go:364
-#: internal/system/dialog/dialog.go:455
+#: internal/system/dialog/dialog.go:354 internal/system/dialog/dialog.go:365
+#: internal/system/dialog/dialog.go:456
 msgid "Will be installed"
 msgstr "Будет установлено"
 
-#: internal/system/dialog/dialog.go:354 internal/system/dialog/dialog.go:365
-#: internal/system/dialog/dialog.go:463
+#: internal/system/dialog/dialog.go:355 internal/system/dialog/dialog.go:366
+#: internal/system/dialog/dialog.go:464
 msgid "Will be removed"
 msgstr "Будет удалено"
 
 #. Затем итоги
-#: internal/system/dialog/dialog.go:357 internal/system/dialog/dialog.go:358
-#: internal/system/dialog/dialog.go:359 internal/system/dialog/dialog.go:360
+#: internal/system/dialog/dialog.go:358 internal/system/dialog/dialog.go:359
+#: internal/system/dialog/dialog.go:360 internal/system/dialog/dialog.go:361
 #, c-format
 msgid "%d package"
 msgid_plural "%d packages"
@@ -3215,30 +3235,30 @@ msgstr[0] "%d пакет"
 msgstr[1] "%d пакета"
 msgstr[2] "%d пакетов"
 
-#: internal/system/dialog/dialog.go:362
+#: internal/system/dialog/dialog.go:363
 msgid "Total:"
 msgstr "Итого:"
 
-#: internal/system/dialog/dialog.go:366
+#: internal/system/dialog/dialog.go:367
 msgid "Not affected"
 msgstr "Не затронуто"
 
-#: internal/system/dialog/dialog.go:374
+#: internal/system/dialog/dialog.go:375
 msgid "Package information:"
 msgid_plural "Packages information:"
 msgstr[0] "Информация о пакете:"
 msgstr[1] "Информация о пакетах:"
 msgstr[2] "Информация о пакетах:"
 
-#: internal/system/dialog/dialog.go:382
+#: internal/system/dialog/dialog.go:383
 msgid "Package list:"
 msgstr "Список пакетов:"
 
-#: internal/system/dialog/dialog.go:388
+#: internal/system/dialog/dialog.go:389
 msgid "[Installed]"
 msgstr "[Установлено]"
 
-#: internal/system/dialog/dialog.go:399
+#: internal/system/dialog/dialog.go:400
 #, c-format
 msgid ""
 "\n"
@@ -3247,34 +3267,34 @@ msgstr ""
 "\n"
 "Пакет %d:"
 
-#: internal/system/dialog/dialog.go:401 internal/system/dialog/dialog.go:467
-#: internal/system/dialog/dialog.go:488
+#: internal/system/dialog/dialog.go:402 internal/system/dialog/dialog.go:468
+#: internal/system/dialog/dialog.go:481
 msgid "No"
 msgstr "Нет"
 
-#: internal/system/dialog/dialog.go:403
+#: internal/system/dialog/dialog.go:404
 msgid "Yes"
 msgstr "Да"
 
-#: internal/system/dialog/dialog.go:407
+#: internal/system/dialog/dialog.go:408
 msgid "Action"
 msgstr "Действие"
 
-#: internal/system/dialog/dialog.go:408
+#: internal/system/dialog/dialog.go:409
 msgid "Category"
 msgstr "Категория"
 
 #. Выводим "Версия в облаке" обычным стилем
-#: internal/system/dialog/dialog.go:414 internal/system/dialog/dialog.go:425
+#: internal/system/dialog/dialog.go:415 internal/system/dialog/dialog.go:426
 msgid "Repository version"
 msgstr "Версия в репозитории"
 
 #. Выводим "Версия в системе", уже с раскрашенным текстом
-#: internal/system/dialog/dialog.go:423
+#: internal/system/dialog/dialog.go:424
 msgid "System version"
 msgstr "Версия в системе"
 
-#: internal/system/dialog/dialog.go:491
+#: internal/system/dialog/dialog.go:484
 msgid "and others"
 msgstr "и другие"
 
@@ -3302,83 +3322,83 @@ msgstr ""
 msgid "No packages"
 msgstr "Нет пакетов"
 
-#: main.go:72
+#: main.go:73
 msgid "Start session D-Bus service org.altlinux.APM"
 msgstr "Запустить сессионный сервис D-Bus org.altlinux.APM"
 
-#: main.go:78 main.go:90
+#: main.go:79 main.go:91
 msgid "Enable verbose logging to stdout"
 msgstr "Включить подробное логирование в стандартный вывод"
 
-#: main.go:84
+#: main.go:85
 msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
-#: main.go:96
+#: main.go:97
 msgid "Start system HTTP API server"
 msgstr "Запустить системный HTTP API сервер"
 
-#: main.go:102 main.go:119
+#: main.go:103 main.go:121
 msgid "Listen address (host:port)"
 msgstr "Адрес прослушивания (хост:порт)"
 
-#: main.go:107 main.go:124
-msgid "API token for authentication"
-msgstr "API-токен для аутентификации"
+#: main.go:108 main.go:126
+msgid "API token for authentication (prefer APM_API_TOKEN env)"
+msgstr "API-токен для аутентификации (предпочтительно через переменную APM_API_TOKEN)"
 
-#: main.go:113
+#: main.go:115
 msgid "Start session HTTP API"
 msgstr "Запустить сессионный HTTP API сервер"
 
-#: main.go:146
+#: main.go:149
 msgid "Show the list of commands or help for each command"
 msgstr "Показать список команд или справку по каждой команде"
 
-#: main.go:147 main.go:154
+#: main.go:150 main.go:157
 msgid "[command]"
 msgstr "[команда]"
 
-#: main.go:153
+#: main.go:156
 msgid "Print version"
 msgstr "Показать версию"
 
-#: main.go:168
+#: main.go:171
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
 
-#: main.go:174
+#: main.go:177
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:199
+#: main.go:202
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:206
+#: main.go:209
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:230
+#: main.go:233
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr "Неизвестная команда: %s. Посмотрите 'apm help'"
 
-#: main.go:314
+#: main.go:317
 msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
-#: main.go:433
+#: main.go:436
 msgid "Distrobox is not installed"
 msgstr "Distrobox не установлен"
 
-#: main.go:524
+#: main.go:531
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:531
+#: main.go:538
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 
