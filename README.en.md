@@ -1,7 +1,8 @@
-APM supports three operating modes:
-* DBUS service
-* Console application
-Support for atomic images (functionality and behavior model are determined automatically)
+APM supports four operating modes:
+* D-Bus service
+* Console application with TUI
+* HTTP API
+* Support for atomic images (functionality and behavior model are determined automatically)
 
 Two response formats:
 * formatted text (Default)
@@ -15,23 +16,53 @@ For detailed help after installation, run:
 apm -help
 ```
 
-## Configuration file
-The config.conf file does not exist by default, but can be created using the /etc/apm/config.yml path. It can contain the following parameters in yml format:
-
-* commandPrefix - prefix for launching all commands
-* environment - runtime profile. `dev` or `prod`
-* pathLogFile - the path to the logs file
-* pathDBSQLSystem - the path to the system package database
-* pathDBSQLUser - path to the package database from distrobox
-* pathImageFile - path to the image configuration file
-
 ## Installation
-It is recommended to install the package from the repository, manual build:
+It is recommended to install the package from the repository:
+```
+apt-get install apm
+```
 
+For manual build:
 ```
 apt-get install systemd-devel libapt-devel gettext-tools meson golang
 meson setup build --wipe --prefix /usr
 meson install -C build
+```
+
+## Translations
+```
+./po/create_pot
+./po/update_po ru
+```
+
+## Theme settings
+```
+/etc/apm/config.yml
+colors:
+    # Main colors for output
+    enumerator: "#c4c8c6"      # Branch numbering color
+    accent: "#a2734c"          # Accent and heading color
+    itemLight: "#171717"       # Text color for light theme
+    itemDark: "#c4c8c6"        # Text color for dark theme
+    success: "2"               # Success color (green)
+    error: "9"                 # Error color (red)
+
+    # Dialog colors
+    delete: "#a81c1f"          # Delete action color
+    install: "#2bb389"         # Install action color
+    shortcut: "#888888"        # Hint and "No" state color
+    scrollBar: "#ff0000"       # Scroll indicator color
+    dialogKeyLight: "#234f55"  # Dialog key color for light theme
+    dialogKeyDark: "#82a0a3"   # Dialog key color for dark theme
+
+    # Progress bar colors
+    progressStart: "#c4c8c6"   # Start color of the progress bar gradient
+    progressEnd: "#26a269"     # End color of the progress bar gradient
+```
+
+## Tests
+```
+sudo meson test -C build go-test
 ```
 
 General help:
@@ -41,97 +72,125 @@ apm -h
 Module:
    apm - Atomic Package Manager
 
-Usage:
-   apm [command [command options]]
-
 Commands:
    dbus-session  Start session D-Bus service org.altlinux.APM
    dbus-system   Start system D-Bus service org.altlinux.APM
+   http-server   Start system HTTP API server
+   http-session  Start session HTTP API server
    system, s     System package management
+   repo, r       Repository management
    distrobox, d  Managing packages and containers in distrobox
    help, h       Show the list of commands or help for each command
+   version, v    Show version
 
 Options:
-   --format value, -f value       Output format: json, text (default: "text")
-   --transaction value, -t value  Internal property, adds the transaction to the output
-   --help, -h                     show help
-
+      --format, -f       Output format: json, text
+      --transaction, -t  Internal property, adds the transaction to the output
+      --help, -h         Show help
+      --version, -v      Show version
 ```
 
+## Configuration file
+The config.conf file does not exist by default, but can be created at `/etc/apm/config.yml`. It can contain the following parameters in yml format:
 
-## User DBUS Session
-To view all methods, for example, install D-SPY and then find the APM service there
+* commandPrefix - prefix for launching all commands
+* environment - runtime profile. `dev` or `prod`
+* pathLogFile - path to the log file
+* pathDBSQLSystem - path to the system package database
+* pathDBSQLUser - path to the distrobox package database
+* pathImageFile - path to the image configuration file
+
+## D-Bus API
+
+APM exports two D-Bus services named `org.altlinux.APM`. Full documentation: [DBUS_API](docs/DBUS_API.md)
+
+### User session
+When running in a user session, the service registers on the session D-Bus, which does not require additional privileges.
+In this mode, APM works with distrobox containers. To view all methods, install D-SPY and find the APM service there.
 
 ```
 apm dbus-session - run
 apm distrobox dbus-doc - online documentation
 ```
 
-## System DBUS Session
-To view all methods, for example, install D-SPY and then find the APM service there
-
+### System session
+In this mode, APM works with system packages. To view all methods, install D-SPY and find the APM service there.
 ```
+
 sudo apm dbus-system - run
 sudo apm system dbus-doc - online documentation
 ```
 
-## Example of working with system packages
+## HTTP API
+
+APM provides HTTP servers with REST API, WebSocket events, and Swagger UI. Full documentation: [HTTP_API](docs/HTTP_API.md)
+
+## Working with system packages
 ```
 apm s
 
-NAME:
-   apm system - Manage system packages
+Module:
+   apm system - System package management
 
-USAGE:
-   apm system [command [command options]] 
+Usage:
+   apm system [command [command options]]
 
-COMMANDS:
-   install     List of packages to install
+Commands:
+   reinstall   Reinstall packages
+   install     List of packages to install. Formats package- and package+ are supported.
    remove, rm  List of packages to remove
-   update      Update the package database
-   upgrade     Overall system upgrade
+   update      Update package database
+   upgrade     System image upgrade
    info        Package information
    search      Quick package search by name
    list        Build a query to retrieve the list of packages
    image, i    Module for working with the image
+   dbus-doc    Show online D-Bus documentation
 
-OPTIONS:
-   --help, -h  show help
-
+Options:
+      --help, -h  Show help
 ```
 
 ### Installation
-When operating from an atomic system, the flag -apply/-a becomes available. 
-When specified, the package will be added to the system and the image will be rebuilt.
+When operating from an atomic system, the flag -apply/-a becomes available. When specified, the package will be added to the system and the image will be rebuilt.
 
-Example query:
+Example:
 ```
-apm s install zip
-
-⚛
-├── zip successfully removed.
+sudo apm s install zip
+[✓] Package analysis
+[✓] Loading package list from ALT repository
+[✓] Progress: Loading all packages completed
+[✓] Progress: Installing zip completed
+[✓] Working with packages
+[✓] Database synchronization
+├── 1 package successfully installed and 0 upgraded.
+│
 ╰── Information
+    ├── Download size: 0.23 MB
+    ├── Essential packages: none
     ├── Additionally installed: none
-    ├── Number of new installations: 0
-    ├── Newly installed packages: none
-    ├── Number of not updated: 64
-    ├── Number of removed: 1
-    ├── Removed packages
+    ├── Install size: 0.69 MB
+    ├── Number of newly installed: 1
+    ├── Newly installed packages
     │   ╰── 1) zip
-    ├── Number of updated: 0
-    ╰── Updated packages: none
+    ├── Number of removed: 0
+    ├── Removed packages: none
+    ├── Number of upgraded: 0
+    ╰── Upgraded packages: none
 ```
 
-If the output format is not specified as json and the query source is not DBUS, a preliminary dialog for package analysis for installation is launched
+If the output format is not specified as json and the request source is not D-Bus, a preliminary package analysis dialog is launched.
+
 ![img.png](data/assets/install.png)
 
 
-Result of execution in json format:
+Result in json format:
 ```
 apm s install zip -f json
 
 {
   "data": {
+    "message": "1 package successfully installed and 0 upgraded.",
     "info": {
       "extraInstalled": null,
       "upgradedPackages": null,
@@ -142,164 +201,141 @@ apm s install zip -f json
       "upgradedCount": 0,
       "newInstalledCount": 1,
       "removedCount": 0,
-      "notUpgradedCount": 64
+      "downloadSize": 245806,
+      "installSize": 720012,
+      "essentialPackages": null
     }
   },
-  "error": false
+  "error": null
 }
 ```
 
 ### Removal
 When operating from an atomic system, the flag -apply/-a becomes available. When specified, the package will be removed from the system and the image will be rebuilt.
 
-Example query:
+Example:
 ```
-apm s remove zip
-
-⚛
-├── zip successfully removed.
+sudo apm s remove zip
+[✓] Package analysis
+[✓] Progress: Loading all packages completed
+[✓] Working with packages
+[✓] Database synchronization
+├── file-roller, zip successfully removed.
+│
 ╰── Information
+    ├── Download size: 0.00 MB
+    ├── Essential packages: none
     ├── Additionally installed: none
-    ├── Number of new installations: 0
+    ├── Install size: 0.00 MB
+    ├── Number of newly installed: 0
     ├── Newly installed packages: none
-    ├── Number of not updated: 64
-    ├── Number of removed: 1
+    ├── Number of removed: 2
     ├── Removed packages
-    │   ╰── 1) zip
-    ├── Number of updated: 0
-    ╰── Updated packages: none
-    
+    │   ├── 1) file-roller
+    │   ╰── 2) zip
+    ├── Number of upgraded: 0
+    ╰── Upgraded packages: none
 ```
 
-If the output format is not specified as json and the query source is not DBUS, a preliminary dialog for package analysis for removal is launched
+If the output format is not specified as json and the request source is not D-Bus, a preliminary package analysis dialog is launched.
+
 ![img.png](data/assets/remove.png)
 
 
-Result of execution in json format:
+Result in json format:
 ```
 apm s remove zip -f json
 
 {
-  "data": {
-    "info": {
-      "extraInstalled": null,
-      "upgradedPackages": null,
-      "newInstalledPackages": null,
-      "removedPackages": [
-        "zip"
-      ],
-      "upgradedCount": 0,
-      "newInstalledCount": 0,
-      "removedCount": 1,
-      "notUpgradedCount": 64
-    }
-  },
-  "error": false
+  "data": null,
+  "error": {
+    "errorCode": "PERMISSION",
+    "message": "Elevated privileges are required. Please use sudo or su"
+  }
 }
-
 ```
 
 ### Lists
-Lists allow you to build complex queries through filtering and sorting
+Lists allow you to build complex queries through filtering and sorting.
 
 ```
 apm s list -h
-     
-NAME:
+
+Module:
    apm system list - Build a query to retrieve the list of packages
 
-USAGE:
+Usage:
    apm system list [command [command options]]
 
-OPTIONS:
-   --sort value                       Field for sorting, for example: name, installed
-   --order value                      Sorting order: ASC or DESC (default: "ASC")
-   --limit value                      Query limit (default: 10)
-   --offset value                     Query offset (default: 0)
-   --filter value [ --filter value ]  Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true
-   --force-update                     Force update all packages before the query (default: false)
-   --full                             Full output of information (default: false)
-   --help, -h                         show help
-
-GLOBAL OPTIONS:
-   --format value, -f value       Output format: json, text (default: "text")
-   --transaction value, -t value  Internal property, adds a transaction to the output
+Options:
+      --sort                 Sort packages by field, example fields: name, section
+      --order                Sort direction: ascending (ASC) or descending (DESC)
+      --limit                Maximum number of returned records
+      --offset               Starting position (offset) for the result set
+      --filter [ --filter ]  Filter in the format key=value. The flag can be specified multiple times, e.g.: --filter name=zip --filter installed=true
+      --force-update         Force update all packages before the query
+      --full                 Full information output
+      --help, -h             Show help
 ```
 
 For example, to retrieve the heaviest package and display only one entry:
 ```
 apm system list --sort="size" --order="DESC" -limit 1
 
-⚛
 ├── Found 1 record
+│
 ├── Packages
 │   ╰── 1)
-│       ├── Dependencies
-│       │   ╰── 1) speed-dreams
-│       ├── Description: Game data for Speed Dreams                     
-│       │   Speed Dreams is a fork of the racing car simulator Torcs,
-│       │   with some new features.                                  
-│       ├── Filename: speed-dreams-data-2.3.0-alt1.x86_64.rpm
 │       ├── Installed: no
-│       ├── Disk space required: 2722.10 MB
 │       ├── Maintainer: Artyom Bystrov <arbars@altlinux.org>
 │       ├── Name: speed-dreams-data
-│       ├── Section: Games/Sports
-│       ├── Size: 1942.57 MB
-│       ├── Version: 2.3.0
-│       ╰── Installed version: no
-╰── Total records: 53865
+│       ├── Summary: Game data for Speed Dreams
+│       ╰── Version: 2.3.0
+╰── Total: 45538
 ```
 
-Or to find all packages installed in the system and limit the output to one package:
+Or find all packages installed in the system and limit the output to one package:
 ```
 apm system list --filter installed=true -limit 1
 
-⚛
 ├── Found 1 record
+│
 ├── Packages
 │   ╰── 1)
-│       ├── Dependencies
-│       │   ├── 9) perl
-│       │   ├── 10) perl-base
-│       │   ╰── 11) rtld
-│       ├── Description: Parts of the groff formatting system that is required for viewing manpages
-│       │   A stripped-down groff package containing the components required                    
-│       │   to view man pages in ASCII, Latin-1 and UTF-8.                                      
-│       ├── Filename: groff-base-1.22.3-alt2.x86_64.rpm
 │       ├── Installed: yes
-│       ├── Disk space required: 3.19 MB
-│       ├── Maintainer: Alexey Gladkov <legion@altlinux.ru>
-│       ├── Package name: groff-base
-│       ├── Section: Text tools
-│       ├── Size: 0.83 MB
-│       ├── Version: 1.22.3
-│       ╰── Installed version: 1.22.3
-╰── Total records: 1594
+│       ├── Maintainer: Paul Wolneykien <manowar@altlinux.org>
+│       ├── Name: libjemalloc2
+│       ├── Summary: A general-purpose scalable concurrent malloc(3) implementation
+│       ╰── Version: 5.3.0
+╰── Total: 1740
+
 ```
 
 To build queries, it is better to view the response in json format to see the field names without formatting.
 
-## Example of working with distrobox
+
+## Working with distrobox
 ```
-apm d                                    
-NAME:
-   apm distrobox - Manage distrobox packages and containers
+apm d
 
-USAGE:
-   apm distrobox [command [command options]] 
+Module:
+   apm distrobox - Managing packages and containers in distrobox
 
-COMMANDS:
+Usage:
+   apm distrobox [command [command options]]
+
+Commands:
    update        Update and synchronize the list of installed packages with the host
    info          Package information
    search        Quick package search by name
    list          Build a query to retrieve the list of packages
    install       Install a package
-   remove, rm    Remove a package
+   remove        Remove a package
+   dbus-doc      Show online D-Bus documentation
    container, c  Module for working with containers
 
-OPTIONS:
-   --help, -h  show help
+Options:
+      --help, -h  Show help
 ```
 
 ### Adding a container
@@ -312,116 +348,113 @@ apm distrobox c create --image alt
 
 ### Lists
 
-The distrobox lists are built similarly to system packages, description:
+The distrobox lists are built similarly to system packages:
 
 ```
-apm distrobox list -h       
-             
-NAME:
+apm distrobox list -h
+
+Module:
    apm distrobox list - Build a query to retrieve the list of packages
 
-USAGE:
+Usage:
    apm distrobox list [command [command options]]
 
-OPTIONS:
-   --container value, -c value        Container name. Must be specified
-   --sort value                       Field for sorting, for example: name, version
-   --order value                      Sorting order: ASC or DESC (default: "ASC")
-   --limit value                      Query limit (default: 10)
-   --offset value                     Query offset (default: 0)
-   --filter value [ --filter value ]  Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true
-   --force-update                     Force update all packages before the query (default: false)
-   --help, -h                         show help
-
-GLOBAL OPTIONS:
-   --format value, -f value       Output format: json, text (default: "text")
-   --transaction value, -t value  Internal property, adds a transaction to the output
+Options:
+      --container, -c        Container name. Optional flag
+      --sort                 Sort field, e.g.: name, version
+      --order                Sort direction: ascending (ASC) or descending (DESC)
+      --limit                Maximum number of returned records
+      --offset               Starting position (offset) for the result set
+      --filter [ --filter ]  Filter in the format key=value. The flag can be specified multiple times, e.g.: --filter name=zip --filter installed=true
+      --force-update         Force update all packages before the query
+      --help, -h             Show help
 ```
 
-To get all packages for the container atomic-alt:
+To get all packages for the container alt-software:
 
 ```
-apm distrobox list -c atomic-alt -limit 1
-
-⚛
+apm distrobox list -c alt-software -limit 1
+[✓] Requesting container list
+[✓] Requesting container information
+[✓] Filtering packages
 ├── Found 1 record
+│
 ├── Packages
 │   ╰── 1)
-│       ├── Description: Libraries and header files for LLVM                       
-│       │   This package contains library and header files needed to develop new
-│       │   native programs that use the LLVM infrastructure.                   
+│       ├── Container: alt-software
+│       ├── Description: Libre realtime strategy game of ancient warfare
+│       │   0 A.D. (pronounced "zero ey-dee") is a free software, cross-platform
+│       │   real-time strategy (RTS) game of ancient warfare. In short, it is a
+│       │   historically-based war/economy game that allows players to relive or
+│       │   rewrite the history of Western civilizations, focusing on the years
+│       │   between 500 B.C. and 500 A.D. The project is highly ambitious, involving
+│       │   state-of-the-art 3D graphics, detailed artwork, sound, and a flexible
+│       │   and powerful custom-built game engine.
 │       ├── Exported: no
 │       ├── Installed: no
 │       ├── Package manager: apt-get
-│       ├── Package name: llvm14.0-devel
-│       ╰── Version: 14.0.6
-╰── Total records: 53865
+│       ├── Name: 0ad
+│       ╰── Version: 0.27.1
+╰── Total: 57415
 ```
 
 ## Working with an atomic image
-This functionality is available only when working from an atomic image
+This functionality is available only when working from an atomic image.
 
 ```
 apm s image -h
 
-NAME:
+Module:
    apm system image - Module for working with the image
 
-USAGE:
-   apm system image [command [command options]] 
+Usage:
+   apm system image [command [command options]]
 
-COMMANDS:
+Commands:
+   build    Build image
    apply    Apply changes to the host
    status   Image status
-   update   Update the image
+   update   System image update
    history  Image change history
 
-OPTIONS:
-   --help, -h  show help
+Options:
+      --help, -h  Show help
 ```
 
-APM abstracts away from the docker format and introduces a new yml format; the path to this file is specified in the configuration field pathImageFile. 
+APM abstracts away from the docker format and introduces a new yml format; the path to this file is specified in the configuration field pathImageFile.
 This file will be used as the database for all image changes. To view the current state, run:
 ```
 sudo apm s image status
-
-⚛
 ├── Image status
+│
 ╰── Loaded image
     ├── Configuration
-    │   ├── Commands: []
-    │   ├── Image: ghcr.io/alt-gnome/alt-atomic:latest-nv
-    │   ╰── Packages
-    │       ├── Install
-    │       │   ╰── 1) redis
-    │       ╰── Remove: []
+    │   ├── Image: altlinux.space/alt-atomic/onyx-nvidia/stable:latest
+    │   ╰── Modules
+    │       ╰── 1)
+    │           ├── body
+    │           │   ╰── Install
+    │           │       ╰── 1) tmux
+    │           ├── Name: image-apply-results
+    │           ╰── Type: packages
     ├── Image
     │   ├── Specification
     │   │   ╰── Image
-    │   │       ├── Image: a88583f54c8e
+    │   │       ├── Image: 5942c8885645
     │   │       ╰── Transport: containers-storage
     │   ╰── Status
     │       ├── Loaded
     │       │   ├── Image
     │       │   │   ├── Image
-    │       │   │   │   ├── Image: ghcr.io/alt-gnome/alt-atomic:latest-nv
+    │       │   │   │   ├── Image: 5942c8885645
     │       │   │   │   ╰── Transport: containers-storage
-    │       │   │   ├── Image hash: sha256:57f696c0ea4a69d877e22c916ee46c4c2f8b9045154fc6ca58ee8419df7d3af2
-    │       │   │   ├── Date: 2025-03-12T12:11:08.245328960Z
+    │       │   │   ├── Image digest: sha256:b431df1948d2112f01a38ca6b23762dc3469a687a90fb51b61a8fe676abc36d6
+    │       │   │   ├── Date: 2026-02-22T07:24:20.671370656Z
     │       │   │   ╰── Version: none
     │       │   ├── Pinned: no
     │       │   ╰── Storage type: ostreeContainer
-    │       ╰── In queue
-    │           ├── Image
-    │           │   ├── Image
-    │           │   │   ├── Image: a88583f54c8e
-    │           │   │   ╰── Transport: containers-storage
-    │           │   ├── Image hash: sha256:21ccfa2b5c6793d0bc9074f0725f45e771706123c8cbd4cb6bbc53b50466aef9
-    │           │   ├── Date: 2025-03-12T16:36:51.054268321Z
-    │           │   ╰── Version: none
-    │           ├── Pinned: no
-    │           ╰── Storage type: ostreeContainer
-    ╰── Status: Modified image. Configuration file: /etc/apm/image.yml
+    │       ╰── Committed: no
+    ╰── Status: Image modified. Configuration file: /etc/apm/image.yml
 ```
 
 You will see the path to the configuration file, for example:
@@ -438,7 +471,7 @@ packages:
 commands: []
 ```
 
-All operations for installing and removing packages with the flag -apply will be recorded in this file, and you can also edit it manually, then run the following command:
+All operations for installing and removing packages with the -apply flag will be recorded in this file. You can also edit it manually, then run:
 ```
 sudo apm s image apply
 
