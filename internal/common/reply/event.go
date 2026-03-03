@@ -105,6 +105,7 @@ const (
 	EventSystemUpdateAllPackagesDB  = "system.updateAllPackagesDB"
 	EventSystemUpdateAppStream      = "system.UpdateAppStream"
 	EventSystemDownloadProgress     = "system.downloadProgress"
+	EventSystemInstallProgress      = "system.installProgress"
 	EventSystemPullImage            = "system.pullImage"
 
 	EventBootcLayers   = "service.bootc-layers"

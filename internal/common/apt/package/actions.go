@@ -241,16 +241,23 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 type packageProgress struct {
 	lastPercent int
 	lastUpdate  time.Time
+	id          int
 }
 
-func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
+func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
+	pkgCount := 0
+	if len(packageCount) > 0 {
+		pkgCount = packageCount[0]
+	}
 	// Состояние для загрузки
 	lastDownloadPercent := -1
 	lastDownloadUpdate := time.Now()
+	downloadStarted := false
 
 	// Состояние для установки пакетов
 	packageState := make(map[string]*packageProgress)
 	var packageMutex sync.Mutex
+	nextInstallID := 1
 
 	return func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
 		switch event {
@@ -258,6 +265,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 			if total == 0 {
 				return
 			}
+			downloadStarted = true
 			percent := int((cur * 100) / total)
 
 			if percent < 100 {
@@ -295,11 +303,18 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 				}
 			}
 		case aptLib.CallbackDownloadComplete:
+			if !downloadStarted {
+				return
+			}
+			doneText := app.T_("All packages downloaded")
+			if pkgCount == 1 {
+				doneText = app.T_("Package downloaded")
+			}
 			reply.CreateEventNotification(ctx, reply.StateAfter,
 				reply.WithEventName(reply.EventSystemDownloadProgress),
 				reply.WithProgress(true),
 				reply.WithProgressPercent(100),
-				reply.WithProgressDoneText(app.T_("All packages downloaded")),
+				reply.WithProgressDoneText(doneText),
 			)
 		case aptLib.CallbackInstallProgress:
 			if pkg == "" || total == 0 {
@@ -314,7 +329,9 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 				state = &packageProgress{
 					lastPercent: -1,
 					lastUpdate:  time.Now(),
+					id:          nextInstallID,
 				}
+				nextInstallID++
 				packageState[pkg] = state
 			}
 
@@ -345,7 +362,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 				state.lastPercent = percent
 				state.lastUpdate = now
 
-				ev := fmt.Sprintf("system.installProgress-%s", pkg)
+				ev := fmt.Sprintf("%s-%d", reply.EventSystemInstallProgress, state.id)
 
 				if percent < 100 {
 					reply.CreateEventNotification(ctx, reply.StateBefore,
@@ -359,6 +376,7 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 						reply.WithEventName(ev),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(100),
+						reply.WithEventView(fmt.Sprintf(app.T_("Installing %s"), pkg)),
 						reply.WithProgressDoneText(fmt.Sprintf(app.T_("Installing %s"), pkg)),
 					)
 
@@ -374,7 +392,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
-	err := a.serviceAptBinding.InstallPackages(packages, a.getHandler(ctx))
+	err := a.serviceAptBinding.InstallPackages(packages, a.getHandler(ctx, len(packages)))
 	if err != nil {
 		return err
 	}
@@ -390,7 +408,7 @@ func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInst
 	err := a.serviceAptBinding.CombineInstallRemovePackages(
 		packagesInstall,
 		packagesRemove,
-		a.getHandler(ctx),
+		a.getHandler(ctx, len(packagesInstall)+len(packagesRemove)),
 		purge,
 		depends,
 	)
@@ -405,7 +423,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
-	err := a.serviceAptBinding.RemovePackages(packages, purge, depends, a.getHandler(ctx))
+	err := a.serviceAptBinding.RemovePackages(packages, purge, depends, a.getHandler(ctx, len(packages)))
 	if err != nil {
 		return err
 	}
@@ -445,7 +463,7 @@ func (a *Actions) ReinstallPackages(ctx context.Context, packages []string) erro
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
-	err := a.serviceAptBinding.ReinstallPackages(packages, a.getHandler(ctx))
+	err := a.serviceAptBinding.ReinstallPackages(packages, a.getHandler(ctx, len(packages)))
 	if err != nil {
 		return err
 	}
@@ -638,10 +656,12 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 	type itemState struct {
 		lastPercent int
 		lastUpdate  time.Time
+		id          int
 	}
 	items := make(map[string]*itemState)
 	done := make(map[string]bool)
 	var mu sync.Mutex
+	nextID := 1
 
 	return func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
 		switch event {
@@ -657,7 +677,8 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 			}
 			state, exists := items[pkg]
 			if !exists {
-				state = &itemState{lastPercent: -1, lastUpdate: time.Now()}
+				state = &itemState{lastPercent: -1, lastUpdate: time.Now(), id: nextID}
+				nextID++
 				items[pkg] = state
 			}
 
@@ -679,6 +700,7 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 			if shouldUpdate && percent < 100 {
 				state.lastPercent = percent
 				state.lastUpdate = now
+				id := state.id
 				mu.Unlock()
 
 				viewText := pkg
@@ -686,7 +708,7 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 					viewText += "  " + speedStr
 				}
 
-				ev := fmt.Sprintf("system.AptUpdate-%s", pkg)
+				ev := fmt.Sprintf("%s-%d", reply.EventSystemAptUpdate, id)
 				reply.CreateEventNotification(ctx, reply.StateBefore,
 					reply.WithEventName(ev),
 					reply.WithProgress(true),
@@ -699,7 +721,11 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 
 		case aptLib.CallbackDownloadStop:
 			mu.Lock()
-			_, tracked := items[pkg]
+			state, tracked := items[pkg]
+			var id int
+			if tracked {
+				id = state.id
+			}
 			delete(items, pkg)
 			if tracked {
 				done[pkg] = true
@@ -707,11 +733,12 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 			mu.Unlock()
 
 			if tracked && pkg != "" {
-				ev := fmt.Sprintf("system.AptUpdate-%s", pkg)
+				ev := fmt.Sprintf("%s-%d", reply.EventSystemAptUpdate, id)
 				reply.CreateEventNotification(ctx, reply.StateAfter,
 					reply.WithEventName(ev),
 					reply.WithProgress(true),
 					reply.WithProgressPercent(100),
+					reply.WithEventView(pkg),
 					reply.WithProgressDoneText(pkg),
 				)
 			}
@@ -720,6 +747,9 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 }
 
 func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemAptUpdate))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))
+
 	return a.serviceAptBinding.Update(a.getUpdateHandler(ctx), noLock...)
 }
 
