@@ -27,7 +27,7 @@ import (
 	"reflect"
 )
 
-// HTTPWrapper – обёртка для действий с репозиториями, предназначенная для экспорта через HTTP.
+// HTTPWrapper предоставляет обёртку для действий с репозиториями через HTTP.
 type HTTPWrapper struct {
 	http_server.BaseHTTPWrapper
 	actions *Actions
@@ -41,7 +41,7 @@ func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTT
 	}
 }
 
-// List – Получить список репозиториев
+// List возвращает список репозиториев.
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	all := r.URL.Query().Get("all") == "true"
 
@@ -54,7 +54,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Add – Добавить репозиторий
+// Add добавляет репозиторий.
 func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -91,7 +91,7 @@ func (w *HTTPWrapper) Add(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// CheckAdd – Симулировать добавление репозитория
+// CheckAdd симулирует добавление репозитория.
 func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -128,7 +128,7 @@ func (w *HTTPWrapper) CheckAdd(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Remove – Удалить репозиторий
+// Remove удаляет репозиторий.
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -165,7 +165,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// CheckRemove – Симулировать удаление репозитория
+// CheckRemove симулирует удаление репозитория.
 func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -202,7 +202,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Set – Установить ветку
+// Set устанавливает ветку репозитория.
 func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -239,7 +239,7 @@ func (w *HTTPWrapper) Set(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// CheckSet – Симулировать установку ветки
+// CheckSet симулирует установку ветки репозитория.
 func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -276,7 +276,7 @@ func (w *HTTPWrapper) CheckSet(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Clean – Удалить временные репозитории (cdrom, task)
+// Clean удаляет временные cdrom-источники.
 func (w *HTTPWrapper) Clean(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Clean(ctx)
@@ -287,7 +287,7 @@ func (w *HTTPWrapper) Clean(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// CheckClean – Симулировать удаление временных репозиториев
+// CheckClean симулирует очистку cdrom-источников.
 func (w *HTTPWrapper) CheckClean(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.CheckClean(ctx)
@@ -298,7 +298,7 @@ func (w *HTTPWrapper) CheckClean(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// GetBranches – Получить список доступных веток
+// GetBranches возвращает список доступных веток.
 func (w *HTTPWrapper) GetBranches(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.GetBranches(ctx)
@@ -309,7 +309,7 @@ func (w *HTTPWrapper) GetBranches(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// GetTaskPackages – Получить список пакетов из задачи
+// GetTaskPackages возвращает список пакетов задачи.
 func (w *HTTPWrapper) GetTaskPackages(rw http.ResponseWriter, r *http.Request) {
 	taskNum := r.PathValue("taskNum")
 
@@ -322,7 +322,7 @@ func (w *HTTPWrapper) GetTaskPackages(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// TestTask – Тестировать пакеты из задачи
+// TestTask тестирует пакеты задачи.
 func (w *HTTPWrapper) TestTask(rw http.ResponseWriter, r *http.Request) {
 	taskNum := r.PathValue("taskNum")
 

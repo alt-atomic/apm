@@ -113,7 +113,6 @@ func NewRepoService(appConfig *app.Config) *RepoService {
 		serviceAptDatabase: hostPackageDBSvc,
 	}
 
-	// Получаем пути из apt-config если возможно
 	svc.detectAPTConfig()
 
 	// Инициализируем известные ветки
@@ -642,7 +641,6 @@ func (s *RepoService) parseSourceArgs(ctx context.Context, args []string, date s
 
 // buildRepoFromArgs собирает строку репозитория из аргументов [type, url, arch, components...]
 func (s *RepoService) buildRepoFromArgs(args []string) []string {
-	// Заменяем _arch_ на текущую архитектуру
 	var processed []string
 	for _, arg := range args {
 		if arg == "_arch_" {

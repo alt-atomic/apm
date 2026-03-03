@@ -135,7 +135,7 @@ type TaskResultEvent struct {
 	Error       *APIError   `json:"error"`
 }
 
-// NotificationOption — функция-опция для настройки EventData.
+// NotificationOption определяет функцию-опцию для настройки EventData.
 type NotificationOption func(*EventData)
 
 // WithEventName задаёт имя события.

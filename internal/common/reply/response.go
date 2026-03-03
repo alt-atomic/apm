@@ -135,7 +135,6 @@ func (r *ResponseRenderer) formatField(key string, value interface{}) string {
 
 // buildTreeFromMap рекурсивно строит дерево (tree.Tree) из map[string]interface{}.
 func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) *tree.Tree {
-	// Создаем корень дерева
 	t := tree.New().Root(prefix)
 
 	// 1) Если у нас есть "message", обрабатываем его первым
@@ -216,24 +215,18 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 		v := data[k]
 		switch vv := v.(type) {
 
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: значение == nil
-		case nil:
+		case nil: // значение == nil
 			t.Child(fmt.Sprintf(app.T_("%s: no"), TranslateKey(k)))
 			//t.Child(fmt.Sprintf("%s: []", translateKey(k)))
 
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: строка
-		case string:
+		case string: // строка
 			if vv == "" {
 				t.Child(fmt.Sprintf(app.T_("%s: no"), TranslateKey(k)))
 			} else {
 				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), r.formatField(k, vv)))
 			}
 
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: булевский (true/false) → "да"/"нет"
-		case bool:
+		case bool: // булевский (true/false) → "да"/"нет"
 			var boolStr string
 			if vv {
 				boolStr = app.T_("yes")
@@ -242,9 +235,7 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 			}
 			t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), boolStr))
 
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: числа (int, float64)
-		case int, float64:
+		case int, float64: // числа
 			if k == "size" || k == "installedSize" || k == "downloadSize" || k == "installSize" {
 				sizeVal := 0
 				switch valueTyped := vv.(type) {
@@ -261,15 +252,11 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 				t.Child(fmt.Sprintf("%s: %v", TranslateKey(k), vv))
 			}
 
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: вложенная map
-		case map[string]interface{}:
+		case map[string]interface{}: // вложенная map
 			subTree := r.buildTreeFromMap(TranslateKey(k), vv, isError)
 			t.Child(subTree)
 
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: срез (slice) из interface{}
-		case []interface{}:
+		case []interface{}: // срез из interface{}
 			if len(vv) == 0 {
 				t.Child(fmt.Sprintf("%s: []", TranslateKey(k))) // пустой срез
 				continue
@@ -285,8 +272,7 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 			}
 			t.Child(listNode)
 
-		// СЛУЧАЙ: срез из map[string]interface{}
-		case []map[string]interface{}:
+		case []map[string]interface{}: // срез из map[string]interface{}
 			if len(vv) == 0 {
 				// Показываем пустой массив как []
 				t.Child(fmt.Sprintf("%s: []", TranslateKey(k)))
@@ -299,15 +285,11 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 			}
 			t.Child(listNode)
 
-			//----------------------------------------------------------------------
-			// ДРУГИЕ СЛУЧАИ: структуры, срезы непонятных типов и т.д.
-		default:
+		default: // структуры, срезы непонятных типов и т.д.
 			rv := reflect.ValueOf(v)
 			switch rv.Kind() {
 
-			//------------------------------------------------------------------
-			// СЛУЧАЙ: структура
-			case reflect.Struct:
+			case reflect.Struct: // структура
 				b, err := json.Marshal(vv)
 				if err == nil {
 					var mm map[string]interface{}
@@ -319,8 +301,7 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 				}
 				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 
-			// СЛУЧАЙ: указатель (попробуем развернуть через JSON как структуру/срез)
-			case reflect.Ptr:
+			case reflect.Ptr: // указатель
 				b, err := json.Marshal(vv)
 				if err == nil {
 					var mm map[string]interface{}
@@ -346,9 +327,7 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 				}
 				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 
-			//------------------------------------------------------------------
-			// СЛУЧАЙ: срез (slice) непонятного типа
-			case reflect.Slice:
+			case reflect.Slice: // срез непонятного типа
 				b, err := json.Marshal(vv)
 				if err == nil {
 					var arr []interface{}
@@ -368,7 +347,6 @@ func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]inter
 				}
 				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (slice of unknown type)"), vv)))
 
-			//------------------------------------------------------------------
 			default:
 				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
 			}
@@ -396,8 +374,7 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 	isError := resp.Error != nil
 
 	switch format {
-	// ---------------------------------- JSON ----------------------------------
-	case app.FormatJSON:
+	case app.FormatJSON: // JSON
 		if !isError {
 			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
 				delete(dataMap, "message")
@@ -409,8 +386,7 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 		}
 		fmt.Println(string(b))
 
-	// ---------------------------------- TEXT (по умолчанию) ------------------
-	default:
+	default: // TEXT (по умолчанию)
 		if isError {
 			msg := resp.Error.Message
 			if len(msg) > 0 {

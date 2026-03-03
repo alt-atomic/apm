@@ -71,7 +71,7 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 	}
 }
 
-// findPkgInfoOnlyFirstArg — как обычный поиск, но только для первого аргумента
+// findPkgInfoOnlyFirstArg выполняет поиск информации о пакете только для первого аргумента.
 func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
 		if cmd.NArg() >= 2 {

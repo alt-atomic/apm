@@ -33,7 +33,7 @@ import (
 	"strings"
 )
 
-// HTTPWrapper – обёртка для системных действий, предназначенная для экспорта через HTTP.
+// HTTPWrapper предоставляет обёртку для системных действий через HTTP.
 type HTTPWrapper struct {
 	http_server.BaseHTTPWrapper
 	actions *Actions
@@ -47,7 +47,7 @@ func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTT
 	}
 }
 
-// CheckRemove – Проверить пакеты перед удалением
+// CheckRemove проверяет возможность удаления пакетов.
 func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -87,7 +87,7 @@ func (w *HTTPWrapper) CheckRemove(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// CheckInstall – Проверить пакеты перед установкой
+// CheckInstall проверяет возможность установки пакетов.
 func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -117,7 +117,7 @@ func (w *HTTPWrapper) CheckInstall(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// CheckUpgrade – Проверить пакеты перед обновлением системы
+// CheckUpgrade проверяет возможность обновления системы.
 func (w *HTTPWrapper) CheckUpgrade(rw http.ResponseWriter, r *http.Request) {
 	if w.RunBackground(rw, r, reply.EventSystemCheckUpgrade, func(ctx context.Context) (interface{}, error) {
 		return w.actions.CheckUpgrade(ctx)
@@ -134,7 +134,7 @@ func (w *HTTPWrapper) CheckUpgrade(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Remove – Удалить пакеты
+// Remove удаляет пакеты.
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -174,7 +174,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Install – Установить пакеты
+// Install устанавливает пакеты.
 func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -204,7 +204,7 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Info – Получить информацию о пакете
+// Info возвращает информацию о пакете.
 func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	full := r.URL.Query().Get("full") == "true"
@@ -221,7 +221,7 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-// MultiInfo – Получить информацию о нескольких пакетах
+// MultiInfo возвращает информацию о нескольких пакетах.
 func (w *HTTPWrapper) MultiInfo(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -251,7 +251,7 @@ func (w *HTTPWrapper) MultiInfo(rw http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-// List – Получить список пакетов
+// List возвращает список пакетов с фильтрацией.
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	limit := 50
@@ -302,7 +302,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-// GetFilterFields – Получить доступные поля для фильтрации
+// GetFilterFields возвращает доступные поля фильтрации.
 func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.GetFilterFields(ctx)
@@ -313,7 +313,7 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Search – Поиск пакетов по названию
+// Search выполняет поиск пакетов.
 func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	q := query.Get("q")
@@ -332,7 +332,7 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-// Update – Обновить базу данных пакетов
+// Update обновляет базу данных пакетов.
 func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	noLock := r.URL.Query().Get("noLock") == "true"
 
@@ -351,7 +351,7 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Upgrade – Обновить систему
+// Upgrade обновляет систему.
 func (w *HTTPWrapper) Upgrade(rw http.ResponseWriter, r *http.Request) {
 	if w.RunBackground(rw, r, reply.EventSystemUpgrade, func(ctx context.Context) (interface{}, error) {
 		return w.actions.Upgrade(ctx)
@@ -368,9 +368,9 @@ func (w *HTTPWrapper) Upgrade(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// --- Image (atomic only) ---
+// Image (atomic only)
 
-// ImageStatus – Получить статус образа
+// ImageStatus возвращает статус образа.
 func (w *HTTPWrapper) ImageStatus(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.ImageStatus(ctx)
@@ -381,7 +381,7 @@ func (w *HTTPWrapper) ImageStatus(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// ImageUpdate – Обновить образ
+// ImageUpdate обновляет образ системы.
 func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 	if w.RunBackground(rw, r, reply.EventSystemImageUpdate, func(ctx context.Context) (interface{}, error) {
 		return w.actions.ImageUpdate(ctx)
@@ -398,7 +398,7 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// ImageApply – Применить изменения к образу
+// ImageApply применяет изменения к образу.
 func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 	if w.RunBackground(rw, r, reply.EventSystemImageApply, func(ctx context.Context) (interface{}, error) {
 		return w.actions.ImageApply(ctx)
@@ -415,7 +415,7 @@ func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// ImageHistory – Получить историю изменений образа
+// ImageHistory возвращает историю обновлений образа.
 func (w *HTTPWrapper) ImageHistory(rw http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	imageName := query.Get("imageName")
@@ -443,7 +443,7 @@ func (w *HTTPWrapper) ImageHistory(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// ImageGetConfig – Получить конфигурацию образа
+// ImageGetConfig возвращает конфигурацию образа.
 func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.ImageGetConfig(ctx)
@@ -454,7 +454,7 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// ImageSaveConfig – Сохранить конфигурацию образа
+// ImageSaveConfig сохраняет конфигурацию образа.
 func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 	var config build.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {

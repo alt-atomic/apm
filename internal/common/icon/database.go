@@ -35,7 +35,7 @@ type DBIcon struct {
 	Icon      []byte `gorm:"column:icon;not null"`
 }
 
-// TableName задаёт имя таблицы
+// TableName задаёт имя таблицы.
 func (DBIcon) TableName() string {
 	return "icons"
 }
@@ -45,7 +45,7 @@ type DBService struct {
 	db *gorm.DB
 }
 
-// NewIconDBService — конструктор сервиса
+// NewIconDBService создаёт новый сервис для работы с иконками в базе данных.
 func NewIconDBService(db *sql.DB) (*DBService, error) {
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),

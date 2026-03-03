@@ -37,7 +37,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// PackageDBService — сервис для операций с базой данных пакетов
+// PackageDBService предоставляет сервис для операций с базой данных пакетов.
 type PackageDBService struct {
 	dbManager app.DatabaseManager
 	realDb    *gorm.DB
@@ -81,7 +81,7 @@ func (s *PackageDBService) db() (*gorm.DB, error) {
 	return s.realDb, nil
 }
 
-// NewPackageDBService — конструктор сервиса
+// NewPackageDBService создаёт новый сервис для работы с базой данных пакетов.
 func NewPackageDBService(dbManager app.DatabaseManager) *PackageDBService {
 	return &PackageDBService{
 		dbManager: dbManager,
@@ -108,7 +108,7 @@ func (t PackageType) String() string {
 
 func (t PackageType) Value() (driver.Value, error) { return int64(t), nil }
 
-// DBPackage — модель для GORM, отражающая структуру таблицы в БД.
+// DBPackage описывает модель пакета для GORM.
 type DBPackage struct {
 	Name             string               `gorm:"column:name;primaryKey"`
 	Architecture     string               `gorm:"column:architecture"`
@@ -131,12 +131,12 @@ type DBPackage struct {
 	TypePackage      PackageType          `gorm:"column:typePackage"`
 }
 
-// TableName — задаём имя таблицы
+// TableName задаёт имя таблицы.
 func (DBPackage) TableName() string {
 	return "host_image_packages"
 }
 
-// fromDBModel — вспомогательная функция, преобразующая DBPackage (модель БД) в бизнес-структуру Package.
+// fromDBModel преобразует модель базы данных в бизнес-структуру.
 func (dbp DBPackage) fromDBModel() Package {
 	p := Package{
 		Name:             dbp.Name,
@@ -168,7 +168,7 @@ func (dbp DBPackage) fromDBModel() Package {
 	return p
 }
 
-// toDBModel — обратная функция, преобразующая бизнес-структуру Package в DBPackage для сохранения в БД.
+// toDBModel преобразует бизнес-структуру в модель базы данных.
 func (p Package) toDBModel() DBPackage {
 	dbp := DBPackage{
 		Name:             p.Name,

@@ -29,14 +29,14 @@ import (
 	"sync"
 )
 
-// Service — сервис иконок
+// Service предоставляет сервис для работы с иконками.
 type Service struct {
 	serviceDistroAPI *service.DistroAPIService
 	dbService        *DBService
 	commandPrefix    string
 }
 
-// NewIconService — конструктор сервиса
+// NewIconService создаёт новый сервис для работы с иконками.
 func NewIconService(db *sql.DB, commandPrefix string) *Service {
 	distroAPISvc := service.NewDistroAPIService(commandPrefix)
 

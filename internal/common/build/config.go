@@ -33,7 +33,7 @@ var (
 	ParseJsonConfigData = core.ParseJsonConfigData
 )
 
-// HostConfigService — сервис для работы с конфигурацией хоста.
+// HostConfigService предоставляет сервис для работы с конфигурацией хоста.
 type HostConfigService struct {
 	Config              *Config
 	serviceHostDatabase *HostDBService

@@ -49,7 +49,7 @@ type DistroDBService struct {
 	db *gorm.DB
 }
 
-// NewDistroDBService — конструктор сервиса
+// NewDistroDBService создаёт новый сервис для работы с базой данных distrobox.
 func NewDistroDBService(db *sql.DB) (*DistroDBService, error) {
 	gormLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
@@ -79,7 +79,7 @@ func NewDistroDBService(db *sql.DB) (*DistroDBService, error) {
 	}, nil
 }
 
-// TableName - задаём имя таблицы
+// TableName задаёт имя таблицы.
 func (DBDistroPackage) TableName() string {
 	return "distrobox_packages"
 }

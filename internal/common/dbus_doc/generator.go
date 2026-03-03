@@ -31,6 +31,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // DBusMethodInfo содержит информацию о DBus методе
@@ -212,14 +213,7 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
 			if line != "" {
-				if strings.Contains(line, "–") {
-					parts := strings.SplitN(line, "–", 2)
-					if len(parts) == 2 {
-						descriptions[nextFunc.Name.Name] = strings.TrimSpace(parts[1])
-					}
-				} else {
-					descriptions[nextFunc.Name.Name] = line
-				}
+				descriptions[nextFunc.Name.Name] = g.extractDescription(nextFunc.Name.Name, line)
 				break
 			}
 		}
@@ -288,6 +282,30 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 	})
 
 	return methods
+}
+
+// extractDescription извлекает описание метода из doc-комментария.
+// Поддерживает два формата:
+//   - "MethodName – описание" (en-dash разделитель)
+//   - "MethodName описание." (Go doc формат, имя + глагол)
+func (g *Generator) extractDescription(methodName, line string) string {
+	if strings.Contains(line, "–") {
+		parts := strings.SplitN(line, "–", 2)
+		if len(parts) == 2 {
+			return strings.TrimSpace(parts[1])
+		}
+	}
+
+	if strings.HasPrefix(line, methodName+" ") {
+		desc := strings.TrimPrefix(line, methodName+" ")
+		if len(desc) > 0 {
+			runes := []rune(desc)
+			runes[0] = unicode.ToUpper(runes[0])
+			return string(runes)
+		}
+	}
+
+	return line
 }
 
 // getASTTypeString преобразует AST тип в строку

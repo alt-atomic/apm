@@ -34,7 +34,7 @@ type TemporaryConfig struct {
 	} `yaml:"packages" json:"packages"`
 }
 
-// TemporaryConfigService HostConfigService — сервис для работы с временным конфигурационным файлом
+// TemporaryConfigService сервис для работы с временным конфигурационным файлом
 type TemporaryConfigService struct {
 	Config             *TemporaryConfig
 	temporaryImageFile string

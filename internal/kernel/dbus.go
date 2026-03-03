@@ -27,14 +27,14 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusWrapper – обёртка для kernel действий, предназначенная для экспорта через DBus.
+// DBusWrapper предоставляет обёртку для действий с ядрами через DBus.
 type DBusWrapper struct {
 	conn    *dbus.Conn
 	actions *Actions
 	ctx     context.Context
 }
 
-// NewDBusWrapper создаёт новую обёртку над actions
+// NewDBusWrapper создаёт новую обёртку над actions.
 func NewDBusWrapper(a *Actions, c *dbus.Conn, ctx context.Context) *DBusWrapper {
 	return &DBusWrapper{actions: a, conn: c, ctx: ctx}
 }
@@ -47,7 +47,7 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 	return nil
 }
 
-// ListKernels – Получить список доступных ядер
+// ListKernels возвращает список доступных ядер.
 func (w *DBusWrapper) ListKernels(flavour string, installedOnly bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ListKernels(ctx, flavour, installedOnly)
@@ -61,7 +61,7 @@ func (w *DBusWrapper) ListKernels(flavour string, installedOnly bool, transactio
 	return string(data), nil
 }
 
-// GetCurrentKernel – Получить информацию о текущем ядре
+// GetCurrentKernel возвращает информацию о текущем ядре.
 func (w *DBusWrapper) GetCurrentKernel(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetCurrentKernel(ctx)
@@ -75,7 +75,7 @@ func (w *DBusWrapper) GetCurrentKernel(transaction string) (string, *dbus.Error)
 	return string(data), nil
 }
 
-// CheckInstallKernel – Проверить установку ядра (симуляция)
+// CheckInstallKernel проверяет возможность установки ядра.
 func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -115,7 +115,7 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 	return string(data), nil
 }
 
-// InstallKernel – Установить ядро с указанным flavour
+// InstallKernel устанавливает ядро.
 func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -155,7 +155,7 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 	return string(data), nil
 }
 
-// CheckUpdateKernel – Проверить обновление ядра (симуляция)
+// CheckUpdateKernel проверяет возможность обновления ядра.
 func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -195,7 +195,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 	return string(data), nil
 }
 
-// UpdateKernel – Обновить ядро до последней версии
+// UpdateKernel обновляет ядро.
 func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules []string, includeHeaders bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -235,7 +235,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 	return string(data), nil
 }
 
-// CheckCleanOldKernels – Проверить удаление старых ядер (симуляция)
+// CheckCleanOldKernels проверяет возможность удаления старых ядер.
 func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -275,7 +275,7 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 	return string(data), nil
 }
 
-// CleanOldKernels – Удалить старые ядра
+// CleanOldKernels удаляет старые ядра.
 func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -315,7 +315,7 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 	return string(data), nil
 }
 
-// ListKernelModules – Получить список модулей для ядра
+// ListKernelModules возвращает список модулей ядра.
 func (w *DBusWrapper) ListKernelModules(flavour string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ListKernelModules(ctx, flavour)
@@ -329,7 +329,7 @@ func (w *DBusWrapper) ListKernelModules(flavour string, transaction string) (str
 	return string(data), nil
 }
 
-// CheckInstallKernelModules – Проверить установку модулей ядра (симуляция)
+// CheckInstallKernelModules проверяет возможность установки модулей ядра.
 func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -369,7 +369,7 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 	return string(data), nil
 }
 
-// InstallKernelModules – Установить модули ядра
+// InstallKernelModules устанавливает модули ядра.
 func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -409,7 +409,7 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 	return string(data), nil
 }
 
-// CheckRemoveKernelModules – Проверить удаление модулей ядра (симуляция)
+// CheckRemoveKernelModules проверяет возможность удаления модулей ядра.
 func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -449,7 +449,7 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 	return string(data), nil
 }
 
-// RemoveKernelModules – Удалить модули ядра
+// RemoveKernelModules удаляет модули ядра.
 func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, modules []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err

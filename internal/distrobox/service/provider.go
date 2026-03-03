@@ -33,7 +33,7 @@ type PackageService struct {
 	commandPrefix         string
 }
 
-// NewPackageService — конструктор сервиса.
+// NewPackageService создаёт новый сервис для работы с пакетами.
 func NewPackageService(serviceDistroDatabase *DistroDBService, commandPrefix string) *PackageService {
 	return &PackageService{
 		serviceDistroDatabase: serviceDistroDatabase,

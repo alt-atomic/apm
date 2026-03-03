@@ -29,7 +29,7 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusWrapper – обёртка для системных действий, предназначенная для экспорта через DBus.
+// DBusWrapper предоставляет обёртку для системных действий, предназначенную для экспорта через DBus.
 type DBusWrapper struct {
 	conn    *dbus.Conn
 	actions *Actions
@@ -49,7 +49,7 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 	return nil
 }
 
-// Install – Установка пакетов
+// Install устанавливает пакеты.
 func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -90,7 +90,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 	return string(data), nil
 }
 
-// Remove – Удаление пакетов
+// Remove удаляет пакеты.
 func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, depends bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -131,7 +131,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 	return string(data), nil
 }
 
-// GetFilterFields - Список полей фильтрации для метода list, помогает динамически строить фильтры в интерфейсе
+// GetFilterFields возвращает список полей фильтрации для метода list, помогающий динамически строить фильтры в интерфейсе.
 func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx)
@@ -147,7 +147,7 @@ func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) 
 	return string(data), nil
 }
 
-// Update – Обновление системы
+// Update обновляет систему.
 func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -188,7 +188,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 	return string(data), nil
 }
 
-// List – Продвинутый поиск пакетов по фильтру
+// List выполняет продвинутый поиск пакетов по фильтру.
 func (w *DBusWrapper) List(sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
@@ -214,7 +214,7 @@ func (w *DBusWrapper) List(sort string, order string, limit int, offset int, fil
 	return string(data), nil
 }
 
-// Info – Получить информацию о пакете
+// Info возвращает информацию о пакете.
 func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, packageName)
@@ -228,7 +228,7 @@ func (w *DBusWrapper) Info(packageName string, transaction string) (string, *dbu
 	return string(data), nil
 }
 
-// MultiInfo – Получить информацию о нескольких пакетах
+// MultiInfo возвращает информацию о нескольких пакетах.
 func (w *DBusWrapper) MultiInfo(packages []string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.MultiInfo(ctx, packages)
@@ -242,7 +242,7 @@ func (w *DBusWrapper) MultiInfo(packages []string, transaction string) (string, 
 	return string(data), nil
 }
 
-// CheckUpgrade – Проверить обновление
+// CheckUpgrade проверяет возможность обновления.
 func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -283,7 +283,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 	return string(data), nil
 }
 
-// Upgrade – Обновить систему (для не-атомарных систем)
+// Upgrade обновляет систему (для не-атомарных систем).
 func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -324,7 +324,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 	return string(data), nil
 }
 
-// CheckInstall – Проверить установку пакетов
+// CheckInstall проверяет возможность установки пакетов.
 func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -365,7 +365,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 	return string(data), nil
 }
 
-// CheckRemove – Проверить удаление пакетов
+// CheckRemove проверяет возможность удаления пакетов.
 func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -406,7 +406,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 	return string(data), nil
 }
 
-// Search – Простой! Поиск пакетов
+// Search выполняет простой поиск пакетов.
 func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction string, installed bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -423,7 +423,7 @@ func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction
 	return string(data), nil
 }
 
-// ImageApply – Декларативно применить настройки image.yml к образу хост-системы
+// ImageApply декларативно применяет настройки image.yml к образу хост-системы.
 func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -464,7 +464,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 	return string(data), nil
 }
 
-// ImageHistory – История обновлений
+// ImageHistory возвращает историю обновлений.
 func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, imageName string, limit int, offset int) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -481,7 +481,7 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 	return string(data), nil
 }
 
-// ImageUpdate – Обновить образ системы
+// ImageUpdate обновляет образ системы.
 func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -522,7 +522,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 	return string(data), nil
 }
 
-// ImageStatus – Проверить статус образа
+// ImageStatus проверяет статус образа.
 func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -539,7 +539,7 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	return string(data), nil
 }
 
-// ImageGetConfig - Получить текущий конфиг image.yml
+// ImageGetConfig возвращает текущую конфигурацию image.yml.
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig(w.ctx)
 	if err != nil {
@@ -552,7 +552,7 @@ func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	return string(data), nil
 }
 
-// ImageSaveConfig - Проверить и сохранить новый конфиг image.yml
+// ImageSaveConfig проверяет и сохраняет новую конфигурацию image.yml.
 func (w *DBusWrapper) ImageSaveConfig(sender dbus.Sender, config string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err

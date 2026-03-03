@@ -59,7 +59,7 @@ func (a *Actions) GetIconService() *icon.Service {
 	return a.iconService
 }
 
-// GetIconByPackage - Получить иконку приложения, container можно передать пустым
+// GetIconByPackage возвращает иконку приложения. Параметр container можно передать пустым.
 func (a *Actions) GetIconByPackage(_ context.Context, packageName, container string) ([]byte, error) {
 	data, err := a.iconService.GetIcon(packageName, container)
 	if err != nil {

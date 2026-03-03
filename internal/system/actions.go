@@ -667,10 +667,6 @@ type ListParams struct {
 }
 
 // List возвращает список пакетов
-// List возвращает список пакетов.
-// Структура ListParams заполняется из query параметров автоматически по json тегам
-// @permission read
-// @summary Получить список пакетов
 func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, error) {
 	if params.ForceUpdate {
 		_, err := a.serviceAptActions.Update(ctx)
@@ -683,7 +679,6 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, e
 		return nil, err
 	}
 
-	// Формируем фильтры (map[string]interface{})
 	filters := make(map[string]interface{})
 	for _, filter := range params.Filters {
 		filter = strings.TrimSpace(filter)
@@ -724,7 +719,7 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, e
 	}, nil
 }
 
-// GetFilterFields возвращает список свойств для фильтрации.
+// GetFilterFields возвращает список свойств для фильтрации
 func (a *Actions) GetFilterFields(ctx context.Context) (GetFilterFieldsResponse, error) {
 	if err := a.validateDB(ctx, false); err != nil {
 		return nil, err // validateDB already handles its own classification
@@ -762,7 +757,7 @@ func (a *Actions) GetFilterFields(ctx context.Context) (GetFilterFieldsResponse,
 	return fields, nil
 }
 
-// Search осуществляет поиск системного пакета по названию.
+// Search осуществляет поиск системного пакета по названию
 func (a *Actions) Search(ctx context.Context, packageName string, installed bool) (*SearchResponse, error) {
 	err := a.validateDB(ctx, false)
 	if err != nil {
@@ -984,7 +979,6 @@ func (a *Actions) saveChange(_ context.Context, packagesInstall []string, packag
 		return err
 	}
 
-	// Вспомогательная функция для обработки списка пакетов
 	processPackages := func(packages []string, addFunc func(string) error) error {
 		for _, pkg := range packages {
 			if pkg = strings.TrimSpace(pkg); pkg != "" {
@@ -996,12 +990,10 @@ func (a *Actions) saveChange(_ context.Context, packagesInstall []string, packag
 		return nil
 	}
 
-	// Обрабатываем пакеты на установку
 	if err := processPackages(packagesInstall, a.serviceTemporaryConfig.AddInstallPackage); err != nil {
 		return err
 	}
 
-	// Обрабатываем пакеты на удаление
 	if err := processPackages(packagesRemove, a.serviceTemporaryConfig.AddRemovePackage); err != nil {
 		return err
 	}

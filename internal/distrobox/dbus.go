@@ -27,18 +27,18 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusWrapper – обёртка для системных действий, предназначенная для экспорта через DBus.
+// DBusWrapper предоставляет обёртку для действий с контейнерами через DBus.
 type DBusWrapper struct {
 	actions *Actions
 	ctx     context.Context
 }
 
-// NewDBusWrapper создаёт новую обёртку над actions
+// NewDBusWrapper создаёт новую обёртку над actions.
 func NewDBusWrapper(a *Actions, ctx context.Context) *DBusWrapper {
 	return &DBusWrapper{actions: a, ctx: ctx}
 }
 
-// GetIconByPackage - Получить иконку приложения, container можно передать пустым
+// GetIconByPackage возвращает иконку приложения. Параметр container можно передать пустым.
 func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]byte, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, "")
 	data, err := w.actions.GetIconByPackage(ctx, packageName, container)
@@ -49,7 +49,7 @@ func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]
 	return data, nil
 }
 
-// GetFilterFields - Список полей фильтрации для метода list, помогает динамически строить фильтры в интерфейсе
+// GetFilterFields возвращает список полей фильтрации для динамического построения фильтров в интерфейсе.
 func (w *DBusWrapper) GetFilterFields(container string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetFilterFields(ctx, container)
@@ -65,7 +65,7 @@ func (w *DBusWrapper) GetFilterFields(container string, transaction string) (str
 	return string(data), nil
 }
 
-// Update - Обновление пакетов
+// Update обновляет пакеты.
 func (w *DBusWrapper) Update(container string, transaction string, background bool) (string, *dbus.Error) {
 	if transaction == "" {
 		transaction = helper.GenerateTransactionID()
@@ -102,7 +102,7 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 	return string(data), nil
 }
 
-// Info - Информация о пакете
+// Info возвращает информацию о пакете.
 func (w *DBusWrapper) Info(container string, packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Info(ctx, container, packageName)
@@ -116,7 +116,7 @@ func (w *DBusWrapper) Info(container string, packageName string, transaction str
 	return string(data), nil
 }
 
-// Search - Простой поиск пакетов
+// Search выполняет простой поиск пакетов.
 func (w *DBusWrapper) Search(container string, packageName string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, container, packageName)
@@ -130,7 +130,7 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 	return string(data), nil
 }
 
-// List - Продвинутый поиск пакетов по фильтру
+// List выполняет продвинутый поиск пакетов по фильтру.
 func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
@@ -157,7 +157,7 @@ func (w *DBusWrapper) List(container string, sort string, order string, limit in
 	return string(data), nil
 }
 
-// Install - Установка пакета
+// Install устанавливает пакет.
 func (w *DBusWrapper) Install(container string, packageName string, export bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
@@ -171,7 +171,7 @@ func (w *DBusWrapper) Install(container string, packageName string, export bool,
 	return string(data), nil
 }
 
-// Remove - Удаление пакета
+// Remove удаляет пакет.
 func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Remove(ctx, container, packageName, onlyExport)
@@ -185,7 +185,7 @@ func (w *DBusWrapper) Remove(container string, packageName string, onlyExport bo
 	return string(data), nil
 }
 
-// ContainerList - Список контейнеров
+// ContainerList возвращает список контейнеров.
 func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerList(ctx)
@@ -199,7 +199,7 @@ func (w *DBusWrapper) ContainerList(transaction string) (string, *dbus.Error) {
 	return string(data), nil
 }
 
-// ContainerAdd - Добавить контейнер
+// ContainerAdd добавляет контейнер.
 func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks string, transaction string, background bool) (string, *dbus.Error) {
 	if transaction == "" {
 		transaction = helper.GenerateTransactionID()
@@ -236,7 +236,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 	return string(data), nil
 }
 
-// ContainerRemove - Удалить контейнер
+// ContainerRemove удаляет контейнер.
 func (w *DBusWrapper) ContainerRemove(name string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.ContainerRemove(ctx, name)

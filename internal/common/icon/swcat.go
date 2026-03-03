@@ -32,14 +32,14 @@ import (
 	"apm/internal/common/helper"
 )
 
-// SwCatIconService — сервис для работы с XML-файлами SWCatalog.
+// SwCatIconService предоставляет сервис для работы с XML-файлами SWCatalog.
 type SwCatIconService struct {
 	path          string
 	containerName string
 	commandPrefix string
 }
 
-// NewSwCatIconService — конструктор сервиса.
+// NewSwCatIconService создаёт новый экземпляр сервиса для работы с иконками SWCatalog.
 func NewSwCatIconService(path string, containerName string, commandPrefix string) *SwCatIconService {
 	return &SwCatIconService{
 		path:          path,
@@ -48,14 +48,14 @@ func NewSwCatIconService(path string, containerName string, commandPrefix string
 	}
 }
 
-// Component – исходная структура из XML.
+// Component описывает исходную структуру компонента из XML.
 type Component struct {
 	XMLName xml.Name `xml:"component"`
 	PkgName string   `xml:"pkgname"`
 	Icons   []Icon   `xml:"icon"`
 }
 
-// Icon – структура для иконок.
+// Icon описывает структуру иконки.
 type Icon struct {
 	Type   string `xml:"type,attr" json:"type"`
 	Width  int    `xml:"width,attr" json:"width"`
@@ -63,13 +63,13 @@ type Icon struct {
 	Value  string `xml:",chardata" json:"value"`
 }
 
-// SWCatalog – структура, соответствующая корневому элементу XML.
+// SWCatalog описывает структуру корневого элемента XML каталога программного обеспечения.
 type SWCatalog struct {
 	XMLName    xml.Name    `xml:"components"`
 	Components []Component `xml:"component"`
 }
 
-// PackageIconsSwCat – итоговая структура для каждого пакета.
+// PackageIconsSwCat описывает итоговую структуру иконок пакета.
 type PackageIconsSwCat struct {
 	PkgName string `json:"pkgName"`
 	Icons   []Icon `json:"icons"`

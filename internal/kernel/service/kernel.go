@@ -155,10 +155,8 @@ func NewKernelManager(dbService *_package.PackageDBService, aptActions *apt.Acti
 func (km *Manager) SimulateRemoveKernel(kernel *Info) (*libApt.PackageChanges, error) {
 	var packagesToRemove []string
 
-	// Добавляем само ядро
 	packagesToRemove = append(packagesToRemove, kernel.PackageName)
 
-	// Находим все установленные модули для данного ядра
 	availableModules, err := km.FindAvailableModules(kernel)
 	if err == nil {
 		for _, moduleInfo := range availableModules {
@@ -175,10 +173,8 @@ func (km *Manager) SimulateRemoveKernel(kernel *Info) (*libApt.PackageChanges, e
 func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 	var packagesToRemove []string
 
-	// Добавляем само ядро
 	packagesToRemove = append(packagesToRemove, kernel.PackageName)
 
-	// Находим все установленные модули для данного ядра
 	availableModules, err := km.FindAvailableModules(kernel)
 	if err == nil {
 		for _, moduleInfo := range availableModules {
@@ -385,16 +381,13 @@ func (km *Manager) FindAvailableModules(kernel *Info) (modules []ModuleInfo, err
 
 // SimulateUpgrade симулирует обновление до указанного ядра с модулями
 func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeaders bool) (preview *UpgradePreview, err error) {
-	// Формируем список пакетов для установки
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
 
-	// Симулируем установку через APT Actions
 	changes, err := km.aptActions.SimulateInstall(installPackages)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to simulate kernel upgrade: %s"), err.Error())
 	}
 
-	// Проверяем какие модули недоступны
 	missingModules := km.findMissingModules(kernel, modules)
 
 	preview = &UpgradePreview{
@@ -411,11 +404,9 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstall))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstall))
 
-	// Формируем список пакетов для установки
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
 
 	if dryRun {
-		// Используем APT Actions для симуляции
 		_, err := km.aptActions.SimulateInstall(installPackages)
 		return err
 	}
@@ -544,7 +535,6 @@ func (km *Manager) InheritModulesFromKernel(targetKernel *Info, sourceKernel *In
 		return nil, fmt.Errorf(app.T_("failed to get available modules from source kernel: %s"), err.Error())
 	}
 
-	// Извлекаем только установленные модули из исходного ядра
 	var sourceModules []string
 	for _, moduleInfo := range sourceAvailableModules {
 		if moduleInfo.IsInstalled {
@@ -636,7 +626,6 @@ func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 		return
 	}
 
-	// Обновляем данные из базы
 	kernel.IsInstalled = km.checkInstallStatus(kernel, pkg.Installed)
 	kernel.PackageName = pkg.Name
 
@@ -681,21 +670,18 @@ func (km *Manager) checkModuleInstallStatus(module, flavour string, aptInstalled
 func (km *Manager) buildPackageList(kernel *Info, modules []string, includeHeaders bool) []string {
 	var installPackages []string
 
-	// Добавляем само ядро - используем FullVersion если содержит #
 	if strings.Contains(kernel.FullVersion, "#") {
 		installPackages = append(installPackages, kernel.FullVersion)
 	} else {
 		installPackages = append(installPackages, kernel.PackageName)
 	}
 
-	// Добавляем модули с полными версиями
 	for _, module := range modules {
 		modulePackage := fmt.Sprintf("kernel-modules-%s-%s", module, kernel.Flavour)
 		fullModulePackage := km.GetFullPackageNameForModule(modulePackage)
 		installPackages = append(installPackages, fullModulePackage)
 	}
 
-	// Добавляем headers если нужно
 	if includeHeaders {
 		headerPackage := fmt.Sprintf("kernel-headers-%s", kernel.Flavour)
 		moduleHeaderPackage := fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour)

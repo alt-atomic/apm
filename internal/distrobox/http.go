@@ -29,7 +29,7 @@ import (
 	"strings"
 )
 
-// HTTPWrapper – обёртка для действий с distrobox, предназначенная для экспорта через HTTP.
+// HTTPWrapper предоставляет обёртку для действий с контейнерами через HTTP.
 type HTTPWrapper struct {
 	http_server.BaseHTTPWrapper
 	actions *Actions
@@ -43,7 +43,7 @@ func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTT
 	}
 }
 
-// Update – Обновить список пакетов в контейнере
+// Update обновляет список пакетов.
 func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	container := r.URL.Query().Get("container")
 	if container == "" {
@@ -66,7 +66,7 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Info – Получить информацию о пакете
+// Info возвращает информацию о пакете.
 func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	container := r.URL.Query().Get("container")
 	if container == "" {
@@ -89,7 +89,7 @@ func (w *HTTPWrapper) Info(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Search – Поиск пакетов по названию
+// Search выполняет поиск пакетов.
 func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	container := query.Get("container")
@@ -109,7 +109,7 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// List – Получить список пакетов
+// List возвращает список пакетов с фильтрацией.
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -156,7 +156,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Install – Установить пакет
+// Install устанавливает пакет.
 func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -199,7 +199,7 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// Remove – Удалить пакет
+// Remove удаляет пакет.
 func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -242,7 +242,7 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// GetFilterFields – Получить доступные поля для фильтрации
+// GetFilterFields возвращает доступные поля фильтрации.
 func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	container := r.URL.Query().Get("container")
 	if container == "" {
@@ -259,7 +259,7 @@ func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// GetIcon – Получить иконку пакета
+// GetIcon возвращает иконку пакета.
 func (w *HTTPWrapper) GetIcon(rw http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	container := r.URL.Query().Get("container")
@@ -275,7 +275,7 @@ func (w *HTTPWrapper) GetIcon(rw http.ResponseWriter, r *http.Request) {
 	_, _ = rw.Write(data)
 }
 
-// ContainerList – Получить список контейнеров
+// ContainerList возвращает список контейнеров.
 func (w *HTTPWrapper) ContainerList(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.ContainerList(ctx)
@@ -286,7 +286,7 @@ func (w *HTTPWrapper) ContainerList(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// ContainerAdd – Создать новый контейнер
+// ContainerAdd создаёт новый контейнер.
 func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 	body, err := w.ParseBodyParams(r)
 	if err != nil {
@@ -335,7 +335,7 @@ func (w *HTTPWrapper) ContainerAdd(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// ContainerRemove – Удалить контейнер
+// ContainerRemove удаляет контейнер.
 func (w *HTTPWrapper) ContainerRemove(rw http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {

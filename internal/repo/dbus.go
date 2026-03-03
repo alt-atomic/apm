@@ -26,7 +26,7 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusWrapper – обёртка для действий с репозиториями, предназначенная для экспорта через DBus
+// DBusWrapper предоставляет обёртку для действий с репозиториями через DBus.
 type DBusWrapper struct {
 	conn    *dbus.Conn
 	actions *Actions
@@ -46,7 +46,7 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 	return nil
 }
 
-// List – Получить список репозиториев
+// List возвращает список репозиториев.
 func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.List(ctx, all)
@@ -60,7 +60,7 @@ func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
 	return string(data), nil
 }
 
-// Add – Добавить репозиторий
+// Add добавляет репозиторий.
 func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -78,7 +78,7 @@ func (w *DBusWrapper) Add(sender dbus.Sender, source, date, transaction string) 
 	return string(data), nil
 }
 
-// Remove – Удалить репозиторий
+// Remove удаляет репозиторий.
 func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -96,7 +96,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, source, date, transaction strin
 	return string(data), nil
 }
 
-// Set – Установить ветку (удалить все и добавить указанную)
+// Set устанавливает ветку репозитория.
 func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -113,7 +113,7 @@ func (w *DBusWrapper) Set(sender dbus.Sender, branch, date, transaction string) 
 	return string(data), nil
 }
 
-// Clean – Удалить cdrom и task репозитории
+// Clean удаляет cdrom-источники из репозиториев.
 func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
@@ -130,7 +130,7 @@ func (w *DBusWrapper) Clean(sender dbus.Sender, transaction string) (string, *db
 	return string(data), nil
 }
 
-// GetBranches – Получить список доступных веток
+// GetBranches возвращает список доступных веток.
 func (w *DBusWrapper) GetBranches() (string, *dbus.Error) {
 	resp, err := w.actions.GetBranches(w.ctx)
 	if err != nil {
@@ -143,7 +143,7 @@ func (w *DBusWrapper) GetBranches() (string, *dbus.Error) {
 	return string(data), nil
 }
 
-// GetTaskPackages – Получить список пакетов из задачи
+// GetTaskPackages возвращает список пакетов задачи.
 func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.GetTaskPackages(ctx, taskNum)
@@ -157,7 +157,7 @@ func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (strin
 	return string(data), nil
 }
 
-// CheckAdd – Симулировать добавление репозитория
+// CheckAdd симулирует добавление репозитория.
 func (w *DBusWrapper) CheckAdd(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
@@ -172,7 +172,7 @@ func (w *DBusWrapper) CheckAdd(source, date, transaction string) (string, *dbus.
 	return string(data), nil
 }
 
-// CheckRemove – Симулировать удаление репозитория
+// CheckRemove симулирует удаление репозитория.
 func (w *DBusWrapper) CheckRemove(source, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
@@ -187,7 +187,7 @@ func (w *DBusWrapper) CheckRemove(source, date, transaction string) (string, *db
 	return string(data), nil
 }
 
-// CheckSet – Симулировать установку ветки
+// CheckSet симулирует установку ветки репозитория.
 func (w *DBusWrapper) CheckSet(branch, date, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckSet(ctx, branch, date)
@@ -201,7 +201,7 @@ func (w *DBusWrapper) CheckSet(branch, date, transaction string) (string, *dbus.
 	return string(data), nil
 }
 
-// CheckClean – Симулировать очистку cdrom и task репозиториев
+// CheckClean симулирует очистку cdrom-источников.
 func (w *DBusWrapper) CheckClean(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.CheckClean(ctx)

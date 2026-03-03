@@ -58,13 +58,13 @@ type Image struct {
 	ImageDigest string    `json:"imageDigest"`
 }
 
-// HostImageService — единый сервис для операций с образом (build, switch и т.д.).
+// HostImageService предоставляет единый сервис для работы с образами хоста.
 type HostImageService struct {
 	appConfig     *app.Configuration
 	containerPath string
 }
 
-// NewHostImageService — конструктор сервиса
+// NewHostImageService создаёт новый сервис для работы с образами хоста.
 func NewHostImageService(appConfig *app.Configuration, containerPath string) *HostImageService {
 	return &HostImageService{
 		appConfig:     appConfig,
