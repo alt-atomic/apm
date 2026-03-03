@@ -299,12 +299,6 @@ func CommandList(ctx context.Context) *cli.Command {
 					Value:   false,
 				},
 				&cli.BoolFlag{
-					Name:    "purge",
-					Usage:   app.T_("Attempt to remove all files"),
-					Aliases: []string{"p"},
-					Value:   false,
-				},
-				&cli.BoolFlag{
 					Name:    "depends",
 					Usage:   app.T_("Attempt to remove depends"),
 					Aliases: []string{"d"},
@@ -319,13 +313,13 @@ func CommandList(ctx context.Context) *cli.Command {
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				if cmd.Bool("simulate") {
-					resp, err := actions.CheckRemove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"))
+					resp, err := actions.CheckRemove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					return reply.CliResponse(ctx, reply.OK(resp))
 				}
-				resp, err := actions.Remove(ctx, cmd.Args().Slice(), cmd.Bool("purge"), cmd.Bool("depends"),
+				resp, err := actions.Remove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"),
 					cmd.Bool("yes"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
