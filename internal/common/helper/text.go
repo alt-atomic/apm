@@ -97,6 +97,25 @@ func ParseBool(val interface{}) (bool, bool) {
 	return false, false
 }
 
+// FormatSpeed форматирует скорость в байтах/сек в человекочитаемый вид.
+func FormatSpeed(bytesPerSec uint64) string {
+	if bytesPerSec == 0 {
+		return ""
+	}
+	const (
+		kb = 1024
+		mb = 1024 * 1024
+	)
+	switch {
+	case bytesPerSec >= mb:
+		return fmt.Sprintf("%.1f MB/s", float64(bytesPerSec)/float64(mb))
+	case bytesPerSec >= kb:
+		return fmt.Sprintf("%.0f KB/s", float64(bytesPerSec)/float64(kb))
+	default:
+		return fmt.Sprintf("%d B/s", bytesPerSec)
+	}
+}
+
 // CompareVersions сравнивает две версии пакетов
 // Возвращает: 1 если a > b, -1 если a < b, 0 если равны
 func CompareVersions(a, b string) int {

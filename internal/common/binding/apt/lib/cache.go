@@ -25,6 +25,7 @@ import "C"
 
 import (
 	"runtime"
+	cgoRuntime "runtime/cgo"
 	"unsafe"
 )
 
@@ -53,8 +54,15 @@ func (c *Cache) Close() {
 	}
 }
 
-func (c *Cache) Update() error {
+func (c *Cache) Update(handler ProgressHandler) error {
 	return withMutex(func() error {
+		var userData C.uintptr_t
+		if handler != nil {
+			handle := cgoRuntime.NewHandle(handler)
+			defer handle.Delete()
+			userData = C.uintptr_t(handle)
+			C.apt_use_go_progress_callback(userData)
+		}
 		if res := C.apt_cache_update(c.Ptr); res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}

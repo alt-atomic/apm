@@ -7,7 +7,7 @@
 
 AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                                          AptProgressCallback callback,
-                                         void *user_data) {
+                                         uintptr_t user_data) {
     if (!cache || !cache->dep_cache) return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid cache for dist upgrade");
 
     try {
@@ -41,7 +41,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
             if (_error->PendingError()) {
                 if (cb_set) {
                     global_callback = nullptr;
-                    global_user_data = nullptr;
+                    global_user_data = 0;
                 }
                 return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the download directory");
             }
@@ -53,7 +53,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         if (!source_list.ReadMainList()) {
             if (cb_set) {
                 global_callback = nullptr;
-                global_user_data = nullptr;
+                global_user_data = 0;
             }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
         }
@@ -62,14 +62,14 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         if (!pm->GetArchives(&acquire, &source_list, &records)) {
             if (cb_set) {
                 global_callback = nullptr;
-                global_user_data = nullptr;
+                global_user_data = 0;
             }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to get package archives for dist upgrade");
         }
         if (acquire.Run() != pkgAcquire::Continue) {
             if (cb_set) {
                 global_callback = nullptr;
-                global_user_data = nullptr;
+                global_user_data = 0;
             }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages for dist upgrade");
         }
@@ -99,7 +99,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                 if (_system) _system->Lock();
                 if (cb_set) {
                     global_callback = nullptr;
-                    global_user_data = nullptr;
+                    global_user_data = 0;
                 }
                 // Collect detailed error message from APT
                 {
@@ -113,7 +113,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                 if (_system) _system->Lock();
                 if (cb_set) {
                     global_callback = nullptr;
-                    global_user_data = nullptr;
+                    global_user_data = 0;
                 }
                 {
                     std::string error_details = collect_pending_errors();
@@ -126,7 +126,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                 if (_system) _system->Lock();
                 if (cb_set) {
                     global_callback = nullptr;
-                    global_user_data = nullptr;
+                    global_user_data = 0;
                 }
                 {
                     std::string error_details = collect_pending_errors();
@@ -141,7 +141,7 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         if (!update_marks) {
             if (cb_set) {
                 global_callback = nullptr;
-                global_user_data = nullptr;
+                global_user_data = 0;
             }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to update package marks after dist upgrade");
         }
@@ -149,18 +149,18 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         if (!check_apt_errors()) {
             if (cb_set) {
                 global_callback = nullptr;
-                global_user_data = nullptr;
+                global_user_data = 0;
             }
             return make_result(last_error, nullptr);
         }
         if (cb_set) {
             global_callback = nullptr;
-            global_user_data = nullptr;
+            global_user_data = 0;
         }
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
         global_callback = nullptr;
-        global_user_data = nullptr;
+        global_user_data = 0;
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }

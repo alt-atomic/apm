@@ -361,7 +361,7 @@ func getTaskText(task string) string {
 	case EventSystemUpdateSTPLR:
 		return app.T_("Loading package list from STPLR repository")
 	case EventSystemAptUpdate:
-		return app.T_("Loading package list from ALT repository")
+		return app.T_("Loading package list from repository")
 	case EventSystemSavePackagesToDB:
 		return app.T_("Saving packages to the database")
 	case EventSystemSaveImageToDB:

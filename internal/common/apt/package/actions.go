@@ -243,7 +243,7 @@ type packageProgress struct {
 	lastUpdate  time.Time
 }
 
-func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total uint64) {
+func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
 	// Состояние для загрузки
 	lastDownloadPercent := -1
 	lastDownloadUpdate := time.Now()
@@ -252,12 +252,15 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 	packageState := make(map[string]*packageProgress)
 	var packageMutex sync.Mutex
 
-	return func(pkg string, event aptLib.ProgressType, cur, total uint64) {
+	return func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
 		switch event {
 		case aptLib.CallbackDownloadProgress:
+			if total == 0 {
+				return
+			}
 			percent := int((cur * 100) / total)
 
-			if total > 0 && percent < 100 {
+			if percent < 100 {
 				now := time.Now()
 				elapsed := now.Sub(lastDownloadUpdate)
 
@@ -278,11 +281,16 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 					lastDownloadPercent = percent
 					lastDownloadUpdate = now
 
+					viewText := app.T_("Downloading packages")
+					if speedStr := helper.FormatSpeed(speed); speedStr != "" {
+						viewText += "  " + speedStr
+					}
+
 					reply.CreateEventNotification(ctx, reply.StateBefore,
 						reply.WithEventName(reply.EventSystemDownloadProgress),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(app.T_("Downloading packages")),
+						reply.WithEventView(viewText),
 					)
 				}
 			}
@@ -318,22 +326,17 @@ func (a *Actions) getHandler(ctx context.Context) func(pkg string, event aptLib.
 			shouldUpdate := false
 
 			if state.lastPercent == -1 {
-				// Первое обновление
 				shouldUpdate = true
 			} else if percent == 100 {
-				// Завершение - всегда показываем
 				shouldUpdate = true
 			} else if percent != state.lastPercent {
 				percentDiff := helper.Abs(percent - state.lastPercent)
 
 				if percentDiff >= 10 {
-					// Большое изменение - обновляем быстрее
 					shouldUpdate = elapsed >= 50*time.Millisecond
 				} else if percentDiff >= 5 {
-					// Среднее изменение
 					shouldUpdate = elapsed >= 100*time.Millisecond
 				} else {
-					// Маленькое изменение - обновляем редко
 					shouldUpdate = elapsed >= 200*time.Millisecond
 				}
 			}
@@ -631,16 +634,93 @@ func (a *Actions) GetInstalledPackages(ctx context.Context, noLock ...bool) (map
 	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
 }
 
-func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemAptUpdate))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))
-
-	err := a.serviceAptBinding.Update(noLock...)
-	if err != nil {
-		return err
+func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
+	type itemState struct {
+		lastPercent int
+		lastUpdate  time.Time
 	}
+	items := make(map[string]*itemState)
+	done := make(map[string]bool)
+	var mu sync.Mutex
 
-	return nil
+	return func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
+		switch event {
+		case aptLib.CallbackDownloadItemProgress:
+			if pkg == "" || total == 0 {
+				return
+			}
+
+			mu.Lock()
+			if done[pkg] {
+				mu.Unlock()
+				return
+			}
+			state, exists := items[pkg]
+			if !exists {
+				state = &itemState{lastPercent: -1, lastUpdate: time.Now()}
+				items[pkg] = state
+			}
+
+			percent := int((cur * 100) / total)
+			now := time.Now()
+			elapsed := now.Sub(state.lastUpdate)
+
+			shouldUpdate := false
+			if state.lastPercent == -1 {
+				shouldUpdate = true
+			} else if percent != state.lastPercent {
+				if percent < 10 || percent > 90 {
+					shouldUpdate = elapsed >= 50*time.Millisecond
+				} else {
+					shouldUpdate = elapsed >= 100*time.Millisecond
+				}
+			}
+
+			if shouldUpdate && percent < 100 {
+				state.lastPercent = percent
+				state.lastUpdate = now
+				mu.Unlock()
+
+				viewText := pkg
+				if speedStr := helper.FormatSpeed(speed); speedStr != "" {
+					viewText += "  " + speedStr
+				}
+
+				ev := fmt.Sprintf("system.AptUpdate-%s", pkg)
+				reply.CreateEventNotification(ctx, reply.StateBefore,
+					reply.WithEventName(ev),
+					reply.WithProgress(true),
+					reply.WithProgressPercent(float64(percent)),
+					reply.WithEventView(viewText),
+				)
+			} else {
+				mu.Unlock()
+			}
+
+		case aptLib.CallbackDownloadStop:
+			mu.Lock()
+			_, tracked := items[pkg]
+			delete(items, pkg)
+			if tracked {
+				done[pkg] = true
+			}
+			mu.Unlock()
+
+			if tracked && pkg != "" {
+				ev := fmt.Sprintf("system.AptUpdate-%s", pkg)
+				reply.CreateEventNotification(ctx, reply.StateAfter,
+					reply.WithEventName(ev),
+					reply.WithProgress(true),
+					reply.WithProgressPercent(100),
+					reply.WithProgressDoneText(pkg),
+				)
+			}
+		}
+	}
+}
+
+func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
+	return a.serviceAptBinding.Update(a.getUpdateHandler(ctx), noLock...)
 }
 
 func extractLastMessage(changelog string) string {

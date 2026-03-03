@@ -26,7 +26,6 @@ import "C"
 import (
 	"runtime"
 	cgoRuntime "runtime/cgo"
-	"unsafe"
 )
 
 // PackageManager обрабатывает операции установки/удаления через уровень C++
@@ -59,7 +58,7 @@ func (pm *PackageManager) Close() {
 // InstallPackages выполняет установку пакета без обратного вызова прогресса
 func (pm *PackageManager) InstallPackages() error {
 	return withMutex(func() error {
-		if res := C.apt_install_packages(pm.Ptr, nil, nil); res.code != C.APT_SUCCESS {
+		if res := C.apt_install_packages(pm.Ptr, nil, 0); res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}
 		return nil
@@ -69,12 +68,11 @@ func (pm *PackageManager) InstallPackages() error {
 // InstallPackagesWithProgress выполняет установку пакета с обратным вызовом прогресса
 func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) error {
 	return withMutex(func() error {
-		var userData unsafe.Pointer
+		var userData C.uintptr_t
 		if handler != nil {
 			handle := cgoRuntime.NewHandle(handler)
 			defer handle.Delete()
-			// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
-			userData = unsafe.Pointer(uintptr(handle))
+			userData = C.uintptr_t(handle)
 			C.apt_use_go_progress_callback(userData)
 		}
 		if res := C.apt_install_packages(pm.Ptr, nil, userData); res.code != C.APT_SUCCESS {
@@ -87,12 +85,11 @@ func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) e
 // DistUpgradeWithProgress выполняет полное обновление системы с прогрессом
 func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
 	return withMutex(func() error {
-		var userData unsafe.Pointer
+		var userData C.uintptr_t
 		if handler != nil {
 			handle := cgoRuntime.NewHandle(handler)
 			defer handle.Delete()
-			// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
-			userData = unsafe.Pointer(uintptr(handle))
+			userData = C.uintptr_t(handle)
 			C.apt_use_go_progress_callback(userData)
 		}
 		if res := C.apt_dist_upgrade_with_progress(c.Ptr, nil, userData); res.code != C.APT_SUCCESS {

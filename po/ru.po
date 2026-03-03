@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-03 15:55+0600\n"
+"POT-Creation-Date: 2026-03-03 17:20+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -693,12 +693,12 @@ msgstr ""
 msgid "No packages found matching the specified patterns"
 msgstr "Не найдено пакетов, соответствующих указанным шаблонам"
 
-#: internal/common/apt/package/actions.go:285
+#: internal/common/apt/package/actions.go:281
 #: internal/common/reply/event.go:384
 msgid "Downloading packages"
 msgstr "Загрузка пакетов"
 
-#: internal/common/apt/package/actions.go:294
+#: internal/common/apt/package/actions.go:299
 msgid "All packages downloaded"
 msgstr "Загрузка всех пакетов"
 
@@ -1352,8 +1352,8 @@ msgid "Loading package list from STPLR repository"
 msgstr "Загрузка списка пакетов из репозитория STPLR"
 
 #: internal/common/reply/event.go:364
-msgid "Loading package list from ALT repository"
-msgstr "Загрузка списка пакетов из репозитория ALT"
+msgid "Loading package list from repository"
+msgstr "Загрузка списка пакетов из репозитория"
 
 #: internal/common/reply/event.go:368
 msgid "Saving image history to the database"

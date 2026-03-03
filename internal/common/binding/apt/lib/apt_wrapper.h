@@ -60,17 +60,19 @@ typedef enum {
     APT_CALLBACK_DOWNLOAD_START = 20,
     APT_CALLBACK_DOWNLOAD_PROGRESS = 21,
     APT_CALLBACK_DOWNLOAD_STOP = 22,
-    APT_CALLBACK_DOWNLOAD_COMPLETE = 23
+    APT_CALLBACK_DOWNLOAD_COMPLETE = 23,
+    APT_CALLBACK_DOWNLOAD_ITEM_PROGRESS = 24
 } AptCallbackType;
 
 typedef void (*AptProgressCallback)(const char *package_name,
                                     AptCallbackType callback_type,
                                     uint64_t current,
                                     uint64_t total,
-                                    void *user_data);
+                                    uint64_t speed_bps,
+                                    uintptr_t user_data);
 
 // Optional log callback to route error/info messages instead of stderr
-typedef void (*AptLogCallback)(const char *message, void *user_data);
+typedef void (*AptLogCallback)(const char *message, uintptr_t user_data);
 
 // Essential package info for simulation warnings
 typedef struct {
@@ -145,8 +147,6 @@ AptResult apt_cache_refresh(AptCache *cache);
 
 AptResult apt_cache_update(AptCache *cache);
 
-AptResult apt_cache_dist_upgrade(AptCache *cache);
-
 // File installation support - preprocess arguments to detect and handle RPM files
 AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new);
 
@@ -163,24 +163,20 @@ AptResult apt_mark_remove(AptCache *cache, const char *package_name, bool purge,
 // Package execution
 AptResult apt_install_packages(AptPackageManager *pm,
                                AptProgressCallback callback,
-                               void *user_data);
+                               uintptr_t user_data);
 
 // Full dist-upgrade execution with progress callbacks (mark + download + install)
 AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                                          AptProgressCallback callback,
-                                         void *user_data);
-
-// Register a default/global progress callback that will be used if the
-// per-call callback is NULL. Useful for language bindings.
-void apt_register_progress_callback(AptProgressCallback callback, void *user_data);
+                                         uintptr_t user_data);
 
 // Register a log callback to receive error/info messages instead of writing to stderr
-void apt_set_log_callback(AptLogCallback callback, void *user_data);
+void apt_set_log_callback(AptLogCallback callback, uintptr_t user_data);
 
 // Helpers to enable Go-exported callbacks without exposing them as C symbols in Go code
-void apt_use_go_progress_callback(void *user_data);
+void apt_use_go_progress_callback(uintptr_t user_data);
 
-void apt_enable_go_log_callback(void *user_data);
+void apt_enable_go_log_callback(uintptr_t user_data);
 
 // Enable/disable capturing of std::cout/std::cerr into the registered log callback
 void apt_capture_stdio(int enable);
@@ -268,14 +264,8 @@ bool apt_has_broken_packages(const AptCache *cache);
 
 uint32_t apt_get_broken_count(const AptCache *cache);
 
-// Debug/testing functions
-bool apt_test_findpkg(const AptCache *cache, const char *package_name);
-
 // Configuration
 AptErrorCode apt_set_config(const char *key, const char *value);
-
-// Force cleanup functions
-void apt_force_unlock();
 
 // Lock status information
 typedef struct {

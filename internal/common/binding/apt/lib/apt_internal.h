@@ -6,6 +6,7 @@
 #include <apt-pkg/packagemanager.h>
 #include <apt-pkg/pkgsystem.h>
 #include <apt-pkg/acquire.h>
+#include <apt-pkg/acquire-worker.h>
 
 #include <memory>
 #include <string>
@@ -39,10 +40,10 @@ struct AptPackageManager {
 };
 
 extern AptProgressCallback global_callback;
-extern void *global_user_data;
+extern uintptr_t global_user_data;
 
 extern AptLogCallback g_log_callback;
-extern void *g_log_user_data;
+extern uintptr_t g_log_user_data;
 
 extern AptErrorCode last_error;
 extern std::string last_error_message;
@@ -94,13 +95,13 @@ AptResult plan_change_internal(
 
 // Common callback bridge structure for progress handling
 struct CallbackBridge {
-    void *user_data;
+    uintptr_t user_data;
     AptCache *cache;
     std::vector<std::string> planned;
     size_t current_idx;
     std::string current_name;
 
-    CallbackBridge() : user_data(nullptr), cache(nullptr), current_idx(0) {
+    CallbackBridge() : user_data(0), cache(nullptr), current_idx(0) {
     }
 };
 

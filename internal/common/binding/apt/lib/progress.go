@@ -25,26 +25,28 @@ import "C"
 
 import (
 	cgoRuntime "runtime/cgo"
-	"unsafe"
 )
 
 type ProgressType int
 
 const (
-	CallbackInstallProgress  ProgressType = 1
-	CallbackDownloadProgress ProgressType = 21
-	CallbackDownloadComplete ProgressType = 23
+	CallbackInstallProgress      ProgressType = 1
+	CallbackDownloadStart        ProgressType = 20
+	CallbackDownloadProgress     ProgressType = 21
+	CallbackDownloadStop         ProgressType = 22
+	CallbackDownloadComplete     ProgressType = 23
+	CallbackDownloadItemProgress ProgressType = 24
 )
 
-type ProgressHandler func(packageName string, eventType ProgressType, current, total uint64)
+type ProgressHandler func(packageName string, eventType ProgressType, current, total, speed uint64)
 
 //export goAptProgressCallback
-func goAptProgressCallback(cname *C.char, ctype C.int, ccurrent C.ulonglong, ctotal C.ulonglong, user unsafe.Pointer) {
+func goAptProgressCallback(cname *C.char, ctype C.int, ccurrent C.ulonglong, ctotal C.ulonglong, cspeed C.ulonglong, user C.uintptr_t) {
 	defer func() { _ = recover() }()
-	h := cgoRuntime.Handle(uintptr(user))
+	h := cgoRuntime.Handle(user)
 	if v := h.Value(); v != nil {
 		if handler, ok := v.(ProgressHandler); ok && handler != nil {
-			handler(C.GoString(cname), ProgressType(int(ctype)), uint64(ccurrent), uint64(ctotal))
+			handler(C.GoString(cname), ProgressType(int(ctype)), uint64(ccurrent), uint64(ctotal), uint64(cspeed))
 		}
 	}
 }

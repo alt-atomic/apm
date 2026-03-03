@@ -25,6 +25,12 @@ import (
 	"github.com/leonelquinteros/gotext"
 )
 
+// Переменные-обёртки для gotext
+var (
+	gotextGet  = gotext.Get
+	gotextGetN = gotext.GetN
+)
+
 // translatorImpl реализация Translator
 type translatorImpl struct {
 	localesPath string
@@ -55,13 +61,13 @@ func (t *translatorImpl) initLocales() {
 // T_ возвращает переведенную строку
 func (t *translatorImpl) T_(messageID string) string {
 	t.initLocales()
-	return gotext.Get(messageID)
+	return gotextGet(messageID)
 }
 
 // TN_ возвращает переведенную строку с поддержкой множественного числа
 func (t *translatorImpl) TN_(messageID string, pluralMessageID string, count int) string {
 	t.initLocales()
-	return gotext.GetN(messageID, pluralMessageID, count)
+	return gotextGetN(messageID, pluralMessageID, count)
 }
 
 // GetSystemLocale возвращает базовый язык системы в виде language.Tag.

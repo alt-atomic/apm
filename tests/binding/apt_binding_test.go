@@ -45,7 +45,7 @@ func TestAptUpdate(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	if err := actions.Update(); err != nil {
+	if err := actions.Update(nil); err != nil {
 		t.Fatalf("Update failed: %v", err)
 	}
 }

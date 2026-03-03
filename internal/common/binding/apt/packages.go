@@ -222,7 +222,7 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler) error {
 }
 
 // Update обновление локальной базы пакетов
-func (a *Actions) Update(noLock ...bool) error {
+func (a *Actions) Update(handler lib.ProgressHandler, noLock ...bool) error {
 	skipLock := len(noLock) > 0 && noLock[0]
 
 	return a.operationWrapperWithOptions(skipLock, func() error {
@@ -237,7 +237,7 @@ func (a *Actions) Update(noLock ...bool) error {
 		}
 		defer cache.Close()
 
-		return cache.Update()
+		return cache.Update(handler)
 	})
 }
 

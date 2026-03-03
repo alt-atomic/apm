@@ -35,7 +35,7 @@ public:
     }
 };
 
-AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, void *user_data) {
+AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, uintptr_t user_data) {
     if (!pm || !pm->pm || !pm->cache || !pm->cache->dep_cache)
         return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
 
@@ -96,7 +96,7 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
 
         // Send final download complete event
         if (global_callback != nullptr) {
-            global_callback("", APT_CALLBACK_DOWNLOAD_STOP, 100, 100, global_user_data);
+            global_callback("", APT_CALLBACK_DOWNLOAD_STOP, 100, 100, 0, global_user_data);
         }
 
         if (acquire_result != pkgAcquire::Continue) {
@@ -163,12 +163,12 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
         }
 
         global_callback = nullptr;
-        global_user_data = nullptr;
+        global_user_data = 0;
 
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception &e) {
         global_callback = nullptr;
-        global_user_data = nullptr;
+        global_user_data = 0;
         if (_system) {
             _system->Lock();
         }

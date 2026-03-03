@@ -21,7 +21,7 @@ std::string last_error_message;
 
 // Optional logging callback (bridge to Go callers)
 AptLogCallback g_log_callback = nullptr;
-void *g_log_user_data = nullptr;
+uintptr_t g_log_user_data = 0;
 
 void emit_log(const std::string &msg) {
     if (g_log_callback) {
@@ -119,18 +119,15 @@ extern "C" void apt_capture_stdio(int enable) {
             std::cerr.rdbuf(g_emit_stream.rdbuf());
             std::clog.rdbuf(g_emit_stream.rdbuf());
 
-            // Redirect C stderr to pipe (captures RPM output and other)
             fflush(stderr);
             g_captured_stderr.clear();
             int pipefd[2];
             if (pipe(pipefd) == 0) {
                 g_pipe_read_fd = pipefd[0];
                 g_pipe_write_fd = pipefd[1];
-                // Make read end non-blocking
                 fcntl(g_pipe_read_fd, F_SETFL, O_NONBLOCK);
                 g_saved_stderr_fd = dup(STDERR_FILENO);
                 dup2(g_pipe_write_fd, STDERR_FILENO);
-                // Start reader thread
                 g_reader_running.store(true);
                 g_reader_thread = std::thread(stderr_reader_thread);
             }
@@ -139,7 +136,6 @@ extern "C" void apt_capture_stdio(int enable) {
         }
     } else {
         if (g_stdio_captured) {
-            // Flush any pending content
             try {
                 g_emit_stream.flush();
                 std::cout.flush();
@@ -174,7 +170,6 @@ extern "C" void apt_capture_stdio(int enable) {
             // Send captured stderr to log handler for error analysis
             // Only send to callback if set (otherwise discard - we don't want garbage in console)
             if (!g_captured_stderr.empty() && g_log_callback) {
-                // Split by lines and send each to log handler
                 std::istringstream stream(g_captured_stderr);
                 std::string line;
                 while (std::getline(stream, line)) {
@@ -594,32 +589,34 @@ AptResult apt_mark_remove(AptCache *cache, const char *package_name, bool purge,
 
 // Progress callback implementation
 AptProgressCallback global_callback = nullptr;
-void *global_user_data = nullptr;
+uintptr_t global_user_data = 0;
 
 // Simple progress callback that handles package manager operations
 class SimpleProgressCallback {
 public:
     static void InstallProgress(const char *package, int current, int total) {
         if (global_callback && package) {
-            global_callback(package, APT_CALLBACK_INST_PROGRESS, current, total, global_user_data);
+            global_callback(package, APT_CALLBACK_INST_PROGRESS, current, total, 0, global_user_data);
         }
     }
 
     static void InstallStart(const char *package) {
         if (global_callback && package) {
-            global_callback(package, APT_CALLBACK_INST_START, 0, 0, global_user_data);
+            global_callback(package, APT_CALLBACK_INST_START, 0, 0, 0, global_user_data);
         }
     }
 
     static void InstallStop(const char *package) {
         if (global_callback && package) {
-            global_callback(package, APT_CALLBACK_INST_STOP, 0, 0, global_user_data);
+            global_callback(package, APT_CALLBACK_INST_STOP, 0, 0, 0, global_user_data);
         }
     }
 };
 
 // ProgressStatus implementations (after global_callback is defined)
 bool ProgressStatus::Pulse(pkgAcquire *Owner) {
+    // Call parent first — it computes CurrentCPS (bytes/sec)
+    bool ret = pkgAcquireStatus::Pulse(Owner);
     if (global_callback != nullptr) {
         // Send overall download progress
         if (TotalBytes > 0) {
@@ -627,25 +624,41 @@ bool ProgressStatus::Pulse(pkgAcquire *Owner) {
             global_callback("", APT_CALLBACK_DOWNLOAD_PROGRESS,
                             static_cast<uint64_t>(CurrentBytes),
                             static_cast<uint64_t>(TotalBytes),
+                            static_cast<uint64_t>(CurrentCPS),
+                            global_user_data);
+        }
+
+        // Per-item progress from active workers
+        for (pkgAcquire::Worker *W = Owner->WorkersBegin(); W != nullptr; W = Owner->WorkerStep(W)) {
+            if (W->CurrentItem == nullptr) continue;
+            const std::string &desc = W->CurrentItem->Description;
+            if (desc.empty()) continue;
+            uint64_t cur = W->CurrentSize;
+            uint64_t tot = W->TotalSize;
+            if (tot == 0) continue;
+            global_callback(desc.c_str(), APT_CALLBACK_DOWNLOAD_ITEM_PROGRESS,
+                            cur, tot,
+                            static_cast<uint64_t>(CurrentCPS),
                             global_user_data);
         }
     }
-    return pkgAcquireStatus::Pulse(Owner);
+    return ret;
 }
 
 void ProgressStatus::Fetch(pkgAcquire::ItemDesc &Itm) {
-    const char *name = Itm.ShortDesc.empty() ? Itm.URI.c_str() : Itm.ShortDesc.c_str();
+    const char *name = Itm.Description.empty() ? Itm.URI.c_str() : Itm.Description.c_str();
     active_name_.assign(name ? name : "");
     has_active_item_ = true;
     if (global_callback != nullptr) {
-        global_callback(active_name_.c_str(), APT_CALLBACK_DOWNLOAD_START, 0, 0, global_user_data);
+        global_callback(active_name_.c_str(), APT_CALLBACK_DOWNLOAD_START, 0, 0, 0, global_user_data);
     }
     pkgAcquireStatus::Fetch(Itm);
 }
 
 void ProgressStatus::Done(pkgAcquire::ItemDesc &Itm) {
+    const char *name = Itm.Description.empty() ? active_name_.c_str() : Itm.Description.c_str();
     if (global_callback != nullptr) {
-        global_callback(active_name_.c_str(), APT_CALLBACK_DOWNLOAD_STOP, 0, 0, global_user_data);
+        global_callback(name, APT_CALLBACK_DOWNLOAD_STOP, 0, 0, 0, global_user_data);
     }
     has_active_item_ = false;
     active_name_.clear();
@@ -660,7 +673,7 @@ void ProgressStatus::Fail(pkgAcquire::ItemDesc &Itm) {
 
 void ProgressStatus::Stop() {
     if (global_callback != nullptr) {
-        global_callback("", APT_CALLBACK_DOWNLOAD_COMPLETE, 100, 100, global_user_data);
+        global_callback("", APT_CALLBACK_DOWNLOAD_COMPLETE, 100, 100, 0, global_user_data);
     }
     pkgAcquireStatus::Stop();
 }
@@ -751,80 +764,27 @@ uint32_t apt_get_broken_count(const AptCache *cache) {
     return cache->dep_cache->BrokenCount();
 }
 
-// Debug function to test FindPkg logic like in original apt-get
-bool apt_test_findpkg(const AptCache *cache, const char *package_name) {
-    if (!cache || !cache->dep_cache || !package_name) return false;
-
-    try {
-        pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(package_name);
-
-        emit_log(std::string("=== FindPkg Test for '") + package_name + "' ===");
-        emit_log(std::string("pkg.end(): ") + (pkg.end() ? "true" : "false"));
-
-        if (!pkg.end()) {
-            emit_log("Package found in cache!");
-            emit_log(std::string("Name: ") + pkg.Name());
-            emit_log(std::string("ID: ") + std::to_string(pkg->ID));
-
-            pkgDepCache::StateCache &state = (*cache->dep_cache)[pkg];
-            pkgCache::VerIterator candidate = state.CandidateVerIter(*cache->dep_cache);
-            emit_log(std::string("CandidateVer.end(): ") + (candidate.end() ? "true" : "false"));
-
-            emit_log(std::string("ProvidesList: ") + (pkg->ProvidesList == 0 ? "empty" : "has provides"));
-
-            if (pkg->ProvidesList != 0) {
-                emit_log("This is a virtual package! Providers:");
-                for (pkgCache::PrvIterator prv = pkg.ProvidesList(); !prv.end(); ++prv) {
-                    pkgCache::PkgIterator provider = prv.OwnerPkg();
-                    std::string line = std::string("  - ") + provider.Name();
-                    if (!provider.CurrentVer().end()) {
-                        line += std::string(" (INSTALLED: ") + provider.CurrentVer().VerStr() + ")";
-                    }
-                    pkgCache::VerIterator candVer = (*cache->dep_cache)[provider].CandidateVerIter(*cache->dep_cache);
-                    if (!candVer.end()) {
-                        line += std::string(" (CANDIDATE: ") + candVer.VerStr() + ")";
-                    }
-                    emit_log(line);
-                }
-            }
-
-            return true;
-        } else {
-            emit_log("Package NOT found in cache.");
-            return false;
-        }
-    } catch (const std::exception &e) {
-        emit_log(std::string("Exception: ") + e.what());
-        return false;
-    }
-}
-
-extern "C" void apt_set_log_callback(AptLogCallback callback, void *user_data) {
+extern "C" void apt_set_log_callback(AptLogCallback callback, uintptr_t user_data) {
     g_log_callback = callback;
     g_log_user_data = user_data;
-}
-
-// Global/default progress callback registration
-extern "C" void apt_register_progress_callback(AptProgressCallback callback, void *user_data) {
-    global_callback = callback;
-    global_user_data = user_data;
 }
 
 extern "C" void goAptProgressCallback(const char *package_name,
                                       int callback_type,
                                       uint64_t current,
                                       uint64_t total,
-                                      void *user_data);
+                                      uint64_t speed_bps,
+                                      uintptr_t user_data);
 
-extern "C" void goAptLogCallback(const char *message, void *user_data);
+extern "C" void goAptLogCallback(const char *message, uintptr_t user_data);
 
 
-extern "C" void apt_use_go_progress_callback(void *user_data) {
+extern "C" void apt_use_go_progress_callback(const uintptr_t user_data) {
     global_callback = reinterpret_cast<AptProgressCallback>(goAptProgressCallback);
     global_user_data = user_data;
 }
 
-extern "C" void apt_enable_go_log_callback(void *user_data) {
+extern "C" void apt_enable_go_log_callback(const uintptr_t user_data) {
     g_log_callback = static_cast<AptLogCallback>(goAptLogCallback);
     g_log_user_data = user_data;
 }
@@ -839,18 +799,6 @@ AptErrorCode apt_set_config(const char *key, const char *value) {
     } catch (const std::exception &e) {
         emit_log(std::string("Exception: ") + e.what());
         return APT_ERROR_UNKNOWN;
-    }
-}
-
-// Force unlock function to clean up hanging locks
-void apt_force_unlock() {
-    try {
-        pkgSystem *system = _system;
-        if (system) {
-            system->UnLock(true);
-        }
-    } catch (...) {
-        // Ignore any exceptions during force unlock
     }
 }
 
@@ -928,7 +876,7 @@ PackageManagerCallback_t create_common_progress_callback(CallbackBridge *) {
         }
 
         if (global_callback) {
-            global_callback(effective_name, our_type, amount, total, global_user_data);
+            global_callback(effective_name, our_type, amount, total, 0, global_user_data);
         }
     };
 }
