@@ -108,7 +108,6 @@ Authorization: Bearer secrettoken          — полный доступ (manage
 - `GET /api/v1/health` — проверка состояния
 - `GET /api/v1/docs` — Swagger UI
 - `GET /api/v1/openapi.json` — OpenAPI спецификация
-- `GET /api/v1/events` — WebSocket (события)
 
 ---
 
