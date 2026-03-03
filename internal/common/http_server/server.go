@@ -68,107 +68,57 @@ type tokenInfo struct {
 }
 
 // NewServer создаёт новый HTTP сервер
-func NewServer(config Config, appConfig *app.Config) *Server {
+func NewServer(config Config, appConfig *app.Config) (*Server, error) {
 	s := &Server{
 		config:    config,
 		appConfig: appConfig,
 		mux:       http.NewServeMux(),
 	}
 	if config.APIToken != "" {
-		s.parsedToken = parseToken(config.APIToken)
+		parsed, err := ParseToken(config.APIToken)
+		if err != nil {
+			return nil, err
+		}
+		s.parsedToken = parsed
 	}
-	return s
+	return s, nil
 }
 
-// GetMux возвращает маршрутизатор для регистрации обработчиков
-func (s *Server) GetMux() *http.ServeMux {
-	return s.mux
-}
-
-// SetRegistry устанавливает registry для проверки прав
-func (s *Server) SetRegistry(registry *Registry) {
-	s.registry = registry
-}
-
-// parseToken парсит токен в формате "permission:token" или просто "token"
-func parseToken(tokenStr string) tokenInfo {
+// ParseToken парсит токен в формате "permission:token".
+// Возвращает ошибку если формат неверный или permission неизвестный.
+func ParseToken(tokenStr string) (tokenInfo, error) {
 	parts := strings.SplitN(tokenStr, ":", 2)
-	if len(parts) == 2 {
-		return tokenInfo{
-			permission: parts[0],
-			token:      parts[1],
-		}
+	if len(parts) != 2 || parts[1] == "" {
+		return tokenInfo{}, fmt.Errorf(app.T_("Invalid token format: expected '<permission>:<token>', got '%s'\n  permission must be '%s' (read-only) or '%s' (full access)\n  example: --api-token %s:my-secret-token"), tokenStr, PermRead, PermManage, PermRead)
 	}
+
+	perm := parts[0]
+	if perm != PermRead && perm != PermManage {
+		return tokenInfo{}, fmt.Errorf(app.T_("Unknown permission '%s': must be '%s' (read-only) or '%s' (full access)\n  example: --api-token %s:%s"), perm, PermRead, PermManage, PermRead, parts[1])
+	}
+
 	return tokenInfo{
-		permission: "manage",
-		token:      tokenStr,
-	}
-}
-
-// matchPath проверяет соответствие реального пути шаблону с параметрами
-func matchPath(pattern, path string) bool {
-	patternParts := strings.Split(pattern, "/")
-	pathParts := strings.Split(path, "/")
-	if len(patternParts) != len(pathParts) {
-		return false
-	}
-	for i, p := range patternParts {
-		if strings.HasPrefix(p, "{") && strings.HasSuffix(p, "}") {
-			continue
-		}
-		if p != pathParts[i] {
-			return false
-		}
-	}
-	return true
-}
-
-// findEndpointPermission находит требуемое разрешение для endpoint
-func (s *Server) findEndpointPermission(path string, method string) string {
-	if s.registry == nil {
-		return ""
-	}
-
-	for _, ep := range s.registry.GetHTTPEndpoints() {
-		if ep.HTTPMethod == method && matchPath(ep.HTTPPath, path) {
-			return ep.Permission
-		}
-	}
-	return ""
+		permission: perm,
+		token:      parts[1],
+	}, nil
 }
 
 // checkPermission проверяет, достаточно ли прав у токена
 func checkPermission(tokenPerm string, requiredPerm string) bool {
-	if requiredPerm == "" || tokenPerm == "manage" {
+	if requiredPerm == "" || tokenPerm == PermManage {
 		return true
 	}
 	return tokenPerm == requiredPerm
 }
 
-// authMiddleware проверяет авторизацию
-func (s *Server) authMiddleware(next http.Handler) http.Handler {
-	publicPaths := []string{
-		"/",
-		"/api/v1",
-		"/api/v1/health",
-		"/api/v1/docs",
-		"/api/v1/openapi.json",
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		for _, path := range publicPaths {
-			if r.URL.Path == path {
-				next.ServeHTTP(w, r)
-				return
-			}
-		}
-
+// withAuth оборачивает handler в per-handler аутентификацию и проверку прав
+func (s *Server) withAuth(perm string, handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if s.parsedToken.token == "" {
-			next.ServeHTTP(w, r)
+			handler(w, r)
 			return
 		}
 
-		// Получаем токен из заголовка или query-параметра
 		tokenStr := ""
 		if authHeader := r.Header.Get("Authorization"); authHeader != "" {
 			tokenStr = authHeader
@@ -180,24 +130,47 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		}
 
 		if tokenStr == "" {
-			writeUnauthorized(w, "Authorization header or token query parameter is required")
+			writeUnauthorized(w, app.T_("Authorization header or token query parameter is required"))
 			return
 		}
 
 		if subtle.ConstantTimeCompare([]byte(tokenStr), []byte(s.parsedToken.token)) != 1 {
-			writeUnauthorized(w, "Invalid API token")
+			writeUnauthorized(w, app.T_("Invalid API token"))
 			return
 		}
 
-		requiredPerm := s.findEndpointPermission(r.URL.Path, r.Method)
-
-		if !checkPermission(s.parsedToken.permission, requiredPerm) {
-			writeForbidden(w, "Insufficient permissions. Required: "+requiredPerm+", provided: "+s.parsedToken.permission)
+		if !checkPermission(s.parsedToken.permission, perm) {
+			writeForbidden(w, fmt.Sprintf(app.T_("Insufficient permissions. Required: %s, provided: %s"), perm, s.parsedToken.permission))
 			return
 		}
 
-		next.ServeHTTP(w, r)
-	})
+		handler(w, r)
+	}
+}
+
+// RegisterEndpoints регистрирует endpoints: оборачивает handler в withAuth, добавляет в mux и registry
+func (s *Server) RegisterEndpoints(endpoints []Endpoint) {
+	if s.registry == nil {
+		s.registry = NewRegistry()
+	}
+
+	for _, ep := range endpoints {
+		handler := ep.Handler
+		if ep.Permission != "" {
+			handler = s.withAuth(ep.Permission, handler)
+		}
+		s.mux.HandleFunc(ep.HTTPMethod+" "+ep.HTTPPath, handler)
+	}
+
+	s.registry.RegisterEndpoints(endpoints)
+}
+
+// GetRegistry возвращает registry для OpenAPI генератора
+func (s *Server) GetRegistry() *Registry {
+	if s.registry == nil {
+		s.registry = NewRegistry()
+	}
+	return s.registry
 }
 
 // loggingMiddleware логирует запросы
@@ -278,7 +251,7 @@ func (s *Server) bodySizeLimitMiddleware(next http.Handler) http.Handler {
 
 // Start запускает HTTP сервер
 func (s *Server) Start(ctx context.Context) error {
-	handler := s.corsMiddleware(s.loggingMiddleware(s.authMiddleware(s.bodySizeLimitMiddleware(s.mux))))
+	handler := s.corsMiddleware(s.loggingMiddleware(s.bodySizeLimitMiddleware(s.mux)))
 	s.server = &http.Server{
 		Handler:      handler,
 		ReadTimeout:  s.config.ReadTimeout,
@@ -352,9 +325,14 @@ func (s *Server) RegisterHealthCheck() {
 // RegisterWebSocket регистрирует WebSocket эндпоинт для событий
 func (s *Server) RegisterWebSocket() {
 	hub := GetWebSocketHub()
-	s.mux.HandleFunc("GET /api/v1/events", func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hub.HandleWebSocket(w, r)
 	})
+	if s.parsedToken.token != "" {
+		s.mux.HandleFunc("GET /api/v1/events", s.withAuth(PermRead, handler))
+	} else {
+		s.mux.HandleFunc("GET /api/v1/events", handler)
+	}
 	app.Log.Info("WebSocket events endpoint: ws://" + s.config.ListenAddr + "/api/v1/events")
 }
 

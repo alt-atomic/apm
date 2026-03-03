@@ -128,16 +128,14 @@ type SecurityScheme struct {
 type OpenAPIGenerator struct {
 	registry   *Registry
 	version    string
-	isAtomic   bool
 	listenAddr string
 }
 
 // NewOpenAPIGenerator создает новый генератор
-func NewOpenAPIGenerator(registry *Registry, version string, isAtomic bool, listenAddr string) *OpenAPIGenerator {
+func NewOpenAPIGenerator(registry *Registry, version string, listenAddr string) *OpenAPIGenerator {
 	return &OpenAPIGenerator{
 		registry:   registry,
 		version:    version,
-		isAtomic:   isAtomic,
 		listenAddr: listenAddr,
 	}
 }
@@ -145,7 +143,6 @@ func NewOpenAPIGenerator(registry *Registry, version string, isAtomic bool, list
 // GenerateOpenAPI генерирует OpenAPI спецификацию как map для интерфейса http_server
 func (g *OpenAPIGenerator) GenerateOpenAPI() map[string]interface{} {
 	spec := g.Generate()
-	// Конвертируем в map через JSON
 	data, _ := json.Marshal(spec)
 	var result map[string]interface{}
 	_ = json.Unmarshal(data, &result)
@@ -190,11 +187,6 @@ Subscribe to real-time events (progress updates, notifications) via WebSocket:
 	tagsSet := make(map[string]bool)
 
 	for _, ep := range g.registry.GetHTTPEndpoints() {
-		// Пропускаем image endpoints для не-атомарных систем
-		if !g.isAtomic && strings.Contains(ep.HTTPPath, "/image") {
-			continue
-		}
-
 		// Собираем уникальные теги
 		for _, tag := range ep.Tags {
 			tagsSet[tag] = true

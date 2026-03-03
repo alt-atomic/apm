@@ -352,36 +352,16 @@ func (w *HTTPWrapper) ContainerRemove(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// RegisterRoutes регистрирует все HTTP маршруты в mux
-func (w *HTTPWrapper) RegisterRoutes(mux *http.ServeMux) {
-	// Пакеты - информация
-	mux.HandleFunc("GET /api/v1/distrobox/packages/filter-fields", w.GetFilterFields)
-	mux.HandleFunc("GET /api/v1/distrobox/packages/search", w.Search)
-	mux.HandleFunc("GET /api/v1/distrobox/packages/{name}/icon", w.GetIcon)
-	mux.HandleFunc("GET /api/v1/distrobox/packages/{name}", w.Info)
-	mux.HandleFunc("GET /api/v1/distrobox/packages", w.List)
-
-	// Пакеты - действия
-	mux.HandleFunc("POST /api/v1/distrobox/update", w.Update)
-	mux.HandleFunc("POST /api/v1/distrobox/packages/install", w.Install)
-	mux.HandleFunc("POST /api/v1/distrobox/packages/remove", w.Remove)
-
-	// Контейнеры
-	mux.HandleFunc("GET /api/v1/distrobox/containers", w.ContainerList)
-	mux.HandleFunc("POST /api/v1/distrobox/containers", w.ContainerAdd)
-	mux.HandleFunc("DELETE /api/v1/distrobox/containers/{name}", w.ContainerRemove)
-}
-
-// GetHTTPEndpoints возвращает описания endpoints для OpenAPI документации
-func GetHTTPEndpoints() []http_server.Endpoint {
+// GetEndpoints возвращает описания endpoints с handler
+func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 	return []http_server.Endpoint{
 		// Пакеты - информация
 		{
-			Method:       "List",
+			Handler:      w.List,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages",
 			ResponseType: reflect.TypeOf(ListResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить список пакетов в контейнере",
 			Tags:         []string{"distrobox"},
 			QueryParams: []http_server.QueryParam{
@@ -395,11 +375,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Info",
+			Handler:      w.Info,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages/{name}",
 			ResponseType: reflect.TypeOf(InfoResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить информацию о пакете",
 			Tags:         []string{"distrobox"},
 			PathParams:   []string{"name"},
@@ -408,11 +388,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:      "GetIcon",
+			Handler:     w.GetIcon,
 			HTTPMethod:  "GET",
 			HTTPPath:    "/api/v1/distrobox/packages/{name}/icon",
 			ContentType: "image/*",
-			Permission:  "read",
+			Permission:  http_server.PermRead,
 			Summary:     "Получить иконку пакета",
 			Tags:        []string{"distrobox"},
 			PathParams:  []string{"name"},
@@ -421,11 +401,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Search",
+			Handler:      w.Search,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages/search",
 			ResponseType: reflect.TypeOf(SearchResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Поиск пакетов по названию",
 			Tags:         []string{"distrobox"},
 			QueryParams: []http_server.QueryParam{
@@ -434,11 +414,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "GetFilterFields",
+			Handler:      w.GetFilterFields,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/packages/filter-fields",
 			ResponseType: reflect.TypeOf(GetFilterFieldsResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить доступные поля для фильтрации",
 			Tags:         []string{"distrobox"},
 			QueryParams: []http_server.QueryParam{
@@ -448,11 +428,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 
 		// Пакеты - действия
 		{
-			Method:       "Update",
+			Handler:      w.Update,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/update",
 			ResponseType: reflect.TypeOf(UpdateResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Обновить список пакетов в контейнере",
 			Tags:         []string{"distrobox"},
 			QueryParams: []http_server.QueryParam{
@@ -461,11 +441,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Install",
+			Handler:      w.Install,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/packages/install",
 			ResponseType: reflect.TypeOf(InstallResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Установить пакет в контейнер",
 			Tags:         []string{"distrobox"},
 			ParamMappings: []http_server.ParamMapping{
@@ -475,11 +455,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Remove",
+			Handler:      w.Remove,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/packages/remove",
 			ResponseType: reflect.TypeOf(RemoveResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Удалить пакет из контейнера",
 			Tags:         []string{"distrobox"},
 			ParamMappings: []http_server.ParamMapping{
@@ -491,20 +471,20 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 
 		// Контейнеры
 		{
-			Method:       "ContainerList",
+			Handler:      w.ContainerList,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/distrobox/containers",
 			ResponseType: reflect.TypeOf(ContainerListResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить список контейнеров",
 			Tags:         []string{"distrobox"},
 		},
 		{
-			Method:       "ContainerAdd",
+			Handler:      w.ContainerAdd,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/distrobox/containers",
 			ResponseType: reflect.TypeOf(ContainerAddResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Создать новый контейнер",
 			Tags:         []string{"distrobox"},
 			ParamMappings: []http_server.ParamMapping{
@@ -518,11 +498,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "ContainerRemove",
+			Handler:      w.ContainerRemove,
 			HTTPMethod:   "DELETE",
 			HTTPPath:     "/api/v1/distrobox/containers/{name}",
 			ResponseType: reflect.TypeOf(ContainerRemoveResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Удалить контейнер",
 			Tags:         []string{"distrobox"},
 			PathParams:   []string{"name"},

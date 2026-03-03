@@ -105,7 +105,7 @@ func main() {
 				},
 				&cli.StringFlag{
 					Name:    "api-token",
-					Usage:   app.T_("API token for authentication (prefer APM_API_TOKEN env)"),
+					Usage:   app.T_("API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"),
 					Sources: cli.EnvVars("APM_API_TOKEN"),
 				},
 			},
@@ -123,7 +123,7 @@ func main() {
 				},
 				&cli.StringFlag{
 					Name:    "api-token",
-					Usage:   app.T_("API token for authentication (prefer APM_API_TOKEN env)"),
+					Usage:   app.T_("API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"),
 					Sources: cli.EnvVars("APM_API_TOKEN"),
 				},
 			},
@@ -383,7 +383,11 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 		config.APIToken = token
 	}
 
-	server := http_server.NewServer(config, appConfig)
+	server, err := http_server.NewServer(config, appConfig)
+	if err != nil {
+		cliError(err)
+		return err
+	}
 
 	wsHub := http_server.GetWebSocketHub()
 	reply.SetWebSocketHub(wsHub)
@@ -399,23 +403,17 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 	// System модуль
 	sysActions := system.NewActions(appConfig)
 	sysHTTPWrapper := system.NewHTTPWrapper(sysActions, appConfig, ctx)
-	sysHTTPWrapper.RegisterRoutes(server.GetMux(), appConfig.ConfigManager.GetConfig().IsAtomic)
+	server.RegisterEndpoints(sysHTTPWrapper.GetEndpoints(appConfig.ConfigManager.GetConfig().IsAtomic))
 
 	// Repo модуль
 	repoActions := repo.NewActions(appConfig)
 	repoHTTPWrapper := repo.NewHTTPWrapper(repoActions, appConfig, ctx)
-	repoHTTPWrapper.RegisterRoutes(server.GetMux())
-
-	// Регистрируем endpoints в registry для OpenAPI документации и проверки прав
-	registry := http_server.NewRegistry()
-	registry.RegisterEndpoints(system.GetHTTPEndpoints())
-	registry.RegisterEndpoints(repo.GetHTTPEndpoints())
-	server.SetRegistry(registry)
+	server.RegisterEndpoints(repoHTTPWrapper.GetEndpoints())
 
 	// Регистрируем OpenAPI документацию из registry
-	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic, config.ListenAddr))
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(server.GetRegistry(), appConfig.ConfigManager.GetConfig().Version, config.ListenAddr))
 
-	err := server.Start(ctx)
+	err = server.Start(ctx)
 	if err != nil {
 		cliError(err)
 	}
@@ -449,7 +447,11 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 		config.APIToken = token
 	}
 
-	server := http_server.NewServer(config, appConfig)
+	server, err := http_server.NewServer(config, appConfig)
+	if err != nil {
+		cliError(err)
+		return err
+	}
 
 	wsHub := http_server.GetWebSocketHub()
 	reply.SetWebSocketHub(wsHub)
@@ -465,7 +467,7 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 	// Distrobox модуль
 	distroboxActions := distrobox.NewActions(appConfig)
 	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, ctx)
-	distroboxHTTPWrapper.RegisterRoutes(server.GetMux())
+	server.RegisterEndpoints(distroboxHTTPWrapper.GetEndpoints())
 
 	// Параллельно обновляем иконки
 	go func() {
@@ -474,14 +476,10 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 		}
 	}()
 
-	registry := http_server.NewRegistry()
-	registry.RegisterEndpoints(distrobox.GetHTTPEndpoints())
-	server.SetRegistry(registry)
-
 	// Регистрируем OpenAPI документацию из registry
-	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, false, config.ListenAddr))
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(server.GetRegistry(), appConfig.ConfigManager.GetConfig().Version, config.ListenAddr))
 
-	err := server.Start(ctx)
+	err = server.Start(ctx)
 	if err != nil {
 		cliError(err)
 	}

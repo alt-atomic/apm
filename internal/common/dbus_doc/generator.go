@@ -17,20 +17,15 @@
 package dbus_doc
 
 import (
-	"apm/internal/common/app"
 	"apm/internal/common/reply"
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"net/http"
 	"reflect"
 	"sort"
 	"strings"
-	"time"
 	"unicode"
 )
 
@@ -52,7 +47,6 @@ type DBusParameter struct {
 type Config struct {
 	ModuleName      string
 	DBusInterface   string
-	ServerPort      string
 	ResponseTypes   map[string]reflect.Type
 	MethodResponses map[string]string // имя метода DBusWrapper → имя типа ответа
 	SourceCode      string
@@ -455,10 +449,8 @@ func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 		case reflect.Struct:
 			fieldValue.Set(reflect.ValueOf(g.createExampleStruct(field.Type)))
 		case reflect.Ptr:
-			// Создаем новый экземпляр типа, на который указывает указатель
 			elemType := field.Type.Elem()
 			ptrValue := reflect.New(elemType)
-			// Заполняем структуру, на которую указывает указатель
 			filledValue := g.createExampleStruct(elemType)
 			ptrValue.Elem().Set(reflect.ValueOf(filledValue))
 			fieldValue.Set(ptrValue)
@@ -468,41 +460,4 @@ func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 	}
 
 	return value.Interface()
-}
-
-// StartDocServer запускает веб-сервер с документацией
-func (g *Generator) StartDocServer(ctx context.Context) error {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		html := g.GenerateDBusDocHTML()
-		_, err := fmt.Fprint(w, html)
-		if err != nil {
-			if !strings.Contains(err.Error(), "broken pipe") {
-				app.Log.Error("HTTP write error: " + err.Error())
-			}
-			return
-		}
-	})
-
-	server := &http.Server{
-		Addr:         ":" + g.config.ServerPort,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-	}
-
-	fmt.Printf("Documentation server started at http://localhost:%s\n", g.config.ServerPort)
-	fmt.Println("Press Ctrl+C to stop")
-
-	go func() {
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			app.Log.Fatal(err.Error())
-		}
-	}()
-
-	<-ctx.Done()
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	return server.Shutdown(shutdownCtx)
 }

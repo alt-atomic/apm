@@ -18,6 +18,7 @@ package kernel
 
 import (
 	"apm/internal/common/dbus_doc"
+	"apm/internal/common/http_server"
 	"context"
 	_ "embed"
 )
@@ -37,7 +38,6 @@ func getDocConfig() dbus_doc.Config {
 	return dbus_doc.Config{
 		ModuleName:      "Kernel",
 		DBusInterface:   "org.altlinux.APM.kernel",
-		ServerPort:      "8082",
 		SourceCode:      dbusSource,
 		DBusSession:     "system",
 		ResponseTypes:   responseTypes,
@@ -47,6 +47,6 @@ func getDocConfig() dbus_doc.Config {
 
 // startDocServer запускает веб-сервер с документацией
 func startDocServer(ctx context.Context) error {
-	generator := dbus_doc.NewGenerator(getDocConfig())
-	return generator.StartDocServer(ctx)
+	gen := dbus_doc.NewGenerator(getDocConfig())
+	return http_server.ServeHTML(ctx, "127.0.0.1:8083", gen.GenerateDBusDocHTML)
 }

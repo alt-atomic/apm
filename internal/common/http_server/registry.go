@@ -17,13 +17,19 @@
 package http_server
 
 import (
+	"net/http"
 	"reflect"
+)
+
+const (
+	PermRead   = "read"
+	PermManage = "manage"
 )
 
 // Endpoint описывает API endpoint
 type Endpoint struct {
-	// Имя метода в Actions
-	Method string
+	// HTTP обработчик
+	Handler http.HandlerFunc
 	// HTTP метод (GET, POST, PUT, DELETE)
 	HTTPMethod string
 	// HTTP путь (/api/v1/packages/install)

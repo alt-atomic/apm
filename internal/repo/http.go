@@ -335,31 +335,15 @@ func (w *HTTPWrapper) TestTask(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// RegisterRoutes регистрирует все HTTP маршруты в mux
-func (w *HTTPWrapper) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/v1/repo", w.List)
-	mux.HandleFunc("POST /api/v1/repo", w.Add)
-	mux.HandleFunc("POST /api/v1/repo/check", w.CheckAdd)
-	mux.HandleFunc("DELETE /api/v1/repo", w.Remove)
-	mux.HandleFunc("DELETE /api/v1/repo/check", w.CheckRemove)
-	mux.HandleFunc("POST /api/v1/repo/set", w.Set)
-	mux.HandleFunc("POST /api/v1/repo/set/check", w.CheckSet)
-	mux.HandleFunc("POST /api/v1/repo/clean", w.Clean)
-	mux.HandleFunc("POST /api/v1/repo/clean/check", w.CheckClean)
-	mux.HandleFunc("GET /api/v1/repo/branches", w.GetBranches)
-	mux.HandleFunc("GET /api/v1/repo/task/{taskNum}", w.GetTaskPackages)
-	mux.HandleFunc("POST /api/v1/repo/task/{taskNum}/test", w.TestTask)
-}
-
-// GetHTTPEndpoints возвращает описания endpoints для OpenAPI документации
-func GetHTTPEndpoints() []http_server.Endpoint {
+// GetEndpoints возвращает описания endpoints с handler
+func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 	return []http_server.Endpoint{
 		{
-			Method:       "List",
+			Handler:      w.List,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/repo",
 			ResponseType: reflect.TypeOf(RepoListResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить список репозиториев",
 			Tags:         []string{"repo"},
 			QueryParams: []http_server.QueryParam{
@@ -367,11 +351,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Add",
+			Handler:      w.Add,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo",
 			ResponseType: reflect.TypeOf(RepoAddRemoveResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Добавить репозиторий",
 			Tags:         []string{"repo"},
 			ParamMappings: []http_server.ParamMapping{
@@ -380,11 +364,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "CheckAdd",
+			Handler:      w.CheckAdd,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/check",
 			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Симулировать добавление репозитория",
 			Tags:         []string{"repo"},
 			ParamMappings: []http_server.ParamMapping{
@@ -393,11 +377,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Remove",
+			Handler:      w.Remove,
 			HTTPMethod:   "DELETE",
 			HTTPPath:     "/api/v1/repo",
 			ResponseType: reflect.TypeOf(RepoAddRemoveResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Удалить репозиторий",
 			Tags:         []string{"repo"},
 			ParamMappings: []http_server.ParamMapping{
@@ -406,11 +390,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "CheckRemove",
+			Handler:      w.CheckRemove,
 			HTTPMethod:   "DELETE",
 			HTTPPath:     "/api/v1/repo/check",
 			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Симулировать удаление репозитория",
 			Tags:         []string{"repo"},
 			ParamMappings: []http_server.ParamMapping{
@@ -419,11 +403,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Set",
+			Handler:      w.Set,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/set",
 			ResponseType: reflect.TypeOf(RepoSetResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Установить ветку (удалить все и добавить указанную)",
 			Tags:         []string{"repo"},
 			ParamMappings: []http_server.ParamMapping{
@@ -432,11 +416,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "CheckSet",
+			Handler:      w.CheckSet,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/set/check",
 			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Симулировать установку ветки",
 			Tags:         []string{"repo"},
 			ParamMappings: []http_server.ParamMapping{
@@ -445,48 +429,48 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Clean",
+			Handler:      w.Clean,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/clean",
 			ResponseType: reflect.TypeOf(RepoAddRemoveResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Удалить временные репозитории (cdrom, task)",
 			Tags:         []string{"repo"},
 		},
 		{
-			Method:       "CheckClean",
+			Handler:      w.CheckClean,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/clean/check",
 			ResponseType: reflect.TypeOf(RepoSimulateResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Симулировать удаление временных репозиториев",
 			Tags:         []string{"repo"},
 		},
 		{
-			Method:       "GetBranches",
+			Handler:      w.GetBranches,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/repo/branches",
 			ResponseType: reflect.TypeOf(BranchesResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить список доступных веток",
 			Tags:         []string{"repo"},
 		},
 		{
-			Method:       "GetTaskPackages",
+			Handler:      w.GetTaskPackages,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/repo/task/{taskNum}",
 			ResponseType: reflect.TypeOf(TaskPackagesResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить список пакетов из задачи",
 			Tags:         []string{"repo"},
 			PathParams:   []string{"taskNum"},
 		},
 		{
-			Method:       "TestTask",
+			Handler:      w.TestTask,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/repo/task/{taskNum}/test",
 			ResponseType: reflect.TypeOf(TestTaskResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Тестировать пакеты из задачи",
 			Tags:         []string{"repo"},
 			PathParams:   []string{"taskNum"},

@@ -18,6 +18,7 @@ package repo
 
 import (
 	"apm/internal/common/dbus_doc"
+	"apm/internal/common/http_server"
 	"context"
 	_ "embed"
 )
@@ -31,7 +32,6 @@ func getDocConfig() dbus_doc.Config {
 	return dbus_doc.Config{
 		ModuleName:      "Repo",
 		DBusInterface:   "org.altlinux.APM.repo",
-		ServerPort:      "8083",
 		SourceCode:      dbusSource,
 		DBusSession:     "system",
 		ResponseTypes:   responseTypes,
@@ -41,6 +41,6 @@ func getDocConfig() dbus_doc.Config {
 
 // startDocServer запускает веб-сервер с документацией
 func startDocServer(ctx context.Context) error {
-	generator := dbus_doc.NewGenerator(getDocConfig())
-	return generator.StartDocServer(ctx)
+	gen := dbus_doc.NewGenerator(getDocConfig())
+	return http_server.ServeHTML(ctx, "127.0.0.1:8084", gen.GenerateDBusDocHTML)
 }

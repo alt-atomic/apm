@@ -475,48 +475,15 @@ func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// RegisterRoutes регистрирует все HTTP маршруты в mux
-func (w *HTTPWrapper) RegisterRoutes(mux *http.ServeMux, isAtomic bool) {
-	// Packages - проверки
-	mux.HandleFunc("POST /api/v1/packages/check-remove", w.CheckRemove)
-	mux.HandleFunc("POST /api/v1/packages/check-install", w.CheckInstall)
-	mux.HandleFunc("GET /api/v1/system/check-upgrade", w.CheckUpgrade)
-
-	// Packages - действия
-	mux.HandleFunc("POST /api/v1/packages/remove", w.Remove)
-	mux.HandleFunc("POST /api/v1/packages/install", w.Install)
-
-	// Packages - информация
-	mux.HandleFunc("GET /api/v1/packages/filter-fields", w.GetFilterFields)
-	mux.HandleFunc("GET /api/v1/packages/search", w.Search)
-	mux.HandleFunc("POST /api/v1/packages/info", w.MultiInfo)
-	mux.HandleFunc("GET /api/v1/packages/{name}", w.Info)
-	mux.HandleFunc("GET /api/v1/packages", w.List)
-
-	// System
-	mux.HandleFunc("POST /api/v1/system/update", w.Update)
-	mux.HandleFunc("POST /api/v1/system/upgrade", w.Upgrade)
-
-	// Image (только для atomic)
-	if isAtomic {
-		mux.HandleFunc("GET /api/v1/image/status", w.ImageStatus)
-		mux.HandleFunc("POST /api/v1/image/update", w.ImageUpdate)
-		mux.HandleFunc("POST /api/v1/image/apply", w.ImageApply)
-		mux.HandleFunc("GET /api/v1/image/history", w.ImageHistory)
-		mux.HandleFunc("GET /api/v1/image/config", w.ImageGetConfig)
-		mux.HandleFunc("PUT /api/v1/image/config", w.ImageSaveConfig)
-	}
-}
-
-// GetHTTPEndpoints возвращает описания endpoints для OpenAPI документации
-func GetHTTPEndpoints() []http_server.Endpoint {
-	return []http_server.Endpoint{
+// GetEndpoints возвращает описания endpoints с handler
+func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
+	endpoints := []http_server.Endpoint{
 		{
-			Method:       "CheckRemove",
+			Handler:      w.CheckRemove,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/check-remove",
 			ResponseType: reflect.TypeOf(CheckResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Проверить пакеты перед удалением",
 			Tags:         []string{"packages"},
 			ParamMappings: []http_server.ParamMapping{
@@ -529,11 +496,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "CheckInstall",
+			Handler:      w.CheckInstall,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/check-install",
 			ResponseType: reflect.TypeOf(CheckResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Проверить пакеты перед установкой",
 			Tags:         []string{"packages"},
 			ParamMappings: []http_server.ParamMapping{
@@ -544,11 +511,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "CheckUpgrade",
+			Handler:      w.CheckUpgrade,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/system/check-upgrade",
 			ResponseType: reflect.TypeOf(CheckResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Проверить пакеты перед обновлением системы",
 			Tags:         []string{"system"},
 			QueryParams: []http_server.QueryParam{
@@ -558,11 +525,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 
 		// Packages - действия
 		{
-			Method:       "Remove",
+			Handler:      w.Remove,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/remove",
 			ResponseType: reflect.TypeOf(InstallRemoveResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Удалить пакеты",
 			Tags:         []string{"packages"},
 			ParamMappings: []http_server.ParamMapping{
@@ -575,11 +542,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Install",
+			Handler:      w.Install,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/install",
 			ResponseType: reflect.TypeOf(InstallRemoveResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Установить пакеты",
 			Tags:         []string{"packages"},
 			ParamMappings: []http_server.ParamMapping{
@@ -592,11 +559,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 
 		// Packages - информация
 		{
-			Method:       "Info",
+			Handler:      w.Info,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages/{name}",
 			ResponseType: reflect.TypeOf(InfoResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить информацию о пакете",
 			Tags:         []string{"packages"},
 			PathParams:   []string{"name"},
@@ -605,11 +572,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "MultiInfo",
+			Handler:      w.MultiInfo,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/packages/info",
 			ResponseType: reflect.TypeOf(MultiInfoResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить информацию о нескольких пакетах",
 			Tags:         []string{"packages"},
 			ParamMappings: []http_server.ParamMapping{
@@ -620,11 +587,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "List",
+			Handler:      w.List,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages",
 			ResponseType: reflect.TypeOf(ListResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить список пакетов",
 			Tags:         []string{"packages"},
 			QueryParams: []http_server.QueryParam{
@@ -638,20 +605,20 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "GetFilterFields",
+			Handler:      w.GetFilterFields,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages/filter-fields",
 			ResponseType: reflect.TypeOf(GetFilterFieldsResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Получить доступные поля для фильтрации",
 			Tags:         []string{"packages"},
 		},
 		{
-			Method:       "Search",
+			Handler:      w.Search,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/packages/search",
 			ResponseType: reflect.TypeOf(SearchResponse{}),
-			Permission:   "read",
+			Permission:   http_server.PermRead,
 			Summary:      "Поиск пакетов по названию",
 			Tags:         []string{"packages"},
 			QueryParams: []http_server.QueryParam{
@@ -663,11 +630,11 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 
 		// System
 		{
-			Method:       "Update",
+			Handler:      w.Update,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/system/update",
 			ResponseType: reflect.TypeOf(UpdateResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Обновить базу данных пакетов",
 			Tags:         []string{"system"},
 			QueryParams: []http_server.QueryParam{
@@ -676,84 +643,90 @@ func GetHTTPEndpoints() []http_server.Endpoint {
 			},
 		},
 		{
-			Method:       "Upgrade",
+			Handler:      w.Upgrade,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/system/upgrade",
 			ResponseType: reflect.TypeOf(UpgradeResponse{}),
-			Permission:   "manage",
+			Permission:   http_server.PermManage,
 			Summary:      "Обновить систему",
 			Tags:         []string{"system"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
-
-		// Image (atomic only)
-		{
-			Method:       "ImageStatus",
-			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/image/status",
-			ResponseType: reflect.TypeOf(ImageStatusResponse{}),
-			Permission:   "read",
-			Summary:      "Получить статус образа",
-			Tags:         []string{"image"},
-		},
-		{
-			Method:       "ImageUpdate",
-			HTTPMethod:   "POST",
-			HTTPPath:     "/api/v1/image/update",
-			ResponseType: reflect.TypeOf(ImageUpdateResponse{}),
-			Permission:   "manage",
-			Summary:      "Обновить образ",
-			Tags:         []string{"image"},
-			QueryParams: []http_server.QueryParam{
-				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
-			},
-		},
-		{
-			Method:       "ImageApply",
-			HTTPMethod:   "POST",
-			HTTPPath:     "/api/v1/image/apply",
-			ResponseType: reflect.TypeOf(ImageApplyResponse{}),
-			Permission:   "manage",
-			Summary:      "Применить изменения к образу",
-			Tags:         []string{"image"},
-			QueryParams: []http_server.QueryParam{
-				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
-			},
-		},
-		{
-			Method:       "ImageHistory",
-			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/image/history",
-			ResponseType: reflect.TypeOf(ImageHistoryResponse{}),
-			Permission:   "read",
-			Summary:      "Получить историю изменений образа",
-			Tags:         []string{"image"},
-			QueryParams: []http_server.QueryParam{
-				{Name: "imageName", Type: "string", Required: false, Description: "Имя образа"},
-				{Name: "limit", Type: "integer", Required: false, Description: "Лимит записей"},
-				{Name: "offset", Type: "integer", Required: false, Description: "Смещение"},
-			},
-		},
-		{
-			Method:       "ImageGetConfig",
-			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/image/config",
-			ResponseType: reflect.TypeOf(ImageConfigResponse{}),
-			Permission:   "read",
-			Summary:      "Получить конфигурацию образа",
-			Tags:         []string{"image"},
-		},
-		{
-			Method:       "ImageSaveConfig",
-			HTTPMethod:   "PUT",
-			HTTPPath:     "/api/v1/image/config",
-			RequestType:  reflect.TypeOf(build.Config{}),
-			ResponseType: reflect.TypeOf(ImageConfigResponse{}),
-			Permission:   "manage",
-			Summary:      "Сохранить конфигурацию образа",
-			Tags:         []string{"image"},
-		},
 	}
+
+	// Image (только для atomic)
+	if isAtomic {
+		endpoints = append(endpoints,
+			http_server.Endpoint{
+				Handler:      w.ImageStatus,
+				HTTPMethod:   "GET",
+				HTTPPath:     "/api/v1/image/status",
+				ResponseType: reflect.TypeOf(ImageStatusResponse{}),
+				Permission:   http_server.PermRead,
+				Summary:      "Получить статус образа",
+				Tags:         []string{"image"},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageUpdate,
+				HTTPMethod:   "POST",
+				HTTPPath:     "/api/v1/image/update",
+				ResponseType: reflect.TypeOf(ImageUpdateResponse{}),
+				Permission:   http_server.PermManage,
+				Summary:      "Обновить образ",
+				Tags:         []string{"image"},
+				QueryParams: []http_server.QueryParam{
+					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+				},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageApply,
+				HTTPMethod:   "POST",
+				HTTPPath:     "/api/v1/image/apply",
+				ResponseType: reflect.TypeOf(ImageApplyResponse{}),
+				Permission:   http_server.PermManage,
+				Summary:      "Применить изменения к образу",
+				Tags:         []string{"image"},
+				QueryParams: []http_server.QueryParam{
+					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+				},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageHistory,
+				HTTPMethod:   "GET",
+				HTTPPath:     "/api/v1/image/history",
+				ResponseType: reflect.TypeOf(ImageHistoryResponse{}),
+				Permission:   http_server.PermRead,
+				Summary:      "Получить историю изменений образа",
+				Tags:         []string{"image"},
+				QueryParams: []http_server.QueryParam{
+					{Name: "imageName", Type: "string", Required: false, Description: "Имя образа"},
+					{Name: "limit", Type: "integer", Required: false, Description: "Лимит записей"},
+					{Name: "offset", Type: "integer", Required: false, Description: "Смещение"},
+				},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageGetConfig,
+				HTTPMethod:   "GET",
+				HTTPPath:     "/api/v1/image/config",
+				ResponseType: reflect.TypeOf(ImageConfigResponse{}),
+				Permission:   http_server.PermRead,
+				Summary:      "Получить конфигурацию образа",
+				Tags:         []string{"image"},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageSaveConfig,
+				HTTPMethod:   "PUT",
+				HTTPPath:     "/api/v1/image/config",
+				RequestType:  reflect.TypeOf(build.Config{}),
+				ResponseType: reflect.TypeOf(ImageConfigResponse{}),
+				Permission:   http_server.PermManage,
+				Summary:      "Сохранить конфигурацию образа",
+				Tags:         []string{"image"},
+			},
+		)
+	}
+
+	return endpoints
 }
