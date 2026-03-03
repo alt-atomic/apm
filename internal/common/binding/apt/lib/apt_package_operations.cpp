@@ -464,16 +464,7 @@ AptResult process_package_removals(const AptCache *cache,
         cache->dep_cache->MarkDelete(pkg, purge);
         remove_targets.emplace_back(pkg.Name(), pkg);
 
-        // delete only one package
-        // mark_dependent_packages_for_removal(cache, pkg, purge);
     }
-
-    //    Save for history TODO удалить после тестирования комментарий
-    //    std::set<pkgCache::PkgIterator> being_removed;
-    //    for (const auto& target : remove_targets) {
-    //        being_removed.insert(target.second);
-    //    }
-    //    mark_orphan_packages_for_removal(cache, being_removed, purge);
 
     return make_result(APT_SUCCESS, nullptr);
 }
@@ -711,7 +702,10 @@ void collect_package_changes(const AptCache *cache,
             if (st.CandidateVer != nullptr) {
                 download_size += static_cast<uint64_t>(st.CandidateVer->Size);
                 install_size += static_cast<int64_t>(st.CandidateVer->InstalledSize);
-                if (st.InstallVer != nullptr) install_size -= static_cast<int64_t>(st.InstallVer->InstalledSize);
+                pkgCache::VerIterator currentVer = iter.CurrentVer();
+                if (!currentVer.end()) {
+                    install_size -= static_cast<int64_t>(currentVer->InstalledSize);
+                }
             }
         } else if (st.Downgrade()) {
             upgraded.emplace_back(iter.Name());
@@ -812,22 +806,22 @@ void populate_changes_structure(AptPackageChanges *changes,
     if (changes->extra_installed_count > 0) {
         changes->extra_installed = static_cast<char **>(malloc(changes->extra_installed_count * sizeof(char *)));
         for (size_t i = 0; i < changes->extra_installed_count; ++i)
-            changes->extra_installed[i] = strdup(extra_installed[i].c_str());
+            changes->extra_installed[i] = safe_strdup(extra_installed[i]);
     }
     if (changes->removed_count > 0) {
         changes->removed_packages = static_cast<char **>(malloc(changes->removed_count * sizeof(char *)));
         for (size_t i = 0; i < changes->removed_count; ++i)
-            changes->removed_packages[i] = strdup(removed[i].c_str());
+            changes->removed_packages[i] = safe_strdup(removed[i]);
     }
     if (changes->upgraded_count > 0) {
         changes->upgraded_packages = static_cast<char **>(malloc(changes->upgraded_count * sizeof(char *)));
         for (size_t i = 0; i < changes->upgraded_count; ++i)
-            changes->upgraded_packages[i] = strdup(upgraded[i].c_str());
+            changes->upgraded_packages[i] = safe_strdup(upgraded[i]);
     }
     if (changes->new_installed_count > 0) {
         changes->new_installed_packages = static_cast<char **>(malloc(changes->new_installed_count * sizeof(char *)));
         for (size_t i = 0; i < changes->new_installed_count; ++i)
-            changes->new_installed_packages[i] = strdup(new_installed[i].c_str());
+            changes->new_installed_packages[i] = safe_strdup(new_installed[i]);
     }
 
     changes->essential_packages_count = essential_list.size();
@@ -835,10 +829,8 @@ void populate_changes_structure(AptPackageChanges *changes,
         changes->essential_packages = static_cast<AptEssentialPackage *>(malloc(
             changes->essential_packages_count * sizeof(AptEssentialPackage)));
         for (size_t i = 0; i < changes->essential_packages_count; ++i) {
-            changes->essential_packages[i].name = strdup(essential_list[i].first.c_str());
-            changes->essential_packages[i].reason = essential_list[i].second.empty()
-                ? nullptr
-                : strdup(essential_list[i].second.c_str());
+            changes->essential_packages[i].name = safe_strdup(essential_list[i].first);
+            changes->essential_packages[i].reason = safe_strdup(essential_list[i].second);
         }
     }
 }

@@ -8,6 +8,20 @@
 #include <regex.h>
 #include <set>
 
+// RAII wrapper
+class RegexGuard {
+    regex_t re_{};
+    bool compiled_ = false;
+public:
+    bool compile(const char *pattern, const int flags) {
+        if (regcomp(&re_, pattern, flags) != 0) return false;
+        compiled_ = true;
+        return true;
+    }
+    regex_t *get() { return &re_; }
+    ~RegexGuard() { if (compiled_) regfree(&re_); }
+};
+
 AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageList *result) {
     if (!cache || !cache->dep_cache || !pattern || !result) {
         return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid parameters for search");
@@ -21,14 +35,13 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
 
         pkgDepCache::Policy policy;
 
-        regex_t compiled_pattern;
-        if (regcomp(&compiled_pattern, pattern, REG_EXTENDED | REG_ICASE | REG_NOSUB) != 0) {
+        RegexGuard compiled_pattern;
+        if (!compiled_pattern.compile(pattern, REG_EXTENDED | REG_ICASE | REG_NOSUB)) {
             return make_result(APT_ERROR_UNKNOWN, "Failed to compile regex pattern");
         }
 
         pkgRecords Recs(Cache);
         if (_error->PendingError() == true) {
-            regfree(&compiled_pattern);
             return make_result(APT_ERROR_UNKNOWN, "Failed to create package records parser");
         }
 
@@ -37,13 +50,13 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
             bool NameMatch;
         };
 
-        auto *VFList = new ExVerFile[Cache.HeaderP->PackageCount + 1]();
+        std::unique_ptr<ExVerFile[]> VFList(new ExVerFile[Cache.HeaderP->PackageCount + 1]());
 
         for (pkgCache::PkgIterator P = Cache.PkgBegin(); P.end() == false; ++P) {
             VFList[P->ID].NameMatch = false;
             VFList[P->ID].Vf = nullptr;
 
-            if (regexec(&compiled_pattern, P.Name(), 0, nullptr, 0) == 0) {
+            if (regexec(compiled_pattern.get(), P.Name(), 0, nullptr, 0) == 0) {
                 VFList[P->ID].NameMatch = true;
             }
 
@@ -77,12 +90,12 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
             return 0;
         };
 
-        qsort(VFList, Cache.HeaderP->PackageCount, sizeof(*VFList), LocalityCompare);
+        qsort(VFList.get(), Cache.HeaderP->PackageCount, sizeof(ExVerFile), LocalityCompare);
 
         std::vector<AptPackageInfo> matched_packages;
         std::set<std::string> seen_packages;
 
-        for (ExVerFile *J = VFList; J->Vf != nullptr; J++) {
+        for (ExVerFile *J = VFList.get(); J->Vf != nullptr; J++) {
             pkgCache::VerFileIterator VF(Cache, J->Vf);
 
             try {
@@ -95,8 +108,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                     std::string ShortDesc = Parser.ShortDesc();
 
                     Match = false;
-                    if (regexec(&compiled_pattern, LongDesc.c_str(), 0, nullptr, 0) == 0 ||
-                        regexec(&compiled_pattern, ShortDesc.c_str(), 0, nullptr, 0) == 0) {
+                    if (regexec(compiled_pattern.get(), LongDesc.c_str(), 0, nullptr, 0) == 0 ||
+                        regexec(compiled_pattern.get(), ShortDesc.c_str(), 0, nullptr, 0) == 0) {
                         Match = true;
                     }
                 }
@@ -136,14 +149,14 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                         std::string long_desc = Parser.LongDesc();
                         std::string short_desc = Parser.ShortDesc();
 
-                        info.description = strdup(long_desc.c_str());
-                        info.short_description = strdup(short_desc.c_str());
-                        info.maintainer = strdup(Parser.Maintainer().c_str());
-                        info.source_package = strdup(Parser.SourcePkg().c_str());
-                        info.md5_hash = strdup(Parser.MD5Hash().c_str());
-                        info.blake2b_hash = strdup(Parser.BLAKE2b().c_str());
-                        info.filename = strdup(Parser.FileName().c_str());
-                        info.changelog = strdup(Parser.Changelog().c_str());
+                        info.description = safe_strdup(long_desc.c_str());
+                        info.short_description = safe_strdup(short_desc.c_str());
+                        info.maintainer = safe_strdup(Parser.Maintainer().c_str());
+                        info.source_package = safe_strdup(Parser.SourcePkg().c_str());
+                        info.md5_hash = safe_strdup(Parser.MD5Hash().c_str());
+                        info.blake2b_hash = safe_strdup(Parser.BLAKE2b().c_str());
+                        info.filename = safe_strdup(Parser.FileName().c_str());
+                        info.changelog = safe_strdup(Parser.Changelog().c_str());
 
                         // Parse fields from full record (Homepage, Version, Architecture)
                         const char *rec_start, *rec_stop;
@@ -191,19 +204,19 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                             size_t end = record.find('\n', start);
                             if (end == std::string::npos) end = record.length();
                             std::string homepage = record.substr(start, end - start);
-                            info.homepage = strdup(homepage.c_str());
+                            info.homepage = safe_strdup(homepage.c_str());
                         } else {
                             // leave homepage as nullptr if not present
                         }
 
-                        info.name = strdup(effective_name.c_str());
+                        info.name = safe_strdup(effective_name.c_str());
                         info.aliases = nullptr;
                         info.alias_count = 0;
 
                         if (!Pkg.end()) {
                             info.package_id = Pkg->ID;
                             if (Pkg.Section() != nullptr && *Pkg.Section() != '\0') {
-                                info.section = strdup(Pkg.Section());
+                                info.section = safe_strdup(Pkg.Section());
                             }
                             info.essential = (Pkg->Flags & pkgCache::Flag::Essential) != 0;
                             info.auto_installed = (Pkg->Flags & pkgCache::Flag::Auto) != 0;
@@ -238,14 +251,14 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                             pkgCache::VerIterator Ver = policy.GetCandidateVer(Pkg);
                             if (!Ver.end()) {
                                 if (Ver.VerStr() != nullptr && *Ver.VerStr() != '\0') {
-                                    info.version = strdup(Ver.VerStr());
+                                    info.version = safe_strdup(Ver.VerStr());
                                 }
                                 if (Ver.Arch() != nullptr && *Ver.Arch() != '\0') {
-                                    info.architecture = strdup(Ver.Arch());
+                                    info.architecture = safe_strdup(Ver.Arch());
                                 }
                                 if (pkgCache::Priority(Ver->Priority) != nullptr && *pkgCache::Priority(Ver->Priority)
                                     != '\0') {
-                                    info.priority = strdup(pkgCache::Priority(Ver->Priority));
+                                    info.priority = safe_strdup(pkgCache::Priority(Ver->Priority));
                                 }
                                 info.installed_size = Ver->InstalledSize;
                                 info.download_size = Ver->Size;
@@ -261,7 +274,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                             if (!joined.empty()) joined += ", ";
                                             joined += prov_name;
                                         }
-                                        info.provides = strdup(joined.c_str());
+                                        info.provides = safe_strdup(joined.c_str());
                                     }
                                 }
                                 {
@@ -281,15 +294,15 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                             if (!joined.empty()) joined += ", ";
                                             joined += dep_name;
                                         }
-                                        info.depends = strdup(joined.c_str());
+                                        info.depends = safe_strdup(joined.c_str());
                                     }
                                 }
                             } else {
                                 if (!record_version.empty()) {
-                                    info.version = strdup(record_version.c_str());
+                                    info.version = safe_strdup(record_version.c_str());
                                 }
                                 if (!record_arch.empty()) {
-                                    info.architecture = strdup(record_arch.c_str());
+                                    info.architecture = safe_strdup(record_arch.c_str());
                                 }
                                 info.installed_size = 0;
                                 info.download_size = 0;
@@ -301,7 +314,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                         size_t end = record.find('\n', start);
                                         if (end == std::string::npos) end = record.length();
                                         std::string deps = record.substr(start, end - start);
-                                        if (!deps.empty()) info.depends = strdup(deps.c_str());
+                                        if (!deps.empty()) info.depends = safe_strdup(deps.c_str());
                                     }
                                 }
                             }
@@ -311,10 +324,10 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                             info.auto_installed = false;
                             info.state = APT_PKG_STATE_NOT_INSTALLED;
                             if (!record_version.empty()) {
-                                info.version = strdup(record_version.c_str());
+                                info.version = safe_strdup(record_version.c_str());
                             }
                             if (!record_arch.empty()) {
-                                info.architecture = strdup(record_arch.c_str());
+                                info.architecture = safe_strdup(record_arch.c_str());
                             }
                             info.installed_size = 0;
                             info.download_size = 0;
@@ -325,16 +338,15 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                     size_t end = record.find('\n', start);
                                     if (end == std::string::npos) end = record.length();
                                     std::string deps = record.substr(start, end - start);
-                                    if (!deps.empty()) info.depends = strdup(deps.c_str());
+                                    if (!deps.empty()) info.depends = safe_strdup(deps.c_str());
                                 }
                             }
                         }
 
                         // Finalize auxiliary fields (use record-provides if nothing collected from cache)
                         if (info.provides == nullptr && !record_provides.empty())
-                            info.provides = strdup(record_provides.c_str());
+                            info.provides = safe_strdup(record_provides.c_str());
 
-                        // Build aliases list for biarch naming (ALT): i586-<name>, <name>.32bit, i586-<name>.32bit
                         {
                             std::vector<std::string> aliases;
                             std::string current_name = Parser.Name();
@@ -376,7 +388,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                 info.alias_count = aliases.size();
                                 info.aliases = static_cast<char **>(calloc(info.alias_count, sizeof(char *)));
                                 for (size_t ai = 0; ai < aliases.size(); ++ai) {
-                                    info.aliases[ai] = strdup(aliases[ai].c_str());
+                                    info.aliases[ai] = safe_strdup(aliases[ai].c_str());
                                 }
                             }
                         }
@@ -394,15 +406,10 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
             }
         }
 
-        // Clean up VFList and regex
-        delete[] VFList;
-        regfree(&compiled_pattern);
-
         if (matched_packages.empty()) {
             return make_result(APT_SUCCESS);
         }
 
-        // Allocate result array
         result->count = matched_packages.size();
         result->packages = static_cast<AptPackageInfo *>(calloc(result->count, sizeof(AptPackageInfo)));
         if (!result->packages) {
@@ -410,7 +417,6 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
             return make_result(APT_ERROR_UNKNOWN, "Failed to allocate memory for search results");
         }
 
-        // Copy results from matched_packages vector
         for (size_t i = 0; i < matched_packages.size(); ++i) {
             result->packages[i] = matched_packages[i];
         }
@@ -427,14 +433,14 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
         result->count = 0;
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     } catch (...) {
-        if (result->packages) {
+        if (result && result->packages) {
             for (size_t i = 0; i < result->count; ++i) {
                 apt_free_package_info(&result->packages[i]);
             }
             free(result->packages);
             result->packages = nullptr;
         }
-        result->count = 0;
+        if (result) result->count = 0;
         return make_result(APT_ERROR_UNKNOWN, "Unknown exception in search");
     }
 }

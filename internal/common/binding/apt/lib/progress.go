@@ -41,7 +41,7 @@ const (
 type ProgressHandler func(packageName string, eventType ProgressType, current, total, speed uint64)
 
 //export goAptProgressCallback
-func goAptProgressCallback(cname *C.char, ctype C.int, ccurrent C.ulonglong, ctotal C.ulonglong, cspeed C.ulonglong, user C.uintptr_t) {
+func goAptProgressCallback(cname *C.char, ctype C.AptCallbackType, ccurrent C.ulonglong, ctotal C.ulonglong, cspeed C.ulonglong, user C.uintptr_t) {
 	defer func() { _ = recover() }()
 	h := cgoRuntime.Handle(user)
 	if v := h.Value(); v != nil {

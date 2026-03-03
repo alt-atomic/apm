@@ -5,8 +5,8 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 // Forward declarations
 typedef struct AptSystem AptSystem;
@@ -76,8 +76,8 @@ typedef void (*AptLogCallback)(const char *message, uintptr_t user_data);
 
 // Essential package info for simulation warnings
 typedef struct {
-    char *name;    // package name
-    char *reason;  // NULL if directly essential/important, or name of the essential/important package that depends on it
+    char *name;
+    char *reason;
 } AptEssentialPackage;
 
 // Package states
@@ -120,7 +120,7 @@ typedef struct {
     uint64_t installed_size;
     uint64_t download_size;
     uint32_t package_id;
-    // Aliases for this package (e.g., i586-<name>, i586-<name>.32bit)
+    // Aliases for this package
     char **aliases;
     size_t alias_count;
 } AptPackageInfo;
@@ -147,7 +147,6 @@ AptResult apt_cache_refresh(AptCache *cache);
 
 AptResult apt_cache_update(AptCache *cache);
 
-// File installation support - preprocess arguments to detect and handle RPM files
 AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new);
 
 // Package manager
@@ -222,14 +221,14 @@ AptResult apt_simulate_install(AptCache *cache, const char **package_names, size
 AptResult apt_simulate_remove(AptCache *cache, const char **package_names, size_t count, bool purge,
                               bool remove_depends, AptPackageChanges *changes);
 
-AptResult apt_simulate_dist_upgrade(AptCache *cache, AptPackageChanges *changes);
+AptResult apt_simulate_dist_upgrade(const AptCache *cache, AptPackageChanges *changes);
 
 AptResult apt_simulate_autoremove(const AptCache *cache, AptPackageChanges *changes);
 
 // Reinstall simulation
 AptResult apt_simulate_reinstall(AptCache *cache, const char **package_names, size_t count, AptPackageChanges *changes);
 
-// Apply reinstall changes to cache
+// Apply to reinstall changes to cache
 AptResult apt_apply_reinstall(AptCache *cache, const char **package_names, size_t count);
 
 // Combined simulation: install and remove in a single transaction
@@ -250,9 +249,9 @@ AptResult apt_apply_changes(AptCache *cache,
 
 void apt_free_package_changes(AptPackageChanges *changes);
 
-// Helper to access essential package fields by index (CGO-friendly)
-static inline void apt_get_essential_package(const AptPackageChanges *changes, size_t index,
-                                             const char **out_name, const char **out_reason) {
+// Helper to access essential package fields by index
+static void apt_get_essential_package(const AptPackageChanges *changes, size_t index,
+                                      const char **out_name, const char **out_reason) {
     *out_name = changes->essential_packages[index].name;
     *out_reason = changes->essential_packages[index].reason;
 }

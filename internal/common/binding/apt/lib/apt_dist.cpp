@@ -11,6 +11,8 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
     if (!cache || !cache->dep_cache) return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid cache for dist upgrade");
 
     try {
+        CallbackGuard cbGuard;
+
         if (!pkgDistUpgrade(*cache->dep_cache)) {
             return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Distribution upgrade failed");
         }
@@ -27,22 +29,15 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
             return make_result(APT_ERROR_INIT_FAILED, "Failed to create package manager for dist upgrade");
         }
 
-        bool cb_set = false;
         if (callback) {
             global_callback = callback;
             global_user_data = user_data;
-            cb_set = true;
         }
 
-        // Lock the archive directory
+        FileFd Lock;
         if (!_config->FindB("Debug::NoLocking", false)) {
-            FileFd Lock;
             Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
             if (_error->PendingError()) {
-                if (cb_set) {
-                    global_callback = nullptr;
-                    global_user_data = 0;
-                }
                 return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the download directory");
             }
         }
@@ -51,26 +46,14 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         pkgAcquire acquire(&status);
         pkgSourceList source_list;
         if (!source_list.ReadMainList()) {
-            if (cb_set) {
-                global_callback = nullptr;
-                global_user_data = 0;
-            }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
         }
 
         pkgRecords records(*cache->dep_cache);
         if (!pm->GetArchives(&acquire, &source_list, &records)) {
-            if (cb_set) {
-                global_callback = nullptr;
-                global_user_data = 0;
-            }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to get package archives for dist upgrade");
         }
         if (acquire.Run() != pkgAcquire::Continue) {
-            if (cb_set) {
-                global_callback = nullptr;
-                global_user_data = 0;
-            }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages for dist upgrade");
         }
 
@@ -92,16 +75,13 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         PackageManagerCallback_t apt_callback = create_common_progress_callback(&bridgeData);
 
         auto result = pm->DoInstall(apt_callback, &bridgeData);
+
+        if (_system) _system->Lock();
+
         switch (result) {
             case pkgPackageManager::Completed:
                 break;
             case pkgPackageManager::Failed:
-                if (_system) _system->Lock();
-                if (cb_set) {
-                    global_callback = nullptr;
-                    global_user_data = 0;
-                }
-                // Collect detailed error message from APT
                 {
                     std::string error_details = collect_pending_errors();
                     if (error_details.empty()) {
@@ -110,11 +90,6 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                     return make_result(APT_ERROR_OPERATION_FAILED, error_details.c_str());
                 }
             case pkgPackageManager::Incomplete:
-                if (_system) _system->Lock();
-                if (cb_set) {
-                    global_callback = nullptr;
-                    global_user_data = 0;
-                }
                 {
                     std::string error_details = collect_pending_errors();
                     if (error_details.empty()) {
@@ -123,11 +98,6 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                     return make_result(APT_ERROR_OPERATION_INCOMPLETE, error_details.c_str());
                 }
             default:
-                if (_system) _system->Lock();
-                if (cb_set) {
-                    global_callback = nullptr;
-                    global_user_data = 0;
-                }
                 {
                     std::string error_details = collect_pending_errors();
                     if (error_details.empty()) {
@@ -139,28 +109,14 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
 
         bool update_marks = pm->UpdateMarks();
         if (!update_marks) {
-            if (cb_set) {
-                global_callback = nullptr;
-                global_user_data = 0;
-            }
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to update package marks after dist upgrade");
         }
 
         if (!check_apt_errors()) {
-            if (cb_set) {
-                global_callback = nullptr;
-                global_user_data = 0;
-            }
             return make_result(last_error, nullptr);
-        }
-        if (cb_set) {
-            global_callback = nullptr;
-            global_user_data = 0;
         }
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
-        global_callback = nullptr;
-        global_user_data = 0;
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }

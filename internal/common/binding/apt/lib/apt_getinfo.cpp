@@ -26,7 +26,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                 return preprocess_result;
             }
 
-            // Only refresh cache if new RPM file was added to config
             if (added_new) {
                 AptResult refresh_result = apt_cache_refresh(cache);
                 if (refresh_result.code != APT_SUCCESS) {
@@ -34,7 +33,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                 }
             }
 
-            // Find the package that was added from the RPM file
             bool found_package = false;
             for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
                 for (pkgCache::VerIterator ver = iter.VersionList(); !ver.end(); ++ver) {
@@ -55,7 +53,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                                    (std::string("Unable to find package from RPM file: ") + input).c_str());
             }
         } else {
-            // Regular package name - normalize: strip .32bit alias suffix
             requested = input;
             if (!requested.empty() && requested.size() > 7 && requested.rfind(".32bit") == requested.size() - 7) {
                 requested.erase(requested.size() - 7);
@@ -64,7 +61,6 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
 
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(requested);
         if (pkg.end()) {
-            // Try common ALT biarch provider name: i586-<requested>
             std::string i586_name = std::string("i586-") + requested;
             pkg = cache->dep_cache->FindPkg(i586_name);
         }
@@ -91,16 +87,16 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
 
         // Use the requested normalized name as primary display name when it differs (to honor aliases)
         if (!requested.empty()) {
-            info->name = strdup(requested.c_str());
+            info->name = safe_strdup(requested.c_str());
         } else {
-            info->name = strdup(pkg.Name());
+            info->name = safe_strdup(pkg.Name());
         }
         info->package_id = pkg->ID;
 
         info->essential = (pkg->Flags & pkgCache::Flag::Essential) != 0;
         info->auto_installed = (pkg->Flags & pkgCache::Flag::Auto) != 0;
 
-        info->section = strdup(pkg.Section() ? pkg.Section() : "unknown");
+        info->section = safe_strdup(pkg.Section() ? pkg.Section() : "unknown");
 
         // Package state - check CurrentVer()
         if (!pkg.CurrentVer().end()) {
@@ -128,13 +124,13 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
             info->state = APT_PKG_STATE_NOT_INSTALLED;
         }
 
-        pkgDepCache::Policy Plcy;
-        pkgCache::VerIterator candidate_ver = Plcy.GetCandidateVer(pkg);
+        pkgDepCache::Policy Policy;
+        pkgCache::VerIterator candidate_ver = Policy.GetCandidateVer(pkg);
 
         if (!candidate_ver.end()) {
-            info->version = strdup(candidate_ver.VerStr());
+            info->version = safe_strdup(candidate_ver.VerStr());
 
-            info->architecture = strdup(candidate_ver.Arch());
+            info->architecture = safe_strdup(candidate_ver.Arch());
 
             for (pkgCache::VerFileIterator vf = candidate_ver.FileList(); !vf.end(); ++vf) {
                 if (vf.File().Archive() != nullptr) {
@@ -153,40 +149,40 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                 std::string short_desc = parser.ShortDesc();
 
                 if (!desc.empty()) {
-                    info->description = strdup(desc.c_str());
+                    info->description = safe_strdup(desc.c_str());
                 }
                 if (!short_desc.empty()) {
-                    info->short_description = strdup(short_desc.c_str());
+                    info->short_description = safe_strdup(short_desc.c_str());
                 }
 
                 std::string maintainer = parser.Maintainer();
                 if (!maintainer.empty()) {
-                    info->maintainer = strdup(maintainer.c_str());
+                    info->maintainer = safe_strdup(maintainer.c_str());
                 }
 
                 std::string source_pkg = parser.SourcePkg();
                 if (!source_pkg.empty()) {
-                    info->source_package = strdup(source_pkg.c_str());
+                    info->source_package = safe_strdup(source_pkg.c_str());
                 }
 
                 std::string md5_hash = parser.MD5Hash();
                 if (!md5_hash.empty()) {
-                    info->md5_hash = strdup(md5_hash.c_str());
+                    info->md5_hash = safe_strdup(md5_hash.c_str());
                 }
 
                 std::string blake2b_hash = parser.BLAKE2b();
                 if (!blake2b_hash.empty()) {
-                    info->blake2b_hash = strdup(blake2b_hash.c_str());
+                    info->blake2b_hash = safe_strdup(blake2b_hash.c_str());
                 }
 
                 std::string filename = parser.FileName();
                 if (!filename.empty()) {
-                    info->filename = strdup(filename.c_str());
+                    info->filename = safe_strdup(filename.c_str());
                 }
 
                 std::string changelog = parser.Changelog();
                 if (!changelog.empty()) {
-                    info->changelog = strdup(changelog.c_str());
+                    info->changelog = safe_strdup(changelog.c_str());
                 }
 
                 const char *rec_start, *rec_stop;
@@ -199,7 +195,7 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                     size_t end = record.find('\n', start);
                     if (end == std::string::npos) end = record.length();
                     std::string homepage = record.substr(start, end - start);
-                    info->homepage = strdup(homepage.c_str());
+                    info->homepage = safe_strdup(homepage.c_str());
                 }
 
                 size_t provides_pos = record.find("Provides: ");
@@ -208,17 +204,17 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
                     size_t end = record.find('\n', start);
                     if (end == std::string::npos) end = record.length();
                     std::string provides = record.substr(start, end - start);
-                    info->provides = strdup(provides.c_str());
+                    info->provides = safe_strdup(provides.c_str());
                 }
             }
         } else {
-            info->version = strdup("unknown");
-            info->architecture = strdup("unknown");
+            info->version = safe_strdup("unknown");
+            info->architecture = safe_strdup("unknown");
             info->download_size = 0;
             info->installed_size = 0;
         }
 
-        info->priority = strdup("normal");
+        info->priority = safe_strdup("normal");
 
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {

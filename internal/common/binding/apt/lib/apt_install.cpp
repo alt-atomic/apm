@@ -40,6 +40,7 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
         return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
 
     try {
+        CallbackGuard cbGuard;
         ReInstallConfigGuard reinstallGuard;
         bool hasReinstall = reinstallGuard.setIfNeeded(pm->cache->dep_cache);
 
@@ -69,9 +70,8 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             global_user_data = user_data;
         }
 
-        // Lock the archive directory
+        FileFd Lock;
         if (!_config->FindB("Debug::NoLocking", false)) {
-            FileFd Lock;
             Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
             if (_error->PendingError()) {
                 return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the download directory");
@@ -124,12 +124,12 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
 
         auto result = pm->pm->DoInstall(apt_callback, &bridgeData);
 
+        if (_system) _system->Lock();
+
         switch (result) {
             case pkgPackageManager::Completed:
                 break;
             case pkgPackageManager::Failed:
-                if (_system) _system->Lock();
-                // Collect detailed error message from APT
                 {
                     std::string error_details = collect_pending_errors();
                     if (error_details.empty()) {
@@ -138,7 +138,6 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
                     return make_result(APT_ERROR_OPERATION_FAILED, error_details.c_str());
                 }
             case pkgPackageManager::Incomplete:
-                if (_system) _system->Lock();
                 {
                     std::string error_details = collect_pending_errors();
                     if (error_details.empty()) {
@@ -147,7 +146,6 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
                     return make_result(APT_ERROR_OPERATION_INCOMPLETE, error_details.c_str());
                 }
             default:
-                if (_system) _system->Lock();
                 {
                     std::string error_details = collect_pending_errors();
                     if (error_details.empty()) {
@@ -162,16 +160,8 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to update package marks");
         }
 
-        global_callback = nullptr;
-        global_user_data = 0;
-
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
     } catch (const std::exception &e) {
-        global_callback = nullptr;
-        global_user_data = 0;
-        if (_system) {
-            _system->Lock();
-        }
         return make_result(APT_ERROR_INSTALL_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
 }

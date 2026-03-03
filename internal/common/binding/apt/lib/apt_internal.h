@@ -6,8 +6,8 @@
 #include <apt-pkg/packagemanager.h>
 #include <apt-pkg/pkgsystem.h>
 #include <apt-pkg/acquire.h>
-#include <apt-pkg/acquire-worker.h>
 
+#include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
@@ -41,6 +41,11 @@ struct AptPackageManager {
 
 extern AptProgressCallback global_callback;
 extern uintptr_t global_user_data;
+
+// RAII guard that clears global_callback/global_user_data on scope exit,
+struct CallbackGuard {
+    ~CallbackGuard() { global_callback = nullptr; global_user_data = 0; }
+};
 
 extern AptLogCallback g_log_callback;
 extern uintptr_t g_log_user_data;
@@ -107,3 +112,15 @@ struct CallbackBridge {
 
 // Common progress callback function used by both install and dist-upgrade
 PackageManagerCallback_t create_common_progress_callback(CallbackBridge *bridgeData);
+
+inline char *safe_strdup(const char *s) {
+    if (!s || !*s) return nullptr;
+    char *p = strdup(s);
+    return p;
+}
+
+inline char *safe_strdup(const std::string &s) {
+    if (s.empty()) return nullptr;
+    char *p = strdup(s.c_str());
+    return p;
+}

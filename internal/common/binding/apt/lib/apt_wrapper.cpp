@@ -4,6 +4,7 @@
 #include <apt-pkg/error.h>
 #include <apt-pkg/init.h>
 #include <apt-pkg/sourcelist.h>
+#include <apt-pkg/acquire-worker.h>
 
 #include <atomic>
 #include <cstdio>
@@ -89,10 +90,10 @@ static void stderr_reader_thread() {
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(g_pipe_read_fd, &fds);
-        struct timeval tv = {0, 100000};
-        int ret = select(g_pipe_read_fd + 1, &fds, nullptr, nullptr, &tv);
+        timeval tv = {0, 100000};
+        const int ret = select(g_pipe_read_fd + 1, &fds, nullptr, nullptr, &tv);
         if (ret > 0 && FD_ISSET(g_pipe_read_fd, &fds)) {
-            ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
+            const ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
             if (n > 0) {
                 buffer[n] = '\0';
                 g_captured_stderr += buffer;
@@ -101,7 +102,7 @@ static void stderr_reader_thread() {
     }
     // Drain remaining data
     while (true) {
-        ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
+        const ssize_t n = read(g_pipe_read_fd, buffer, sizeof(buffer) - 1);
         if (n <= 0) break;
         buffer[n] = '\0';
         g_captured_stderr += buffer;
@@ -111,7 +112,6 @@ static void stderr_reader_thread() {
 extern "C" void apt_capture_stdio(int enable) {
     if (enable) {
         if (!g_stdio_captured) {
-            // Redirect C++ iostreams to emit_stream
             g_prev_cout = std::cout.rdbuf();
             g_prev_cerr = std::cerr.rdbuf();
             g_prev_clog = std::clog.rdbuf();
@@ -168,7 +168,6 @@ extern "C" void apt_capture_stdio(int enable) {
             }
 
             // Send captured stderr to log handler for error analysis
-            // Only send to callback if set (otherwise discard - we don't want garbage in console)
             if (!g_captured_stderr.empty() && g_log_callback) {
                 std::istringstream stream(g_captured_stderr);
                 std::string line;
@@ -247,13 +246,6 @@ static const char *find_first_broken_pkg(pkgDepCache *dep) {
     return nullptr;
 }
 
-static char *dup_cstr(const std::string &s) {
-    if (s.empty()) return nullptr;
-    const auto p = static_cast<char *>(malloc(s.size() + 1));
-    if (!p) return nullptr;
-    memcpy(p, s.c_str(), s.size() + 1);
-    return p;
-}
 
 AptResult make_result(const AptErrorCode code, const char *message) {
     AptResult r{};
@@ -272,7 +264,7 @@ AptResult make_result(const AptErrorCode code, const char *message) {
         if (!last_error_message.empty() && last_error == code) msg = last_error_message;
     }
     if (msg.empty()) msg = apt_error_string(code);
-    r.message = dup_cstr(msg);
+    r.message = safe_strdup(msg);
     return r;
 }
 
@@ -351,8 +343,7 @@ AptResult apt_cache_open(const AptSystem *system, AptCache **cache, bool with_lo
     try {
         *cache = new AptCache();
 
-        static std::ostringstream nullstream;
-        (*cache)->cache_file = std::make_unique<CacheFile>(nullstream, with_lock);
+        (*cache)->cache_file = std::make_unique<CacheFile>(apt_log_stream(), with_lock);
 
         if (!(*cache)->cache_file->Open()) {
             delete *cache;
@@ -408,8 +399,7 @@ AptResult apt_cache_refresh(AptCache *cache) {
     try {
         cache->cache_file.reset();
 
-        static std::ostringstream nullstream;
-        cache->cache_file = std::make_unique<CacheFile>(nullstream, true);
+        cache->cache_file = std::make_unique<CacheFile>(apt_log_stream(), true);
 
         if (!cache->cache_file->Open()) {
             return make_result(APT_ERROR_CACHE_REFRESH_FAILED, "Failed to reopen cache after refresh");
@@ -442,9 +432,8 @@ AptResult apt_cache_update(AptCache *cache) {
     if (!cache || !cache->cache_file) return make_result(APT_ERROR_CACHE_OPEN_FAILED);
 
     try {
-        // Lock the list directory (same as apt-get does)
+        FileFd Lock;
         if (!_config->FindB("Debug::NoLocking", false)) {
-            FileFd Lock;
             Lock.Fd(GetLock(_config->FindDir("Dir::State::Lists") + "lock"));
             if (_error->PendingError()) {
                 return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the list directory");
@@ -459,7 +448,6 @@ AptResult apt_cache_update(AptCache *cache) {
             return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to read sources.list");
         }
 
-        // Step 1: Update release files
         if (!source_list.InvalidateReleases()) {
             return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to invalidate releases");
         }
@@ -486,7 +474,6 @@ AptResult apt_cache_update(AptCache *cache) {
             }
         }
 
-        // Step 2: Update package indexes
         if (!source_list.GetIndexes(&acquire)) {
             return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to get package indexes");
         }
@@ -503,7 +490,6 @@ AptResult apt_cache_update(AptCache *cache) {
                                "Package index update failed: Unable to download package lists");
         }
 
-        // Check for failed items even if Run() returned Continue
         for (pkgAcquire::ItemCIterator I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
             if ((*I)->Status == pkgAcquire::Item::StatError && !(*I)->ErrorText.empty()) {
                 std::string error_msg = "Package index update failed: " + (*I)->DescURI() + " " + (*I)->ErrorText;
@@ -616,11 +602,9 @@ public:
 // ProgressStatus implementations (after global_callback is defined)
 bool ProgressStatus::Pulse(pkgAcquire *Owner) {
     // Call parent first — it computes CurrentCPS (bytes/sec)
-    bool ret = pkgAcquireStatus::Pulse(Owner);
+    const bool ret = pkgAcquireStatus::Pulse(Owner);
     if (global_callback != nullptr) {
-        // Send overall download progress
         if (TotalBytes > 0) {
-            // Use "" as package name to indicate overall progress
             global_callback("", APT_CALLBACK_DOWNLOAD_PROGRESS,
                             static_cast<uint64_t>(CurrentBytes),
                             static_cast<uint64_t>(TotalBytes),
@@ -628,13 +612,12 @@ bool ProgressStatus::Pulse(pkgAcquire *Owner) {
                             global_user_data);
         }
 
-        // Per-item progress from active workers
-        for (pkgAcquire::Worker *W = Owner->WorkersBegin(); W != nullptr; W = Owner->WorkerStep(W)) {
+        for (const pkgAcquire::Worker *W = Owner->WorkersBegin(); W != nullptr; W = Owner->WorkerStep(W)) {
             if (W->CurrentItem == nullptr) continue;
             const std::string &desc = W->CurrentItem->Description;
             if (desc.empty()) continue;
-            uint64_t cur = W->CurrentSize;
-            uint64_t tot = W->TotalSize;
+            const uint64_t cur = W->CurrentSize;
+            const uint64_t tot = W->TotalSize;
             if (tot == 0) continue;
             global_callback(desc.c_str(), APT_CALLBACK_DOWNLOAD_ITEM_PROGRESS,
                             cur, tot,
@@ -724,8 +707,7 @@ void apt_free_package_list(AptPackageList *list) {
 }
 
 // Utility functions
-const char *apt_error_string(AptErrorCode error) {
-    // Prefer the last detailed message captured via set_error if it matches the code
+const char *apt_error_string(const AptErrorCode error) {
     if (last_error == error && !last_error_message.empty()) {
         return last_error_message.c_str();
     }
@@ -770,7 +752,7 @@ extern "C" void apt_set_log_callback(AptLogCallback callback, uintptr_t user_dat
 }
 
 extern "C" void goAptProgressCallback(const char *package_name,
-                                      int callback_type,
+                                      AptCallbackType callback_type,
                                       uint64_t current,
                                       uint64_t total,
                                       uint64_t speed_bps,
@@ -780,7 +762,7 @@ extern "C" void goAptLogCallback(const char *message, uintptr_t user_data);
 
 
 extern "C" void apt_use_go_progress_callback(const uintptr_t user_data) {
-    global_callback = reinterpret_cast<AptProgressCallback>(goAptProgressCallback);
+    global_callback = goAptProgressCallback;
     global_user_data = user_data;
 }
 
@@ -846,8 +828,8 @@ void apt_free_package_changes(AptPackageChanges *changes) {
 
 // Optimized progress callback implementation - simplified for performance
 PackageManagerCallback_t create_common_progress_callback(CallbackBridge *) {
-    return [](const char *nevra, aptCallbackType what, uint64_t amount, uint64_t total, void *callbackData) {
-        // Fast path - only handle the callbacks we care about
+    return [](const char *nevra, const aptCallbackType what, const uint64_t amount, const uint64_t total,
+              void *callbackData) {
         AptCallbackType our_type;
         switch (what) {
             case APTCALLBACK_INST_PROGRESS: our_type = APT_CALLBACK_INST_PROGRESS;
@@ -856,7 +838,7 @@ PackageManagerCallback_t create_common_progress_callback(CallbackBridge *) {
                 break;
             case APTCALLBACK_INST_STOP: our_type = APT_CALLBACK_INST_STOP;
                 break;
-            default: return; // Skip unknown callbacks immediately
+            default: return;
         }
 
         auto *bd = static_cast<CallbackBridge *>(callbackData);
@@ -936,15 +918,6 @@ AptResult apt_preprocess_install_arguments(const char **install_names, size_t in
     }
 }
 
-// Helper function to duplicate a C string (returns nullptr if input is empty)
-static char *dup_string(const std::string &s) {
-    if (s.empty()) return nullptr;
-    const auto p = static_cast<char *>(malloc(s.size() + 1));
-    if (!p) return nullptr;
-    memcpy(p, s.c_str(), s.size() + 1);
-    return p;
-}
-
 // Helper function to check if a lock file can be acquired
 static bool check_lock_file(const std::string &path, int &holder_pid) {
     holder_pid = -1;
@@ -994,8 +967,7 @@ static std::string get_process_name(int pid) {
     char name[256];
     if (fgets(name, sizeof(name), f)) {
         fclose(f);
-        // Remove trailing newline
-        size_t len = strlen(name);
+        const size_t len = strlen(name);
         if (len > 0 && name[len - 1] == '\n') {
             name[len - 1] = '\0';
         }
@@ -1016,13 +988,11 @@ struct LockPaths {
 static LockPaths get_lock_paths() {
     LockPaths paths{};
 
-    // Archives lock: Dir::Cache::Archives + "lock"
     const std::string archives_dir = _config->FindDir("Dir::Cache::Archives", "/var/cache/apt/archives/");
-    paths.archives_lock = dup_string(archives_dir + "lock");
+    paths.archives_lock = safe_strdup(archives_dir + "lock");
 
-    // Lists lock: Dir::State::lists + "lock"
     const std::string lists_dir = _config->FindDir("Dir::State::lists", "/var/lib/apt/lists/");
-    paths.lists_lock = dup_string(lists_dir + "lock");
+    paths.lists_lock = safe_strdup(lists_dir + "lock");
 
     return paths;
 }
@@ -1050,12 +1020,12 @@ AptLockStatus apt_check_lock_status() {
             status.is_locked = true;
             status.can_acquire = false;
             status.lock_pid = archives_holder_pid;
-            status.lock_file_path = dup_string(paths.archives_lock);
+            status.lock_file_path = safe_strdup(paths.archives_lock);
 
             if (archives_holder_pid > 0) {
                 const std::string proc_name = get_process_name(archives_holder_pid);
                 if (!proc_name.empty()) {
-                    status.lock_holder = dup_string(proc_name);
+                    status.lock_holder = safe_strdup(proc_name);
                 }
             }
 
@@ -1069,12 +1039,12 @@ AptLockStatus apt_check_lock_status() {
             status.is_locked = true;
             status.can_acquire = false;
             status.lock_pid = lists_holder_pid;
-            status.lock_file_path = dup_string(paths.lists_lock);
+            status.lock_file_path = safe_strdup(paths.lists_lock);
 
             if (lists_holder_pid > 0) {
                 const std::string proc_name = get_process_name(lists_holder_pid);
                 if (!proc_name.empty()) {
-                    status.lock_holder = dup_string(proc_name);
+                    status.lock_holder = safe_strdup(proc_name);
                 }
             }
 
@@ -1084,7 +1054,7 @@ AptLockStatus apt_check_lock_status() {
 
         free_lock_paths(paths);
     } catch (const std::exception &e) {
-        status.error_message = dup_string(std::string("Exception: ") + e.what());
+        status.error_message = safe_strdup(std::string("Exception: ") + e.what());
         status.can_acquire = false;
     }
 

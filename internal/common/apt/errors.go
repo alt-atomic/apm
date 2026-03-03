@@ -83,7 +83,6 @@ const (
 	ErrRpmDatabaseLock
 	ErrPackageIsAlreadyNewest
 	ErrConflictsViolated
-	// ErrAptInitConfigFailed bindings-specific (APT wrapper messages)
 	ErrAptInitConfigFailed
 	ErrInvalidSystemPointer
 	ErrAptInitSystemFailed
@@ -149,6 +148,7 @@ const (
 	ErrPackagesCouldNotBeInstalled
 	ErrPackagesAlreadyInstalled
 	ErrRpmUnpackingFailed
+	ErrRpmRunningTransaction
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -424,6 +424,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrRpmUnpackingFailed, "unpacking of archive failed: %s", func() string {
 		return app.T_("RPM package unpacking failed: %s. The package may be incompatible with the current system or requires special permissions")
 	}, 1},
+	{ErrRpmRunningTransaction, "Error while running transaction", func() string {
+		return app.T_("Error while running transaction")
+	}, 0},
 }
 
 // cleanErrorPrefix убирает префиксы ошибок APT (E:) и RPM (error:)

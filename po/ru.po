@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-04 00:23+0600\n"
+"POT-Creation-Date: 2026-03-04 02:57+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -689,39 +689,43 @@ msgstr ""
 "Ошибка распаковки RPM пакета: %s. Пакет может быть несовместим с текущей "
 "системой или требует специальных разрешений"
 
+#: internal/common/apt/errors.go:428
+msgid "Error while running transaction"
+msgstr "Ошибка во время исполнения транзакции"
+
 #: internal/common/apt/package/actions.go:191
 msgid "No packages found matching the specified patterns"
 msgstr "Не найдено пакетов, соответствующих указанным шаблонам"
 
-#: internal/common/apt/package/actions.go:290
+#: internal/common/apt/package/actions.go:292
 #: internal/common/reply/event.go:385
 msgid "Downloading packages"
 msgstr "Загрузка пакетов"
 
-#: internal/common/apt/package/actions.go:304
+#: internal/common/apt/package/actions.go:309
 msgid "All packages downloaded"
 msgstr "Загрузка всех пакетов"
 
-#: internal/common/apt/package/actions.go:306
+#: internal/common/apt/package/actions.go:311
 msgid "Package downloaded"
 msgstr "Загрузка пакета"
 
-#: internal/common/apt/package/actions.go:367
+#: internal/common/apt/package/actions.go:372
 #, c-format
 msgid "Installing progress: %s"
 msgstr "Прогресс установки: %s"
 
-#: internal/common/apt/package/actions.go:374
-#: internal/common/apt/package/actions.go:375
+#: internal/common/apt/package/actions.go:379
+#: internal/common/apt/package/actions.go:380
 #, c-format
 msgid "Installing %s"
 msgstr "Установка %s"
 
-#: internal/common/apt/package/actions.go:514
+#: internal/common/apt/package/actions.go:519
 msgid "AppStream load failed: %v"
 msgstr "Не удалось загрузить AppStream: %v"
 
-#: internal/common/apt/package/actions.go:615
+#: internal/common/apt/package/actions.go:620
 msgid "Error updating information about installed packages: %w"
 msgstr "Ошибка обновления информации об установленных пакетах: %w"
 
