@@ -75,7 +75,7 @@ func NewServer(config Config, appConfig *app.Config) (*Server, error) {
 		mux:       http.NewServeMux(),
 	}
 	if config.APIToken != "" {
-		parsed, err := ParseToken(config.APIToken)
+		parsed, err := parseToken(config.APIToken)
 		if err != nil {
 			return nil, err
 		}
@@ -84,9 +84,9 @@ func NewServer(config Config, appConfig *app.Config) (*Server, error) {
 	return s, nil
 }
 
-// ParseToken парсит токен в формате "permission:token".
+// parseToken парсит токен в формате "permission:token".
 // Возвращает ошибку если формат неверный или permission неизвестный.
-func ParseToken(tokenStr string) (tokenInfo, error) {
+func parseToken(tokenStr string) (tokenInfo, error) {
 	parts := strings.SplitN(tokenStr, ":", 2)
 	if len(parts) != 2 || parts[1] == "" {
 		return tokenInfo{}, fmt.Errorf(app.T_("Invalid token format: expected '<permission>:<token>', got '%s'\n  permission must be '%s' (read-only) or '%s' (full access)\n  example: --api-token %s:my-secret-token"), tokenStr, PermRead, PermManage, PermRead)
@@ -94,7 +94,11 @@ func ParseToken(tokenStr string) (tokenInfo, error) {
 
 	perm := parts[0]
 	if perm != PermRead && perm != PermManage {
-		return tokenInfo{}, fmt.Errorf(app.T_("Unknown permission '%s': must be '%s' (read-only) or '%s' (full access)\n  example: --api-token %s:%s"), perm, PermRead, PermManage, PermRead, parts[1])
+		return tokenInfo{}, fmt.Errorf(app.T_("Unknown permission '%s': must be '%s' (read-only) or '%s' (full access)\n  example: --api-token %s:%s"), perm, PermRead, PermManage, PermRead, "my-secret-token")
+	}
+
+	if len(parts[1]) < minTokenLength {
+		return tokenInfo{}, fmt.Errorf(app.T_("Token is too short: minimum %d characters required"), minTokenLength)
 	}
 
 	return tokenInfo{
@@ -206,12 +210,15 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if isAllowedOrigin(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-		}
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Transaction-ID")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Transaction-ID")
 
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+		} else if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
@@ -239,6 +246,7 @@ func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return h.Hijack()
 }
 
+const minTokenLength = 6
 const maxRequestBodySize = 20 << 20
 
 // bodySizeLimitMiddleware ограничивает размер тела запроса

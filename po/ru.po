@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-03 15:36+0600\n"
+"POT-Creation-Date: 2026-03-03 15:55+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -1155,15 +1155,20 @@ msgstr ""
 "'%s' (полный доступ)\n"
 "  пример: --api-token %s:%s"
 
-#: internal/common/http_server/server.go:133
+#: internal/common/http_server/server.go:101
+#, c-format
+msgid "Token is too short: minimum %d characters required"
+msgstr "Токен слишком короткий: минимум %d символов"
+
+#: internal/common/http_server/server.go:137
 msgid "Authorization header or token query parameter is required"
 msgstr "Требуется заголовок Authorization или параметр запроса token"
 
-#: internal/common/http_server/server.go:138
+#: internal/common/http_server/server.go:142
 msgid "Invalid API token"
 msgstr "Неверный API-токен"
 
-#: internal/common/http_server/server.go:143
+#: internal/common/http_server/server.go:147
 #, c-format
 msgid "Insufficient permissions. Required: %s, provided: %s"
 msgstr "Недостаточно прав. Требуется: %s, предоставлено: %s"
