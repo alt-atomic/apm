@@ -93,19 +93,12 @@ func CleanDependency(s string) string {
 }
 
 func IsRegularFileAndIsPackage(path string) bool {
+	if strings.ToLower(filepath.Ext(path)) != ".rpm" {
+		return false
+	}
 	info, err := os.Stat(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
 		return false
 	}
-	if !info.Mode().IsRegular() {
-		return false
-	}
-	ext := strings.ToLower(filepath.Ext(path))
-	if ext != ".rpm" {
-		return false
-	}
-	return true
+	return info.Mode().IsRegular()
 }

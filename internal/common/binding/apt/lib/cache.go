@@ -335,6 +335,67 @@ func (c *Cache) SimulateChange(installNames []string, removeNames []string, purg
 	return changes, err
 }
 
+// SimulateChangeWithRpmInfo симуляция изменений с получением информации о RPM файлах за одну сессию кеша
+func (c *Cache) SimulateChangeWithRpmInfo(installNames []string, removeNames []string, purge bool, depends bool, rpmFiles []string) (*PackageChanges, []*PackageInfo, error) {
+	if len(installNames) == 0 && len(removeNames) == 0 {
+		return nil, nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
+	}
+
+	var changes *PackageChanges
+	var rpmInfos []*PackageInfo
+
+	err := withMutex(func() error {
+		var cInst **C.char
+		var instCount C.size_t
+		var installArr []*C.char
+
+		if len(installNames) > 0 {
+			installArr = makeCStringArray(installNames)
+			defer freeCStringArray(installArr)
+			cInst = (**C.char)(unsafe.Pointer(&installArr[0]))
+			instCount = C.size_t(len(installNames))
+		}
+
+		var cRem **C.char
+		var remCount C.size_t
+		var removeArr []*C.char
+
+		if len(removeNames) > 0 {
+			removeArr = makeCStringArray(removeNames)
+			defer freeCStringArray(removeArr)
+			cRem = (**C.char)(unsafe.Pointer(&removeArr[0]))
+			remCount = C.size_t(len(removeNames))
+		}
+
+		var cc C.AptPackageChanges
+		res := C.apt_simulate_change(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), C.bool(depends), &cc)
+		defer C.apt_free_package_changes(&cc)
+
+		if res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+
+		changes = convertPackageChanges(&cc)
+
+		for _, rpmFile := range rpmFiles {
+			cname := C.CString(rpmFile)
+			var ci C.AptPackageInfo
+			res = C.apt_get_package_info(c.Ptr, cname, &ci)
+			C.free(unsafe.Pointer(cname))
+			if res.code != C.APT_SUCCESS {
+				return ErrorFromResult(res)
+			}
+			info := &PackageInfo{}
+			info.fromCStruct(&ci)
+			C.apt_free_package_info(&ci)
+			rpmInfos = append(rpmInfos, info)
+		}
+
+		return nil
+	})
+	return changes, rpmInfos, err
+}
+
 // ApplyChanges applies package changes to the cache
 func (c *Cache) ApplyChanges(installNames []string, removeNames []string, purge bool, depends bool) error {
 	return withMutex(func() error {

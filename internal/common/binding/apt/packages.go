@@ -55,12 +55,12 @@ func Close() {
 }
 
 // operationWrapper обёртка для всех операций с APT
-func (a *Actions) operationWrapper(fn func() error) error {
-	return a.operationWrapperWithOptions(false, fn)
+func (a *Actions) operationWrapper(fn func() error, installPackages ...string) error {
+	return a.operationWrapperWithOptions(false, fn, installPackages...)
 }
 
 // operationWrapperWithOptions обёртка с опциями для операций с APT
-func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error) error {
+func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error, installPackages ...string) error {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
 
@@ -86,8 +86,18 @@ func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error) er
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
 
+	var err error
+	if len(installPackages) > 0 {
+		err = lib.PreprocessInstallArguments(installPackages)
+	}
+
 	// Выполняем основную функцию
-	err := fn()
+	if err == nil {
+		err = fn()
+	}
+
+	// Очищаем RPM аргументы
+	lib.ClearInstallArguments()
 
 	// Очищаем и анализируем ошибки
 	lib.CaptureStdIO(false)
@@ -126,7 +136,7 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 			return pm.InstallPackagesWithProgress(handler)
 		}
 		return pm.InstallPackages()
-	})
+	}, packagesInstall...)
 }
 
 // InstallPackages установка пакетов
@@ -162,7 +172,7 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 			return pm.InstallPackagesWithProgress(handler)
 		}
 		return pm.InstallPackages()
-	})
+	}, packageNames...)
 }
 
 // RemovePackages удаление пакетов
@@ -279,7 +289,7 @@ func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err
 
 		packageInfo, e = cache.GetPackageInfo(packageName)
 		return e
-	})
+	}, packageName)
 	return
 }
 
@@ -303,7 +313,7 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 
 		packageInfo, e = cache.SimulateInstall(packageNames)
 		return e
-	})
+	}, packageNames...)
 	return
 }
 
@@ -391,7 +401,31 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 
 		packageChanges, e = cache.SimulateChange(installNames, removeNames, purge, depends)
 		return e
-	})
+	}, installNames...)
+	return
+}
+
+// SimulateChangeWithRpmInfo симуляция изменений с получением информации о RPM файлах за одну сессию кеша
+func (a *Actions) SimulateChangeWithRpmInfo(installNames []string, removeNames []string, purge bool, depends bool, rpmFiles []string) (packageChanges *lib.PackageChanges, rpmInfos []*lib.PackageInfo, err error) {
+	if len(installNames) == 0 && len(removeNames) == 0 {
+		return nil, nil, lib.CustomError(lib.AptErrorInvalidParameters, "Invalid parameters")
+	}
+
+	err = a.operationWrapper(func() error {
+		system, e := getSystem()
+		if e != nil {
+			return e
+		}
+
+		cache, e := lib.OpenCache(system, false)
+		if e != nil {
+			return e
+		}
+		defer cache.Close()
+
+		packageChanges, rpmInfos, e = cache.SimulateChangeWithRpmInfo(installNames, removeNames, purge, depends, rpmFiles)
+		return e
+	}, rpmFiles...)
 	return
 }
 
@@ -415,7 +449,7 @@ func (a *Actions) SimulateReinstall(packageNames []string) (packageInfo *lib.Pac
 
 		packageInfo, e = cache.SimulateReinstall(packageNames)
 		return e
-	})
+	}, packageNames...)
 	return
 }
 
@@ -452,7 +486,7 @@ func (a *Actions) ReinstallPackages(packageNames []string, handler lib.ProgressH
 			return pm.InstallPackagesWithProgress(handler)
 		}
 		return pm.InstallPackages()
-	})
+	}, packageNames...)
 }
 
 // enrichErrorDetails добавляет детали к ошибке из логов и строк ошибки

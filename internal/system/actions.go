@@ -268,9 +268,21 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		reply.CreateSpinner(a.appConfig)
 	}
 
-	err = a.serviceAptActions.AptUpdate(ctx)
-	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+	allLocalRpm := len(packagesInstall) > 0 && len(packagesRemove) == 0
+	if allLocalRpm {
+		for _, pkg := range packagesInstall {
+			if !apt.IsRegularFileAndIsPackage(pkg) {
+				allLocalRpm = false
+				break
+			}
+		}
+	}
+	// Проверяем, все ли пакеты на вход являются RPM файлами
+	if !allLocalRpm {
+		err = a.serviceAptActions.AptUpdate(ctx)
+		if err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+		}
 	}
 
 	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)

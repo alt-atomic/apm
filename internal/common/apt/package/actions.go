@@ -138,6 +138,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 	// Обрабатываем wildcard пакеты и создаём расширенный запрос
 	var expandedInstall []string
 	var expandedRemove []string
+	var rpmFiles []string
 
 	// Вспомогательная функция для обработки списка пакетов
 	processPackageList := func(packages []string, targetList *[]string, onlyInstalled bool) error {
@@ -163,10 +164,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 				}
 			} else {
 				if aptParser.IsRegularFileAndIsPackage(original) {
-					err := a.SaveRpmPackageToDatabase(ctx, original)
-					if err != nil {
-						return err
-					}
+					rpmFiles = append(rpmFiles, original)
 				}
 
 				// Для обычных пакетов - копируем как есть
@@ -197,6 +195,16 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 
 	if reinstall {
 		packageChanges, aptError = a.CheckReinstall(ctx, expandedInstall)
+	} else if len(rpmFiles) > 0 {
+		var rpmInfos []*aptLib.PackageInfo
+		packageChanges, rpmInfos, aptError = a.serviceAptBinding.SimulateChangeWithRpmInfo(expandedInstall, expandedRemove, purge, depends, rpmFiles)
+		if aptError == nil {
+			for _, rpmInfo := range rpmInfos {
+				if err := a.saveRpmInfoToDatabase(ctx, rpmInfo); err != nil {
+					return nil, nil, nil, nil, err
+				}
+			}
+		}
 	} else {
 		packageChanges, aptError = a.serviceAptBinding.SimulateChange(expandedInstall, expandedRemove, purge, depends)
 	}
@@ -779,15 +787,8 @@ func extractLastMessage(changelog string) string {
 	return strings.Join(result, "\n")
 }
 
-// SaveRpmPackageToDatabase сохраняет информацию об одном RPM пакете в базу данных
-// Аналог функции Update, но работает с одним пакетом из файла
-func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath string) error {
-	// Получаем информацию о пакете из биндингов
-	ap, err := a.GetInfo(ctx, rpmFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to get package info: %w", err)
-	}
-
+// saveRpmInfoToDatabase сохраняет PackageInfo в базу данных
+func (a *Actions) saveRpmInfoToDatabase(ctx context.Context, ap *aptLib.PackageInfo) error {
 	_, errFind := a.serviceAptDatabase.GetPackageByName(ctx, ap.Name)
 	if errFind == nil {
 		return nil
@@ -864,6 +865,7 @@ func (a *Actions) SaveRpmPackageToDatabase(ctx context.Context, rpmFilePath stri
 	packages := []Package{p}
 
 	// Обновляем информацию об установке
+	var err error
 	packages, err = a.updateInstalledInfo(ctx, packages)
 	if err != nil {
 		return fmt.Errorf("error updating installed info: %w", err)

@@ -149,6 +149,8 @@ const (
 	ErrPackagesAlreadyInstalled
 	ErrRpmUnpackingFailed
 	ErrRpmRunningTransaction
+	ErrPackageNotInstalledCannotReinstall
+	ErrUnableToFindPackageFromRpm
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -428,6 +430,12 @@ var errorPatterns = []ErrorEntry{
 	{ErrRpmRunningTransaction, "Error while running transaction", func() string {
 		return app.T_("Error while running transaction")
 	}, 0},
+	{ErrPackageNotInstalledCannotReinstall, "Package %s is not installed, so cannot be reinstalled", func() string {
+		return app.T_("Package %s is not installed, so cannot be reinstalled")
+	}, 1},
+	{ErrUnableToFindPackageFromRpm, "Unable to find package from RPM file: %s", func() string {
+		return app.T_("Unable to find package from RPM file: %s")
+	}, 1},
 }
 
 // cleanErrorPrefix убирает префиксы ошибок APT (E:) и RPM (error:)

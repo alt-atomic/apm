@@ -108,6 +108,26 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 	return changes
 }
 
+// PreprocessInstallArguments регистрирует аргументы в конфигурации APT до открытия кеша
+func PreprocessInstallArguments(names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+	cNames := makeCStringArray(names)
+	defer freeCStringArray(cNames)
+	var addedNew C.bool
+	res := C.apt_preprocess_install_arguments((**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(names)), &addedNew)
+	if res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
+	}
+	return nil
+}
+
+// ClearInstallArguments очищает аргументы
+func ClearInstallArguments() {
+	C.apt_clear_install_arguments()
+}
+
 // withMutex выполняет функцию под защитой глобального мьютекса APT
 func withMutex(fn func() error) error {
 	AptMutex.Lock()

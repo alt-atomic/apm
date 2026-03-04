@@ -884,7 +884,7 @@ PackageManagerCallback_t create_common_progress_callback(CallbackBridge *) {
 
 // RPM file detection utility (shared implementation)
 bool is_rpm_file(const std::string &path) {
-    if (path.empty()) {
+    if (path.length() <= 4 || path.substr(path.length() - 4) != ".rpm") {
         return false;
     }
 
@@ -893,14 +893,10 @@ bool is_rpm_file(const std::string &path) {
         return false;
     }
 
-    if (path.length() > 4 && path.substr(path.length() - 4) == ".rpm") {
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
-// File installation support - preprocess arguments to detect and handle RPM files
+// File installation support preprocess arguments to detect and handle RPM files
 AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new) {
     if (added_new) *added_new = false;
 
@@ -935,6 +931,11 @@ AptResult apt_preprocess_install_arguments(const char **install_names, size_t in
     } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception in preprocess: ") + e.what()).c_str());
     }
+}
+
+// Clear RPM file entries from APT::Arguments to prevent stale state in long-running processes
+void apt_clear_install_arguments() {
+    _config->Clear("APT::Arguments");
 }
 
 // Helper function to check if a lock file can be acquired

@@ -149,6 +149,8 @@ AptResult apt_cache_update(AptCache *cache);
 
 AptResult apt_preprocess_install_arguments(const char **install_names, size_t install_count, bool *added_new);
 
+void apt_clear_install_arguments(void);
+
 // Package manager
 AptResult apt_package_manager_create(AptCache *cache, AptPackageManager **pm);
 
