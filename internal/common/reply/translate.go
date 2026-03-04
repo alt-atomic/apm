@@ -143,6 +143,8 @@ func TranslateKey(key string) string {
 		return app.T_("Image Name")
 	case "transport":
 		return app.T_("Transport")
+	case "keptBackCount":
+		return app.T_("Kept Back Count")
 	case "pinned":
 		return app.T_("Pinned")
 	case "list":

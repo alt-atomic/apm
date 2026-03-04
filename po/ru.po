@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-04 14:43+0600\n"
+"POT-Creation-Date: 2026-03-04 15:52+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -1764,170 +1764,174 @@ msgid "Transport"
 msgstr "Транспорт"
 
 #: internal/common/reply/translate.go:147
+msgid "Kept Back Count"
+msgstr "Количество сохранённых"
+
+#: internal/common/reply/translate.go:149
 msgid "Pinned"
 msgstr "Закреплено"
 
-#: internal/common/reply/translate.go:149
+#: internal/common/reply/translate.go:151
 msgid "List"
 msgstr "Список"
 
-#: internal/common/reply/translate.go:151
+#: internal/common/reply/translate.go:153
 msgid "Kernel"
 msgstr "Ядро"
 
-#: internal/common/reply/translate.go:153
+#: internal/common/reply/translate.go:155
 msgid "Kernels"
 msgstr "Ядра"
 
-#: internal/common/reply/translate.go:155
+#: internal/common/reply/translate.go:157
 msgid "Current Kernel"
 msgstr "Текущее ядро"
 
-#: internal/common/reply/translate.go:157
+#: internal/common/reply/translate.go:159
 msgid "Latest Kernel"
 msgstr "Последнее ядро"
 
-#: internal/common/reply/translate.go:159
+#: internal/common/reply/translate.go:161
 msgid "Preview"
 msgstr "Предварительный просмотр"
 
-#: internal/common/reply/translate.go:161
+#: internal/common/reply/translate.go:163
 msgid "Age in Days"
 msgstr "Возраст в днях"
 
-#: internal/common/reply/translate.go:163
+#: internal/common/reply/translate.go:165
 msgid "Build Time"
 msgstr "Время сборки"
 
-#: internal/common/reply/translate.go:165
+#: internal/common/reply/translate.go:167
 msgid "Flavour"
 msgstr "Разновидность"
 
-#: internal/common/reply/translate.go:167
+#: internal/common/reply/translate.go:169
 msgid "Full Version"
 msgstr "Полная версия"
 
-#: internal/common/reply/translate.go:169
+#: internal/common/reply/translate.go:171
 msgid "Is Installed"
 msgstr "Установлено"
 
-#: internal/common/reply/translate.go:171
+#: internal/common/reply/translate.go:173
 msgid "Is Running"
 msgstr "Запущено"
 
-#: internal/common/reply/translate.go:173
+#: internal/common/reply/translate.go:175
 msgid "Release"
 msgstr "Релиз"
 
-#: internal/common/reply/translate.go:175
+#: internal/common/reply/translate.go:177
 msgid "Modules"
 msgstr "Модули"
 
-#: internal/common/reply/translate.go:177
+#: internal/common/reply/translate.go:179
 msgid "Kept"
 msgstr "Сохранённый"
 
-#: internal/common/reply/translate.go:179
+#: internal/common/reply/translate.go:181
 msgid "Reasons"
 msgstr "Причины"
 
-#: internal/common/reply/translate.go:181
+#: internal/common/reply/translate.go:183
 msgid "Version Raw"
 msgstr "Полная версия"
 
-#: internal/common/reply/translate.go:183
+#: internal/common/reply/translate.go:185
 msgid "Kept Kernels"
 msgstr "Сохранённые ядра"
 
-#: internal/common/reply/translate.go:185
+#: internal/common/reply/translate.go:187
 msgid "Remove kernels"
 msgstr "Удаляемые ядра"
 
-#: internal/common/reply/translate.go:187
+#: internal/common/reply/translate.go:189
 msgid "Installed Modules"
 msgstr "Установленные модули"
 
-#: internal/common/reply/translate.go:189
+#: internal/common/reply/translate.go:191
 msgid "Selected Modules"
 msgstr "Выбранные модули"
 
-#: internal/common/reply/translate.go:191
+#: internal/common/reply/translate.go:193
 msgid "Missing Modules"
 msgstr "Отсутствующие модули"
 
-#: internal/common/reply/translate.go:193
+#: internal/common/reply/translate.go:195
 msgid "Available Update"
 msgstr "Доступно обновление"
 
-#: internal/common/reply/translate.go:195
+#: internal/common/reply/translate.go:197
 msgid "Summary"
 msgstr "Краткое описание"
 
-#: internal/common/reply/translate.go:197
+#: internal/common/reply/translate.go:199
 msgid "Repositories"
 msgstr "Репозитории"
 
-#: internal/common/reply/translate.go:199
+#: internal/common/reply/translate.go:201
 msgid "Added"
 msgstr "Добавлено"
 
-#: internal/common/reply/translate.go:201
+#: internal/common/reply/translate.go:203
 msgid "Removed"
 msgstr "Удалено"
 
-#: internal/common/reply/translate.go:203
+#: internal/common/reply/translate.go:205
 msgid "Arch"
 msgstr "Архитектура"
 
-#: internal/common/reply/translate.go:205
+#: internal/common/reply/translate.go:207
 msgid "Key"
 msgstr "Ключ"
 
-#: internal/common/reply/translate.go:207
+#: internal/common/reply/translate.go:209
 msgid "Components"
 msgstr "Компоненты"
 
-#: internal/common/reply/translate.go:209
+#: internal/common/reply/translate.go:211
 msgid "File"
 msgstr "Файл"
 
-#: internal/common/reply/translate.go:211
+#: internal/common/reply/translate.go:213
 msgid "Type"
 msgstr "Тип"
 
-#: internal/common/reply/translate.go:213
+#: internal/common/reply/translate.go:215
 msgid "URL"
 msgstr "URL"
 
-#: internal/common/reply/translate.go:215
+#: internal/common/reply/translate.go:217
 msgid "Branches"
 msgstr "Ветки"
 
-#: internal/common/reply/translate.go:217
+#: internal/common/reply/translate.go:219
 msgid "Branch"
 msgstr "Ветка"
 
-#: internal/common/reply/translate.go:219
+#: internal/common/reply/translate.go:221
 msgid "Task num"
 msgstr "Номер задачи"
 
-#: internal/common/reply/translate.go:221
+#: internal/common/reply/translate.go:223
 msgid "Entry"
 msgstr "Запись"
 
-#: internal/common/reply/translate.go:223
+#: internal/common/reply/translate.go:225
 msgid "WillAdd"
 msgstr "Будет добавлено"
 
-#: internal/common/reply/translate.go:225
+#: internal/common/reply/translate.go:227
 msgid "WillRemove"
 msgstr "Будет удалено"
 
-#: internal/common/reply/translate.go:227 internal/system/dialog/dialog.go:312
+#: internal/common/reply/translate.go:229 internal/system/dialog/dialog.go:312
 msgid "Essential packages"
 msgstr "Важные пакеты"
 
-#: internal/common/reply/translate.go:229
+#: internal/common/reply/translate.go:231
 msgid "Reason"
 msgstr "Причины"
 
