@@ -262,8 +262,8 @@ AptResult process_package_installs(const AptCache *cache,
 
         std::string raw(install_names[i]);
 
-        // Resolve file path to package name
-        if (!raw.empty() && raw[0] == '/') {
+        // Resolve file path to package name (skip RPM files)
+        if (!raw.empty() && raw[0] == '/' && !is_rpm_file(raw)) {
             const AptResult result = resolve_file_to_package(cache, raw);
             if (result.code != APT_SUCCESS) {
                 return result;
