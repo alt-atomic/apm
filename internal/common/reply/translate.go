@@ -119,6 +119,8 @@ func TranslateKey(key string) string {
 		return app.T_("Size")
 	case "newInstalledPackages":
 		return app.T_("Newly Installed Packages")
+	case "keptBackPackages":
+		return app.T_("Kept Back Packages")
 	case "notUpgradedCount":
 		return app.T_("Not Upgraded Count")
 	case "containerName":

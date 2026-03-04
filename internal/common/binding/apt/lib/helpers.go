@@ -80,6 +80,7 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 		UpgradedCount:     int(cc.upgraded_count),
 		NewInstalledCount: int(cc.new_installed_count),
 		RemovedCount:      int(cc.removed_count),
+		KeptBackCount:     int(cc.kept_back_count),
 		NotUpgradedCount:  int(cc.not_upgraded_count),
 		DownloadSize:      uint64(cc.download_size),
 		InstallSize:       int64(cc.install_size),
@@ -90,6 +91,7 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 	changes.UpgradedPackages = convertCStringArray(cc.upgraded_packages, cc.upgraded_count)
 	changes.NewInstalledPackages = convertCStringArray(cc.new_installed_packages, cc.new_installed_count)
 	changes.RemovedPackages = convertCStringArray(cc.removed_packages, cc.removed_count)
+	changes.KeptBackPackages = convertCStringArray(cc.kept_back_packages, cc.kept_back_count)
 
 	// Конвертируем essential-пакеты
 	if cc.essential_packages_count > 0 && cc.essential_packages != nil {

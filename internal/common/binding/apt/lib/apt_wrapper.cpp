@@ -815,6 +815,13 @@ void apt_free_package_changes(AptPackageChanges *changes) {
         free(changes->removed_packages);
     }
 
+    if (changes->kept_back_packages) {
+        for (size_t i = 0; i < changes->kept_back_count; i++) {
+            free(changes->kept_back_packages[i]);
+        }
+        free(changes->kept_back_packages);
+    }
+
     if (changes->essential_packages) {
         for (size_t i = 0; i < changes->essential_packages_count; i++) {
             free(changes->essential_packages[i].name);

@@ -675,12 +675,11 @@ AptResult finalize_dependency_resolution(const AptCache *cache, const std::set<s
 
 void collect_package_changes(const AptCache *cache,
                              const std::set<std::string> &requested_install,
-                             const std::set<std::string> &requested_remove,
                              std::vector<std::string> &extra_installed,
-                             std::vector<std::string> &extra_removed,
                              std::vector<std::string> &upgraded,
                              std::vector<std::string> &new_installed,
                              std::vector<std::string> &removed,
+                             std::vector<std::string> &kept_back,
                              uint64_t &download_size,
                              int64_t &install_size) {
     download_size = 0;
@@ -688,6 +687,12 @@ void collect_package_changes(const AptCache *cache,
 
     for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
         pkgDepCache::StateCache &st = (*cache->dep_cache)[iter];
+
+        if (iter->CurrentVer != 0 && st.Upgradable() && !st.Upgrade() && !st.Delete()) {
+            kept_back.emplace_back(iter.Name());
+            continue;
+        }
+
         if (st.NewInstall()) {
             new_installed.emplace_back(iter.Name());
             if (requested_install.find(iter.Name()) == requested_install.end()) {
@@ -719,9 +724,6 @@ void collect_package_changes(const AptCache *cache,
             }
         } else if (st.Delete()) {
             removed.emplace_back(iter.Name());
-            if (requested_remove.find(iter.Name()) == requested_remove.end()) {
-                extra_removed.emplace_back(iter.Name());
-            }
             if (st.InstallVer != nullptr) install_size -= static_cast<int64_t>(st.InstallVer->InstalledSize);
         } else if ((st.iFlags & pkgDepCache::ReInstall) != 0) {
             new_installed.emplace_back(iter.Name());
@@ -792,6 +794,8 @@ void populate_changes_structure(AptPackageChanges *changes,
                                 const std::vector<std::string> &upgraded,
                                 const std::vector<std::string> &new_installed,
                                 const std::vector<std::string> &removed,
+                                const std::vector<std::string> &kept_back,
+                                const size_t not_upgraded_count,
                                 const std::vector<std::pair<std::string, std::string>> &essential_list,
                                 const uint64_t download_size,
                                 const int64_t install_size) {
@@ -799,7 +803,8 @@ void populate_changes_structure(AptPackageChanges *changes,
     changes->upgraded_count = upgraded.size();
     changes->new_installed_count = new_installed.size();
     changes->removed_count = removed.size();
-    changes->not_upgraded_count = 0;
+    changes->kept_back_count = kept_back.size();
+    changes->not_upgraded_count = not_upgraded_count;
     changes->download_size = download_size;
     changes->install_size = install_size;
 
@@ -822,6 +827,11 @@ void populate_changes_structure(AptPackageChanges *changes,
         changes->new_installed_packages = static_cast<char **>(malloc(changes->new_installed_count * sizeof(char *)));
         for (size_t i = 0; i < changes->new_installed_count; ++i)
             changes->new_installed_packages[i] = safe_strdup(new_installed[i]);
+    }
+    if (changes->kept_back_count > 0) {
+        changes->kept_back_packages = static_cast<char **>(malloc(changes->kept_back_count * sizeof(char *)));
+        for (size_t i = 0; i < changes->kept_back_count; ++i)
+            changes->kept_back_packages[i] = safe_strdup(kept_back[i]);
     }
 
     changes->essential_packages_count = essential_list.size();

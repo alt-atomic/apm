@@ -197,11 +197,13 @@ typedef struct {
     char **upgraded_packages; // Packages that will be upgraded
     char **new_installed_packages; // New packages that will be installed
     char **removed_packages; // Packages that will be removed
+    char **kept_back_packages; // Packages kept back (have upgrade but not upgraded)
 
     size_t extra_installed_count;
     size_t upgraded_count;
     size_t new_installed_count;
     size_t removed_count;
+    size_t kept_back_count;
     size_t not_upgraded_count;
 
     uint64_t download_size; // Size in bytes to download

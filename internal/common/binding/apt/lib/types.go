@@ -105,11 +105,13 @@ type PackageChanges struct {
 	UpgradedPackages     []string `json:"upgradedPackages"`
 	NewInstalledPackages []string `json:"newInstalledPackages"`
 	RemovedPackages      []string `json:"removedPackages"`
+	KeptBackPackages     []string `json:"keptBackPackages"`
 
 	UpgradedCount     int `json:"upgradedCount"`
 	NewInstalledCount int `json:"newInstalledCount"`
 	RemovedCount      int `json:"removedCount"`
-	NotUpgradedCount  int `json:"-"`
+	KeptBackCount     int `json:"keptBackCount"`
+	NotUpgradedCount  int `json:"notUpgradedCount"`
 
 	DownloadSize uint64 `json:"downloadSize"`
 	InstallSize  int64  `json:"installSize"`

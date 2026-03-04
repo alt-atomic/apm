@@ -115,83 +115,26 @@ AptResult apt_simulate_dist_upgrade(const AptCache *cache, AptPackageChanges *ch
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
         }
 
+        std::set<std::string> empty_set;
+        std::vector<std::string> extra_installed;
         std::vector<std::string> upgraded;
         std::vector<std::string> new_installed;
         std::vector<std::string> removed;
-
+        std::vector<std::string> kept_back;
         uint64_t download_size = 0;
         int64_t install_size = 0;
 
-        for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin();
-             !iter.end(); ++iter) {
-            pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[iter];
+        collect_package_changes(cache, empty_set,
+                                extra_installed, upgraded,
+                                new_installed, removed, kept_back, download_size, install_size);
 
-            if (pkg_state.NewInstall()) {
-                new_installed.emplace_back(iter.Name());
+        extra_installed.clear();
 
-                if (pkg_state.CandidateVer != nullptr) {
-                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
-                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
-                }
-            } else if (pkg_state.Upgrade()) {
-                upgraded.emplace_back(iter.Name());
+        std::vector<std::pair<std::string, std::string>> essential_list;
+        collect_essential_packages(cache, essential_list);
 
-                if (pkg_state.CandidateVer != nullptr) {
-                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
-                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
-                    pkgCache::VerIterator currentVer = iter.CurrentVer();
-                    if (!currentVer.end()) {
-                        install_size -= static_cast<int64_t>(currentVer->InstalledSize);
-                    }
-                }
-            } else if (pkg_state.Downgrade()) {
-                upgraded.emplace_back(iter.Name());
-
-                if (pkg_state.CandidateVer != nullptr) {
-                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
-                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
-                    pkgCache::VerIterator currentVer = iter.CurrentVer();
-                    if (!currentVer.end()) {
-                        install_size -= static_cast<int64_t>(currentVer->InstalledSize);
-                    }
-                }
-            } else if (pkg_state.Delete()) {
-                removed.emplace_back(iter.Name());
-
-                if (pkg_state.InstallVer != nullptr) {
-                    install_size -= static_cast<int64_t>(pkg_state.InstallVer->InstalledSize);
-                }
-            }
-        }
-
-        changes->extra_installed_count = 0;
-        changes->upgraded_count = upgraded.size();
-        changes->new_installed_count = new_installed.size();
-        changes->removed_count = removed.size();
-        changes->not_upgraded_count = 0;
-        changes->download_size = download_size;
-        changes->install_size = install_size;
-
-        if (changes->new_installed_count > 0) {
-            changes->new_installed_packages = static_cast<char **>(malloc(changes->new_installed_count * sizeof(char *)));
-            for (size_t i = 0; i < changes->new_installed_count; i++) {
-                changes->new_installed_packages[i] = safe_strdup(new_installed[i]);
-            }
-        }
-
-        if (changes->upgraded_count > 0) {
-            changes->upgraded_packages = static_cast<char **>(malloc(changes->upgraded_count * sizeof(char *)));
-            for (size_t i = 0; i < changes->upgraded_count; i++) {
-                changes->upgraded_packages[i] = safe_strdup(upgraded[i]);
-            }
-        }
-
-        if (changes->removed_count > 0) {
-            changes->removed_packages = static_cast<char **>(malloc(changes->removed_count * sizeof(char *)));
-            for (size_t i = 0; i < changes->removed_count; i++) {
-                changes->removed_packages[i] = safe_strdup(removed[i]);
-            }
-        }
+        populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed,
+                                   kept_back, kept_back.size(), essential_list, download_size, install_size);
 
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
@@ -284,17 +227,16 @@ AptResult plan_change_internal(
 
         // Collect changes
         std::vector<std::string> extra_installed;
-        std::vector<std::string> extra_removed;
         std::vector<std::string> upgraded;
         std::vector<std::string> new_installed;
         std::vector<std::string> removed;
-        std::vector<std::string> reinstalled;
+        std::vector<std::string> kept_back;
         uint64_t download_size = 0;
         int64_t install_size = 0;
 
-        collect_package_changes(cache, requested_install, requested_remove,
-                                extra_installed, extra_removed, upgraded,
-                                new_installed, removed, download_size, install_size);
+        collect_package_changes(cache, requested_install,
+                                extra_installed, upgraded,
+                                new_installed, removed, kept_back, download_size, install_size);
 
         if (!requested_install.empty() && requested_remove.empty() && requested_reinstall.empty()) {
             std::set<std::string> will_change;
@@ -318,12 +260,15 @@ AptResult plan_change_internal(
             }
         }
 
+        size_t total_not_upgraded = kept_back.size();
+        kept_back.clear();
+
         // Collect essential/important packages that will be removed
         std::vector<std::pair<std::string, std::string>> essential_list;
         collect_essential_packages(cache, essential_list);
 
         populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed,
-                                   essential_list, download_size, install_size);
+                                   kept_back, total_not_upgraded, essential_list, download_size, install_size);
 
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
@@ -408,100 +353,51 @@ AptResult apt_simulate_autoremove(const AptCache *cache, AptPackageChanges *chan
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to calculate autoremove packages");
         }
 
-        // Mark unneeded packages for removal
-        for (const std::string &pkg_name: unneeded_packages) {
-            pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(pkg_name);
-            if (!pkg.end() && pkg->CurrentState == pkgCache::State::Installed) {
+        pkgProblemResolver Fix(cache->dep_cache);
+
+        for (pkgCache::PkgIterator pkg = cache->dep_cache->PkgBegin(); !pkg.end(); ++pkg) {
+            if (pkg->CurrentState != pkgCache::State::Installed) {
+                continue;
+            }
+
+            if (kept_packages.count(pkg.Name()) != 0) {
+                cache->dep_cache->MarkKeep(pkg);
+                Fix.Protect(pkg);
+            } else {
                 cache->dep_cache->MarkDelete(pkg, false);
             }
         }
 
-        // Try to resolve problems
-        if (cache->dep_cache->BrokenCount() > 0) {
-            pkgProblemResolver Fix(cache->dep_cache);
-            Fix.InstallProtect();
-            if (!Fix.Resolve(false)) {
-                return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to resolve dependencies during autoremove");
-            }
+        if (!Fix.Resolve(false)) {
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Failed to resolve dependencies during autoremove");
         }
 
         if (!check_apt_errors()) {
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
         }
 
-        std::vector<std::string> removed;
+        std::set<std::string> empty_set;
+        std::vector<std::string> extra_installed;
         std::vector<std::string> upgraded;
         std::vector<std::string> new_installed;
-
+        std::vector<std::string> removed;
+        std::vector<std::string> kept_back;
         uint64_t download_size = 0;
         int64_t install_size = 0;
 
-        for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-            pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[iter];
+        collect_package_changes(cache, empty_set,
+                                extra_installed, upgraded,
+                                new_installed, removed, kept_back, download_size, install_size);
 
-            if (pkg_state.Delete()) {
-                removed.emplace_back(iter.Name());
-                if (pkg_state.InstallVer != nullptr) {
-                    install_size -= static_cast<int64_t>(pkg_state.InstallVer->InstalledSize);
-                }
-            } else if (pkg_state.NewInstall()) {
-                new_installed.emplace_back(iter.Name());
-                if (pkg_state.CandidateVer != nullptr) {
-                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
-                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
-                }
-            } else if (pkg_state.Upgrade()) {
-                upgraded.emplace_back(iter.Name());
-                if (pkg_state.CandidateVer != nullptr) {
-                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
-                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
-                    pkgCache::VerIterator currentVer = iter.CurrentVer();
-                    if (!currentVer.end()) {
-                        install_size -= static_cast<int64_t>(currentVer->InstalledSize);
-                    }
-                }
-            } else if (pkg_state.Downgrade()) {
-                upgraded.emplace_back(iter.Name());
-                if (pkg_state.CandidateVer != nullptr) {
-                    download_size += static_cast<uint64_t>(pkg_state.CandidateVer->Size);
-                    install_size += static_cast<int64_t>(pkg_state.CandidateVer->InstalledSize);
-                    pkgCache::VerIterator currentVer = iter.CurrentVer();
-                    if (!currentVer.end()) {
-                        install_size -= static_cast<int64_t>(currentVer->InstalledSize);
-                    }
-                }
-            }
-        }
+        extra_installed.clear();
+        size_t total_not_upgraded = kept_back.size();
+        kept_back.clear();
 
-        // Fill results structure
-        changes->extra_installed_count = 0;
-        changes->upgraded_count = upgraded.size();
-        changes->new_installed_count = new_installed.size();
-        changes->removed_count = removed.size();
-        changes->not_upgraded_count = 0;
-        changes->download_size = download_size;
-        changes->install_size = install_size;
+        std::vector<std::pair<std::string, std::string>> essential_list;
+        collect_essential_packages(cache, essential_list);
 
-        if (changes->removed_count > 0) {
-            changes->removed_packages = static_cast<char **>(malloc(changes->removed_count * sizeof(char *)));
-            for (size_t i = 0; i < changes->removed_count; i++) {
-                changes->removed_packages[i] = safe_strdup(removed[i]);
-            }
-        }
-
-        if (changes->upgraded_count > 0) {
-            changes->upgraded_packages = static_cast<char **>(malloc(changes->upgraded_count * sizeof(char *)));
-            for (size_t i = 0; i < changes->upgraded_count; i++) {
-                changes->upgraded_packages[i] = safe_strdup(upgraded[i]);
-            }
-        }
-
-        if (changes->new_installed_count > 0) {
-            changes->new_installed_packages = static_cast<char **>(malloc(changes->new_installed_count * sizeof(char *)));
-            for (size_t i = 0; i < changes->new_installed_count; i++) {
-                changes->new_installed_packages[i] = safe_strdup(new_installed[i]);
-            }
-        }
+        populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed,
+                                   kept_back, total_not_upgraded, essential_list, download_size, install_size);
 
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {

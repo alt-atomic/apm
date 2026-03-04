@@ -537,6 +537,11 @@ func (a *Actions) Upgrade(ctx context.Context) (*UpgradeResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeApt, errUpgrade)
 	}
 
+	err = a.updateAllPackagesDB(ctx)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
+	}
+
 	messageAnswer := fmt.Sprintf(
 		"%s %s %s",
 		fmt.Sprintf(app.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
