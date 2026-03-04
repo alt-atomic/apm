@@ -837,6 +837,18 @@ void apt_free_package_changes(AptPackageChanges *changes) {
 PackageManagerCallback_t create_common_progress_callback(CallbackBridge *) {
     return [](const char *nevra, const aptCallbackType what, const uint64_t amount, const uint64_t total,
               void *callbackData) {
+        switch (what) {
+            case APTCALLBACK_UNPACK_ERROR:
+            case APTCALLBACK_CPIO_ERROR:
+            case APTCALLBACK_SCRIPT_ERROR:
+                if (nevra && nevra[0]) {
+                    emit_log(std::string(nevra));
+                }
+                return;
+            default:
+                break;
+        }
+
         AptCallbackType our_type;
         switch (what) {
             case APTCALLBACK_INST_PROGRESS: our_type = APT_CALLBACK_INST_PROGRESS;

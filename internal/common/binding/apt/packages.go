@@ -17,6 +17,7 @@
 package apt
 
 import (
+	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	"apm/internal/common/binding/apt/lib"
 	"strings"
@@ -454,10 +455,33 @@ func (a *Actions) ReinstallPackages(packageNames []string, handler lib.ProgressH
 	})
 }
 
+// enrichErrorDetails добавляет детали к ошибке из логов и строк ошибки
+func enrichErrorDetails(m *apt.MatchedError, logs []string, errLines []string) {
+	if m.IsTransactionError() {
+		if details := apt.CollectTransactionDetails(logs); details != "" {
+			m.Details = details
+		}
+	}
+
+	if m.Entry.Code == apt.ErrMultiInstallProvidersSelect && len(errLines) > 1 {
+		var providers []string
+		for i := 1; i < len(errLines); i++ {
+			line := strings.TrimSpace(errLines[i])
+			if line != "" && !strings.HasPrefix(line, "You should") {
+				providers = append(providers, line)
+			}
+		}
+		if len(providers) > 0 {
+			m.Details = strings.Join(providers, "\n") + "\n" + app.T_("You should explicitly select one to install")
+		}
+	}
+}
+
 // checkAnyError анализ всех ошибок, включает в себя stdout из apt-lib
 func (a *Actions) checkAnyError(logs []string, err error) error {
 	aptErrors := apt.ErrorLinesAnalyseAll(logs)
 	for _, errApr := range aptErrors {
+		enrichErrorDetails(errApr, logs, nil)
 		return errApr
 	}
 
@@ -468,22 +492,11 @@ func (a *Actions) checkAnyError(logs []string, err error) error {
 	if msg := strings.TrimSpace(err.Error()); msg != "" {
 		lines := strings.Split(msg, "\n")
 		if m := apt.ErrorLinesAnalise(lines); m != nil {
-			// Если это ошибка с провайдерами, захватываем весь список
-			if m.Entry.Code == apt.ErrMultiInstallProvidersSelect && len(lines) > 1 {
-				var providers []string
-				for i := 1; i < len(lines); i++ {
-					line := strings.TrimSpace(lines[i])
-					if line != "" && !strings.HasPrefix(line, "You should") {
-						providers = append(providers, line)
-					}
-				}
-				if len(providers) > 0 {
-					m.Params = append(m.Params, strings.Join(providers, "\n"))
-				}
-			}
+			enrichErrorDetails(m, logs, lines)
 			return m
 		}
 		if m := apt.CheckError(msg); m != nil {
+			enrichErrorDetails(m, logs, lines)
 			return m
 		}
 	}

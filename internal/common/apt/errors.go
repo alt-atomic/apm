@@ -153,8 +153,9 @@ const (
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
 type MatchedError struct {
-	Entry  ErrorEntry
-	Params []string
+	Entry   ErrorEntry
+	Params  []string
+	Details string
 }
 
 // ErrorEntry описывает шаблон ошибки.
@@ -410,8 +411,8 @@ var errorPatterns = []ErrorEntry{
 	{ErrCannotRemoveTryTogether, "Cannot remove %s. Try removing together: %s", func() string { return app.T_("Cannot remove %s. Try removing together: %s") }, 2},
 	{ErrSomeBrokenDependencies, "Broken dependencies", func() string { return app.T_("Broken dependencies") }, 0},
 	{ErrMultiInstallProvidersSelect, "Virtual package %s is provided by:", func() string {
-		return app.T_("Virtual package %s is provided by:\n%s \nYou should explicitly select one to install")
-	}, 2},
+		return app.T_("Virtual package %s is provided by:")
+	}, 1},
 	{ErrRepositoryUpdateFailed, "Repository update failed: %s", func() string { return app.T_("Repository update failed: %s") }, 1},
 	{ErrPackageIndexUpdateFailed, "Package index update failed: %s", func() string { return app.T_("Package index update failed: %s") }, 1},
 	{ErrConflictingPackages, "Conflicting packages: %s and %s", func() string { return app.T_("Conflicting packages: %s and %s") }, 2},
@@ -496,10 +497,17 @@ func CheckError(requestError string) *MatchedError {
 func (e *MatchedError) Error() string {
 	var template = e.Entry.TranslatedPattern()
 
+	var msg string
 	if e.Entry.Params > 0 && len(e.Params) >= e.Entry.Params {
-		return fmt.Sprintf(template, toInterfaceSlice(e.Params[:e.Entry.Params])...)
+		msg = fmt.Sprintf(template, toInterfaceSlice(e.Params[:e.Entry.Params])...)
+	} else {
+		msg = template
 	}
-	return template
+
+	if e.Details != "" {
+		msg += "\n" + e.Details
+	}
+	return msg
 }
 
 func (e *MatchedError) IsCritical() bool {
@@ -536,21 +544,6 @@ func (e *MatchedError) NeedUpdate() bool {
 	}
 }
 
-//func FindCriticalError(errorList []error) error {
-//	for _, err := range errorList {
-//		var matchedErr *MatchedError
-//		if err != nil && !errors.As(err, &matchedErr) {
-//			return err
-//		}
-//
-//		if err != nil && matchedErr.IsCritical() {
-//			return matchedErr
-//		}
-//	}
-//
-//	return nil
-//}
-
 func patternToRegex(pattern string) string {
 	parts := strings.Split(pattern, "%s")
 	for i, part := range parts {
@@ -565,4 +558,53 @@ func toInterfaceSlice(strings []string) []interface{} {
 		result[i] = s
 	}
 	return result
+}
+
+// IsTransactionError проверяет, является ли ошибка связанной с RPM транзакцией.
+func (e *MatchedError) IsTransactionError() bool {
+	switch e.Entry.Code {
+	case ErrRpmRunningTransaction, ErrPMOperationFailed, ErrPMOperationIncomplete:
+		return true
+	default:
+		return false
+	}
+}
+
+// CollectTransactionDetails извлекает строки RPM problem из логов.
+func CollectTransactionDetails(logs []string) string {
+	var details []string
+	for _, line := range logs {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if isRpmProblemLine(trimmed) {
+			details = append(details, trimmed)
+		}
+	}
+	return strings.Join(details, "\n")
+}
+
+// rpmProblemPatterns подстроки, характерные для ошибок librpm
+var rpmProblemPatterns = []string{
+	" conflicts with ",
+	" conflicts between attempted installs of ",
+	" is needed by ",
+	" is obsoleted by ",
+	" is already installed",
+	" is intended for a ",
+	"which is newer than",
+}
+
+// isRpmProblemLine определяет, является ли строка описанием RPM problem
+func isRpmProblemLine(line string) bool {
+	for _, pattern := range rpmProblemPatterns {
+		if strings.Contains(line, pattern) {
+			return true
+		}
+	}
+	if strings.HasPrefix(line, "installing package ") && strings.Contains(line, " filesystem") {
+		return true
+	}
+	return false
 }
