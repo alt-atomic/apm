@@ -23,13 +23,37 @@ import (
 	"strings"
 )
 
-var soNameRe = regexp.MustCompile(`^(.+?\.so(?:\.[0-9]+)*).*`)
+var (
+	re64bit             = regexp.MustCompile(`\s*\((?i:64bit)\)$`)
+	reVersionConstraint = regexp.MustCompile(`\s*\([<>!=][^)]*\)$`)
+)
+
+func cleanSoName(s string) (string, bool) {
+	idx := strings.Index(s, ".so")
+	if idx == -1 {
+		return "", false
+	}
+	end := idx + 3
+	for end < len(s) && s[end] == '.' {
+		j := end + 1
+		if j >= len(s) || s[j] < '0' || s[j] > '9' {
+			break
+		}
+		for j < len(s) && s[j] >= '0' && s[j] <= '9' {
+			j++
+		}
+		end = j
+	}
+	return s[:end], true
+}
 
 func CleanDependency(s string) string {
 	s = strings.TrimSpace(s)
 
-	if m := soNameRe.FindStringSubmatch(s); len(m) > 1 && strings.HasPrefix(s, "lib") {
-		return m[1]
+	if strings.HasPrefix(s, "lib") {
+		if cleaned, ok := cleanSoName(s); ok {
+			return cleaned
+		}
 	}
 
 	if idx := strings.IndexByte(s, '('); idx != -1 {
@@ -46,8 +70,8 @@ func CleanDependency(s string) string {
 	}
 
 	// Убираем версионные ограничения только для обычных зависимостей пакетов
-	s = regexp.MustCompile(`\s*\((?i:64bit)\)$`).ReplaceAllString(s, "")
-	s = regexp.MustCompile(`\s*\([<>!=][^)]*\)$`).ReplaceAllString(s, "")
+	s = re64bit.ReplaceAllString(s, "")
+	s = reVersionConstraint.ReplaceAllString(s, "")
 
 	if idx := strings.IndexByte(s, '('); idx != -1 {
 		inner := s[idx+1:]

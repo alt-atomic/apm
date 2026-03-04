@@ -2,6 +2,7 @@
 
 #include <apt-pkg/algorithms.h>
 #include <apt-pkg/error.h>
+#include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/version.h>
 #include <apt-pkg/versionmatch.h>
 
@@ -218,6 +219,33 @@ static AptResult resolve_virtual_package(const AptCache *cache, const Requiremen
     return make_result(APT_SUCCESS, nullptr);
 }
 
+static AptResult resolve_file_to_package(const AptCache *cache, std::string &name) {
+    pkgRecords recs(*cache->cache_file);
+    if (_error->PendingError()) {
+        _error->Discard();
+        return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+            (std::string("Package not found: ") + name).c_str());
+    }
+
+    for (pkgCache::PkgIterator pkg = cache->dep_cache->PkgBegin(); !pkg.end(); ++pkg) {
+        pkgCache::VerIterator ver = (*cache->dep_cache)[pkg].CandidateVerIter(*cache->dep_cache);
+        if (ver.end()) continue;
+
+        pkgCache::VerFileIterator vf = ver.FileList();
+        if (vf.end()) continue;
+
+        pkgRecords::Parser &parse = recs.Lookup(vf);
+        if (parse.HasFile(name.c_str())) {
+            emit_log(std::string("Selecting ") + pkg.Name() + " for '" + name + "'");
+            name = pkg.Name();
+            return make_result(APT_SUCCESS, nullptr);
+        }
+    }
+
+    return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+        (std::string("Package not found: ") + name).c_str());
+}
+
 AptResult process_package_installs(const AptCache *cache,
                                    const char **install_names,
                                    size_t install_count,
@@ -233,6 +261,15 @@ AptResult process_package_installs(const AptCache *cache,
         if (!install_names[i]) continue;
 
         std::string raw(install_names[i]);
+
+        // Resolve file path to package name
+        if (!raw.empty() && raw[0] == '/') {
+            const AptResult result = resolve_file_to_package(cache, raw);
+            if (result.code != APT_SUCCESS) {
+                return result;
+            }
+        }
+
         RequirementSpec req = parse_requirement(raw);
 
         pkgCache::PkgIterator pkg;
