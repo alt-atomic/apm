@@ -116,7 +116,9 @@ func SetupHelpTemplates() {
 
 %s{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
 
-%s{{template "visibleFlagTemplate" .}}{{end}}
+%s{{template "visibleFlagTemplate" .}}{{end}}{{if .VisiblePersistentFlags}}
+
+%s{{template "visiblePersistentFlagTemplate" .}}{{end}}
 `,
 		titleStyle.Render(app.T_("Module:")),
 		titleStyle.Render(app.T_("Usage:")),
@@ -125,6 +127,7 @@ func SetupHelpTemplates() {
 		titleStyle.Render(app.T_("Commands:")),
 		titleStyle.Render(app.T_("Options:")),
 		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Global options:")),
 	)
 
 	cli.FlagStringer = func(fl cli.Flag) string {

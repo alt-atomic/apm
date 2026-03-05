@@ -481,7 +481,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 	}
 
 	for key, value := range envVars {
-		if err := os.Setenv(key, value); err != nil {
+		if err = os.Setenv(key, value); err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}
 	}

@@ -3425,8 +3425,8 @@ msgid "Display type: tree, plain"
 msgstr "Тип отображения: tree, plain"
 
 #: main.go:183
-msgid "Show only specified fields"
-msgstr "Показать только указанные поля"
+msgid "Output only specified fields"
+msgstr "Выводить только указанные поля"
 
 #: main.go:188
 msgid "Internal property, adds the transaction to the output"

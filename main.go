@@ -179,9 +179,9 @@ func main() {
 				Value:   "",
 			},
 			&cli.StringSliceFlag{
-				Name:    "fields",
-				Usage:   app.T_("Show only specified fields"),
-				Aliases: []string{"F"},
+				Name:    "output",
+				Usage:   app.T_("Output only specified fields"),
+				Aliases: []string{"o"},
 			},
 			&cli.StringFlag{
 				Name:    "transaction",

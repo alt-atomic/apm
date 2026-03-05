@@ -5,12 +5,16 @@ import (
 	"strings"
 )
 
-func (r *ResponseRenderer) renderPlain(dataMap map[string]interface{}) string {
+func (r *ResponseRenderer) renderPlain(dataMap map[string]interface{}, isError ...bool) string {
 	var lines []string
 
 	keys := sortedKeys(dataMap)
 	if msgVal, ok := dataMap["message"]; ok {
-		lines = append(lines, fmt.Sprintf("%v", msgVal))
+		msg := fmt.Sprintf("%v", msgVal)
+		if len(isError) > 0 && isError[0] {
+			msg = r.errorMsgStyle.Render(msg)
+		}
+		lines = append(lines, msg)
 		if len(keys) > 0 {
 			lines = append(lines, "")
 		}

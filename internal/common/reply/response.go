@@ -293,7 +293,7 @@ func (r *ResponseRenderer) renderText(dataMap map[string]interface{}, isError bo
 	}
 	switch r.appConfig.ConfigManager.GetConfig().FormatType {
 	case app.FormatTypePlain:
-		return r.renderPlain(dataMap)
+		return r.renderPlain(dataMap, isError)
 	default:
 		return r.renderTree(dataMap, isError)
 	}

@@ -54,7 +54,7 @@ func WithOptions[T any](
 			if ft := cmd.String("format_type"); ft != "" {
 				appConfig.ConfigManager.SetFormatType(ft)
 			}
-			if fields := cmd.StringSlice("fields"); len(fields) > 0 {
+			if fields := cmd.StringSlice("output"); len(fields) > 0 {
 				appConfig.ConfigManager.SetFields(fields)
 			}
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
