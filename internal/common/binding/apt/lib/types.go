@@ -91,6 +91,7 @@ type PackageInfo struct {
 	DownloadSize     uint64
 	PackageID        uint32
 	Aliases          []string
+	Files            []string
 }
 
 // EssentialPackage represents an essential/important package that will be removed

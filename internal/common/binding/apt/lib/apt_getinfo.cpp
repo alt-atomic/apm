@@ -1,4 +1,5 @@
 #include "apt_internal.h"
+#include "apt_filelist.h"
 
 #include <apt-pkg/pkgrecords.h>
 
@@ -10,6 +11,7 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
     }
 
     try {
+        LocaleGuard locale;
         memset(info, 0, sizeof(AptPackageInfo));
         info->aliases = nullptr;
         info->alias_count = 0;
@@ -215,6 +217,13 @@ AptResult apt_get_package_info(AptCache *cache, const char *package_name, AptPac
         }
 
         info->priority = safe_strdup("normal");
+
+        // Fill file list from repository index
+        if (!candidate_ver.end()) {
+            pkgCache::VerFileIterator vf = candidate_ver.FileList();
+            AptFileListCache fl_cache;
+            apt_filelist_fill(vf, info, fl_cache);
+        }
 
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {

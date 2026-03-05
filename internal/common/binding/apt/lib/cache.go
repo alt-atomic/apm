@@ -469,4 +469,7 @@ func (p *PackageInfo) fromCStruct(c *C.AptPackageInfo) {
 	if c.alias_count > 0 && c.aliases != nil {
 		p.Aliases = convertCStringArray(c.aliases, c.alias_count)
 	}
+	if c.file_count > 0 && c.files != nil {
+		p.Files = convertCStringArray(c.files, c.file_count)
+	}
 }

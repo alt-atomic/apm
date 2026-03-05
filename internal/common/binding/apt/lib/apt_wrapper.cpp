@@ -690,6 +690,12 @@ void apt_free_package_info(AptPackageInfo *info) {
         }
         free(info->aliases);
     }
+    if (info->files) {
+        for (size_t i = 0; i < info->file_count; ++i) {
+            free(info->files[i]);
+        }
+        free(info->files);
+    }
 
     memset(info, 0, sizeof(AptPackageInfo));
 }

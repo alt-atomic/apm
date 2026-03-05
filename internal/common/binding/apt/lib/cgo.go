@@ -20,7 +20,7 @@ package lib
 // cgo-timestamp: 17574454192
 #cgo CPPFLAGS: -I${SRCDIR} -I/usr/include/apt-pkg -DAPT_WRAPPER_BUILD
 #cgo CXXFLAGS: -std=c++17 -fstack-protector-strong
-#cgo LDFLAGS: -lapt-pkg -lstdc++
+#cgo LDFLAGS: -lapt-pkg -lstdc++ -lrpm -lrpmio
 
 #include "apt_wrapper.h"
 */

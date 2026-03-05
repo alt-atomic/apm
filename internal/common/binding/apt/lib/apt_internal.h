@@ -7,11 +7,31 @@
 #include <apt-pkg/pkgsystem.h>
 #include <apt-pkg/acquire.h>
 
+#include <clocale>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
 #include <iostream>
+
+// RAII guard: temporarily sets LC_ALL from environment, restores on destruction
+struct LocaleGuard {
+    char *saved;
+    LocaleGuard() : saved(nullptr) {
+        const char *cur = setlocale(LC_ALL, nullptr);
+        if (cur) saved = strdup(cur);
+        setlocale(LC_ALL, "");
+    }
+    ~LocaleGuard() {
+        if (saved) {
+            setlocale(LC_ALL, saved);
+            free(saved);
+        }
+    }
+    LocaleGuard(const LocaleGuard &) = delete;
+    LocaleGuard &operator=(const LocaleGuard &) = delete;
+};
 
 // Internal structures originally defined in apt_wrapper.cpp
 struct AptSystem {

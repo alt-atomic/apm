@@ -89,6 +89,8 @@ func TranslateKey(key string) string {
 		return app.T_("Containers")
 	case "paths":
 		return app.T_("Paths")
+	case "files":
+		return app.T_("Files")
 	case "description":
 		return app.T_("Description")
 	case "date":

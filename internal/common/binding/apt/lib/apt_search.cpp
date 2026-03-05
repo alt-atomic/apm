@@ -1,4 +1,5 @@
 #include "apt_internal.h"
+#include "apt_filelist.h"
 
 #include <apt-pkg/error.h>
 #include <apt-pkg/pkgrecords.h>
@@ -31,6 +32,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
     result->count = 0;
 
     try {
+        LocaleGuard locale;
         pkgCache &Cache = cache->dep_cache->GetCache();
 
         pkgDepCache::Policy policy;
@@ -94,6 +96,7 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
 
         std::vector<AptPackageInfo> matched_packages;
         std::set<std::string> seen_packages;
+        AptFileListCache hdlist_cache;
 
         for (ExVerFile *J = VFList.get(); J->Vf != nullptr; J++) {
             pkgCache::VerFileIterator VF(Cache, J->Vf);
@@ -392,6 +395,8 @@ AptResult apt_search_packages(AptCache *cache, const char *pattern, AptPackageLi
                                 }
                             }
                         }
+
+                        apt_filelist_fill(VF, &info, hdlist_cache);
 
                         matched_packages.push_back(info);
 

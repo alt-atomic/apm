@@ -129,6 +129,7 @@ type DBPackage struct {
 	Changelog        string               `gorm:"column:changelog"`
 	Installed        bool                 `gorm:"column:installed"`
 	TypePackage      PackageType          `gorm:"column:typePackage"`
+	Files            string               `gorm:"column:files"`
 }
 
 // TableName задаёт имя таблицы.
@@ -165,6 +166,9 @@ func (dbp DBPackage) fromDBModel() Package {
 	if strings.TrimSpace(dbp.Provides) != "" {
 		p.Provides = strings.Split(dbp.Provides, ",")
 	}
+	if strings.TrimSpace(dbp.Files) != "" {
+		p.Files = strings.Split(dbp.Files, ",")
+	}
 	return p
 }
 
@@ -196,6 +200,9 @@ func (p Package) toDBModel() DBPackage {
 	}
 	if len(p.Provides) > 0 {
 		dbp.Provides = strings.Join(p.Provides, ",")
+	}
+	if len(p.Files) > 0 {
+		dbp.Files = strings.Join(p.Files, ",")
 	}
 	return dbp
 }
@@ -253,7 +260,8 @@ func (s *PackageDBService) GetPackageByName(ctx context.Context, packageName str
 
 	var dbPkg DBPackage
 	err = db.WithContext(ctx).
-		Where("name = ? OR (',' || aliases || ',') LIKE ?", packageName, "%,"+packageName+",%").
+		Where("name = ? OR (',' || aliases || ',') LIKE ? OR (',' || files || ',') LIKE ?",
+			packageName, "%,"+packageName+",%", "%,"+packageName+",%").
 		First(&dbPkg).Error
 	if err != nil {
 		return Package{}, fmt.Errorf(app.T_("Failed to get information about the package %s"), packageName)
@@ -303,7 +311,8 @@ func (s *PackageDBService) GetPackagesByNames(ctx context.Context, names []strin
 	for _, name := range missingNames {
 		var dbPkg DBPackage
 		err = db.WithContext(ctx).
-			Where("(',' || aliases || ',') LIKE ?", "%,"+name+",%").
+			Where("(',' || aliases || ',') LIKE ? OR (',' || files || ',') LIKE ?",
+				"%,"+name+",%", "%,"+name+",%").
 			First(&dbPkg).Error
 		if err != nil {
 			continue
@@ -392,6 +401,18 @@ func (s *PackageDBService) SearchPackagesByNameLike(ctx context.Context, likePat
 		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
 	}
 
+	// Fallback: поиск по файлам если по имени ничего не нашли
+	if len(dbPkgs) == 0 {
+		query = db.WithContext(ctx).Model(&DBPackage{}).
+			Where("files LIKE ?", likePattern)
+		if installed {
+			query = query.Where("installed = ?", true)
+		}
+		if err = query.Find(&dbPkgs).Error; err != nil {
+			return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
+		}
+	}
+
 	result := make([]Package, 0, len(dbPkgs))
 	for _, dbp := range dbPkgs {
 		result = append(result, dbp.fromDBModel())
@@ -422,6 +443,19 @@ func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePat
 	var dbPkgs []DBPackage
 	if err = query.Find(&dbPkgs).Error; err != nil {
 		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
+	}
+
+	// Fallback: поиск по файлам если по имени ничего не нашли
+	if len(dbPkgs) == 0 {
+		query = db.WithContext(ctx).Model(&DBPackage{}).
+			Where("files LIKE ?", likePattern).
+			Limit(limit)
+		if installed {
+			query = query.Where("installed = ?", true)
+		}
+		if err = query.Find(&dbPkgs).Error; err != nil {
+			return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
+		}
 	}
 
 	res := make([]Package, 0, len(dbPkgs))
@@ -573,7 +607,7 @@ func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) e
 				"architecture", "section", "installed_size", "maintainer",
 				"versionRaw", "versionInstalled", "depends", "provides",
 				"size", "filename", "summary", "description", "appStream", "changelog",
-				"installed", "typePackage", "aliases",
+				"installed", "typePackage", "aliases", "files",
 			}),
 		}).
 		Create(&dbPkg).Error
@@ -655,4 +689,5 @@ var AllowedFilterFields = []string{
 	"changelog",
 	"installed",
 	"typePackage",
+	"files",
 }

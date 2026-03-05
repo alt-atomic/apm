@@ -15,4 +15,6 @@ add_executable(apm
         internal/common/binding/apt/lib/apt_search.cpp
         internal/common/binding/apt/lib/apt_simulate.cpp
         internal/common/binding/apt/lib/apt_wrapper.cpp
-        internal/common/binding/apt/lib/apt_wrapper.h)
+        internal/common/binding/apt/lib/apt_wrapper.h
+        internal/common/binding/apt/lib/apt_filelist.cpp
+        internal/common/binding/apt/lib/apt_filelist.h)

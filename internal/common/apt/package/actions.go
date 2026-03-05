@@ -69,6 +69,7 @@ type Package struct {
 	Changelog        string               `json:"lastChangelog"`
 	Installed        bool                 `json:"installed"`
 	TypePackage      int                  `json:"typePackage"`
+	Files            []string             `json:"files"`
 }
 
 type FindType uint8
@@ -540,72 +541,7 @@ func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error)
 
 	packages = make([]Package, 0, len(aptPackages))
 	for _, ap := range aptPackages {
-		var depends []string
-		seen := make(map[string]bool)
-
-		if ap.Depends != "" {
-			depList := strings.Split(ap.Depends, ",")
-			for _, dep := range depList {
-				clean := strings.TrimSpace(dep)
-				if clean == "" {
-					continue
-				}
-				clean = aptParser.CleanDependency(clean)
-				if !seen[clean] {
-					seen[clean] = true
-					depends = append(depends, clean)
-				}
-			}
-		}
-		var provides []string
-		seen = make(map[string]bool)
-
-		if ap.Provides != "" {
-			provList := strings.Split(ap.Provides, ",")
-			for _, prov := range provList {
-				clean := strings.TrimSpace(prov)
-				if clean == "" {
-					continue
-				}
-				clean = aptParser.CleanDependency(clean)
-				if !seen[clean] {
-					seen[clean] = true
-					provides = append(provides, clean)
-				}
-			}
-		}
-
-		formattedVersion := ap.Version
-		if v, errParse := helper.GetVersionFromAptCache(ap.Version); errParse == nil && v != "" {
-			formattedVersion = v
-		}
-
-		p := Package{
-			Name:             ap.Name,
-			Architecture:     ap.Architecture,
-			Section:          ap.Section,
-			InstalledSize:    int(ap.InstalledSize),
-			Maintainer:       ap.Maintainer,
-			Version:          formattedVersion,
-			VersionRaw:       ap.Version,
-			VersionInstalled: "",
-			Depends:          depends,
-			Aliases:          ap.Aliases,
-			Provides:         provides,
-			Size:             int(ap.DownloadSize),
-			Filename:         ap.Filename,
-			Summary:          ap.ShortDescription,
-			Description:      ap.Description,
-			AppStream:        nil,
-			Changelog:        ap.Changelog,
-			Installed:        false,
-			TypePackage:      int(PackageTypeSystem),
-		}
-
-		if p.Description == "" {
-			p.Description = ap.ShortDescription
-		}
-		packages = append(packages, p)
+		packages = append(packages, convertAptPackage(&ap))
 	}
 
 	for i := range packages {
@@ -772,7 +708,7 @@ func extractLastMessage(changelog string) string {
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, "*") {
+		if isChangelogHeader(trimmed) {
 			if !found {
 				result = append(result, trimmed)
 				found = true
@@ -787,6 +723,75 @@ func extractLastMessage(changelog string) string {
 	return strings.Join(result, "\n")
 }
 
+// isChangelogHeader проверяет, является ли строка заголовком записи changelog.
+func isChangelogHeader(line string) bool {
+	if !strings.HasPrefix(line, "* ") {
+		return false
+	}
+	fields := strings.Fields(line)
+	if len(fields) < 5 {
+		return false
+	}
+	year := fields[4]
+	return len(year) == 4 && year[0] >= '0' && year[0] <= '9'
+}
+
+// convertAptPackage преобразует aptLib.PackageInfo в Package
+func convertAptPackage(ap *aptLib.PackageInfo) Package {
+	cleanList := func(csv string) []string {
+		if csv == "" {
+			return nil
+		}
+		var result []string
+		seen := make(map[string]bool)
+		for _, item := range strings.Split(csv, ",") {
+			clean := strings.TrimSpace(item)
+			if clean == "" {
+				continue
+			}
+			clean = aptParser.CleanDependency(clean)
+			if !seen[clean] {
+				seen[clean] = true
+				result = append(result, clean)
+			}
+		}
+		return result
+	}
+
+	formattedVersion := ap.Version
+	if v, err := helper.GetVersionFromAptCache(ap.Version); err == nil && v != "" {
+		formattedVersion = v
+	}
+
+	description := strings.TrimSpace(ap.Description)
+	summary := strings.TrimSpace(ap.ShortDescription)
+	if description == "" && summary != "" {
+		description = summary
+	}
+
+	return Package{
+		Name:             ap.Name,
+		Architecture:     ap.Architecture,
+		Section:          ap.Section,
+		InstalledSize:    int(ap.InstalledSize),
+		Maintainer:       ap.Maintainer,
+		Version:          formattedVersion,
+		VersionRaw:       ap.Version,
+		VersionInstalled: "",
+		Depends:          cleanList(ap.Depends),
+		Aliases:          ap.Aliases,
+		Provides:         cleanList(ap.Provides),
+		Size:             int(ap.DownloadSize),
+		Filename:         ap.Filename,
+		Summary:          summary,
+		Description:      description,
+		Changelog:        ap.Changelog,
+		Installed:        false,
+		TypePackage:      int(PackageTypeSystem),
+		Files:            ap.Files,
+	}
+}
+
 // saveRpmInfoToDatabase сохраняет PackageInfo в базу данных
 func (a *Actions) saveRpmInfoToDatabase(ctx context.Context, ap *aptLib.PackageInfo) error {
 	_, errFind := a.serviceAptDatabase.GetPackageByName(ctx, ap.Name)
@@ -794,71 +799,7 @@ func (a *Actions) saveRpmInfoToDatabase(ctx context.Context, ap *aptLib.PackageI
 		return nil
 	}
 
-	// Преобразуем зависимости
-	var depends []string
-	seen := make(map[string]bool)
-	if ap.Depends != "" {
-		depList := strings.Split(ap.Depends, ",")
-		for _, dep := range depList {
-			clean := strings.TrimSpace(dep)
-			if clean == "" {
-				continue
-			}
-			clean = aptParser.CleanDependency(clean)
-			if !seen[clean] {
-				seen[clean] = true
-				depends = append(depends, clean)
-			}
-		}
-	}
-
-	// Преобразуем provides
-	var provides []string
-	seen = make(map[string]bool)
-	if ap.Provides != "" {
-		provList := strings.Split(ap.Provides, ",")
-		for _, prov := range provList {
-			clean := strings.TrimSpace(prov)
-			if clean == "" {
-				continue
-			}
-			clean = aptParser.CleanDependency(clean)
-			if !seen[clean] {
-				seen[clean] = true
-				provides = append(provides, clean)
-			}
-		}
-	}
-
-	// Форматируем версию
-	formattedVersion := ap.Version
-	if v, errParse := helper.GetVersionFromAptCache(ap.Version); errParse == nil && v != "" {
-		formattedVersion = v
-	}
-
-	// Создаем структуру Package
-	p := Package{
-		Name:             ap.Name,
-		Architecture:     ap.Architecture,
-		Section:          ap.Section,
-		InstalledSize:    int(ap.InstalledSize),
-		Maintainer:       ap.Maintainer,
-		Version:          formattedVersion,
-		VersionInstalled: "",
-		Depends:          depends,
-		Aliases:          ap.Aliases,
-		Provides:         provides,
-		Size:             int(ap.DownloadSize),
-		Filename:         ap.Filename,
-		Summary:          ap.ShortDescription,
-		Description:      ap.Description,
-		AppStream:        nil,
-		Changelog:        ap.Changelog,
-		Installed:        false,
-		TypePackage:      int(PackageTypeSystem),
-	}
-
-	// Извлекаем последнее сообщение из changelog
+	p := convertAptPackage(ap)
 	p.Changelog = extractLastMessage(p.Changelog)
 
 	// Создаем слайс с одним пакетом

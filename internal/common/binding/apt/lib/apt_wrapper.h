@@ -123,6 +123,9 @@ typedef struct {
     // Aliases for this package
     char **aliases;
     size_t alias_count;
+    // Files owned by this package (from repository index)
+    char **files;
+    size_t file_count;
 } AptPackageInfo;
 
 // Structured result for operations: code + optional message (malloc'ed; caller must free)
