@@ -51,6 +51,12 @@ func WithOptions[T any](
 		return func(ctx context.Context, cmd *cli.Command) error {
 			appConfig := app.GetAppConfig(ctx)
 			appConfig.ConfigManager.SetFormat(cmd.String("format"))
+			if ft := cmd.String("format_type"); ft != "" {
+				appConfig.ConfigManager.SetFormatType(ft)
+			}
+			if fields := cmd.StringSlice("fields"); len(fields) > 0 {
+				appConfig.ConfigManager.SetFields(fields)
+			}
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
 			isRoot := syscall.Geteuid() == 0

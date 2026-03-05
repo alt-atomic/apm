@@ -31,6 +31,8 @@ type Manager interface {
 	GetColors() Colors
 	IsDevMode() bool
 	SetFormat(format string)
+	SetFormatType(formatType string)
+	SetFields(fields []string)
 	GetTemporaryImageFile() string
 	GetPathImageContainerFile() string
 	GetPathImageFile() string
@@ -69,10 +71,16 @@ type Colors struct {
 
 // Константы форматов вывода
 const (
-	FormatText = "text" // CLI текстовый вывод
-	FormatJSON = "json" // CLI JSON вывод
-	FormatDBus = "dbus" // D-Bus сервис
-	FormatHTTP = "http" // HTTP сервер с WebSocket
+	FormatText = "text"
+	FormatJSON = "json"
+	FormatDBus = "dbus"
+	FormatHTTP = "http"
+)
+
+// Константы типов отображения (в рамках FormatText)
+const (
+	FormatTypeTree  = "tree"
+	FormatTypePlain = "plain"
 )
 
 // Configuration основная конфигурация приложения
@@ -83,6 +91,7 @@ type Configuration struct {
 	PathDBSQLUser   string `yaml:"pathDBSQLUser"`
 	PathLocales     string `yaml:"pathLocales"`
 	Colors          Colors `yaml:"colors"`
+	FormatType      string `yaml:"formatType"`
 
 	PathContainerFile string `yaml:"-"`
 	PathImageFile     string `yaml:"-"`
@@ -90,11 +99,12 @@ type Configuration struct {
 	Version           string `yaml:"-"`
 
 	// Runtime flags
-	ExistStplr     bool   `yaml:"-"`
-	ExistDistrobox bool   `yaml:"-"`
-	Format         string `yaml:"-"`
-	IsAtomic       bool   `yaml:"-"`
-	DevMode        bool   `yaml:"-"`
+	ExistStplr     bool     `yaml:"-"`
+	ExistDistrobox bool     `yaml:"-"`
+	Format         string   `yaml:"-"`
+	Fields         []string `yaml:"-"`
+	IsAtomic       bool     `yaml:"-"`
+	DevMode        bool     `yaml:"-"`
 }
 
 // configManagerImpl реализация Manager
@@ -105,7 +115,8 @@ type configManagerImpl struct {
 // NewConfigManager создает новый менеджер конфигурации
 func NewConfigManager(buildInfo BuildInfo) (Manager, error) {
 	cfg := &Configuration{
-		Colors: getDefaultColors(),
+		Colors:     getDefaultColors(),
+		FormatType: FormatTypeTree,
 	}
 
 	cm := &configManagerImpl{
@@ -267,6 +278,19 @@ func (cm *configManagerImpl) GetPathImageContainerFile() string {
 // SetFormat устанавливает формат вывода
 func (cm *configManagerImpl) SetFormat(format string) {
 	cm.config.Format = format
+}
+
+func (cm *configManagerImpl) SetFormatType(formatType string) {
+	switch formatType {
+	case FormatTypePlain:
+		cm.config.FormatType = formatType
+	default:
+		cm.config.FormatType = FormatTypeTree
+	}
+}
+
+func (cm *configManagerImpl) SetFields(fields []string) {
+	cm.config.Fields = fields
 }
 
 // getDefaultColors возвращает цветовую схему по умолчанию

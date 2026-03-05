@@ -69,9 +69,14 @@ type Launchable struct {
 	Value string `xml:",chardata" json:"value"`
 }
 
+type ContentAttribute struct {
+	ID    string `xml:"id,attr"   json:"id"`
+	Value string `xml:",chardata" json:"value"`
+}
+
 type ContentRating struct {
-	Type    string `xml:"type,attr,omitempty" json:"type,omitempty"`
-	Content string `xml:",innerxml"           json:"content"`
+	Type       string             `xml:"type,attr,omitempty"  json:"type,omitempty"`
+	Attributes []ContentAttribute `xml:"content_attribute"    json:"attributes,omitempty"`
 }
 
 type Icon struct {

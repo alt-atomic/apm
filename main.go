@@ -173,6 +173,17 @@ func main() {
 				Value:   "text",
 			},
 			&cli.StringFlag{
+				Name:    "format_type",
+				Usage:   app.T_("Display type: tree, plain"),
+				Aliases: []string{"ft"},
+				Value:   "",
+			},
+			&cli.StringSliceFlag{
+				Name:    "fields",
+				Usage:   app.T_("Show only specified fields"),
+				Aliases: []string{"F"},
+			},
+			&cli.StringFlag{
 				Name:    "transaction",
 				Usage:   app.T_("Internal property, adds the transaction to the output"),
 				Aliases: []string{"t"},

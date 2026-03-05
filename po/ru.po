@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-05 18:08+0600\n"
+"POT-Creation-Date: 2026-03-05 22:37+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -27,9 +27,9 @@ msgstr ""
 msgid "error opening system database: %w"
 msgstr "Ошибка открытия системной базы данных: %w"
 
-#: internal/common/app/database.go:90 internal/common/wrapper/wrapper.go:64
-#: internal/kernel/actions.go:688 internal/system/actions.go:1025 main.go:304
-#: main.go:371
+#: internal/common/app/database.go:90 internal/common/wrapper/wrapper.go:70
+#: internal/kernel/actions.go:688 internal/system/actions.go:1025 main.go:315
+#: main.go:382
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
@@ -64,19 +64,19 @@ msgstr "Интерфейс org.altlinux.APM уже используется"
 msgid "failed to close DBus connection: %w"
 msgstr "Не удалось закрыть соединение DBus: %w"
 
-#: internal/common/appstream/swcat.go:122
+#: internal/common/appstream/swcat.go:127
 msgid "Cannot read dir %s: %w"
 msgstr "Невозможно прочитать директорию %s: %w"
 
-#: internal/common/appstream/swcat.go:135
+#: internal/common/appstream/swcat.go:140
 msgid "Read file %s failed: %w"
 msgstr "Не удалось прочитать файл %s: %w"
 
-#: internal/common/appstream/swcat.go:139
+#: internal/common/appstream/swcat.go:144
 msgid "Unpack %s failed: %w"
 msgstr "Не удалось распаковать %s: %w"
 
-#: internal/common/appstream/swcat.go:145
+#: internal/common/appstream/swcat.go:150
 msgid "Parse %s failed: %w"
 msgstr "Не удалось спарсить %s: %w"
 
@@ -741,48 +741,50 @@ msgstr "Ошибка очистки таблицы: %w"
 msgid "Batch insert error: %w"
 msgstr "Ошибка пакетной вставки: %w"
 
-#: internal/common/apt/package/database.go:266
+#: internal/common/apt/package/database.go:267
 #, c-format
 msgid "Failed to get information about the package %s"
 msgstr "не удалось извлечь информацию о пакете %s"
 
-#: internal/common/apt/package/database.go:340
+#: internal/common/apt/package/database.go:342
 msgid "Temporary table drop error: %w"
 msgstr "Ошибка создания временной таблицы: %w"
 
-#: internal/common/apt/package/database.go:344
+#: internal/common/apt/package/database.go:346
 msgid "Temporary table creation error: %w"
 msgstr "Ошибка создания временной таблицы: %w"
 
-#: internal/common/apt/package/database.go:356
+#: internal/common/apt/package/database.go:358
 msgid "Batch insert into temporary table error: %w"
 msgstr "Ошибка пакетной вставки во временную таблицу: %w"
 
-#: internal/common/apt/package/database.go:375
+#: internal/common/apt/package/database.go:377
 msgid "Batch update error: %w"
 msgstr "Ошибка пакетного обновления"
 
-#: internal/common/apt/package/database.go:399
-#: internal/common/apt/package/database.go:431
-#: internal/common/apt/package/database.go:481
+#: internal/common/apt/package/database.go:401
+#: internal/common/apt/package/database.go:412
+#: internal/common/apt/package/database.go:445
+#: internal/common/apt/package/database.go:457
+#: internal/common/apt/package/database.go:508
 msgid "Query execution error: %w"
 msgstr "Ошибка исполнения запроса"
 
-#: internal/common/apt/package/database.go:463
+#: internal/common/apt/package/database.go:490
 #, c-format
 msgid "Invalid sort field: %s. Available fields: %s"
 msgstr "Некорректное поле сортировки: %s. Доступные поля: %s"
 
-#: internal/common/apt/package/database.go:509
+#: internal/common/apt/package/database.go:536
 msgid "Package count error: %w"
 msgstr "Ошибка количества пакетов: %w"
 
-#: internal/common/apt/package/database.go:520
+#: internal/common/apt/package/database.go:547
 #, c-format
 msgid "Invalid filter field: %s. Available fields: %s"
 msgstr "Некорректное поле фильтра: %s. Доступные поля: %s"
 
-#: internal/common/apt/package/database.go:610
+#: internal/common/apt/package/database.go:637
 #, c-format
 msgid "Table %s exists but contains no records"
 msgstr "Таблица %s существует, но не содержит записей"
@@ -1477,29 +1479,14 @@ msgstr "Симуляция удаления пакетов"
 msgid "Progress: %s completed"
 msgstr "Прогресс: %s завершён"
 
-#: internal/common/reply/response.go:175 internal/common/reply/response.go:198
-#: internal/common/reply/response.go:302 internal/common/reply/response.go:328
-#: internal/common/reply/response.go:351
-msgid "%T (unknown type)"
-msgstr "%T (неизвестный тип)"
-
-#: internal/common/reply/response.go:194 internal/common/reply/response.go:348
-msgid "%T (slice of unknown type)"
-msgstr "%T (фрагмент неизвестного типа)"
-
-#. значение == nil
-#: internal/common/reply/response.go:219 internal/common/reply/response.go:224
-#, c-format
-msgid "%s: no"
-msgstr "%s: нет"
-
-#: internal/common/reply/response.go:232
-msgid "yes"
-msgstr "да"
-
-#: internal/common/reply/response.go:234
+#: internal/common/reply/response.go:102 internal/common/reply/response.go:105
+#: internal/common/reply/response.go:112
 msgid "no"
 msgstr "нет"
+
+#: internal/common/reply/response.go:110
+msgid "yes"
+msgstr "да"
 
 #: internal/common/reply/translate.go:11
 msgid "Aliases"
@@ -1947,7 +1934,7 @@ msgstr "Важные пакеты"
 msgid "Reason"
 msgstr "Причины"
 
-#: internal/common/wrapper/wrapper.go:69 main.go:251 main.go:428
+#: internal/common/wrapper/wrapper.go:75 main.go:262 main.go:439
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -3434,44 +3421,62 @@ msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
 
 #: main.go:177
+msgid "Display type: tree, plain"
+msgstr "Тип отображения: tree, plain"
+
+#: main.go:183
+msgid "Show only specified fields"
+msgstr "Показать только указанные поля"
+
+#: main.go:188
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:202
+#: main.go:213
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:209
+#: main.go:220
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:233
+#: main.go:244
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr "Неизвестная команда: %s. Посмотрите 'apm help'"
 
-#: main.go:317
+#: main.go:328
 msgid "Administrator privileges are required to start"
 msgstr "Требуются привилегии администратора для запуска"
 
-#: main.go:434
+#: main.go:445
 msgid "Distrobox is not installed"
 msgstr "Distrobox не установлен"
 
-#: main.go:529
+#: main.go:540
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:536
+#: main.go:547
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 
 #: data/apt-bridge/update-apm.lua:6
 msgid "Updating apm database"
 msgstr "Обновление базы данных apm"
+
+#~ msgid "%T (unknown type)"
+#~ msgstr "%T (неизвестный тип)"
+
+#~ msgid "%T (slice of unknown type)"
+#~ msgstr "%T (фрагмент неизвестного типа)"
+
+#, c-format
+#~ msgid "%s: no"
+#~ msgstr "%s: нет"
 
 #~ msgid "Attempt to remove all files"
 #~ msgstr "Попытка удалить все файлы"
