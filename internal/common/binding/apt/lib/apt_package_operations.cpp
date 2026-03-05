@@ -170,6 +170,12 @@ static AptResult resolve_virtual_package(const AptCache *cache, const Requiremen
             if (AlreadySeen) continue;
 
             if (PrvPkg.CurrentVer() == Prv.OwnerVer()) {
+                if (req.has_version) {
+                    const char *prvVer = Prv.ProvideVersion();
+                    if (prvVer == nullptr ||
+                        cache->dep_cache->VS().CheckDep(prvVer, req.op, req.version.c_str()) == false)
+                        continue;
+                }
                 GoodSolutions.push_back(PrvPkg);
                 if (instVirtual) break;
                 continue;

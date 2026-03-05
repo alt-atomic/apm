@@ -240,6 +240,27 @@ func (s *ComplexPackageTestSuite) TestPackageAlreadyInstalled() {
 	}
 }
 
+// TestVersionedVirtualPackage тестирует что версионированные виртуальные пакеты
+// корректно фильтруют провайдеров по версии (регрессия: установленные провайдеры
+// с неподходящей версией не должны попадать в список кандидатов)
+func (s *ComplexPackageTestSuite) TestVersionedVirtualPackage() {
+	s.T().Log("Testing versioned virtual package 'typelib(GtkSource)=5'")
+
+	resp, err := s.actions.CheckInstall(s.ctx, []string{"typelib(GtkSource)=5"})
+
+	if err != nil {
+		errMsg := err.Error()
+		s.T().Logf("typelib(GtkSource)=5 result: %v", errMsg)
+
+		assert.False(s.T(),
+			strings.Contains(errMsg, "libgtksourceview4"),
+			"Version =5 must not include version 4 provider in candidates: %v", errMsg)
+	} else {
+		assert.NotNil(s.T(), resp)
+		s.T().Logf("typelib(GtkSource)=5 check successful: resolved correctly")
+	}
+}
+
 // Запуск набора тестов
 func TestComplexPackageSuite(t *testing.T) {
 	suite.Run(t, new(ComplexPackageTestSuite))

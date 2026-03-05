@@ -1102,7 +1102,10 @@ type ShortPackageResponse struct {
 // FormatPackageOutput принимает данные (один пакет или срез пакетов) и флаг full.
 // Если full == true, то возвращается полный вывод, иначе – сокращённый.
 func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
-	isTextFormat := a.appConfig.ConfigManager.GetConfig().Format == app.FormatText
+	var isTextFormat bool
+	if a.appConfig != nil && a.appConfig.ConfigManager != nil {
+		isTextFormat = a.appConfig.ConfigManager.GetConfig().Format == app.FormatText
+	}
 
 	switch v := data.(type) {
 	case _package.Package:
