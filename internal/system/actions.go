@@ -439,7 +439,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 }
 
 // Update обновляет информацию или базу данных пакетов.
-func (a *Actions) Update(ctx context.Context, noLock bool) (*UpdateResponse, error) {
+func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*UpdateResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -448,6 +448,17 @@ func (a *Actions) Update(ctx context.Context, noLock bool) (*UpdateResponse, err
 	err = a.validateDB(ctx, noLock)
 	if err != nil {
 		return nil, err
+	}
+
+	if onlyDB {
+		packages, err := a.serviceAptActions.UpdateDBOnly(ctx, noLock)
+		if err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+		}
+		return &UpdateResponse{
+			Message: app.T_("Installed package status updated"),
+			Count:   len(packages),
+		}, nil
 	}
 
 	packages, err := a.serviceAptActions.Update(ctx, noLock)

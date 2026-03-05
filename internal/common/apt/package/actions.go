@@ -572,6 +572,26 @@ func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error)
 	return packages, nil
 }
 
+// UpdateDBOnly обновляет статус установленных пакетов в БД без обновления репозиториев.
+func (a *Actions) UpdateDBOnly(ctx context.Context, noLock ...bool) ([]Package, error) {
+	packages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, nil, "", "", 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	packages, err = a.updateInstalledInfo(ctx, packages, noLock...)
+	if err != nil {
+		return nil, fmt.Errorf(app.T_("Error updating information about installed packages: %w"), err)
+	}
+
+	err = a.serviceAptDatabase.SavePackagesToDB(ctx, packages)
+	if err != nil {
+		return nil, err
+	}
+
+	return packages, nil
+}
+
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
 func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package, noLock ...bool) ([]Package, error) {
 	installed, err := a.GetInstalledPackages(ctx, noLock...)

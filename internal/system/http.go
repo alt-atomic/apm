@@ -337,13 +337,13 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 	noLock := r.URL.Query().Get("noLock") == "true"
 
 	if w.RunBackground(rw, r, reply.EventSystemUpdate, func(ctx context.Context) (interface{}, error) {
-		return w.actions.Update(ctx, noLock)
+		return w.actions.Update(ctx, noLock, false)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.Update(ctx, noLock)
+	resp, err := w.actions.Update(ctx, noLock, false)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return

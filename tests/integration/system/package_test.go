@@ -100,7 +100,7 @@ func (s *SystemTestSuite) TestRemoveNotExistentPackage() {
 
 // TestUpdate тестирует обновление пакетов
 func (s *SystemTestSuite) TestUpdate() {
-	resp, err := s.actions.Update(s.ctx, false)
+	resp, err := s.actions.Update(s.ctx, false, false)
 	if err != nil {
 		s.T().Logf("Update error (may be expected): %v", err)
 	} else {

@@ -337,9 +337,13 @@ func CommandList(ctx context.Context) *cli.Command {
 					Usage: app.T_("Skip file locking (use with caution)"),
 					Value: false,
 				},
+				&cli.BoolFlag{
+					Name:  "only-db",
+					Usage: app.T_("Only update installed status in DB without refreshing repositories"),
+				},
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.Update(ctx, cmd.Bool("no-lock"))
+				resp, err := actions.Update(ctx, cmd.Bool("no-lock"), cmd.Bool("only-db"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}

@@ -160,7 +160,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.Update(ctx, false)
+			resp, err := w.actions.Update(ctx, false, false)
 			reply.SendTaskResult(ctx, reply.EventSystemUpdate, resp, err)
 		}()
 
@@ -177,7 +177,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Update(ctx, false)
+	resp, err := w.actions.Update(ctx, false, false)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
