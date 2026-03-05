@@ -20,7 +20,10 @@ import (
 	aptErrors "apm/internal/common/apt"
 	aptBinding "apm/internal/common/binding/apt"
 	aptlib "apm/internal/common/binding/apt/lib"
+	_ "embed"
 	"errors"
+	"os"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -28,6 +31,9 @@ import (
 )
 
 const testPackage = "hello"
+
+//go:embed files/test-apm-example-1.0-alt1.x86_64.rpm
+var testRpmData []byte
 
 // TestAptNewActions ensures Actions can be constructed and closed
 func TestAptNewActions(t *testing.T) {
@@ -280,6 +286,53 @@ func TestAptMultiplePackageInstall(t *testing.T) {
 		assert.NotNil(t, changes)
 		t.Logf("Multiple packages: new=%d, upgraded=%d, extra=%d",
 			changes.NewInstalledCount, changes.UpgradedCount, len(changes.ExtraInstalled))
+	}
+}
+
+// TestAptInstallRemoveRpmFile tests installing and removing an RPM file from disk.
+func TestAptInstallRemoveRpmFile(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root")
+	}
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-apm-example-*.rpm")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	if _, err = tmpFile.Write(testRpmData); err != nil {
+		t.Fatalf("failed to write RPM data: %v", err)
+	}
+	tmpFile.Close()
+	rpmPath := tmpFile.Name()
+
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	const testPkg = "test-apm-example"
+
+	if info, e := actions.GetInfo(testPkg); e == nil && info != nil && info.State == 1 {
+		if err = actions.RemovePackages([]string{testPkg}, false, false, nil); err != nil {
+			t.Fatalf("pre-cleanup remove failed: %v", err)
+		}
+	}
+
+	if err = actions.InstallPackages([]string{rpmPath}, nil); err != nil {
+		t.Fatalf("install RPM file failed: %v", err)
+	}
+
+	const installedFile = "/usr/share/test-apm-example/test.txt"
+	content, err := os.ReadFile(installedFile)
+	if err != nil {
+		t.Fatalf("expected file %s not found after install: %v", installedFile, err)
+	}
+	assert.Equal(t, "hello", strings.TrimSpace(string(content)))
+
+	if err = actions.RemovePackages([]string{"test-apm-example"}, false, false, nil); err != nil {
+		t.Fatalf("remove test-apm-example failed: %v", err)
+	}
+
+	if _, err = os.Stat(installedFile); !os.IsNotExist(err) {
+		t.Errorf("expected %s to be removed after package removal", installedFile)
 	}
 }
 
