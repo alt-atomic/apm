@@ -174,13 +174,12 @@ func CommandList(ctx context.Context) *cli.Command {
 						Required: true,
 					},
 					&cli.BoolFlag{
-						Name:  "export",
-						Usage: app.T_("Export package"),
-						Value: true,
+						Name:  "no-export",
+						Usage: app.T_("Do not export package to host"),
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					resp, err := actions.Install(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("export"))
+					resp, err := actions.Install(ctx, cmd.String("container"), cmd.Args().First(), !cmd.Bool("no-export"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
@@ -215,17 +214,19 @@ func CommandList(ctx context.Context) *cli.Command {
 				}),
 			},
 			{
-				Name:  "dbus-doc",
-				Usage: app.T_("Show dbus online documentation"),
+				Name:     "dbus-doc",
+				Usage:    app.T_("Show dbus online documentation"),
+				Category: app.T_("Documentation"),
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					reply.StopSpinner(appConfig)
 					return actions.GenerateOnlineDoc(ctx)
 				}),
 			},
 			{
-				Name:    "container",
-				Usage:   app.T_("Module for working with containers"),
-				Aliases: []string{"c"},
+				Name:     "container",
+				Usage:    app.T_("Module for working with containers"),
+				Aliases:  []string{"c"},
+				Category: app.T_("Modules"),
 				Commands: []*cli.Command{
 					{
 						Name:  "list",

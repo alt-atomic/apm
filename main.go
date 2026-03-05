@@ -69,9 +69,10 @@ func main() {
 
 	cmds := []*cli.Command{
 		{
-			Name:   "dbus-session",
-			Usage:  app.T_("Start session D-Bus service org.altlinux.APM"),
-			Action: sessionDbus,
+			Name:     "dbus-session",
+			Usage:    app.T_("Start session D-Bus service org.altlinux.APM"),
+			Category: app.T_("Services"),
+			Action:   sessionDbus,
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:    "verbose",
@@ -81,9 +82,10 @@ func main() {
 			},
 		},
 		{
-			Name:   "dbus-system",
-			Usage:  app.T_("Start system D-Bus service org.altlinux.APM"),
-			Action: systemDbus,
+			Name:     "dbus-system",
+			Usage:    app.T_("Start system D-Bus service org.altlinux.APM"),
+			Category: app.T_("Services"),
+			Action:   systemDbus,
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:    "verbose",
@@ -93,9 +95,10 @@ func main() {
 			},
 		},
 		{
-			Name:   "http-server",
-			Usage:  app.T_("Start system HTTP API server"),
-			Action: httpServer,
+			Name:     "http-server",
+			Usage:    app.T_("Start system HTTP API server"),
+			Category: app.T_("Services"),
+			Action:   httpServer,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "listen",
@@ -111,9 +114,10 @@ func main() {
 			},
 		},
 		{
-			Name:   "http-session",
-			Usage:  app.T_("Start session HTTP API"),
-			Action: httpSession,
+			Name:     "http-session",
+			Usage:    app.T_("Start session HTTP API"),
+			Category: app.T_("Services"),
+			Action:   httpSession,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "listen",
@@ -247,6 +251,10 @@ func applyCommandSetting(cliCommand *cli.Command) {
 	cliCommand.HideHelpCommand = true
 	cliCommand.EnableShellCompletion = true
 	cliCommand.Suggest = true
+	cliCommand.OnUsageError = func(ctx context.Context, cmd *cli.Command, err error, _ bool) error {
+		cliError(helper.TranslateUsageError(err))
+		return err
+	}
 
 	for _, sub := range cliCommand.Commands {
 		applyCommandSetting(sub)
@@ -482,7 +490,7 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 
 	// Параллельно обновляем иконки
 	go func() {
-		if err := distroboxActions.GetIconService().ReloadIcons(ctx); err != nil {
+		if err = distroboxActions.GetIconService().ReloadIcons(ctx); err != nil {
 			app.Log.Error(err.Error())
 		}
 	}()

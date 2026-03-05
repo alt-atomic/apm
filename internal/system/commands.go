@@ -466,11 +466,13 @@ func CommandList(ctx context.Context) *cli.Command {
 			Name:     "image",
 			Usage:    app.T_("Module for working with the image"),
 			Aliases:  []string{"i"},
+			Category: app.T_("Image"),
 			Commands: imageCmds,
 		},
 		{
-			Name:  "dbus-doc",
-			Usage: app.T_("Show dbus online documentation"),
+			Name:     "dbus-doc",
+			Usage:    app.T_("Show dbus online documentation"),
+			Category: app.T_("Documentation"),
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				reply.StopSpinner(appConfig)
 				return actions.GenerateOnlineDoc(ctx)
