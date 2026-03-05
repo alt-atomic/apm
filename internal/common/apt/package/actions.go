@@ -65,7 +65,7 @@ type Package struct {
 	Filename         string               `json:"filename"`
 	Summary          string               `json:"summary"`
 	Description      string               `json:"description"`
-	AppStream        *appstream.Component `json:"appStream"`
+	AppStream        *appstream.Component `json:"appStream" cli:"hidden"`
 	Changelog        string               `json:"lastChangelog"`
 	Installed        bool                 `json:"installed"`
 	TypePackage      int                  `json:"typePackage"`

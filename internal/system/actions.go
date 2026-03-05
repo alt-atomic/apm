@@ -23,6 +23,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	_binding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
+	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	_kservice "apm/internal/kernel/service"
 	reposervice "apm/internal/repo/service"
@@ -1101,10 +1102,14 @@ type ShortPackageResponse struct {
 // FormatPackageOutput принимает данные (один пакет или срез пакетов) и флаг full.
 // Если full == true, то возвращается полный вывод, иначе – сокращённый.
 func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
+	isTextFormat := a.appConfig.ConfigManager.GetConfig().Format == app.FormatText
+
 	switch v := data.(type) {
-	// Если передан один пакет
 	case _package.Package:
 		if full {
+			if isTextFormat {
+				helper.ClearCLIHiddenFields(&v)
+			}
 			return v
 		}
 		return ShortPackageResponse{
@@ -1114,9 +1119,13 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 			Installed:  v.Installed,
 			Maintainer: v.Maintainer,
 		}
-	// Если передан срез пакетов
 	case []_package.Package:
 		if full {
+			if isTextFormat {
+				for i := range v {
+					helper.ClearCLIHiddenFields(&v[i])
+				}
+			}
 			return v
 		}
 		shortList := make([]ShortPackageResponse, 0, len(v))
