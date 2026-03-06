@@ -19,6 +19,7 @@ package system
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/common/wrapper"
 	"apm/internal/system/appstream"
@@ -406,13 +407,9 @@ func CommandList(ctx context.Context) *cli.Command {
 			}),
 		},
 		{
-			Name:  "list",
-			Usage: app.T_("Building a query to get a list of packages"),
-			Description: app.T_("Filtering for the list method:") + "\n" +
-				app.T_("Format: key[op]=value or key=value (uses default operator for the field)") + "\n" +
-				app.T_("Operators: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte (<=), contains") + "\n" +
-				app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n" +
-				app.T_("Examples: --filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education"),
+			Name:        "list",
+			Usage:       app.T_("Building a query to get a list of packages"),
+			Description: helper.FilterDescription("--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education"),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "sort",

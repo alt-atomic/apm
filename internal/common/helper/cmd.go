@@ -107,4 +107,20 @@ func Abs(x int) int {
 	return x
 }
 
-
+// FilterDescription генерирует общее описание фильтра для команд.
+func FilterDescription(examples string) string {
+	return app.T_("Filtering for the list method:") + "\n\n" +
+		app.T_("Format: key[op]=value or key=value (each field has a default operator)") + "\n\n" +
+		app.T_("Available operators:") + "\n" +
+		"  eq       - " + app.T_("exact match (=)") + "\n" +
+		"  ne       - " + app.T_("not equal (<>)") + "\n" +
+		"  like     - " + app.T_("pattern match (LIKE), use % as wildcard") + "\n" +
+		"  gt       - " + app.T_("greater than (>)") + "\n" +
+		"  gte      - " + app.T_("greater than or equal (>=)") + "\n" +
+		"  lt       - " + app.T_("less than (<)") + "\n" +
+		"  lte      - " + app.T_("less than or equal (<=)") + "\n" +
+		"  contains - " + app.T_("contains value (for JSON/array fields)") + "\n\n" +
+		app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n\n" +
+		app.T_("Examples:") + "\n" +
+		"  " + examples
+}

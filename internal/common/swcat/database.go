@@ -269,14 +269,14 @@ func appStreamComponentApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool)
 
 // ComponentFields определения полей фильтрации для Component (без префикса).
 var ComponentFields = map[string]filter.FieldConfig{
-	"type":            {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Component type")}},
-	"id":              {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Component ID")}},
-	"pkgname":         {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Package name")}},
-	"name":            {DefaultOp: filter.OpLike, Extra: map[string]any{"type": "STRING", "description": app.T_("Application name")}},
-	"summary":         {DefaultOp: filter.OpLike, Extra: map[string]any{"type": "STRING", "description": app.T_("Short description")}},
-	"project_license": {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Project license")}},
-	"categories":      {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "ARRAY", "description": app.T_("Categories")}},
-	"keywords":        {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "ARRAY", "description": app.T_("Keywords for search")}},
+	"type":            {DefaultOp: filter.OpEq, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe}, Extra: map[string]any{"type": "STRING", "description": app.T_("Component type")}},
+	"id":              {DefaultOp: filter.OpEq, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Component ID")}},
+	"pkgname":         {DefaultOp: filter.OpEq, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Package name")}},
+	"name":            {DefaultOp: filter.OpLike, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Application name")}},
+	"summary":         {DefaultOp: filter.OpLike, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Short description")}},
+	"project_license": {DefaultOp: filter.OpEq, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Project license")}},
+	"categories":      {DefaultOp: filter.OpContains, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpContains}, Extra: map[string]any{"type": "ARRAY", "description": app.T_("Categories")}},
+	"keywords":        {DefaultOp: filter.OpContains, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpContains}, Extra: map[string]any{"type": "ARRAY", "description": app.T_("Keywords for search")}},
 }
 
 // PrefixedFields возвращает ComponentFields с добавленным префиксом к каждому ключу.
@@ -301,7 +301,7 @@ func PrefixedAppliers(prefix string, applier filter.FieldApplier) map[string]fil
 var FilterConfig = &filter.Config{
 	Fields: func() map[string]filter.FieldConfig {
 		fields := PrefixedFields("components.")
-		fields["pkgname"] = filter.FieldConfig{DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING"}}
+		fields["pkgname"] = filter.FieldConfig{DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING"}}
 		return fields
 	}(),
 }

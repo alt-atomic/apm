@@ -20,6 +20,7 @@ internal/common/build/models/link.go
 internal/common/build/models/repos.go
 internal/common/build/podman.go
 internal/common/filter/filter.go
+internal/common/helper/cmd.go
 internal/common/helper/polkit.go
 internal/common/helper/text.go
 internal/common/helper/translate.go

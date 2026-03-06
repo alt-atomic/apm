@@ -18,6 +18,7 @@ package appstream
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/common/swcat"
 	"apm/internal/common/wrapper"
@@ -65,13 +66,9 @@ func CommandList(_ context.Context) []*cli.Command {
 			}),
 		},
 		{
-			Name:  "list",
-			Usage: app.T_("Building a query to get a list of components"),
-			Description: app.T_("Filtering for the list method:") + "\n" +
-				app.T_("Format: key[op]=value or key=value (uses default operator for the field)") + "\n" +
-				app.T_("Operators: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte (<=), contains") + "\n" +
-				app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n" +
-				app.T_("Examples: --filter pkgname=steam --filter components.type[eq]=desktop-application"),
+			Name:        "list",
+			Usage:       app.T_("Building a query to get a list of components"),
+			Description: helper.FilterDescription("--filter pkgname=steam --filter components.type[eq]=desktop-application"),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "sort",

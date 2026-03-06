@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-07 03:41+0600\n"
+"POT-Creation-Date: 2026-03-07 04:51+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -1157,6 +1157,59 @@ msgstr "Недопустимый формат оператора фильтра:
 msgid "Empty filter field: %s"
 msgstr "Пустое поле фильтра: %s"
 
+#: internal/common/helper/cmd.go:113
+msgid "Filtering for the list method:"
+msgstr "Фильтрация для метода list:"
+
+#: internal/common/helper/cmd.go:114
+msgid "Format: key[op]=value or key=value (each field has a default operator)"
+msgstr "Формат: key[op]=value или key=value (для каждого поля задан оператор по умолчанию)"
+
+#: internal/common/helper/cmd.go:115
+msgid "Available operators:"
+msgstr "Доступные операторы:"
+
+#: internal/common/helper/cmd.go:116
+msgid "exact match (=)"
+msgstr "точное совпадение (=)"
+
+#: internal/common/helper/cmd.go:117
+msgid "not equal (<>)"
+msgstr "не равно (<>)"
+
+#: internal/common/helper/cmd.go:118
+#, c-format
+msgid "pattern match (LIKE), use % as wildcard"
+msgstr "поиск по шаблону (LIKE), % — подстановочный знак"
+
+#: internal/common/helper/cmd.go:119
+msgid "greater than (>)"
+msgstr "больше (>)"
+
+#: internal/common/helper/cmd.go:120
+msgid "greater than or equal (>=)"
+msgstr "больше или равно (>=)"
+
+#: internal/common/helper/cmd.go:121
+msgid "less than (<)"
+msgstr "меньше (<)"
+
+#: internal/common/helper/cmd.go:122
+msgid "less than or equal (<=)"
+msgstr "меньше или равно (<=)"
+
+#: internal/common/helper/cmd.go:123
+msgid "contains value (for JSON/array fields)"
+msgstr "содержит значение (для JSON/массивов)"
+
+#: internal/common/helper/cmd.go:124
+msgid "OR: use \"|\" to combine values: key[op]=value1|value2"
+msgstr "ИЛИ: используйте \"|\" для объединения значений: key[op]=value1|value2"
+
+#: internal/common/helper/cmd.go:125
+msgid "Examples:"
+msgstr "Примеры:"
+
 #: internal/common/helper/polkit.go:71
 msgid "Failed to get caller PID: %w"
 msgstr "Не удалось получить PID вызывающего процесса: %w"
@@ -1714,7 +1767,7 @@ msgstr "Дайджест образа"
 msgid "Distribution"
 msgstr "Дистрибутив"
 
-#: internal/common/reply/translate.go:49 internal/distrobox/commands.go:240
+#: internal/common/reply/translate.go:49 internal/distrobox/commands.go:237
 msgid "Container"
 msgstr "Контейнер"
 
@@ -1770,7 +1823,7 @@ msgstr "Обновлённые пакеты"
 msgid "Package Name"
 msgstr "Имя пакета"
 
-#: internal/common/reply/translate.go:79 internal/system/commands.go:487
+#: internal/common/reply/translate.go:79 internal/system/commands.go:484
 msgid "Image"
 msgstr "Образ"
 
@@ -2201,167 +2254,132 @@ msgstr "Необходимо указать имя контейнера"
 msgid "Failed to delete container records: %w"
 msgstr "Не удалось удалить записи контейнера: %w"
 
-#: internal/distrobox/commands.go:46
+#: internal/distrobox/commands.go:47
 msgid "Managing packages and containers in distrobox"
 msgstr "Управление пакетами и контейнерами в distrobox"
 
-#: internal/distrobox/commands.go:50
+#: internal/distrobox/commands.go:51
 msgid "Update and synchronize the list of installed packages with the host"
 msgstr "Обновить и синхронизировать список установленных пакетов с хостом"
 
-#: internal/distrobox/commands.go:54 internal/distrobox/commands.go:75
-#: internal/distrobox/commands.go:183 internal/distrobox/commands.go:208
-#: internal/distrobox/commands.go:318 internal/distrobox/commands.go:352
+#: internal/distrobox/commands.go:55 internal/distrobox/commands.go:76
+#: internal/distrobox/commands.go:180 internal/distrobox/commands.go:205
+#: internal/distrobox/commands.go:315 internal/distrobox/commands.go:349
 msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
-#: internal/distrobox/commands.go:70 internal/system/commands.go:359
+#: internal/distrobox/commands.go:71 internal/system/commands.go:360
 msgid "Package information"
 msgstr "Информация о пакете"
 
-#: internal/distrobox/commands.go:91 internal/system/commands.go:382
+#: internal/distrobox/commands.go:92 internal/system/commands.go:383
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
-#: internal/distrobox/commands.go:96 internal/distrobox/commands.go:120
+#: internal/distrobox/commands.go:97 internal/distrobox/commands.go:117
 msgid "Container name. Optional flag"
 msgstr "Имя контейнера. Необязательный флаг"
 
-#: internal/distrobox/commands.go:111
+#: internal/distrobox/commands.go:112
 msgid "Building query to retrieve package list"
 msgstr "Построение запроса для извлечения списка пакетов"
 
-#: internal/distrobox/commands.go:112 internal/system/appstream/commands.go:70
-#: internal/system/commands.go:411
-msgid "Filtering for the list method:"
-msgstr "Фильтрация для метода list:"
-
-#: internal/distrobox/commands.go:113 internal/system/appstream/commands.go:71
-#: internal/system/commands.go:412
-msgid ""
-"Format: key[op]=value or key=value (uses default operator for the field)"
-msgstr ""
-"Формат: key[op]=value или key=value (используется оператор по умолчанию для "
-"поля)"
-
-#: internal/distrobox/commands.go:114 internal/system/appstream/commands.go:72
-#: internal/system/commands.go:413
-msgid ""
-"Operators: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte (<=), "
-"contains"
-msgstr ""
-"Операторы: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte (<=), "
-"contains"
-
-#: internal/distrobox/commands.go:115 internal/system/appstream/commands.go:73
-#: internal/system/commands.go:414
-msgid "OR: use \"|\" to combine values: key[op]=value1|value2"
-msgstr "ИЛИ: используйте \"|\" для объединения значений: key[op]=value1|value2"
-
-#: internal/distrobox/commands.go:116
-msgid ""
-"Examples: --filter name=zip --filter name[eq]=zip --filter installed=true --"
-"filter manager[eq]=apt|pacman"
-msgstr ""
-"Примеры: --filter name=zip --filter name[eq]=zip --filter installed=true --"
-"filter manager[eq]=apt|pacman"
-
-#: internal/distrobox/commands.go:125
+#: internal/distrobox/commands.go:122
 msgid "Field for sorting, for example: name, version"
 msgstr "Поле для сортировки, к примеру: name, version"
 
-#: internal/distrobox/commands.go:129 internal/system/appstream/commands.go:82
-#: internal/system/commands.go:423
+#: internal/distrobox/commands.go:126 internal/system/appstream/commands.go:79
+#: internal/system/commands.go:420
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
-#: internal/distrobox/commands.go:134 internal/system/appstream/commands.go:87
-#: internal/system/commands.go:200 internal/system/commands.go:428
+#: internal/distrobox/commands.go:131 internal/system/appstream/commands.go:84
+#: internal/system/commands.go:201 internal/system/commands.go:425
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
-#: internal/distrobox/commands.go:139 internal/system/appstream/commands.go:92
-#: internal/system/commands.go:205 internal/system/commands.go:433
+#: internal/distrobox/commands.go:136 internal/system/appstream/commands.go:89
+#: internal/system/commands.go:206 internal/system/commands.go:430
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
-#: internal/distrobox/commands.go:144 internal/system/appstream/commands.go:97
-#: internal/system/commands.go:438
+#: internal/distrobox/commands.go:141 internal/system/appstream/commands.go:94
+#: internal/system/commands.go:435
 msgid "Filter in the format key[op]=value or key=value"
 msgstr "Фильтр в формате key[op]=value или key=value"
 
-#: internal/distrobox/commands.go:148
+#: internal/distrobox/commands.go:145
 msgid "Force update all packages before the request"
 msgstr "Принудительное обновление всех пакетов перед запросом"
 
-#: internal/distrobox/commands.go:178
+#: internal/distrobox/commands.go:175
 msgid "Install package"
 msgstr "Установка пакета"
 
-#: internal/distrobox/commands.go:189
+#: internal/distrobox/commands.go:186
 msgid "Do not export package to host"
 msgstr "Не экспортировать пакет в хост-систему"
 
-#: internal/distrobox/commands.go:203
+#: internal/distrobox/commands.go:200
 msgid "Remove package"
 msgstr "Удаление пакета"
 
-#: internal/distrobox/commands.go:214
+#: internal/distrobox/commands.go:211
 msgid "Remove only from host, leave package in container"
 msgstr "Удалить только с хоста, оставить пакет в контейнере"
 
-#: internal/distrobox/commands.go:229 internal/kernel/commands.go:257
-#: internal/repo/commands.go:242 internal/system/commands.go:492
+#: internal/distrobox/commands.go:226 internal/kernel/commands.go:257
+#: internal/repo/commands.go:242 internal/system/commands.go:489
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
-#: internal/distrobox/commands.go:230 internal/kernel/commands.go:258
-#: internal/repo/commands.go:243 internal/system/commands.go:493
+#: internal/distrobox/commands.go:227 internal/kernel/commands.go:258
+#: internal/repo/commands.go:243 internal/system/commands.go:490
 msgid "Documentation"
 msgstr "Документация"
 
-#: internal/distrobox/commands.go:238
+#: internal/distrobox/commands.go:235
 msgid "Module for working with containers"
 msgstr "Модуль для работы с контейнерами"
 
-#: internal/distrobox/commands.go:244
+#: internal/distrobox/commands.go:241
 msgid "List of containers"
 msgstr "Список контейнеров"
 
-#: internal/distrobox/commands.go:256
+#: internal/distrobox/commands.go:253
 msgid "Add container"
 msgstr "Добавить контейнер"
 
-#: internal/distrobox/commands.go:260
+#: internal/distrobox/commands.go:257
 msgid "Container. Must be specified, options: alt, ubuntu, arch"
 msgstr "Контейнер. Должен быть указан, опции: alt, ubuntu, arch"
 
-#: internal/distrobox/commands.go:265
+#: internal/distrobox/commands.go:262
 #: internal/distrobox/service/database.go:323
 msgid "Container name"
 msgstr "Имя контейнера"
 
-#: internal/distrobox/commands.go:281
+#: internal/distrobox/commands.go:278
 msgid "The value for image must be one of: alt, ubuntu, arch"
 msgstr "Значение для образа, одно из: alt, ubuntu, arch"
 
-#: internal/distrobox/commands.go:309
+#: internal/distrobox/commands.go:306
 msgid "Manual container addition"
 msgstr "Ручное добавление контейнера"
 
-#: internal/distrobox/commands.go:313
+#: internal/distrobox/commands.go:310
 msgid "Image link. Required"
 msgstr "Ссылка на образ. Обязательно"
 
-#: internal/distrobox/commands.go:323
+#: internal/distrobox/commands.go:320
 msgid "List of packages to install"
 msgstr "Список пакетов для установки"
 
-#: internal/distrobox/commands.go:328
+#: internal/distrobox/commands.go:325
 msgid "Calling hook to execute commands"
 msgstr "Вызов обработчика для исполнения команд"
 
-#: internal/distrobox/commands.go:347
+#: internal/distrobox/commands.go:344
 msgid "Remove container"
 msgstr "Удалить контейнер"
 
@@ -2838,7 +2856,7 @@ msgstr "Установите дополнительные модули ядра"
 msgid "Install kernel headers"
 msgstr "Установить заголовки ядра"
 
-#: internal/kernel/commands.go:96 internal/system/commands.go:270
+#: internal/kernel/commands.go:96 internal/system/commands.go:271
 msgid "Simulate installation"
 msgstr "Симуляция установки"
 
@@ -3307,7 +3325,7 @@ msgstr "Найдено %d из %d пакетов"
 msgid "Nothing found"
 msgstr "Ничего не найдено"
 
-#: internal/system/actions.go:795 internal/system/commands.go:168
+#: internal/system/actions.go:795 internal/system/commands.go:169
 msgid "Image status"
 msgstr "Статус образа"
 
@@ -3353,158 +3371,142 @@ msgstr "Данные о приложении не найдены для паке
 msgid "Application info for %s"
 msgstr "Информация о приложении для %s"
 
-#: internal/system/appstream/commands.go:43
+#: internal/system/appstream/commands.go:44
 msgid "Update applications data from XML catalogs"
 msgstr "Обновить данные о приложениях из XML-каталогов"
 
-#: internal/system/appstream/commands.go:54
+#: internal/system/appstream/commands.go:55
 msgid "Show applications data for a package"
 msgstr "Показать данные о приложении для пакета"
 
-#: internal/system/appstream/commands.go:58
+#: internal/system/appstream/commands.go:59
 msgid "Package name is required"
 msgstr "Необходимо указать имя пакета"
 
-#: internal/system/appstream/commands.go:69
+#: internal/system/appstream/commands.go:70
 msgid "Building a query to get a list of components"
 msgstr "Построение запроса для получения списка компонентов"
 
-#: internal/system/appstream/commands.go:74
-msgid ""
-"Examples: --filter pkgname=steam --filter components.type[eq]=desktop-"
-"application"
-msgstr ""
-"Примеры: --filter pkgname=steam --filter components.type[eq]=desktop-"
-"application"
-
-#: internal/system/appstream/commands.go:78
+#: internal/system/appstream/commands.go:75
 msgid "Sort by field, example fields: pkgname"
 msgstr "Сортировать по полю, примеры полей: pkgname"
 
-#: internal/system/commands.go:93 internal/system/commands.go:180
+#: internal/system/commands.go:94 internal/system/commands.go:181
 msgid "Upgrade system image"
 msgstr "Обновление образа системы"
 
-#: internal/system/commands.go:106
+#: internal/system/commands.go:107
 msgid "General system upgrade"
 msgstr "Общее обновление системы"
 
-#: internal/system/commands.go:110
+#: internal/system/commands.go:111
 msgid "Simulate upgrade"
 msgstr "Симуляция обновления"
 
-#: internal/system/commands.go:138
+#: internal/system/commands.go:139
 msgid "Build image"
 msgstr "Создать образ"
 
-#: internal/system/commands.go:156
+#: internal/system/commands.go:157
 msgid "Apply changes to the host"
 msgstr "Применить изменения на хосте"
 
-#: internal/system/commands.go:192
+#: internal/system/commands.go:193
 msgid "Image changes history"
 msgstr "История изменения образа"
 
-#: internal/system/commands.go:196
+#: internal/system/commands.go:197
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
-#: internal/system/commands.go:225
+#: internal/system/commands.go:226
 msgid "Reinstall packages"
 msgstr "Переустановка пакетов"
 
-#: internal/system/commands.go:230
+#: internal/system/commands.go:231
 msgid "Reinstall without confirmation"
 msgstr "Переустановить без подтверждения"
 
-#: internal/system/commands.go:236
+#: internal/system/commands.go:237
 msgid "Simulate reinstallation"
 msgstr "Симуляция переустановки"
 
-#: internal/system/commands.go:259
+#: internal/system/commands.go:260
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 "Список пакетов для установки. Формат package- и package+ поддерживается."
 
-#: internal/system/commands.go:264
+#: internal/system/commands.go:265
 msgid "Install without confirmation"
 msgstr "Установить без подтверждения"
 
-#: internal/system/commands.go:294
+#: internal/system/commands.go:295
 msgid "List of packages to remove"
 msgstr "Список пакетов на удаление"
 
-#: internal/system/commands.go:299
+#: internal/system/commands.go:300
 msgid "Remove without confirmation"
 msgstr "Удалить без подтверждения"
 
-#: internal/system/commands.go:305
+#: internal/system/commands.go:306
 msgid "Attempt to remove depends"
 msgstr "Попытка удалить зависимости"
 
-#: internal/system/commands.go:311
+#: internal/system/commands.go:312
 msgid "Simulate removal"
 msgstr "Симуляция удаления"
 
-#: internal/system/commands.go:335
+#: internal/system/commands.go:336
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/system/commands.go:339
+#: internal/system/commands.go:340
 msgid "Skip file locking (use with caution)"
 msgstr "Пропустить блокировку файла (использовать с осторожностью)"
 
-#: internal/system/commands.go:344
+#: internal/system/commands.go:345
 msgid "Only update installed status in DB without refreshing repositories"
 msgstr ""
 "Обновить только статус установленных пакетов в БД без обновления репозиториев"
 
-#: internal/system/commands.go:364
+#: internal/system/commands.go:365
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:387
+#: internal/system/commands.go:388
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/system/commands.go:393 internal/system/commands.go:447
+#: internal/system/commands.go:394 internal/system/commands.go:444
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
-#: internal/system/commands.go:410
+#: internal/system/commands.go:411
 msgid "Building a query to get a list of packages"
 msgstr "Создание запроса для получения списка пакетов"
 
-#: internal/system/commands.go:415
-msgid ""
-"Examples: --filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --"
-"filter section[eq]=games|education"
-msgstr ""
-"Примеры: --filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --"
-"filter section[eq]=games|education"
-
-#: internal/system/commands.go:419
+#: internal/system/commands.go:416
 msgid "Sort packages by field, example fields: name, section"
 msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
-#: internal/system/commands.go:442
+#: internal/system/commands.go:439
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/system/commands.go:479
+#: internal/system/commands.go:476
 msgid "Module for application information"
 msgstr "Модуль для информации о приложениях"
 
-#: internal/system/commands.go:480
+#: internal/system/commands.go:477
 msgid "Applications"
 msgstr "Приложения"
 
-#: internal/system/commands.go:485
+#: internal/system/commands.go:482
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/system/commands.go:504
+#: internal/system/commands.go:501
 msgid "System package management"
 msgstr "Управление системными пакетами"
 
@@ -3773,6 +3775,36 @@ msgstr "Не удалось закрыть базы данных: %s"
 #: data/apt-bridge/update-apm.lua:6
 msgid "Updating apm database"
 msgstr "Обновление базы данных apm"
+
+#, fuzzy
+#~ msgid ""
+#~ "--filter name=zip --filter name[eq]=zip --filter installed=true --filter "
+#~ "manager[eq]=apt|pacman"
+#~ msgstr ""
+#~ "Примеры: --filter name=zip --filter name[eq]=zip --filter installed=true "
+#~ "--filter manager[eq]=apt|pacman"
+
+#, fuzzy
+#~ msgid ""
+#~ "--filter pkgname=steam --filter components.type[eq]=desktop-application"
+#~ msgstr ""
+#~ "Примеры: --filter pkgname=steam --filter components.type[eq]=desktop-"
+#~ "application"
+
+#, fuzzy
+#~ msgid ""
+#~ "--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter "
+#~ "section[eq]=games|education"
+#~ msgstr ""
+#~ "Примеры: --filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --"
+#~ "filter section[eq]=games|education"
+
+#~ msgid ""
+#~ "Operators: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte "
+#~ "(<=), contains"
+#~ msgstr ""
+#~ "Операторы: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte "
+#~ "(<=), contains"
 
 #~ msgid "AppStream load failed: %w"
 #~ msgstr "Не удалось загрузить AppStream: %w"

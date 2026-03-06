@@ -689,30 +689,30 @@ func (s *PackageDBService) UpdateAppStreamLinks(ctx context.Context) error {
 var SystemFilterConfig = &filter.Config{
 	Fields: func() map[string]filter.FieldConfig {
 		fields := map[string]filter.FieldConfig{
-			"name":             {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package name")}},
-			"isApp":            {DefaultOp: filter.OpEq, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL", "description": app.T_("Has AppStream data (is application)")}},
-			"section":          {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package section (e.g. Shells, Editors)")}},
-			"installedSize":    {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "INTEGER", "description": app.T_("Installed size in bytes")}},
-			"maintainer":       {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package maintainer")}},
-			"version":          {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Available version")}},
-			"versionRaw":       {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Raw version string")}},
-			"versionInstalled": {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Installed version")}},
-			"depends":          {DefaultOp: filter.OpContains, Sortable: true, AllowedOps: []filter.Op{filter.OpContains, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Package dependencies")}},
-			"provides":         {DefaultOp: filter.OpContains, Sortable: true, AllowedOps: []filter.Op{filter.OpContains, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Provided virtual packages")}},
-			"size":             {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "INTEGER", "description": app.T_("Download size in bytes")}},
-			"filename":         {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package filename")}},
-			"description":      {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package description")}},
-			"summary":          {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Short package summary")}},
-			"changelog":        {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Last changelog entry")}},
-			"installed":        {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL", "description": app.T_("Installation status")}},
-			"typePackage": {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{
+			"name":             {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Package name"}},
+			"isApp":            {DefaultOp: filter.OpEq, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe}, Extra: map[string]any{"type": "BOOL", "description": "Has AppStream data (is application)"}},
+			"section":          {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Package section (e.g. Shells, Editors)"}},
+			"installedSize":    {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpGt, filter.OpGte, filter.OpLt, filter.OpLte}, Extra: map[string]any{"type": "INTEGER", "description": "Installed size in bytes"}},
+			"maintainer":       {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Package maintainer"}},
+			"version":          {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Available version"}},
+			"versionRaw":       {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Raw version string"}},
+			"versionInstalled": {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Installed version"}},
+			"depends":          {DefaultOp: filter.OpContains, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike, filter.OpContains}, Extra: map[string]any{"type": "STRING", "description": "Package dependencies"}},
+			"provides":         {DefaultOp: filter.OpContains, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike, filter.OpContains}, Extra: map[string]any{"type": "STRING", "description": "Provided virtual packages"}},
+			"size":             {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpGt, filter.OpGte, filter.OpLt, filter.OpLte}, Extra: map[string]any{"type": "INTEGER", "description": "Download size in bytes"}},
+			"filename":         {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Package filename"}},
+			"description":      {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Package description"}},
+			"summary":          {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Short package summary"}},
+			"changelog":        {DefaultOp: filter.OpLike, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": "Last changelog entry"}},
+			"installed":        {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe}, Extra: map[string]any{"type": "BOOL", "description": "Installation status"}},
+			"typePackage": {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe}, Extra: map[string]any{
 				"type":        "ENUM",
 				"description": app.T_("Package type"),
 				"info": map[PackageType]string{
 					PackageTypeSystem: "System package",
 				},
 			}},
-			"files": {DefaultOp: filter.OpContains, AllowedOps: []filter.Op{filter.OpContains, filter.OpLike}, Extra: map[string]any{"type": "STRING", "description": app.T_("Package file list")}},
+			"files": {DefaultOp: filter.OpContains, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike, filter.OpContains}, Extra: map[string]any{"type": "STRING", "description": "Package file list"}},
 		}
 		for k, v := range swcat.PrefixedFields("appStream.") {
 			fields[k] = v
