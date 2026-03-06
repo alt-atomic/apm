@@ -383,15 +383,15 @@ func getTaskText(task string) string {
 	case EventSystemUpdateAllPackagesDB:
 		return app.T_("Synchronizing database")
 	case EventSystemUpdateAppStream:
-		return app.T_("Update information about applications")
+		return app.T_("Loading application data from catalogs")
 	case EventSystemDownloadProgress:
 		return app.T_("Downloading packages")
 	case EventSystemPullImage:
 		return app.T_("Downloading image")
 	case EventAppStreamUpdate:
-		return app.T_("Updating AppStream data")
+		return app.T_("Updating application data")
 	case EventAppStreamSaveToDB:
-		return app.T_("Saving AppStream to database")
+		return app.T_("Saving application data")
 	case EventBootcLayers:
 		return app.T_("Fetching layers")
 	case EventBootcDownload:

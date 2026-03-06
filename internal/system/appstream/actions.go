@@ -17,12 +17,15 @@
 package appstream
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/reply"
 	"apm/internal/common/swcat"
 	"context"
+	"errors"
 	"fmt"
+	"syscall"
 )
 
 // Actions объединяет методы для управления AppStream данными.
@@ -50,11 +53,11 @@ func (a *Actions) Update(ctx context.Context) (*UpdateResponse, error) {
 
 	pkgMap, err := a.swCatService.Load(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("AppStream load failed: %w"), err)
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, fmt.Errorf(app.T_("Failed to load application data: %w"), err))
 	}
 
 	if err = a.dbService.SaveComponentsToDB(ctx, pkgMap); err != nil {
-		return nil, fmt.Errorf(app.T_("Failed to save AppStream to database: %w"), err)
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, fmt.Errorf(app.T_("Failed to save application data to database: %w"), err))
 	}
 
 	if err = a.pkgDBService.UpdateAppStreamLinks(ctx); err != nil {
@@ -62,24 +65,37 @@ func (a *Actions) Update(ctx context.Context) (*UpdateResponse, error) {
 	}
 
 	return &UpdateResponse{
-		Message: app.T_("AppStream data updated successfully"),
+		Message: app.T_("Application data updated successfully"),
 		Count:   len(pkgMap),
 	}, nil
 }
 
+// validateDB проверяет наличие данных AppStream в БД
+func (a *Actions) validateDB(ctx context.Context) error {
+	if err := a.dbService.DatabaseExist(ctx); err != nil {
+		if syscall.Geteuid() != 0 {
+			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+		}
+		if _, updateErr := a.Update(ctx); updateErr != nil {
+			return updateErr
+		}
+	}
+	return nil
+}
+
 // Info возвращает AppStream данные для конкретного пакета.
 func (a *Actions) Info(ctx context.Context, pkgname string) (*InfoResponse, error) {
-	if err := a.dbService.DatabaseExist(ctx); err != nil {
+	if err := a.validateDB(ctx); err != nil {
 		return nil, err
 	}
 
 	components, err := a.dbService.GetByPkgName(ctx, pkgname)
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("AppStream data not found for package: %s"), pkgname)
+		return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf(app.T_("Application data not found for package: %s"), pkgname))
 	}
 
 	return &InfoResponse{
-		Message:    fmt.Sprintf(app.T_("AppStream info for %s"), pkgname),
+		Message:    fmt.Sprintf(app.T_("Application info for %s"), pkgname),
 		PkgName:    pkgname,
 		Components: components,
 	}, nil
@@ -87,18 +103,18 @@ func (a *Actions) Info(ctx context.Context, pkgname string) (*InfoResponse, erro
 
 // List возвращает список AppStream компонентов с фильтрацией и пагинацией.
 func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, error) {
-	if err := a.dbService.DatabaseExist(ctx); err != nil {
+	if err := a.validateDB(ctx); err != nil {
 		return nil, err
 	}
 
 	totalCount, err := a.dbService.CountComponents(ctx, params.Filters)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
 	components, err := a.dbService.QueryComponents(ctx, params.Filters, params.Sort, params.Order, params.Limit, params.Offset)
 	if err != nil {
-		return nil, err
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
 	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(components)), len(components))
