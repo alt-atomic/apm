@@ -5,10 +5,15 @@
 ### В контейнере
 
 ```bash
-Просто войти в контейнер
+# Тест для distrobox, требует обычного пользователя (не root) и сам distrobox
+go test -tags distrobox ./tests/integration/distrobox/...
+
+# Просто войти в контейнер
 ./scripts/test-container.sh exec
-Запустить интеграционные тесты
+
+# Запустить интеграционные тесты
 ./scripts/test-container.sh integration 
-Запустить все тесты
+
+# Запустить все тесты
 ./scripts/test-container.sh all
 ```
