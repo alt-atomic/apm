@@ -18,8 +18,10 @@ package system
 
 import (
 	"apm/internal/common/app"
+	_package "apm/internal/common/apt/package"
 	"apm/internal/common/reply"
 	"apm/internal/common/wrapper"
+	"apm/internal/system/appstream"
 	"context"
 	"fmt"
 	"strings"
@@ -406,6 +408,11 @@ func CommandList(ctx context.Context) *cli.Command {
 		{
 			Name:  "list",
 			Usage: app.T_("Building a query to get a list of packages"),
+			Description: app.T_("Filtering for the list method:") + "\n" +
+				app.T_("Format: key[op]=value or key=value (uses default operator for the field)") + "\n" +
+				app.T_("Operators: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte (<=), contains") + "\n" +
+				app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n" +
+				app.T_("Examples: --filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education"),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "sort",
@@ -428,7 +435,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 				&cli.StringSliceFlag{
 					Name:  "filter",
-					Usage: app.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
+					Usage: app.T_("Filter in the format key[op]=value or key=value"),
 				},
 				&cli.BoolFlag{
 					Name:  "force-update",
@@ -442,12 +449,17 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				filters, err := _package.SystemFilterConfig.Parse(cmd.StringSlice("filter"))
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				}
+
 				params := ListParams{
 					Sort:        cmd.String("sort"),
 					Order:       cmd.String("order"),
 					Offset:      cmd.Int("offset"),
 					Limit:       cmd.Int("limit"),
-					Filters:     cmd.StringSlice("filter"),
+					Filters:     filters,
 					ForceUpdate: cmd.Bool("force-update"),
 				}
 
@@ -461,6 +473,13 @@ func CommandList(ctx context.Context) *cli.Command {
 					"totalCount": resp.TotalCount,
 				}))
 			}),
+		},
+		{
+			Name:     "appstream",
+			Usage:    app.T_("AppStream component management"),
+			Aliases:  []string{"as"},
+			Category: app.T_("AppStream"),
+			Commands: appstream.CommandList(ctx),
 		},
 		{
 			Name:     "image",

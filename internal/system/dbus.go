@@ -19,9 +19,13 @@ package system
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build"
+	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/common/swcat"
+	"apm/internal/system/appstream"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -31,14 +35,20 @@ import (
 
 // DBusWrapper предоставляет обёртку для системных действий, предназначенную для экспорта через DBus.
 type DBusWrapper struct {
-	conn    *dbus.Conn
-	actions *Actions
-	ctx     context.Context
+	conn             *dbus.Conn
+	actions          *Actions
+	appstreamActions *appstream.Actions
+	ctx              context.Context
 }
 
 // NewDBusWrapper создаёт новую обёртку над actions
 func NewDBusWrapper(a *Actions, c *dbus.Conn, ctx context.Context) *DBusWrapper {
-	return &DBusWrapper{actions: a, conn: c, ctx: ctx}
+	return &DBusWrapper{
+		actions:          a,
+		appstreamActions: appstream.NewActions(a.appConfig),
+		conn:             c,
+		ctx:              ctx,
+	}
 }
 
 // checkManagePermission проверяет права org.altlinux.APM.manage
@@ -188,18 +198,31 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 	return string(data), nil
 }
 
-// List выполняет продвинутый поиск пакетов по фильтру.
-func (w *DBusWrapper) List(sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
+// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON - это JSON-строка вида [{"field":"name","op":"like","value":"fire"}]
+func (w *DBusWrapper) List(sort string, order string, limit int, offset int, filtersJSON string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
 		limit = 10
 	}
+
+	var filters []filter.Filter
+	if filtersJSON != "" {
+		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
+			return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
+		}
+	}
+
+	validated, err := _package.SystemFilterConfig.Validate(filters)
+	if err != nil {
+		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
+	}
+
 	params := ListParams{
 		Sort:        sort,
 		Order:       order,
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     filters,
+		Filters:     validated,
 		ForceUpdate: forceUpdate,
 	}
 
@@ -407,10 +430,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 }
 
 // Search выполняет простой поиск пакетов.
-func (w *DBusWrapper) Search(sender dbus.Sender, packageName string, transaction string, installed bool) (string, *dbus.Error) {
-	if err := w.checkManagePermission(sender); err != nil {
-		return "", err
-	}
+func (w *DBusWrapper) Search(packageName string, transaction string, installed bool) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Search(ctx, packageName, installed)
 	if err != nil {
@@ -542,6 +562,112 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 // ImageGetConfig возвращает текущую конфигурацию image.yml.
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig(w.ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// AppStreamUpdate загружает и сохраняет AppStream данные.
+func (w *DBusWrapper) AppStreamUpdate(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
+	}
+
+	if transaction == "" {
+		transaction = helper.GenerateTransactionID()
+	}
+
+	if background {
+		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+		go func() {
+			resp, err := w.appstreamActions.Update(ctx)
+			reply.SendTaskResult(ctx, reply.EventAppStreamUpdate, resp, err)
+		}()
+
+		bgResp := BackgroundTaskResponse{
+			Message:     app.T_("Task started in background"),
+			Transaction: transaction,
+		}
+		data, jerr := json.Marshal(reply.OK(bgResp))
+		if jerr != nil {
+			return "", dbus.MakeFailedError(jerr)
+		}
+		return string(data), nil
+	}
+
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.appstreamActions.Update(ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// AppStreamInfo возвращает AppStream данные для конкретного пакета.
+func (w *DBusWrapper) AppStreamInfo(pkgname, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.appstreamActions.Info(ctx, pkgname)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// AppStreamList возвращает список AppStream компонентов с фильтрами.
+func (w *DBusWrapper) AppStreamList(sort, order string, limit, offset int, filtersJSON, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	if limit <= 0 {
+		limit = 10
+	}
+
+	var filters []filter.Filter
+	if filtersJSON != "" {
+		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
+			return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
+		}
+	}
+
+	validated, err := swcat.FilterConfig.Validate(filters)
+	if err != nil {
+		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
+	}
+
+	params := appstream.ListParams{
+		Sort:    sort,
+		Order:   order,
+		Limit:   limit,
+		Offset:  offset,
+		Filters: validated,
+	}
+
+	resp, err := w.appstreamActions.List(ctx, params)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// AppStreamGetFilterFields возвращает список полей фильтрации для AppStream.
+func (w *DBusWrapper) AppStreamGetFilterFields(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.appstreamActions.GetFilterFields(ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}

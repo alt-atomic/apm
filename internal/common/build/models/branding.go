@@ -2,6 +2,7 @@ package models
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
@@ -39,8 +40,8 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 		if len(b.Subpackages) != 0 {
 			brandingSubpackages = b.Subpackages
 		} else {
-			filters := map[string]any{
-				"name": brandingPackagesPrefix,
+			filters := []filter.Filter{
+				{Field: "name", Op: filter.OpLike, Value: brandingPackagesPrefix},
 			}
 			var err error
 			packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)

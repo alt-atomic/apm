@@ -19,8 +19,8 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	"apm/internal/common/filter"
 	"apm/internal/common/icon"
-	"apm/internal/common/reply"
 	"apm/internal/distrobox/service"
 	"context"
 	"errors"
@@ -142,13 +142,13 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Container   string   `json:"container"`
-	Sort        string   `json:"sort"`
-	Order       string   `json:"order"`
-	Limit       int      `json:"limit"`
-	Offset      int      `json:"offset"`
-	Filters     []string `json:"filters"`
-	ForceUpdate bool     `json:"forceUpdate"`
+	Container   string          `json:"container"`
+	Sort        string          `json:"sort"`
+	Order       string          `json:"order"`
+	Limit       int             `json:"limit"`
+	Offset      int             `json:"offset"`
+	Filters     []filter.Filter `json:"filters"`
+	ForceUpdate bool            `json:"forceUpdate"`
 }
 
 // List возвращает список пакетов согласно заданным параметрам.
@@ -174,28 +174,8 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, e
 		Offset:      params.Offset,
 		SortField:   params.Sort,
 		SortOrder:   params.Order,
-		Filters:     make(map[string]interface{}),
+		Filters:     params.Filters,
 	}
-
-	// Формируем фильтры (map[string]interface{})
-	filters := make(map[string]interface{})
-	for _, filter := range params.Filters {
-		filter = strings.TrimSpace(filter)
-		if filter == "" {
-			continue
-		}
-		parts := strings.SplitN(filter, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-		if key != "" && value != "" {
-			filters[key] = value
-		}
-	}
-
-	builder.Filters = filters
 
 	queryResult, err := a.servicePackage.GetPackagesQuery(ctx, osInfo, builder)
 	if err != nil {
@@ -355,47 +335,9 @@ func (a *Actions) ContainerRemove(ctx context.Context, name string) (*ContainerR
 	}, nil
 }
 
-// GetFilterFields возвращает список свойств для фильтрации по названию контейнера. Метод для DBUS
-func (a *Actions) GetFilterFields(ctx context.Context, container string) (GetFilterFieldsResponse, error) {
-	osInfo, err := a.validateContainer(ctx, container)
-	if err != nil {
-		return nil, err
-	}
-
-	fieldList := service.AllowedFilterFields
-
-	var fields []FilterField
-	var manager []string
-	lowerOsName := strings.ToLower(osInfo.OS)
-	switch {
-	case strings.Contains(lowerOsName, "arch"):
-		manager = append(manager, "pacman")
-	case strings.Contains(lowerOsName, "alt"):
-		manager = append(manager, "apt-get")
-	case strings.Contains(lowerOsName, "ubuntu"):
-		manager = append(manager, "apt")
-	}
-
-	for _, field := range fieldList {
-		fieldType := "STRING"
-		if field == "installed" || field == "exporting" {
-			fieldType = "BOOL"
-		}
-
-		var choice []string
-		if field == "manager" {
-			choice = manager
-		}
-
-		fields = append(fields, FilterField{
-			Name:   field,
-			Text:   reply.TranslateKey(field),
-			Type:   fieldType,
-			Choice: choice,
-		})
-	}
-
-	return fields, nil
+// GetFilterFields возвращает список свойств для фильтрации. Метод для DBUS
+func (a *Actions) GetFilterFields(_ context.Context) (GetFilterFieldsResponse, error) {
+	return service.DistroFilterConfig.FieldsInfo(), nil
 }
 
 // validateDatabase проверяет, что таблица содержит какие-то записи

@@ -18,6 +18,7 @@ package service
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
@@ -26,9 +27,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"strings"
 
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 
 	"gorm.io/driver/sqlite"
@@ -181,41 +182,34 @@ func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerN
 }
 
 // CountTotalPackages возвращает количество записей (COUNT(*)) c учётом фильтра containerName и других полей.
-func (s *DistroDBService) CountTotalPackages(containerName string, filters map[string]interface{}) (int, error) {
+func (s *DistroDBService) CountTotalPackages(containerName string, filters []filter.Filter) (int, error) {
 	db := s.db.Model(&DBDistroPackage{})
 	if containerName != "" {
 		db = db.Where("container = ?", containerName)
 	}
 
-	db, err := s.applyFilters(db, filters)
-	if err != nil {
-		return 0, err
-	}
+	db = DistroFilterApplier.Apply(db, filters)
 
 	var total int64
-	if err = db.Count(&total).Error; err != nil {
+	if err := db.Count(&total).Error; err != nil {
 		return 0, err
 	}
 	return int(total), nil
 }
 
 // QueryPackages возвращает записи с фильтрами, сортировкой, limit/offset.
-func (s *DistroDBService) QueryPackages(containerName string, filters map[string]interface{}, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
+func (s *DistroDBService) QueryPackages(containerName string, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
 	db := s.db.Model(&DBDistroPackage{})
 
 	if containerName != "" {
 		db = db.Where("container = ?", containerName)
 	}
 
-	var err error
-	db, err = s.applyFilters(db, filters)
-	if err != nil {
-		return nil, err
-	}
+	db = DistroFilterApplier.Apply(db, filters)
 
 	if sortField != "" {
-		if !s.isAllowedField(sortField, allowedSortFields) {
-			return nil, fmt.Errorf(app.T_("Invalid sort field: %s. Available fields: %s."), sortField, strings.Join(allowedSortFields, ", "))
+		if err := DistroFilterConfig.ValidateSortField(sortField); err != nil {
+			return nil, err
 		}
 		upperOrder := strings.ToUpper(sortOrder)
 		if upperOrder != "ASC" && upperOrder != "DESC" {
@@ -232,7 +226,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters map[string
 	}
 
 	var dbPackages []DBDistroPackage
-	if err = db.Find(&dbPackages).Error; err != nil {
+	if err := db.Find(&dbPackages).Error; err != nil {
 		return nil, err
 	}
 
@@ -311,50 +305,32 @@ func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, conta
 	return nil
 }
 
-// applyFilters применяет фильтры
-func (s *DistroDBService) applyFilters(db *gorm.DB, filters map[string]interface{}) (*gorm.DB, error) {
-	for field, value := range filters {
-		if !s.isAllowedField(field, AllowedFilterFields) {
-			return nil, fmt.Errorf(app.T_("Invalid filter field: %s. Available fields: %s."), field, strings.Join(AllowedFilterFields, ", "))
-		}
-		switch field {
-		case "installed", "exporting":
-			boolVal, ok := helper.ParseBool(value)
-			if ok {
-				db = db.Where(fmt.Sprintf("%s = ?", field), boolVal)
-			}
-		default:
-			if strVal, ok := value.(string); ok {
-				db = db.Where(fmt.Sprintf("%s LIKE ?", field), "%"+strVal+"%")
-			} else {
-				db = db.Where(fmt.Sprintf("%s = ?", field), value)
-			}
-		}
+// distroBoolApplier обрабатывает булевые фильтры installed и exporting.
+func distroBoolApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
+	boolVal, ok := helper.ParseBool(f.Value)
+	if !ok {
+		return query, true
 	}
-	return db, nil
+	return query.Where(clause.Eq{Column: clause.Column{Name: f.Field}, Value: boolVal}), true
 }
 
-// Проверка, входит ли поле в список разрешённых
-func (s *DistroDBService) isAllowedField(field string, allowed []string) bool {
-	return slices.Contains(allowed, field)
+// DistroFilterConfig конфигурация фильтрации для distrobox пакетов.
+var DistroFilterConfig = &filter.Config{
+	Fields: map[string]filter.FieldConfig{
+		"name":        {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+		"version":     {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+		"description": {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+		"container":   {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+		"installed":   {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL"}},
+		"exporting":   {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL"}},
+		"manager":     {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING", "choice": []string{"apt-get", "apt", "pacman"}}},
+	},
 }
 
-var allowedSortFields = []string{
-	"name",
-	"version",
-	"description",
-	"container",
-	"installed",
-	"exporting",
-	"manager",
-}
-
-var AllowedFilterFields = []string{
-	"name",
-	"version",
-	"description",
-	"container",
-	"installed",
-	"exporting",
-	"manager",
+// DistroFilterApplier применяет фильтры к GORM-запросу для distrobox пакетов.
+var DistroFilterApplier = &filter.GormApplier{
+	CustomAppliers: map[string]filter.FieldApplier{
+		"installed": distroBoolApplier,
+		"exporting": distroBoolApplier,
+	},
 }

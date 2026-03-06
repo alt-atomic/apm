@@ -19,9 +19,13 @@ package system
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build"
+	"apm/internal/common/filter"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
+	"apm/internal/common/swcat"
+	appstream2 "apm/internal/system/appstream"
 	"context"
 	"encoding/json"
 	"errors"
@@ -30,20 +34,21 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 // HTTPWrapper предоставляет обёртку для системных действий через HTTP.
 type HTTPWrapper struct {
 	http_server.BaseHTTPWrapper
-	actions *Actions
+	actions          *Actions
+	appstreamActions *appstream2.Actions
 }
 
 // NewHTTPWrapper создаёт новую обёртку над actions
 func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTTPWrapper {
 	return &HTTPWrapper{
-		BaseHTTPWrapper: http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
-		actions:         a,
+		BaseHTTPWrapper:  http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
+		actions:          a,
+		appstreamActions: appstream2.NewActions(appConfig),
 	}
 }
 
@@ -253,28 +258,31 @@ func (w *HTTPWrapper) MultiInfo(rw http.ResponseWriter, r *http.Request) {
 
 // List возвращает список пакетов с фильтрацией.
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
+	var body ListFiltersBody
+	if r.Body != nil && r.ContentLength > 0 {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && err.Error() != "EOF" {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
+	}
+
+	validated, err := _package.SystemFilterConfig.Validate(body.Filters)
+	if err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+		return
+	}
+
 	query := r.URL.Query()
 	limit := 50
-	if l := query.Get("limit"); l != "" {
-		if v, err := strconv.Atoi(l); err == nil {
-			limit = v
+	if v := query.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
 		}
 	}
-
 	offset := 0
-	if o := query.Get("offset"); o != "" {
-		if v, err := strconv.Atoi(o); err == nil {
-			offset = v
-		}
-	}
-
-	var filters []string
-	filtersParam := query["filters"]
-	for _, f := range filtersParam {
-		if strings.Contains(f, ",") {
-			filters = append(filters, strings.Split(f, ",")...)
-		} else {
-			filters = append(filters, f)
+	if v := query.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			offset = n
 		}
 	}
 
@@ -283,11 +291,10 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		Order:       query.Get("order"),
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     filters,
+		Filters:     validated,
 		ForceUpdate: query.Get("forceUpdate") == "true",
+		Full:        query.Get("full") != "false",
 	}
-
-	full := query.Get("full") != "false"
 
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.List(ctx, params)
@@ -297,7 +304,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteJSON(rw, reply.OK(map[string]interface{}{
 		"message":    resp.Message,
-		"packages":   w.actions.FormatPackageOutput(resp.Packages, full),
+		"packages":   w.actions.FormatPackageOutput(resp.Packages, params.Full),
 		"totalCount": resp.TotalCount,
 	}))
 }
@@ -475,6 +482,95 @@ func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
+// AppStreamUpdate загружает и сохраняет AppStream данные.
+func (w *HTTPWrapper) AppStreamUpdate(rw http.ResponseWriter, r *http.Request) {
+	if w.RunBackground(rw, r, reply.EventAppStreamUpdate, func(ctx context.Context) (interface{}, error) {
+		return w.appstreamActions.Update(ctx)
+	}) {
+		return
+	}
+
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.appstreamActions.Update(ctx)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
+// AppStreamInfo возвращает AppStream данные для конкретного пакета.
+func (w *HTTPWrapper) AppStreamInfo(rw http.ResponseWriter, r *http.Request) {
+	pkgname := r.PathValue("pkgname")
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.appstreamActions.Info(ctx, pkgname)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
+// AppStreamList возвращает список AppStream компонентов.
+func (w *HTTPWrapper) AppStreamList(rw http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Filters []filter.Filter `json:"filters"`
+	}
+	if r.Body != nil && r.ContentLength > 0 {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && err.Error() != "EOF" {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
+	}
+
+	validated, err := swcat.FilterConfig.Validate(body.Filters)
+	if err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+		return
+	}
+
+	query := r.URL.Query()
+	limit := 50
+	if v := query.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
+		}
+	}
+	offset := 0
+	if v := query.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			offset = n
+		}
+	}
+
+	params := appstream2.ListParams{
+		Sort:    query.Get("sort"),
+		Order:   query.Get("order"),
+		Limit:   limit,
+		Offset:  offset,
+		Filters: validated,
+	}
+
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.appstreamActions.List(ctx, params)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
+// AppStreamGetFilterFields возвращает доступные поля фильтрации AppStream.
+func (w *HTTPWrapper) AppStreamGetFilterFields(rw http.ResponseWriter, r *http.Request) {
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.appstreamActions.GetFilterFields(ctx)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
 // GetEndpoints возвращает описания endpoints с handler
 func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 	endpoints := []http_server.Endpoint{
@@ -588,18 +684,31 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 		},
 		{
 			Handler:      w.List,
-			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/packages",
+			HTTPMethod:   "POST",
+			HTTPPath:     "/api/v1/packages/list",
+			RequestType:  reflect.TypeOf(ListFiltersBody{}),
 			ResponseType: reflect.TypeOf(ListResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить список пакетов",
-			Tags:         []string{"packages"},
+			Description: "Поиск пакетов с фильтрацией, сортировкой и пагинацией.\n\n" +
+				"**Фильтры** передаются в JSON body в массиве `filters`, каждый элемент содержит:\n" +
+				"- `field` — имя поля (например: name, section, installed, appStream.categories)\n" +
+				"- `op` — оператор: eq, ne, like, gt, gte, lt, lte, contains (если не указан — используется оператор по умолчанию для поля)\n" +
+				"- `value` — значение для сравнения\n\n" +
+				"**OR-логика**: для поиска по нескольким значениям используйте `|` в value: `\"value\": \"Games|Education\"`\n\n" +
+				"Остальные параметры (sort, order, limit, offset, full, forceUpdate) передаются через query string.\n\n" +
+				"**Пример**:\n" +
+				"```\n" +
+				"POST /api/v1/packages/list?sort=name&limit=20\n" +
+				"Body: {\"filters\": [{\"field\": \"name\", \"op\": \"like\", \"value\": \"fire\"}]}\n" +
+				"```\n\n" +
+				"Доступные поля и операторы можно получить через GET /api/v1/packages/filter-fields",
+			Tags: []string{"packages"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "sort", Type: "string", Required: false, Description: "Поле сортировки"},
-				{Name: "order", Type: "string", Required: false, Description: "Порядок сортировки (asc/desc)"},
+				{Name: "order", Type: "string", Required: false, Description: "Порядок сортировки (ASC/DESC)"},
 				{Name: "limit", Type: "integer", Required: false, Description: "Лимит записей (по умолчанию 50)"},
 				{Name: "offset", Type: "integer", Required: false, Description: "Смещение"},
-				{Name: "filters", Type: "string", Required: false, Description: "Фильтры (можно несколько)"},
 				{Name: "forceUpdate", Type: "boolean", Required: false, Description: "Принудительное обновление базы"},
 				{Name: "full", Type: "boolean", Required: false, Description: "Полный формат вывода"},
 			},
@@ -655,6 +764,54 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			},
 		},
 	}
+	endpoints = append(endpoints,
+		http_server.Endpoint{
+			Handler:      w.AppStreamUpdate,
+			HTTPMethod:   "POST",
+			HTTPPath:     "/api/v1/appstream/update",
+			ResponseType: reflect.TypeOf(appstream2.UpdateResponse{}),
+			Permission:   http_server.PermManage,
+			Summary:      "Обновить данные AppStream",
+			Tags:         []string{"appstream"},
+			QueryParams: []http_server.QueryParam{
+				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+			},
+		},
+		http_server.Endpoint{
+			Handler:      w.AppStreamInfo,
+			HTTPMethod:   "GET",
+			HTTPPath:     "/api/v1/appstream/{pkgname}",
+			ResponseType: reflect.TypeOf(appstream2.InfoResponse{}),
+			Permission:   http_server.PermRead,
+			Summary:      "Получить AppStream данные для пакета",
+			Tags:         []string{"appstream"},
+			PathParams:   []string{"pkgname"},
+		},
+		http_server.Endpoint{
+			Handler:      w.AppStreamList,
+			HTTPMethod:   "POST",
+			HTTPPath:     "/api/v1/appstream/list",
+			ResponseType: reflect.TypeOf(appstream2.ListResponse{}),
+			Permission:   http_server.PermRead,
+			Summary:      "Получить список AppStream компонентов",
+			Tags:         []string{"appstream"},
+			QueryParams: []http_server.QueryParam{
+				{Name: "sort", Type: "string", Required: false, Description: "Поле сортировки"},
+				{Name: "order", Type: "string", Required: false, Description: "Порядок сортировки (ASC/DESC)"},
+				{Name: "limit", Type: "integer", Required: false, Description: "Лимит записей (по умолчанию 50)"},
+				{Name: "offset", Type: "integer", Required: false, Description: "Смещение"},
+			},
+		},
+		http_server.Endpoint{
+			Handler:      w.AppStreamGetFilterFields,
+			HTTPMethod:   "GET",
+			HTTPPath:     "/api/v1/appstream/filter-fields",
+			ResponseType: reflect.TypeOf(appstream2.FilterFieldsAppStreamResponse{}),
+			Permission:   http_server.PermRead,
+			Summary:      "Получить доступные поля для фильтрации AppStream",
+			Tags:         []string{"appstream"},
+		},
+	)
 
 	// Image (только для atomic)
 	if isAtomic {

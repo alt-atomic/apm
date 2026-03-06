@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -108,19 +107,4 @@ func Abs(x int) int {
 	return x
 }
 
-// ClearCLIHiddenFields обнуляет поля структуры с тегом cli:"hidden".
-func ClearCLIHiddenFields(v interface{}) {
-	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
-		rv = rv.Elem()
-	}
-	if rv.Kind() != reflect.Struct {
-		return
-	}
-	rt := rv.Type()
-	for i := 0; i < rt.NumField(); i++ {
-		if rt.Field(i).Tag.Get("cli") == "hidden" {
-			rv.Field(i).Set(reflect.Zero(rt.Field(i).Type))
-		}
-	}
-}
+

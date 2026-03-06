@@ -21,6 +21,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/binding/apt"
 	libApt "apm/internal/common/binding/apt/lib"
+	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
@@ -251,14 +252,14 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelList))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelList))
 
-	filters := map[string]interface{}{
-		"typePackage": int(_package.PackageTypeSystem),
+	nameValue := "kernel-image-"
+	if flavour != "" {
+		nameValue = fmt.Sprintf("kernel-image-%s", flavour)
 	}
 
-	if flavour != "" {
-		filters["name"] = fmt.Sprintf("kernel-image-%s", flavour)
-	} else {
-		filters["name"] = "kernel-image-"
+	filters := []filter.Filter{
+		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
+		{Field: "name", Op: filter.OpLike, Value: nameValue},
 	}
 
 	// Ищем в базе данных с сортировкой по версии
@@ -463,9 +464,9 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 	ctx := context.Background()
 
 	// Поиск всех kernel-image пакетов в базе данных
-	filters := map[string]interface{}{
-		"typePackage": int(_package.PackageTypeSystem),
-		"name":        "kernel-image-",
+	filters := []filter.Filter{
+		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
+		{Field: "name", Op: filter.OpLike, Value: "kernel-image-"},
 	}
 	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil {
@@ -604,9 +605,9 @@ func (km *Manager) AutoSelectHeadersAndFirmware(ctx context.Context, kernel *Inf
 func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 	ctx := context.Background()
 
-	filters := map[string]interface{}{
-		"typePackage": int(_package.PackageTypeSystem),
-		"name":        fmt.Sprintf("kernel-image-%s", kernel.Flavour),
+	filters := []filter.Filter{
+		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
+		{Field: "name", Op: filter.OpLike, Value: fmt.Sprintf("kernel-image-%s", kernel.Flavour)},
 	}
 	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil {

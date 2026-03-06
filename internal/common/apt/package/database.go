@@ -18,9 +18,10 @@ package _package
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/appstream"
+	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/common/swcat"
 	"context"
 	"database/sql/driver"
 	"fmt"
@@ -110,26 +111,26 @@ func (t PackageType) Value() (driver.Value, error) { return int64(t), nil }
 
 // DBPackage описывает модель пакета для GORM.
 type DBPackage struct {
-	Name             string               `gorm:"column:name;primaryKey"`
-	Architecture     string               `gorm:"column:architecture"`
-	Section          string               `gorm:"column:section"`
-	InstalledSize    int                  `gorm:"column:installed_size"`
-	Maintainer       string               `gorm:"column:maintainer"`
-	Version          string               `gorm:"column:version;primaryKey"`
-	VersionRaw       string               `gorm:"column:versionRaw"`
-	VersionInstalled string               `gorm:"column:versionInstalled"`
-	Depends          string               `gorm:"column:depends"`
-	Aliases          string               `gorm:"column:aliases"`
-	Provides         string               `gorm:"column:provides"`
-	Size             int                  `gorm:"column:size"`
-	Filename         string               `gorm:"column:filename"`
-	Summary          string               `gorm:"column:summary"`
-	Description      string               `gorm:"column:description"`
-	AppStream        *appstream.Component `gorm:"column:appStream;serializer:json;type:TEXT"`
-	Changelog        string               `gorm:"column:changelog"`
-	Installed        bool                 `gorm:"column:installed"`
-	TypePackage      PackageType          `gorm:"column:typePackage"`
-	Files            string               `gorm:"column:files"`
+	Name             string      `gorm:"column:name;primaryKey"`
+	Architecture     string      `gorm:"column:architecture"`
+	Section          string      `gorm:"column:section"`
+	InstalledSize    int         `gorm:"column:installedSize"`
+	Maintainer       string      `gorm:"column:maintainer"`
+	Version          string      `gorm:"column:version;primaryKey"`
+	VersionRaw       string      `gorm:"column:versionRaw"`
+	VersionInstalled string      `gorm:"column:versionInstalled"`
+	Depends          string      `gorm:"column:depends"`
+	Aliases          string      `gorm:"column:aliases"`
+	Provides         string      `gorm:"column:provides"`
+	Size             int         `gorm:"column:size"`
+	Filename         string      `gorm:"column:filename"`
+	Summary          string      `gorm:"column:summary"`
+	Description      string      `gorm:"column:description"`
+	IDAppStream      *uint       `gorm:"column:idAppStream"`
+	Changelog        string      `gorm:"column:changelog"`
+	Installed        bool        `gorm:"column:installed"`
+	TypePackage      PackageType `gorm:"column:typePackage"`
+	Files            string      `gorm:"column:files"`
 }
 
 // TableName задаёт имя таблицы.
@@ -152,10 +153,10 @@ func (dbp DBPackage) fromDBModel() Package {
 		Filename:         dbp.Filename,
 		Summary:          dbp.Summary,
 		Description:      dbp.Description,
-		AppStream:        dbp.AppStream,
 		Changelog:        dbp.Changelog,
 		Installed:        dbp.Installed,
 		TypePackage:      int(dbp.TypePackage),
+		HasAppStream:     dbp.IDAppStream != nil,
 	}
 	if strings.TrimSpace(dbp.Aliases) != "" {
 		p.Aliases = strings.Split(dbp.Aliases, ",")
@@ -187,7 +188,6 @@ func (p Package) toDBModel() DBPackage {
 		Filename:         p.Filename,
 		Summary:          p.Summary,
 		Description:      p.Description,
-		AppStream:        p.AppStream,
 		Changelog:        p.Changelog,
 		Installed:        p.Installed,
 		TypePackage:      PackageType(p.TypePackage),
@@ -468,7 +468,7 @@ func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePat
 // QueryHostImagePackages возвращает пакеты с возможностью фильтрации и сортировки
 func (s *PackageDBService) QueryHostImagePackages(
 	ctx context.Context,
-	filters map[string]interface{},
+	filters []filter.Filter,
 	sortField, sortOrder string,
 	limit, offset int,
 ) ([]Package, error) {
@@ -479,15 +479,12 @@ func (s *PackageDBService) QueryHostImagePackages(
 
 	query := db.WithContext(ctx).Model(&DBPackage{})
 
-	// Применяем фильтры через общий метод
-	query, err = s.applyFilters(query, filters)
-	if err != nil {
-		return nil, err
-	}
+	// Применяем фильтры
+	query = SystemFilterApplier.Apply(query, filters)
 
 	if sortField != "" {
-		if !isAllowedField(sortField, allowedSortFields) {
-			return nil, fmt.Errorf(app.T_("Invalid sort field: %s. Available fields: %s"), sortField, strings.Join(allowedSortFields, ", "))
+		if err = SystemFilterConfig.ValidateSortField(sortField); err != nil {
+			return nil, err
 		}
 		order := strings.ToUpper(sortOrder)
 		if order != "ASC" && order != "DESC" {
@@ -518,18 +515,14 @@ func (s *PackageDBService) QueryHostImagePackages(
 }
 
 // CountHostImagePackages возвращает количество записей с учётом фильтров
-func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters map[string]interface{}) (int64, error) {
+func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters []filter.Filter) (int64, error) {
 	db, err := s.db()
 	if err != nil {
 		return 0, err
 	}
 
 	query := db.WithContext(ctx).Model(&DBPackage{})
-
-	query, err = s.applyFilters(query, filters)
-	if err != nil {
-		return 0, err
-	}
+	query = SystemFilterApplier.Apply(query, filters)
 
 	var totalCount int64
 	if err = query.Count(&totalCount).Error; err != nil {
@@ -539,54 +532,89 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters m
 	return totalCount, nil
 }
 
-// applyFilters применяет фильтры к запросу и возвращает модифицированный *gorm.DB.
-// Если встречается недопустимое поле, возвращается ошибка.
-func (s *PackageDBService) applyFilters(query *gorm.DB, filters map[string]interface{}) (*gorm.DB, error) {
-	for field, value := range filters {
-		if !isAllowedField(field, AllowedFilterFields) {
-			return nil, fmt.Errorf(app.T_("Invalid filter field: %s. Available fields: %s"), field, strings.Join(AllowedFilterFields, ", "))
-		}
-
-		switch field {
-		case "isApp":
-			boolVal, ok := helper.ParseBool(value)
-			if !ok {
-				continue
-			}
-			if boolVal {
-				query = query.Where("appStream IS NOT NULL AND appStream <> ''")
-			} else {
-				query = query.Where("appStream IS NULL OR appStream = ''")
-			}
-		case "installed":
-			boolVal, ok := helper.ParseBool(value)
-			if !ok {
-				continue
-			}
-			query = query.Where("installed = ?", boolVal)
-		case "typePackage":
-			query = query.Where("typePackage = ?", value)
-		case "depends":
-			if strVal, ok := value.(string); ok {
-				query = query.Where("(',' || depends || ',') LIKE ?", "%,"+strVal+",%")
-			} else {
-				query = query.Where("(',' || depends || ',') LIKE ?", fmt.Sprintf("%%,%v,%%", value))
-			}
-		case "provides":
-			if strVal, ok := value.(string); ok {
-				query = query.Where("(',' || provides || ',') LIKE ?", "%,"+strVal+",%")
-			} else {
-				query = query.Where("(',' || provides || ',') LIKE ?", fmt.Sprintf("%%,%v,%%", value))
-			}
-		default:
-			if strVal, ok := value.(string); ok {
-				query = query.Where(fmt.Sprintf("%s LIKE ?", field), "%"+strVal+"%")
-			} else {
-				query = query.Where(fmt.Sprintf("%s = ?", field), value)
-			}
-		}
+// appStreamApplier обрабатывает фильтры по полям appStream через JOIN на host_appstream_components.
+func appStreamApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
+	if !strings.HasPrefix(f.Field, "appStream.") {
+		return query, false
 	}
-	return query, nil
+
+	subField := strings.TrimPrefix(f.Field, "appStream.")
+	if !filter.IsSafeFieldName(subField) {
+		return query, false
+	}
+
+	// Сразу отсекаем пакеты без AppStream
+	query = query.Where("idAppStream IS NOT NULL")
+
+	if subField == "pkgname" {
+		colExpr, sqlOp, sqlValue := filter.ColOpToSQL("ac.pkgname", f.Op, f.Value)
+		return query.Where(
+			fmt.Sprintf(`EXISTS (
+				SELECT 1 FROM host_appstream_components ac
+				WHERE ac.id = host_image_packages.idAppStream AND %s %s
+			)`, colExpr, sqlOp),
+			sqlValue,
+		), true
+	}
+
+	if subField == "keywords" || subField == "categories" {
+		colExpr, sqlOp, sqlValue := filter.ColOpToSQL("kv.value", f.Op, f.Value)
+		return query.Where(
+			fmt.Sprintf(`EXISTS (
+				SELECT 1 FROM host_appstream_components ac,
+				json_each(ac.components) AS comp,
+				json_each(json_extract(comp.value, '$.%s')) AS kv
+				WHERE ac.id = host_image_packages.idAppStream AND %s %s
+			)`, subField, colExpr, sqlOp),
+			sqlValue,
+		), true
+	}
+
+	if subField == "name" || subField == "summary" || subField == "description" {
+		colExpr, sqlOp, sqlValue := filter.ColOpToSQL("lv.value", f.Op, f.Value)
+		return query.Where(
+			fmt.Sprintf(`EXISTS (
+				SELECT 1 FROM host_appstream_components ac,
+				json_each(ac.components) AS comp,
+				json_each(json_extract(comp.value, '$.%s')) AS lv
+				WHERE ac.id = host_image_packages.idAppStream AND %s %s
+			)`, subField, colExpr, sqlOp),
+			sqlValue,
+		), true
+	}
+
+	colExpr, sqlOp, sqlValue := filter.ColOpToSQL(
+		fmt.Sprintf("json_extract(comp.value, '$.%s')", subField), f.Op, f.Value,
+	)
+	return query.Where(
+		fmt.Sprintf(`EXISTS (
+			SELECT 1 FROM host_appstream_components ac,
+			json_each(ac.components) AS comp
+			WHERE ac.id = host_image_packages.idAppStream AND %s %s
+		)`, colExpr, sqlOp),
+		sqlValue,
+	), true
+}
+
+// isAppApplier обрабатывает специальный фильтр isApp.
+func isAppApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
+	boolVal, ok := helper.ParseBool(f.Value)
+	if !ok {
+		return query, true
+	}
+	if boolVal {
+		return query.Where("idAppStream IS NOT NULL"), true
+	}
+	return query.Where("idAppStream IS NULL"), true
+}
+
+// installedApplier обрабатывает фильтр installed с ParseBool.
+func installedApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
+	boolVal, ok := helper.ParseBool(f.Value)
+	if !ok {
+		return query, true
+	}
+	return query.Where(clause.Eq{Column: clause.Column{Name: "installed"}, Value: boolVal}), true
 }
 
 // SaveSinglePackage сохраняет один пакет в базу данных без очистки таблицы
@@ -606,7 +634,7 @@ func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) e
 			DoUpdates: clause.AssignmentColumns([]string{
 				"architecture", "section", "installed_size", "maintainer",
 				"versionRaw", "versionInstalled", "depends", "provides",
-				"size", "filename", "summary", "description", "appStream", "changelog",
+				"size", "filename", "summary", "description", "changelog",
 				"installed", "typePackage", "aliases", "files",
 			}),
 		}).
@@ -640,54 +668,64 @@ func (s *PackageDBService) PackageDatabaseExist(ctx context.Context) error {
 	return nil
 }
 
-// Вспомогательная функция для проверки разрешённых полей
-func isAllowedField(field string, allowed []string) bool {
-	for _, f := range allowed {
-		if f == field {
-			return true
-		}
+// UpdateAppStreamLinks обновляет idAppStream
+func (s *PackageDBService) UpdateAppStreamLinks(ctx context.Context) error {
+	db, err := s.db()
+	if err != nil {
+		return err
 	}
-	return false
+
+	return db.WithContext(ctx).Exec(`
+		UPDATE host_image_packages
+		SET idAppStream = (
+			SELECT id FROM host_appstream_components
+			WHERE host_appstream_components.pkgname = host_image_packages.name
+			LIMIT 1
+		)
+	`).Error
 }
 
-// Списки разрешённых полей для сортировки
-var allowedSortFields = []string{
-	"name",
-	"section",
-	"installedSize",
-	"maintainer",
-	"version",
-	"versionRaw",
-	"versionInstalled",
-	"depends",
-	"provides",
-	"size",
-	"filename",
-	"description",
-	"summary",
-	"changelog",
-	"installed",
-	"typePackage",
+// SystemFilterConfig конфигурация фильтрации для системных пакетов.
+var SystemFilterConfig = &filter.Config{
+	Fields: func() map[string]filter.FieldConfig {
+		fields := map[string]filter.FieldConfig{
+			"name":             {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"isApp":            {DefaultOp: filter.OpEq, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL"}},
+			"section":          {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"installedSize":    {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "INTEGER"}},
+			"maintainer":       {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"version":          {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"versionRaw":       {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"versionInstalled": {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"depends":          {DefaultOp: filter.OpContains, Sortable: true, AllowedOps: []filter.Op{filter.OpContains, filter.OpLike}, Extra: map[string]any{"type": "STRING"}},
+			"provides":         {DefaultOp: filter.OpContains, Sortable: true, AllowedOps: []filter.Op{filter.OpContains, filter.OpLike}, Extra: map[string]any{"type": "STRING"}},
+			"size":             {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "INTEGER"}},
+			"filename":         {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"description":      {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"summary":          {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"changelog":        {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"installed":        {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL"}},
+			"typePackage": {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{
+				"type": "ENUM",
+				"info": map[PackageType]string{
+					PackageTypeSystem: "System package",
+				},
+			}},
+			"files": {DefaultOp: filter.OpContains, AllowedOps: []filter.Op{filter.OpContains, filter.OpLike}, Extra: map[string]any{"type": "STRING"}},
+		}
+		for k, v := range swcat.PrefixedFields("appStream.") {
+			fields[k] = v
+		}
+		return fields
+	}(),
 }
 
-// AllowedFilterFields Списки разрешённых полей для фильтрации.
-var AllowedFilterFields = []string{
-	"name",
-	"isApp",
-	"section",
-	"installedSize",
-	"maintainer",
-	"version",
-	"versionRaw",
-	"versionInstalled",
-	"depends",
-	"provides",
-	"size",
-	"filename",
-	"description",
-	"summary",
-	"changelog",
-	"installed",
-	"typePackage",
-	"files",
+// SystemFilterApplier применяет фильтры к GORM-запросу для системных пакетов.
+var SystemFilterApplier = &filter.GormApplier{
+	CustomAppliers: func() map[string]filter.FieldApplier {
+		appliers := swcat.PrefixedAppliers("appStream.", appStreamApplier)
+		appliers["isApp"] = isAppApplier
+		appliers["installed"] = installedApplier
+		return appliers
+	}(),
 }

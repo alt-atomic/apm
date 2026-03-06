@@ -18,6 +18,7 @@ package service
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/filter"
 	"apm/internal/common/reply"
 	"context"
 	"errors"
@@ -60,12 +61,12 @@ type PackageQueryResult struct {
 
 // PackageQueryBuilder задаёт параметры запроса.
 type PackageQueryBuilder struct {
-	ForceUpdate bool                   // Обновление перед тем как выполнить запрос
-	Limit       int                    // Если Limit <= 0, то ограничение не применяется
-	Offset      int                    // Если Offset < 0, то считается 0
-	Filters     map[string]interface{} // фильтры вида "field": value; используется условие "="
-	SortField   string                 // Поле сортировки (например, "packageName")
-	SortOrder   string                 // "ASC" или "DESC"
+	ForceUpdate bool            // Обновление перед тем как выполнить запрос
+	Limit       int             // Если Limit <= 0, то ограничение не применяется
+	Offset      int             // Если Offset < 0, то считается 0
+	Filters     []filter.Filter // фильтры с полем, оператором и значением
+	SortField   string          // Поле сортировки (например, "packageName")
+	SortOrder   string          // "ASC" или "DESC"
 }
 
 type InfoPackageAnswer struct {

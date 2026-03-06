@@ -21,6 +21,7 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/reply"
 	"apm/internal/common/wrapper"
+	"apm/internal/distrobox/service"
 	"context"
 	"errors"
 
@@ -108,6 +109,11 @@ func CommandList(ctx context.Context) *cli.Command {
 			{
 				Name:  "list",
 				Usage: app.T_("Building query to retrieve package list"),
+				Description: app.T_("Filtering for the list method:") + "\n" +
+					app.T_("Format: key[op]=value or key=value (uses default operator for the field)") + "\n" +
+					app.T_("Operators: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte (<=), contains") + "\n" +
+					app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n" +
+					app.T_("Examples: --filter name=zip --filter name[eq]=zip --filter installed=true --filter manager[eq]=apt|pacman"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "container",
@@ -135,7 +141,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 					&cli.StringSliceFlag{
 						Name:  "filter",
-						Usage: app.T_("Filter in the format key=value. The flag can be specified multiple times, for example: --filter name=zip --filter installed=true"),
+						Usage: app.T_("Filter in the format key[op]=value or key=value"),
 					},
 					&cli.BoolFlag{
 						Name:  "force-update",
@@ -144,13 +150,18 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+					filters, err := service.DistroFilterConfig.Parse(cmd.StringSlice("filter"))
+					if err != nil {
+						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					}
+
 					params := ListParams{
 						Container:   cmd.String("container"),
 						Sort:        cmd.String("sort"),
 						Order:       cmd.String("order"),
 						Offset:      cmd.Int("offset"),
 						Limit:       cmd.Int("limit"),
-						Filters:     cmd.StringSlice("filter"),
+						Filters:     filters,
 						ForceUpdate: cmd.Bool("force-update"),
 					}
 

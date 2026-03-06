@@ -3,6 +3,7 @@ package models
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
 	"apm/internal/kernel/service"
@@ -79,7 +80,9 @@ func (b *KernelBody) Validate() error {
 }
 
 func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
-	b.Validate()
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
 
 	var shouldInstallKernel = !b.KernelInfo.IsEmpty()
 	var shouldRebuildInitrd = !b.Initrd.IsEmpty() || shouldInstallKernel
@@ -197,8 +200,8 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 				}
 
 				if !slices.Contains(themes, b.Initrd.PlymouthTheme) {
-					filters := map[string]any{
-						"name": fmt.Sprintf("plymouth-theme-%s", b.Initrd.PlymouthTheme),
+					filters := []filter.Filter{
+						{Field: "name", Op: filter.OpLike, Value: fmt.Sprintf("plymouth-theme-%s", b.Initrd.PlymouthTheme)},
 					}
 					packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 					if err != nil {
@@ -324,10 +327,10 @@ func currentKernelInfo(ctx context.Context, svc Service) (*service.Info, error) 
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
 
-	filters := map[string]any{
-		"typePackage": int(_package.PackageTypeSystem),
-		"name":        "kernel-image-",
-		"installed":   true,
+	filters := []filter.Filter{
+		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
+		{Field: "name", Op: filter.OpLike, Value: "kernel-image-"},
+		{Field: "installed", Op: filter.OpEq, Value: "true"},
 	}
 	packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil {

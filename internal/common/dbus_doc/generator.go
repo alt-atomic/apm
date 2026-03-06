@@ -403,11 +403,12 @@ func (g *Generator) generateJSONExample(responseType string) string {
 // createExampleStruct создаёт пример структуры с заполненными значениями
 func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 	if typ.Kind() == reflect.Slice {
-		if typ.Elem().Name() == "FilterField" {
+		elemType := typ.Elem()
+		if elemType.Kind() == reflect.Struct {
 			slice := reflect.MakeSlice(typ, 1, 1)
 			elem := slice.Index(0)
-			exampleField := g.createExampleStruct(typ.Elem())
-			elem.Set(reflect.ValueOf(exampleField))
+			exampleElem := g.createExampleStruct(elemType)
+			elem.Set(reflect.ValueOf(exampleElem))
 			return slice.Interface()
 		}
 		return reflect.MakeSlice(typ, 0, 0).Interface()

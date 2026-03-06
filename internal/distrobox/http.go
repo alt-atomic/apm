@@ -21,12 +21,13 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
+	"apm/internal/distrobox/service"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 // HTTPWrapper предоставляет обёртку для действий с контейнерами через HTTP.
@@ -111,29 +112,31 @@ func (w *HTTPWrapper) Search(rw http.ResponseWriter, r *http.Request) {
 
 // List возвращает список пакетов с фильтрацией.
 func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
+	var body ListFiltersBody
+	if r.Body != nil && r.ContentLength > 0 {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && err.Error() != "EOF" {
+			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+			return
+		}
+	}
+
+	validated, err := service.DistroFilterConfig.Validate(body.Filters)
+	if err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
+		return
+	}
+
 	query := r.URL.Query()
-
 	limit := 50
-	if l := query.Get("limit"); l != "" {
-		if v, err := strconv.Atoi(l); err == nil {
-			limit = v
+	if v := query.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
 		}
 	}
-
 	offset := 0
-	if o := query.Get("offset"); o != "" {
-		if v, err := strconv.Atoi(o); err == nil {
-			offset = v
-		}
-	}
-
-	var filters []string
-	filtersParam := query["filters"]
-	for _, f := range filtersParam {
-		if strings.Contains(f, ",") {
-			filters = append(filters, strings.Split(f, ",")...)
-		} else {
-			filters = append(filters, f)
+	if v := query.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			offset = n
 		}
 	}
 
@@ -143,7 +146,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		Order:       query.Get("order"),
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     filters,
+		Filters:     validated,
 		ForceUpdate: query.Get("forceUpdate") == "true",
 	}
 
@@ -244,14 +247,8 @@ func (w *HTTPWrapper) Remove(rw http.ResponseWriter, r *http.Request) {
 
 // GetFilterFields возвращает доступные поля фильтрации.
 func (w *HTTPWrapper) GetFilterFields(rw http.ResponseWriter, r *http.Request) {
-	container := r.URL.Query().Get("container")
-	if container == "" {
-		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("container is required")))
-		return
-	}
-
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.GetFilterFields(ctx, container)
+	resp, err := w.actions.GetFilterFields(ctx)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -358,19 +355,32 @@ func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 		// Пакеты - информация
 		{
 			Handler:      w.List,
-			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/distrobox/packages",
+			HTTPMethod:   "POST",
+			HTTPPath:     "/api/v1/distrobox/packages/list",
+			RequestType:  reflect.TypeOf(ListFiltersBody{}),
 			ResponseType: reflect.TypeOf(ListResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить список пакетов в контейнере",
-			Tags:         []string{"distrobox"},
+			Description: "Поиск пакетов в контейнере с фильтрацией, сортировкой и пагинацией.\n\n" +
+				"**Фильтры** передаются в JSON body в массиве `filters`, каждый элемент содержит:\n" +
+				"- `field` — имя поля (например: name, section, installed)\n" +
+				"- `op` — оператор: eq, ne, like, gt, gte, lt, lte, contains (если не указан — используется оператор по умолчанию для поля)\n" +
+				"- `value` — значение для сравнения\n\n" +
+				"**OR-логика**: для поиска по нескольким значениям используйте `|` в value: `\"value\": \"Games|Education\"`\n\n" +
+				"Остальные параметры (container, sort, order, limit, offset, forceUpdate) передаются через query string.\n\n" +
+				"**Пример**:\n" +
+				"```\n" +
+				"POST /api/v1/distrobox/packages/list?container=ubuntu&sort=name&limit=20\n" +
+				"Body: {\"filters\": [{\"field\": \"name\", \"op\": \"like\", \"value\": \"fire\"}]}\n" +
+				"```\n\n" +
+				"Доступные поля и операторы можно получить через GET /api/v1/distrobox/packages/filter-fields",
+			Tags: []string{"distrobox"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "container", Type: "string", Required: false, Description: "Имя контейнера"},
 				{Name: "sort", Type: "string", Required: false, Description: "Поле сортировки"},
-				{Name: "order", Type: "string", Required: false, Description: "Порядок сортировки (asc/desc)"},
+				{Name: "order", Type: "string", Required: false, Description: "Порядок сортировки (ASC/DESC)"},
 				{Name: "limit", Type: "integer", Required: false, Description: "Лимит записей (по умолчанию 50)"},
 				{Name: "offset", Type: "integer", Required: false, Description: "Смещение"},
-				{Name: "filters", Type: "string", Required: false, Description: "Фильтры (можно несколько)"},
 				{Name: "forceUpdate", Type: "boolean", Required: false, Description: "Принудительное обновление базы"},
 			},
 		},
@@ -421,9 +431,6 @@ func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 			Permission:   http_server.PermRead,
 			Summary:      "Получить доступные поля для фильтрации",
 			Tags:         []string{"distrobox"},
-			QueryParams: []http_server.QueryParam{
-				{Name: "container", Type: "string", Required: true, Description: "Имя контейнера"},
-			},
 		},
 
 		// Пакеты - действия

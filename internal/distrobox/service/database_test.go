@@ -20,256 +20,92 @@ import (
 	"testing"
 )
 
-// TestIsAllowedField проверяет валидацию разрешенных полей для фильтрации и сортировки
-func TestIsAllowedField(t *testing.T) {
-	// Создаем экземпляр для тестирования
-	service := &DistroDBService{}
+// TestDistroFilterConfigAllowedFields проверяет валидацию разрешённых полей для фильтрации
+func TestDistroFilterConfigAllowedFields(t *testing.T) {
+	validFields := []string{"name", "version", "description", "container", "installed", "exporting", "manager"}
+	invalidFields := []string{"invalid", "unknown", "password", "secret", "admin"}
 
-	tests := []struct {
-		name     string
-		field    string
-		allowed  []string
-		expected bool
-	}{
-		{
-			name:     "Valid field in allowed list",
-			field:    "name",
-			allowed:  []string{"name", "version", "description"},
-			expected: true,
-		},
-		{
-			name:     "Invalid field not in allowed list",
-			field:    "invalid_field",
-			allowed:  []string{"name", "version", "description"},
-			expected: false,
-		},
-		{
-			name:     "Empty field",
-			field:    "",
-			allowed:  []string{"name", "version", "description"},
-			expected: false,
-		},
-		{
-			name:     "Field with exact match",
-			field:    "version",
-			allowed:  []string{"name", "version", "description"},
-			expected: true,
-		},
-		{
-			name:     "Case sensitive field - lowercase in list",
-			field:    "Name",
-			allowed:  []string{"name", "version", "description"},
-			expected: false,
-		},
-		{
-			name:     "Case sensitive field - uppercase in list",
-			field:    "name",
-			allowed:  []string{"Name", "Version", "Description"},
-			expected: false,
-		},
-		{
-			name:     "Empty allowed list",
-			field:    "name",
-			allowed:  []string{},
-			expected: false,
-		},
-		{
-			name:     "Single item allowed list - match",
-			field:    "name",
-			allowed:  []string{"name"},
-			expected: true,
-		},
-		{
-			name:     "Single item allowed list - no match",
-			field:    "version",
-			allowed:  []string{"name"},
-			expected: false,
-		},
-		{
-			name:     "Field with spaces",
-			field:    "name ",
-			allowed:  []string{"name", "version", "description"},
-			expected: false,
-		},
-		{
-			name:     "Field with special characters",
-			field:    "name-special",
-			allowed:  []string{"name-special", "version", "description"},
-			expected: true,
-		},
-		{
-			name:     "Unicode field name",
-			field:    "имя",
-			allowed:  []string{"имя", "версия", "описание"},
-			expected: true,
-		},
+	for _, field := range validFields {
+		t.Run("Valid_"+field, func(t *testing.T) {
+			if !DistroFilterConfig.IsAllowedField(field) {
+				t.Errorf("IsAllowedField(%q) = false, want true", field)
+			}
+		})
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := service.isAllowedField(tt.field, tt.allowed)
-			if result != tt.expected {
-				t.Errorf("isAllowedField(%q, %v) = %v, want %v", tt.field, tt.allowed, result, tt.expected)
+	for _, field := range invalidFields {
+		t.Run("Invalid_"+field, func(t *testing.T) {
+			if DistroFilterConfig.IsAllowedField(field) {
+				t.Errorf("IsAllowedField(%q) = true, want false", field)
 			}
 		})
 	}
 }
 
-// TestIsAllowedFieldWithRealData проверяет работу с реальными константами из кода
-func TestIsAllowedFieldWithRealData(t *testing.T) {
-	service := &DistroDBService{}
+// TestDistroFilterConfigParse проверяет парсинг фильтров через конфигурацию
+func TestDistroFilterConfigParse(t *testing.T) {
+	t.Run("default op for name is like", func(t *testing.T) {
+		filters, err := DistroFilterConfig.Parse([]string{"name=test"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(filters) != 1 {
+			t.Fatalf("expected 1 filter, got %d", len(filters))
+		}
+		if filters[0].Op != "like" {
+			t.Errorf("expected op 'like', got %q", filters[0].Op)
+		}
+	})
 
-	// Тестируем с реальными allowedSortFields
-	validSortFields := []string{"name", "version", "description", "container", "installed", "exporting", "manager"}
-	invalidSortFields := []string{"invalid", "unknown", "password", "secret", "admin"}
+	t.Run("explicit eq for name", func(t *testing.T) {
+		filters, err := DistroFilterConfig.Parse([]string{"name[eq]=test"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filters[0].Op != "eq" {
+			t.Errorf("expected op 'eq', got %q", filters[0].Op)
+		}
+	})
 
-	for _, field := range validSortFields {
-		t.Run("ValidSort_"+field, func(t *testing.T) {
-			result := service.isAllowedField(field, allowedSortFields)
-			if !result {
-				t.Errorf("isAllowedField(%q, allowedSortFields) = false, want true", field)
-			}
-		})
-	}
+	t.Run("default op for installed is eq", func(t *testing.T) {
+		filters, err := DistroFilterConfig.Parse([]string{"installed=true"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filters[0].Op != "eq" {
+			t.Errorf("expected op 'eq', got %q", filters[0].Op)
+		}
+	})
 
-	for _, field := range invalidSortFields {
-		t.Run("InvalidSort_"+field, func(t *testing.T) {
-			result := service.isAllowedField(field, allowedSortFields)
-			if result {
-				t.Errorf("isAllowedField(%q, allowedSortFields) = true, want false", field)
-			}
-		})
-	}
+	t.Run("disallowed op for installed", func(t *testing.T) {
+		_, err := DistroFilterConfig.Parse([]string{"installed[like]=true"})
+		if err == nil {
+			t.Fatal("expected error for disallowed op on installed")
+		}
+	})
 
-	// Тестируем с реальными AllowedFilterFields
-	validFilterFields := []string{"name", "version", "description", "container", "installed", "exporting", "manager"}
-	invalidFilterFields := []string{"password", "token", "key", "private", "internal"}
-
-	for _, field := range validFilterFields {
-		t.Run("ValidFilter_"+field, func(t *testing.T) {
-			result := service.isAllowedField(field, AllowedFilterFields)
-			if !result {
-				t.Errorf("isAllowedField(%q, AllowedFilterFields) = false, want true", field)
-			}
-		})
-	}
-
-	for _, field := range invalidFilterFields {
-		t.Run("InvalidFilter_"+field, func(t *testing.T) {
-			result := service.isAllowedField(field, AllowedFilterFields)
-			if result {
-				t.Errorf("isAllowedField(%q, AllowedFilterFields) = true, want false", field)
-			}
-		})
-	}
+	t.Run("unknown field", func(t *testing.T) {
+		_, err := DistroFilterConfig.Parse([]string{"unknown=value"})
+		if err == nil {
+			t.Fatal("expected error for unknown field")
+		}
+	})
 }
 
-// TestIsAllowedFieldConsistency проверяет согласованность между allowedSortFields и AllowedFilterFields
-func TestIsAllowedFieldConsistency(t *testing.T) {
-	// Проверяем, что списки содержат одинаковые поля (в данном случае они должны быть идентичными)
-	if len(allowedSortFields) != len(AllowedFilterFields) {
-		t.Errorf("allowedSortFields and AllowedFilterFields have different lengths: %d vs %d",
-			len(allowedSortFields), len(AllowedFilterFields))
-	}
+// TestSortAndFilterFieldsConsistency проверяет, что все поля фильтрации являются сортируемыми
+func TestSortAndFilterFieldsConsistency(t *testing.T) {
+	filterFields := DistroFilterConfig.AllowedFields()
+	sortableFields := DistroFilterConfig.SortableFields()
 
-	service := &DistroDBService{}
-
-	// Проверяем, что каждое поле из allowedSortFields есть в AllowedFilterFields
-	for _, sortField := range allowedSortFields {
-		if !service.isAllowedField(sortField, AllowedFilterFields) {
-			t.Errorf("Sort field %q is not present in AllowedFilterFields", sortField)
+	for _, field := range filterFields {
+		if err := DistroFilterConfig.ValidateSortField(field); err != nil {
+			t.Errorf("Filter field %q should be sortable but is not", field)
 		}
 	}
 
-	// Проверяем, что каждое поле из AllowedFilterFields есть в allowedSortFields
-	for _, filterField := range AllowedFilterFields {
-		if !service.isAllowedField(filterField, allowedSortFields) {
-			t.Errorf("Filter field %q is not present in allowedSortFields", filterField)
+	for _, field := range sortableFields {
+		if !DistroFilterConfig.IsAllowedField(field) {
+			t.Errorf("Sortable field %q is not a valid filter field", field)
 		}
-	}
-}
-
-// TestIsAllowedFieldPerformance проверяет производительность функции на больших списках
-func TestIsAllowedFieldPerformance(t *testing.T) {
-	service := &DistroDBService{}
-
-	// Создаем большой список разрешенных полей
-	largeAllowedList := make([]string, 1000)
-	for i := 0; i < 1000; i++ {
-		largeAllowedList[i] = "field_" + string(rune(i))
-	}
-
-	testFields := []string{
-		"field_0",     // первый элемент
-		"field_500",   // средний элемент
-		"field_999",   // последний элемент
-		"nonexistent", // несуществующий элемент
-	}
-
-	for _, field := range testFields {
-		t.Run("Performance_"+field, func(t *testing.T) {
-			// Запускаем функцию много раз для проверки производительности
-			for i := 0; i < 1000; i++ {
-				service.isAllowedField(field, largeAllowedList)
-			}
-		})
-	}
-}
-
-// TestIsAllowedFieldEdgeCases проверяет граничные случаи
-func TestIsAllowedFieldEdgeCases(t *testing.T) {
-	service := &DistroDBService{}
-
-	edgeCases := []struct {
-		name     string
-		field    string
-		allowed  []string
-		expected bool
-	}{
-		{
-			name:     "Nil allowed list",
-			field:    "name",
-			allowed:  nil,
-			expected: false,
-		},
-		{
-			name:     "Very long field name",
-			field:    string(make([]rune, 1000)),
-			allowed:  []string{"name"},
-			expected: false,
-		},
-		{
-			name:     "Field with null character",
-			field:    "name\x00",
-			allowed:  []string{"name"},
-			expected: false,
-		},
-		{
-			name:     "Field with newline",
-			field:    "name\n",
-			allowed:  []string{"name"},
-			expected: false,
-		},
-		{
-			name:     "Allowed list with duplicates",
-			field:    "name",
-			allowed:  []string{"name", "name", "version"},
-			expected: true,
-		},
-		{
-			name:     "Empty strings in allowed list",
-			field:    "",
-			allowed:  []string{"", "name", "version"},
-			expected: true,
-		},
-	}
-
-	for _, tt := range edgeCases {
-		t.Run(tt.name, func(t *testing.T) {
-			result := service.isAllowedField(tt.field, tt.allowed)
-			if result != tt.expected {
-				t.Errorf("isAllowedField(%q, %v) = %v, want %v", tt.field, tt.allowed, result, tt.expected)
-			}
-		})
 	}
 }

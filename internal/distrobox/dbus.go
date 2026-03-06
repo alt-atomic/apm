@@ -19,8 +19,10 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/distrobox/service"
 	"context"
 	"encoding/json"
 
@@ -50,9 +52,9 @@ func (w *DBusWrapper) GetIconByPackage(packageName string, container string) ([]
 }
 
 // GetFilterFields возвращает список полей фильтрации для динамического построения фильтров в интерфейсе.
-func (w *DBusWrapper) GetFilterFields(container string, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) GetFilterFields(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.GetFilterFields(ctx, container)
+	resp, err := w.actions.GetFilterFields(ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
@@ -130,19 +132,32 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 	return string(data), nil
 }
 
-// List выполняет продвинутый поиск пакетов по фильтру.
-func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filters []string, forceUpdate bool, transaction string) (string, *dbus.Error) {
+// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON - это JSON-строка вида [{"field":"name","op":"like","value":"fire"}]
+func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filtersJSON string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
 		limit = 50
 	}
+
+	var filters []filter.Filter
+	if filtersJSON != "" {
+		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
+			return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
+		}
+	}
+
+	validated, err := service.DistroFilterConfig.Validate(filters)
+	if err != nil {
+		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
+	}
+
 	params := ListParams{
 		Container:   container,
 		Sort:        sort,
 		Order:       order,
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     filters,
+		Filters:     validated,
 		ForceUpdate: forceUpdate,
 	}
 

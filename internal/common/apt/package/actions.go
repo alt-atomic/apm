@@ -18,12 +18,12 @@ package _package
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/appstream"
 	aptParser "apm/internal/common/apt"
 	aptBinding "apm/internal/common/binding/apt"
 	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/common/swcat"
 	"context"
 	"errors"
 	"fmt"
@@ -34,7 +34,6 @@ import (
 
 type Actions struct {
 	appConfig          *app.Config
-	appStream          *appstream.SwCatService
 	serviceAptDatabase *PackageDBService
 	serviceAptBinding  *aptBinding.Actions
 }
@@ -42,7 +41,6 @@ type Actions struct {
 func NewActions(serviceAptDatabase *PackageDBService, appConfig *app.Config) *Actions {
 	return &Actions{
 		appConfig:          appConfig,
-		appStream:          appstream.NewSwCatService("/usr/share/swcatalog/xml"),
 		serviceAptDatabase: serviceAptDatabase,
 		serviceAptBinding:  aptBinding.NewActions(),
 	}
@@ -50,26 +48,27 @@ func NewActions(serviceAptDatabase *PackageDBService, appConfig *app.Config) *Ac
 
 // Package описывает структуру для хранения информации о пакете.
 type Package struct {
-	Name             string               `json:"name"`
-	Architecture     string               `json:"architecture"`
-	Section          string               `json:"section"`
-	InstalledSize    int                  `json:"installedSize"`
-	Maintainer       string               `json:"maintainer"`
-	Version          string               `json:"version"`
-	VersionRaw       string               `json:"versionRaw"`
-	VersionInstalled string               `json:"versionInstalled"`
-	Depends          []string             `json:"depends"`
-	Aliases          []string             `json:"aliases"`
-	Provides         []string             `json:"provides"`
-	Size             int                  `json:"size"`
-	Filename         string               `json:"filename"`
-	Summary          string               `json:"summary"`
-	Description      string               `json:"description"`
-	AppStream        *appstream.Component `json:"appStream" cli:"hidden"`
-	Changelog        string               `json:"lastChangelog"`
-	Installed        bool                 `json:"installed"`
-	TypePackage      int                  `json:"typePackage"`
-	Files            []string             `json:"files"`
+	Name             string            `json:"name"`
+	Architecture     string            `json:"architecture"`
+	Section          string            `json:"section"`
+	InstalledSize    int               `json:"installedSize"`
+	Maintainer       string            `json:"maintainer"`
+	Version          string            `json:"version"`
+	VersionRaw       string            `json:"versionRaw"`
+	VersionInstalled string            `json:"versionInstalled"`
+	Depends          []string          `json:"depends"`
+	Aliases          []string          `json:"aliases"`
+	Provides         []string          `json:"provides"`
+	Size             int               `json:"size"`
+	Filename         string            `json:"filename"`
+	Summary          string            `json:"summary"`
+	Description      string            `json:"description"`
+	AppStream        []swcat.Component `json:"appStream,omitempty"`
+	HasAppStream     bool              `json:"-"`
+	Changelog        string            `json:"lastChangelog"`
+	Installed        bool              `json:"installed"`
+	TypePackage      int               `json:"typePackage"`
+	Files            []string          `json:"files"`
 }
 
 type FindType uint8
@@ -521,33 +520,17 @@ func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error)
 		return nil, err
 	}
 
-	var packages []Package
-
-	asComponents, errAS := a.appStream.Load(ctx)
-	if errAS != nil {
-		app.Log.Debugf(app.T_("AppStream load failed: %v"), errAS)
-	}
-
-	asMap := make(map[string]*appstream.Component, len(asComponents))
-	for i := range asComponents {
-		c := &asComponents[i]
-		asMap[c.PkgName] = c
-	}
-
 	aptPackages, err := a.serviceAptBinding.Search("", noLock...)
 	if err != nil {
 		return nil, err
 	}
 
-	packages = make([]Package, 0, len(aptPackages))
+	packages := make([]Package, 0, len(aptPackages))
 	for _, ap := range aptPackages {
 		packages = append(packages, convertAptPackage(&ap))
 	}
 
 	for i := range packages {
-		if comp, ok := asMap[packages[i].Name]; ok {
-			packages[i].AppStream = comp
-		}
 		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
 	}
 

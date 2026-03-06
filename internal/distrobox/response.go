@@ -16,7 +16,10 @@
 
 package distrobox
 
-import "apm/internal/distrobox/service"
+import (
+	"apm/internal/common/filter"
+	"apm/internal/distrobox/service"
+)
 
 // UpdateResponse структура ответа для Update метода
 type UpdateResponse struct {
@@ -35,6 +38,11 @@ type InfoResponse struct {
 type SearchResponse struct {
 	Message  string                `json:"message"`
 	Packages []service.PackageInfo `json:"packages"`
+}
+
+// ListFiltersBody тело запроса для List — только фильтры.
+type ListFiltersBody struct {
+	Filters []filter.Filter `json:"filters"`
 }
 
 // ListResponse структура ответа для List метода
@@ -73,16 +81,8 @@ type ContainerRemoveResponse struct {
 	ContainerInfo service.ContainerInfo `json:"containerInfo"`
 }
 
-// FilterField структура поля для фильтрации
-type FilterField struct {
-	Name   string   `json:"name"`
-	Text   string   `json:"text"`
-	Type   string   `json:"type"`
-	Choice []string `json:"choice"`
-}
-
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода
-type GetFilterFieldsResponse []FilterField
+type GetFilterFieldsResponse []filter.FieldInfo
 
 // BackgroundTaskResponse структура ответа при запуске фоновой задачи
 type BackgroundTaskResponse struct {

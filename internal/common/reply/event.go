@@ -108,6 +108,9 @@ const (
 	EventSystemInstallProgress      = "system.installProgress"
 	EventSystemPullImage            = "system.pullImage"
 
+	EventAppStreamUpdate   = "appstream.Update"
+	EventAppStreamSaveToDB = "appstream.SaveToDB"
+
 	EventBootcLayers   = "service.bootc-layers"
 	EventBootcDownload = "service.bootc-download"
 
@@ -385,6 +388,10 @@ func getTaskText(task string) string {
 		return app.T_("Downloading packages")
 	case EventSystemPullImage:
 		return app.T_("Downloading image")
+	case EventAppStreamUpdate:
+		return app.T_("Updating AppStream data")
+	case EventAppStreamSaveToDB:
+		return app.T_("Saving AppStream to database")
 	case EventBootcLayers:
 		return app.T_("Fetching layers")
 	case EventBootcDownload:

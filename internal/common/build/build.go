@@ -22,6 +22,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/common_types"
 	"apm/internal/common/build/core"
+	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
 	"apm/internal/kernel/service"
 	_repo_service "apm/internal/repo/service"
@@ -171,15 +172,15 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	return outputModule, nil
 }
 
-func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters map[string]any, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
+func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
 	return cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, sortField, sortOrder, limit, offset)
 }
 
 func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error) {
 	packageInfo, err := cfgService.serviceDBService.GetPackageByName(ctx, packageName)
 	if err != nil {
-		filters := map[string]interface{}{
-			"provides": packageName,
+		filters := []filter.Filter{
+			{Field: "provides", Op: filter.OpContains, Value: packageName},
 		}
 
 		alternativePackages, errFind := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "", "", 5, 0)

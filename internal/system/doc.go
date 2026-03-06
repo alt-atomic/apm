@@ -19,8 +19,10 @@ package system
 import (
 	"apm/internal/common/dbus_doc"
 	"apm/internal/common/http_server"
+	"apm/internal/system/appstream"
 	"context"
 	_ "embed"
+	"reflect"
 )
 
 //go:embed dbus.go
@@ -29,6 +31,20 @@ var dbusSource string
 // getDocConfig возвращает конфигурацию документации D-Bus
 func getDocConfig() dbus_doc.Config {
 	responseTypes, methodResponses := dbus_doc.DeriveResponseTypes((*Actions)(nil))
+
+	// добавление AppStream модуля
+	asResponseTypes, _ := dbus_doc.DeriveResponseTypes((*appstream.Actions)(nil))
+	for name, typ := range asResponseTypes {
+		if name == "APIResponse" {
+			continue
+		}
+		responseTypes[name] = typ
+	}
+	methodResponses["AppStreamUpdate"] = reflect.TypeOf(appstream.UpdateResponse{}).Name()
+	methodResponses["AppStreamInfo"] = reflect.TypeOf(appstream.InfoResponse{}).Name()
+	methodResponses["AppStreamList"] = reflect.TypeOf(appstream.ListResponse{}).Name()
+	methodResponses["AppStreamGetFilterFields"] = reflect.TypeOf(appstream.FilterFieldsAppStreamResponse{}).Name()
+
 	return dbus_doc.Config{
 		ModuleName:      "System",
 		DBusInterface:   "org.altlinux.APM.system",

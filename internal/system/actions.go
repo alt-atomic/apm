@@ -23,8 +23,9 @@ import (
 	_package "apm/internal/common/apt/package"
 	_binding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
-	"apm/internal/common/helper"
+	"apm/internal/common/filter"
 	"apm/internal/common/reply"
+	"apm/internal/common/swcat"
 	_kservice "apm/internal/kernel/service"
 	reposervice "apm/internal/repo/service"
 	"apm/internal/system/dialog"
@@ -47,6 +48,7 @@ type Actions struct {
 	serviceHostDatabase    *build.HostDBService
 	serviceHostConfig      *build.HostConfigService
 	serviceTemporaryConfig *service.TemporaryConfigService
+	serviceAppStreamDB     *swcat.DBService
 }
 
 // NewActions создаёт новый экземпляр Actions.
@@ -68,6 +70,8 @@ func NewActions(appConfig *app.Config) *Actions {
 	)
 	hostAptSvc := _package.NewActions(hostPackageDBSvc, appConfig)
 
+	appStreamDBSvc := swcat.NewAppStreamDBService(appConfig.DatabaseManager)
+
 	return &Actions{
 		appConfig:              appConfig,
 		serviceHostImage:       hostImageSvc,
@@ -76,6 +80,7 @@ func NewActions(appConfig *app.Config) *Actions {
 		serviceHostDatabase:    hostDBSvc,
 		serviceHostConfig:      hostConfigSvc,
 		serviceTemporaryConfig: hostTemporarySvc,
+		serviceAppStreamDB:     appStreamDBSvc,
 	}
 }
 
@@ -593,8 +598,8 @@ func (a *Actions) Info(ctx context.Context, packageName string) (*InfoResponse, 
 
 	packageInfo, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
 	if err != nil {
-		filters := map[string]interface{}{
-			"provides": packageName,
+		filters := []filter.Filter{
+			{Field: "provides", Op: filter.OpContains, Value: packageName},
 		}
 
 		alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
@@ -618,6 +623,10 @@ func (a *Actions) Info(ctx context.Context, packageName string) (*InfoResponse, 
 			return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf(message+"%s", strings.Join(altNames, " ")))
 		}
 	}
+
+	pkgs := []_package.Package{packageInfo}
+	a.enrichWithAppStream(ctx, pkgs)
+	packageInfo = pkgs[0]
 
 	return &InfoResponse{
 		Message:     app.T_("Package found"),
@@ -667,8 +676,8 @@ func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiI
 
 	var notFound []string
 	for _, name := range missing {
-		providesPackages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, map[string]interface{}{
-			"provides": name,
+		providesPackages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, []filter.Filter{
+			{Field: "provides", Op: filter.OpContains, Value: name},
 		}, "", "", 1, 0)
 		if err != nil || len(providesPackages) == 0 {
 			notFound = append(notFound, name)
@@ -676,6 +685,8 @@ func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiI
 		}
 		packages = append(packages, providesPackages[0])
 	}
+
+	a.enrichWithAppStream(ctx, packages)
 
 	return &MultiInfoResponse{
 		Message:  fmt.Sprintf(app.T_("Found %d out of %d packages"), len(packages), len(names)),
@@ -686,13 +697,13 @@ func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiI
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Sort        string   `json:"sort"`
-	Order       string   `json:"order"`
-	Limit       int      `json:"limit"`
-	Offset      int      `json:"offset"`
-	Filters     []string `json:"filters"`
-	ForceUpdate bool     `json:"forceUpdate"`
-	Full        bool     `json:"full"`
+	Sort        string          `json:"sort"`
+	Order       string          `json:"order"`
+	Limit       int             `json:"limit"`
+	Offset      int             `json:"offset"`
+	Filters     []filter.Filter `json:"filters"`
+	ForceUpdate bool            `json:"forceUpdate"`
+	Full        bool            `json:"full"`
 }
 
 // List возвращает список пакетов
@@ -708,29 +719,12 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, e
 		return nil, err
 	}
 
-	filters := make(map[string]interface{})
-	for _, filter := range params.Filters {
-		filter = strings.TrimSpace(filter)
-		if filter == "" {
-			continue
-		}
-		parts := strings.SplitN(filter, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-		if key != "" && value != "" {
-			filters[key] = value
-		}
-	}
-
-	totalCount, err := a.serviceAptDatabase.CountHostImagePackages(ctx, filters)
+	totalCount, err := a.serviceAptDatabase.CountHostImagePackages(ctx, params.Filters)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
 
-	packages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, params.Sort, params.Order, params.Limit, params.Offset)
+	packages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, params.Filters, params.Sort, params.Order, params.Limit, params.Offset)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
 	}
@@ -738,6 +732,8 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, e
 	if len(packages) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("Nothing found")))
 	}
+
+	a.enrichWithAppStream(ctx, packages)
 
 	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
@@ -751,39 +747,10 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, e
 // GetFilterFields возвращает список свойств для фильтрации
 func (a *Actions) GetFilterFields(ctx context.Context) (GetFilterFieldsResponse, error) {
 	if err := a.validateDB(ctx, false); err != nil {
-		return nil, err // validateDB already handles its own classification
+		return nil, err
 	}
 
-	fieldList := _package.AllowedFilterFields
-
-	var fields GetFilterFieldsResponse
-
-	for _, field := range fieldList {
-		ff := FilterField{
-			Name: field,
-			Text: reply.TranslateKey(field),
-			Type: "STRING",
-		}
-
-		switch field {
-		case "size":
-			ff.Type = "INTEGER"
-		case "installedSize":
-			ff.Type = "INTEGER"
-		case "installed", "isApp":
-			ff.Type = "BOOL"
-
-		case "typePackage":
-			ff.Type = "ENUM"
-			ff.Info = map[_package.PackageType]string{
-				_package.PackageTypeSystem: app.T_("System package"),
-			}
-		}
-
-		fields = append(fields, ff)
-	}
-
-	return fields, nil
+	return _package.SystemFilterConfig.FieldsInfo(), nil
 }
 
 // Search осуществляет поиск системного пакета по названию
@@ -806,6 +773,8 @@ func (a *Actions) Search(ctx context.Context, packageName string, installed bool
 	if len(packages) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("Nothing found")))
 	}
+
+	a.enrichWithAppStream(ctx, packages)
 
 	msg := fmt.Sprintf(app.TN_("%d record found", "%d records found", len(packages)), len(packages))
 
@@ -1064,6 +1033,34 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 	return nil
 }
 
+// enrichWithAppStream подтягивает AppStream данные из отдельной таблицы в пакеты
+func (a *Actions) enrichWithAppStream(ctx context.Context, packages []_package.Package) {
+	format := a.appConfig.ConfigManager.GetConfig().Format
+	if format == app.FormatText {
+		return
+	}
+
+	names := make([]string, 0, len(packages))
+	for i := range packages {
+		if packages[i].HasAppStream {
+			names = append(names, packages[i].Name)
+		}
+	}
+	if len(names) == 0 {
+		return
+	}
+	compMap, err := a.serviceAppStreamDB.GetByPkgNames(ctx, names)
+	if err != nil {
+		app.Log.Debugf("enrichWithAppStream: %v", err)
+		return
+	}
+	for i := range packages {
+		if comps, ok := compMap[packages[i].Name]; ok {
+			packages[i].AppStream = comps
+		}
+	}
+}
+
 func (a *Actions) getImageStatus(_ context.Context) (ImageStatus, error) {
 	hostImage, err := a.serviceHostImage.GetHostImage()
 	if err != nil {
@@ -1102,17 +1099,9 @@ type ShortPackageResponse struct {
 // FormatPackageOutput принимает данные (один пакет или срез пакетов) и флаг full.
 // Если full == true, то возвращается полный вывод, иначе – сокращённый.
 func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
-	var isTextFormat bool
-	if a.appConfig != nil && a.appConfig.ConfigManager != nil {
-		isTextFormat = a.appConfig.ConfigManager.GetConfig().Format == app.FormatText
-	}
-
 	switch v := data.(type) {
 	case _package.Package:
 		if full {
-			if isTextFormat {
-				helper.ClearCLIHiddenFields(&v)
-			}
 			return v
 		}
 		return ShortPackageResponse{
@@ -1124,11 +1113,6 @@ func (a *Actions) FormatPackageOutput(data interface{}, full bool) interface{} {
 		}
 	case []_package.Package:
 		if full {
-			if isTextFormat {
-				for i := range v {
-					helper.ClearCLIHiddenFields(&v[i])
-				}
-			}
 			return v
 		}
 		shortList := make([]ShortPackageResponse, 0, len(v))

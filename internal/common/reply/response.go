@@ -325,11 +325,10 @@ func filterFields(data map[string]interface{}, fields []string) map[string]inter
 	}
 
 	filtered := make(map[string]interface{})
-	foundSimple := false
+	remainingFields := make([]string, 0)
 	for k, v := range target {
 		if simple[k] {
 			filtered[k] = v
-			foundSimple = true
 			continue
 		}
 		if children, ok := nested[k]; ok {
@@ -339,13 +338,19 @@ func filterFields(data map[string]interface{}, fields []string) map[string]inter
 		}
 	}
 
-	if !foundSimple {
+	for _, f := range fields {
+		if _, ok := filtered[f]; !ok {
+			remainingFields = append(remainingFields, f)
+		}
+	}
+
+	if len(remainingFields) > 0 {
 		for k, v := range target {
 			if arr, ok := v.([]interface{}); ok {
 				var items []interface{}
 				for _, elem := range arr {
 					if mm, ok := elem.(map[string]interface{}); ok {
-						fm := filterFields(mm, fields)
+						fm := filterFields(mm, remainingFields)
 						if len(fm) > 0 {
 							items = append(items, fm)
 						}

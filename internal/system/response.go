@@ -20,6 +20,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/build"
+	"apm/internal/common/filter"
 )
 
 // CheckResponse структура ответа для Check* методов
@@ -58,6 +59,11 @@ type MultiInfoResponse struct {
 	Message  string             `json:"message"`
 	Packages []_package.Package `json:"packages"`
 	NotFound []string           `json:"notFound,omitempty"`
+}
+
+// ListFiltersBody тело запроса для List — только фильтры.
+type ListFiltersBody struct {
+	Filters []filter.Filter `json:"filters"`
 }
 
 // ListResponse структура ответа для List метода
@@ -108,16 +114,8 @@ type ImageConfigResponse struct {
 	Config build.Config `json:"config"`
 }
 
-// FilterField структура поля для фильтрации
-type FilterField struct {
-	Name string                          `json:"name"`
-	Text string                          `json:"text"`
-	Info map[_package.PackageType]string `json:"info"`
-	Type string                          `json:"type"`
-}
-
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода
-type GetFilterFieldsResponse []FilterField
+type GetFilterFieldsResponse []filter.FieldInfo
 
 // BackgroundTaskResponse структура ответа при запуске фоновой задачи
 type BackgroundTaskResponse struct {
