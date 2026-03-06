@@ -690,19 +690,13 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			ResponseType: reflect.TypeOf(ListResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить список пакетов",
-			Description: "Поиск пакетов с фильтрацией, сортировкой и пагинацией.\n\n" +
-				"**Фильтры** передаются в JSON body в массиве `filters`, каждый элемент содержит:\n" +
-				"- `field` — имя поля (например: name, section, installed, appStream.categories)\n" +
-				"- `op` — оператор: eq, ne, like, gt, gte, lt, lte, contains (если не указан — используется оператор по умолчанию для поля)\n" +
-				"- `value` — значение для сравнения\n\n" +
-				"**OR-логика**: для поиска по нескольким значениям используйте `|` в value: `\"value\": \"Games|Education\"`\n\n" +
-				"Остальные параметры (sort, order, limit, offset, full, forceUpdate) передаются через query string.\n\n" +
-				"**Пример**:\n" +
-				"```\n" +
-				"POST /api/v1/packages/list?sort=name&limit=20\n" +
-				"Body: {\"filters\": [{\"field\": \"name\", \"op\": \"like\", \"value\": \"fire\"}]}\n" +
-				"```\n\n" +
-				"Доступные поля и операторы можно получить через GET /api/v1/packages/filter-fields",
+			Description: filter.ListEndpointDescription(
+				"Поиск пакетов",
+				"name, section, installed, appStream.categories",
+				"POST /api/v1/packages/list?sort=name&limit=20",
+				`{"filters": [{"field": "name", "op": "like", "value": "hello"}]}`,
+				"/api/v1/packages/filter-fields",
+			),
 			Tags: []string{"packages"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "sort", Type: "string", Required: false, Description: "Поле сортировки"},
@@ -791,10 +785,18 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Handler:      w.AppStreamList,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/appstream/list",
+			RequestType:  reflect.TypeOf(appstream2.ListFiltersBody{}),
 			ResponseType: reflect.TypeOf(appstream2.ListResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить список AppStream компонентов",
-			Tags:         []string{"appstream"},
+			Description: filter.ListEndpointDescription(
+				"Поиск AppStream компонентов",
+				"pkgname, components.name, components.categories",
+				"POST /api/v1/appstream/list?sort=pkgname&limit=20",
+				`{"filters": [{"field": "components.categories", "op": "eq", "value": "Game"}]}`,
+				"/api/v1/appstream/filter-fields",
+			),
+			Tags: []string{"appstream"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "sort", Type: "string", Required: false, Description: "Поле сортировки"},
 				{Name: "order", Type: "string", Required: false, Description: "Порядок сортировки (ASC/DESC)"},

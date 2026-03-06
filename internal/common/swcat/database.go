@@ -269,14 +269,14 @@ func appStreamComponentApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool)
 
 // ComponentFields определения полей фильтрации для Component (без префикса).
 var ComponentFields = map[string]filter.FieldConfig{
-	"type":            {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": "Component type (desktop-application, addon, etc.)"}},
-	"id":              {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": "Component ID (e.g. org.mozilla.firefox)"}},
-	"pkgname":         {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": "Package name inside component"}},
-	"name":            {DefaultOp: filter.OpLike, Extra: map[string]any{"type": "STRING", "description": "Application name (localized)"}},
-	"summary":         {DefaultOp: filter.OpLike, Extra: map[string]any{"type": "STRING", "description": "Short description (localized)"}},
-	"project_license": {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": "Project license (e.g. GPL-3.0)"}},
-	"categories":      {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "ARRAY", "description": "Categories (Game, Education, etc.)"}},
-	"keywords":        {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "ARRAY", "description": "Keywords for search"}},
+	"type":            {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Component type")}},
+	"id":              {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Component ID")}},
+	"pkgname":         {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Package name")}},
+	"name":            {DefaultOp: filter.OpLike, Extra: map[string]any{"type": "STRING", "description": app.T_("Application name")}},
+	"summary":         {DefaultOp: filter.OpLike, Extra: map[string]any{"type": "STRING", "description": app.T_("Short description")}},
+	"project_license": {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "STRING", "description": app.T_("Project license")}},
+	"categories":      {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "ARRAY", "description": app.T_("Categories")}},
+	"keywords":        {DefaultOp: filter.OpEq, Extra: map[string]any{"type": "ARRAY", "description": app.T_("Keywords for search")}},
 }
 
 // PrefixedFields возвращает ComponentFields с добавленным префиксом к каждому ключу.

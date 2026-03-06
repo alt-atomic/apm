@@ -50,5 +50,10 @@ type InfoResponse struct {
 	Components []swcat.Component `json:"components"`
 }
 
+// ListFiltersBody тело запроса для List — только фильтры.
+type ListFiltersBody struct {
+	Filters []filter.Filter `json:"filters"`
+}
+
 // FilterFieldsAppStreamResponse структура ответа для GetFilterFields.
 type FilterFieldsAppStreamResponse []filter.FieldInfo

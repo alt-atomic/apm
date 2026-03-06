@@ -475,10 +475,9 @@ func CommandList(ctx context.Context) *cli.Command {
 			}),
 		},
 		{
-			Name:     "appstream",
-			Usage:    app.T_("AppStream component management"),
-			Aliases:  []string{"as"},
-			Category: app.T_("AppStream"),
+			Name:     "app-stream",
+			Usage:    app.T_("Module for application information"),
+			Category: app.T_("Applications"),
 			Commands: appstream.CommandList(ctx),
 		},
 		{

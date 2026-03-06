@@ -317,13 +317,13 @@ func distroBoolApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
 // DistroFilterConfig конфигурация фильтрации для distrobox пакетов.
 var DistroFilterConfig = &filter.Config{
 	Fields: map[string]filter.FieldConfig{
-		"name":        {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
-		"version":     {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
-		"description": {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING"}},
-		"container":   {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING"}},
-		"installed":   {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL"}},
-		"exporting":   {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL"}},
-		"manager":     {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING", "choice": []string{"apt-get", "apt", "pacman"}}},
+		"name":        {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package name")}},
+		"version":     {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package version")}},
+		"description": {DefaultOp: filter.OpLike, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package description")}},
+		"container":   {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Container name")}},
+		"installed":   {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL", "description": app.T_("Installation status")}},
+		"exporting":   {DefaultOp: filter.OpEq, Sortable: true, AllowedOps: []filter.Op{filter.OpEq}, Extra: map[string]any{"type": "BOOL", "description": app.T_("Export status")}},
+		"manager":     {DefaultOp: filter.OpEq, Sortable: true, Extra: map[string]any{"type": "STRING", "description": app.T_("Package manager"), "choice": []string{"apt-get", "apt", "pacman"}}},
 	},
 }
 

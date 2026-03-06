@@ -19,6 +19,7 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	"apm/internal/common/filter"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
 	"apm/internal/distrobox/service"
@@ -361,19 +362,13 @@ func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 			ResponseType: reflect.TypeOf(ListResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить список пакетов в контейнере",
-			Description: "Поиск пакетов в контейнере с фильтрацией, сортировкой и пагинацией.\n\n" +
-				"**Фильтры** передаются в JSON body в массиве `filters`, каждый элемент содержит:\n" +
-				"- `field` — имя поля (например: name, section, installed)\n" +
-				"- `op` — оператор: eq, ne, like, gt, gte, lt, lte, contains (если не указан — используется оператор по умолчанию для поля)\n" +
-				"- `value` — значение для сравнения\n\n" +
-				"**OR-логика**: для поиска по нескольким значениям используйте `|` в value: `\"value\": \"Games|Education\"`\n\n" +
-				"Остальные параметры (container, sort, order, limit, offset, forceUpdate) передаются через query string.\n\n" +
-				"**Пример**:\n" +
-				"```\n" +
-				"POST /api/v1/distrobox/packages/list?container=ubuntu&sort=name&limit=20\n" +
-				"Body: {\"filters\": [{\"field\": \"name\", \"op\": \"like\", \"value\": \"fire\"}]}\n" +
-				"```\n\n" +
-				"Доступные поля и операторы можно получить через GET /api/v1/distrobox/packages/filter-fields",
+			Description: filter.ListEndpointDescription(
+				"Поиск пакетов в контейнере",
+				"name, section, installed",
+				"POST /api/v1/distrobox/packages/list?container=ubuntu&sort=name&limit=20",
+				`{"filters": [{"field": "name", "op": "like", "value": "hello"}]}`,
+				"/api/v1/distrobox/packages/filter-fields",
+			),
 			Tags: []string{"distrobox"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "container", Type: "string", Required: false, Description: "Имя контейнера"},

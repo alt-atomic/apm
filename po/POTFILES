@@ -1,7 +1,6 @@
 internal/common/app/app.go
 internal/common/app/database.go
 internal/common/app/dbus.go
-internal/common/appstream/swcat.go
 internal/common/app/translator.go
 internal/common/apt/errors.go
 internal/common/apt/package/actions.go
@@ -20,6 +19,7 @@ internal/common/build/models/kernel.go
 internal/common/build/models/link.go
 internal/common/build/models/repos.go
 internal/common/build/podman.go
+internal/common/filter/filter.go
 internal/common/helper/polkit.go
 internal/common/helper/text.go
 internal/common/helper/translate.go
@@ -32,6 +32,8 @@ internal/common/reply/event.go
 internal/common/reply/preloader.go
 internal/common/reply/response.go
 internal/common/reply/translate.go
+internal/common/swcat/database.go
+internal/common/swcat/swcat.go
 internal/common/wrapper/wrapper.go
 internal/distrobox/actions.go
 internal/distrobox/commands.go
@@ -50,6 +52,8 @@ internal/repo/actions.go
 internal/repo/commands.go
 internal/repo/service/repo.go
 internal/system/actions.go
+internal/system/appstream/actions.go
+internal/system/appstream/commands.go
 internal/system/commands.go
 internal/system/dbus.go
 internal/system/dialog/dialog.go

@@ -40,7 +40,7 @@ func CommandList(_ context.Context) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "update",
-			Usage: app.T_("Update AppStream data from XML catalogs"),
+			Usage: app.T_("Update applications data from XML catalogs"),
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Update(ctx)
 				if err != nil {
@@ -51,7 +51,7 @@ func CommandList(_ context.Context) []*cli.Command {
 		},
 		{
 			Name:      "info",
-			Usage:     app.T_("Show AppStream data for a package"),
+			Usage:     app.T_("Show applications data for a package"),
 			ArgsUsage: "<package_name>",
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				if cmd.Args().Len() == 0 {
@@ -66,7 +66,7 @@ func CommandList(_ context.Context) []*cli.Command {
 		},
 		{
 			Name:  "list",
-			Usage: app.T_("List AppStream components"),
+			Usage: app.T_("Building a query to get a list of components"),
 			Description: app.T_("Filtering for the list method:") + "\n" +
 				app.T_("Format: key[op]=value or key=value (uses default operator for the field)") + "\n" +
 				app.T_("Operators: eq (=), ne (<>), like (LIKE), gt (>), gte (>=), lt (<), lte (<=), contains") + "\n" +

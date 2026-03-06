@@ -304,3 +304,21 @@ func splitFilterString(s string) (field string, op Op, value string, err error) 
 
 	return field, op, value, nil
 }
+
+// ListEndpointDescription генерирует описание для списка с фильтрацией
+func ListEndpointDescription(subject, fieldsExample, exampleURL, exampleBody, filterFieldsURL string) string {
+	return fmt.Sprintf("%s с фильтрацией, сортировкой и пагинацией.\n\n"+
+		"**Фильтры** передаются в JSON body в массиве `filters`, каждый элемент содержит:\n"+
+		"- `field` — имя поля (например: %s)\n"+
+		"- `op` — оператор: eq, ne, like, gt, gte, lt, lte, contains (если не указан — используется оператор по умолчанию для поля)\n"+
+		"- `value` — значение для сравнения\n\n"+
+		"**OR-логика**: для поиска по нескольким значениям используйте `|` в value: `\"value\": \"Games|Education\"`\n\n"+
+		"Остальные параметры передаются через query string.\n\n"+
+		"**Пример**:\n"+
+		"```\n"+
+		"%s\n"+
+		"Body: %s\n"+
+		"```\n\n"+
+		"Доступные поля и операторы можно получить через GET %s",
+		subject, fieldsExample, exampleURL, exampleBody, filterFieldsURL)
+}
