@@ -226,7 +226,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				Name:     "container",
 				Usage:    app.T_("Module for working with containers"),
 				Aliases:  []string{"c"},
-				Category: app.T_("Modules"),
+				Category: app.T_("Container"),
 				Commands: []*cli.Command{
 					{
 						Name:  "list",
