@@ -19,7 +19,6 @@ package build
 import (
 	"apm/internal/common/app"
 	"apm/internal/common/build/core"
-	"apm/internal/common/version"
 	"context"
 	"errors"
 	"os"
@@ -91,7 +90,7 @@ func (s *HostConfigService) GetConfigEnvVars() (map[string]string, error) {
 		return map[string]string{}, nil
 	}
 
-	if envs, err = core.ReadAndParseConfigEnvYamlFile(s.pathImageFile, version.ParseVersion(s.hostImageService.appConfig.Version)); err != nil {
+	if envs, err = core.ReadAndParseConfigEnvYamlFile(s.pathImageFile, *s.hostImageService.appConfig.ParsedVersion); err != nil {
 		return map[string]string{}, err
 	}
 	return envs.Env, nil

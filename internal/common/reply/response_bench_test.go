@@ -2,6 +2,7 @@ package reply
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/version"
 	"fmt"
 	"testing"
 )
@@ -34,16 +35,17 @@ type stubConfigManager struct {
 	config *app.Configuration
 }
 
-func (s *stubConfigManager) GetConfig() *app.Configuration     { return s.config }
-func (s *stubConfigManager) GetColors() app.Colors             { return s.config.Colors }
-func (s *stubConfigManager) IsDevMode() bool                   { return false }
-func (s *stubConfigManager) SetFormat(string)                  {}
-func (s *stubConfigManager) SetFormatType(string)              {}
-func (s *stubConfigManager) SetFields([]string)                {}
-func (s *stubConfigManager) GetTemporaryImageFile() string     { return "" }
-func (s *stubConfigManager) GetPathImageContainerFile() string { return "" }
-func (s *stubConfigManager) GetPathImageFile() string          { return "" }
-func (s *stubConfigManager) GetResourcesDir() string           { return "" }
+func (s *stubConfigManager) GetConfig() *app.Configuration      { return s.config }
+func (s *stubConfigManager) GetColors() app.Colors              { return s.config.Colors }
+func (s *stubConfigManager) GetParsedVersion() *version.Version { return s.config.ParsedVersion }
+func (s *stubConfigManager) IsDevMode() bool                    { return false }
+func (s *stubConfigManager) SetFormat(string)                   {}
+func (s *stubConfigManager) SetFormatType(string)               {}
+func (s *stubConfigManager) SetFields([]string)                 {}
+func (s *stubConfigManager) GetTemporaryImageFile() string      { return "" }
+func (s *stubConfigManager) GetPathImageContainerFile() string  { return "" }
+func (s *stubConfigManager) GetPathImageFile() string           { return "" }
+func (s *stubConfigManager) GetResourcesDir() string            { return "" }
 
 // generateDeepData создаёт структуру с depth уровнями вложенности и width ключами на каждом уровне.
 func generateDeepData(depth, width int) map[string]interface{} {

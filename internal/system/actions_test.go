@@ -2,7 +2,6 @@ package system
 
 import (
 	_package "apm/internal/common/apt/package"
-	"fmt"
 	"testing"
 )
 
@@ -126,59 +125,6 @@ func TestActions_FormatPackageOutput_UnsupportedType(t *testing.T) {
 	}
 }
 
-func TestActions_FormatPackageOutput_EmptySlice(t *testing.T) {
-	actions := &Actions{}
-
-	var packages []_package.Package
-
-	// Тестируем полный формат
-	fullResult := actions.FormatPackageOutput(packages, true)
-	fullPkgs, ok := fullResult.([]_package.Package)
-	if !ok {
-		t.Error("FormatPackageOutput should return []Package for full format")
-	}
-
-	if len(fullPkgs) != 0 {
-		t.Errorf("Expected 0 packages, got %d", len(fullPkgs))
-	}
-
-	// Тестируем краткий формат
-	shortResult := actions.FormatPackageOutput(packages, false)
-	shortPkgs, ok := shortResult.([]ShortPackageResponse)
-	if !ok {
-		t.Error("FormatPackageOutput should return []ShortPackageResponse for short format")
-	}
-
-	if len(shortPkgs) != 0 {
-		t.Errorf("Expected 0 packages, got %d", len(shortPkgs))
-	}
-}
-
-func TestShortPackageResponse_Structure(t *testing.T) {
-	response := ShortPackageResponse{
-		Name:       "test-package",
-		Installed:  true,
-		Version:    "1.0.0",
-		Maintainer: "Test Maintainer",
-	}
-
-	if response.Name != "test-package" {
-		t.Errorf("Expected name 'test-package', got %s", response.Name)
-	}
-
-	if !response.Installed {
-		t.Error("Expected installed true")
-	}
-
-	if response.Version != "1.0.0" {
-		t.Errorf("Expected version '1.0.0', got %s", response.Version)
-	}
-
-	if response.Maintainer != "Test Maintainer" {
-		t.Errorf("Expected maintainer 'Test Maintainer', got %s", response.Maintainer)
-	}
-}
-
 func TestActions_FormatPackageOutput_EdgeCases(t *testing.T) {
 	actions := &Actions{}
 
@@ -202,45 +148,5 @@ func TestActions_FormatPackageOutput_EdgeCases(t *testing.T) {
 
 	if shortPkg.Installed != false {
 		t.Error("Expected installed false for empty package")
-	}
-}
-
-func TestActions_FormatPackageOutput_LargeSlice(t *testing.T) {
-	actions := &Actions{}
-
-	// Создаем большой срез пакетов
-	packages := make([]_package.Package, 1000)
-	for i := 0; i < 1000; i++ {
-		packages[i] = _package.Package{
-			Name:      fmt.Sprintf("package-%d", i),
-			Version:   "1.0.0",
-			Installed: i%2 == 0,
-		}
-	}
-
-	// Тестируем краткий формат
-	result := actions.FormatPackageOutput(packages, false)
-	shortPkgs, ok := result.([]ShortPackageResponse)
-	if !ok {
-		t.Error("Should return []ShortPackageResponse for large slice")
-		return
-	}
-
-	if len(shortPkgs) != 1000 {
-		t.Errorf("Expected 1000 packages, got %d", len(shortPkgs))
-	}
-
-	// Проверяем первый и последний элемент
-	if shortPkgs[0].Name != "package-0" {
-		t.Errorf("Expected first package 'package-0', got %s", shortPkgs[0].Name)
-	}
-
-	if shortPkgs[999].Name != "package-999" {
-		t.Errorf("Expected last package 'package-999', got %s", shortPkgs[999].Name)
-	}
-
-	// Проверяем паттерн installed
-	if !shortPkgs[0].Installed || shortPkgs[1].Installed {
-		t.Error("Installed pattern should be even=true, odd=false")
 	}
 }

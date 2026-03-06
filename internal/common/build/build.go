@@ -23,7 +23,6 @@ import (
 	"apm/internal/common/build/common_types"
 	"apm/internal/common/build/core"
 	"apm/internal/common/osutils"
-	"apm/internal/common/version"
 	"apm/internal/kernel/service"
 	_repo_service "apm/internal/repo/service"
 	"context"
@@ -75,7 +74,7 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	exprData := common_types.ExprData{
 		Modules: modulesMap,
 		Env:     osutils.GetEnvMap(),
-		Version: version.ParseVersion(cfgService.appConfig.ConfigManager.GetConfig().Version),
+		Version: *cfgService.appConfig.ConfigManager.GetParsedVersion(),
 	}
 
 	moduleResolvedEnvMap, err := core.ResolveExprMap(module.Env, exprData)

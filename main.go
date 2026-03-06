@@ -24,7 +24,6 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
-	"apm/internal/common/version"
 	"apm/internal/distrobox"
 	"apm/internal/kernel"
 	"apm/internal/repo"
@@ -168,7 +167,7 @@ func main() {
 	rootCommand := &cli.Command{
 		Name:    "apm",
 		Usage:   "Atomic Package Manager",
-		Version: version.ParseVersion(appConfig.ConfigManager.GetConfig().Version).Value,
+		Version: appConfig.ConfigManager.GetParsedVersion().Value,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -506,8 +505,7 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 }
 
 func printVersion(_ context.Context, _ *cli.Command) error {
-	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
-	fmt.Printf("%s version %s\n", "apm", v.Value)
+	fmt.Printf("%s version %s\n", "apm", appConfig.ConfigManager.GetParsedVersion().Value)
 	return nil
 }
 

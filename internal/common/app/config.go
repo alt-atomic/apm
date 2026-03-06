@@ -17,6 +17,7 @@
 package app
 
 import (
+	"apm/internal/common/version"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,7 @@ import (
 type Manager interface {
 	GetConfig() *Configuration
 	GetColors() Colors
+	GetParsedVersion() *version.Version
 	IsDevMode() bool
 	SetFormat(format string)
 	SetFormatType(formatType string)
@@ -98,6 +100,8 @@ type Configuration struct {
 	PathResourcesDir  string `yaml:"-"`
 	Version           string `yaml:"-"`
 
+	ParsedVersion *version.Version `yaml:"-"`
+
 	// Runtime flags
 	ExistStplr     bool     `yaml:"-"`
 	ExistDistrobox bool     `yaml:"-"`
@@ -158,6 +162,7 @@ func (cm *configManagerImpl) loadConfiguration(buildInfo BuildInfo) error {
 	}
 
 	cm.detectSystemCapabilities()
+	cm.parseVersion()
 
 	return nil
 }
@@ -238,6 +243,22 @@ func (cm *configManagerImpl) detectSystemCapabilities() {
 	cm.config.IsAtomic = fileExists("/usr/bin/bootc")
 	cm.config.ExistStplr = fileExists("/usr/bin/stplr")
 	cm.config.ExistDistrobox = fileExists("/usr/bin/distrobox")
+}
+
+// parseVersion парсит версию из конфигурации, при ошибке использует "unknown"
+func (cm *configManagerImpl) parseVersion() {
+	ver, err := version.ParseVersion(cm.config.Version)
+	if err != nil {
+		Log.Warning("Failed to parse version: ", err)
+		cm.config.ParsedVersion = &version.Version{Value: "unknown"}
+	} else {
+		cm.config.ParsedVersion = ver
+	}
+}
+
+// GetParsedVersion возвращает версию
+func (cm *configManagerImpl) GetParsedVersion() *version.Version {
+	return cm.config.ParsedVersion
 }
 
 // GetConfig возвращает конфигурацию
