@@ -685,6 +685,10 @@ func (s *PackageDBService) UpdateAppStreamLinks(ctx context.Context) error {
 			WHERE host_appstream_components.pkgname = host_image_packages.name
 			LIMIT 1
 		)
+		WHERE EXISTS (
+			SELECT 1 FROM host_appstream_components
+			WHERE host_appstream_components.pkgname = host_image_packages.name
+		)
 	`).Error
 }
 

@@ -27,6 +27,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -525,14 +526,20 @@ func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error)
 		return nil, err
 	}
 
-	packages := make([]Package, 0, len(aptPackages))
-	for _, ap := range aptPackages {
-		packages = append(packages, convertAptPackage(&ap))
+	packages := make([]Package, len(aptPackages))
+	var wg sync.WaitGroup
+	chunkSize := max((len(aptPackages)+runtime.NumCPU()-1)/runtime.NumCPU(), 1)
+	for start := 0; start < len(aptPackages); start += chunkSize {
+		wg.Add(1)
+		go func(start, end int) {
+			defer wg.Done()
+			for i := start; i < end; i++ {
+				packages[i] = convertAptPackage(&aptPackages[i])
+				packages[i].Changelog = extractLastMessage(packages[i].Changelog)
+			}
+		}(start, min(start+chunkSize, len(aptPackages)))
 	}
-
-	for i := range packages {
-		packages[i].Changelog = extractLastMessage(packages[i].Changelog)
-	}
+	wg.Wait()
 
 	//if lib.Env.ExistStplr {
 	//	packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
