@@ -106,7 +106,6 @@ func TestHTTPStatus(t *testing.T) {
 	}
 }
 
-// notFoundError реализует IsNotFound() для тестирования автоконвертации
 type notFoundError struct {
 	msg string
 }
