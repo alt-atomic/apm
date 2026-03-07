@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"sort"
 	"testing"
 )
 
@@ -156,46 +157,6 @@ func TestConfigParse(t *testing.T) {
 	})
 }
 
-func TestConfigParseWithPrefixes(t *testing.T) {
-	cfg := &Config{
-		Fields: map[string]FieldConfig{
-			"name": {DefaultOp: OpLike},
-		},
-		Prefixes: map[string]FieldConfig{
-			"app.": {DefaultOp: OpLike},
-		},
-	}
-
-	t.Run("prefix field", func(t *testing.T) {
-		filters, err := cfg.Parse([]string{"app.name=test"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if filters[0].Field != "app.name" {
-			t.Errorf("expected field %q, got %q", "app.name", filters[0].Field)
-		}
-		if filters[0].Op != OpLike {
-			t.Errorf("expected op %q, got %q", OpLike, filters[0].Op)
-		}
-	})
-
-	t.Run("prefix field with explicit op", func(t *testing.T) {
-		filters, err := cfg.Parse([]string{"app.categories[eq]=Game"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if filters[0].Op != OpEq {
-			t.Errorf("expected op %q, got %q", OpEq, filters[0].Op)
-		}
-	})
-
-	t.Run("prefix sql injection blocked", func(t *testing.T) {
-		_, err := cfg.Parse([]string{"app.'); DROP TABLE--=x"})
-		if err == nil {
-			t.Fatal("expected error for unsafe prefix field name")
-		}
-	})
-}
 
 func TestEscapeLike(t *testing.T) {
 	tests := []struct {
@@ -309,5 +270,137 @@ func TestIsSafeFieldName(t *testing.T) {
 		if IsSafeFieldName(s) {
 			t.Errorf("expected %q to be unsafe", s)
 		}
+	}
+}
+
+func TestColOpToSQL(t *testing.T) {
+	tests := []struct {
+		name     string
+		col      string
+		op       Op
+		value    string
+		wantCol  string
+		wantOp   string
+		wantVal  string
+	}{
+		{"eq", "name", OpEq, "test", "name", "= ?", "test"},
+		{"ne", "name", OpNe, "test", "name", "<> ?", "test"},
+		{"like", "name", OpLike, "test", "name", "LIKE ? ESCAPE '\\'", "%test%"},
+		{"like with special chars", "name", OpLike, "100%", "name", "LIKE ? ESCAPE '\\'", "%100\\%%"},
+		{"gt", "size", OpGt, "100", "size", "> ?", "100"},
+		{"gte", "size", OpGte, "100", "size", ">= ?", "100"},
+		{"lt", "size", OpLt, "100", "size", "< ?", "100"},
+		{"lte", "size", OpLte, "100", "size", "<= ?", "100"},
+		{"contains", "depends", OpContains, "libgtk", "(',' || depends || ',')", "LIKE ? ESCAPE '\\'", "%,libgtk,%"},
+		{"contains with underscore", "tags", OpContains, "my_tag", "(',' || tags || ',')", "LIKE ? ESCAPE '\\'", "%,my\\_tag,%"},
+		{"default fallback", "name", "unknown", "test", "name", "= ?", "test"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			col, op, val := ColOpToSQL(tt.col, tt.op, tt.value)
+			if col != tt.wantCol {
+				t.Errorf("col: got %q, want %q", col, tt.wantCol)
+			}
+			if op != tt.wantOp {
+				t.Errorf("op: got %q, want %q", op, tt.wantOp)
+			}
+			if val != tt.wantVal {
+				t.Errorf("val: got %q, want %q", val, tt.wantVal)
+			}
+		})
+	}
+}
+
+func TestConfigFieldsInfo(t *testing.T) {
+	cfg := &Config{
+		Fields: map[string]FieldConfig{
+			"name": {DefaultOp: OpLike, AllowedOps: []Op{OpEq, OpLike}, Sortable: true, Extra: map[string]any{"type": "STRING"}},
+			"size": {DefaultOp: OpEq, Sortable: true},
+		},
+	}
+
+	info := cfg.FieldsInfo()
+	if len(info) != 2 {
+		t.Fatalf("expected 2 fields, got %d", len(info))
+	}
+
+	byName := make(map[string]FieldInfo)
+	for _, fi := range info {
+		byName[fi.Name] = fi
+	}
+
+	nameInfo := byName["name"]
+	if nameInfo.DefaultOp != OpLike {
+		t.Errorf("name.DefaultOp: got %q, want %q", nameInfo.DefaultOp, OpLike)
+	}
+	if len(nameInfo.AllowedOps) != 2 {
+		t.Errorf("name.AllowedOps: got %d, want 2", len(nameInfo.AllowedOps))
+	}
+	if !nameInfo.Sortable {
+		t.Error("name should be sortable")
+	}
+	if nameInfo.Extra["type"] != "STRING" {
+		t.Errorf("name.Extra[type]: got %v, want STRING", nameInfo.Extra["type"])
+	}
+
+	sizeInfo := byName["size"]
+	if len(sizeInfo.AllowedOps) != len(AllOps) {
+		t.Errorf("size.AllowedOps should default to AllOps, got %d", len(sizeInfo.AllowedOps))
+	}
+}
+
+func TestConfigAllowedFields(t *testing.T) {
+	cfg := &Config{
+		Fields: map[string]FieldConfig{
+			"name":    {},
+			"size":    {},
+			"version": {},
+		},
+	}
+
+	fields := cfg.AllowedFields()
+	sort.Strings(fields)
+	expected := []string{"name", "size", "version"}
+	if len(fields) != len(expected) {
+		t.Fatalf("expected %d fields, got %d", len(expected), len(fields))
+	}
+	for i := range fields {
+		if fields[i] != expected[i] {
+			t.Errorf("field[%d]: got %q, want %q", i, fields[i], expected[i])
+		}
+	}
+}
+
+func TestConfigSortableFields(t *testing.T) {
+	cfg := &Config{
+		Fields: map[string]FieldConfig{
+			"name":      {Sortable: true},
+			"size":      {Sortable: true},
+			"installed": {Sortable: false},
+		},
+	}
+
+	fields := cfg.SortableFields()
+	sort.Strings(fields)
+	if len(fields) != 2 {
+		t.Fatalf("expected 2 sortable fields, got %d", len(fields))
+	}
+	expected := []string{"name", "size"}
+	for i := range fields {
+		if fields[i] != expected[i] {
+			t.Errorf("field[%d]: got %q, want %q", i, fields[i], expected[i])
+		}
+	}
+}
+
+func TestIsValidOp(t *testing.T) {
+	for _, op := range AllOps {
+		if !isValidOp(op) {
+			t.Errorf("expected %q to be valid", op)
+		}
+	}
+	if isValidOp("invalid") {
+		t.Error("expected 'invalid' to be invalid op")
 	}
 }

@@ -83,38 +83,26 @@ type FieldInfo struct {
 // Config описывает конфигурацию фильтрации для конкретного модуля
 type Config struct {
 	Fields map[string]FieldConfig
-	// Prefixes позволяет определить конфигурацию для полей с общим префиксом
-	Prefixes map[string]FieldConfig
 }
 
 // IsAllowedField проверяет, допустимо ли поле для фильтрации.
 func (c *Config) IsAllowedField(field string) bool {
-	if _, ok := c.Fields[field]; ok {
-		return true
-	}
-	for prefix := range c.Prefixes {
-		if strings.HasPrefix(field, prefix) {
-			return true
-		}
-	}
-	return false
+	_, ok := c.Fields[field]
+	return ok
 }
 
 // AllowedFields возвращает список допустимых полей.
 func (c *Config) AllowedFields() []string {
-	fields := make([]string, 0, len(c.Fields)+len(c.Prefixes))
+	fields := make([]string, 0, len(c.Fields))
 	for f := range c.Fields {
 		fields = append(fields, f)
-	}
-	for p := range c.Prefixes {
-		fields = append(fields, p+"*")
 	}
 	return fields
 }
 
 // FieldsInfo возвращает описание всех полей для API-ответа.
 func (c *Config) FieldsInfo() []FieldInfo {
-	result := make([]FieldInfo, 0, len(c.Fields)+len(c.Prefixes))
+	result := make([]FieldInfo, 0, len(c.Fields))
 	for name, fc := range c.Fields {
 		allowedOps := fc.AllowedOps
 		if allowedOps == nil {
@@ -122,19 +110,6 @@ func (c *Config) FieldsInfo() []FieldInfo {
 		}
 		result = append(result, FieldInfo{
 			Name:       name,
-			DefaultOp:  fc.DefaultOp,
-			AllowedOps: allowedOps,
-			Sortable:   fc.Sortable,
-			Extra:      fc.Extra,
-		})
-	}
-	for prefix, fc := range c.Prefixes {
-		allowedOps := fc.AllowedOps
-		if allowedOps == nil {
-			allowedOps = AllOps
-		}
-		result = append(result, FieldInfo{
-			Name:       prefix + "*",
 			DefaultOp:  fc.DefaultOp,
 			AllowedOps: allowedOps,
 			Sortable:   fc.Sortable,
@@ -167,17 +142,10 @@ func (c *Config) ValidateSortField(field string) error {
 		field, strings.Join(c.SortableFields(), ", "))
 }
 
-// getFieldConfig возвращает конфигурацию поля (из Fields или Prefixes)
+// getFieldConfig возвращает конфигурацию поля
 func (c *Config) getFieldConfig(field string) (FieldConfig, bool) {
-	if fc, ok := c.Fields[field]; ok {
-		return fc, true
-	}
-	for prefix, fc := range c.Prefixes {
-		if strings.HasPrefix(field, prefix) {
-			return fc, true
-		}
-	}
-	return FieldConfig{}, false
+	fc, ok := c.Fields[field]
+	return fc, ok
 }
 
 // isAllowedOp проверяет, допустим ли оператор для данного поля
@@ -249,7 +217,7 @@ func (c *Config) Parse(raw []string) ([]Filter, error) {
 }
 
 // OrSeparator разделитель для OR-логики в значениях фильтра.
-// Пример: "name[like]=zip|rar" → name LIKE '%zip%' OR name LIKE '%rar%'
+// Пример: "name[like]=zip|rar" = name LIKE '%zip%' OR name LIKE '%rar%'
 const OrSeparator = "|"
 
 // SplitOrValues разделяет значение

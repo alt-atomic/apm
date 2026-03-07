@@ -31,8 +31,6 @@ type FieldApplier func(query *gorm.DB, f Filter) (*gorm.DB, bool)
 type GormApplier struct {
 	// CustomAppliers кастомные обработчики для конкретных полей.
 	CustomAppliers map[string]FieldApplier
-	// PrefixAppliers кастомные обработчики для полей с общим префиксом.
-	PrefixAppliers map[string]FieldApplier
 }
 
 // Apply применяет список фильтров к GORM-запросу. Поддерживает OR через разделитель "|" в значении для всех applier-ов
@@ -69,17 +67,6 @@ func (a *GormApplier) applyOne(query *gorm.DB, f Filter) *gorm.DB {
 			q, handled := applier(query, f)
 			if handled {
 				return q
-			}
-		}
-	}
-	if a.PrefixAppliers != nil {
-		for prefix, applier := range a.PrefixAppliers {
-			if strings.HasPrefix(f.Field, prefix) {
-				q, handled := applier(query, f)
-				if handled {
-					return q
-				}
-				break
 			}
 		}
 	}
