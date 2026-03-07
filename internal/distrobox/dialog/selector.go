@@ -140,7 +140,7 @@ func (m selectorModel) View() string {
 		sb.WriteString(hintStyle.Render("    "+cancelLabel) + "\n")
 	}
 
-	sb.WriteString(hintStyle.Render("↑/↓ " + app.T_("select") + "  Enter " + app.T_("confirm") + " ESC/q " + app.T_("cancel")))
+	sb.WriteString(hintStyle.Render(app.T_("Navigation: ↑/↓ or j/k - select, Enter - confirm, Esc/q - cancel")))
 
 	return sb.String()
 }

@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-08 01:06+0600\n"
+"POT-Creation-Date: 2026-03-08 01:25+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -103,8 +103,8 @@ msgstr "Файл пакета %s не синхронизирован"
 msgid "Trivial Only specified but this is not a trivial operation"
 msgstr "Указана только тривиальная операция, но это не тривиальная операция"
 
-#: internal/common/apt/errors.go:200 internal/distrobox/dialog/selector.go:171
-#: internal/distrobox/dialog/selector.go:176
+#: internal/common/apt/errors.go:200 internal/distrobox/dialog/selector.go:170
+#: internal/distrobox/dialog/selector.go:175
 #: internal/system/dialog/dialog.go:95 internal/system/dialog/dialog.go:101
 #: internal/system/dialog/dialog_image.go:100
 #: internal/system/dialog/dialog_image.go:123
@@ -1619,12 +1619,12 @@ msgstr "Симуляция удаления пакетов"
 msgid "Progress: %s completed"
 msgstr "Прогресс: %s завершён"
 
-#: internal/common/reply/response.go:102 internal/common/reply/response.go:105
-#: internal/common/reply/response.go:112
+#: internal/common/reply/response.go:107 internal/common/reply/response.go:110
+#: internal/common/reply/response.go:117
 msgid "no"
 msgstr "нет"
 
-#: internal/common/reply/response.go:110
+#: internal/common/reply/response.go:115
 msgid "yes"
 msgstr "да"
 
@@ -2176,7 +2176,7 @@ msgstr "Пакет %s установлен"
 msgid "Package %s removed"
 msgstr "Пакет %s удалён"
 
-#: internal/distrobox/actions.go:278 internal/distrobox/dialog/selector.go:152
+#: internal/distrobox/actions.go:278 internal/distrobox/dialog/selector.go:151
 msgid "No containers found"
 msgstr "Контейнеры не найдены"
 
@@ -2334,27 +2334,19 @@ msgstr "Вызов обработчика для исполнения коман
 msgid "Remove container"
 msgstr "Удалить контейнер"
 
-#: internal/distrobox/dialog/selector.go:117
+#: internal/distrobox/dialog/selector.go:118
 msgid "Select container:"
 msgstr "Выберите контейнер:"
 
-#: internal/distrobox/dialog/selector.go:137
+#: internal/distrobox/dialog/selector.go:136
 msgid "Cancel"
 msgstr "Отмена"
 
-#: internal/distrobox/dialog/selector.go:144
-msgid "select"
-msgstr "выбор"
+#: internal/distrobox/dialog/selector.go:143
+msgid "Navigation: ↑/↓ or j/k - select, Enter - confirm, Esc/q - cancel"
+msgstr "Навигация: ↑/↓ или j/k - выбор, Enter - подтвердить, Esc/q - отмена"
 
-#: internal/distrobox/dialog/selector.go:144
-msgid "confirm"
-msgstr "подтвердить"
-
-#: internal/distrobox/dialog/selector.go:144
-msgid "cancel"
-msgstr "отмена"
-
-#: internal/distrobox/dialog/selector.go:166
+#: internal/distrobox/dialog/selector.go:165
 msgid "Error starting selector: %v"
 msgstr "Ошибка запуска селектора: %v"
 
@@ -3635,7 +3627,7 @@ msgstr ""
 "Пакет %d:"
 
 #: internal/system/dialog/dialog.go:406 internal/system/dialog/dialog.go:472
-#: internal/system/dialog/dialog.go:485
+#: internal/system/dialog/dialog.go:484
 msgid "No"
 msgstr "Нет"
 
@@ -3661,7 +3653,7 @@ msgstr "Версия в репозитории"
 msgid "System version"
 msgstr "Версия в системе"
 
-#: internal/system/dialog/dialog.go:488
+#: internal/system/dialog/dialog.go:487
 msgid "and others"
 msgstr "и другие"
 
@@ -3782,6 +3774,15 @@ msgstr "Не удалось закрыть базы данных: %s"
 #: data/apt-bridge/update-apm.lua:6
 msgid "Updating apm database"
 msgstr "Обновление базы данных apm"
+
+#~ msgid "select"
+#~ msgstr "выбор"
+
+#~ msgid "confirm"
+#~ msgstr "подтвердить"
+
+#~ msgid "cancel"
+#~ msgstr "отмена"
 
 #~ msgid "You must specify the container name"
 #~ msgstr "Необходимо указать имя контейнера"
