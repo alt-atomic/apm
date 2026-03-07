@@ -18,11 +18,13 @@ package app
 
 import (
 	"apm/internal/common/version"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
@@ -30,6 +32,8 @@ import (
 type Manager interface {
 	GetConfig() *Configuration
 	GetColors() Colors
+	SaveConfig(config *Configuration) error
+	GetConfigPath() string
 	GetParsedVersion() *version.Version
 	IsDevMode() bool
 	SetFormat(format string)
@@ -55,21 +59,26 @@ type BuildInfo struct {
 
 // Colors конфигурация цветовой схемы
 type Colors struct {
-	Enumerator     string `yaml:"enumerator"`
-	Accent         string `yaml:"accent"`
-	ItemLight      string `yaml:"itemLight"`
-	ItemDark       string `yaml:"itemDark"`
-	Success        string `yaml:"success"`
-	Error          string `yaml:"error"`
-	Delete         string `yaml:"delete"`
-	Install        string `yaml:"install"`
-	Shortcut       string `yaml:"shortcut"`
-	ScrollBar      string `yaml:"scrollBar"`
-	DialogKeyLight string `yaml:"dialogKeyLight"`
-	DialogKeyDark  string `yaml:"dialogKeyDark"`
-	ProgressStart  string `yaml:"progressStart"`
-	ProgressEnd    string `yaml:"progressEnd"`
+	Accent    string `yaml:"accent"`
+	TextLight string `yaml:"textLight"`
+	TextDark  string `yaml:"textDark"`
+
+	TreeBranch    string `yaml:"treeBranch"`
+	ResultSuccess string `yaml:"resultSuccess"`
+	ResultError   string `yaml:"resultError"`
+
+	DialogAction     string `yaml:"dialogAction"`
+	DialogDanger     string `yaml:"dialogDanger"`
+	DialogHint       string `yaml:"dialogHint"`
+	DialogScroll     string `yaml:"dialogScroll"`
+	DialogLabelLight string `yaml:"dialogLabelLight"`
+	DialogLabelDark  string `yaml:"dialogLabelDark"`
+
+	ProgressEmpty  string `yaml:"progressEmpty"`
+	ProgressFilled string `yaml:"progressFilled"`
 }
+
+const defaultConfigPath = "/etc/apm/config.yml"
 
 // Константы форматов вывода
 const (
@@ -113,13 +122,14 @@ type Configuration struct {
 
 // configManagerImpl реализация Manager
 type configManagerImpl struct {
-	config *Configuration
+	config     *Configuration
+	configPath string
 }
 
 // NewConfigManager создает новый менеджер конфигурации
 func NewConfigManager(buildInfo BuildInfo) (Manager, error) {
 	cfg := &Configuration{
-		Colors:     getDefaultColors(),
+		Colors:     GetDefaultColors(),
 		FormatType: FormatTypeTree,
 	}
 
@@ -201,8 +211,8 @@ func (cm *configManagerImpl) loadConfigFile() error {
 
 	if _, err := os.Stat("config.yml"); err == nil {
 		configPath = "config.yml"
-	} else if _, err = os.Stat("/etc/apm/config.yml"); err == nil {
-		configPath = "/etc/apm/config.yml"
+	} else if _, err = os.Stat(defaultConfigPath); err == nil {
+		configPath = defaultConfigPath
 	}
 
 	if configPath != "" {
@@ -211,6 +221,7 @@ func (cm *configManagerImpl) loadConfigFile() error {
 		}
 	}
 
+	cm.configPath = configPath
 	return nil
 }
 
@@ -271,6 +282,58 @@ func (cm *configManagerImpl) GetColors() Colors {
 	return cm.config.Colors
 }
 
+// SaveConfig сохраняет конфигурацию в файл и обновляет текущий конфиг
+func (cm *configManagerImpl) SaveConfig(config *Configuration) error {
+	configPath := cm.configPath
+	if configPath == "" {
+		configPath = defaultConfigPath
+	}
+
+	existing := make(map[string]interface{})
+	data, err := os.ReadFile(configPath)
+	if err == nil {
+		_ = goyaml.Unmarshal(data, &existing)
+	}
+
+	configData, err := goyaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	var configMap map[string]interface{}
+	if err = goyaml.Unmarshal(configData, &configMap); err != nil {
+		return fmt.Errorf("failed to unmarshal config map: %w", err)
+	}
+
+	for k, v := range configMap {
+		existing[k] = v
+	}
+
+	out, err := goyaml.Marshal(existing)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err = EnsurePath(configPath); err != nil {
+		return fmt.Errorf("failed to ensure config path: %w", err)
+	}
+
+	if err = os.WriteFile(configPath, out, 0644); err != nil {
+		return fmt.Errorf("failed to write config %s: %w", configPath, err)
+	}
+
+	cm.config.Colors = config.Colors
+	cm.config.CommandPrefix = config.CommandPrefix
+	cm.config.FormatType = config.FormatType
+	cm.configPath = configPath
+	return nil
+}
+
+// GetConfigPath возвращает путь к файлу конфигурации
+func (cm *configManagerImpl) GetConfigPath() string {
+	return cm.configPath
+}
+
 // IsDevMode возвращает флаг режима разработки
 func (cm *configManagerImpl) IsDevMode() bool {
 	return cm.config.DevMode
@@ -314,23 +377,25 @@ func (cm *configManagerImpl) SetFields(fields []string) {
 	cm.config.Fields = fields
 }
 
-// getDefaultColors возвращает цветовую схему по умолчанию
-func getDefaultColors() Colors {
+// GetDefaultColors возвращает цветовую схему по умолчанию
+func GetDefaultColors() Colors {
 	return Colors{
-		Enumerator:     "#c4c8c6",
-		Accent:         "#a2734c",
-		ItemLight:      "#171717",
-		ItemDark:       "#c4c8c6",
-		Success:        "2",
-		Error:          "9",
-		Delete:         "#a81c1f",
-		Install:        "#26a269",
-		Shortcut:       "#888888",
-		ScrollBar:      "#ff0000",
-		DialogKeyLight: "#234f55",
-		DialogKeyDark:  "#82a0a3",
-		ProgressStart:  "#c4c8c6",
-		ProgressEnd:    "#26a269",
+		Accent:        "#a2734c",
+		TextLight:     "#171717",
+		TextDark:      "#c4c8c6",
+		TreeBranch:    "#c4c8c6",
+		ResultSuccess: "2",
+		ResultError:   "9",
+
+		DialogAction:     "#26a269",
+		DialogDanger:     "#a81c1f",
+		DialogHint:       "#888888",
+		DialogScroll:     "#ff0000",
+		DialogLabelLight: "#234f55",
+		DialogLabelDark:  "#82a0a3",
+
+		ProgressEmpty:  "#c4c8c6",
+		ProgressFilled: "#26a269",
 	}
 }
 

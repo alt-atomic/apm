@@ -35,31 +35,6 @@ meson install -C build
 ./po/update_po ru
 ```
 
-## Theme settings
-```
-/etc/apm/config.yml
-colors:
-    # Main colors for output
-    enumerator: "#c4c8c6"      # Branch numbering color
-    accent: "#a2734c"          # Accent and heading color
-    itemLight: "#171717"       # Text color for light theme
-    itemDark: "#c4c8c6"        # Text color for dark theme
-    success: "2"               # Success color (green)
-    error: "9"                 # Error color (red)
-
-    # Dialog colors
-    delete: "#a81c1f"          # Delete action color
-    install: "#2bb389"         # Install action color
-    shortcut: "#888888"        # Hint and "No" state color
-    scrollBar: "#ff0000"       # Scroll indicator color
-    dialogKeyLight: "#234f55"  # Dialog key color for light theme
-    dialogKeyDark: "#82a0a3"   # Dialog key color for dark theme
-
-    # Progress bar colors
-    progressStart: "#c4c8c6"   # Start color of the progress bar gradient
-    progressEnd: "#26a269"     # End color of the progress bar gradient
-```
-
 ## Tests
 ```
 ./scripts/test-container.sh all
@@ -91,14 +66,54 @@ Options:
 ```
 
 ## Configuration file
-The config.conf file does not exist by default, but can be created at `/etc/apm/config.yml`. It can contain the following parameters in yml format:
+The config file does not exist by default, but can be created at `/etc/apm/config.yml`.
 
-* commandPrefix - prefix for launching all commands
-* environment - runtime profile. `dev` or `prod`
-* pathLogFile - path to the log file
-* pathDBSQLSystem - path to the system package database
-* pathDBSQLUser - path to the distrobox package database
-* pathImageFile - path to the image configuration file
+```yaml
+# Prefix for launching all commands
+commandPrefix: ""
+# Runtime profile: dev or prod
+environment: "prod"
+# Path to the system package database
+pathDBSQLSystem: ""
+# Path to the distrobox package database
+pathDBSQLUser: ""
+# Output format type: tree or plain
+formatType: "tree"
+
+# Color scheme
+colors:
+    # Accent and heading color
+    accent: "#a2734c"
+    # Text color for light theme
+    textLight: "#171717"
+    # Text color for dark theme
+    textDark: "#c4c8c6"
+
+    # Tree branch color
+    treeBranch: "#c4c8c6"
+    # Success result color
+    resultSuccess: "2"
+    # Error result color
+    resultError: "9"
+
+    # Dialog: positive action color (install, update)
+    dialogAction: "#26a269"
+    # Dialog: dangerous action color (remove)
+    dialogDanger: "#a81c1f"
+    # Dialog: hints and shortcuts color
+    dialogHint: "#888888"
+    # Dialog: scroll indicator color
+    dialogScroll: "#ff0000"
+    # Dialog: label color for light theme
+    dialogLabelLight: "#234f55"
+    # Dialog: label color for dark theme
+    dialogLabelDark: "#82a0a3"
+
+    # Progress bar: empty segment color
+    progressEmpty: "#c4c8c6"
+    # Progress bar: filled segment color
+    progressFilled: "#26a269"
+```
 
 ## D-Bus API
 

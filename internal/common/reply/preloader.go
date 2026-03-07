@@ -102,8 +102,8 @@ func CreateSpinner(appConfig *app.Config) {
 		colors:      colors,
 		stopCh:      make(chan struct{}),
 		doneCh:      make(chan struct{}),
-		filledStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressEnd)),
-		emptyStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressStart)),
+		filledStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressFilled)),
+		emptyStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressEmpty)),
 	}
 	activeSp = sp
 

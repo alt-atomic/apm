@@ -94,7 +94,8 @@ func GetAppConfig(ctx context.Context) *Config {
 	if cfg, ok := ctx.Value(AppConfigKey).(*Config); ok {
 		return cfg
 	}
-	panic("AppConfig not found in context")
+	Log.Fatal("App config not found in context: critical internal error")
+	return nil
 }
 
 // Config централизованный конфиг приложение

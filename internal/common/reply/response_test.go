@@ -247,7 +247,7 @@ func TestToDataMap_NilOnInvalid(t *testing.T) {
 }
 
 func TestRenderPlain_MessageFirst(t *testing.T) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message": "Package installed",
 		"name":    "vim",
@@ -264,7 +264,7 @@ func TestRenderPlain_MessageFirst(t *testing.T) {
 }
 
 func TestRenderPlain_ScalarFields(t *testing.T) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"name":    "bash",
 		"version": "5.2",
@@ -280,7 +280,7 @@ func TestRenderPlain_ScalarFields(t *testing.T) {
 }
 
 func TestRenderPlain_NestedMap(t *testing.T) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"info": map[string]interface{}{
 			"name":    "gcc",
@@ -296,7 +296,7 @@ func TestRenderPlain_NestedMap(t *testing.T) {
 }
 
 func TestRenderPlain_ScalarList(t *testing.T) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"aliases": []interface{}{"vi", "vim.basic"},
 	}
@@ -308,7 +308,7 @@ func TestRenderPlain_ScalarList(t *testing.T) {
 }
 
 func TestRenderPlain_EmptySlice(t *testing.T) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"depends": []interface{}{},
 	}
@@ -319,7 +319,7 @@ func TestRenderPlain_EmptySlice(t *testing.T) {
 }
 
 func TestRenderPlain_ObjectList(t *testing.T) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"packages": []interface{}{
 			map[string]interface{}{"name": "vim", "version": "9.0"},
@@ -399,35 +399,106 @@ func TestErrorResponseFromError_WrappedAPMError(t *testing.T) {
 	}
 }
 
-func TestRenderProgressBar_BoundsClamping(t *testing.T) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
-
-	cases := []struct {
-		name     string
-		percent  float64
-		contains string
-	}{
-		{"negative clamped to 0", -10, "0%"},
-		{"zero", 0, "0%"},
-		{"half", 50, "50%"},
-		{"full", 100, "100%"},
-		{"over 100 clamped", 150, "100%"},
+func TestRenderText_TreeFormat(t *testing.T) {
+	r := NewRendererFromColors(app.GetDefaultColors())
+	data := map[string]interface{}{
+		"message": "Test message",
+		"name":    "test-package",
+		"version": "1.0.0",
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			tk := task{
-				viewName:        "downloading",
-				progressPercent: c.percent,
-			}
-			result := renderProgressBar(tk, r.enumeratorStyle, r.itemStyle)
+	result := r.RenderText(data, app.FormatTypeTree, false)
+	if result == "" {
+		t.Fatal("RenderText tree returned empty string")
+	}
+	if !strings.Contains(result, "Test message") {
+		t.Error("tree output should contain message")
+	}
+	if !strings.Contains(result, "1.0.0") {
+		t.Error("tree output should contain version")
+	}
+}
 
-			if !strings.Contains(result, c.contains) {
-				t.Errorf("renderProgressBar(%.0f%%) should contain %q, got %q", c.percent, c.contains, result)
-			}
-			if !strings.Contains(result, "downloading") {
-				t.Errorf("renderProgressBar should contain viewName, got %q", result)
-			}
-		})
+func TestRenderText_PlainFormat(t *testing.T) {
+	r := NewRendererFromColors(app.GetDefaultColors())
+	data := map[string]interface{}{
+		"message": "Test message",
+		"name":    "test-package",
+		"version": "1.0.0",
+	}
+
+	result := r.RenderText(data, app.FormatTypePlain, false)
+	if result == "" {
+		t.Fatal("RenderText plain returned empty string")
+	}
+	if !strings.Contains(result, "Test message") {
+		t.Error("plain output should contain message")
+	}
+	if !strings.Contains(result, "1.0.0") {
+		t.Error("plain output should contain version")
+	}
+}
+
+func TestRenderText_ErrorFlag(t *testing.T) {
+	r := NewRendererFromColors(app.GetDefaultColors())
+	data := map[string]interface{}{
+		"message": "Something went wrong",
+	}
+
+	resultOk := r.RenderText(data, app.FormatTypeTree, false)
+	resultErr := r.RenderText(data, app.FormatTypeTree, true)
+
+	if resultOk == resultErr {
+		t.Error("error and success renders should differ (different styling)")
+	}
+}
+
+func TestRenderText_DefaultsToTree(t *testing.T) {
+	r := NewRendererFromColors(app.GetDefaultColors())
+	data := map[string]interface{}{
+		"message": "hello",
+		"key":     "value",
+	}
+
+	treeResult := r.RenderText(data, app.FormatTypeTree, false)
+	unknown := r.RenderText(data, "unknown_format", false)
+
+	if treeResult != unknown {
+		t.Error("unknown format type should fall back to tree")
+	}
+}
+
+func TestRenderText_NestedData(t *testing.T) {
+	r := NewRendererFromColors(app.GetDefaultColors())
+	data := map[string]interface{}{
+		"message": "Package info",
+		"details": map[string]interface{}{
+			"name":    "pkg",
+			"version": "2.0",
+		},
+	}
+
+	for _, ft := range []string{app.FormatTypeTree, app.FormatTypePlain} {
+		result := r.RenderText(data, ft, false)
+		if !strings.Contains(result, "2.0") {
+			t.Errorf("format %s: nested version not found in output", ft)
+		}
+	}
+}
+
+func TestRenderText_ListData(t *testing.T) {
+	r := NewRendererFromColors(app.GetDefaultColors())
+	data := map[string]interface{}{
+		"packages": []interface{}{
+			map[string]interface{}{"name": "aaa", "version": "1.0"},
+			map[string]interface{}{"name": "bbb", "version": "2.0"},
+		},
+	}
+
+	for _, ft := range []string{app.FormatTypeTree, app.FormatTypePlain} {
+		result := r.RenderText(data, ft, false)
+		if !strings.Contains(result, "aaa") || !strings.Contains(result, "bbb") {
+			t.Errorf("format %s: list items not found in output", ft)
+		}
 	}
 }

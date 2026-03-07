@@ -105,14 +105,14 @@ func (m selectorModel) View() string {
 	titleStyle := lipgloss.NewStyle().Bold(true).
 		Foreground(lipgloss.Color(m.colors.Accent))
 	activeStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(m.colors.Install))
+		Foreground(lipgloss.Color(m.colors.DialogAction))
 	itemStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{
-			Light: m.colors.ItemLight,
-			Dark:  m.colors.ItemDark,
+			Light: m.colors.TextLight,
+			Dark:  m.colors.TextDark,
 		})
 	hintStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(m.colors.Shortcut)).Faint(true)
+		Foreground(lipgloss.Color(m.colors.DialogHint)).Faint(true)
 
 	var sb strings.Builder
 	sb.WriteString(titleStyle.Render(app.T_("Select container:")))
@@ -132,7 +132,7 @@ func (m selectorModel) View() string {
 	}
 
 	cancelStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(m.colors.Delete))
+		Foreground(lipgloss.Color(m.colors.DialogDanger))
 	cancelLabel := app.T_("Cancel")
 	if m.cursor == len(m.containers) {
 		sb.WriteString(cancelStyle.Render("  › "+cancelLabel) + "\n")

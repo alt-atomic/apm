@@ -316,9 +316,9 @@ func (m selectionModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m selectionModel) View() string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent))
-	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Install))
-	removeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Delete))
-	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Shortcut)).Faint(true)
+	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.DialogAction))
+	removeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.DialogDanger))
+	shortcutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.DialogHint)).Faint(true)
 
 	var s strings.Builder
 
@@ -411,10 +411,10 @@ func (m selectionModel) buildActionButtons() string {
 	var s strings.Builder
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent))
-	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Install))
+	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.DialogAction))
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: m.appConfig.ConfigManager.GetConfig().Colors.ItemLight,
-		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.ItemDark,
+		Light: m.appConfig.ConfigManager.GetConfig().Colors.TextLight,
+		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.TextDark,
 	})
 
 	s.WriteString(titleStyle.Render(app.T_("Select an action:")) + "\n")
@@ -495,8 +495,6 @@ func (m selectionModel) removePackageEnumerator(_ list.Items, index int) string 
 		return fmt.Sprintf("   %s", symbol)
 	}
 }
-
-// Вспомогательные методы
 
 func (m selectionModel) getCurrentPackageList() []packageItem {
 	if m.currentPanel == 0 {

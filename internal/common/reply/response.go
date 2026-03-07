@@ -59,6 +59,7 @@ func ErrorResponseFromError(err error) APIResponse {
 
 type ResponseRenderer struct {
 	appConfig       *app.Config
+	colors          app.Colors
 	enumeratorStyle lipgloss.Style
 	accentStyle     lipgloss.Style
 	messageStyle    lipgloss.Style
@@ -67,21 +68,26 @@ type ResponseRenderer struct {
 }
 
 func NewResponseRenderer(appConfig *app.Config) *ResponseRenderer {
-	colors := appConfig.ConfigManager.GetColors()
-	adaptiveColor := lipgloss.AdaptiveColor{Light: colors.ItemLight, Dark: colors.ItemDark}
+	r := NewRendererFromColors(appConfig.ConfigManager.GetColors())
+	r.appConfig = appConfig
+	return r
+}
+
+func NewRendererFromColors(colors app.Colors) *ResponseRenderer {
+	adaptiveColor := lipgloss.AdaptiveColor{Light: colors.TextLight, Dark: colors.TextDark}
 
 	return &ResponseRenderer{
-		appConfig:       appConfig,
-		enumeratorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.Enumerator)).MarginRight(1),
+		colors:          colors,
+		enumeratorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.TreeBranch)).MarginRight(1),
 		accentStyle:     lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colors.Accent)),
 		messageStyle:    lipgloss.NewStyle().Bold(true).MarginBottom(1),
-		errorMsgStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color(colors.Error)),
+		errorMsgStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ResultError)),
 		itemStyle:       lipgloss.NewStyle().Foreground(adaptiveColor),
 	}
 }
 
 func (r *ResponseRenderer) GetColors() app.Colors {
-	return r.appConfig.ConfigManager.GetColors()
+	return r.colors
 }
 
 func IsTTY() bool {
@@ -293,10 +299,21 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 
 func (r *ResponseRenderer) renderText(dataMap map[string]interface{}, isError bool) string {
 	dataMap = normalizeDataMap(dataMap)
-	if fields := r.appConfig.ConfigManager.GetConfig().Fields; len(fields) > 0 {
-		dataMap = filterFields(dataMap, fields)
+	if r.appConfig != nil {
+		if fields := r.appConfig.ConfigManager.GetConfig().Fields; len(fields) > 0 {
+			dataMap = filterFields(dataMap, fields)
+		}
 	}
-	switch r.appConfig.ConfigManager.GetConfig().FormatType {
+	formatType := app.FormatTypeTree
+	if r.appConfig != nil {
+		formatType = r.appConfig.ConfigManager.GetConfig().FormatType
+	}
+	return r.RenderText(dataMap, formatType, isError)
+}
+
+func (r *ResponseRenderer) RenderText(dataMap map[string]interface{}, formatType string, isError bool) string {
+	dataMap = normalizeDataMap(dataMap)
+	switch formatType {
 	case app.FormatTypePlain:
 		return r.renderPlain(dataMap, isError)
 	default:

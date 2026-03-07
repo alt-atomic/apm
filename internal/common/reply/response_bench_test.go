@@ -2,50 +2,9 @@ package reply
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/version"
 	"fmt"
 	"testing"
 )
-
-func makeTestConfig(formatType string, fields []string) *app.Config {
-	return &app.Config{
-		ConfigManager: &stubConfigManager{
-			config: &app.Configuration{
-				Format:     app.FormatText,
-				FormatType: formatType,
-				Fields:     fields,
-				Colors:     testColors(),
-			},
-		},
-	}
-}
-
-func testColors() app.Colors {
-	return app.Colors{
-		Enumerator: "#c4c8c6",
-		Accent:     "#a2734c",
-		ItemLight:  "#171717",
-		ItemDark:   "#c4c8c6",
-		Success:    "2",
-		Error:      "9",
-	}
-}
-
-type stubConfigManager struct {
-	config *app.Configuration
-}
-
-func (s *stubConfigManager) GetConfig() *app.Configuration      { return s.config }
-func (s *stubConfigManager) GetColors() app.Colors              { return s.config.Colors }
-func (s *stubConfigManager) GetParsedVersion() *version.Version { return s.config.ParsedVersion }
-func (s *stubConfigManager) IsDevMode() bool                    { return false }
-func (s *stubConfigManager) SetFormat(string)                   {}
-func (s *stubConfigManager) SetFormatType(string)               {}
-func (s *stubConfigManager) SetFields([]string)                 {}
-func (s *stubConfigManager) GetTemporaryImageFile() string      { return "" }
-func (s *stubConfigManager) GetPathImageContainerFile() string  { return "" }
-func (s *stubConfigManager) GetPathImageFile() string           { return "" }
-func (s *stubConfigManager) GetResourcesDir() string            { return "" }
 
 // generateDeepData создаёт структуру с depth уровнями вложенности и width ключами на каждом уровне.
 func generateDeepData(depth, width int) map[string]interface{} {
@@ -96,9 +55,9 @@ func generateListData(n int) map[string]interface{} {
 	}
 }
 
-// BenchmarkTreeDeep — глубокая вложенность: 6 уровней по 5 ключей = ~19500 узлов
+// BenchmarkTreeDeep глубокая вложенность: 6 уровней по 5 ключей = ~19500 узлов
 func BenchmarkTreeDeep(b *testing.B) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypeTree, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := generateDeepData(6, 5)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -106,9 +65,9 @@ func BenchmarkTreeDeep(b *testing.B) {
 	}
 }
 
-// BenchmarkPlainDeep — то же для plain
+// BenchmarkPlainDeep то же для plain
 func BenchmarkPlainDeep(b *testing.B) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := generateDeepData(6, 5)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -116,9 +75,9 @@ func BenchmarkPlainDeep(b *testing.B) {
 	}
 }
 
-// BenchmarkTreeWide — 3000 вложенных объектов на верхнем уровне
+// BenchmarkTreeWide 3000 вложенных объектов на верхнем уровне
 func BenchmarkTreeWide(b *testing.B) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypeTree, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := generateWideData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -126,9 +85,9 @@ func BenchmarkTreeWide(b *testing.B) {
 	}
 }
 
-// BenchmarkPlainWide — то же для plain
+// BenchmarkPlainWide то же для plain
 func BenchmarkPlainWide(b *testing.B) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := generateWideData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -136,9 +95,9 @@ func BenchmarkPlainWide(b *testing.B) {
 	}
 }
 
-// BenchmarkTreeList — список из 3000 пакетов (типичный сценарий)
+// BenchmarkTreeList список из 3000 пакетов (типичный сценарий)
 func BenchmarkTreeList(b *testing.B) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypeTree, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := generateListData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -146,9 +105,9 @@ func BenchmarkTreeList(b *testing.B) {
 	}
 }
 
-// BenchmarkPlainList — то же для plain
+// BenchmarkPlainList то же для plain
 func BenchmarkPlainList(b *testing.B) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, nil))
+	r := NewRendererFromColors(app.GetDefaultColors())
 	data := generateListData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -156,12 +115,14 @@ func BenchmarkPlainList(b *testing.B) {
 	}
 }
 
-// BenchmarkFilterFields — фильтрация полей из 3000 элементов
+// BenchmarkFilterFields фильтрация полей из 3000 элементов
 func BenchmarkFilterFields(b *testing.B) {
-	r := NewResponseRenderer(makeTestConfig(app.FormatTypePlain, []string{"name", "version"}))
+	r := NewRendererFromColors(app.GetDefaultColors())
+	fields := []string{"name", "version"}
 	data := generateListData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = r.renderText(data, false)
+		filtered := filterFields(normalizeDataMap(data), fields)
+		_ = r.RenderText(filtered, app.FormatTypePlain, false)
 	}
 }

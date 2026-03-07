@@ -13,10 +13,10 @@ func (r *ResponseRenderer) renderTree(dataMap map[string]interface{}, isError bo
 	var rootColor lipgloss.Style
 	if isError {
 		rootColor = lipgloss.NewStyle().Bold(true).
-			Foreground(lipgloss.Color(r.GetColors().Error))
+			Foreground(lipgloss.Color(r.GetColors().ResultError))
 	} else {
 		rootColor = lipgloss.NewStyle().Bold(true).
-			Foreground(lipgloss.Color(r.GetColors().Success))
+			Foreground(lipgloss.Color(r.GetColors().ResultSuccess))
 	}
 
 	t.Enumerator(tree.RoundedEnumerator).
