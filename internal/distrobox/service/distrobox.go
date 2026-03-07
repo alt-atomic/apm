@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -111,6 +112,10 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 			})
 		}
 	}
+
+	slices.SortFunc(containers, func(a, b ContainerInfo) int {
+		return strings.Compare(a.ContainerName, b.ContainerName)
+	})
 
 	return containers, nil
 }

@@ -51,10 +51,9 @@ func CommandList(ctx context.Context) *cli.Command {
 				Usage: app.T_("Update and synchronize the list of installed packages with the host"),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "container",
-						Usage:    app.T_("Container name. Required"),
-						Aliases:  []string{"c"},
-						Required: true,
+						Name:    "container",
+						Usage:   app.T_("Container name. Required"),
+						Aliases: []string{"c"},
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
@@ -176,10 +175,9 @@ func CommandList(ctx context.Context) *cli.Command {
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "container",
-						Usage:    app.T_("Container name. Required"),
-						Aliases:  []string{"c"},
-						Required: true,
+						Name:    "container",
+						Usage:   app.T_("Container name. Required"),
+						Aliases: []string{"c"},
 					},
 					&cli.BoolFlag{
 						Name:  "no-export",
@@ -201,15 +199,13 @@ func CommandList(ctx context.Context) *cli.Command {
 				ArgsUsage: "package",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:     "container",
-						Usage:    app.T_("Container name. Required"),
-						Aliases:  []string{"c"},
-						Required: true,
+						Name:    "container",
+						Usage:   app.T_("Container name. Required"),
+						Aliases: []string{"c"},
 					},
 					&cli.BoolFlag{
 						Name:  "only-host",
 						Usage: app.T_("Remove only from host, leave package in container"),
-						Value: false,
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {

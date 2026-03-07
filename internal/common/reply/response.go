@@ -88,6 +88,11 @@ func IsTTY() bool {
 	return terminal.IsTerminal(int(os.Stdout.Fd()))
 }
 
+// IsInteractive возвращает true если формат text и терминал интерактивный (для TUI и других штук)
+func IsInteractive(appConfig *app.Config) bool {
+	return appConfig.ConfigManager.GetConfig().Format == app.FormatText && IsTTY()
+}
+
 func (r *ResponseRenderer) formatField(key string, value interface{}) string {
 	valStr := fmt.Sprintf("%v", value)
 	if key == "name" || key == "packageName" {

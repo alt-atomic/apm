@@ -57,7 +57,7 @@ type model struct {
 
 // NewDialog запускает диалог отображения информации о пакете с выбором действия.
 func NewDialog(appConfig *app.Config, packageInfo []_package.Package, packageChange aptLib.PackageChanges, action Action) (bool, error) {
-	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !reply.IsTTY() {
+	if !reply.IsInteractive(appConfig) {
 		return true, nil
 	}
 
@@ -471,7 +471,6 @@ func (m model) statusPackage(pkg _package.Package) string {
 
 	return m.getShortcutStyle().Render(app.T_("No"))
 }
-
 
 func (m model) formatDependencies(depends []string, availableWidth int) string {
 	var filtered []string

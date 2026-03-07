@@ -83,7 +83,7 @@ func restoreEcho() {
 
 // CreateSpinner создание и запуск спиннера.
 func CreateSpinner(appConfig *app.Config) {
-	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
+	if !IsInteractive(appConfig) {
 		return
 	}
 
@@ -111,7 +111,7 @@ func CreateSpinner(appConfig *app.Config) {
 }
 
 func StopSpinner(appConfig *app.Config) {
-	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
+	if !IsInteractive(appConfig) {
 		return
 	}
 
@@ -163,7 +163,7 @@ func StopSpinner(appConfig *app.Config) {
 
 // UpdateTask обновление задачи/прогресса.
 func UpdateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
-	if appConfig.ConfigManager.GetConfig().Format != app.FormatText || !IsTTY() {
+	if !IsInteractive(appConfig) {
 		return
 	}
 

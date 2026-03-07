@@ -21,6 +21,8 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/filter"
 	"apm/internal/common/icon"
+	"apm/internal/common/reply"
+	"apm/internal/distrobox/dialog"
 	"apm/internal/distrobox/service"
 	"context"
 	"errors"
@@ -346,12 +348,40 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 	return nil
 }
 
+// selectContainerInteractive показывает интерактивный селектор контейнера в TTY-режиме.
+func (a *Actions) selectContainerInteractive(ctx context.Context) (string, error) {
+	appConfig := app.GetAppConfig(ctx)
+	if !reply.IsInteractive(appConfig) {
+		return "", apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("Required flag %s not set"), "container"))
+	}
+
+	containers, err := a.serviceDistroAPI.GetContainerList(ctx, true)
+	if err != nil {
+		return "", apmerr.New(apmerr.ErrorTypeContainer, err)
+	}
+
+	reply.StopSpinner(appConfig)
+
+	selected, err := dialog.SelectContainer(containers, appConfig.ConfigManager.GetColors())
+	if err != nil {
+		return "", apmerr.New(apmerr.ErrorTypeValidation, err)
+	}
+
+	reply.CreateSpinner(appConfig)
+
+	return selected, nil
+}
+
 // validateContainer проверяет, что имя контейнера не пустой и обновляет пакеты, если нужно.
 func (a *Actions) validateContainer(ctx context.Context, container string, autoUpdate ...bool) (service.ContainerInfo, error) {
 	shouldAutoUpdate := len(autoUpdate) == 0 || autoUpdate[0]
 	container = strings.TrimSpace(container)
 	if container == "" {
-		return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the container name")))
+		selected, err := a.selectContainerInteractive(ctx)
+		if err != nil {
+			return service.ContainerInfo{}, err
+		}
+		container = selected
 	}
 
 	// Если контейнер не найден через API, проверяем наличие записей в базе данных
