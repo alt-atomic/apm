@@ -75,8 +75,8 @@ type LoggerImpl interface {
 
 // DatabaseManager управляет подключениями к базам данных
 type DatabaseManager interface {
-	GetSystemDB() *sql.DB
-	GetUserDB() *sql.DB
+	GetSystemDB() (*sql.DB, error)
+	GetUserDB() (*sql.DB, error)
 	Close() error
 }
 

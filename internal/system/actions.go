@@ -1020,7 +1020,7 @@ func (a *Actions) saveChange(_ context.Context, packagesInstall []string, packag
 func (a *Actions) validateDB(ctx context.Context, noLock bool) error {
 	if err := a.serviceAptDatabase.PackageDatabaseExist(ctx); err != nil {
 		if syscall.Geteuid() != 0 {
-			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("package database is empty. Run 'apm system update' with elevated rights to create it")))
 		}
 
 		_, err = a.serviceAptActions.Update(ctx, noLock)

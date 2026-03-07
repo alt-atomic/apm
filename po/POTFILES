@@ -26,6 +26,7 @@ internal/common/helper/text.go
 internal/common/helper/translate.go
 internal/common/http_server/handler.go
 internal/common/http_server/server.go
+internal/common/icon/database.go
 internal/common/icon/service.go
 internal/common/icon/swcat.go
 internal/common/osutils/osutils.go

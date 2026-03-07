@@ -36,15 +36,12 @@ type Actions struct {
 }
 
 func NewActions(appConfig *app.Config) *Actions {
-	distroDBSvc, err := service.NewDistroDBService(appConfig.DatabaseManager.GetUserDB())
-	if err != nil {
-		app.Log.Error(err)
-	}
+	distroDBSvc := service.NewDistroDBService(appConfig.DatabaseManager)
 
 	commandPrefix := appConfig.ConfigManager.GetConfig().CommandPrefix
 	distroPackageSvc := service.NewPackageService(distroDBSvc, commandPrefix)
 	distroAPISvc := service.NewDistroAPIService(commandPrefix)
-	iconSvc := icon.NewIconService(appConfig.DatabaseManager.GetUserDB(), commandPrefix)
+	iconSvc := icon.NewIconService(appConfig.DatabaseManager, commandPrefix)
 
 	return &Actions{
 		servicePackage:        distroPackageSvc,
@@ -70,7 +67,7 @@ func (a *Actions) GetIconByPackage(_ context.Context, packageName, container str
 
 // Update обновляет и синхронизирует список пакетов в контейнере.
 func (a *Actions) Update(ctx context.Context, container string) (*UpdateResponse, error) {
-	osInfo, err := a.validateContainer(ctx, container)
+	osInfo, err := a.validateContainer(ctx, container, false)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +347,8 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 }
 
 // validateContainer проверяет, что имя контейнера не пустой и обновляет пакеты, если нужно.
-func (a *Actions) validateContainer(ctx context.Context, container string) (service.ContainerInfo, error) {
+func (a *Actions) validateContainer(ctx context.Context, container string, autoUpdate ...bool) (service.ContainerInfo, error) {
+	shouldAutoUpdate := len(autoUpdate) == 0 || autoUpdate[0]
 	container = strings.TrimSpace(container)
 	if container == "" {
 		return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the container name")))
@@ -369,13 +367,11 @@ func (a *Actions) validateContainer(ctx context.Context, container string) (serv
 	}
 
 	// Если база не содержит данные, обновляем пакеты.
-	if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err != nil {
-		osInfo, errInfo = a.serviceDistroAPI.GetContainerOsInfo(ctx, container)
-		if errInfo != nil {
-			return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeNotFound, errInfo)
-		}
-		if _, err = a.servicePackage.UpdatePackages(ctx, osInfo); err != nil {
-			return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeDatabase, err)
+	if shouldAutoUpdate {
+		if err := a.serviceDistroDatabase.ContainerDatabaseExist(ctx, container); err != nil {
+			if _, err = a.servicePackage.UpdatePackages(ctx, osInfo); err != nil {
+				return service.ContainerInfo{}, apmerr.New(apmerr.ErrorTypeDatabase, err)
+			}
 		}
 	}
 

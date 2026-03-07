@@ -22,12 +22,12 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
@@ -47,37 +47,52 @@ type DBDistroPackage struct {
 }
 
 type DistroDBService struct {
-	db *gorm.DB
+	dbManager app.DatabaseManager
+	realDb    *gorm.DB
+}
+
+var initDistroDBMutex sync.Mutex
+
+func (s *DistroDBService) db() (*gorm.DB, error) {
+	initDistroDBMutex.Lock()
+	defer initDistroDBMutex.Unlock()
+
+	if s.realDb == nil {
+		gormLogger := logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				LogLevel: logger.Silent,
+			},
+		)
+
+		conn, err := s.dbManager.GetUserDB()
+		if err != nil {
+			return nil, fmt.Errorf(app.T_("failed to get user DB: %w"), err)
+		}
+
+		s.realDb, err = gorm.Open(sqlite.Dialector{
+			Conn:       conn,
+			DriverName: "sqlite3",
+		}, &gorm.Config{
+			Logger: gormLogger,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error opening GORM with existing db: %w", err)
+		}
+
+		if err = s.realDb.AutoMigrate(&DBDistroPackage{}); err != nil {
+			return nil, fmt.Errorf("autoMigrate failed: %w", err)
+		}
+	}
+
+	return s.realDb, nil
 }
 
 // NewDistroDBService создаёт новый сервис для работы с базой данных distrobox.
-func NewDistroDBService(db *sql.DB) (*DistroDBService, error) {
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			LogLevel: logger.Silent,
-		},
-	)
-
-	gormDB, err := gorm.Open(sqlite.Dialector{
-		Conn:       db,
-		DriverName: "sqlite3",
-	}, &gorm.Config{
-		Logger: gormLogger,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("error opening GORM with existing db: %w", err)
-	}
-
-	// Автоматическая миграция
-	if err = gormDB.AutoMigrate(&DBDistroPackage{}); err != nil {
-		return nil, fmt.Errorf("autoMigrate failed: %w", err)
-	}
-
+func NewDistroDBService(dbManager app.DatabaseManager) *DistroDBService {
 	return &DistroDBService{
-		db: gormDB,
-	}, nil
+		dbManager: dbManager,
+	}
 }
 
 // TableName задаёт имя таблицы.
@@ -121,8 +136,13 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 		return errors.New(app.T_("The 'container' field cannot be empty when saving packages to the database"))
 	}
 
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("container = ?", containerName).Delete(&DBDistroPackage{}).Error; err != nil {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err = tx.Where("container = ?", containerName).Delete(&DBDistroPackage{}).Error; err != nil {
 			return err
 		}
 
@@ -151,8 +171,13 @@ func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName st
 
 // DatabaseExist проверяет, есть ли вообще записи в таблице (не пустая ли).
 func (s *DistroDBService) DatabaseExist(ctx context.Context) error {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
 	var count int64
-	if err := s.db.WithContext(ctx).Model(&DBDistroPackage{}).Count(&count).Error; err != nil {
+	if err = db.WithContext(ctx).Model(&DBDistroPackage{}).Count(&count).Error; err != nil {
 		if strings.Contains(err.Error(), "no such table") {
 			return errors.New(app.T_("The database does not have any records, it is necessary to create or update any container"))
 		}
@@ -167,8 +192,13 @@ func (s *DistroDBService) DatabaseExist(ctx context.Context) error {
 
 // ContainerDatabaseExist проверяет, есть ли у данного containerName вообще записи в таблице.
 func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerName string) error {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
 	var count int64
-	if err := s.db.WithContext(ctx).
+	if err := db.WithContext(ctx).
 		Model(&DBDistroPackage{}).
 		Where("container = ?", containerName).
 		Count(&count).Error; err != nil {
@@ -183,7 +213,12 @@ func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerN
 
 // CountTotalPackages возвращает количество записей (COUNT(*)) c учётом фильтра containerName и других полей.
 func (s *DistroDBService) CountTotalPackages(containerName string, filters []filter.Filter) (int, error) {
-	db := s.db.Model(&DBDistroPackage{})
+	gormDB, err := s.db()
+	if err != nil {
+		return 0, err
+	}
+
+	db := gormDB.Model(&DBDistroPackage{})
 	if containerName != "" {
 		db = db.Where("container = ?", containerName)
 	}
@@ -191,7 +226,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters []fil
 	db = DistroFilterApplier.Apply(db, filters)
 
 	var total int64
-	if err := db.Count(&total).Error; err != nil {
+	if err = db.Count(&total).Error; err != nil {
 		return 0, err
 	}
 	return int(total), nil
@@ -199,7 +234,12 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters []fil
 
 // QueryPackages возвращает записи с фильтрами, сортировкой, limit/offset.
 func (s *DistroDBService) QueryPackages(containerName string, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
-	db := s.db.Model(&DBDistroPackage{})
+	gormDB, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
+	db := gormDB.Model(&DBDistroPackage{})
 
 	if containerName != "" {
 		db = db.Where("container = ?", containerName)
@@ -208,7 +248,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters []filter.F
 	db = DistroFilterApplier.Apply(db, filters)
 
 	if sortField != "" {
-		if err := DistroFilterConfig.ValidateSortField(sortField); err != nil {
+		if err = DistroFilterConfig.ValidateSortField(sortField); err != nil {
 			return nil, err
 		}
 		upperOrder := strings.ToUpper(sortOrder)
@@ -226,7 +266,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters []filter.F
 	}
 
 	var dbPackages []DBDistroPackage
-	if err := db.Find(&dbPackages).Error; err != nil {
+	if err = db.Find(&dbPackages).Error; err != nil {
 		return nil, err
 	}
 
@@ -239,7 +279,12 @@ func (s *DistroDBService) QueryPackages(containerName string, filters []filter.F
 
 // FindPackagesByName ищет пакеты по name (LIKE) + container (при необходимости).
 func (s *DistroDBService) FindPackagesByName(containerName, partialName string) ([]PackageInfo, error) {
-	db := s.db.Model(&DBDistroPackage{})
+	gormDB, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
+	db := gormDB.Model(&DBDistroPackage{})
 
 	if containerName != "" {
 		db = db.Where("container = ?", containerName)
@@ -249,7 +294,7 @@ func (s *DistroDBService) FindPackagesByName(containerName, partialName string) 
 	}
 
 	var dbPackages []DBDistroPackage
-	if err := db.Find(&dbPackages).Error; err != nil {
+	if err = db.Find(&dbPackages).Error; err != nil {
 		return nil, err
 	}
 
@@ -276,7 +321,13 @@ func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName,
 		fieldName: value,
 	}
 
-	if err := s.db.WithContext(ctx).
+	db, err := s.db()
+	if err != nil {
+		app.Log.Error(err)
+		return
+	}
+
+	if err = db.WithContext(ctx).
 		Model(&DBDistroPackage{}).
 		Where("container = ? AND name = ?", containerName, name).
 		Updates(updateMap).Error; err != nil {
@@ -286,8 +337,13 @@ func (s *DistroDBService) UpdatePackageField(ctx context.Context, containerName,
 
 // GetPackageInfoByName возвращает запись (container+name) из таблицы.
 func (s *DistroDBService) GetPackageInfoByName(containerName, name string) (PackageInfo, error) {
+	db, err := s.db()
+	if err != nil {
+		return PackageInfo{}, err
+	}
+
 	var dbp DBDistroPackage
-	if err := s.db.
+	if err = db.
 		Where("container = ? AND name = ?", containerName, name).
 		First(&dbp).Error; err != nil {
 		return PackageInfo{}, err
@@ -297,7 +353,12 @@ func (s *DistroDBService) GetPackageInfoByName(containerName, name string) (Pack
 
 // DeletePackagesFromContainer удаляет все записи для указанного контейнера.
 func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, containerName string) error {
-	if err := s.db.WithContext(ctx).
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
+	if err := db.WithContext(ctx).
 		Where("container = ?", containerName).
 		Delete(&DBDistroPackage{}).Error; err != nil {
 		return fmt.Errorf(app.T_("Error deleting container records %s: %v"), containerName, err)

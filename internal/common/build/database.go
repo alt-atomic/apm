@@ -67,9 +67,12 @@ func (h *HostDBService) db() (*gorm.DB, error) {
 			},
 		)
 
-		var err error
+		conn, err := h.dbManager.GetSystemDB()
+		if err != nil {
+			return nil, fmt.Errorf(app.T_("failed to get system DB: %w"), err)
+		}
 		h.realDb, err = gorm.Open(sqlite.Dialector{
-			Conn:       h.dbManager.GetSystemDB(),
+			Conn:       conn,
 			DriverName: "sqlite3",
 		}, &gorm.Config{
 			Logger: gormLogger,

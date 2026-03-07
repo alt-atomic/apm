@@ -18,7 +18,6 @@ package app
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -35,7 +34,7 @@ type databaseManagerImpl struct {
 	systemPath string
 	userPath   string
 
-	mutex sync.RWMutex
+	mutex sync.Mutex
 
 	systemOnce sync.Once
 	userOnce   sync.Once
@@ -50,27 +49,31 @@ func NewDatabaseManager(systemPath, userPath string) DatabaseManager {
 }
 
 // GetSystemDB возвращает системную базу данных с ленивой инициализацией
-func (dm *databaseManagerImpl) GetSystemDB() *sql.DB {
+func (dm *databaseManagerImpl) GetSystemDB() (*sql.DB, error) {
+	var initErr error
 	dm.systemOnce.Do(func() {
 		if err := dm.initSystemDB(); err != nil {
-			Log.Fatal("Failed to initialize system DB: ", err)
+			initErr = err
 		}
 	})
-	dm.mutex.RLock()
-	defer dm.mutex.RUnlock()
-	return dm.systemDB
+	if initErr != nil {
+		return nil, initErr
+	}
+	return dm.systemDB, nil
 }
 
 // GetUserDB возвращает пользовательскую базу данных с ленивой инициализацией
-func (dm *databaseManagerImpl) GetUserDB() *sql.DB {
+func (dm *databaseManagerImpl) GetUserDB() (*sql.DB, error) {
+	var initErr error
 	dm.userOnce.Do(func() {
 		if err := dm.initUserDB(); err != nil {
-			Log.Fatal("Failed to initialize user DB: ", err)
+			initErr = err
 		}
 	})
-	dm.mutex.RLock()
-	defer dm.mutex.RUnlock()
-	return dm.userDB
+	if initErr != nil {
+		return nil, initErr
+	}
+	return dm.userDB, nil
 }
 
 // initSystemDB инициализирует системную базу данных
@@ -87,7 +90,7 @@ func (dm *databaseManagerImpl) initSystemDB() error {
 	if err = db.Ping(); err != nil {
 		db.Close()
 		if _, statErr := os.Stat(dm.systemPath); os.IsNotExist(statErr) && syscall.Geteuid() != 0 {
-			return errors.New(T_("Elevated rights are required to perform this action. Please use sudo or su"))
+			return fmt.Errorf(T_("system database not found (%s). Run 'apm system update' with elevated rights to create it"), dm.systemPath)
 		}
 		return fmt.Errorf(T_("error connecting to system database: %w"), err)
 	}

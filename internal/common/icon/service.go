@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"runtime"
@@ -37,13 +36,9 @@ type Service struct {
 }
 
 // NewIconService создаёт новый сервис для работы с иконками.
-func NewIconService(db *sql.DB, commandPrefix string) *Service {
+func NewIconService(dbManager app.DatabaseManager, commandPrefix string) *Service {
 	distroAPISvc := service.NewDistroAPIService(commandPrefix)
-
-	iconDB, err := NewIconDBService(db)
-	if err != nil {
-		app.Log.Error(fmt.Sprintf("Failed to initialize icon DB service: %v", err))
-	}
+	iconDB := NewIconDBService(dbManager)
 
 	return &Service{
 		serviceDistroAPI: distroAPISvc,

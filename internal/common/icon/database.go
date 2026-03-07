@@ -17,10 +17,11 @@
 package icon
 
 import (
-	"database/sql"
+	"apm/internal/common/app"
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -42,52 +43,79 @@ func (DBIcon) TableName() string {
 
 // DBService сервис для работы с иконками в БД
 type DBService struct {
-	db *gorm.DB
+	dbManager app.DatabaseManager
+	realDb    *gorm.DB
+}
+
+var initIconDBMutex sync.Mutex
+
+func (s *DBService) db() (*gorm.DB, error) {
+	initIconDBMutex.Lock()
+	defer initIconDBMutex.Unlock()
+
+	if s.realDb == nil {
+		gormLogger := logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				LogLevel: logger.Silent,
+			},
+		)
+
+		conn, err := s.dbManager.GetUserDB()
+		if err != nil {
+			return nil, fmt.Errorf(app.T_("failed to get user DB: %w"), err)
+		}
+
+		s.realDb, err = gorm.Open(sqlite.Dialector{
+			Conn:       conn,
+			DriverName: "sqlite3",
+		}, &gorm.Config{
+			Logger: gormLogger,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error opening GORM with existing db: %w", err)
+		}
+
+		if err = s.realDb.AutoMigrate(&DBIcon{}); err != nil {
+			return nil, fmt.Errorf("autoMigrate failed: %w", err)
+		}
+	}
+
+	return s.realDb, nil
 }
 
 // NewIconDBService создаёт новый сервис для работы с иконками в базе данных.
-func NewIconDBService(db *sql.DB) (*DBService, error) {
-	gormLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			LogLevel: logger.Silent,
-		},
-	)
-
-	gormDB, err := gorm.Open(sqlite.Dialector{
-		Conn:       db,
-		DriverName: "sqlite3",
-	}, &gorm.Config{
-		Logger: gormLogger,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error opening GORM with existing db: %w", err)
-	}
-
-	if err = gormDB.AutoMigrate(&DBIcon{}); err != nil {
-		return nil, fmt.Errorf("autoMigrate failed: %w", err)
-	}
-
-	return &DBService{db: gormDB}, nil
+func NewIconDBService(dbManager app.DatabaseManager) *DBService {
+	return &DBService{dbManager: dbManager}
 }
 
 // SaveIcon сохраняет иконку, игнорируя конфликт если уже существует
 func (s *DBService) SaveIcon(pkgName, container string, iconData []byte) error {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+
 	record := DBIcon{
 		Package:   pkgName,
 		Container: container,
 		Icon:      iconData,
 	}
-	result := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&record)
+	result := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&record)
 	return result.Error
 }
 
 // GetIcon извлекает сжатую иконку из БД. Если не найдено с контейнером — пробует без контейнера.
 func (s *DBService) GetIcon(pkgName, container string) ([]byte, error) {
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
 	var record DBIcon
-	err := s.db.Where("package = ? AND container = ?", pkgName, container).First(&record).Error
+	err = db.Where("package = ? AND container = ?", pkgName, container).First(&record).Error
 	if err != nil && container != "" {
-		err = s.db.Where("package = ? AND container = ''", pkgName).First(&record).Error
+		err = db.Where("package = ? AND container = ''", pkgName).First(&record).Error
 	}
 	if err != nil {
 		return nil, err
@@ -97,8 +125,13 @@ func (s *DBService) GetIcon(pkgName, container string) ([]byte, error) {
 
 // IconExists проверяет наличие иконки в БД
 func (s *DBService) IconExists(pkgName, container string) (bool, error) {
+	db, err := s.db()
+	if err != nil {
+		return false, err
+	}
+
 	var count int64
-	err := s.db.Model(&DBIcon{}).Where("package = ? AND container = ?", pkgName, container).Count(&count).Error
+	err = db.Model(&DBIcon{}).Where("package = ? AND container = ?", pkgName, container).Count(&count).Error
 	if err != nil {
 		return false, err
 	}
@@ -107,8 +140,13 @@ func (s *DBService) IconExists(pkgName, container string) (bool, error) {
 
 // GetExistingPackages возвращает множество имён пакетов, уже сохранённых для данного контейнера
 func (s *DBService) GetExistingPackages(container string) (map[string]bool, error) {
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
 	var packages []string
-	err := s.db.Model(&DBIcon{}).Where("container = ?", container).Pluck("package", &packages).Error
+	err = db.Model(&DBIcon{}).Where("container = ?", container).Pluck("package", &packages).Error
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +162,11 @@ func (s *DBService) SaveIconsBatch(icons []DBIcon) error {
 	if len(icons) == 0 {
 		return nil
 	}
-	return s.db.Transaction(func(tx *gorm.DB) error {
+	db, err := s.db()
+	if err != nil {
+		return err
+	}
+	return db.Transaction(func(tx *gorm.DB) error {
 		batchSize := 500
 		for i := 0; i < len(icons); i += batchSize {
 			end := i + batchSize
@@ -141,15 +183,20 @@ func (s *DBService) SaveIconsBatch(icons []DBIcon) error {
 
 // GetStats возвращает количество иконок и общий размер данных
 func (s *DBService) GetStats() (int, int, error) {
-	var count int64
-	var totalSize int64
-
-	if err := s.db.Model(&DBIcon{}).Count(&count).Error; err != nil {
+	db, err := s.db()
+	if err != nil {
 		return 0, 0, err
 	}
 
-	row := s.db.Model(&DBIcon{}).Select("COALESCE(SUM(LENGTH(icon)), 0)").Row()
-	if err := row.Scan(&totalSize); err != nil {
+	var count int64
+	var totalSize int64
+
+	if err = db.Model(&DBIcon{}).Count(&count).Error; err != nil {
+		return 0, 0, err
+	}
+
+	row := db.Model(&DBIcon{}).Select("COALESCE(SUM(LENGTH(icon)), 0)").Row()
+	if err = row.Scan(&totalSize); err != nil {
 		return 0, 0, err
 	}
 
