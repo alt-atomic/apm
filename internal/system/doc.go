@@ -32,7 +32,7 @@ var dbusSource string
 func getDocConfig() dbus_doc.Config {
 	responseTypes, methodResponses := dbus_doc.DeriveResponseTypes((*Actions)(nil))
 
-	// добавление AppStream модуля
+	// добавление модуля приложений
 	asResponseTypes, _ := dbus_doc.DeriveResponseTypes((*appstream.Actions)(nil))
 	for name, typ := range asResponseTypes {
 		if name == "APIResponse" {
@@ -40,10 +40,11 @@ func getDocConfig() dbus_doc.Config {
 		}
 		responseTypes[name] = typ
 	}
-	methodResponses["AppStreamUpdate"] = reflect.TypeOf(appstream.UpdateResponse{}).Name()
-	methodResponses["AppStreamInfo"] = reflect.TypeOf(appstream.InfoResponse{}).Name()
-	methodResponses["AppStreamList"] = reflect.TypeOf(appstream.ListResponse{}).Name()
-	methodResponses["AppStreamGetFilterFields"] = reflect.TypeOf(appstream.FilterFieldsAppStreamResponse{}).Name()
+	methodResponses["ApplicationUpdate"] = reflect.TypeOf(appstream.UpdateResponse{}).Name()
+	methodResponses["ApplicationInfo"] = reflect.TypeOf(appstream.InfoResponse{}).Name()
+	methodResponses["ApplicationList"] = reflect.TypeOf(appstream.ListResponse{}).Name()
+	methodResponses["ApplicationGetFilterFields"] = reflect.TypeOf(appstream.FilterFieldsAppStreamResponse{}).Name()
+	methodResponses["ApplicationCategories"] = reflect.TypeOf(appstream.CategoriesResponse{}).Name()
 
 	return dbus_doc.Config{
 		ModuleName:      "System",

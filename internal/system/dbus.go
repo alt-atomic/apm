@@ -572,8 +572,8 @@ func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	return string(data), nil
 }
 
-// AppStreamUpdate загружает и сохраняет AppStream данные.
-func (w *DBusWrapper) AppStreamUpdate(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
+// ApplicationUpdate загружает и сохраняет данные приложений.
+func (w *DBusWrapper) ApplicationUpdate(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
@@ -586,7 +586,7 @@ func (w *DBusWrapper) AppStreamUpdate(sender dbus.Sender, transaction string, ba
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.appstreamActions.Update(ctx)
-			reply.SendTaskResult(ctx, reply.EventAppStreamUpdate, resp, err)
+			reply.SendTaskResult(ctx, reply.EventApplicationUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -612,8 +612,8 @@ func (w *DBusWrapper) AppStreamUpdate(sender dbus.Sender, transaction string, ba
 	return string(data), nil
 }
 
-// AppStreamInfo возвращает AppStream данные для конкретного пакета.
-func (w *DBusWrapper) AppStreamInfo(pkgname, transaction string) (string, *dbus.Error) {
+// ApplicationInfo возвращает данные приложения для конкретного пакета.
+func (w *DBusWrapper) ApplicationInfo(pkgname, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.appstreamActions.Info(ctx, pkgname)
 	if err != nil {
@@ -626,8 +626,8 @@ func (w *DBusWrapper) AppStreamInfo(pkgname, transaction string) (string, *dbus.
 	return string(data), nil
 }
 
-// AppStreamList возвращает список AppStream компонентов с фильтрами.
-func (w *DBusWrapper) AppStreamList(sort, order string, limit, offset int, filtersJSON, transaction string) (string, *dbus.Error) {
+// ApplicationList возвращает список приложений с фильтрами.
+func (w *DBusWrapper) ApplicationList(sort, order string, limit, offset int, filtersJSON, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
 		limit = 10
@@ -664,10 +664,38 @@ func (w *DBusWrapper) AppStreamList(sort, order string, limit, offset int, filte
 	return string(data), nil
 }
 
-// AppStreamGetFilterFields возвращает список полей фильтрации для AppStream.
-func (w *DBusWrapper) AppStreamGetFilterFields(transaction string) (string, *dbus.Error) {
+// ApplicationGetFilterFields возвращает список полей фильтрации приложений.
+func (w *DBusWrapper) ApplicationGetFilterFields(transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.appstreamActions.GetFilterFields(ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// Sections возвращает список уникальных секций пакетов.
+func (w *DBusWrapper) Sections(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.Sections(ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// ApplicationCategories возвращает список уникальных категорий приложений.
+func (w *DBusWrapper) ApplicationCategories(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.appstreamActions.Categories(ctx)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}

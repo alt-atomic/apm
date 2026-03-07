@@ -114,6 +114,12 @@ type ImageConfigResponse struct {
 	Config build.Config `json:"config"`
 }
 
+// SectionsResponse структура ответа для метода Sections.
+type SectionsResponse struct {
+	Message  string   `json:"message"`
+	Sections []string `json:"sections"`
+}
+
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода
 type GetFilterFieldsResponse []filter.FieldInfo
 

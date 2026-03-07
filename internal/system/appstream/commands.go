@@ -66,6 +66,17 @@ func CommandList(_ context.Context) []*cli.Command {
 			}),
 		},
 		{
+			Name:  "categories",
+			Usage: app.T_("Show all available application categories"),
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.Categories(ctx)
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				}
+				return reply.CliResponse(ctx, reply.OK(resp))
+			}),
+		},
+		{
 			Name:        "list",
 			Usage:       app.T_("Building a query to get a list of components"),
 			Description: helper.FilterDescription("--filter pkgname=steam --filter components.type[eq]=desktop-application"),

@@ -482,9 +482,9 @@ func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// AppStreamUpdate загружает и сохраняет AppStream данные.
-func (w *HTTPWrapper) AppStreamUpdate(rw http.ResponseWriter, r *http.Request) {
-	if w.RunBackground(rw, r, reply.EventAppStreamUpdate, func(ctx context.Context) (interface{}, error) {
+// ApplicationUpdate загружает и сохраняет данные приложений.
+func (w *HTTPWrapper) ApplicationUpdate(rw http.ResponseWriter, r *http.Request) {
+	if w.RunBackground(rw, r, reply.EventApplicationUpdate, func(ctx context.Context) (interface{}, error) {
 		return w.appstreamActions.Update(ctx)
 	}) {
 		return
@@ -499,8 +499,8 @@ func (w *HTTPWrapper) AppStreamUpdate(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// AppStreamInfo возвращает AppStream данные для конкретного пакета.
-func (w *HTTPWrapper) AppStreamInfo(rw http.ResponseWriter, r *http.Request) {
+// ApplicationInfo возвращает данные приложения для конкретного пакета.
+func (w *HTTPWrapper) ApplicationInfo(rw http.ResponseWriter, r *http.Request) {
 	pkgname := r.PathValue("pkgname")
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.appstreamActions.Info(ctx, pkgname)
@@ -511,8 +511,8 @@ func (w *HTTPWrapper) AppStreamInfo(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// AppStreamList возвращает список AppStream компонентов.
-func (w *HTTPWrapper) AppStreamList(rw http.ResponseWriter, r *http.Request) {
+// ApplicationList возвращает список приложений.
+func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Filters []filter.Filter `json:"filters"`
 	}
@@ -560,10 +560,32 @@ func (w *HTTPWrapper) AppStreamList(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
-// AppStreamGetFilterFields возвращает доступные поля фильтрации AppStream.
-func (w *HTTPWrapper) AppStreamGetFilterFields(rw http.ResponseWriter, r *http.Request) {
+// ApplicationGetFilterFields возвращает доступные поля фильтрации приложений.
+func (w *HTTPWrapper) ApplicationGetFilterFields(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.appstreamActions.GetFilterFields(ctx)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
+// Sections возвращает список уникальных секций пакетов.
+func (w *HTTPWrapper) Sections(rw http.ResponseWriter, r *http.Request) {
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.actions.Sections(ctx)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
+// ApplicationCategories возвращает список уникальных категорий приложений.
+func (w *HTTPWrapper) ApplicationCategories(rw http.ResponseWriter, r *http.Request) {
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.appstreamActions.Categories(ctx)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -692,7 +714,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Summary:      "Получить список пакетов",
 			Description: filter.ListEndpointDescription(
 				"Поиск пакетов",
-				"name, section, installed, appStream.categories",
+				"name, section, installed, app.categories",
 				"POST /api/v1/packages/list?sort=name&limit=20",
 				`{"filters": [{"field": "name", "op": "like", "value": "hello"}]}`,
 				"/api/v1/packages/filter-fields",
@@ -714,6 +736,15 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			ResponseType: reflect.TypeOf(GetFilterFieldsResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить доступные поля для фильтрации",
+			Tags:         []string{"packages"},
+		},
+		{
+			Handler:      w.Sections,
+			HTTPMethod:   "GET",
+			HTTPPath:     "/api/v1/packages/sections",
+			ResponseType: reflect.TypeOf(SectionsResponse{}),
+			Permission:   http_server.PermRead,
+			Summary:      "Получить список секций пакетов",
 			Tags:         []string{"packages"},
 		},
 		{
@@ -760,43 +791,43 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 	}
 	endpoints = append(endpoints,
 		http_server.Endpoint{
-			Handler:      w.AppStreamUpdate,
+			Handler:      w.ApplicationUpdate,
 			HTTPMethod:   "POST",
-			HTTPPath:     "/api/v1/appstream/update",
+			HTTPPath:     "/api/v1/applications/update",
 			ResponseType: reflect.TypeOf(appstream2.UpdateResponse{}),
 			Permission:   http_server.PermManage,
-			Summary:      "Обновить данные AppStream",
-			Tags:         []string{"appstream"},
+			Summary:      "Обновить данные приложений",
+			Tags:         []string{"applications"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
 		http_server.Endpoint{
-			Handler:      w.AppStreamInfo,
+			Handler:      w.ApplicationInfo,
 			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/appstream/{pkgname}",
+			HTTPPath:     "/api/v1/applications/{pkgname}",
 			ResponseType: reflect.TypeOf(appstream2.InfoResponse{}),
 			Permission:   http_server.PermRead,
-			Summary:      "Получить AppStream данные для пакета",
-			Tags:         []string{"appstream"},
+			Summary:      "Получить данные приложения для пакета",
+			Tags:         []string{"applications"},
 			PathParams:   []string{"pkgname"},
 		},
 		http_server.Endpoint{
-			Handler:      w.AppStreamList,
+			Handler:      w.ApplicationList,
 			HTTPMethod:   "POST",
-			HTTPPath:     "/api/v1/appstream/list",
+			HTTPPath:     "/api/v1/applications/list",
 			RequestType:  reflect.TypeOf(appstream2.ListFiltersBody{}),
 			ResponseType: reflect.TypeOf(appstream2.ListResponse{}),
 			Permission:   http_server.PermRead,
-			Summary:      "Получить список AppStream компонентов",
+			Summary:      "Получить список приложений",
 			Description: filter.ListEndpointDescription(
-				"Поиск AppStream компонентов",
+				"Поиск приложений",
 				"pkgname, components.name, components.categories",
-				"POST /api/v1/appstream/list?sort=pkgname&limit=20",
+				"POST /api/v1/applications/list?sort=pkgname&limit=20",
 				`{"filters": [{"field": "components.categories", "op": "eq", "value": "Game"}]}`,
-				"/api/v1/appstream/filter-fields",
+				"/api/v1/applications/filter-fields",
 			),
-			Tags: []string{"appstream"},
+			Tags: []string{"applications"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "sort", Type: "string", Required: false, Description: "Поле сортировки"},
 				{Name: "order", Type: "string", Required: false, Description: "Порядок сортировки (ASC/DESC)"},
@@ -805,13 +836,22 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			},
 		},
 		http_server.Endpoint{
-			Handler:      w.AppStreamGetFilterFields,
+			Handler:      w.ApplicationGetFilterFields,
 			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/appstream/filter-fields",
+			HTTPPath:     "/api/v1/applications/filter-fields",
 			ResponseType: reflect.TypeOf(appstream2.FilterFieldsAppStreamResponse{}),
 			Permission:   http_server.PermRead,
-			Summary:      "Получить доступные поля для фильтрации AppStream",
-			Tags:         []string{"appstream"},
+			Summary:      "Получить доступные поля для фильтрации приложений",
+			Tags:         []string{"applications"},
+		},
+		http_server.Endpoint{
+			Handler:      w.ApplicationCategories,
+			HTTPMethod:   "GET",
+			HTTPPath:     "/api/v1/applications/categories",
+			ResponseType: reflect.TypeOf(appstream2.CategoriesResponse{}),
+			Permission:   http_server.PermRead,
+			Summary:      "Получить список категорий приложений",
+			Tags:         []string{"applications"},
 		},
 	)
 

@@ -103,13 +103,13 @@ const (
 	EventSystemBootcUpgrade         = "system.bootcUpgrade"
 	EventSystemPruneOldImages       = "system.pruneOldImages"
 	EventSystemUpdateAllPackagesDB  = "system.updateAllPackagesDB"
-	EventSystemUpdateAppStream      = "system.UpdateAppStream"
+	EventSystemUpdateApplications   = "system.UpdateApplications"
 	EventSystemDownloadProgress     = "system.downloadProgress"
 	EventSystemInstallProgress      = "system.installProgress"
 	EventSystemPullImage            = "system.pullImage"
 
-	EventAppStreamUpdate   = "appstream.Update"
-	EventAppStreamSaveToDB = "appstream.SaveToDB"
+	EventApplicationUpdate   = "application.Update"
+	EventApplicationSaveToDB = "application.SaveToDB"
 
 	EventBootcLayers   = "service.bootc-layers"
 	EventBootcDownload = "service.bootc-download"
@@ -382,15 +382,15 @@ func getTaskText(task string) string {
 		return app.T_("Cleaning up old images")
 	case EventSystemUpdateAllPackagesDB:
 		return app.T_("Synchronizing database")
-	case EventSystemUpdateAppStream:
+	case EventSystemUpdateApplications:
 		return app.T_("Loading application data from catalogs")
 	case EventSystemDownloadProgress:
 		return app.T_("Downloading packages")
 	case EventSystemPullImage:
 		return app.T_("Downloading image")
-	case EventAppStreamUpdate:
+	case EventApplicationUpdate:
 		return app.T_("Updating application data")
-	case EventAppStreamSaveToDB:
+	case EventApplicationSaveToDB:
 		return app.T_("Saving application data")
 	case EventBootcLayers:
 		return app.T_("Fetching layers")

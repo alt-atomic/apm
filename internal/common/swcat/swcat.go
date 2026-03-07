@@ -24,11 +24,9 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"html"
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -37,8 +35,8 @@ type Service struct{ path string }
 func NewSwCatService(path string) *Service { return &Service{path: path} }
 
 func (s *Service) Load(ctx context.Context) (map[string][]Component, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAppStream))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAppStream))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateApplications))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateApplications))
 	files, err := os.ReadDir(s.path)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Cannot read dir %s: %w"), s.path, err)
@@ -83,20 +81,44 @@ func sanitizeComponent(c *Component) {
 	c.Name = dedupTexts(c.Name)
 	c.Summary = dedupTexts(c.Summary)
 	c.Description = dedupTexts(c.Description)
+	c.DeveloperName = dedupTexts(c.DeveloperName)
 
-	for i := range c.Description {
-		c.Description[i].Value = cleanHTML(c.Description[i].Value)
+	applyLegacyFields(c)
+}
+
+func applyLegacyFields(c *Component) {
+	if c.UpdateContact == "" {
+		if c.LegacyUpdateContact != "" {
+			c.UpdateContact = c.LegacyUpdateContact
+		} else if c.LegacyXUpdateContact != "" {
+			c.UpdateContact = c.LegacyXUpdateContact
+		}
+	}
+	if c.MetadataLicense == "" && c.LegacyMetaLicence != "" {
+		c.MetadataLicense = c.LegacyMetaLicence
+	}
+	legacyLic := c.LegacyLicence
+	if legacyLic == "" {
+		legacyLic = c.LegacyLicense
+	}
+	if legacyLic != "" {
+		if c.MetadataLicense != "" && c.ProjectLicense == "" {
+			c.ProjectLicense = legacyLic
+		} else if c.MetadataLicense == "" {
+			c.MetadataLicense = legacyLic
+		}
+	}
+	if len(c.Name) == 0 && c.LegacyName != "" {
+		c.Name = LocalizedMap{{Value: c.LegacyName}}
+	}
+	if len(c.Summary) == 0 && c.LegacySummary != "" {
+		c.Summary = LocalizedMap{{Value: c.LegacySummary}}
+	}
+	if c.Launchable == nil && c.LegacyLaunch != nil {
+		c.Launchable = c.LegacyLaunch
 	}
 }
 
-var tagRe = regexp.MustCompile(`(?s)<[^>]*>`)
-
-func cleanHTML(raw string) string {
-	s := html.UnescapeString(raw)
-	s = tagRe.ReplaceAllString(s, "")
-	s = strings.Join(strings.Fields(s), " ")
-	return strings.TrimSpace(s)
-}
 
 func dedupTexts(src LocalizedMap) LocalizedMap {
 	seen := make(map[string]struct{}, len(src))

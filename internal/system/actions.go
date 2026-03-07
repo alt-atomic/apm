@@ -753,6 +753,23 @@ func (a *Actions) GetFilterFields(ctx context.Context) (GetFilterFieldsResponse,
 	return _package.SystemFilterConfig.FieldsInfo(), nil
 }
 
+// Sections возвращает список всех уникальных секций пакетов.
+func (a *Actions) Sections(ctx context.Context) (*SectionsResponse, error) {
+	if err := a.validateDB(ctx, false); err != nil {
+		return nil, err
+	}
+
+	sections, err := a.serviceAptDatabase.GetSections(ctx)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
+	}
+
+	return &SectionsResponse{
+		Message:  fmt.Sprintf(app.TN_("%d section found", "%d sections found", len(sections)), len(sections)),
+		Sections: sections,
+	}, nil
+}
+
 // Search осуществляет поиск системного пакета по названию
 func (a *Actions) Search(ctx context.Context, packageName string, installed bool) (*SearchResponse, error) {
 	err := a.validateDB(ctx, false)

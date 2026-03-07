@@ -108,8 +108,8 @@ func Abs(x int) int {
 }
 
 // FilterDescription генерирует общее описание фильтра для команд.
-func FilterDescription(examples string) string {
-	return app.T_("Filtering for the list method:") + "\n\n" +
+func FilterDescription(examples string, notes ...string) string {
+	result := app.T_("Filtering for the list method:") + "\n\n" +
 		app.T_("Format: key[op]=value or key=value (each field has a default operator)") + "\n\n" +
 		app.T_("Available operators:") + "\n" +
 		"  eq       - " + app.T_("exact match (=)") + "\n" +
@@ -123,4 +123,8 @@ func FilterDescription(examples string) string {
 		app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n\n" +
 		app.T_("Examples:") + "\n" +
 		"  " + examples
+	for _, note := range notes {
+		result += "\n\n" + note
+	}
+	return result
 }

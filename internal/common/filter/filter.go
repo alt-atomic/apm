@@ -83,8 +83,7 @@ type FieldInfo struct {
 // Config описывает конфигурацию фильтрации для конкретного модуля
 type Config struct {
 	Fields map[string]FieldConfig
-	// Prefixes позволяет определить конфигурацию для полей с общим префиксом,
-	// например "appStream." для appStream.name, appStream.categories и т.д.
+	// Prefixes позволяет определить конфигурацию для полей с общим префиксом
 	Prefixes map[string]FieldConfig
 }
 

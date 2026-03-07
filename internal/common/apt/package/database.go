@@ -534,11 +534,11 @@ func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters [
 
 // appStreamApplier обрабатывает фильтры по полям appStream через JOIN на host_appstream_components.
 func appStreamApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
-	if !strings.HasPrefix(f.Field, "appStream.") {
+	if !strings.HasPrefix(f.Field, swcat.AppStreamPrefix) {
 		return query, false
 	}
 
-	subField := strings.TrimPrefix(f.Field, "appStream.")
+	subField := strings.TrimPrefix(f.Field, swcat.AppStreamPrefix)
 	if !filter.IsSafeFieldName(subField) {
 		return query, false
 	}
@@ -685,6 +685,25 @@ func (s *PackageDBService) UpdateAppStreamLinks(ctx context.Context) error {
 	`).Error
 }
 
+// GetSections возвращает список уникальных секций пакетов.
+func (s *PackageDBService) GetSections(ctx context.Context) ([]string, error) {
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
+	var sections []string
+	err = db.WithContext(ctx).Model(&DBPackage{}).
+		Distinct("section").
+		Where("section != ''").
+		Order("section").
+		Pluck("section", &sections).Error
+	if err != nil {
+		return nil, err
+	}
+	return sections, nil
+}
+
 // SystemFilterConfig конфигурация фильтрации для системных пакетов.
 var SystemFilterConfig = &filter.Config{
 	Fields: func() map[string]filter.FieldConfig {
@@ -714,7 +733,7 @@ var SystemFilterConfig = &filter.Config{
 			}},
 			"files": {DefaultOp: filter.OpContains, AllowedOps: []filter.Op{filter.OpEq, filter.OpNe, filter.OpLike, filter.OpContains}, Extra: map[string]any{"type": "STRING", "description": "Package file list"}},
 		}
-		for k, v := range swcat.PrefixedFields("appStream.") {
+		for k, v := range swcat.PrefixedFields(swcat.AppStreamPrefix) {
 			fields[k] = v
 		}
 		return fields
@@ -724,7 +743,7 @@ var SystemFilterConfig = &filter.Config{
 // SystemFilterApplier применяет фильтры к GORM-запросу для системных пакетов.
 var SystemFilterApplier = &filter.GormApplier{
 	CustomAppliers: func() map[string]filter.FieldApplier {
-		appliers := swcat.PrefixedAppliers("appStream.", appStreamApplier)
+		appliers := swcat.PrefixedAppliers(swcat.AppStreamPrefix, appStreamApplier)
 		appliers["isApp"] = isAppApplier
 		appliers["installed"] = installedApplier
 		return appliers

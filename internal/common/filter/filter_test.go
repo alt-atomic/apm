@@ -162,17 +162,17 @@ func TestConfigParseWithPrefixes(t *testing.T) {
 			"name": {DefaultOp: OpLike},
 		},
 		Prefixes: map[string]FieldConfig{
-			"appStream.": {DefaultOp: OpLike},
+			"app.": {DefaultOp: OpLike},
 		},
 	}
 
 	t.Run("prefix field", func(t *testing.T) {
-		filters, err := cfg.Parse([]string{"appStream.name=test"})
+		filters, err := cfg.Parse([]string{"app.name=test"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if filters[0].Field != "appStream.name" {
-			t.Errorf("expected field %q, got %q", "appStream.name", filters[0].Field)
+		if filters[0].Field != "app.name" {
+			t.Errorf("expected field %q, got %q", "app.name", filters[0].Field)
 		}
 		if filters[0].Op != OpLike {
 			t.Errorf("expected op %q, got %q", OpLike, filters[0].Op)
@@ -180,7 +180,7 @@ func TestConfigParseWithPrefixes(t *testing.T) {
 	})
 
 	t.Run("prefix field with explicit op", func(t *testing.T) {
-		filters, err := cfg.Parse([]string{"appStream.categories[eq]=Game"})
+		filters, err := cfg.Parse([]string{"app.categories[eq]=Game"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -190,7 +190,7 @@ func TestConfigParseWithPrefixes(t *testing.T) {
 	})
 
 	t.Run("prefix sql injection blocked", func(t *testing.T) {
-		_, err := cfg.Parse([]string{"appStream.'); DROP TABLE--=x"})
+		_, err := cfg.Parse([]string{"app.'); DROP TABLE--=x"})
 		if err == nil {
 			t.Fatal("expected error for unsafe prefix field name")
 		}
@@ -298,7 +298,7 @@ func TestConfigParseOrValue(t *testing.T) {
 }
 
 func TestIsSafeFieldName(t *testing.T) {
-	safe := []string{"name", "appStream.name", "installed_size", "a1", "_field"}
+	safe := []string{"name", "app.name", "installed_size", "a1", "_field"}
 	for _, s := range safe {
 		if !IsSafeFieldName(s) {
 			t.Errorf("expected %q to be safe", s)

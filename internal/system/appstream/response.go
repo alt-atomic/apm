@@ -55,5 +55,11 @@ type ListFiltersBody struct {
 	Filters []filter.Filter `json:"filters"`
 }
 
+// CategoriesResponse структура ответа для метода Categories.
+type CategoriesResponse struct {
+	Message    string   `json:"message"`
+	Categories []string `json:"categories"`
+}
+
 // FilterFieldsAppStreamResponse структура ответа для GetFilterFields.
 type FilterFieldsAppStreamResponse []filter.FieldInfo

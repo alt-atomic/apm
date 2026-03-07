@@ -49,6 +49,8 @@ func TranslateKey(key string) string {
 		return app.T_("Container")
 	case "name":
 		return app.T_("Name")
+	case "sections":
+		return app.T_("Sections")
 	case "extraInstalled":
 		return app.T_("Extra Installed")
 	case "upgradedCount":

@@ -407,9 +407,23 @@ func CommandList(ctx context.Context) *cli.Command {
 			}),
 		},
 		{
-			Name:        "list",
-			Usage:       app.T_("Building a query to get a list of packages"),
-			Description: helper.FilterDescription("--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education"),
+			Name:  "sections",
+			Usage: app.T_("Show all available package sections"),
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.Sections(ctx)
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				}
+				return reply.CliResponse(ctx, reply.OK(resp))
+			}),
+		},
+		{
+			Name:  "list",
+			Usage: app.T_("Building a query to get a list of packages"),
+			Description: helper.FilterDescription(
+				"--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education",
+				app.T_("Application fields are available with the \"app.\" prefix: app.name, app.categories, app.type, etc."),
+			),
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "sort",
@@ -472,7 +486,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			}),
 		},
 		{
-			Name:     "app-stream",
+			Name:     "application",
 			Usage:    app.T_("Module for application information"),
 			Category: app.T_("Applications"),
 			Commands: appstream.CommandList(ctx),

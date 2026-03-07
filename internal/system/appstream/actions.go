@@ -48,8 +48,8 @@ func NewActions(appConfig *app.Config) *Actions {
 
 // Update загружает AppStream данные из XML и сохраняет в БД.
 func (a *Actions) Update(ctx context.Context) (*UpdateResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventAppStreamUpdate))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventAppStreamUpdate))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationUpdate))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationUpdate))
 
 	pkgMap, err := a.swCatService.Load(ctx)
 	if err != nil {
@@ -123,6 +123,23 @@ func (a *Actions) List(ctx context.Context, params ListParams) (*ListResponse, e
 		Message:    msg,
 		Components: components,
 		TotalCount: int(totalCount),
+	}, nil
+}
+
+// Categories возвращает список всех уникальных категорий.
+func (a *Actions) Categories(ctx context.Context) (*CategoriesResponse, error) {
+	if err := a.validateDB(ctx); err != nil {
+		return nil, err
+	}
+
+	categories, err := a.dbService.GetCategories(ctx)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
+	}
+
+	return &CategoriesResponse{
+		Message:    fmt.Sprintf(app.TN_("%d category found", "%d categories found", len(categories)), len(categories)),
+		Categories: categories,
 	}, nil
 }
 

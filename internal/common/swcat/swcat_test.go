@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -47,7 +46,7 @@ func TestXMLParseRealComponent(t *testing.T) {
 		</categories>
 		<pkgname>0ad</pkgname>
 		<releases>
-			<release timestamp="1760471686" version="0.27.1"/>
+			<release date="2024-10-15" version="0.27.1" type="stable"/>
 		</releases>
 	</component>`
 
@@ -82,6 +81,72 @@ func TestXMLParseRealComponent(t *testing.T) {
 	}
 	if comp.Releases[0].Version != "0.27.1" {
 		t.Errorf("Release version = %q, want %q", comp.Releases[0].Version, "0.27.1")
+	}
+	if comp.Releases[0].Date != "2024-10-15" {
+		t.Errorf("Release date = %q, want %q", comp.Releases[0].Date, "2024-10-15")
+	}
+	if comp.Releases[0].Type != "stable" {
+		t.Errorf("Release type = %q, want %q", comp.Releases[0].Type, "stable")
+	}
+}
+
+func TestXMLParseReleaseWithDetails(t *testing.T) {
+	raw := `<component type="desktop">
+		<id>test.desktop</id>
+		<pkgname>test</pkgname>
+		<releases>
+			<release date="2024-10-15" version="1.2.0" type="stable" urgency="high">
+				<description>
+					<p>New features and bug fixes</p>
+					<p xml:lang="ru">Новые функции и исправления</p>
+				</description>
+				<url type="details">https://example.com/releases/1.2.0</url>
+			</release>
+			<release date="2024-08-01" version="1.1.0"/>
+		</releases>
+	</component>`
+
+	var comp Component
+	if err := xml.Unmarshal([]byte(raw), &comp); err != nil {
+		t.Fatalf("xml.Unmarshal failed: %v", err)
+	}
+
+	if len(comp.Releases) != 2 {
+		t.Fatalf("Releases count = %d, want 2", len(comp.Releases))
+	}
+
+	r := comp.Releases[0]
+	if r.Version != "1.2.0" {
+		t.Errorf("Release.Version = %q, want %q", r.Version, "1.2.0")
+	}
+	if r.Date != "2024-10-15" {
+		t.Errorf("Release.Date = %q, want %q", r.Date, "2024-10-15")
+	}
+	if r.Type != "stable" {
+		t.Errorf("Release.Type = %q, want %q", r.Type, "stable")
+	}
+	if r.Urgency != "high" {
+		t.Errorf("Release.Urgency = %q, want %q", r.Urgency, "high")
+	}
+	if len(r.Description) == 0 {
+		t.Fatal("Release.Description is empty")
+	}
+	if r.URL == nil {
+		t.Fatal("Release.URL is nil")
+	}
+	if r.URL.Value != "https://example.com/releases/1.2.0" {
+		t.Errorf("Release.URL.Value = %q, want %q", r.URL.Value, "https://example.com/releases/1.2.0")
+	}
+	if r.URL.Type != "details" {
+		t.Errorf("Release.URL.Type = %q, want %q", r.URL.Type, "details")
+	}
+
+	r2 := comp.Releases[1]
+	if r2.Version != "1.1.0" {
+		t.Errorf("Release[1].Version = %q, want %q", r2.Version, "1.1.0")
+	}
+	if r2.Date != "2024-08-01" {
+		t.Errorf("Release[1].Date = %q, want %q", r2.Date, "2024-08-01")
 	}
 }
 
@@ -127,7 +192,7 @@ func TestXMLParseScreenshots(t *testing.T) {
 		<id>test.desktop</id>
 		<pkgname>test</pkgname>
 		<screenshots>
-			<screenshot type="default">
+			<screenshot type="default" environment="gnome">
 				<caption>Main screen</caption>
 				<caption xml:lang="ru">Главный экран</caption>
 				<image type="source" width="905" height="650">https://example.com/screen.png</image>
@@ -146,6 +211,9 @@ func TestXMLParseScreenshots(t *testing.T) {
 	screenshot := comp.Screenshots[0]
 	if screenshot.Type != "default" {
 		t.Errorf("Screenshot.Type = %q, want %q", screenshot.Type, "default")
+	}
+	if screenshot.Environment != "gnome" {
+		t.Errorf("Screenshot.Environment = %q, want %q", screenshot.Environment, "gnome")
 	}
 	if len(screenshot.Caption) != 2 {
 		t.Errorf("Caption count = %d, want 2", len(screenshot.Caption))
@@ -416,7 +484,10 @@ func TestComponentJSONRoundtrip(t *testing.T) {
 		</screenshots>
 		<pkgname>86box</pkgname>
 		<releases>
-			<release timestamp="1766665170" version="5.3"/>
+			<release date="2025-01-15" version="5.3" type="stable">
+				<description><p>Bug fixes and improvements</p></description>
+				<url type="details">https://example.com/release</url>
+			</release>
 		</releases>
 		<icon type="cached" width="64" height="64">net.86box.86Box.png</icon>
 		<icon type="cached" width="128" height="128">net.86box.86Box.png</icon>
@@ -485,6 +556,79 @@ func TestComponentJSONRoundtrip(t *testing.T) {
 	}
 }
 
+func TestLegacyFieldsFallback(t *testing.T) {
+	raw := `<component type="desktop">
+		<id>legacy.desktop</id>
+		<pkgname>legacy-app</pkgname>
+		<_name>Legacy Name</_name>
+		<_summary>Legacy Summary</_summary>
+		<licence>GPL-2.0</licence>
+		<metadata_licence>CC0-1.0</metadata_licence>
+		<updatecontact>dev@example.com</updatecontact>
+		<launch>legacy.desktop</launch>
+	</component>`
+
+	var comp Component
+	if err := xml.Unmarshal([]byte(raw), &comp); err != nil {
+		t.Fatalf("xml.Unmarshal failed: %v", err)
+	}
+	sanitizeComponent(&comp)
+
+	if len(comp.Name) == 0 || comp.Name[0].Value != "Legacy Name" {
+		t.Errorf("Name not populated from <_name>, got %v", comp.Name)
+	}
+	if len(comp.Summary) == 0 || comp.Summary[0].Value != "Legacy Summary" {
+		t.Errorf("Summary not populated from <_summary>, got %v", comp.Summary)
+	}
+	if comp.MetadataLicense != "CC0-1.0" {
+		t.Errorf("MetadataLicense = %q, want %q", comp.MetadataLicense, "CC0-1.0")
+	}
+	if comp.ProjectLicense != "GPL-2.0" {
+		t.Errorf("ProjectLicense = %q, want %q", comp.ProjectLicense, "GPL-2.0")
+	}
+	if comp.UpdateContact != "dev@example.com" {
+		t.Errorf("UpdateContact = %q, want %q", comp.UpdateContact, "dev@example.com")
+	}
+	if comp.Launchable == nil || comp.Launchable.Value != "legacy.desktop" {
+		t.Errorf("Launchable not populated from <launch>, got %v", comp.Launchable)
+	}
+}
+
+func TestLegacyFieldsNoOverride(t *testing.T) {
+	raw := `<component type="desktop">
+		<id>modern.desktop</id>
+		<pkgname>modern-app</pkgname>
+		<name>Modern Name</name>
+		<summary>Modern Summary</summary>
+		<project_license>MIT</project_license>
+		<metadata_license>CC0-1.0</metadata_license>
+		<update_contact>modern@example.com</update_contact>
+		<launchable type="desktop-id">modern.desktop</launchable>
+		<_name>Legacy Name</_name>
+		<licence>GPL-2.0</licence>
+		<updatecontact>legacy@example.com</updatecontact>
+	</component>`
+
+	var comp Component
+	if err := xml.Unmarshal([]byte(raw), &comp); err != nil {
+		t.Fatalf("xml.Unmarshal failed: %v", err)
+	}
+	sanitizeComponent(&comp)
+
+	if comp.Name[0].Value != "Modern Name" {
+		t.Errorf("Name should not be overridden, got %q", comp.Name[0].Value)
+	}
+	if comp.ProjectLicense != "MIT" {
+		t.Errorf("ProjectLicense should not be overridden, got %q", comp.ProjectLicense)
+	}
+	if comp.UpdateContact != "modern@example.com" {
+		t.Errorf("UpdateContact should not be overridden, got %q", comp.UpdateContact)
+	}
+	if comp.Launchable.Value != "modern.desktop" {
+		t.Errorf("Launchable should not be overridden, got %q", comp.Launchable.Value)
+	}
+}
+
 func TestSanitizeComponent(t *testing.T) {
 	comp := Component{
 		Name: LocalizedMap{
@@ -502,169 +646,8 @@ func TestSanitizeComponent(t *testing.T) {
 	if len(comp.Name) != 2 {
 		t.Errorf("Name count after dedup = %d, want 2", len(comp.Name))
 	}
-	if comp.Description[0].Value != "A bold description with & entities." {
-		t.Errorf("Description = %q, want cleaned text", comp.Description[0].Value)
-	}
-}
-
-func TestCleanHTML(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "Simple HTML tags",
-			input:    "<p>Hello <b>world</b></p>",
-			expected: "Hello world",
-		},
-		{
-			name:     "Complex nested tags",
-			input:    "<div><h1>Title</h1><p>Paragraph with <em>emphasis</em> and <strong>strong</strong> text.</p></div>",
-			expected: "TitleParagraph with emphasis and strong text.",
-		},
-		{
-			name:     "Self-closing tags",
-			input:    "Line 1<br/>Line 2<hr/>Line 3",
-			expected: "Line 1Line 2Line 3",
-		},
-		{
-			name:     "HTML entities",
-			input:    "Caf&eacute; &amp; R&eacute;sum&eacute;",
-			expected: "Café & Résumé",
-		},
-		{
-			name:     "Mixed HTML entities and tags",
-			input:    "<p>Price: &pound;100 &lt; &pound;200</p>",
-			expected: "Price: £100",
-		},
-		{
-			name:     "No HTML content",
-			input:    "Plain text without any HTML",
-			expected: "Plain text without any HTML",
-		},
-		{
-			name:     "Empty string",
-			input:    "",
-			expected: "",
-		},
-		{
-			name:     "Only whitespace",
-			input:    "   \n\t   ",
-			expected: "",
-		},
-		{
-			name:     "Tags with attributes",
-			input:    `<a href="https://example.com" class="link">Click here</a>`,
-			expected: "Click here",
-		},
-		{
-			name:     "Malformed HTML",
-			input:    "<p>Unclosed paragraph<div>Another tag</p>",
-			expected: "Unclosed paragraphAnother tag",
-		},
-		{
-			name:     "Multiple consecutive spaces",
-			input:    "<p>Text    with     multiple     spaces</p>",
-			expected: "Text with multiple spaces",
-		},
-		{
-			name:     "Mixed whitespace characters",
-			input:    "<div>Text\n\twith\r\nmixed\t\twhitespace</div>",
-			expected: "Text with mixed whitespace",
-		},
-		{
-			name:     "HTML comments",
-			input:    "<!-- This is a comment --><p>Visible text</p><!-- Another comment -->",
-			expected: "Visible text",
-		},
-		{
-			name:     "Script and style tags",
-			input:    "<script>var x = 1;</script><p>Content</p><style>body { color: red; }</style>",
-			expected: "var x = 1;Contentbody { color: red; }",
-		},
-		{
-			name:     "Multiline HTML",
-			input:    "<div>\n  <h1>Title</h1>\n  <p>Paragraph</p>\n</div>",
-			expected: "Title Paragraph",
-		},
-		{
-			name:     "HTML with special characters",
-			input:    "<p>Symbols: &copy; &trade; &reg;</p>",
-			expected: "Symbols: © ™ ®",
-		},
-		{
-			name:     "Nested quotes in attributes",
-			input:    `<div title="He said 'Hello'">Content</div>`,
-			expected: "Content",
-		},
-		{
-			name:     "Tags with line breaks",
-			input:    "<p>First\nline</p><p>Second\nline</p>",
-			expected: "First lineSecond line",
-		},
-		{
-			name:     "Only HTML tags",
-			input:    "<div><span></span></div>",
-			expected: "",
-		},
-		{
-			name:     "Real appstream description",
-			input:    "\n\t\t\t<p>0 A.D. (pronounced &quot;zero ey-dee&quot;) is a free software, cross-platform\nreal-time strategy (RTS) game of ancient warfare.</p>\n\t\t",
-			expected: `0 A.D. (pronounced "zero ey-dee") is a free software, cross-platform real-time strategy (RTS) game of ancient warfare.`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := cleanHTML(tt.input)
-			if result != tt.expected {
-				t.Errorf("cleanHTML(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestCleanHTMLEdgeCases(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "Very long string",
-			input:    "<p>" + strings.Repeat("a", 10000) + "</p>",
-			expected: strings.Repeat("a", 10000),
-		},
-		{
-			name:     "Deeply nested tags",
-			input:    "<a><b><c><d><e><f>Content</f></e></d></c></b></a>",
-			expected: "Content",
-		},
-		{
-			name:     "Unclosed tag at end",
-			input:    "Content<p",
-			expected: "Content<p",
-		},
-		{
-			name:     "Tag in middle of word",
-			input:    "Hel<b>lo Wor</b>ld",
-			expected: "Hello World",
-		},
-		{
-			name:     "Escaped HTML in text",
-			input:    "Code: &lt;script&gt;alert('hi')&lt;/script&gt;",
-			expected: "Code: alert('hi')",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := cleanHTML(tt.input)
-			if result != tt.expected {
-				t.Errorf("cleanHTML(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
-		})
+	if comp.Description[0].Value != "<p>A <b>bold</b> description with &amp; entities.</p>" {
+		t.Errorf("Description should preserve HTML, got %q", comp.Description[0].Value)
 	}
 }
 

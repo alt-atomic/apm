@@ -32,6 +32,9 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// AppStreamPrefix префикс для фильтрации по полям AppStream компонентов.
+const AppStreamPrefix = "app."
+
 // DBAppStream модель для таблицы host_appstream_components.
 type DBAppStream struct {
 	ID         uint        `gorm:"primaryKey;autoIncrement" json:"id"`
@@ -81,8 +84,8 @@ func (s *DBService) db() (*gorm.DB, error) {
 
 // SaveComponentsToDB полностью перезаписывает таблицу AppStream компонентов.
 func (s *DBService) SaveComponentsToDB(ctx context.Context, pkgMap map[string][]Component) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventAppStreamSaveToDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventAppStreamSaveToDB))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationSaveToDB))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationSaveToDB))
 
 	db, err := s.db()
 	if err != nil {
@@ -229,6 +232,27 @@ func (s *DBService) DatabaseExist(ctx context.Context) error {
 		return fmt.Errorf(app.T_("Table %s exists but contains no records"), DBAppStream{}.TableName())
 	}
 	return nil
+}
+
+// GetCategories возвращает список уникальных категорий из всех компонентов.
+func (s *DBService) GetCategories(ctx context.Context) ([]string, error) {
+	db, err := s.db()
+	if err != nil {
+		return nil, err
+	}
+
+	var categories []string
+	err = db.WithContext(ctx).Raw(`
+		SELECT DISTINCT kv.value
+		FROM host_appstream_components ac,
+		json_each(ac.components) AS comp,
+		json_each(json_extract(comp.value, '$.categories')) AS kv
+		ORDER BY kv.value
+	`).Scan(&categories).Error
+	if err != nil {
+		return nil, fmt.Errorf(app.T_("Query execution error: %w"), err)
+	}
+	return categories, nil
 }
 
 // appStreamComponentApplier обрабатывает фильтры по полям components через json_extract.
