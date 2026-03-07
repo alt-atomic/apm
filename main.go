@@ -331,10 +331,6 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	if syscall.Geteuid() != 0 {
-		return errors.New(app.T_("Administrator privileges are required to start"))
-	}
-
 	sysActions := system.NewActions(appConfig)
 	conn, _ := dbus.SystemBus()
 
