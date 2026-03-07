@@ -461,6 +461,9 @@ func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*Update
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 		}
+		if err = a.serviceAptDatabase.UpdateAppStreamLinks(ctx); err != nil {
+			app.Log.Debugf("UpdateAppStreamLinks: %v", err)
+		}
 		return &UpdateResponse{
 			Message: app.T_("Installed package status updated"),
 			Count:   len(packages),
@@ -470,6 +473,10 @@ func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*Update
 	packages, err := a.serviceAptActions.Update(ctx, noLock)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+	}
+
+	if err = a.serviceAptDatabase.UpdateAppStreamLinks(ctx); err != nil {
+		app.Log.Debugf("UpdateAppStreamLinks: %v", err)
 	}
 
 	return &UpdateResponse{
