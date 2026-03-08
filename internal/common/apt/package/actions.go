@@ -47,6 +47,16 @@ func NewActions(serviceAptDatabase *PackageDBService, appConfig *app.Config) *Ac
 	}
 }
 
+// SetAptConfigOverrides устанавливает переопределения конфигурации APT
+func (a *Actions) SetAptConfigOverrides(overrides map[string]string) {
+	a.serviceAptBinding.SetConfigOverrides(overrides)
+}
+
+// GetAptConfigOverrides возвращает текущие переопределения конфигурации APT
+func (a *Actions) GetAptConfigOverrides() map[string]string {
+	return a.serviceAptBinding.GetConfigOverrides()
+}
+
 // Package описывает структуру для хранения информации о пакете.
 type Package struct {
 	Name             string            `json:"name"`

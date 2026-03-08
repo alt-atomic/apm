@@ -706,6 +706,35 @@ func (w *DBusWrapper) ApplicationCategories(transaction string) (string, *dbus.E
 	return string(data), nil
 }
 
+// SetAptConfigOverrides устанавливает переопределения конфигурации APT, сохраняющиеся между запросами.
+func (w *DBusWrapper) SetAptConfigOverrides(sender dbus.Sender, options map[string]string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
+	}
+	resp, err := w.actions.SetAptConfigOverrides(options)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// GetAptConfigOverrides возвращает текущие переопределения конфигурации APT.
+func (w *DBusWrapper) GetAptConfigOverrides() (string, *dbus.Error) {
+	resp, err := w.actions.GetAptConfigOverrides()
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // ImageSaveConfig проверяет и сохраняет новую конфигурацию image.yml.
 func (w *DBusWrapper) ImageSaveConfig(sender dbus.Sender, config string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {

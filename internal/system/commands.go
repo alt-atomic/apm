@@ -87,6 +87,30 @@ func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
 var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
 var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
+// applyAptOptions парсит -o флаги и применяет к actions
+func applyAptOptions(cmd *cli.Command, actions *Actions) {
+	opts := cmd.StringSlice("option")
+	if len(opts) == 0 {
+		return
+	}
+	overrides := make(map[string]string, len(opts))
+	for _, opt := range opts {
+		if k, v, ok := strings.Cut(opt, "="); ok {
+			overrides[strings.TrimSpace(k)] = strings.TrimSpace(v)
+		}
+	}
+	_, _ = actions.SetAptConfigOverrides(overrides)
+}
+
+// aptOptionFlag общий флаг для всех команд работы с пакетами
+var aptOptionFlag = func() cli.Flag {
+	return &cli.StringSliceFlag{
+		Name:    "option",
+		Usage:   app.T_("Override APT config option, e.g. Dir::Cache::Archives=/tmp"),
+		Aliases: []string{"o"},
+	}
+}
+
 func upgradeCommand(appConfig *app.Config) *cli.Command {
 	if appConfig.ConfigManager.GetConfig().IsAtomic {
 		return &cli.Command{
@@ -118,8 +142,10 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 				Aliases: []string{"d"},
 				Value:   false,
 			},
+			aptOptionFlag(),
 		},
 		Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+			applyAptOptions(cmd, actions)
 			if cmd.Bool("simulate") {
 				resp, err := actions.CheckUpgrade(ctx)
 				if err != nil {
@@ -244,8 +270,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Aliases: []string{"s"},
 					Value:   false,
 				},
+				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				applyAptOptions(cmd, actions)
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckReinstall(ctx, cmd.Args().Slice())
 					if err != nil {
@@ -284,8 +312,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Aliases: []string{"d"},
 					Value:   false,
 				},
+				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				applyAptOptions(cmd, actions)
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckInstall(ctx, cmd.Args().Slice())
 					if err != nil {
@@ -325,8 +355,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Aliases: []string{"s"},
 					Value:   false,
 				},
+				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				applyAptOptions(cmd, actions)
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckRemove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"))
 					if err != nil {
@@ -356,8 +388,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Name:  "only-db",
 					Usage: app.T_("Only update installed status in DB without refreshing repositories"),
 				},
+				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				applyAptOptions(cmd, actions)
 				resp, err := actions.Update(ctx, cmd.Bool("no-lock"), cmd.Bool("only-db"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))

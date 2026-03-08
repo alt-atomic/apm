@@ -346,9 +346,11 @@ AptResult apt_cache_open(const AptSystem *system, AptCache **cache, bool with_lo
         (*cache)->cache_file = std::make_unique<CacheFile>(apt_log_stream(), with_lock);
 
         if (!(*cache)->cache_file->Open()) {
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "Failed to open APT cache";
             delete *cache;
             *cache = nullptr;
-            return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Failed to open APT cache");
+            return make_result(APT_ERROR_CACHE_OPEN_FAILED, err.c_str());
         }
 
         if (!(*cache)->cache_file->CheckDeps()) {
@@ -402,7 +404,9 @@ AptResult apt_cache_refresh(AptCache *cache) {
         cache->cache_file = std::make_unique<CacheFile>(apt_log_stream(), true);
 
         if (!cache->cache_file->Open()) {
-            return make_result(APT_ERROR_CACHE_REFRESH_FAILED, "Failed to reopen cache after refresh");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "Failed to reopen cache after refresh";
+            return make_result(APT_ERROR_CACHE_REFRESH_FAILED, err.c_str());
         }
 
         if (!cache->cache_file->CheckDeps()) {
@@ -445,7 +449,9 @@ AptResult apt_cache_update(AptCache *cache) {
         pkgSourceList source_list;
 
         if (!source_list.ReadMainList()) {
-            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to read sources.list");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "The list of sources could not be read.";
+            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, err.c_str());
         }
 
         if (!source_list.InvalidateReleases()) {
@@ -498,7 +504,9 @@ AptResult apt_cache_update(AptCache *cache) {
         }
 
         if (!cache->cache_file->BuildCaches()) {
-            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, "Failed to rebuild caches");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "Failed to rebuild caches";
+            return make_result(APT_ERROR_CACHE_UPDATE_FAILED, err.c_str());
         }
 
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
@@ -790,10 +798,24 @@ AptErrorCode apt_set_config(const char *key, const char *value) {
     }
 }
 
-char *apt_get_config(const char *key, const char *default_value) {
-    if (!key) return nullptr;
-    std::string val = _config->Find(key, default_value ? default_value : "");
-    return strdup(val.c_str());
+char *apt_dump_config() {
+    std::ostringstream ss;
+    _config->Dump(ss);
+    return strdup(ss.str().c_str());
+}
+
+void *apt_config_snapshot() {
+    try {
+        return new Configuration(*_config);
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+void apt_config_restore(void *snapshot) {
+    if (!snapshot) return;
+    delete _config;
+    _config = static_cast<Configuration *>(snapshot);
 }
 
 void apt_free_package_changes(AptPackageChanges *changes) {

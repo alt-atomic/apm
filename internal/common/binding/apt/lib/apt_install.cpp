@@ -83,13 +83,17 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
         pkgSourceList source_list;
 
         if (!source_list.ReadMainList()) {
-            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "The list of sources could not be read.";
+            return make_result(APT_ERROR_INSTALL_FAILED, err.c_str());
         }
 
         pkgRecords records(*pm->cache->dep_cache);
 
         if (!pm->pm->GetArchives(&acquire, &source_list, &records)) {
-            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to get package archives");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "Failed to get package archives";
+            return make_result(APT_ERROR_INSTALL_FAILED, err.c_str());
         }
 
         auto acquire_result = acquire.Run();

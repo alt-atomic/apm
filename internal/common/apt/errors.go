@@ -153,6 +153,7 @@ const (
 	ErrUnableToFindPackageFromRpm
 	ErrTransactionSetCheckFailed
 	ErrSomeErrorsRunningTransaction
+	ErrArchiveDirectoryMissing
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -444,6 +445,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrSomeErrorsRunningTransaction, "Some errors occurred while running transaction", func() string {
 		return app.T_("Some errors occurred while running transaction")
 	}, 0},
+	{ErrArchiveDirectoryMissing, "Archive directory %s is missing.", func() string {
+		return app.T_("Archive directory %s is missing.")
+	}, 1},
 }
 
 // cleanErrorPrefix убирает префиксы ошибок APT (E:) и RPM (error:)

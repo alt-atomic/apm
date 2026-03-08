@@ -318,6 +318,8 @@ func (g *Generator) getASTTypeString(expr ast.Expr) string {
 		}
 	case *ast.ArrayType:
 		return "[]" + g.getASTTypeString(t.Elt)
+	case *ast.MapType:
+		return "map[" + g.getASTTypeString(t.Key) + "]" + g.getASTTypeString(t.Value)
 	case *ast.SelectorExpr:
 		return g.getASTTypeString(t.X) + "." + t.Sel.Name
 	default:
@@ -338,26 +340,29 @@ func (g *Generator) formatParameters(params []DBusParameter) string {
 	return strings.Join(parts, "")
 }
 
-// generateDBusCommand генерирует пример dbus-send команды
+// generateDBusCommand генерирует пример gdbus call команды для вызова метода через D-Bus.
 func (g *Generator) generateDBusCommand(method DBusMethodInfo) string {
 	sessionType := g.config.DBusSession
 	if sessionType == "" {
 		sessionType = "system"
 	}
-	cmd := fmt.Sprintf("dbus-send --%s --print-reply --dest=org.altlinux.APM /org/altlinux/APM %s.%s", sessionType, g.config.DBusInterface, method.Name)
+
+	cmd := fmt.Sprintf("gdbus call --%s --dest org.altlinux.APM --object-path /org/altlinux/APM --method %s.%s", sessionType, g.config.DBusInterface, method.Name)
 
 	for _, param := range method.Parameters {
 		switch param.Type {
 		case "string":
-			cmd += " string:\"example\""
+			cmd += ` "example"`
 		case "[]string":
-			cmd += " array:string:\"example1\",\"example2\""
+			cmd += ` '["example1", "example2"]'`
 		case "bool":
-			cmd += " boolean:true"
+			cmd += " true"
 		case "int":
-			cmd += " int32:10"
+			cmd += " 10"
+		case "map[string]string":
+			cmd += ` '{"Key": "Value"}'`
 		default:
-			cmd += " string:\"" + param.Name + "\""
+			cmd += ` "` + param.Name + `"`
 		}
 	}
 
@@ -449,6 +454,12 @@ func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 			fieldValue.Set(slice)
 		case reflect.Struct:
 			fieldValue.Set(reflect.ValueOf(g.createExampleStruct(field.Type)))
+		case reflect.Map:
+			m := reflect.MakeMap(field.Type)
+			if field.Type.Key().Kind() == reflect.String && field.Type.Elem().Kind() == reflect.String {
+				m.SetMapIndex(reflect.ValueOf("Key"), reflect.ValueOf("Value"))
+			}
+			fieldValue.Set(m)
 		case reflect.Ptr:
 			elemType := field.Type.Elem()
 			ptrValue := reflect.New(elemType)

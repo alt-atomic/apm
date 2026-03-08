@@ -84,6 +84,21 @@ func NewActions(appConfig *app.Config) *Actions {
 	}
 }
 
+// SetAptConfigOverrides устанавливает переопределения конфигурации APT
+func (a *Actions) SetAptConfigOverrides(overrides map[string]string) (*AptConfigResponse, error) {
+	a.serviceAptActions.SetAptConfigOverrides(overrides)
+	return &AptConfigResponse{Options: overrides}, nil
+}
+
+// GetAptConfigOverrides возвращает текущие переопределения конфигурации APT
+func (a *Actions) GetAptConfigOverrides() (*AptConfigResponse, error) {
+	overrides := a.serviceAptActions.GetAptConfigOverrides()
+	if overrides == nil {
+		overrides = map[string]string{}
+	}
+	return &AptConfigResponse{Options: overrides}, nil
+}
+
 type ImageStatus struct {
 	Image  build.HostImage `json:"image"`
 	Status string          `json:"status"`

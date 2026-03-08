@@ -32,10 +32,22 @@ var (
 	aptMutex      sync.Mutex
 )
 
-type Actions struct{}
+type Actions struct {
+	configOverrides map[string]string
+}
 
 func NewActions() *Actions {
 	return &Actions{}
+}
+
+// SetConfigOverrides устанавливает переопределения конфигурации APT
+func (a *Actions) SetConfigOverrides(overrides map[string]string) {
+	a.configOverrides = overrides
+}
+
+// GetConfigOverrides возвращает текущие переопределения конфигурации APT
+func (a *Actions) GetConfigOverrides() map[string]string {
+	return a.configOverrides
 }
 
 func getSystem() (*lib.System, error) {
@@ -56,13 +68,12 @@ func Close() {
 
 // OperationOptions опции для операций с APT
 type OperationOptions struct {
-	SkipLock        bool
-	ConfigOverrides map[string]string
-	RpmArguments    []string
+	SkipLock     bool
+	RpmArguments []string
 }
 
 // runOperation единая обёртка для всех операций с APT
-func (a *Actions) runOperation(opts OperationOptions, fn func() error) error {
+func (a *Actions) runOperation(opts OperationOptions, fn func(system *lib.System) error) error {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
 
@@ -84,6 +95,11 @@ func (a *Actions) runOperation(opts OperationOptions, fn func() error) error {
 	lib.StartOperation()
 	defer lib.EndOperation()
 
+	system, initErr := getSystem()
+	if initErr != nil {
+		return initErr
+	}
+
 	logs := make([]string, 0, 256)
 	lib.SetLogHandler(func(msg string) { logs = append(logs, msg) })
 	lib.CaptureStdIO(true)
@@ -94,49 +110,61 @@ func (a *Actions) runOperation(opts OperationOptions, fn func() error) error {
 	}
 
 	if err == nil {
-		err = lib.WithConfigOverrides(opts.ConfigOverrides, fn)
+		err = lib.WithConfigOverrides(a.configOverrides, func() error {
+			return fn(system)
+		})
 	}
 
 	// Очищаем RPM аргументы
 	lib.ClearInstallArguments()
 
-	// Очищаем и анализируем ошибки
+	// Захватываем ошибки
 	lib.CaptureStdIO(false)
 	lib.SetLogHandler(nil)
 
-	return a.checkAnyError(logs, err)
+	result := a.checkAnyError(logs, err)
+	if result != nil && len(logs) > 0 {
+		app.Log.Error("[APM DUMP ERROR] ", result.Error())
+		for _, line := range logs {
+			app.Log.Error("[APM DUMP TRACE] ", line)
+		}
+	}
+	return result
+}
+
+// withCache открывает кеш APT и передаёт в fn
+func withCache(system *lib.System, readOnly bool, fn func(*lib.Cache) error) error {
+	cache, err := lib.OpenCache(system, readOnly)
+	if err != nil {
+		return err
+	}
+	defer cache.Close()
+	return fn(cache)
+}
+
+// commitWithPM создаёт PackageManager и выполняет установку
+func commitWithPM(cache *lib.Cache, handler lib.ProgressHandler, downloadOnly bool) error {
+	pm, err := lib.NewPackageManager(cache)
+	if err != nil {
+		return err
+	}
+	defer pm.Close()
+	if handler != nil {
+		return pm.InstallPackagesWithProgress(handler, downloadOnly)
+	}
+	return pm.InstallPackages(downloadOnly)
 }
 
 // CombineInstallRemovePackages комбинированный метод установки и удаления
 func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string,
 	handler lib.ProgressHandler, purge bool, depends bool, downloadOnly bool) error {
-	return a.runOperation(OperationOptions{RpmArguments: packagesInstall}, func() error {
-		system, err := getSystem()
-		if err != nil {
-			return err
-		}
-
-		cache, err := lib.OpenCache(system, false)
-		if err != nil {
-			return err
-		}
-		defer cache.Close()
-
-		// ApplyChanges to apply all changes in ONE transaction
-		if e := cache.ApplyChanges(packagesInstall, packagesRemove, purge, depends); e != nil {
-			return e
-		}
-
-		pm, err := lib.NewPackageManager(cache)
-		if err != nil {
-			return err
-		}
-		defer pm.Close()
-
-		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler, downloadOnly)
-		}
-		return pm.InstallPackages(downloadOnly)
+	return a.runOperation(OperationOptions{RpmArguments: packagesInstall}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			if e := cache.ApplyChanges(packagesInstall, packagesRemove, purge, depends); e != nil {
+				return e
+			}
+			return commitWithPM(cache, handler, downloadOnly)
+		})
 	})
 }
 
@@ -145,34 +173,13 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 	if len(packageNames) == 0 {
 		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
-
-	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
-		system, err := getSystem()
-		if err != nil {
-			return err
-		}
-
-		cache, err := lib.OpenCache(system, false)
-		if err != nil {
-			return err
-		}
-		defer cache.Close()
-
-		// Use ApplyChanges to apply all packages in ONE transaction
-		if e := cache.ApplyChanges(packageNames, nil, false, false); e != nil {
-			return e
-		}
-
-		pm, err := lib.NewPackageManager(cache)
-		if err != nil {
-			return err
-		}
-		defer pm.Close()
-
-		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler, downloadOnly)
-		}
-		return pm.InstallPackages(downloadOnly)
+	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			if e := cache.ApplyChanges(packageNames, nil, false, false); e != nil {
+				return e
+			}
+			return commitWithPM(cache, handler, downloadOnly)
+		})
 	})
 }
 
@@ -181,112 +188,54 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, depends bool
 	if len(packageNames) == 0 {
 		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
-
-	return a.runOperation(OperationOptions{}, func() error {
-		system, err := getSystem()
-		if err != nil {
-			return err
-		}
-
-		cache, err := lib.OpenCache(system, false)
-		if err != nil {
-			return err
-		}
-		defer cache.Close()
-
-		// Use ApplyChanges to apply all packages in ONE transaction
-		if e := cache.ApplyChanges(nil, packageNames, purge, depends); e != nil {
-			return e
-		}
-
-		pm, err := lib.NewPackageManager(cache)
-		if err != nil {
-			return err
-		}
-		defer pm.Close()
-
-		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler, false)
-		}
-		return pm.InstallPackages(false)
+	return a.runOperation(OperationOptions{}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			if e := cache.ApplyChanges(nil, packageNames, purge, depends); e != nil {
+				return e
+			}
+			return commitWithPM(cache, handler, false)
+		})
 	})
 }
 
 // DistUpgrade обновление системы
 func (a *Actions) DistUpgrade(handler lib.ProgressHandler, downloadOnly bool) error {
-	return a.runOperation(OperationOptions{}, func() error {
-		system, err := getSystem()
-		if err != nil {
-			return err
-		}
-
-		cache, err := lib.OpenCache(system, false)
-		if err != nil {
-			return err
-		}
-		defer cache.Close()
-
-		return cache.DistUpgradeWithProgress(handler, downloadOnly)
+	return a.runOperation(OperationOptions{}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			return cache.DistUpgradeWithProgress(handler, downloadOnly)
+		})
 	})
 }
 
 // Update обновление локальной базы пакетов
 func (a *Actions) Update(handler lib.ProgressHandler, noLock ...bool) error {
 	skipLock := len(noLock) > 0 && noLock[0]
-
-	return a.runOperation(OperationOptions{SkipLock: skipLock}, func() error {
-		system, err := getSystem()
-		if err != nil {
-			return err
-		}
-
-		cache, err := lib.OpenCache(system, false)
-		if err != nil {
-			return err
-		}
-		defer cache.Close()
-
-		return cache.Update(handler)
+	return a.runOperation(OperationOptions{SkipLock: skipLock}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			return cache.Update(handler)
+		})
 	})
 }
 
 // Search поиск по пакетам
 func (a *Actions) Search(pattern string, noLock ...bool) (packages []lib.PackageInfo, err error) {
 	skipLock := len(noLock) > 0 && noLock[0]
-	err = a.runOperation(OperationOptions{SkipLock: skipLock}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, true)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packages, e = cache.SearchPackages(pattern)
-		return e
+	err = a.runOperation(OperationOptions{SkipLock: skipLock}, func(system *lib.System) error {
+		return withCache(system, true, func(cache *lib.Cache) error {
+			packages, err = cache.SearchPackages(pattern)
+			return err
+		})
 	})
 	return
 }
 
 // GetInfo поиск одного пакета
 func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err error) {
-	err = a.runOperation(OperationOptions{}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, true)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageInfo, e = cache.GetPackageInfo(packageName)
-		return e
+	err = a.runOperation(OperationOptions{}, func(system *lib.System) error {
+		return withCache(system, true, func(cache *lib.Cache) error {
+			packageInfo, err = cache.GetPackageInfo(packageName)
+			return err
+		})
 	})
 	return
 }
@@ -296,21 +245,11 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 	if len(packageNames) == 0 {
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
-
-	err = a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, false)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageInfo, e = cache.SimulateInstall(packageNames)
-		return e
+	err = a.runOperation(OperationOptions{RpmArguments: packageNames}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			packageInfo, err = cache.SimulateInstall(packageNames)
+			return err
+		})
 	})
 	return
 }
@@ -320,61 +259,33 @@ func (a *Actions) SimulateRemove(packageNames []string, purge bool, depends bool
 	if len(packageNames) == 0 {
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
-
-	err = a.runOperation(OperationOptions{}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, false)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageInfo, e = cache.SimulateRemove(packageNames, purge, depends)
-		return e
+	err = a.runOperation(OperationOptions{}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			packageInfo, err = cache.SimulateRemove(packageNames, purge, depends)
+			return err
+		})
 	})
 	return
 }
 
 // SimulateDistUpgrade симуляция обновления системы
 func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err error) {
-	err = a.runOperation(OperationOptions{}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, false)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageChanges, e = cache.SimulateDistUpgrade()
-		return e
+	err = a.runOperation(OperationOptions{}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			packageChanges, err = cache.SimulateDistUpgrade()
+			return err
+		})
 	})
 	return
 }
 
 // SimulateAutoRemove симуляция автоматического удаления неиспользуемых пакетов
 func (a *Actions) SimulateAutoRemove() (packageChanges *lib.PackageChanges, err error) {
-	err = a.runOperation(OperationOptions{}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, false)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageChanges, e = cache.SimulateAutoRemove()
-		return e
+	err = a.runOperation(OperationOptions{}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			packageChanges, err = cache.SimulateAutoRemove()
+			return err
+		})
 	})
 	return
 }
@@ -384,21 +295,11 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 	if len(installNames) == 0 && len(removeNames) == 0 {
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "Invalid parameters")
 	}
-
-	err = a.runOperation(OperationOptions{RpmArguments: installNames}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, false)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageChanges, e = cache.SimulateChange(installNames, removeNames, purge, depends)
-		return e
+	err = a.runOperation(OperationOptions{RpmArguments: installNames}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			packageChanges, err = cache.SimulateChange(installNames, removeNames, purge, depends)
+			return err
+		})
 	})
 	return
 }
@@ -408,21 +309,11 @@ func (a *Actions) SimulateChangeWithRpmInfo(installNames []string, removeNames [
 	if len(installNames) == 0 && len(removeNames) == 0 {
 		return nil, nil, lib.CustomError(lib.AptErrorInvalidParameters, "Invalid parameters")
 	}
-
-	err = a.runOperation(OperationOptions{RpmArguments: rpmFiles}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, false)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageChanges, rpmInfos, e = cache.SimulateChangeWithRpmInfo(installNames, removeNames, purge, depends, rpmFiles)
-		return e
+	err = a.runOperation(OperationOptions{RpmArguments: rpmFiles}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			packageChanges, rpmInfos, err = cache.SimulateChangeWithRpmInfo(installNames, removeNames, purge, depends, rpmFiles)
+			return err
+		})
 	})
 	return
 }
@@ -432,21 +323,11 @@ func (a *Actions) SimulateReinstall(packageNames []string) (packageInfo *lib.Pac
 	if len(packageNames) == 0 {
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
-
-	err = a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
-		system, e := getSystem()
-		if e != nil {
-			return e
-		}
-
-		cache, e := lib.OpenCache(system, false)
-		if e != nil {
-			return e
-		}
-		defer cache.Close()
-
-		packageInfo, e = cache.SimulateReinstall(packageNames)
-		return e
+	err = a.runOperation(OperationOptions{RpmArguments: packageNames}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			packageInfo, err = cache.SimulateReinstall(packageNames)
+			return err
+		})
 	})
 	return
 }
@@ -456,34 +337,13 @@ func (a *Actions) ReinstallPackages(packageNames []string, handler lib.ProgressH
 	if len(packageNames) == 0 {
 		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
-
-	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
-		system, err := getSystem()
-		if err != nil {
-			return err
-		}
-
-		cache, err := lib.OpenCache(system, false)
-		if err != nil {
-			return err
-		}
-		defer cache.Close()
-
-		// Apply reinstall changes to cache
-		if e := cache.ApplyReinstall(packageNames); e != nil {
-			return e
-		}
-
-		pm, err := lib.NewPackageManager(cache)
-		if err != nil {
-			return err
-		}
-		defer pm.Close()
-
-		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler, false)
-		}
-		return pm.InstallPackages(false)
+	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func(system *lib.System) error {
+		return withCache(system, false, func(cache *lib.Cache) error {
+			if e := cache.ApplyReinstall(packageNames); e != nil {
+				return e
+			}
+			return commitWithPM(cache, handler, false)
+		})
 	})
 }
 

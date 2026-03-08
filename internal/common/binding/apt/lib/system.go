@@ -32,10 +32,10 @@ import (
 	"unsafe"
 )
 
-// System represents APT system configuration
+// System представляет конфигурацию APT системы
 type System struct{ Ptr *C.AptSystem }
 
-// NewSystem initializes APT system
+// NewSystem инициализирует APT систему
 func NewSystem() (*System, error) {
 	AptMutex.Lock()
 	defer AptMutex.Unlock()
@@ -67,7 +67,7 @@ func NewSystem() (*System, error) {
 	return s, nil
 }
 
-// Close frees the system resources
+// Close освобождает ресурсы системы
 func (s *System) Close() {
 	if s.Ptr != nil {
 		BlockSignals()
@@ -78,7 +78,7 @@ func (s *System) Close() {
 	}
 }
 
-// SetConfig sets an APT configuration key-value pair (e.g. "Dir::Cache::Archives", "/tmp/")
+// SetConfig устанавливает значение конфигурации APT (например "Dir::Cache::Archives", "/tmp/")
 func SetConfig(key, value string) {
 	cKey := C.CString(key)
 	cVal := C.CString(value)
@@ -87,41 +87,54 @@ func SetConfig(key, value string) {
 	C.apt_set_config(cKey, cVal)
 }
 
-// GetConfig returns the current APT configuration value for key.
-func GetConfig(key, defaultValue string) string {
-	cKey := C.CString(key)
-	cDef := C.CString(defaultValue)
-	defer C.free(unsafe.Pointer(cKey))
-	defer C.free(unsafe.Pointer(cDef))
-	cVal := C.apt_get_config(cKey, cDef)
+// DumpConfig возвращает всю конфигурацию APT в виде строки.
+func DumpConfig() string {
+	cVal := C.apt_dump_config()
 	if cVal == nil {
-		return defaultValue
+		return ""
 	}
 	defer C.free(unsafe.Pointer(cVal))
 	return C.GoString(cVal)
 }
 
-// WithConfigOverrides applies overrides, runs fn, then restores original values.
+// ConfigSnapshot создаёт копию всего дерева конфигурации APT.
+func ConfigSnapshot() unsafe.Pointer {
+	return C.apt_config_snapshot()
+}
+
+// ConfigRestore восстанавливает конфигурацию APT из снимка (освобождает снимок).
+func ConfigRestore(snapshot unsafe.Pointer) {
+	if snapshot != nil {
+		C.apt_config_restore(snapshot)
+	}
+}
+
+// WithConfigOverrides сохраняет снимок конфигурации, применяет overrides, выполняет fn, затем восстанавливает из снимка.
 func WithConfigOverrides(overrides map[string]string, fn func() error) error {
 	if len(overrides) == 0 {
 		return fn()
 	}
 
-	saved := make(map[string]string, len(overrides))
+	snapshot := ConfigSnapshot()
+	if snapshot == nil {
+		return fn()
+	}
+
+	defer func() {
+		//fmt.Fprintln(os.Stderr, "[APT config] before restore:\n"+DumpConfig())
+		ConfigRestore(snapshot)
+		//fmt.Fprintln(os.Stderr, "[APT config] after restore:\n"+DumpConfig())
+	}()
+
 	for key, value := range overrides {
-		saved[key] = GetConfig(key, "")
+		//fmt.Fprintf(os.Stderr, "[APT config] override %s = %q\n", key, value)
 		SetConfig(key, value)
 	}
-	defer func() {
-		for key, original := range saved {
-			SetConfig(key, original)
-		}
-	}()
 
 	return fn()
 }
 
-// SetNoLocking enables or disables APT file locking.
+// SetNoLocking включает или отключает блокировку файлов APT.
 func SetNoLocking(noLock bool) {
 	val := "false"
 	if noLock {
@@ -134,7 +147,7 @@ func SetNoLocking(noLock bool) {
 	C.apt_set_config(cKey, cVal)
 }
 
-// isAtomicSystem checks if root filesystem is composefs/overlay
+// isAtomicSystem проверяет является ли корневая ФС composefs/overlay
 func isAtomicSystem() bool {
 	file, err := os.Open("/proc/mounts")
 	if err != nil {

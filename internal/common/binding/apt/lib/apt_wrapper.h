@@ -275,8 +275,14 @@ uint32_t apt_get_broken_count(const AptCache *cache);
 // Configuration
 AptErrorCode apt_set_config(const char *key, const char *value);
 
-// Returns the current value for key (caller must free() the result).
-char *apt_get_config(const char *key, const char *default_value);
+// Dump all APT configuration as a string
+char *apt_dump_config(void);
+
+// Snapshot/restore: deep copy of entire configuration tree
+void *apt_config_snapshot(void);
+
+// Restore configuration from snapshot
+void apt_config_restore(void *snapshot);
 
 // Lock status information
 typedef struct {

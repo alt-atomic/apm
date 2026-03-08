@@ -15,7 +15,9 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         CallbackGuard cbGuard;
 
         if (!pkgDistUpgrade(*cache->dep_cache)) {
-            return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Distribution upgrade failed");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "Distribution upgrade failed";
+            return make_result(APT_ERROR_CACHE_OPEN_FAILED, err.c_str());
         }
 
         if (cache->dep_cache->DelCount() == 0 &&
@@ -47,12 +49,16 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         pkgAcquire acquire(&status);
         pkgSourceList source_list;
         if (!source_list.ReadMainList()) {
-            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to read sources.list");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "The list of sources could not be read.";
+            return make_result(APT_ERROR_INSTALL_FAILED, err.c_str());
         }
 
         pkgRecords records(*cache->dep_cache);
         if (!pm->GetArchives(&acquire, &source_list, &records)) {
-            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to get package archives for dist upgrade");
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = "Failed to get package archives for dist upgrade";
+            return make_result(APT_ERROR_INSTALL_FAILED, err.c_str());
         }
         if (acquire.Run() != pkgAcquire::Continue) {
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages for dist upgrade");
