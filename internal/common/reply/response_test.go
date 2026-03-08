@@ -486,6 +486,33 @@ func TestRenderText_NestedData(t *testing.T) {
 	}
 }
 
+func TestRenderText_MultilineValue(t *testing.T) {
+	r := NewRendererFromColors(app.GetDefaultColors())
+	data := map[string]interface{}{
+		"message":     "Package info",
+		"description": "First line\nSecond line\nThird line",
+		"name":        "test",
+	}
+
+	result := r.RenderText(data, app.FormatTypeTree, false)
+	lines := strings.Split(result, "\n")
+
+	for i, line := range lines {
+		if line == "" {
+			continue
+		}
+		hasTreePrefix := strings.Contains(line, "├") || strings.Contains(line, "╰") || strings.Contains(line, "│")
+		hasPadding := len(line) > 0 && line[0] == ' '
+		if !hasTreePrefix && !hasPadding {
+			t.Errorf("line %d has no tree prefix: %q", i, line)
+		}
+	}
+
+	if !strings.Contains(result, "Second line") {
+		t.Error("multiline value should contain all lines")
+	}
+}
+
 func TestRenderText_ListData(t *testing.T) {
 	r := NewRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{

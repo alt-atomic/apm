@@ -151,6 +151,8 @@ const (
 	ErrRpmRunningTransaction
 	ErrPackageNotInstalledCannotReinstall
 	ErrUnableToFindPackageFromRpm
+	ErrTransactionSetCheckFailed
+	ErrSomeErrorsRunningTransaction
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -436,6 +438,12 @@ var errorPatterns = []ErrorEntry{
 	{ErrUnableToFindPackageFromRpm, "Unable to find package from RPM file: %s", func() string {
 		return app.T_("Unable to find package from RPM file: %s")
 	}, 1},
+	{ErrTransactionSetCheckFailed, "Transaction set check failed", func() string {
+		return app.T_("Transaction set check failed")
+	}, 0},
+	{ErrSomeErrorsRunningTransaction, "Some errors occurred while running transaction", func() string {
+		return app.T_("Some errors occurred while running transaction")
+	}, 0},
 }
 
 // cleanErrorPrefix убирает префиксы ошибок APT (E:) и RPM (error:)
@@ -571,7 +579,8 @@ func toInterfaceSlice(strings []string) []interface{} {
 // IsTransactionError проверяет, является ли ошибка связанной с RPM транзакцией.
 func (e *MatchedError) IsTransactionError() bool {
 	switch e.Entry.Code {
-	case ErrRpmRunningTransaction, ErrPMOperationFailed, ErrPMOperationIncomplete:
+	case ErrRpmRunningTransaction, ErrPMOperationFailed, ErrPMOperationIncomplete,
+		ErrTransactionSetCheckFailed, ErrSomeErrorsRunningTransaction:
 		return true
 	default:
 		return false
