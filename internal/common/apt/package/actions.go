@@ -23,14 +23,12 @@ import (
 	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
 	"context"
 	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Actions struct {
@@ -56,33 +54,6 @@ func (a *Actions) SetAptConfigOverrides(overrides map[string]string) {
 func (a *Actions) GetAptConfigOverrides() map[string]string {
 	return a.serviceAptBinding.GetConfigOverrides()
 }
-
-// Package описывает структуру для хранения информации о пакете.
-type Package struct {
-	Name             string            `json:"name"`
-	Architecture     string            `json:"architecture"`
-	Section          string            `json:"section"`
-	InstalledSize    int               `json:"installedSize"`
-	Maintainer       string            `json:"maintainer"`
-	Version          string            `json:"version"`
-	VersionRaw       string            `json:"versionRaw"`
-	VersionInstalled string            `json:"versionInstalled"`
-	Depends          []string          `json:"depends"`
-	Aliases          []string          `json:"aliases"`
-	Provides         []string          `json:"provides"`
-	Size             int               `json:"size"`
-	Filename         string            `json:"filename"`
-	Summary          string            `json:"summary"`
-	Description      string            `json:"description"`
-	AppStream        []swcat.Component `json:"appStream,omitempty"`
-	HasAppStream     bool              `json:"-"`
-	Changelog        string            `json:"lastChangelog"`
-	Installed        bool              `json:"installed"`
-	TypePackage      int               `json:"typePackage"`
-	Files            []string          `json:"files"`
-}
-
-type FindType uint8
 
 // PrepareInstallPackages разбирает список пакетов с суффиксами +/- и возвращает два списка
 func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string) (install []string, remove []string, err error) {
@@ -122,36 +93,44 @@ func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string)
 // checkPackageExists проверяет существует ли пакет в базе данных
 func (a *Actions) checkPackageExists(ctx context.Context, packageName string) bool {
 	_, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
-	var packagesInfo []Package
-	var finalPackageNames []string
-	seenNames := make(map[string]bool)
-	seenInfo := make(map[string]bool)
 
-	// Объединяем все запрошенные пакеты для обработки wildcard
-	allReq := append([]string{}, installed...)
-	allReq = append(allReq, removed...)
-
-	// Сначала добавляем исходные пакеты из запроса пользователя (как есть)
-	finalPackageNames = append(finalPackageNames, allReq...)
-	for _, original := range allReq {
-		seenNames[original] = true
+	expandedInstall, expandedRemove, rpmFiles, packagesInfo, seenInfo, err := a.expandPackageLists(ctx, installed, removed)
+	if err != nil {
+		return nil, nil, nil, nil, err
 	}
 
-	// Обрабатываем wildcard пакеты и создаём расширенный запрос
-	var expandedInstall []string
-	var expandedRemove []string
-	var rpmFiles []string
+	if len(expandedInstall) == 0 && len(expandedRemove) == 0 {
+		if len(installed) > 0 || len(removed) > 0 {
+			return nil, nil, nil, nil, errors.New(app.T_("No packages found matching the specified patterns"))
+		}
+	}
 
-	// Вспомогательная функция для обработки списка пакетов
+	packageChanges, err := a.simulateChanges(ctx, expandedInstall, expandedRemove, rpmFiles, purge, depends, reinstall)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	packagesInfo, err = a.enrichPackagesInfo(ctx, packagesInfo, seenInfo, packageChanges)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return expandedInstall, expandedRemove, packagesInfo, packageChanges, nil
+}
+
+// expandPackageLists обрабатывает wildcard-пакеты и RPM-файлы, возвращая расширенные списки.
+func (a *Actions) expandPackageLists(ctx context.Context, installed, removed []string) (
+	expandedInstall, expandedRemove, rpmFiles []string, packagesInfo []Package, seenInfo map[string]bool, err error,
+) {
+	seenInfo = make(map[string]bool)
+	seenNames := make(map[string]bool)
+
 	processPackageList := func(packages []string, targetList *[]string, onlyInstalled bool) error {
 		for _, original := range packages {
 			if strings.Contains(original, "*") {
@@ -168,7 +147,6 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 						}
 						if !seenNames[mp.Name] {
 							seenNames[mp.Name] = true
-							finalPackageNames = append(finalPackageNames, mp.Name)
 							*targetList = append(*targetList, mp.Name)
 						}
 					}
@@ -177,8 +155,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 				if aptParser.IsRegularFileAndIsPackage(original) {
 					rpmFiles = append(rpmFiles, original)
 				}
-
-				// Для обычных пакетов - копируем как есть
+				seenNames[original] = true
 				*targetList = append(*targetList, original)
 			}
 		}
@@ -186,225 +163,78 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 	}
 
 	// Обрабатываем пакеты на установку (ищем среди всех доступных)
-	if err := processPackageList(installed, &expandedInstall, false); err != nil {
-		return nil, nil, nil, nil, err
+	if err = processPackageList(installed, &expandedInstall, false); err != nil {
+		return
 	}
 
 	// Обрабатываем пакеты на удаление (ищем только среди установленных)
-	if err := processPackageList(removed, &expandedRemove, true); err != nil {
-		return nil, nil, nil, nil, err
+	if err = processPackageList(removed, &expandedRemove, true); err != nil {
+		return
 	}
 
-	if len(expandedInstall) == 0 && len(expandedRemove) == 0 {
-		if len(installed) > 0 || len(removed) > 0 {
-			return nil, nil, nil, nil, errors.New(app.T_("No packages found matching the specified patterns"))
-		}
-	}
+	return
+}
 
-	var aptError error
-	var packageChanges *aptLib.PackageChanges
-
+// simulateChanges выполняет симуляцию изменений через APT binding.
+func (a *Actions) simulateChanges(ctx context.Context, expandedInstall, expandedRemove, rpmFiles []string,
+	purge, depends, reinstall bool,
+) (*aptLib.PackageChanges, error) {
 	if reinstall {
-		packageChanges, aptError = a.CheckReinstall(ctx, expandedInstall)
-	} else if len(rpmFiles) > 0 {
-		var rpmInfos []*aptLib.PackageInfo
-		packageChanges, rpmInfos, aptError = a.serviceAptBinding.SimulateChangeWithRpmInfo(expandedInstall, expandedRemove, purge, depends, rpmFiles)
-		if aptError == nil {
-			for _, rpmInfo := range rpmInfos {
-				if err := a.saveRpmInfoToDatabase(ctx, rpmInfo); err != nil {
-					return nil, nil, nil, nil, err
-				}
-			}
-		}
-	} else {
-		packageChanges, aptError = a.serviceAptBinding.SimulateChange(expandedInstall, expandedRemove, purge, depends)
-	}
-	if aptError != nil {
-		return nil, nil, nil, nil, aptError
+		return a.CheckReinstall(ctx, expandedInstall)
 	}
 
-	// Добавляем информацию о дополнительных пакетах из packageChanges только в packagesInfo
-	if packageChanges != nil {
-		var namesToFetch []string
-		for _, list := range [][]string{
-			packageChanges.ExtraInstalled,
-			packageChanges.UpgradedPackages,
-			packageChanges.NewInstalledPackages,
-			packageChanges.RemovedPackages,
-		} {
-			for _, pkgName := range list {
-				cleanName := helper.CleanPackageName(strings.TrimSpace(pkgName))
-				if cleanName == "" {
-					continue
-				}
-				if !seenInfo[cleanName] {
-					seenInfo[cleanName] = true
-					namesToFetch = append(namesToFetch, cleanName)
-				}
+	if len(rpmFiles) > 0 {
+		packageChanges, rpmInfos, aptError := a.serviceAptBinding.SimulateChangeWithRpmInfo(expandedInstall, expandedRemove, purge, depends, rpmFiles)
+		if aptError != nil {
+			return nil, aptError
+		}
+		for _, rpmInfo := range rpmInfos {
+			if err := a.saveRpmInfoToDatabase(ctx, rpmInfo); err != nil {
+				return nil, err
 			}
 		}
-
-		if len(namesToFetch) > 0 {
-			batchInfo, err := a.serviceAptDatabase.GetPackagesByNames(ctx, namesToFetch)
-			if err != nil {
-				return nil, nil, nil, nil, err
-			}
-			packagesInfo = append(packagesInfo, batchInfo...)
-		}
+		return packageChanges, nil
 	}
 
-	return expandedInstall, expandedRemove, packagesInfo, packageChanges, nil
+	return a.serviceAptBinding.SimulateChange(expandedInstall, expandedRemove, purge, depends)
 }
 
-// Вспомогательная структура для отслеживания прогресса пакета
-type packageProgress struct {
-	lastPercent int
-	lastUpdate  time.Time
-	id          int
-}
-
-func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
-	pkgCount := 0
-	if len(packageCount) > 0 {
-		pkgCount = packageCount[0]
+// enrichPackagesInfo добавляет информацию о пакетах из packageChanges.
+func (a *Actions) enrichPackagesInfo(ctx context.Context, packagesInfo []Package, seenInfo map[string]bool,
+	packageChanges *aptLib.PackageChanges,
+) ([]Package, error) {
+	if packageChanges == nil {
+		return packagesInfo, nil
 	}
-	// Состояние для загрузки
-	lastDownloadPercent := -1
-	lastDownloadUpdate := time.Now()
-	downloadStarted := false
 
-	// Состояние для установки пакетов
-	packageState := make(map[string]*packageProgress)
-	var packageMutex sync.Mutex
-	nextInstallID := 1
-
-	return func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
-		switch event {
-		case aptLib.CallbackDownloadProgress:
-			if total == 0 {
-				return
+	var namesToFetch []string
+	for _, list := range [][]string{
+		packageChanges.ExtraInstalled,
+		packageChanges.UpgradedPackages,
+		packageChanges.NewInstalledPackages,
+		packageChanges.RemovedPackages,
+	} {
+		for _, pkgName := range list {
+			cleanName := helper.CleanPackageName(strings.TrimSpace(pkgName))
+			if cleanName == "" {
+				continue
 			}
-			downloadStarted = true
-			percent := int((cur * 100) / total)
-
-			if percent < 100 {
-				now := time.Now()
-				elapsed := now.Sub(lastDownloadUpdate)
-
-				// Throttling для загрузки
-				shouldUpdate := false
-
-				if lastDownloadPercent == -1 {
-					shouldUpdate = true
-				} else if percent != lastDownloadPercent {
-					if percent < 10 || percent > 90 {
-						shouldUpdate = elapsed >= 50*time.Millisecond
-					} else {
-						shouldUpdate = elapsed >= 100*time.Millisecond
-					}
-				}
-
-				if shouldUpdate && percent < 100 {
-					lastDownloadPercent = percent
-					lastDownloadUpdate = now
-
-					viewText := app.T_("Downloading packages")
-					if speedStr := helper.FormatSpeed(speed); speedStr != "" {
-						viewText += "  " + speedStr
-					}
-
-					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName(reply.EventSystemDownloadProgress),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(viewText),
-					)
-				}
-			}
-		case aptLib.CallbackDownloadComplete:
-			if !downloadStarted {
-				return
-			}
-			doneText := app.T_("All packages downloaded")
-			if pkgCount == 1 {
-				doneText = app.T_("Package downloaded")
-			}
-			reply.CreateEventNotification(ctx, reply.StateAfter,
-				reply.WithEventName(reply.EventSystemDownloadProgress),
-				reply.WithProgress(true),
-				reply.WithProgressPercent(100),
-				reply.WithProgressDoneText(doneText),
-			)
-		case aptLib.CallbackInstallProgress:
-			if pkg == "" || total == 0 {
-				return
-			}
-
-			packageMutex.Lock()
-			defer packageMutex.Unlock()
-
-			state, exists := packageState[pkg]
-			if !exists {
-				state = &packageProgress{
-					lastPercent: -1,
-					lastUpdate:  time.Now(),
-					id:          nextInstallID,
-				}
-				nextInstallID++
-				packageState[pkg] = state
-			}
-
-			percent := int((cur * 100) / total)
-			now := time.Now()
-			elapsed := now.Sub(state.lastUpdate)
-
-			// Throttling для установки пакетов
-			shouldUpdate := false
-
-			if state.lastPercent == -1 {
-				shouldUpdate = true
-			} else if percent == 100 {
-				shouldUpdate = true
-			} else if percent != state.lastPercent {
-				percentDiff := helper.Abs(percent - state.lastPercent)
-
-				if percentDiff >= 10 {
-					shouldUpdate = elapsed >= 50*time.Millisecond
-				} else if percentDiff >= 5 {
-					shouldUpdate = elapsed >= 100*time.Millisecond
-				} else {
-					shouldUpdate = elapsed >= 200*time.Millisecond
-				}
-			}
-
-			if shouldUpdate {
-				state.lastPercent = percent
-				state.lastUpdate = now
-
-				ev := fmt.Sprintf("%s-%d", reply.EventSystemInstallProgress, state.id)
-
-				if percent < 100 {
-					reply.CreateEventNotification(ctx, reply.StateBefore,
-						reply.WithEventName(ev),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(float64(percent)),
-						reply.WithEventView(fmt.Sprintf(app.T_("Installing progress: %s"), pkg)),
-					)
-				} else {
-					reply.CreateEventNotification(ctx, reply.StateAfter,
-						reply.WithEventName(ev),
-						reply.WithProgress(true),
-						reply.WithProgressPercent(100),
-						reply.WithEventView(fmt.Sprintf(app.T_("Installing %s"), pkg)),
-						reply.WithProgressDoneText(fmt.Sprintf(app.T_("Installing %s"), pkg)),
-					)
-
-					// Удаляем из отслеживания
-					delete(packageState, pkg)
-				}
+			if !seenInfo[cleanName] {
+				seenInfo[cleanName] = true
+				namesToFetch = append(namesToFetch, cleanName)
 			}
 		}
 	}
+
+	if len(namesToFetch) > 0 {
+		batchInfo, err := a.serviceAptDatabase.GetPackagesByNames(ctx, namesToFetch)
+		if err != nil {
+			return nil, err
+		}
+		packagesInfo = append(packagesInfo, batchInfo...)
+	}
+
+	return packagesInfo, nil
 }
 
 func (a *Actions) Install(ctx context.Context, packages []string, downloadOnly bool) error {
@@ -552,13 +382,6 @@ func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error)
 	}
 	wg.Wait()
 
-	//if lib.Env.ExistStplr {
-	//	packages, err = a.serviceStplr.UpdateWithStplrPackages(ctx, packages)
-	//	if err != nil {
-	//		app.Log.Errorf(err.Error())
-	//	}
-	//}
-
 	// @TODO Обновляем информацию о том, установлены ли пакеты локально, на самом деле об этом можно узнать из биндингов
 	packages, err = a.updateInstalledInfo(ctx, packages, noLock...)
 	if err != nil {
@@ -611,104 +434,9 @@ func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package, n
 }
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
-// Использует apt биндинги для защиты от конкурентного доступа к rpmdb
 func (a *Actions) GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error) {
 	commandPrefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
 	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
-}
-
-func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
-	type itemState struct {
-		lastPercent int
-		lastUpdate  time.Time
-		id          int
-	}
-	items := make(map[string]*itemState)
-	done := make(map[string]bool)
-	var mu sync.Mutex
-	nextID := 1
-
-	return func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
-		switch event {
-		case aptLib.CallbackDownloadItemProgress:
-			if pkg == "" || total == 0 {
-				return
-			}
-
-			mu.Lock()
-			if done[pkg] {
-				mu.Unlock()
-				return
-			}
-			state, exists := items[pkg]
-			if !exists {
-				state = &itemState{lastPercent: -1, lastUpdate: time.Now(), id: nextID}
-				nextID++
-				items[pkg] = state
-			}
-
-			percent := int((cur * 100) / total)
-			now := time.Now()
-			elapsed := now.Sub(state.lastUpdate)
-
-			shouldUpdate := false
-			if state.lastPercent == -1 {
-				shouldUpdate = true
-			} else if percent != state.lastPercent {
-				if percent < 10 || percent > 90 {
-					shouldUpdate = elapsed >= 50*time.Millisecond
-				} else {
-					shouldUpdate = elapsed >= 100*time.Millisecond
-				}
-			}
-
-			if shouldUpdate && percent < 100 {
-				state.lastPercent = percent
-				state.lastUpdate = now
-				id := state.id
-				mu.Unlock()
-
-				viewText := pkg
-				if speedStr := helper.FormatSpeed(speed); speedStr != "" {
-					viewText += "  " + speedStr
-				}
-
-				ev := fmt.Sprintf("%s-%d", reply.EventSystemAptUpdate, id)
-				reply.CreateEventNotification(ctx, reply.StateBefore,
-					reply.WithEventName(ev),
-					reply.WithProgress(true),
-					reply.WithProgressPercent(float64(percent)),
-					reply.WithEventView(viewText),
-				)
-			} else {
-				mu.Unlock()
-			}
-
-		case aptLib.CallbackDownloadStop:
-			mu.Lock()
-			state, tracked := items[pkg]
-			var id int
-			if tracked {
-				id = state.id
-			}
-			delete(items, pkg)
-			if tracked {
-				done[pkg] = true
-			}
-			mu.Unlock()
-
-			if tracked && pkg != "" {
-				ev := fmt.Sprintf("%s-%d", reply.EventSystemAptUpdate, id)
-				reply.CreateEventNotification(ctx, reply.StateAfter,
-					reply.WithEventName(ev),
-					reply.WithProgress(true),
-					reply.WithProgressPercent(100),
-					reply.WithEventView(pkg),
-					reply.WithProgressDoneText(pkg),
-				)
-			}
-		}
-	}
 }
 
 func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
@@ -716,101 +444,6 @@ func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))
 
 	return a.serviceAptBinding.Update(a.getUpdateHandler(ctx), noLock...)
-}
-
-func extractLastMessage(changelog string) string {
-	lines := strings.Split(changelog, "\n")
-	var result []string
-	found := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-
-		if isChangelogHeader(trimmed) {
-			if !found {
-				result = append(result, trimmed)
-				found = true
-			} else {
-				break
-			}
-		} else if found {
-			result = append(result, trimmed)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-// isChangelogHeader проверяет, является ли строка заголовком записи changelog.
-func isChangelogHeader(line string) bool {
-	if !strings.HasPrefix(line, "* ") {
-		return false
-	}
-	fields := strings.Fields(line)
-	if len(fields) < 5 {
-		return false
-	}
-	year := fields[4]
-	return len(year) == 4 && year[0] >= '0' && year[0] <= '9'
-}
-
-// convertAptPackage преобразует aptLib.PackageInfo в Package
-func convertAptPackage(ap *aptLib.PackageInfo) Package {
-	cleanList := func(csv string) []string {
-		if csv == "" {
-			return nil
-		}
-		var result []string
-		seen := make(map[string]bool)
-		for _, item := range strings.Split(csv, ",") {
-			clean := strings.TrimSpace(item)
-			if clean == "" {
-				continue
-			}
-			clean = aptParser.CleanDependency(clean)
-			if !seen[clean] {
-				seen[clean] = true
-				result = append(result, clean)
-			}
-		}
-		return result
-	}
-
-	formattedVersion := ap.Version
-	if v, err := helper.GetVersionFromAptCache(ap.Version); err == nil && v != "" {
-		formattedVersion = v
-	}
-
-	description := strings.TrimSpace(ap.Description)
-	summary := strings.TrimSpace(ap.ShortDescription)
-	if description == "" && summary != "" {
-		description = summary
-	}
-
-	return Package{
-		Name:             ap.Name,
-		Architecture:     ap.Architecture,
-		Section:          ap.Section,
-		InstalledSize:    int(ap.InstalledSize),
-		Maintainer:       ap.Maintainer,
-		Version:          formattedVersion,
-		VersionRaw:       ap.Version,
-		VersionInstalled: "",
-		Depends:          cleanList(ap.Depends),
-		Aliases:          ap.Aliases,
-		Provides:         cleanList(ap.Provides),
-		Size:             int(ap.DownloadSize),
-		Filename:         ap.Filename,
-		Summary:          summary,
-		Description:      description,
-		Changelog:        ap.Changelog,
-		Installed:        false,
-		TypePackage:      int(PackageTypeSystem),
-		Files:            ap.Files,
-	}
 }
 
 // saveRpmInfoToDatabase сохраняет PackageInfo в базу данных

@@ -23,7 +23,6 @@ import (
 	"apm/internal/common/reply"
 	"apm/internal/common/swcat"
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"log"
 	"os"
@@ -91,26 +90,6 @@ func NewPackageDBService(dbManager app.DatabaseManager) *PackageDBService {
 		dbManager: dbManager,
 	}
 }
-
-type PackageType uint8
-
-const (
-	PackageTypeSystem PackageType = iota
-	PackageTypeStplr
-)
-
-func (t PackageType) String() string {
-	switch t {
-	case PackageTypeSystem:
-		return "system"
-	case PackageTypeStplr:
-		return "stplr"
-	default:
-		return "unknown"
-	}
-}
-
-func (t PackageType) Value() (driver.Value, error) { return int64(t), nil }
 
 // DBPackage описывает модель пакета для GORM.
 type DBPackage struct {
