@@ -54,23 +54,25 @@ func Close() {
 	aptSystemOnce = sync.Once{}
 }
 
-// operationWrapper обёртка для всех операций с APT
-func (a *Actions) operationWrapper(fn func() error, installPackages ...string) error {
-	return a.operationWrapperWithOptions(false, fn, installPackages...)
+// OperationOptions опции для операций с APT
+type OperationOptions struct {
+	SkipLock        bool
+	ConfigOverrides map[string]string
+	RpmArguments    []string
 }
 
-// operationWrapperWithOptions обёртка с опциями для операций с APT
-func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error, installPackages ...string) error {
+// runOperation единая обёртка для всех операций с APT
+func (a *Actions) runOperation(opts OperationOptions, fn func() error) error {
 	aptMutex.Lock()
 	defer aptMutex.Unlock()
 
-	if skipLock {
+	if opts.SkipLock {
 		lib.SetNoLocking(true)
 		defer lib.SetNoLocking(false)
 	}
 
 	// Проверяем блокировку перед началом операции
-	if !skipLock {
+	if !opts.SkipLock {
 		if err := lib.CheckLockOrError(); err != nil {
 			return err
 		}
@@ -87,13 +89,12 @@ func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error, in
 	lib.CaptureStdIO(true)
 
 	var err error
-	if len(installPackages) > 0 {
-		err = lib.PreprocessInstallArguments(installPackages)
+	if len(opts.RpmArguments) > 0 {
+		err = lib.PreprocessInstallArguments(opts.RpmArguments)
 	}
 
-	// Выполняем основную функцию
 	if err == nil {
-		err = fn()
+		err = lib.WithConfigOverrides(opts.ConfigOverrides, fn)
 	}
 
 	// Очищаем RPM аргументы
@@ -108,8 +109,8 @@ func (a *Actions) operationWrapperWithOptions(skipLock bool, fn func() error, in
 
 // CombineInstallRemovePackages комбинированный метод установки и удаления
 func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string,
-	handler lib.ProgressHandler, purge bool, depends bool) error {
-	return a.operationWrapper(func() error {
+	handler lib.ProgressHandler, purge bool, depends bool, downloadOnly bool) error {
+	return a.runOperation(OperationOptions{RpmArguments: packagesInstall}, func() error {
 		system, err := getSystem()
 		if err != nil {
 			return err
@@ -133,19 +134,19 @@ func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, package
 		defer pm.Close()
 
 		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler)
+			return pm.InstallPackagesWithProgress(handler, downloadOnly)
 		}
-		return pm.InstallPackages()
-	}, packagesInstall...)
+		return pm.InstallPackages(downloadOnly)
+	})
 }
 
 // InstallPackages установка пакетов
-func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHandler) error {
+func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHandler, downloadOnly bool) error {
 	if len(packageNames) == 0 {
 		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
-	return a.operationWrapper(func() error {
+	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
 		system, err := getSystem()
 		if err != nil {
 			return err
@@ -169,10 +170,10 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 		defer pm.Close()
 
 		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler)
+			return pm.InstallPackagesWithProgress(handler, downloadOnly)
 		}
-		return pm.InstallPackages()
-	}, packageNames...)
+		return pm.InstallPackages(downloadOnly)
+	})
 }
 
 // RemovePackages удаление пакетов
@@ -181,7 +182,7 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, depends bool
 		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
-	return a.operationWrapper(func() error {
+	return a.runOperation(OperationOptions{}, func() error {
 		system, err := getSystem()
 		if err != nil {
 			return err
@@ -205,15 +206,15 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, depends bool
 		defer pm.Close()
 
 		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler)
+			return pm.InstallPackagesWithProgress(handler, false)
 		}
-		return pm.InstallPackages()
+		return pm.InstallPackages(false)
 	})
 }
 
 // DistUpgrade обновление системы
-func (a *Actions) DistUpgrade(handler lib.ProgressHandler) error {
-	return a.operationWrapper(func() error {
+func (a *Actions) DistUpgrade(handler lib.ProgressHandler, downloadOnly bool) error {
+	return a.runOperation(OperationOptions{}, func() error {
 		system, err := getSystem()
 		if err != nil {
 			return err
@@ -225,10 +226,7 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler) error {
 		}
 		defer cache.Close()
 
-		if handler != nil {
-			return cache.DistUpgradeWithProgress(handler)
-		}
-		return cache.DistUpgradeWithProgress(nil)
+		return cache.DistUpgradeWithProgress(handler, downloadOnly)
 	})
 }
 
@@ -236,7 +234,7 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler) error {
 func (a *Actions) Update(handler lib.ProgressHandler, noLock ...bool) error {
 	skipLock := len(noLock) > 0 && noLock[0]
 
-	return a.operationWrapperWithOptions(skipLock, func() error {
+	return a.runOperation(OperationOptions{SkipLock: skipLock}, func() error {
 		system, err := getSystem()
 		if err != nil {
 			return err
@@ -255,7 +253,7 @@ func (a *Actions) Update(handler lib.ProgressHandler, noLock ...bool) error {
 // Search поиск по пакетам
 func (a *Actions) Search(pattern string, noLock ...bool) (packages []lib.PackageInfo, err error) {
 	skipLock := len(noLock) > 0 && noLock[0]
-	err = a.operationWrapperWithOptions(skipLock, func() error {
+	err = a.runOperation(OperationOptions{SkipLock: skipLock}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -275,7 +273,7 @@ func (a *Actions) Search(pattern string, noLock ...bool) (packages []lib.Package
 
 // GetInfo поиск одного пакета
 func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err error) {
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -289,7 +287,7 @@ func (a *Actions) GetInfo(packageName string) (packageInfo *lib.PackageInfo, err
 
 		packageInfo, e = cache.GetPackageInfo(packageName)
 		return e
-	}, packageName)
+	})
 	return
 }
 
@@ -299,7 +297,7 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -313,7 +311,7 @@ func (a *Actions) SimulateInstall(packageNames []string) (packageInfo *lib.Packa
 
 		packageInfo, e = cache.SimulateInstall(packageNames)
 		return e
-	}, packageNames...)
+	})
 	return
 }
 
@@ -323,7 +321,7 @@ func (a *Actions) SimulateRemove(packageNames []string, purge bool, depends bool
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -343,7 +341,7 @@ func (a *Actions) SimulateRemove(packageNames []string, purge bool, depends bool
 
 // SimulateDistUpgrade симуляция обновления системы
 func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err error) {
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -363,7 +361,7 @@ func (a *Actions) SimulateDistUpgrade() (packageChanges *lib.PackageChanges, err
 
 // SimulateAutoRemove симуляция автоматического удаления неиспользуемых пакетов
 func (a *Actions) SimulateAutoRemove() (packageChanges *lib.PackageChanges, err error) {
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -387,7 +385,7 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "Invalid parameters")
 	}
 
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{RpmArguments: installNames}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -401,7 +399,7 @@ func (a *Actions) SimulateChange(installNames []string, removeNames []string, pu
 
 		packageChanges, e = cache.SimulateChange(installNames, removeNames, purge, depends)
 		return e
-	}, installNames...)
+	})
 	return
 }
 
@@ -411,7 +409,7 @@ func (a *Actions) SimulateChangeWithRpmInfo(installNames []string, removeNames [
 		return nil, nil, lib.CustomError(lib.AptErrorInvalidParameters, "Invalid parameters")
 	}
 
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{RpmArguments: rpmFiles}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -425,7 +423,7 @@ func (a *Actions) SimulateChangeWithRpmInfo(installNames []string, removeNames [
 
 		packageChanges, rpmInfos, e = cache.SimulateChangeWithRpmInfo(installNames, removeNames, purge, depends, rpmFiles)
 		return e
-	}, rpmFiles...)
+	})
 	return
 }
 
@@ -435,7 +433,7 @@ func (a *Actions) SimulateReinstall(packageNames []string) (packageInfo *lib.Pac
 		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
-	err = a.operationWrapper(func() error {
+	err = a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
 		system, e := getSystem()
 		if e != nil {
 			return e
@@ -449,7 +447,7 @@ func (a *Actions) SimulateReinstall(packageNames []string) (packageInfo *lib.Pac
 
 		packageInfo, e = cache.SimulateReinstall(packageNames)
 		return e
-	}, packageNames...)
+	})
 	return
 }
 
@@ -459,7 +457,7 @@ func (a *Actions) ReinstallPackages(packageNames []string, handler lib.ProgressH
 		return lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
 	}
 
-	return a.operationWrapper(func() error {
+	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func() error {
 		system, err := getSystem()
 		if err != nil {
 			return err
@@ -483,10 +481,10 @@ func (a *Actions) ReinstallPackages(packageNames []string, handler lib.ProgressH
 		defer pm.Close()
 
 		if handler != nil {
-			return pm.InstallPackagesWithProgress(handler)
+			return pm.InstallPackagesWithProgress(handler, false)
 		}
-		return pm.InstallPackages()
-	}, packageNames...)
+		return pm.InstallPackages(false)
+	})
 }
 
 // enrichErrorDetails добавляет детали к ошибке из логов и строк ошибки

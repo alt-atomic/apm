@@ -350,7 +350,7 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*TestTaskRespon
 		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
 	}
 
-	err = a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)
+	err = a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false, false)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}

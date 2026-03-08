@@ -112,6 +112,12 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 				Aliases: []string{"s"},
 				Value:   false,
 			},
+			&cli.BoolFlag{
+				Name:    "download-only",
+				Usage:   app.T_("Download packages without installation"),
+				Aliases: []string{"d"},
+				Value:   false,
+			},
 		},
 		Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 			if cmd.Bool("simulate") {
@@ -121,7 +127,7 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 				}
 				return reply.CliResponse(ctx, reply.OK(resp))
 			}
-			resp, err := actions.Upgrade(ctx)
+			resp, err := actions.Upgrade(ctx, cmd.Bool("download-only"))
 			if err != nil {
 				return reply.CliResponse(ctx, newErrorResponseFromError(err))
 			}
@@ -272,6 +278,12 @@ func CommandList(ctx context.Context) *cli.Command {
 					Aliases: []string{"s"},
 					Value:   false,
 				},
+				&cli.BoolFlag{
+					Name:    "download-only",
+					Usage:   app.T_("Download packages without installation"),
+					Aliases: []string{"d"},
+					Value:   false,
+				},
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				if cmd.Bool("simulate") {
@@ -281,7 +293,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					}
 					return reply.CliResponse(ctx, reply.OK(resp))
 				}
-				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
+				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"), cmd.Bool("download-only"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}

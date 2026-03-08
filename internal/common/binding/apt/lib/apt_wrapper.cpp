@@ -790,6 +790,12 @@ AptErrorCode apt_set_config(const char *key, const char *value) {
     }
 }
 
+char *apt_get_config(const char *key, const char *default_value) {
+    if (!key) return nullptr;
+    std::string val = _config->Find(key, default_value ? default_value : "");
+    return strdup(val.c_str());
+}
+
 void apt_free_package_changes(AptPackageChanges *changes) {
     if (!changes) return;
 

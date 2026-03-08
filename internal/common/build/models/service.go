@@ -11,7 +11,7 @@ import (
 
 type Service interface {
 	IsAtomic() bool
-	CombineInstallRemovePackages(ctx context.Context, packages []string, purge, depends bool) error
+	CombineInstallRemovePackages(ctx context.Context, packages []string, purge, depends bool, downloadOnly bool) error
 	InstallPackages(ctx context.Context, packages []string) error
 	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
 	GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error)

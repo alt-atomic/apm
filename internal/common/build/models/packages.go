@@ -62,5 +62,5 @@ func (b *PackagesBody) Execute(ctx context.Context, svc Service) (any, error) {
 		ops = append(ops, p+"-")
 	}
 
-	return nil, svc.CombineInstallRemovePackages(ctx, ops, false, b.Depends)
+	return nil, svc.CombineInstallRemovePackages(ctx, ops, false, b.Depends, false)
 }

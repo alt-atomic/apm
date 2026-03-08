@@ -412,7 +412,7 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 		return err
 	}
 
-	return km.aptActions.InstallPackages(installPackages, nil)
+	return km.aptActions.InstallPackages(installPackages, nil, false)
 }
 
 // InstallModules устанавливает или симулирует установку пакетов модулей
@@ -423,7 +423,7 @@ func (km *Manager) InstallModules(ctx context.Context, installPackages []string,
 		return km.aptActions.SimulateInstall(installPackages)
 	}
 
-	err := km.aptActions.InstallPackages(installPackages, nil)
+	err := km.aptActions.InstallPackages(installPackages, nil, false)
 	return nil, err
 }
 

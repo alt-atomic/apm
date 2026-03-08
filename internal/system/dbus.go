@@ -60,7 +60,7 @@ func (w *DBusWrapper) checkManagePermission(sender dbus.Sender) *dbus.Error {
 }
 
 // Install устанавливает пакеты.
-func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction string, background bool) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, downloadOnly bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
@@ -72,7 +72,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.Install(ctx, packages, true)
+			resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
 			reply.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
 		}()
 
@@ -89,7 +89,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, transaction
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Install(ctx, packages, true)
+	resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
@@ -307,7 +307,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 }
 
 // Upgrade обновляет систему (для не-атомарных систем).
-func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
+func (w *DBusWrapper) Upgrade(sender dbus.Sender, downloadOnly bool, transaction string, background bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
@@ -319,7 +319,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.Upgrade(ctx)
+			resp, err := w.actions.Upgrade(ctx, downloadOnly)
 			reply.SendTaskResult(ctx, reply.EventSystemUpgrade, resp, err)
 		}()
 
@@ -336,7 +336,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, transaction string, background
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Upgrade(ctx)
+	resp, err := w.actions.Upgrade(ctx, downloadOnly)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}

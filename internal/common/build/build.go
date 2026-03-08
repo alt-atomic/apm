@@ -210,7 +210,7 @@ func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageNa
 	return &packageInfo, nil
 }
 
-func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool) error {
+func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool, downloadOnly bool) error {
 	packagesInstall, packagesRemove, errPrepare := cfgService.serviceAptActions.PrepareInstallPackages(ctx, packages)
 	if errPrepare != nil {
 		return errPrepare
@@ -249,6 +249,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		packagesRemove,
 		purge,
 		depends,
+		downloadOnly,
 	)
 	if errInstall != nil {
 		return errInstall
@@ -258,7 +259,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 }
 
 func (cfgService *ConfigService) InstallPackages(ctx context.Context, packages []string) error {
-	return cfgService.serviceAptActions.Install(ctx, packages)
+	return cfgService.serviceAptActions.Install(ctx, packages, false)
 }
 
 func (cfgService *ConfigService) UpdatePackages(ctx context.Context) error {
@@ -267,7 +268,7 @@ func (cfgService *ConfigService) UpdatePackages(ctx context.Context) error {
 }
 
 func (cfgService *ConfigService) UpgradePackages(ctx context.Context) error {
-	err := cfgService.serviceAptActions.Upgrade(ctx)
+	err := cfgService.serviceAptActions.Upgrade(ctx, false)
 	return err
 }
 

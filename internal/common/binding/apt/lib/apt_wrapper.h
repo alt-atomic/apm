@@ -167,12 +167,14 @@ AptResult apt_mark_remove(AptCache *cache, const char *package_name, bool purge,
 // Package execution
 AptResult apt_install_packages(AptPackageManager *pm,
                                AptProgressCallback callback,
-                               uintptr_t user_data);
+                               uintptr_t user_data,
+                               bool download_only);
 
 // Full dist-upgrade execution with progress callbacks (mark + download + install)
 AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                                          AptProgressCallback callback,
-                                         uintptr_t user_data);
+                                         uintptr_t user_data,
+                                         bool download_only);
 
 // Register a log callback to receive error/info messages instead of writing to stderr
 void apt_set_log_callback(AptLogCallback callback, uintptr_t user_data);
@@ -272,6 +274,9 @@ uint32_t apt_get_broken_count(const AptCache *cache);
 
 // Configuration
 AptErrorCode apt_set_config(const char *key, const char *value);
+
+// Returns the current value for key (caller must free() the result).
+char *apt_get_config(const char *key, const char *default_value);
 
 // Lock status information
 typedef struct {

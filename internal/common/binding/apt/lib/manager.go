@@ -56,9 +56,9 @@ func (pm *PackageManager) Close() {
 }
 
 // InstallPackages выполняет установку пакета без обратного вызова прогресса
-func (pm *PackageManager) InstallPackages() error {
+func (pm *PackageManager) InstallPackages(downloadOnly bool) error {
 	return withMutex(func() error {
-		if res := C.apt_install_packages(pm.Ptr, nil, 0); res.code != C.APT_SUCCESS {
+		if res := C.apt_install_packages(pm.Ptr, nil, 0, C.bool(downloadOnly)); res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}
 		return nil
@@ -66,7 +66,7 @@ func (pm *PackageManager) InstallPackages() error {
 }
 
 // InstallPackagesWithProgress выполняет установку пакета с обратным вызовом прогресса
-func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) error {
+func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler, downloadOnly bool) error {
 	return withMutex(func() error {
 		var userData C.uintptr_t
 		if handler != nil {
@@ -75,7 +75,7 @@ func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) e
 			userData = C.uintptr_t(handle)
 			C.apt_use_go_progress_callback(userData)
 		}
-		if res := C.apt_install_packages(pm.Ptr, nil, userData); res.code != C.APT_SUCCESS {
+		if res := C.apt_install_packages(pm.Ptr, nil, userData, C.bool(downloadOnly)); res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}
 		return nil
@@ -83,7 +83,7 @@ func (pm *PackageManager) InstallPackagesWithProgress(handler ProgressHandler) e
 }
 
 // DistUpgradeWithProgress выполняет полное обновление системы с прогрессом
-func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
+func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler, downloadOnly bool) error {
 	return withMutex(func() error {
 		var userData C.uintptr_t
 		if handler != nil {
@@ -92,7 +92,7 @@ func (c *Cache) DistUpgradeWithProgress(handler ProgressHandler) error {
 			userData = C.uintptr_t(handle)
 			C.apt_use_go_progress_callback(userData)
 		}
-		if res := C.apt_dist_upgrade_with_progress(c.Ptr, nil, userData); res.code != C.APT_SUCCESS {
+		if res := C.apt_dist_upgrade_with_progress(c.Ptr, nil, userData, C.bool(downloadOnly)); res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}
 		return nil

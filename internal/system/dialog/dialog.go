@@ -40,6 +40,7 @@ const (
 	ActionRemove
 	ActionMultiInstall
 	ActionUpgrade
+	ActionDownload
 )
 
 var choices []string
@@ -70,6 +71,8 @@ func NewDialog(appConfig *app.Config, packageInfo []_package.Package, packageCha
 		choices = []string{app.T_("Remove"), app.T_("Abort")}
 	case ActionUpgrade:
 		choices = []string{app.T_("Upgrade"), app.T_("Abort")}
+	case ActionDownload:
+		choices = []string{app.T_("Download"), app.T_("Abort")}
 	}
 
 	m := model{
@@ -95,7 +98,7 @@ func NewDialog(appConfig *app.Config, packageInfo []_package.Package, packageCha
 			return false, errors.New(app.T_("Operation cancelled"))
 		}
 
-		return m.choice == app.T_("Install") || m.choice == app.T_("Remove") || m.choice == app.T_("Edit") || m.choice == app.T_("Upgrade"), nil
+		return m.choice == app.T_("Install") || m.choice == app.T_("Remove") || m.choice == app.T_("Edit") || m.choice == app.T_("Upgrade") || m.choice == app.T_("Download"), nil
 	}
 
 	return false, errors.New(app.T_("Operation cancelled"))
@@ -369,13 +372,13 @@ func (m model) buildContent() string {
 	sb.WriteString("\n" + formatLine(app.T_("Will be removed"), packageRemovedCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(app.T_("Kept back"), packageKeptBackCount, keyWidth, keyStyle, valueStyle))
 	sb.WriteString("\n" + formatLine(app.T_("Not upgraded"), packageNotUpgradedCount, keyWidth, keyStyle, valueStyle))
-	if m.choiceType == ActionUpgrade || m.choiceType == ActionInstall {
+	if m.choiceType == ActionUpgrade || m.choiceType == ActionInstall || m.choiceType == ActionDownload {
 		sb.WriteString("\n" + formatLine(app.T_("Downloaded Size"), helper.AutoSize(int(m.pckChange.DownloadSize)), keyWidth, keyStyle, valueStyle))
 		sb.WriteString("\n" + formatLine(app.T_("Installed Size"), helper.AutoSize(int(m.pckChange.InstallSize)), keyWidth, keyStyle, valueStyle))
 	}
 
 	// В конце - информация о пакетах
-	if m.choiceType != ActionUpgrade {
+	if m.choiceType != ActionUpgrade && len(m.pkg) > 0 {
 		infoPackage := fmt.Sprintf("\n\n%s\n", app.TN_("Package information:", "Packages information:", len(m.pkg)))
 		sb.WriteString(titleStyle.Render(infoPackage))
 	}
@@ -457,10 +460,16 @@ func (m model) statusPackage(pkg _package.Package) string {
 	// Проверяем все возможные имена во всех списках изменений
 	for _, name := range possibleNames {
 		if slices.Contains(m.pckChange.ExtraInstalled, name) || slices.Contains(m.pckChange.NewInstalledPackages, name) {
+			if m.choiceType == ActionDownload {
+				return m.getActionStyle().Render(app.T_("Will be downloaded"))
+			}
 			return m.getActionStyle().Render(app.T_("Will be installed"))
 		}
 
 		if slices.Contains(m.pckChange.UpgradedPackages, name) {
+			if m.choiceType == ActionDownload {
+				return m.getActionStyle().Render(app.T_("Will be downloaded"))
+			}
 			return m.getActionStyle().Render(app.T_("Will be updated"))
 		}
 

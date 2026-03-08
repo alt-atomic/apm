@@ -7,7 +7,8 @@
 
 AptResult apt_dist_upgrade_with_progress(AptCache *cache,
                                          AptProgressCallback callback,
-                                         uintptr_t user_data) {
+                                         uintptr_t user_data,
+                                         bool download_only) {
     if (!cache || !cache->dep_cache) return make_result(APT_ERROR_CACHE_OPEN_FAILED, "Invalid cache for dist upgrade");
 
     try {
@@ -55,6 +56,10 @@ AptResult apt_dist_upgrade_with_progress(AptCache *cache,
         }
         if (acquire.Run() != pkgAcquire::Continue) {
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages for dist upgrade");
+        }
+
+        if (download_only) {
+            return make_result(APT_SUCCESS, nullptr);
         }
 
         if (_system) {

@@ -218,7 +218,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) (*InstallRemoveResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, downloadOnly bool) (*InstallRemoveResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -257,9 +257,13 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 	if len(packagesInfo) > 0 && !confirm {
 		reply.StopSpinner(a.appConfig)
 
-		action := dialog.ActionInstall
-		if packageParse.RemovedCount > 0 {
+		var action dialog.Action
+		if downloadOnly {
+			action = dialog.ActionDownload
+		} else if packageParse.RemovedCount > 0 {
 			action = dialog.ActionMultiInstall
+		} else {
+			action = dialog.ActionInstall
 		}
 
 		dialogStatus, errDialog := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, action)
@@ -291,7 +295,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		}
 	}
 
-	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false)
+	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false, downloadOnly)
 	if errInstall != nil {
 		var matchedErr *apt.MatchedError
 		if errors.As(errInstall, &matchedErr) && matchedErr.NeedUpdate() {
@@ -306,23 +310,32 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool) 
 		return nil, apmerr.New(apmerr.ErrorTypeApt, errInstall)
 	}
 
-	err = a.updateAllPackagesDB(ctx)
-	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
-	}
+	var messageAnswer string
 
-	messageAnswer := fmt.Sprintf(
-		"%s %s %s",
-		fmt.Sprintf(app.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
-		app.T_("and"),
-		fmt.Sprintf(app.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
-	)
+	if downloadOnly {
+		messageAnswer = fmt.Sprintf(
+			app.TN_("%d package successfully downloaded", "%d packages successfully downloaded", packageParse.NewInstalledCount+packageParse.UpgradedCount),
+			packageParse.NewInstalledCount+packageParse.UpgradedCount,
+		)
+	} else {
+		err = a.updateAllPackagesDB(ctx)
+		if err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeDatabase, err)
+		}
 
-	if a.appConfig.ConfigManager.GetConfig().IsAtomic {
-		messageAnswer += app.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
-		errSave := a.saveChange(ctx, packagesInstall, packagesRemove)
-		if errSave != nil {
-			return nil, apmerr.New(apmerr.ErrorTypeImage, errSave)
+		messageAnswer = fmt.Sprintf(
+			"%s %s %s",
+			fmt.Sprintf(app.TN_("%d package successfully installed", "%d packages successfully installed", packageParse.NewInstalledCount), packageParse.NewInstalledCount),
+			app.T_("and"),
+			fmt.Sprintf(app.TN_("%d updated", "%d updated", packageParse.UpgradedCount), packageParse.UpgradedCount),
+		)
+
+		if a.appConfig.ConfigManager.GetConfig().IsAtomic {
+			messageAnswer += app.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
+			errSave := a.saveChange(ctx, packagesInstall, packagesRemove)
+			if errSave != nil {
+				return nil, apmerr.New(apmerr.ErrorTypeImage, errSave)
+			}
 		}
 	}
 
@@ -530,7 +543,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 }
 
 // Upgrade общее обновление системы
-func (a *Actions) Upgrade(ctx context.Context) (*UpgradeResponse, error) {
+func (a *Actions) Upgrade(ctx context.Context, downloadOnly bool) (*UpgradeResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -557,7 +570,12 @@ func (a *Actions) Upgrade(ctx context.Context) (*UpgradeResponse, error) {
 
 	reply.StopSpinner(a.appConfig)
 
-	dialogStatus, err := dialog.NewDialog(a.appConfig, []_package.Package{}, *packageParse, dialog.ActionUpgrade)
+	action := dialog.ActionUpgrade
+	if downloadOnly {
+		action = dialog.ActionDownload
+	}
+
+	dialogStatus, err := dialog.NewDialog(a.appConfig, []_package.Package{}, *packageParse, action)
 	if err != nil {
 		return nil, err
 	}
@@ -568,9 +586,22 @@ func (a *Actions) Upgrade(ctx context.Context) (*UpgradeResponse, error) {
 
 	reply.CreateSpinner(a.appConfig)
 
-	errUpgrade := a.serviceAptActions.Upgrade(ctx)
+	errUpgrade := a.serviceAptActions.Upgrade(ctx, downloadOnly)
 	if errUpgrade != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeApt, errUpgrade)
+	}
+
+	if downloadOnly {
+		total := packageParse.NewInstalledCount + packageParse.UpgradedCount
+		messageAnswer := fmt.Sprintf(
+			app.TN_("%d package successfully downloaded", "%d packages successfully downloaded", total),
+			total,
+		)
+
+		return &UpgradeResponse{
+			Message: app.T_("Download complete"),
+			Result:  &messageAnswer,
+		}, nil
 	}
 
 	err = a.updateAllPackagesDB(ctx)

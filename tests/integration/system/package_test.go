@@ -50,7 +50,7 @@ func (s *SystemTestSuite) SetupSuite() {
 
 // TestInstall тестирует установку пакетов
 func (s *SystemTestSuite) TestInstall() {
-	resp, err := s.actions.Install(s.ctx, []string{testPackage}, true)
+	resp, err := s.actions.Install(s.ctx, []string{testPackage}, true, false)
 	if err != nil {
 		s.T().Logf("Install error (may be expected if already installed): %v", err)
 
@@ -111,7 +111,7 @@ func (s *SystemTestSuite) TestUpdate() {
 
 // TestUpgrade тестирует обновление системы
 func (s *SystemTestSuite) TestUpgrade() {
-	resp, err := s.actions.Upgrade(s.ctx)
+	resp, err := s.actions.Upgrade(s.ctx, false)
 	if err != nil {
 		s.T().Logf("Upgrade error (may be expected): %v", err)
 	} else {

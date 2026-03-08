@@ -78,6 +78,49 @@ func (s *System) Close() {
 	}
 }
 
+// SetConfig sets an APT configuration key-value pair (e.g. "Dir::Cache::Archives", "/tmp/")
+func SetConfig(key, value string) {
+	cKey := C.CString(key)
+	cVal := C.CString(value)
+	defer C.free(unsafe.Pointer(cKey))
+	defer C.free(unsafe.Pointer(cVal))
+	C.apt_set_config(cKey, cVal)
+}
+
+// GetConfig returns the current APT configuration value for key.
+func GetConfig(key, defaultValue string) string {
+	cKey := C.CString(key)
+	cDef := C.CString(defaultValue)
+	defer C.free(unsafe.Pointer(cKey))
+	defer C.free(unsafe.Pointer(cDef))
+	cVal := C.apt_get_config(cKey, cDef)
+	if cVal == nil {
+		return defaultValue
+	}
+	defer C.free(unsafe.Pointer(cVal))
+	return C.GoString(cVal)
+}
+
+// WithConfigOverrides applies overrides, runs fn, then restores original values.
+func WithConfigOverrides(overrides map[string]string, fn func() error) error {
+	if len(overrides) == 0 {
+		return fn()
+	}
+
+	saved := make(map[string]string, len(overrides))
+	for key, value := range overrides {
+		saved[key] = GetConfig(key, "")
+		SetConfig(key, value)
+	}
+	defer func() {
+		for key, original := range saved {
+			SetConfig(key, original)
+		}
+	}()
+
+	return fn()
+}
+
 // SetNoLocking enables or disables APT file locking.
 func SetNoLocking(noLock bool) {
 	val := "false"

@@ -25,7 +25,7 @@ import (
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
 	"apm/internal/common/swcat"
-	appstream2 "apm/internal/system/appstream"
+	"apm/internal/system/appstream"
 	"context"
 	"encoding/json"
 	"errors"
@@ -40,7 +40,7 @@ import (
 type HTTPWrapper struct {
 	http_server.BaseHTTPWrapper
 	actions          *Actions
-	appstreamActions *appstream2.Actions
+	appstreamActions *appstream.Actions
 }
 
 // NewHTTPWrapper создаёт новую обёртку над actions
@@ -48,7 +48,7 @@ func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTT
 	return &HTTPWrapper{
 		BaseHTTPWrapper:  http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
 		actions:          a,
-		appstreamActions: appstream2.NewActions(appConfig),
+		appstreamActions: appstream.NewActions(appConfig),
 	}
 }
 
@@ -194,14 +194,16 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	downloadOnly := r.URL.Query().Get("download_only") == "true"
+
 	if w.RunBackground(rw, r, reply.EventSystemInstall, func(ctx context.Context) (interface{}, error) {
-		return w.actions.Install(ctx, packages, true)
+		return w.actions.Install(ctx, packages, true, downloadOnly)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.Install(ctx, packages, true)
+	resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -360,14 +362,16 @@ func (w *HTTPWrapper) Update(rw http.ResponseWriter, r *http.Request) {
 
 // Upgrade обновляет систему.
 func (w *HTTPWrapper) Upgrade(rw http.ResponseWriter, r *http.Request) {
+	downloadOnly := r.URL.Query().Get("download_only") == "true"
+
 	if w.RunBackground(rw, r, reply.EventSystemUpgrade, func(ctx context.Context) (interface{}, error) {
-		return w.actions.Upgrade(ctx)
+		return w.actions.Upgrade(ctx, downloadOnly)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.Upgrade(ctx)
+	resp, err := w.actions.Upgrade(ctx, downloadOnly)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -543,7 +547,7 @@ func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	params := appstream2.ListParams{
+	params := appstream.ListParams{
 		Sort:    query.Get("sort"),
 		Order:   query.Get("order"),
 		Limit:   limit,
@@ -672,6 +676,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			},
 			QueryParams: []http_server.QueryParam{
 				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+				{Name: "download_only", Type: "boolean", Required: false, Description: "Только скачать пакеты без установки"},
 			},
 		},
 
@@ -786,6 +791,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Tags:         []string{"system"},
 			QueryParams: []http_server.QueryParam{
 				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+				{Name: "download_only", Type: "boolean", Required: false, Description: "Только скачать пакеты без установки"},
 			},
 		},
 	}
@@ -794,7 +800,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Handler:      w.ApplicationUpdate,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/applications/update",
-			ResponseType: reflect.TypeOf(appstream2.UpdateResponse{}),
+			ResponseType: reflect.TypeOf(appstream.UpdateResponse{}),
 			Permission:   http_server.PermManage,
 			Summary:      "Обновить данные приложений",
 			Tags:         []string{"applications"},
@@ -806,7 +812,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Handler:      w.ApplicationInfo,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/applications/{pkgname}",
-			ResponseType: reflect.TypeOf(appstream2.InfoResponse{}),
+			ResponseType: reflect.TypeOf(appstream.InfoResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить данные приложения для пакета",
 			Tags:         []string{"applications"},
@@ -816,8 +822,8 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Handler:      w.ApplicationList,
 			HTTPMethod:   "POST",
 			HTTPPath:     "/api/v1/applications/list",
-			RequestType:  reflect.TypeOf(appstream2.ListFiltersBody{}),
-			ResponseType: reflect.TypeOf(appstream2.ListResponse{}),
+			RequestType:  reflect.TypeOf(appstream.ListFiltersBody{}),
+			ResponseType: reflect.TypeOf(appstream.ListResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить список приложений",
 			Description: filter.ListEndpointDescription(
@@ -839,7 +845,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Handler:      w.ApplicationGetFilterFields,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/applications/filter-fields",
-			ResponseType: reflect.TypeOf(appstream2.FilterFieldsAppStreamResponse{}),
+			ResponseType: reflect.TypeOf(appstream.FilterFieldsAppStreamResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить доступные поля для фильтрации приложений",
 			Tags:         []string{"applications"},
@@ -848,7 +854,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 			Handler:      w.ApplicationCategories,
 			HTTPMethod:   "GET",
 			HTTPPath:     "/api/v1/applications/categories",
-			ResponseType: reflect.TypeOf(appstream2.CategoriesResponse{}),
+			ResponseType: reflect.TypeOf(appstream.CategoriesResponse{}),
 			Permission:   http_server.PermRead,
 			Summary:      "Получить список категорий приложений",
 			Tags:         []string{"applications"},

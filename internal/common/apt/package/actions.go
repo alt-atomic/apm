@@ -397,11 +397,11 @@ func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg 
 	}
 }
 
-func (a *Actions) Install(ctx context.Context, packages []string) error {
+func (a *Actions) Install(ctx context.Context, packages []string, downloadOnly bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
-	err := a.serviceAptBinding.InstallPackages(packages, a.getHandler(ctx, len(packages)))
+	err := a.serviceAptBinding.InstallPackages(packages, a.getHandler(ctx, len(packages)), downloadOnly)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (a *Actions) Install(ctx context.Context, packages []string) error {
 }
 
 func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string,
-	packagesRemove []string, purge bool, depends bool) error {
+	packagesRemove []string, purge bool, depends bool, downloadOnly bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
@@ -420,6 +420,7 @@ func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInst
 		a.getHandler(ctx, len(packagesInstall)+len(packagesRemove)),
 		purge,
 		depends,
+		downloadOnly,
 	)
 	if err != nil {
 		return err
@@ -440,11 +441,11 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 	return nil
 }
 
-func (a *Actions) Upgrade(ctx context.Context) error {
+func (a *Actions) Upgrade(ctx context.Context, downloadOnly bool) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpgrade))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpgrade))
 
-	err := a.serviceAptBinding.DistUpgrade(a.getHandler(ctx))
+	err := a.serviceAptBinding.DistUpgrade(a.getHandler(ctx), downloadOnly)
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,7 @@ public:
     }
 };
 
-AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, uintptr_t user_data) {
+AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, uintptr_t user_data, bool download_only) {
     if (!pm || !pm->pm || !pm->cache || !pm->cache->dep_cache)
         return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
 
@@ -101,6 +101,10 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
 
         if (acquire_result != pkgAcquire::Continue) {
             return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages");
+        }
+
+        if (download_only) {
+            return make_result(APT_SUCCESS, nullptr);
         }
 
         if (_system) {

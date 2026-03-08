@@ -31,6 +31,18 @@ import (
 
 type PackageState int
 
+// Package states (must match AptPackageState in apt_wrapper.h)
+const (
+	//	PackageStateNotInstalled    PackageState = 0
+	PackageStateInstalled PackageState = 1
+	//	PackageStateConfigFiles     PackageState = 2
+	//	PackageStateUnpacked        PackageState = 3
+	//	PackageStateHalfConfigured  PackageState = 4
+	//	PackageStateHalfInstalled   PackageState = 5
+	//	PackageStateTriggersAwaited PackageState = 6
+	//	PackageStateTriggersPending PackageState = 7
+)
+
 // APT error codes (must match apt_wrapper.h)
 const (
 	AptErrorPackageNotFound   = 21

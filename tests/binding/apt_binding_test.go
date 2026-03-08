@@ -42,7 +42,36 @@ func TestAptNewActions(t *testing.T) {
 	aptBinding.Close()
 }
 
-// TestAptSearchBasic update system
+// TestAptDownloadOnly verifies download-only mode downloads without installing
+func TestAptDownloadOnly(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	if info, err := actions.GetInfo(testPackage); err == nil && info != nil && info.State == aptlib.PackageStateInstalled {
+		if err = actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
+			t.Fatalf("pre-cleanup remove failed: %v", err)
+		}
+	}
+
+	err := actions.InstallPackages([]string{testPackage}, nil, true)
+	if err != nil {
+		t.Fatalf("download-only failed: %v", err)
+	}
+
+	info, err := actions.GetInfo(testPackage)
+	if err != nil {
+		t.Fatalf("GetInfo failed: %v", err)
+	}
+	assert.NotEqual(t, aptlib.PackageStateInstalled, info.State,
+		"package should NOT be installed after download-only")
+	t.Logf("download-only: package %s state=%d (not installed)", testPackage, info.State)
+}
+
+// TestAptUpdate update system
 func TestAptUpdate(t *testing.T) {
 	if syscall.Geteuid() != 0 {
 		t.Skip("requires root for APT cache write/lock")
@@ -115,7 +144,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	defer aptBinding.Close()
 
 	// First, try to install the test package (ignore if already newest version)
-	err := actions.InstallPackages([]string{testPackage}, nil)
+	err := actions.InstallPackages([]string{testPackage}, nil, false)
 	if err != nil {
 		if matchedErr := aptErrors.CheckError(err.Error()); matchedErr != nil {
 			if matchedErr.Entry.Code == aptErrors.ErrPackageIsAlreadyNewest {
@@ -161,7 +190,7 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 	defer aptBinding.Close()
 
 	installedFirst := false
-	if info, err := actions.GetInfo(testPackage); err == nil && info != nil && info.State == 1 {
+	if info, err := actions.GetInfo(testPackage); err == nil && info != nil && info.State == aptlib.PackageStateInstalled {
 		installedFirst = true
 	}
 
@@ -169,11 +198,11 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
-		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
+		if err := actions.InstallPackages([]string{testPackage}, nil, false); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
 	} else {
-		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
+		if err := actions.InstallPackages([]string{testPackage}, nil, false); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
 		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
@@ -187,7 +216,7 @@ func TestAptInvalidParameters(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	if err := actions.InstallPackages([]string{}, nil); err == nil {
+	if err := actions.InstallPackages([]string{}, nil, false); err == nil {
 		t.Fatalf("expected error for empty package list in InstallPackages")
 	}
 
@@ -310,13 +339,13 @@ func TestAptInstallRemoveRpmFile(t *testing.T) {
 
 	const testPkg = "test-apm-example"
 
-	if info, e := actions.GetInfo(testPkg); e == nil && info != nil && info.State == 1 {
+	if info, e := actions.GetInfo(testPkg); e == nil && info != nil && info.State == aptlib.PackageStateInstalled {
 		if err = actions.RemovePackages([]string{testPkg}, false, false, nil); err != nil {
 			t.Fatalf("pre-cleanup remove failed: %v", err)
 		}
 	}
 
-	if err = actions.InstallPackages([]string{rpmPath}, nil); err != nil {
+	if err = actions.InstallPackages([]string{rpmPath}, nil, false); err != nil {
 		t.Fatalf("install RPM file failed: %v", err)
 	}
 
