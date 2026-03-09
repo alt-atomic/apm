@@ -18,7 +18,7 @@ package icon
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/distrobox/service"
+	"apm/internal/common/sandbox"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -30,14 +30,14 @@ import (
 
 // Service предоставляет сервис для работы с иконками.
 type Service struct {
-	serviceDistroAPI *service.DistroAPIService
+	serviceDistroAPI *sandbox.DistroAPIService
 	dbService        *DBService
 	commandPrefix    string
 }
 
 // NewIconService создаёт новый сервис для работы с иконками.
 func NewIconService(dbManager app.DatabaseManager, commandPrefix string) *Service {
-	distroAPISvc := service.NewDistroAPIService(commandPrefix)
+	distroAPISvc := sandbox.NewDistroAPIService(commandPrefix)
 	iconDB := NewIconDBService(dbManager)
 
 	return &Service{

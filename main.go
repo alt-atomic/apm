@@ -24,10 +24,10 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
-	"apm/internal/distrobox"
-	"apm/internal/kernel"
-	"apm/internal/repo"
-	"apm/internal/system"
+	"apm/internal/domain/distrobox"
+	"apm/internal/domain/kernel"
+	"apm/internal/domain/repository"
+	"apm/internal/domain/system"
 	"context"
 	"errors"
 	"fmt"
@@ -64,7 +64,7 @@ func main() {
 	systemCommands := system.CommandList(ctx)
 	distroboxCommands := distrobox.CommandList(ctx)
 	kernelCommands := kernel.CommandList(ctx)
-	repoCommands := repo.CommandList(ctx)
+	repoCommands := repository.CommandList(ctx)
 
 	cmds := []*cli.Command{
 		{
@@ -355,9 +355,9 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		interfaces["org.altlinux.APM.kernel"] = kernelObj
 	}
 
-	// Экспортируем repo методы в D-Bus
-	repoActions := repo.NewActions(appConfig)
-	repoObj := repo.NewDBusWrapper(repoActions, conn, ctx)
+	// Экспортируем repository методы в D-Bus
+	repoActions := repository.NewActions(appConfig)
+	repoObj := repository.NewDBusWrapper(repoActions, conn, ctx)
 	if err = appConfig.DBusManager.GetConnection().Export(repoObj, "/org/altlinux/APM", "org.altlinux.APM.repo"); err != nil {
 		return err
 	}
@@ -420,8 +420,8 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 	server.RegisterEndpoints(sysHTTPWrapper.GetEndpoints(appConfig.ConfigManager.GetConfig().IsAtomic))
 
 	// Repo модуль
-	repoActions := repo.NewActions(appConfig)
-	repoHTTPWrapper := repo.NewHTTPWrapper(repoActions, appConfig, ctx)
+	repoActions := repository.NewActions(appConfig)
+	repoHTTPWrapper := repository.NewHTTPWrapper(repoActions, appConfig, ctx)
 	server.RegisterEndpoints(repoHTTPWrapper.GetEndpoints())
 
 	// Регистрируем OpenAPI документацию из registry

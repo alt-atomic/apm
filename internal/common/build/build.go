@@ -24,8 +24,8 @@ import (
 	"apm/internal/common/build/core"
 	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
-	"apm/internal/kernel/service"
-	_repo_service "apm/internal/repo/service"
+	"apm/internal/domain/kernel/service"
+	reposervice "apm/internal/domain/repository/service"
 	"context"
 	"errors"
 	"fmt"
@@ -39,11 +39,11 @@ type ConfigService struct {
 	serviceAptActions *_package.Actions
 	serviceDBService  *_package.PackageDBService
 	kernelManager     *service.Manager
-	repoService       *_repo_service.RepoService
+	repoService       *reposervice.RepoService
 	serviceHostConfig *HostConfigService
 }
 
-func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, repoService *_repo_service.RepoService, hostConfig *HostConfigService) *ConfigService {
+func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig *HostConfigService) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
 		serviceAptActions: aptActions,
@@ -276,7 +276,7 @@ func (cfgService *ConfigService) KernelManager() *service.Manager {
 	return cfgService.kernelManager
 }
 
-func (cfgService *ConfigService) RepoService() *_repo_service.RepoService {
+func (cfgService *ConfigService) RepoService() *reposervice.RepoService {
 	return cfgService.repoService
 }
 

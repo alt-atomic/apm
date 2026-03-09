@@ -19,7 +19,7 @@ APM экспортирует два D-Bus сервиса с именем `org.al
 Для ручного запуска или отладки:
 
 ```bash
-# System Bus — system, kernel, repo (требует root)
+# System Bus — system, kernel, repository (требует root)
 sudo apm dbus-system
 
 # Session Bus — distrobox (пользовательский)
@@ -39,7 +39,7 @@ apm distrobox dbus-doc
 
 apm kernel dbus-doc
 
-apm repo dbus-doc
+apm repository dbus-doc
 ```
 
 ---
@@ -152,7 +152,7 @@ apm repo dbus-doc
 ### Подписка на сигналы
 
 ```bash
-# system, kernel, repo (System Bus)
+# system, kernel, repository (System Bus)
 gdbus monitor --system --dest org.altlinux.APM
 
 # distrobox (Session Bus)

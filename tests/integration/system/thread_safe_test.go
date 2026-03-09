@@ -17,8 +17,8 @@
 package system
 
 import (
-	"apm/internal/system"
-	common "apm/tests/integration/common"
+	"apm/internal/domain/system"
+	"apm/tests/integration/common"
 	"context"
 	"runtime"
 	"sync"

@@ -17,7 +17,7 @@
 package system
 
 import (
-	"apm/internal/system"
+	"apm/internal/domain/system"
 	"apm/tests/integration/common"
 	"context"
 	"strings"

@@ -17,7 +17,7 @@
 package distrobox_test
 
 import (
-	"apm/internal/distrobox"
+	"apm/internal/domain/distrobox"
 	"apm/tests/integration/common"
 	"context"
 	"fmt"
