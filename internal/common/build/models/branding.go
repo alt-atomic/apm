@@ -6,6 +6,7 @@ import (
 	"apm/internal/common/osutils"
 	"context"
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"slices"
@@ -20,7 +21,7 @@ var etcOsRelease = "/etc/os-release"
 
 type BrandingBody struct {
 	// Имя брендинга для пакетов
-	Name string `yaml:"name,omitempty" json:"name,omitempty" needs:"BuildType"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Подпакетоы брендинга, которые нужно поставить. Если пуст, поставятся все
 	Subpackages []string `yaml:"subpackages,omitempty" json:"subpackages,omitempty" needs:"Name"`
@@ -33,6 +34,13 @@ type BrandingBody struct {
 }
 
 func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
+	if len(b.ReleaseOverrides) != 0 && !svc.IsAtomic() {
+		app.Log.Warn("release-overrides doesn't work in non-atomic builds. It will be overwritten on branding package update")
+	}
+
+	var info os.FileInfo
+	var err error
+
 	if b.Name != "" {
 		var brandingPackagesPrefix = fmt.Sprintf("branding-%s-", b.Name)
 		var brandingSubpackages = []string{}
@@ -69,16 +77,16 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			return nil, err
 		}
 
-		info, err := os.Stat(usrLibOsRelease)
-		if err != nil {
-			return nil, err
-		}
-		vars := osrelease.NewFromName(usrLibOsRelease)
-
-		maps.Copy(vars, b.ReleaseOverrides)
-
 		// Исправить release файл для атомарной системы
 		if slices.Contains(brandingSubpackages, "release") && svc.IsAtomic() {
+			info, err = os.Stat(usrLibOsRelease)
+			if err != nil {
+				return nil, err
+			}
+			vars := osrelease.NewFromName(usrLibOsRelease)
+
+			maps.Copy(vars, b.ReleaseOverrides)
+
 			curVer := vars["VERSION"]
 			prettyCurVer := vars["VERSION"]
 
@@ -91,6 +99,11 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			}
 
 			bType := b.BuildType
+
+			if bType == "" {
+				bType = "stable"
+			}
+
 			prettyType := ""
 			prettyNameSuffix := ""
 			releaseType := ""
@@ -134,30 +147,49 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			} else {
 				vars["BUILD_ID"] = fmt.Sprintf("%s %s", vars["NAME"], vars["VERSION_ID"])
 			}
+
+			return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
 		}
 
-		if (slices.Contains(brandingSubpackages, "release") && svc.IsAtomic()) || len(b.ReleaseOverrides) != 0 {
-			var newLines []string
-			for name, value := range vars {
-				newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
-			}
-
-			newOsReleaseContent := strings.Join(newLines, "\n") + "\n"
-			if err = os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), info.Mode().Perm()); err != nil {
-				return nil, err
-			}
-
-			linkBody := &LinkBody{
-				Target:  etcOsRelease,
-				To:      usrLibOsRelease,
-				Replace: true,
-			}
-
-			if _, err = linkBody.Execute(ctx, svc); err != nil {
-				return nil, err
-			}
+	} else if len(b.ReleaseOverrides) != 0 && svc.IsAtomic() {
+		info, err = os.Stat(usrLibOsRelease)
+		if err != nil {
+			return nil, err
 		}
+		vars := osrelease.NewFromName(usrLibOsRelease)
+
+		maps.Copy(vars, b.ReleaseOverrides)
+
+		return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
 	}
 
 	return nil, nil
+}
+
+func saveOsRelease(ctx context.Context, svc Service, vars map[string]string, perm fs.FileMode) error {
+	var newLines []string
+	for name, value := range vars {
+		newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
+	}
+
+	newOsReleaseContent := strings.Join(newLines, "\n") + "\n"
+	if err := os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), perm); err != nil {
+		return err
+	}
+
+	// We must create link only in atomic builds bacause of classic systems uses
+	// /etc/os-release dedicate of /usr/lib/os-release for keeping BUILD_ID var
+	if svc.IsAtomic() {
+		linkBody := &LinkBody{
+			Target:  etcOsRelease,
+			To:      usrLibOsRelease,
+			Replace: true,
+		}
+
+		if _, err := linkBody.Execute(ctx, svc); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
