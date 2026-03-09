@@ -39,6 +39,7 @@ type Manager interface {
 	SetFormat(format string)
 	SetFormatType(formatType string)
 	SetFields(fields []string)
+	EnableVerbose()
 	GetTemporaryImageFile() string
 	GetPathImageContainerFile() string
 	GetPathImageFile() string
@@ -118,6 +119,7 @@ type Configuration struct {
 	Fields         []string `yaml:"-"`
 	IsAtomic       bool     `yaml:"-"`
 	DevMode        bool     `yaml:"-"`
+	Verbose        bool     `yaml:"-"`
 }
 
 // configManagerImpl реализация Manager
@@ -375,6 +377,11 @@ func (cm *configManagerImpl) SetFormatType(formatType string) {
 
 func (cm *configManagerImpl) SetFields(fields []string) {
 	cm.config.Fields = fields
+}
+
+func (cm *configManagerImpl) EnableVerbose() {
+	cm.config.Verbose = true
+	Log.EnableStdoutLogging()
 }
 
 // GetDefaultColors возвращает цветовую схему по умолчанию

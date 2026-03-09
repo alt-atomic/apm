@@ -59,6 +59,10 @@ func WithOptions[T any](
 			}
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
 
+			if cmd.Bool("verbose") {
+				appConfig.ConfigManager.EnableVerbose()
+			}
+
 			isRoot := syscall.Geteuid() == 0
 
 			switch rootCheck {

@@ -23,6 +23,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -206,11 +208,11 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 		ed.View = getTaskText(ed.Name)
 	}
 
-	SendFuncNameDBUS(ctx, &ed)
+	DispatchEvent(ctx, &ed)
 }
 
-// SendFuncNameDBUS отправляет уведомление через DBUS.
-func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
+// DispatchEvent отправляет уведомления.
+func DispatchEvent(ctx context.Context, eventData *EventData) {
 	appConfig := app.GetAppConfig(ctx)
 	txVal := ctx.Value(helper.TransactionKey)
 	txStr, ok := txVal.(string)
@@ -218,10 +220,15 @@ func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 		eventData.Transaction = txStr
 	}
 
-	UpdateTask(appConfig, eventData.Type, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
+	config := appConfig.ConfigManager.GetConfig()
 
-	format := appConfig.ConfigManager.GetConfig().Format
-	switch format {
+	if config.Verbose {
+		logVerboseEvent(eventData)
+	} else {
+		UpdateTask(appConfig, eventData.Type, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
+	}
+
+	switch config.Format {
 	case app.FormatDBus:
 		SendNotificationResponse(eventData, appConfig.DBusManager.GetConnection())
 	case app.FormatHTTP:
@@ -320,6 +327,52 @@ func SendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
 	err = dbusConn.Emit(objPath, signalName, string(message))
 	if err != nil {
 		app.Log.Error(app.T_("Error sending task result: %v"), err)
+	}
+}
+
+var (
+	verboseProgressMu   sync.Mutex
+	verboseProgressLast = make(map[string]int)
+)
+
+// logVerboseEvent логирует событие как простой текст вместо спиннера
+func logVerboseEvent(eventData *EventData) {
+	if eventData.Type == EventTypeProgress {
+		logVerboseProgress(eventData)
+		return
+	}
+
+	if eventData.State == StateBefore {
+		app.Log.Info("[RUN] ", eventData.View)
+	} else if eventData.State == StateAfter {
+		app.Log.Info("[OK] ", eventData.View)
+	}
+}
+
+// logVerboseProgress логирует прогресс каждые 10%
+func logVerboseProgress(eventData *EventData) {
+	bucket := int(eventData.ProgressPercent / 10)
+
+	verboseProgressMu.Lock()
+	lastBucket, exists := verboseProgressLast[eventData.Name]
+	if exists && bucket <= lastBucket && eventData.State != StateAfter {
+		verboseProgressMu.Unlock()
+		return
+	}
+	verboseProgressLast[eventData.Name] = bucket
+	if eventData.State == StateAfter {
+		delete(verboseProgressLast, eventData.Name)
+	}
+	verboseProgressMu.Unlock()
+
+	if eventData.State == StateAfter {
+		if eventData.ProgressDone != "" {
+			app.Log.Info("[DONE] ", eventData.ProgressDone)
+		} else {
+			app.Log.Info("[DONE] ", eventData.View)
+		}
+	} else {
+		app.Log.Info(fmt.Sprintf("[PROGRESS] %s: %.0f%%", eventData.View, eventData.ProgressPercent))
 	}
 }
 

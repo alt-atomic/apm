@@ -22,6 +22,7 @@ func (m *MockConfigManager) IsDevMode() bool                       { return fals
 func (m *MockConfigManager) SetFormat(_ string)                    {}
 func (m *MockConfigManager) SetFormatType(_ string)                {}
 func (m *MockConfigManager) SetFields(_ []string)                  {}
+func (m *MockConfigManager) EnableVerbose()                        {}
 func (m *MockConfigManager) GetTemporaryImageFile() string         { return "" }
 func (m *MockConfigManager) GetPathImageContainerFile() string     { return "" }
 func (m *MockConfigManager) GetPathImageFile() string              { return "" }

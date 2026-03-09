@@ -83,7 +83,7 @@ func restoreEcho() {
 
 // CreateSpinner создание и запуск спиннера.
 func CreateSpinner(appConfig *app.Config) {
-	if !IsInteractive(appConfig) {
+	if !IsInteractive(appConfig) || appConfig.ConfigManager.GetConfig().Verbose {
 		return
 	}
 

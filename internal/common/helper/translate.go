@@ -39,7 +39,6 @@ func SetupHelpTemplates() {
 
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:        "version",
-		Aliases:     []string{"v"},
 		Usage:       app.T_("print the version"),
 		HideDefault: true,
 		Local:       true,
@@ -216,6 +215,10 @@ func TranslateUsageError(err error) error {
 		if flag, ok := strings.CutPrefix(after, "Required flag "); ok {
 			return fmt.Errorf(app.T_("Required flag %s not set"), flag)
 		}
+	}
+
+	if flag, ok := strings.CutPrefix(msg, "flag needs an argument: "); ok {
+		return fmt.Errorf(app.T_("flag needs an argument: %s"), flag)
 	}
 
 	if flag, ok := strings.CutPrefix(msg, "flag provided but not defined: "); ok {

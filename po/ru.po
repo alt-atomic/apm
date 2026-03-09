@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-09 19:48+0600\n"
+"POT-Creation-Date: 2026-03-09 22:05+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -766,7 +766,7 @@ msgid "Package type"
 msgstr "Тип пакета"
 
 #: internal/common/apt/package/progress.go:87
-#: internal/common/reply/event.go:389
+#: internal/common/reply/event.go:442
 msgid "Downloading packages"
 msgstr "Загрузка пакетов"
 
@@ -1108,58 +1108,87 @@ msgstr "Недопустимый формат оператора фильтра:
 msgid "Empty filter field: %s"
 msgstr "Пустое поле фильтра: %s"
 
-#: internal/common/helper/cmd.go:112
+#: internal/common/helper/cmd.go:105
+msgid "Universal package manager for ALT Linux"
+msgstr "Универсальный менеджер пакетов для ALT Linux"
+
+#: internal/common/helper/cmd.go:106
+msgid ""
+"Manages system packages via APT, distrobox containers, atomic images and "
+"kernels"
+msgstr ""
+"Управляет системными пакетами через APT, контейнерами distrobox, атомарными "
+"образами и ядрами"
+
+#: internal/common/helper/cmd.go:107
+msgid "Supports repository management"
+msgstr "Поддерживает управление репозиториями"
+
+#: internal/common/helper/cmd.go:108
+msgid "Works as CLI tool, D-Bus service (system/session) or HTTP API server"
+msgstr ""
+"Работает как CLI утилита, D-Bus сервис (системный/сессионный) или HTTP API "
+"сервер"
+
+#: internal/common/helper/cmd.go:109
+msgid ""
+"Output formats: text (default, types: tree/plain via -ft) and json (-f json)"
+msgstr ""
+"Форматы вывода: text (по умолчанию, типы: tree/plain через -ft) и json (-f "
+"json)"
+
+#: internal/common/helper/cmd.go:121
 msgid "Filtering for the list method:"
 msgstr "Фильтрация для метода list:"
 
-#: internal/common/helper/cmd.go:113
+#: internal/common/helper/cmd.go:122
 msgid "Format: key[op]=value or key=value (each field has a default operator)"
 msgstr ""
 "Формат: key[op]=value или key=value (для каждого поля задан оператор по "
 "умолчанию)"
 
-#: internal/common/helper/cmd.go:114
+#: internal/common/helper/cmd.go:123
 msgid "Available operators:"
 msgstr "Доступные операторы:"
 
-#: internal/common/helper/cmd.go:115
+#: internal/common/helper/cmd.go:124
 msgid "exact match (=)"
 msgstr "точное совпадение (=)"
 
-#: internal/common/helper/cmd.go:116
+#: internal/common/helper/cmd.go:125
 msgid "not equal (<>)"
 msgstr "не равно (<>)"
 
-#: internal/common/helper/cmd.go:117
+#: internal/common/helper/cmd.go:126
 #, c-format
 msgid "pattern match (LIKE), use % as wildcard"
 msgstr "поиск по шаблону (LIKE), % — подстановочный знак"
 
-#: internal/common/helper/cmd.go:118
+#: internal/common/helper/cmd.go:127
 msgid "greater than (>)"
 msgstr "больше (>)"
 
-#: internal/common/helper/cmd.go:119
+#: internal/common/helper/cmd.go:128
 msgid "greater than or equal (>=)"
 msgstr "больше или равно (>=)"
 
-#: internal/common/helper/cmd.go:120
+#: internal/common/helper/cmd.go:129
 msgid "less than (<)"
 msgstr "меньше (<)"
 
-#: internal/common/helper/cmd.go:121
+#: internal/common/helper/cmd.go:130
 msgid "less than or equal (<=)"
 msgstr "меньше или равно (<=)"
 
-#: internal/common/helper/cmd.go:122
+#: internal/common/helper/cmd.go:131
 msgid "contains value (for JSON/array fields)"
 msgstr "содержит значение (для JSON/массивов)"
 
-#: internal/common/helper/cmd.go:123
+#: internal/common/helper/cmd.go:132
 msgid "OR: use \"|\" to combine values: key[op]=value1|value2"
 msgstr "ИЛИ: используйте \"|\" для объединения значений: key[op]=value1|value2"
 
-#: internal/common/helper/cmd.go:124
+#: internal/common/helper/cmd.go:133
 msgid "Examples:"
 msgstr "Примеры:"
 
@@ -1197,88 +1226,93 @@ msgstr "%.2f МБ"
 msgid "show help"
 msgstr "Показать помощь"
 
-#: internal/common/helper/translate.go:43
+#: internal/common/helper/translate.go:42
 msgid "print the version"
 msgstr "Показать версию"
+
+#: internal/common/helper/translate.go:65
+#: internal/common/helper/translate.go:92
+#: internal/common/helper/translate.go:122
+msgid "Module:"
+msgstr "Модуль:"
 
 #: internal/common/helper/translate.go:66
 #: internal/common/helper/translate.go:93
 #: internal/common/helper/translate.go:123
-msgid "Module:"
-msgstr "Модуль:"
-
-#: internal/common/helper/translate.go:67
-#: internal/common/helper/translate.go:94
-#: internal/common/helper/translate.go:124
 msgid "Usage:"
 msgstr "Применение:"
 
-#: internal/common/helper/translate.go:68
-#: internal/common/helper/translate.go:96
-#: internal/common/helper/translate.go:126
+#: internal/common/helper/translate.go:67
+#: internal/common/helper/translate.go:95
+#: internal/common/helper/translate.go:125
 msgid "Description:"
 msgstr "Описание:"
 
-#: internal/common/helper/translate.go:69
-#: internal/common/helper/translate.go:127
+#: internal/common/helper/translate.go:68
+#: internal/common/helper/translate.go:126
 msgid "Commands:"
 msgstr "Команды:"
 
+#: internal/common/helper/translate.go:69
 #: internal/common/helper/translate.go:70
-#: internal/common/helper/translate.go:71
+#: internal/common/helper/translate.go:96
 #: internal/common/helper/translate.go:97
-#: internal/common/helper/translate.go:98
+#: internal/common/helper/translate.go:127
 #: internal/common/helper/translate.go:128
-#: internal/common/helper/translate.go:129
 msgid "Options:"
 msgstr "Параметры:"
 
-#: internal/common/helper/translate.go:95
-#: internal/common/helper/translate.go:125
+#: internal/common/helper/translate.go:94
+#: internal/common/helper/translate.go:124
 msgid "Category:"
 msgstr "Категория:"
 
-#: internal/common/helper/translate.go:99
-#: internal/common/helper/translate.go:130
+#: internal/common/helper/translate.go:98
+#: internal/common/helper/translate.go:129
 msgid "Global options:"
 msgstr "Глобальные параметры:"
 
-#: internal/common/helper/translate.go:150
+#: internal/common/helper/translate.go:149
 msgid "default"
 msgstr "по умолчанию"
 
-#: internal/common/helper/translate.go:214
+#: internal/common/helper/translate.go:213
 #, c-format
 msgid "Required flags %s not set"
 msgstr "Обязательные флаги %s не указаны"
 
-#: internal/common/helper/translate.go:217
+#: internal/common/helper/translate.go:216
 #: internal/domain/distrobox/actions.go:355
 #, c-format
 msgid "Required flag %s not set"
 msgstr "Обязательный флаг %s не указан"
 
-#: internal/common/helper/translate.go:222
+#: internal/common/helper/translate.go:221
+#, c-format
+msgid "flag needs an argument: %s"
+msgstr "флаг требует аргумент: %s"
+
+#: internal/common/helper/translate.go:225
 #, c-format
 msgid "flag provided but not defined: %s"
 msgstr "указан несуществующий флаг: %s"
 
-#: internal/common/helper/translate.go:232
+#: internal/common/helper/translate.go:235
 #, c-format
 msgid "invalid value %s for flag %s: %s"
 msgstr "недопустимое значение %s для флага %s: %s"
 
-#: internal/common/helper/translate.go:234
+#: internal/common/helper/translate.go:237
 #, c-format
 msgid "invalid value %s for flag %s"
 msgstr "недопустимое значение %s для флага %s"
 
-#: internal/common/helper/translate.go:239
+#: internal/common/helper/translate.go:242
 #, c-format
 msgid "no such flag %s"
 msgstr "флаг %s не найден"
 
-#: internal/common/helper/translate.go:249
+#: internal/common/helper/translate.go:252
 #, c-format
 msgid "could not parse %s for flag %s: %s"
 msgstr "не удалось разобрать %s для флага %s: %s"
@@ -1426,211 +1460,211 @@ msgstr "неверная длина: ожидалось 9 символов, по
 msgid "Wrong permission format"
 msgstr "Неправильный формат разрешения"
 
-#: internal/common/reply/event.go:240 internal/common/reply/event.go:313
+#: internal/common/reply/event.go:247 internal/common/reply/event.go:320
 msgid "DBus connection is not initialized"
 msgstr "Соединение DBus не было инициализировано"
 
-#: internal/common/reply/event.go:249
+#: internal/common/reply/event.go:256
 msgid "Error sending notification: %v"
 msgstr "Ошибка отправки уведомления: %v"
 
-#: internal/common/reply/event.go:322
+#: internal/common/reply/event.go:329
 msgid "Error sending task result: %v"
 msgstr "Ошибка при отправке результата задачи: %v"
 
-#: internal/common/reply/event.go:329 internal/common/reply/event.go:371
+#: internal/common/reply/event.go:382 internal/common/reply/event.go:424
 msgid "Saving packages to the database"
 msgstr "Сохранение пакетов в базу данных"
 
-#: internal/common/reply/event.go:331
+#: internal/common/reply/event.go:384
 msgid "Requesting list of containers"
 msgstr "Запрос списка контейнеров"
 
-#: internal/common/reply/event.go:333
+#: internal/common/reply/event.go:386
 msgid "Exporting package"
 msgstr "Экспортирование пакета"
 
-#: internal/common/reply/event.go:335
+#: internal/common/reply/event.go:388
 msgid "Requesting container information"
 msgstr "Запрос информации о контейнере"
 
-#: internal/common/reply/event.go:337
+#: internal/common/reply/event.go:390
 msgid "Creating container"
 msgstr "Создание контейнера"
 
-#: internal/common/reply/event.go:339
+#: internal/common/reply/event.go:392
 msgid "Deleting container"
 msgstr "Удаление контейнера"
 
-#: internal/common/reply/event.go:341
+#: internal/common/reply/event.go:394
 msgid "Installing package"
 msgstr "Установка пакета"
 
-#: internal/common/reply/event.go:343
+#: internal/common/reply/event.go:396
 msgid "Removing package"
 msgstr "Удаление пакета"
 
-#: internal/common/reply/event.go:345
+#: internal/common/reply/event.go:398
 msgid "Retrieving list of packages"
 msgstr "Извлечение списка пакетов"
 
-#: internal/common/reply/event.go:347 internal/common/sandbox/provider.go:140
+#: internal/common/reply/event.go:400 internal/common/sandbox/provider.go:140
 msgid "Determining file owner"
 msgstr "Определение владельца файла"
 
-#: internal/common/reply/event.go:349
+#: internal/common/reply/event.go:402
 msgid "Searching package paths"
 msgstr "Поиск путей пакета"
 
-#: internal/common/reply/event.go:351
+#: internal/common/reply/event.go:404
 msgid "Retrieving package information"
 msgstr "Извлечение информации о пакете"
 
-#: internal/common/reply/event.go:353
+#: internal/common/reply/event.go:406
 msgid "Updating packages"
 msgstr "Обновление пакетов"
 
-#: internal/common/reply/event.go:355
+#: internal/common/reply/event.go:408
 msgid "Filtering packages"
 msgstr "Фильтрация пакетов"
 
-#: internal/common/reply/event.go:357
+#: internal/common/reply/event.go:410
 msgid "Working with packages"
 msgstr "Работа с пакетами"
 
-#: internal/common/reply/event.go:359
+#: internal/common/reply/event.go:412
 msgid "System update"
 msgstr "Обновление системы"
 
-#: internal/common/reply/event.go:361
+#: internal/common/reply/event.go:414
 msgid "Analyzing packages"
 msgstr "Анализ пакетов"
 
-#: internal/common/reply/event.go:363
+#: internal/common/reply/event.go:416
 msgid "General update process"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:365
+#: internal/common/reply/event.go:418
 msgid "General update kernel"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:367
+#: internal/common/reply/event.go:420
 msgid "Loading package list from STPLR repository"
 msgstr "Загрузка списка пакетов из репозитория STPLR"
 
-#: internal/common/reply/event.go:369
+#: internal/common/reply/event.go:422
 msgid "Loading package list from repository"
 msgstr "Загрузка списка пакетов из репозитория"
 
-#: internal/common/reply/event.go:373
+#: internal/common/reply/event.go:426
 msgid "Saving image history to the database"
 msgstr "Сохранение истории образа в базу данных"
 
-#: internal/common/reply/event.go:375
+#: internal/common/reply/event.go:428
 msgid "Building local image"
 msgstr "Создание локального образа"
 
-#: internal/common/reply/event.go:377
+#: internal/common/reply/event.go:430
 msgid "Switching to local image"
 msgstr "Переключение на локальный образ"
 
-#: internal/common/reply/event.go:379
+#: internal/common/reply/event.go:432
 msgid "General Image Update Process"
 msgstr "Общий процесс обновления образа"
 
-#: internal/common/reply/event.go:381
+#: internal/common/reply/event.go:434
 msgid "Downloading base image update"
 msgstr "Загрузка обновления базового образа"
 
-#: internal/common/reply/event.go:383
+#: internal/common/reply/event.go:436
 msgid "Cleaning up old images"
 msgstr "Очистка старых образов"
 
-#: internal/common/reply/event.go:385
+#: internal/common/reply/event.go:438
 msgid "Synchronizing database"
 msgstr "Синхронизация базы данных"
 
-#: internal/common/reply/event.go:387
+#: internal/common/reply/event.go:440
 msgid "Loading application data from catalogs"
 msgstr "Загрузка данных о приложениях из каталогов"
 
-#: internal/common/reply/event.go:391
+#: internal/common/reply/event.go:444
 msgid "Downloading image"
 msgstr "Загрузка образа"
 
-#: internal/common/reply/event.go:393
+#: internal/common/reply/event.go:446
 msgid "Updating application data"
 msgstr "Обновление данных о приложениях"
 
-#: internal/common/reply/event.go:395
+#: internal/common/reply/event.go:448
 msgid "Saving application data"
 msgstr "Сохранение данных о приложениях"
 
-#: internal/common/reply/event.go:397
+#: internal/common/reply/event.go:450
 msgid "Fetching layers"
 msgstr "Получение слоёв"
 
-#: internal/common/reply/event.go:399
+#: internal/common/reply/event.go:452
 msgid "Downloading update"
 msgstr "Загрузка обновления"
 
-#: internal/common/reply/event.go:401
+#: internal/common/reply/event.go:454
 msgid "Get current kernel"
 msgstr "Получить актуальное ядро"
 
-#: internal/common/reply/event.go:403
+#: internal/common/reply/event.go:456
 msgid "Get list kernels"
 msgstr "Получить список ядер"
 
-#: internal/common/reply/event.go:405
+#: internal/common/reply/event.go:458
 msgid "Get kernel modules"
 msgstr "Получить модули ядра"
 
-#: internal/common/reply/event.go:407
+#: internal/common/reply/event.go:460
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:409
+#: internal/common/reply/event.go:462
 msgid "Simulate install kernel"
 msgstr "Симуляция установки ядра"
 
-#: internal/common/reply/event.go:411
+#: internal/common/reply/event.go:464
 msgid "Update kernel"
 msgstr "Обновление ядра"
 
-#: internal/common/reply/event.go:413
+#: internal/common/reply/event.go:466
 msgid "Simulate update kernel"
 msgstr "Симуляция обновления ядра"
 
-#: internal/common/reply/event.go:415
+#: internal/common/reply/event.go:468
 msgid "Clean old kernels"
 msgstr "Очистка старых ядер"
 
-#: internal/common/reply/event.go:417
+#: internal/common/reply/event.go:470
 msgid "Simulate clean old kernels"
 msgstr "Симуляция очистки старых ядер"
 
-#: internal/common/reply/event.go:419 internal/domain/kernel/commands.go:197
+#: internal/common/reply/event.go:472 internal/domain/kernel/commands.go:197
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
-#: internal/common/reply/event.go:421
+#: internal/common/reply/event.go:474
 msgid "Simulate install kernel modules"
 msgstr "Симуляция установки модулей ядра"
 
-#: internal/common/reply/event.go:423 internal/domain/kernel/commands.go:226
+#: internal/common/reply/event.go:476 internal/domain/kernel/commands.go:226
 msgid "Remove kernel modules"
 msgstr "Удалить модули ядра"
 
-#: internal/common/reply/event.go:425
+#: internal/common/reply/event.go:478
 msgid "Simulate remove kernel modules"
 msgstr "Симуляция удаления модулей ядра"
 
-#: internal/common/reply/event.go:427
+#: internal/common/reply/event.go:480
 msgid "Remove packages"
 msgstr "Удаление пакетов"
 
-#: internal/common/reply/event.go:429
+#: internal/common/reply/event.go:482
 msgid "Simulate Remove packages"
 msgstr "Симуляция удаления пакетов"
 
@@ -2394,14 +2428,14 @@ msgstr "Не удалось распаковать %s: %w"
 msgid "Parse %s failed: %w"
 msgstr "Не удалось спарсить %s: %w"
 
-#: internal/common/wrapper/wrapper.go:70 main.go:322 main.go:385
+#: internal/common/wrapper/wrapper.go:74 main.go:313 main.go:376
 msgid ""
 "Elevated rights are required to perform this action. Please use sudo or su"
 msgstr ""
 "Для выполнения этого действия необходимы повышенные права. Пожалуйста, "
 "используйте sudo или su"
 
-#: internal/common/wrapper/wrapper.go:75 main.go:269 main.go:442
+#: internal/common/wrapper/wrapper.go:79 main.go:260 main.go:433
 msgid ""
 "Elevated rights are not allowed to perform this action. Please do not use "
 "sudo or su"
@@ -3798,89 +3832,89 @@ msgstr "Нет пакетов"
 msgid "Start session D-Bus service org.altlinux.APM"
 msgstr "Запустить сессионный сервис D-Bus org.altlinux.APM"
 
-#: main.go:73 main.go:86 main.go:99 main.go:118
+#: main.go:73 main.go:79 main.go:85 main.go:104
 msgid "Services"
 msgstr "Службы"
 
-#: main.go:79 main.go:92
-msgid "Enable verbose logging to stdout"
-msgstr "Включить подробное логирование в стандартный вывод"
-
-#: main.go:85
+#: main.go:78
 msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
-#: main.go:98
+#: main.go:84
 msgid "Start system HTTP API server"
 msgstr "Запустить системный HTTP API сервер"
 
-#: main.go:105 main.go:124
+#: main.go:91 main.go:110
 msgid "Listen address (host:port)"
 msgstr "Адрес прослушивания (хост:порт)"
 
-#: main.go:110 main.go:129
+#: main.go:96 main.go:115
 msgid "API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"
 msgstr ""
 "API-токен в формате <read|manage>:<токен> (предпочтительно через "
 "APM_API_TOKEN)"
 
-#: main.go:117
+#: main.go:103
 msgid "Start session HTTP API"
 msgstr "Запустить сессионный HTTP API сервер"
 
-#: main.go:152
+#: main.go:138
 msgid "Show the list of commands or help for each command"
 msgstr "Показать список команд или справку по каждой команде"
 
-#: main.go:153 main.go:160
+#: main.go:139 main.go:145
 msgid "[command]"
 msgstr "[команда]"
 
-#: main.go:159
+#: main.go:144
 msgid "Print version"
 msgstr "Показать версию"
 
-#: main.go:174
+#: main.go:160
 msgid "Output format: json, text"
 msgstr "Формат вывода: json, text"
 
-#: main.go:180
+#: main.go:166
 msgid "Display type: tree, plain"
 msgstr "Тип отображения: tree, plain"
 
-#: main.go:186
+#: main.go:172
 msgid "Output only specified fields"
 msgstr "Выводить только указанные поля"
 
-#: main.go:191
+#: main.go:177
 msgid "Internal property, adds the transaction to the output"
 msgstr "Внутреннее свойство, добавляющее транзакцию к выводу"
 
-#: main.go:216
+#: main.go:183
+msgid "Enable verbose logging to stdout"
+msgstr "Включить подробное логирование в стандартный вывод"
+
+#: main.go:207
 #, c-format
 msgid "Recieved correct signal %s. Stopping application…"
 msgstr "Получен правильный сигнал %s. Остановка приложения…"
 
-#: main.go:223
+#: main.go:214
 #, c-format
 msgid ""
 "Unexpected signal %s received. Terminating the application with an error."
 msgstr "Получен неожиданный сигнал %s. Завершение работы приложения с ошибкой."
 
-#: main.go:247
+#: main.go:238
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr "Неизвестная команда: %s. Посмотрите 'apm help'"
 
-#: main.go:448
+#: main.go:439
 msgid "Distrobox is not installed"
 msgstr "Distrobox не установлен"
 
-#: main.go:542
+#: main.go:533
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: main.go:549
+#: main.go:540
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 

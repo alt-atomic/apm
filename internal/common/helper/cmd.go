@@ -100,6 +100,15 @@ func IsRunningInContainer() bool {
 	return false
 }
 
+// AppDescription возвращает описание приложения
+func AppDescription() string {
+	return app.T_("Universal package manager for ALT Linux") + "\n" +
+		app.T_("Manages system packages via APT, distrobox containers, atomic images and kernels") + "\n" +
+		app.T_("Supports repository management") + "\n" +
+		app.T_("Works as CLI tool, D-Bus service (system/session) or HTTP API server") + "\n" +
+		app.T_("Output formats: text (default, types: tree/plain via -ft) and json (-f json)")
+}
+
 func Abs(x int) int {
 	if x < 0 {
 		return -x

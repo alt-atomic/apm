@@ -514,7 +514,7 @@ func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*Update
 
 // ImageBuild Update Сборка образа
 func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
-	app.Log.EnableStdoutLogging()
+	a.appConfig.ConfigManager.EnableVerbose()
 	reply.StopSpinner(a.appConfig)
 
 	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {

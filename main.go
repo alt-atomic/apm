@@ -72,26 +72,12 @@ func main() {
 			Usage:    app.T_("Start session D-Bus service org.altlinux.APM"),
 			Category: app.T_("Services"),
 			Action:   sessionDbus,
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:    "verbose",
-					Aliases: []string{"v"},
-					Usage:   app.T_("Enable verbose logging to stdout"),
-				},
-			},
 		},
 		{
 			Name:     "dbus-system",
 			Usage:    app.T_("Start system D-Bus service org.altlinux.APM"),
 			Category: app.T_("Services"),
 			Action:   systemDbus,
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:    "verbose",
-					Aliases: []string{"v"},
-					Usage:   app.T_("Enable verbose logging to stdout"),
-				},
-			},
 		},
 		{
 			Name:     "http-server",
@@ -155,7 +141,6 @@ func main() {
 			},
 			{
 				Name:      "version",
-				Aliases:   []string{"v"},
 				Usage:     app.T_("Print version"),
 				ArgsUsage: app.T_("[command]"),
 				Action:    printVersion,
@@ -165,9 +150,10 @@ func main() {
 
 	// Основная команда приложения
 	rootCommand := &cli.Command{
-		Name:    "apm",
-		Usage:   "Atomic Package Manager",
-		Version: appConfig.ConfigManager.GetParsedVersion().Value,
+		Name:        "apm",
+		Usage:       "Atomic Package Manager",
+		Description: helper.AppDescription(),
+		Version:     appConfig.ConfigManager.GetParsedVersion().Value,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -190,6 +176,11 @@ func main() {
 				Name:    "transaction",
 				Usage:   app.T_("Internal property, adds the transaction to the output"),
 				Aliases: []string{"t"},
+			},
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"v"},
+				Usage:   app.T_("Enable verbose logging to stdout"),
 			},
 		},
 		Commands: cmds,
@@ -263,7 +254,7 @@ func applyCommandSetting(cliCommand *cli.Command) {
 func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
 	if cmd.Bool("verbose") {
-		app.Log.EnableStdoutLogging()
+		appConfig.ConfigManager.EnableVerbose()
 	}
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
@@ -316,7 +307,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
 	if cmd.Bool("verbose") {
-		app.Log.EnableStdoutLogging()
+		appConfig.ConfigManager.EnableVerbose()
 	}
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
@@ -379,7 +370,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 func httpServer(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
-	app.Log.EnableStdoutLogging()
+	appConfig.ConfigManager.EnableVerbose()
 
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
@@ -436,7 +427,7 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 
 func httpSession(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
-	app.Log.EnableStdoutLogging()
+	appConfig.ConfigManager.EnableVerbose()
 
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
