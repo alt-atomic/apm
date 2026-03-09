@@ -31,10 +31,10 @@ import (
 )
 
 type Actions struct {
-	servicePackage        *sandbox.PackageService
-	serviceDistroDatabase *sandbox.DistroDBService
-	serviceDistroAPI      *sandbox.DistroAPIService
-	iconService           *icon.Service
+	servicePackage        packageService
+	serviceDistroDatabase distroDBService
+	serviceDistroAPI      distroAPIService
+	iconService           IconServiceProvider
 }
 
 func NewActions(appConfig *app.Config) *Actions {
@@ -54,7 +54,7 @@ func NewActions(appConfig *app.Config) *Actions {
 }
 
 // GetIconService возвращает сервис иконок
-func (a *Actions) GetIconService() *icon.Service {
+func (a *Actions) GetIconService() IconServiceProvider {
 	return a.iconService
 }
 

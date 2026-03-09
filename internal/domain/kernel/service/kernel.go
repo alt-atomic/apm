@@ -19,7 +19,6 @@ package service
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
-	"apm/internal/common/binding/apt"
 	libApt "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/filter"
 	"apm/internal/common/helper"
@@ -140,12 +139,12 @@ type UpgradePreview struct {
 
 // Manager KernelManager управляет операциями с ядрами
 type Manager struct {
-	dbService  *_package.PackageDBService
-	aptActions *apt.Actions
+	dbService  packageDBService
+	aptActions aptBindingActions
 }
 
 // NewKernelManager создает новый KernelManager
-func NewKernelManager(dbService *_package.PackageDBService, aptActions *apt.Actions) *Manager {
+func NewKernelManager(dbService packageDBService, aptActions aptBindingActions) *Manager {
 	return &Manager{
 		dbService:  dbService,
 		aptActions: aptActions,
@@ -977,6 +976,11 @@ func (km *Manager) GetBackupKernel(ctx context.Context) (*Info, error) {
 	}
 
 	return nil, nil
+}
+
+// BuildFullKernelInfo конвертирует Info в FullKernelInfo с загрузкой модулей
+func (km *Manager) BuildFullKernelInfo(info *Info) FullKernelInfo {
+	return info.ToFull(km)
 }
 
 // GroupKernelsByFlavour группирует ядра по flavour и сортирует по версии

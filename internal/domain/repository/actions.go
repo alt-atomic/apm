@@ -30,8 +30,8 @@ import (
 // Actions объединяет методы для работы с репозиториями
 type Actions struct {
 	appConfig         *app.Config
-	repoService       *service.RepoService
-	serviceAptActions *_package.Actions
+	repoService       repoService
+	serviceAptActions aptActionsService
 }
 
 // NewActions создаёт новый экземпляр Actions

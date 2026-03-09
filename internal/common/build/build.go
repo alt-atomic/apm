@@ -36,14 +36,14 @@ import (
 
 type ConfigService struct {
 	appConfig         *app.Config
-	serviceAptActions *_package.Actions
-	serviceDBService  *_package.PackageDBService
+	serviceAptActions buildAptActionsService
+	serviceDBService  buildPackageDBService
 	kernelManager     *service.Manager
 	repoService       *reposervice.RepoService
-	serviceHostConfig *HostConfigService
+	serviceHostConfig buildHostConfigService
 }
 
-func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig *HostConfigService) *ConfigService {
+func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, dBService buildPackageDBService, kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig buildHostConfigService) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
 		serviceAptActions: aptActions,
@@ -59,11 +59,11 @@ func (cfgService *ConfigService) IsAtomic() bool {
 }
 
 func (cfgService *ConfigService) Build(ctx context.Context) error {
-	if cfgService.serviceHostConfig.Config == nil {
+	if cfgService.serviceHostConfig.GetConfig() == nil {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
-	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.Config.Modules)
+	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
 	return err
 }
 

@@ -34,7 +34,7 @@ var (
 
 // HostConfigService предоставляет сервис для работы с конфигурацией хоста.
 type HostConfigService struct {
-	Config              *Config
+	config              *Config
 	serviceHostDatabase *HostDBService
 	pathImageFile       string
 	hostImageService    *HostImageService
@@ -62,7 +62,7 @@ func (s *HostConfigService) LoadConfig() error {
 		if cfg, err = s.hostImageService.GenerateDefaultConfig(); err != nil {
 			return err
 		}
-		s.Config = &cfg
+		s.config = &cfg
 		return s.SaveConfig()
 	}
 
@@ -76,7 +76,7 @@ func (s *HostConfigService) LoadConfig() error {
 		return err
 	}
 
-	s.Config = &cfg
+	s.config = &cfg
 	return nil
 }
 
@@ -98,23 +98,23 @@ func (s *HostConfigService) GetConfigEnvVars() (map[string]string, error) {
 
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
 func (s *HostConfigService) SaveConfig() error {
-	if s.Config == nil {
+	if s.config == nil {
 		return errors.New(app.T_("Configuration not loaded"))
 	}
 	syncYamlMutex.Lock()
 	defer syncYamlMutex.Unlock()
 
-	return s.Config.Save(s.pathImageFile)
+	return s.config.Save(s.pathImageFile)
 }
 
 // GenerateDockerfile делегирует генерацию Dockerfile к HostImageService
 func (s *HostConfigService) GenerateDockerfile() error {
-	return s.hostImageService.GenerateDockerfile(*s.Config)
+	return s.hostImageService.GenerateDockerfile(*s.config)
 }
 
 // ConfigIsChanged проверяет, изменился ли новый конфиг, используя сервис для работы с базой.
 func (s *HostConfigService) ConfigIsChanged(ctx context.Context) (bool, error) {
-	statusSame, err := s.serviceHostDatabase.IsLatestConfigSame(ctx, *s.Config)
+	statusSame, err := s.serviceHostDatabase.IsLatestConfigSame(ctx, *s.config)
 	if err != nil {
 		return false, err
 	}
@@ -132,8 +132,8 @@ func (s *HostConfigService) SaveConfigToDB(ctx context.Context) error {
 	}
 
 	history := ImageHistory{
-		ImageName: s.Config.Image,
-		Config:    s.Config,
+		ImageName: s.config.Image,
+		Config:    s.config,
 		ImageDate: time.Now().Format(time.RFC3339),
 	}
 	return s.serviceHostDatabase.SaveImageToDB(ctx, history)
@@ -141,22 +141,32 @@ func (s *HostConfigService) SaveConfigToDB(ctx context.Context) error {
 
 // IsInstalled проверяет наличие пакета в списке для установки.
 func (s *HostConfigService) IsInstalled(pkg string) bool {
-	return s.Config.IsInstalled(pkg)
+	return s.config.IsInstalled(pkg)
 }
 
 // IsRemoved проверяет наличие пакета в списке для удаления.
 func (s *HostConfigService) IsRemoved(pkg string) bool {
-	return s.Config.IsRemoved(pkg)
+	return s.config.IsRemoved(pkg)
 }
 
 // AddInstallPackage добавляет пакет в список для установки и сохраняет изменения в файл.
 func (s *HostConfigService) AddInstallPackage(pkg string) error {
-	s.Config.AddInstallPackage(pkg)
+	s.config.AddInstallPackage(pkg)
 	return s.SaveConfig()
 }
 
 // AddRemovePackage добавляет пакет в список для удаления и сохраняет изменения в файл.
 func (s *HostConfigService) AddRemovePackage(pkg string) error {
-	s.Config.AddRemovePackage(pkg)
+	s.config.AddRemovePackage(pkg)
 	return s.SaveConfig()
+}
+
+// GetConfig возвращает текущую конфигурацию.
+func (s *HostConfigService) GetConfig() *Config {
+	return s.config
+}
+
+// SetConfig устанавливает конфигурацию.
+func (s *HostConfigService) SetConfig(config *Config) {
+	s.config = config
 }

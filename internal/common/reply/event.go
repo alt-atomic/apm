@@ -116,6 +116,7 @@ const (
 
 	EventKernelCurrent          = "kernel.CurrentKernel"
 	EventKernelList             = "kernel.ListKernels"
+	EventKernelListModules      = "kernel.ListKernelModules"
 	EventKernelInstall          = "kernel.InstallKernel"
 	EventKernelCheckInstall     = "kernel.CheckInstallKernel"
 	EventKernelUpdate           = "kernel.UpdateKernel"
@@ -400,6 +401,8 @@ func getTaskText(task string) string {
 		return app.T_("Get current kernel")
 	case EventKernelList:
 		return app.T_("Get list kernels")
+	case EventKernelListModules:
+		return app.T_("Get kernel modules")
 	case EventKernelInstall:
 		return app.T_("Install kernel")
 	case EventKernelCheckInstall:

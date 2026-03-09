@@ -34,9 +34,9 @@ import (
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	appConfig          *app.Config
-	serviceAptActions  *_package.Actions
-	serviceAptDatabase *_package.PackageDBService
-	kernelManager      *service.Manager
+	serviceAptActions  aptActionsService
+	serviceAptDatabase aptDatabaseService
+	kernelManager      kernelManagerService
 }
 
 // NewActions создаёт новый экземпляр Actions.
@@ -82,7 +82,7 @@ func (a *Actions) ListKernels(ctx context.Context, flavour string, installedOnly
 
 	return &ListKernelsResponse{
 		Message: fmt.Sprintf(app.TN_("%d kernel found", "%d kernels found", len(kernels)), len(kernels)),
-		Kernels: a.formatKernelOutput(kernels),
+		Kernels: a.formatKernelOutput(ctx, kernels),
 	}, nil
 }
 
@@ -100,7 +100,7 @@ func (a *Actions) GetCurrentKernel(ctx context.Context) (*GetCurrentKernelRespon
 
 	return &GetCurrentKernelResponse{
 		Message: app.T_("Current kernel information"),
-		Kernel:  kernel.ToFull(a.kernelManager),
+		Kernel:  a.kernelManager.BuildFullKernelInfo(kernel),
 	}, nil
 }
 
@@ -159,7 +159,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 	if len(preview.Changes.NewInstalledPackages) == 0 && len(preview.Changes.UpgradedPackages) == 0 {
 		return &InstallUpdateKernelResponse{
 			Message: fmt.Sprintf(app.T_("Kernel %s is already installed"), latest.FullVersion),
-			Kernel:  latest.ToFull(a.kernelManager),
+			Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 			Preview: nil,
 		}, nil
 	}
@@ -167,7 +167,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 	if dryRun {
 		return &InstallUpdateKernelResponse{
 			Message: app.T_("Installation preview"),
-			Kernel:  latest.ToFull(a.kernelManager),
+			Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 			Preview: preview,
 		}, nil
 	}
@@ -184,7 +184,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 
 	return &InstallUpdateKernelResponse{
 		Message: fmt.Sprintf(app.T_("Kernel %s installed successfully"), latest.FullVersion),
-		Kernel:  latest.ToFull(a.kernelManager),
+		Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 		Preview: preview,
 	}, nil
 }
@@ -246,7 +246,7 @@ func (a *Actions) UpdateKernel(ctx context.Context, flavour string, modules []st
 	if latest.Version == current.VersionInstalled && latest.Release == current.Release {
 		return &InstallUpdateKernelResponse{
 			Message: app.T_("Kernel is already up to date"),
-			Kernel:  latest.ToFull(a.kernelManager),
+			Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 			Preview: nil,
 		}, nil
 	}
@@ -411,7 +411,7 @@ func (a *Actions) ListKernelModules(ctx context.Context, flavour string) (*ListK
 
 	return &ListKernelModulesResponse{
 		Message: fmt.Sprintf(app.TN_("%d module found", "%d modules found", len(modules)), len(modules)),
-		Kernel:  latest.ToFull(a.kernelManager),
+		Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 		Modules: modules,
 	}, nil
 }
@@ -500,7 +500,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 
 		return &InstallKernelModulesResponse{
 			Message: app.T_("Modules installation preview"),
-			Kernel:  latest.ToFull(a.kernelManager),
+			Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 			Preview: preview,
 		}, nil
 	}
@@ -522,7 +522,7 @@ func (a *Actions) InstallKernelModules(ctx context.Context, flavour string,
 
 	return &InstallKernelModulesResponse{
 		Message: fmt.Sprintf(app.TN_("%d module installed successfully for kernel %s", "%d modules installed successfully for kernel %s", len(modules)), len(modules), updatedKernel.FullVersion),
-		Kernel:  updatedKernel.ToFull(a.kernelManager),
+		Kernel:  a.kernelManager.BuildFullKernelInfo(updatedKernel),
 		Preview: nil,
 	}, nil
 }
@@ -584,7 +584,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 	if len(modulesToRemove) == 0 {
 		return &RemoveKernelModulesResponse{
 			Message: app.T_("No modules to remove"),
-			Kernel:  latest.ToFull(a.kernelManager),
+			Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 			Preview: nil,
 		}, nil
 	}
@@ -608,7 +608,7 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 
 		return &RemoveKernelModulesResponse{
 			Message: app.T_("Modules removal preview"),
-			Kernel:  latest.ToFull(a.kernelManager),
+			Kernel:  a.kernelManager.BuildFullKernelInfo(latest),
 			Preview: preview,
 		}, nil
 	}
@@ -631,16 +631,19 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 
 	return &RemoveKernelModulesResponse{
 		Message: fmt.Sprintf(app.TN_("%d module removed successfully from kernel %s", "%d modules removed successfully from kernel %s", len(modulesToRemove)), len(modulesToRemove), latest.FullVersion),
-		Kernel:  updatedKernel.ToFull(a.kernelManager),
+		Kernel:  a.kernelManager.BuildFullKernelInfo(updatedKernel),
 		Preview: nil,
 	}, nil
 }
 
 // formatKernelOutput форматирует вывод информации о ядрах
-func (a *Actions) formatKernelOutput(kernels []*service.Info) []service.FullKernelInfo {
+func (a *Actions) formatKernelOutput(ctx context.Context, kernels []*service.Info) []service.FullKernelInfo {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelListModules))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelListModules))
+
 	var result []service.FullKernelInfo
 	for _, kernel := range kernels {
-		result = append(result, kernel.ToFull(a.kernelManager))
+		result = append(result, a.kernelManager.BuildFullKernelInfo(kernel))
 	}
 	return result
 }

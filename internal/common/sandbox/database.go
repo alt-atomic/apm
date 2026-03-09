@@ -358,7 +358,7 @@ func (s *DistroDBService) DeletePackagesFromContainer(ctx context.Context, conta
 		return err
 	}
 
-	if err := db.WithContext(ctx).
+	if err = db.WithContext(ctx).
 		Where("container = ?", containerName).
 		Delete(&DBDistroPackage{}).Error; err != nil {
 		return fmt.Errorf(app.T_("Error deleting container records %s: %v"), containerName, err)

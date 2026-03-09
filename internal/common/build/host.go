@@ -335,7 +335,7 @@ func (h *HostImageService) GenerateDockerfile(config Config) error {
 }
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ. checkSame - включена ли проверка на изменение конфигурации
-func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService *HostConfigService) error {
+func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService SwitchableConfig) error {
 	statusSame, err := hostConfigService.ConfigIsChanged(ctx)
 	if err != nil {
 		return err

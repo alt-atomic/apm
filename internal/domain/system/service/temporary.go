@@ -154,6 +154,11 @@ func (s *TemporaryConfigService) DeleteFile() error {
 	return os.Remove(s.temporaryImageFile)
 }
 
+// GetConfig возвращает текущую конфигурацию.
+func (s *TemporaryConfigService) GetConfig() *TemporaryConfig {
+	return s.Config
+}
+
 // removeElement удаляет элемент из среза строк.
 func removeElement(slice []string, element string) []string {
 	var newSlice []string

@@ -21,12 +21,12 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
-	_binding "apm/internal/common/binding/apt"
+	aptBinding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
 	"apm/internal/common/filter"
 	"apm/internal/common/reply"
 	"apm/internal/common/swcat"
-	_kservice "apm/internal/domain/kernel/service"
+	kservice "apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
 	"apm/internal/domain/system/dialog"
 	"apm/internal/domain/system/service"
@@ -41,13 +41,13 @@ import (
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	appConfig              *app.Config
-	serviceHostImage       *build.HostImageService
-	serviceAptActions      *_package.Actions
-	serviceAptDatabase     *_package.PackageDBService
-	serviceHostDatabase    *build.HostDBService
-	serviceHostConfig      *build.HostConfigService
-	serviceTemporaryConfig *service.TemporaryConfigService
-	serviceAppStreamDB     *swcat.DBService
+	serviceHostImage       hostImageService
+	serviceAptActions      aptActionsService
+	serviceAptDatabase     aptDatabaseService
+	serviceHostDatabase    hostDatabaseService
+	serviceHostConfig      hostConfigService
+	serviceTemporaryConfig temporaryConfigService
+	serviceAppStreamDB     appStreamService
 }
 
 // NewActions создаёт новый экземпляр Actions.
@@ -542,8 +542,8 @@ func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	aptActions := _binding.NewActions()
-	kernelManager := _kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
+	aptActions := aptBinding.NewActions()
+	kernelManager := kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
 	repoService := reposervice.NewRepoService(a.appConfig)
 	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, repoService, a.serviceHostConfig)
 	err = buildService.Build(ctx)
@@ -872,11 +872,11 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*ImageUpdateResponse, error)
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	if err := a.serviceHostConfig.Config.CheckImage(); err != nil {
+	if err := a.serviceHostConfig.GetConfig().CheckImage(); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	err := a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.Config)
+	err := a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.GetConfig())
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
@@ -903,7 +903,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*ImageApplyResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	if err = a.serviceHostConfig.Config.CheckImage(); err != nil {
+	if err = a.serviceHostConfig.GetConfig().CheckImage(); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
@@ -911,13 +911,13 @@ func (a *Actions) ImageApply(ctx context.Context) (*ImageApplyResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	if len(a.serviceTemporaryConfig.Config.Packages.Install) > 0 || len(a.serviceTemporaryConfig.Config.Packages.Remove) > 0 {
+	if len(a.serviceTemporaryConfig.GetConfig().Packages.Install) > 0 || len(a.serviceTemporaryConfig.GetConfig().Packages.Remove) > 0 {
 		reply.StopSpinner(a.appConfig)
 		// Показываем диалог выбора пакетов
 		result, errDialog := dialog.NewPackageSelectionDialog(
 			a.appConfig,
-			a.serviceTemporaryConfig.Config.Packages.Install,
-			a.serviceTemporaryConfig.Config.Packages.Remove,
+			a.serviceTemporaryConfig.GetConfig().Packages.Install,
+			a.serviceTemporaryConfig.GetConfig().Packages.Remove,
 		)
 		if errDialog != nil {
 			return nil, errDialog
@@ -947,7 +947,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*ImageApplyResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	if len(a.serviceHostConfig.Config.Modules) > 0 {
+	if len(a.serviceHostConfig.GetConfig().Modules) > 0 {
 		err = a.serviceHostConfig.GenerateDockerfile()
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -958,7 +958,7 @@ func (a *Actions) ImageApply(ctx context.Context) (*ImageApplyResponse, error) {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}
 	} else {
-		err = a.serviceHostImage.SwitchImage(ctx, a.serviceHostConfig.Config.Image, false)
+		err = a.serviceHostImage.SwitchImage(ctx, a.serviceHostConfig.GetConfig().Image, false)
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}
@@ -1001,7 +1001,7 @@ func (a *Actions) ImageGetConfig(_ context.Context) (*ImageConfigResponse, error
 	}
 
 	return &ImageConfigResponse{
-		Config: *a.serviceHostConfig.Config,
+		Config: *a.serviceHostConfig.GetConfig(),
 	}, nil
 }
 
@@ -1012,7 +1012,7 @@ func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*Imag
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	a.serviceHostConfig.Config = &config
+	a.serviceHostConfig.SetConfig(&config)
 
 	err = a.serviceHostConfig.SaveConfig()
 	if err != nil {
@@ -1020,7 +1020,7 @@ func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*Imag
 	}
 
 	return &ImageConfigResponse{
-		Config: *a.serviceHostConfig.Config,
+		Config: *a.serviceHostConfig.GetConfig(),
 	}, nil
 }
 
@@ -1145,14 +1145,14 @@ func (a *Actions) getImageStatus(_ context.Context) (ImageStatus, error) {
 		return ImageStatus{
 			Status: app.T_("Modified image. Configuration file: ") + a.appConfig.ConfigManager.GetConfig().PathImageFile,
 			Image:  hostImage,
-			Config: *a.serviceHostConfig.Config,
+			Config: *a.serviceHostConfig.GetConfig(),
 		}, nil
 	}
 
 	return ImageStatus{
 		Status: app.T_("Cloud image without changes"),
 		Image:  hostImage,
-		Config: *a.serviceHostConfig.Config,
+		Config: *a.serviceHostConfig.GetConfig(),
 	}, nil
 }
 
