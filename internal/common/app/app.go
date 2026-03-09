@@ -94,8 +94,12 @@ func GetAppConfig(ctx context.Context) *Config {
 	if cfg, ok := ctx.Value(AppConfigKey).(*Config); ok {
 		return cfg
 	}
-	Log.Fatal("App config not found in context: critical internal error")
-	return nil
+	errMsg := "App config not found in context: critical internal error"
+
+	// Компилятору не нравится return nill,
+	// но Log.Fatal и так "убьёт" приложение и до panic не дойдёт, зато IDE не будет жаловаться
+	Log.Fatal(errMsg)
+	panic(errMsg)
 }
 
 // Config централизованный конфиг приложение
