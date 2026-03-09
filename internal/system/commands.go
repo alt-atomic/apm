@@ -105,9 +105,8 @@ func applyAptOptions(cmd *cli.Command, actions *Actions) {
 // aptOptionFlag общий флаг для всех команд работы с пакетами
 var aptOptionFlag = func() cli.Flag {
 	return &cli.StringSliceFlag{
-		Name:    "option",
-		Usage:   app.T_("Override APT config option, e.g. Dir::Cache::Archives=/tmp"),
-		Aliases: []string{"o"},
+		Name:  "option",
+		Usage: app.T_("Override APT config option, e.g. Dir::Cache::Archives=/tmp"),
 	}
 }
 
