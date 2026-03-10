@@ -36,8 +36,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/godbus/dbus/v5"
-
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
 )
@@ -294,9 +292,9 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 
 	// Параллельно обновляем иконки
 	go func() {
-		err = distroActions.GetIconService().ReloadIcons(ctx)
-		if err != nil {
-			app.Log.Error(err.Error())
+		errIcon := distroActions.GetIconService().ReloadIcons(ctx)
+		if errIcon != nil {
+			app.Log.Error(errIcon.Error())
 		}
 	}()
 
@@ -323,7 +321,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	sysActions := system.NewActions(appConfig)
-	conn, _ := dbus.SystemBus()
+	conn := appConfig.DBusManager.GetConnection()
 
 	// Экспортируем system методы в D-Bus
 	sysObj := system.NewDBusWrapper(sysActions, conn, ctx)
