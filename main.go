@@ -300,8 +300,8 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 		}
 	}()
 
-	// Блокируем до сигнала
-	select {}
+	<-ctx.Done()
+	return nil
 }
 
 func systemDbus(ctx context.Context, cmd *cli.Command) error {
@@ -364,8 +364,8 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 
-	// Блокируем до сигнала
-	select {}
+	<-ctx.Done()
+	return nil
 }
 
 func httpServer(ctx context.Context, cmd *cli.Command) error {
