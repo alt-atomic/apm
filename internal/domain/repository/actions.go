@@ -20,6 +20,7 @@ import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/build"
 	"apm/internal/common/command"
 	"apm/internal/domain/repository/service"
 	"context"
@@ -71,6 +72,7 @@ type Actions struct {
 	appConfig         *app.Config
 	repoService       repoService
 	serviceAptActions aptActionsService
+	serviceHostImage  overlayService
 }
 
 // NewActions создаёт новый экземпляр Actions
@@ -80,11 +82,17 @@ func NewActions(appConfig *app.Config) *Actions {
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
+	hostImageSvc := build.NewHostImageService(
+		cfg,
+		appConfig.ConfigManager.GetPathImageContainerFile(),
+		runner,
+	)
 
 	return &Actions{
 		appConfig:         appConfig,
 		repoService:       service.NewRepoService(packageDBSvc, runner),
 		serviceAptActions: aptActions,
+		serviceHostImage:  hostImageSvc,
 	}
 }
 
@@ -112,6 +120,10 @@ func (a *Actions) List(ctx context.Context, all bool) (*RepoListResponse, error)
 // Add добавляет репозиторий
 // args: [source] или [type, url, arch, components...]
 func (a *Actions) Add(ctx context.Context, args []string, date string) (*RepoAddRemoveResponse, error) {
+	if err := a.checkOverlay(ctx); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
 	if len(args) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
@@ -159,6 +171,10 @@ func (a *Actions) CheckAdd(ctx context.Context, args []string, date string) (*Re
 // Remove удаляет репозиторий
 // args: [source] или [type, url, arch, components...]
 func (a *Actions) Remove(ctx context.Context, args []string, date string) (*RepoAddRemoveResponse, error) {
+	if err := a.checkOverlay(ctx); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
 	if len(args) == 0 {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Repository source must be specified")))
 	}
@@ -205,6 +221,10 @@ func (a *Actions) CheckRemove(ctx context.Context, args []string, date string) (
 
 // Set устанавливает ветку (удаляет все и добавляет)
 func (a *Actions) Set(ctx context.Context, branch, date string) (*RepoSetResponse, error) {
+	if err := a.checkOverlay(ctx); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
 	branch = strings.TrimSpace(branch)
 	if branch == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Branch name must be specified")))
@@ -257,6 +277,10 @@ func (a *Actions) CheckSet(ctx context.Context, branch, date string) (*RepoSimul
 
 // Clean удаляет cdrom и task репозитории
 func (a *Actions) Clean(ctx context.Context) (*RepoAddRemoveResponse, error) {
+	if err := a.checkOverlay(ctx); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
 	removed, err := a.repoService.CleanTemporary(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
@@ -338,6 +362,18 @@ func (a *Actions) GetTaskPackages(ctx context.Context, taskNum string) (*TaskPac
 	}, nil
 }
 
+// checkOverlay проверяет, включен ли overlay
+func (a *Actions) checkOverlay(_ context.Context) error {
+	if a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		err := a.serviceHostImage.EnableOverlay()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
 func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
 	return startDocServer(ctx)
@@ -345,6 +381,10 @@ func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
 
 // TestTask тестирует пакеты из задачи
 func (a *Actions) TestTask(ctx context.Context, taskNum string) (*TestTaskResponse, error) {
+	if err := a.checkOverlay(ctx); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
 	taskNum = strings.TrimSpace(taskNum)
 	if taskNum == "" {
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Task number must be specified")))

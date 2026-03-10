@@ -77,6 +77,10 @@ func (m *mockAptActions) CombineInstallRemovePackages(_ context.Context, _ []str
 	return m.combineErr
 }
 
+type mockOverlay struct{}
+
+func (m *mockOverlay) EnableOverlay() error { return nil }
+
 func newTestActions(repo *mockRepoService, apt *mockAptActions) *Actions {
 	if repo == nil {
 		repo = &mockRepoService{}
@@ -88,6 +92,7 @@ func newTestActions(repo *mockRepoService, apt *mockAptActions) *Actions {
 		appConfig:         testutil.DefaultAppConfig(),
 		repoService:       repo,
 		serviceAptActions: apt,
+		serviceHostImage:  &mockOverlay{},
 	}
 }
 

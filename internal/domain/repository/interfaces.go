@@ -36,6 +36,11 @@ type repoService interface {
 	SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]service.Repository, error)
 }
 
+// overlayService определяет методы для работы с usr-overlay в атомарных системах.
+type overlayService interface {
+	EnableOverlay() error
+}
+
 // aptActionsService определяет методы APT операций, используемых в TestTask.
 type aptActionsService interface {
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
