@@ -41,6 +41,7 @@ func CommandList(ctx context.Context) *cli.Command {
 	return &cli.Command{
 		Name:    "kernel",
 		Aliases: []string{"k"},
+		Hidden:  true,
 		Usage:   app.T_("Kernel Management. WARNING - experimental module"),
 		Commands: []*cli.Command{
 			{
