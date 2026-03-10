@@ -26,15 +26,12 @@ package osutils
 
 import (
 	"apm/internal/common/app"
-	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -253,109 +250,6 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	return
 }
 
-func ExecShWithDivider(
-	ctx context.Context,
-	command string,
-	commandOutput string,
-	divider string,
-	quiet bool,
-) (string, string, error) {
-	cmd := exec.CommandContext(ctx, "bash", "-c", "set -e\n"+command+fmt.Sprintf("\necho '%s'\n%s", divider, commandOutput))
-
-	// Если нужен вывод в консоль И в переменную
-	var cmdout bytes.Buffer
-	var cmdoutOutput bytes.Buffer
-	if quiet {
-		cmd.Stdout = &Writer{
-			RealWriter:       &cmdout,
-			RealOutputWriter: &cmdoutOutput,
-			Divider:          divider,
-		}
-	} else {
-		cmd.Stdout = &Writer{
-			RealWriter:       io.MultiWriter(os.Stdout, &cmdout),
-			RealOutputWriter: &cmdoutOutput,
-			Divider:          divider,
-		}
-	}
-
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	result := cmdout.Bytes()
-	resultOutput := cmdoutOutput.Bytes()
-
-	if cmd.ProcessState.ExitCode() != 0 {
-		return "", "", fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
-	}
-
-	if err != nil {
-		return "", "", err
-	}
-
-	return string(result), string(resultOutput), nil
-}
-
-func ExecShWithOutput(
-	ctx context.Context,
-	command string,
-	chDir string,
-	quiet bool,
-) (string, error) {
-	cmd := exec.CommandContext(ctx, "bash", "-c", command)
-	if chDir != "" {
-		cmd.Dir = chDir
-	}
-
-	// Если нужен вывод в консоль И в переменную
-	var stdout bytes.Buffer
-	if quiet {
-		cmd.Stdout = io.MultiWriter(&stdout)
-	} else {
-		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
-	}
-
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	output := stdout.Bytes()
-
-	if cmd.ProcessState.ExitCode() != 0 {
-		return "", fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
-	}
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(output), nil
-}
-
-func ExecSh(
-	ctx context.Context,
-	command string,
-	chDir string,
-	quiet bool,
-) error {
-	cmd := exec.CommandContext(ctx, "bash", "-c", command)
-	if chDir != "" {
-		cmd.Dir = chDir
-	}
-
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	err := cmd.Run()
-
-	if cmd.ProcessState.ExitCode() != 0 {
-		return fmt.Errorf("command '%s' failed with exit code %d", command, cmd.ProcessState.ExitCode())
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Copies the source to the destination and then removes the source.
 func Move(sourcePath, destPath string, replace bool) error {
 	// Copy the source to the destination
 	err := Copy(sourcePath, destPath, replace)

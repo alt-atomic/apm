@@ -2,7 +2,7 @@ package models
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/osutils"
+	"apm/internal/common/command"
 	"context"
 	"fmt"
 )
@@ -24,17 +24,19 @@ func (b *ShellBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	output := ShellOutput{}
 
-	if _, cmdOutputShell, err := osutils.ExecShWithDivider(
-		ctx,
-		b.Command,
-		"env",
-		Divider,
-		b.Quiet,
-	); err != nil {
-		return nil, err
-	} else {
-		output.Env = GetEnvFromOutput(cmdOutputShell)
+	var opts []command.Option
+	if b.Quiet {
+		opts = append(opts, command.WithQuiet())
 	}
+
+	var envOutput string
+	opts = append(opts, command.WithOutputCommand("env", &envOutput))
+
+	if _, _, err := svc.Runner().Run(ctx, []string{b.Command}, opts...); err != nil {
+		return nil, err
+	}
+
+	output.Env = GetEnvFromOutput(envOutput)
 
 	return output, nil
 }

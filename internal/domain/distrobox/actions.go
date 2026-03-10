@@ -19,6 +19,7 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
@@ -40,10 +41,11 @@ type Actions struct {
 func NewActions(appConfig *app.Config) *Actions {
 	distroDBSvc := sandbox.NewDistroDBService(appConfig.DatabaseManager)
 
-	commandPrefix := appConfig.ConfigManager.GetConfig().CommandPrefix
-	distroPackageSvc := sandbox.NewPackageService(distroDBSvc, commandPrefix)
-	distroAPISvc := sandbox.NewDistroAPIService(commandPrefix)
-	iconSvc := icon.NewIconService(appConfig.DatabaseManager, commandPrefix)
+	cfg := appConfig.ConfigManager.GetConfig()
+	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
+	distroPackageSvc := sandbox.NewPackageService(distroDBSvc, runner)
+	distroAPISvc := sandbox.NewDistroAPIService(runner)
+	iconSvc := icon.NewIconService(appConfig.DatabaseManager, runner)
 
 	return &Actions{
 		servicePackage:        distroPackageSvc,

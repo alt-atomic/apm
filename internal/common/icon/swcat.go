@@ -18,6 +18,7 @@ package icon
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -28,23 +29,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"apm/internal/common/helper"
 )
 
 // SwCatIconService предоставляет сервис для работы с XML-файлами SWCatalog.
 type SwCatIconService struct {
 	path          string
 	containerName string
-	commandPrefix string
+	runner        command.Runner
 }
 
 // NewSwCatIconService создаёт новый экземпляр сервиса для работы с иконками SWCatalog.
-func NewSwCatIconService(path string, containerName string, commandPrefix string) *SwCatIconService {
+func NewSwCatIconService(path string, containerName string, runner command.Runner) *SwCatIconService {
 	return &SwCatIconService{
 		path:          path,
 		containerName: containerName,
-		commandPrefix: commandPrefix,
+		runner:        runner,
 	}
 }
 
@@ -82,8 +81,7 @@ func (s *SwCatIconService) copyDirFromContainer(ctx context.Context, src, dst st
 		return err
 	}
 	// Команда копирования из контейнера.
-	args := helper.BuildCommandArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cp", "-r", src+"/.", dst)
-	_, stderr, err := helper.RunCommand(ctx, args)
+	_, stderr, err := s.runner.Run(ctx, []string{"distrobox", "enter", s.containerName, "--", "cp", "-r", src + "/.", dst}, command.WithQuiet())
 	if err != nil {
 		return fmt.Errorf(app.T_("Error copying from container: %v, stderr: %s"), err, stderr)
 	}
@@ -270,8 +268,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 			}
 		}
 	} else {
-		args := helper.BuildCommandArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "find", s.path, "-maxdepth", "1", "-type", "f")
-		stdout, stderr, err := helper.RunCommand(ctx, args)
+		stdout, stderr, err := s.runner.Run(ctx, []string{"distrobox", "enter", s.containerName, "--", "find", s.path, "-maxdepth", "1", "-type", "f"}, command.WithQuiet())
 		if err != nil {
 			return nil, fmt.Errorf(app.T_("Error retrieving files in %s (container %s): %v, stderr: %s"), s.path, s.containerName, err, stderr)
 		}
@@ -297,8 +294,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 				return nil, fmt.Errorf(app.T_("Failed to read file %s: %w"), fullPath, err)
 			}
 		} else {
-			catArgs := helper.BuildCommandArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cat", fullPath)
-			stdout, stderr, err := helper.RunCommand(ctx, catArgs)
+			stdout, stderr, err := s.runner.Run(ctx, []string{"distrobox", "enter", s.containerName, "--", "cat", fullPath}, command.WithQuiet())
 			if err != nil {
 				return nil, fmt.Errorf(app.T_("Error executing command for file %s: %v, stderr: %s"), fullPath, err, stderr)
 			}

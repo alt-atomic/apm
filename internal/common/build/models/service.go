@@ -3,6 +3,7 @@ package models
 import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/common_types"
+	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
@@ -21,6 +22,7 @@ type Service interface {
 	ResourcesDir() string
 	ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error)
 	RepoService() *reposervice.RepoService
+	Runner() command.Runner
 }
 
 type Body interface {

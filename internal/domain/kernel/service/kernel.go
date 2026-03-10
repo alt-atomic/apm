@@ -20,13 +20,13 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	libApt "apm/internal/common/binding/apt/lib"
+	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
@@ -141,13 +141,15 @@ type UpgradePreview struct {
 type Manager struct {
 	dbService  packageDBService
 	aptActions aptBindingActions
+	runner     commandRunner
 }
 
 // NewKernelManager создает новый KernelManager
-func NewKernelManager(dbService packageDBService, aptActions aptBindingActions) *Manager {
+func NewKernelManager(dbService packageDBService, aptActions aptBindingActions, runner commandRunner) *Manager {
 	return &Manager{
 		dbService:  dbService,
 		aptActions: aptActions,
+		runner:     runner,
 	}
 }
 
@@ -192,13 +194,12 @@ func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
 
-	cmd := exec.Command("uname", "-r")
-	output, err := cmd.Output()
+	stdout, _, err := km.runner.Run(ctx, []string{"uname", "-r"}, command.WithQuiet())
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to get current kernel: %s"), err.Error())
 	}
 
-	release := strings.TrimSpace(string(output))
+	release := strings.TrimSpace(stdout)
 
 	tempKernel := parseKernelRelease(release)
 	if tempKernel == nil {
@@ -230,13 +231,12 @@ func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
 
 // GetDefaultKernel возвращает информацию о ядре по умолчанию (/boot/vmlinuz)
 func (km *Manager) GetDefaultKernel() (*Info, error) {
-	cmd := exec.Command("readlink", "/boot/vmlinuz")
-	output, err := cmd.Output()
+	stdout, _, err := km.runner.Run(context.Background(), []string{"readlink", "/boot/vmlinuz"}, command.WithQuiet())
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to get default kernel: %s"), err.Error())
 	}
 
-	vmlinuz := strings.TrimSpace(string(output))
+	vmlinuz := strings.TrimSpace(stdout)
 	release := strings.TrimPrefix(vmlinuz, "vmlinuz-")
 	kernel := parseKernelRelease(release)
 	if kernel != nil {
@@ -946,15 +946,12 @@ func (km *Manager) GetSimplePackageNameForModule(packageName string) string {
 
 // GetBackupKernel определяет backup ядро (с uptime >= 1 день) из /var/log/wtmp
 func (km *Manager) GetBackupKernel(ctx context.Context) (*Info, error) {
-	cmd := exec.CommandContext(ctx, "last", "-a", "reboot")
-	cmd.Env = []string{"LC_ALL=C"}
-
-	output, err := cmd.Output()
+	stdout, _, err := km.runner.Run(ctx, []string{"last", "-a", "reboot"}, command.WithQuiet(), command.WithEnv("LC_ALL=C"))
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to get reboot history: %s"), err.Error())
 	}
 
-	lines := strings.Split(string(output), "\n")
+	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "system boot") && strings.Contains(line, "+") {
 			fields := strings.Fields(line)

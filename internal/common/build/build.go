@@ -22,6 +22,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/common_types"
 	"apm/internal/common/build/core"
+	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
 	"apm/internal/domain/kernel/service"
@@ -41,9 +42,12 @@ type ConfigService struct {
 	kernelManager     *service.Manager
 	repoService       *reposervice.RepoService
 	serviceHostConfig buildHostConfigService
+	runner            command.Runner
 }
 
-func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, dBService buildPackageDBService, kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig buildHostConfigService) *ConfigService {
+func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, dBService buildPackageDBService,
+	kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig buildHostConfigService,
+	runner command.Runner) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
 		serviceAptActions: aptActions,
@@ -51,6 +55,7 @@ func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, 
 		kernelManager:     kernelManager,
 		repoService:       repoService,
 		serviceHostConfig: hostConfig,
+		runner:            runner,
 	}
 }
 
@@ -282,6 +287,10 @@ func (cfgService *ConfigService) RepoService() *reposervice.RepoService {
 
 func (cfgService *ConfigService) ResourcesDir() string {
 	return cfgService.appConfig.ConfigManager.GetResourcesDir()
+}
+
+func (cfgService *ConfigService) Runner() command.Runner {
+	return cfgService.runner
 }
 
 func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error) {

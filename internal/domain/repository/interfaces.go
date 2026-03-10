@@ -26,14 +26,14 @@ import (
 // repoService определяет методы для работы с репозиториями.
 type repoService interface {
 	GetRepositories(ctx context.Context, all bool) ([]service.Repository, error)
-	AddRepository(ctx context.Context, args []string, date string) ([]string, error)
-	RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]string, error)
-	SetBranch(ctx context.Context, branch, date string) (added []string, removed []string, err error)
-	CleanTemporary(ctx context.Context) ([]string, error)
+	AddRepository(ctx context.Context, args []string, date string) ([]service.Repository, error)
+	RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]service.Repository, error)
+	SetBranch(ctx context.Context, branch, date string) (added []service.Repository, removed []service.Repository, err error)
+	CleanTemporary(ctx context.Context) ([]service.Repository, error)
 	GetBranches() []string
 	GetTaskPackages(ctx context.Context, taskNum string) ([]string, error)
-	SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]string, error)
-	SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]string, error)
+	SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]service.Repository, error)
+	SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]service.Repository, error)
 }
 
 // aptActionsService определяет методы APT операций, используемых в TestTask.

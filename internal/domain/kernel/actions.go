@@ -21,6 +21,7 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/binding/apt"
+	"apm/internal/common/command"
 	"apm/internal/common/reply"
 	"apm/internal/domain/kernel/service"
 	"context"
@@ -43,9 +44,11 @@ type Actions struct {
 func NewActions(appConfig *app.Config) *Actions {
 	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
 
+	cfg := appConfig.ConfigManager.GetConfig()
+	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
 	aptActions := apt.NewActions()
 	aptPackageActions := _package.NewActions(hostPackageDBSvc, appConfig)
-	kernelManager := service.NewKernelManager(hostPackageDBSvc, aptActions)
+	kernelManager := service.NewKernelManager(hostPackageDBSvc, aptActions, runner)
 
 	return &Actions{
 		appConfig:          appConfig,

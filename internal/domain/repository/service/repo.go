@@ -18,7 +18,7 @@ package service
 
 import (
 	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
+	"apm/internal/common/command"
 	"bufio"
 	"context"
 	"errors"
@@ -26,12 +26,12 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -95,34 +95,36 @@ type RepoService struct {
 	branches           map[string]Branch
 	useArepo           bool
 	httpClient         *http.Client
-	serviceAptDatabase *_package.PackageDBService
+	serviceAptDatabase packageDBService
+	runner             commandRunner
+	initOnce           sync.Once
 }
 
 // NewRepoService создает новый сервис для работы с репозиториями
-func NewRepoService(appConfig *app.Config) *RepoService {
-	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
-
-	svc := &RepoService{
+func NewRepoService(dbService packageDBService, runner commandRunner) *RepoService {
+	return &RepoService{
 		confMain: DefaultSourcesList,
 		confDir:  DefaultSourcesListDir,
-		arch:     detectArch(),
+		arch:     detectArch(runner),
 		useArepo: checkArepoEnabled(),
 		httpClient: &http.Client{
 			Timeout: HTTPTimeout,
 		},
-		serviceAptDatabase: hostPackageDBSvc,
+		serviceAptDatabase: dbService,
+		runner:             runner,
 	}
+}
 
-	svc.detectAPTConfig()
-
-	// Инициализируем известные ветки
-	svc.initBranches()
-
-	return svc
+// ensureInitialized выполняет отложенную инициализацию конфигурации APT и веток
+func (s *RepoService) ensureInitialized() {
+	s.initOnce.Do(func() {
+		s.detectAPTConfig()
+		s.initBranches()
+	})
 }
 
 // detectArch определяет архитектуру системы
-func detectArch() string {
+func detectArch(runner commandRunner) string {
 	arch := runtime.GOARCH
 	if arch == "amd64" {
 		return "x86_64"
@@ -138,10 +140,9 @@ func detectArch() string {
 	}
 
 	// Fallback через uname
-	cmd := exec.Command("uname", "-m")
-	output, err := cmd.Output()
+	stdout, _, err := runner.Run(context.Background(), []string{"uname", "-m"}, command.WithQuiet())
 	if err == nil {
-		archStr := strings.TrimSpace(string(output))
+		archStr := strings.TrimSpace(stdout)
 		if archStr == "i686" {
 			return "i586"
 		}
@@ -190,10 +191,9 @@ func (s *RepoService) checkHTTPSEnabled(ctx context.Context) bool {
 // detectAPTConfig получает пути конфигурации из apt-config
 func (s *RepoService) detectAPTConfig() {
 	// Получаем sources.list
-	cmd := exec.Command("apt-config", "shell", "FILE", "Dir::Etc::sourcelist/f")
-	output, err := cmd.Output()
+	stdout, _, err := s.runner.Run(context.Background(), []string{"apt-config", "shell", "FILE", "Dir::Etc::sourcelist/f"}, command.WithQuiet())
 	if err == nil {
-		if matches := regexp.MustCompile(`^FILE=(.*)$`).FindStringSubmatch(strings.TrimSpace(string(output))); len(matches) > 1 {
+		if matches := regexp.MustCompile(`^FILE=(.*)$`).FindStringSubmatch(strings.TrimSpace(stdout)); len(matches) > 1 {
 			path := strings.Trim(matches[1], `"'`)
 			if path != "" {
 				s.confMain = path
@@ -202,10 +202,9 @@ func (s *RepoService) detectAPTConfig() {
 	}
 
 	// Получаем sources.list.d
-	cmd = exec.Command("apt-config", "shell", "DIR", "Dir::Etc::sourceparts/d")
-	output, err = cmd.Output()
+	stdout, _, err = s.runner.Run(context.Background(), []string{"apt-config", "shell", "DIR", "Dir::Etc::sourceparts/d"}, command.WithQuiet())
 	if err == nil {
-		if matches := regexp.MustCompile(`^DIR=(.*)$`).FindStringSubmatch(strings.TrimSpace(string(output))); len(matches) > 1 {
+		if matches := regexp.MustCompile(`^DIR=(.*)$`).FindStringSubmatch(strings.TrimSpace(stdout)); len(matches) > 1 {
 			path := strings.Trim(matches[1], `"'`)
 			if path != "" {
 				s.confDir = path
@@ -306,6 +305,7 @@ func (s *RepoService) initBranches() {
 
 // GetBranches возвращает список доступных веток
 func (s *RepoService) GetBranches() []string {
+	s.ensureInitialized()
 	branches := make([]string, 0, len(s.branches))
 	for name := range s.branches {
 		if name == "Sisyphus" || strings.HasPrefix(name, "autoimports.") {
@@ -319,6 +319,7 @@ func (s *RepoService) GetBranches() []string {
 
 // GetRepositories возвращает список репозиториев
 func (s *RepoService) GetRepositories(_ context.Context, all bool) ([]Repository, error) {
+	s.ensureInitialized()
 	var repos []Repository
 
 	files, err := s.getSourceFiles()
@@ -413,7 +414,8 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 
 // AddRepository добавляет репозиторий
 // args: [source] или [type, url, arch, components...]
-func (s *RepoService) AddRepository(ctx context.Context, args []string, date string) ([]string, error) {
+func (s *RepoService) AddRepository(ctx context.Context, args []string, date string) ([]Repository, error) {
+	s.ensureInitialized()
 	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
@@ -423,7 +425,7 @@ func (s *RepoService) AddRepository(ctx context.Context, args []string, date str
 		return nil, errors.New(app.T_("Failed to parse repository source"))
 	}
 
-	var added []string
+	var added []Repository
 
 	for _, u := range urls {
 		exists, commented, err := s.checkRepoExists(ctx, u)
@@ -435,18 +437,22 @@ func (s *RepoService) AddRepository(ctx context.Context, args []string, date str
 			continue
 		}
 
+		var file string
 		if commented {
-			err = s.uncommentRepo(u)
+			file, err = s.uncommentRepo(u)
 			if err != nil {
 				return added, err
 			}
-			added = append(added, u)
 		} else {
 			err = s.appendRepo(u)
 			if err != nil {
 				return added, err
 			}
-			added = append(added, u)
+			file = s.confMain
+		}
+
+		if repo := s.parseLine(u, file, true); repo != nil {
+			added = append(added, *repo)
 		}
 	}
 
@@ -460,8 +466,9 @@ func (s *RepoService) AddRepository(ctx context.Context, args []string, date str
 // RemoveRepository удаляет репозиторий
 // Если purge=true, полностью удаляет файлы в sources.list.d и очищает sources.list
 // args: [source] или [type, url, arch, components...]
-func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]string, error) {
-	var removed []string
+func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]Repository, error) {
+	s.ensureInitialized()
+	var removed []Repository
 
 	if len(args) == 0 {
 		return nil, errors.New(app.T_("Repository source must be specified"))
@@ -475,9 +482,7 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 			return nil, err
 		}
 
-		for _, repo := range repos {
-			removed = append(removed, repo.Entry)
-		}
+		removed = append(removed, repos...)
 
 		if purge {
 			if err = s.purgeAllRepos(); err != nil {
@@ -501,6 +506,13 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 		return nil, err
 	}
 
+	// Получаем текущие репозитории для поиска файлов
+	allRepos, _ := s.GetRepositories(ctx, true)
+	repoByEntry := make(map[string]Repository, len(allRepos))
+	for _, r := range allRepos {
+		repoByEntry[normalizeRepoLine(r.Entry)] = r
+	}
+
 	for _, u := range urls {
 		active, commented, checkErr := s.checkRepoExists(ctx, u)
 		if checkErr != nil {
@@ -514,7 +526,14 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 		if err != nil {
 			continue
 		}
-		removed = append(removed, u)
+
+		normalized := normalizeRepoLine(u)
+		if repo, ok := repoByEntry[normalized]; ok {
+			repo.Active = false
+			removed = append(removed, repo)
+		} else if parsed := s.parseLine(u, "", false); parsed != nil {
+			removed = append(removed, *parsed)
+		}
 	}
 
 	if _, ok := s.branches[source]; ok {
@@ -528,7 +547,8 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 			for _, repo := range repos {
 				if strings.Contains(repo.URL, "/"+source+"/") || strings.HasSuffix(repo.URL, "/"+source) {
 					if err = s.removeOrCommentRepo(repo.Entry); err == nil {
-						removed = append(removed, repo.Entry)
+						repo.Active = false
+						removed = append(removed, repo)
 					}
 				}
 			}
@@ -546,7 +566,8 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 					urlLower := strings.ToLower(repo.URL)
 					if strings.Contains(archLower, branchLower+"/") || strings.Contains(urlLower, "/"+branchLower+"/") {
 						if err = s.removeOrCommentRepo(repo.Entry); err == nil {
-							removed = append(removed, repo.Entry)
+							repo.Active = false
+							removed = append(removed, repo)
 						}
 					}
 				}
@@ -558,7 +579,8 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 }
 
 // SetBranch устанавливает ветку (удаляет все и добавляет)
-func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added []string, removed []string, err error) {
+func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added []Repository, removed []Repository, err error) {
+	s.ensureInitialized()
 	if _, ok := s.branches[branch]; !ok {
 		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branch)
 	}
@@ -577,8 +599,9 @@ func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added
 }
 
 // CleanTemporary удаляет cdrom и task репозитории
-func (s *RepoService) CleanTemporary(ctx context.Context) ([]string, error) {
-	var removed []string
+func (s *RepoService) CleanTemporary(ctx context.Context) ([]Repository, error) {
+	s.ensureInitialized()
+	var removed []Repository
 
 	repos, err := s.GetRepositories(ctx, false)
 	if err != nil {
@@ -600,7 +623,8 @@ func (s *RepoService) CleanTemporary(ctx context.Context) ([]string, error) {
 			if err != nil {
 				continue
 			}
-			removed = append(removed, repo.Entry)
+			repo.Active = false
+			removed = append(removed, repo)
 		}
 	}
 
@@ -982,14 +1006,15 @@ func normalizeRepoLine(line string) string {
 	return strings.Join(fields, " ")
 }
 
-// uncommentRepo раскомментирует репозиторий
-func (s *RepoService) uncommentRepo(repoLine string) error {
+// uncommentRepo раскомментирует репозиторий и возвращает имя файла, в котором он был найден
+func (s *RepoService) uncommentRepo(repoLine string) (string, error) {
 	files, err := s.getSourceFiles()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	normalized := normalizeRepoLine(repoLine)
+	var foundFile string
 
 	for _, filename := range files {
 		content, err := os.ReadFile(filename)
@@ -1008,6 +1033,7 @@ func (s *RepoService) uncommentRepo(repoLine string) error {
 				if normalizeRepoLine(commented) == normalized {
 					lines[i] = commented
 					modified = true
+					foundFile = filename
 				}
 			}
 		}
@@ -1015,12 +1041,12 @@ func (s *RepoService) uncommentRepo(repoLine string) error {
 		if modified {
 			errWrite := os.WriteFile(filename, []byte(strings.Join(lines, "\n")), 0644)
 			if errWrite != nil {
-				return errWrite
+				return "", errWrite
 			}
 		}
 	}
 
-	return nil
+	return foundFile, nil
 }
 
 // appendRepo добавляет репозиторий в sources.list
@@ -1173,17 +1199,20 @@ func (s *RepoService) removePriorityMacro() {
 
 // SimulateAdd симулирует добавление репозитория
 // force: если true, добавляет репозитории даже если они уже существуют
-func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]string, error) {
+func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]Repository, error) {
+	s.ensureInitialized()
 	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}
 
-	var willAdd []string
+	var willAdd []Repository
 	for _, u := range urls {
 		exists, _, _ := s.checkRepoExists(ctx, u)
 		if !exists || force {
-			willAdd = append(willAdd, u)
+			if repo := s.parseLine(u, s.confMain, true); repo != nil {
+				willAdd = append(willAdd, *repo)
+			}
 		}
 	}
 
@@ -1192,8 +1221,9 @@ func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date strin
 
 // SimulateRemove симулирует удаление репозитория
 // args: [source] или [type, url, arch, components...]
-func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]string, error) {
-	var willRemove []string
+func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]Repository, error) {
+	s.ensureInitialized()
+	var willRemove []Repository
 
 	if len(args) == 0 {
 		return nil, errors.New(app.T_("Repository source must be specified"))
@@ -1206,10 +1236,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 		if err != nil {
 			return nil, err
 		}
-		for _, repo := range repos {
-			willRemove = append(willRemove, repo.Entry)
-		}
-		return willRemove, nil
+		return repos, nil
 	}
 
 	urls, err := s.parseSourceArgs(ctx, args, date)
@@ -1217,10 +1244,21 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 		return nil, err
 	}
 
+	allRepos, _ := s.GetRepositories(ctx, true)
+	repoByEntry := make(map[string]Repository, len(allRepos))
+	for _, r := range allRepos {
+		repoByEntry[normalizeRepoLine(r.Entry)] = r
+	}
+
 	for _, u := range urls {
 		exists, _, _ := s.checkRepoExists(ctx, u)
 		if exists {
-			willRemove = append(willRemove, u)
+			normalized := normalizeRepoLine(u)
+			if repo, ok := repoByEntry[normalized]; ok {
+				willRemove = append(willRemove, repo)
+			} else if parsed := s.parseLine(u, "", true); parsed != nil {
+				willRemove = append(willRemove, *parsed)
+			}
 		}
 	}
 
@@ -1234,6 +1272,7 @@ func (s *RepoService) GetArch() string {
 
 // GetConfMain возвращает путь к основному файлу конфигурации
 func (s *RepoService) GetConfMain() string {
+	s.ensureInitialized()
 	return s.confMain
 }
 

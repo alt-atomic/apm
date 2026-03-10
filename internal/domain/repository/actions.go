@@ -20,6 +20,7 @@ import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/command"
 	"apm/internal/domain/repository/service"
 	"context"
 	"errors"
@@ -39,9 +40,12 @@ func NewActions(appConfig *app.Config) *Actions {
 	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
 	aptActions := _package.NewActions(packageDBSvc, appConfig)
 
+	cfg := appConfig.ConfigManager.GetConfig()
+	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
+
 	return &Actions{
 		appConfig:         appConfig,
-		repoService:       service.NewRepoService(appConfig),
+		repoService:       service.NewRepoService(packageDBSvc, runner),
 		serviceAptActions: aptActions,
 	}
 }
@@ -239,7 +243,7 @@ func (a *Actions) CheckClean(ctx context.Context) (*RepoSimulateResponse, error)
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
-	var willRemove []string
+	var willRemove []service.Repository
 	for _, repo := range repos {
 		isCdrom := strings.Contains(repo.URL, "cdrom:")
 		isTask := false
@@ -250,7 +254,7 @@ func (a *Actions) CheckClean(ctx context.Context) (*RepoSimulateResponse, error)
 			}
 		}
 		if isCdrom || isTask {
-			willRemove = append(willRemove, repo.Entry)
+			willRemove = append(willRemove, repo)
 		}
 	}
 

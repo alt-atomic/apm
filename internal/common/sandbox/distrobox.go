@@ -18,13 +18,11 @@ package sandbox
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/helper"
+	"apm/internal/common/command"
 	"apm/internal/common/reply"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"slices"
 	"strings"
@@ -33,13 +31,13 @@ import (
 
 // DistroAPIService реализует методы для работы с пакетами в Arch
 type DistroAPIService struct {
-	commandPrefix string
+	runner command.Runner
 }
 
 // NewDistroAPIService возвращает новый экземпляр DistroAPIService.
-func NewDistroAPIService(commandPrefix string) *DistroAPIService {
+func NewDistroAPIService(runner command.Runner) *DistroAPIService {
 	return &DistroAPIService{
-		commandPrefix: commandPrefix,
+		runner: runner,
 	}
 }
 
@@ -55,8 +53,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerList))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerList))
 
-	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "ls")
-	stdout, stderr, err := helper.RunCommand(ctx, args)
+	stdout, stderr, err := d.runner.Run(ctx, []string{"distrobox", "ls"}, command.WithQuiet())
 	if err != nil {
 		return nil, errors.New(app.T_("Failed to retrieve the list of containers: ") + stderr)
 	}
@@ -92,7 +89,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 			wg.Add(1)
 			go func(n string) {
 				defer wg.Done()
-				info, err := d.fetchOsInfo(n)
+				info, err := d.fetchOsInfo(ctx, n)
 				if err != nil {
 					app.Log.Error(err)
 					info = ContainerInfo{ContainerName: n, OS: "", Active: false}
@@ -131,41 +128,40 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 		suffix = "-d"
 	}
 
-	var commandArgs [][]string
+	type cmdEntry struct {
+		args []string
+	}
+	var commands []cmdEntry
 
 	// Обрабатываем desktop приложения
 	for _, path := range desktopPaths {
-		args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "--app", path)
+		args := []string{"distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "--app", path}
 		if suffix != "" {
 			args = append(args, suffix)
 		}
-		commandArgs = append(commandArgs, args)
+		commands = append(commands, cmdEntry{args: args})
 	}
 
 	// Обрабатываем консольные приложения
 	for _, path := range consolePaths {
-		args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "-b", path)
+		args := []string{"distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "-b", path}
 		if suffix != "" {
 			args = append(args, suffix)
 		}
-		commandArgs = append(commandArgs, args)
+		commands = append(commands, cmdEntry{args: args})
 	}
 
 	// Выполняем все команды параллельно
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(commandArgs))
+	errChan := make(chan error, len(commands))
 
-	for _, cmdArgs := range commandArgs {
+	for _, cmd := range commands {
 		wg.Add(1)
 		go func(args []string) {
 			defer wg.Done()
-			cmd := exec.Command(args[0], args[1:]...)
-			var stdout, stderr bytes.Buffer
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-
-			if err := cmd.Run(); err != nil {
-				stderrStr := strings.TrimSpace(stderr.String())
+			_, stderr, err := d.runner.Run(ctx, args, command.WithQuiet())
+			if err != nil {
+				stderrStr := strings.TrimSpace(stderr)
 				cmdStr := strings.Join(args, " ")
 				if stderrStr != "" {
 					errChan <- fmt.Errorf(app.T_("Error executing command %q: %s"), cmdStr, stderrStr)
@@ -173,7 +169,7 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 					errChan <- fmt.Errorf(app.T_("Error executing command %q: %v"), cmdStr, err)
 				}
 			}
-		}(cmdArgs)
+		}(cmd.args)
 	}
 
 	wg.Wait()
@@ -187,16 +183,10 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 
 // fetchOsInfo выполняет команду для получения информации об ОС контейнера
 // и возвращает объект ContainerInfo.
-func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, error) {
-	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "enter", containerName, "--", "cat", "/etc/os-release")
-	cmd := exec.Command(args[0], args[1:]...)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		stderrStr := strings.TrimSpace(stderr.String())
+func (d *DistroAPIService) fetchOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
+	stdout, stderr, err := d.runner.Run(ctx, []string{"distrobox", "enter", containerName, "--", "cat", "/etc/os-release"}, command.WithQuiet())
+	if err != nil {
+		stderrStr := strings.TrimSpace(stderr)
 		errMsg := fmt.Errorf(app.T_("Error getting OS information for container %s: %v"), containerName, err)
 		if stderrStr != "" {
 			errMsg = fmt.Errorf(app.T_("Error getting OS information for container %s: %s"), containerName, stderrStr)
@@ -204,7 +194,7 @@ func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, err
 		return ContainerInfo{ContainerName: containerName, OS: "", Active: false}, errMsg
 	}
 
-	osReleaseContent := strings.TrimSpace(stdout.String())
+	osReleaseContent := strings.TrimSpace(stdout)
 	lines := strings.Split(osReleaseContent, "\n")
 	var osName string
 
@@ -264,7 +254,7 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 		return ContainerInfo{}, fmt.Errorf(app.T_("Container %s not found"), containerName)
 	}
 
-	return d.fetchOsInfo(containerName)
+	return d.fetchOsInfo(ctx, containerName)
 }
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
@@ -299,7 +289,7 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 	}
 
 	// Формирование аргументов команды без shell
-	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "create", "-i", image, "-n", containerName, "--yes")
+	args := []string{"distrobox", "create", "-i", image, "-n", containerName, "--yes"}
 
 	// Добавляем параметр --additional-packages, если переменная addPkg не пустая
 	if addPkg != "" {
@@ -311,16 +301,15 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 		args = append(args, "--init-hooks", hook)
 	}
 
-	app.Log.Debug(strings.Join(args, " "))
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	_, stderr, err := d.runner.Run(ctx, args)
+	if err != nil {
+		app.Log.Errorf(app.T_("Failed to create container %s: %v, stderr: %s"), containerName, err, stderr)
+		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to create container %s: %v"), containerName, stderr)
+	}
 
-	// Выполнение команды создания контейнера
-	if err := cmd.Run(); err != nil {
-		app.Log.Errorf(app.T_("Failed to create container %s: %v, stderr: %s"), containerName, err, stderr.String())
-		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to create container %s: %v"), containerName, stderr.String())
+	// Первый enter инициализирует контейнер (установка пакетов, настройка)
+	if _, stderr, err = d.runner.Run(ctx, []string{"distrobox", "enter", containerName, "--", "true"}); err != nil {
+		app.Log.Errorf(app.T_("Failed to initialize container %s: %v, stderr: %s"), containerName, err, stderr)
 	}
 
 	return d.GetContainerOsInfo(ctx, containerName)
@@ -340,15 +329,9 @@ func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName st
 		return osInfo, err
 	}
 
-	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "rm", "--yes", "--force", containerName)
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err = cmd.Run(); err != nil {
-		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to delete container %s: %v, stderr: %s"), containerName, err, stderr.String())
+	_, stderr, errRm := d.runner.Run(ctx, []string{"distrobox", "rm", "--yes", "--force", containerName})
+	if errRm != nil {
+		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to delete container %s: %v, stderr: %s"), containerName, errRm, stderr)
 	}
 
 	return osInfo, nil

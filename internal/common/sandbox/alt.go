@@ -18,12 +18,10 @@ package sandbox
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"apm/internal/common/helper"
-	"bufio"
 	"context"
-	"errors"
 	"fmt"
-	"os/exec"
 	"sort"
 	"strings"
 )
@@ -31,32 +29,25 @@ import (
 // AltProvider реализует методы для работы с пакетами в ALT linux
 type AltProvider struct {
 	servicePackage *PackageService
-	commandPrefix  string
+	runner         command.Runner
 }
 
 // NewAltProvider возвращает новый экземпляр AltProvider.
-func NewAltProvider(servicePackage *PackageService, commandPrefix string) *AltProvider {
+func NewAltProvider(servicePackage *PackageService, runner command.Runner) *AltProvider {
 	return &AltProvider{
 		servicePackage: servicePackage,
-		commandPrefix:  commandPrefix,
+		runner:         runner,
 	}
 }
 
 // GetPackages обновляет базу пакетов, выполняет поиск и отмечает установленные пакеты.
 func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
-	updateArgs := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "update")
-	if _, stderr, err := helper.RunCommand(ctx, updateArgs); err != nil {
+	if _, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "update"}, command.WithQuiet()); err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
-	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "apt-cache", "dumpavail")
-	cmd := exec.Command(args[0], args[1:]...)
-
-	stdout, err := cmd.StdoutPipe()
+	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "apt-cache", "dumpavail"}, command.WithQuiet())
 	if err != nil {
-		return nil, fmt.Errorf(app.T_("Error opening stdout pipe: %w"), err)
-	}
-	if err = cmd.Start(); err != nil {
 		return nil, fmt.Errorf(app.T_("Error executing command: %w"), err)
 	}
 
@@ -68,7 +59,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 	}
 
 	// Получаем карту установленных пакетов
-	installedPackages, err := p.getInstalledPackages(containerInfo)
+	installedPackages, err := p.getInstalledPackages(ctx, containerInfo)
 	if err != nil {
 		installedPackages = []string{}
 	}
@@ -85,17 +76,12 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 		exportingMap[name] = true
 	}
 
-	const maxCapacity = 1024 * 1024 * 350 // 350MB
-	buf := make([]byte, maxCapacity)
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(buf, maxCapacity)
-
 	var packages []PackageInfo
 	var pkg PackageInfo
 	var currentKey string
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+	for _, rawLine := range strings.Split(stdout, "\n") {
+		line := strings.TrimSpace(rawLine)
 
 		if line == "" {
 			if pkg.Name != "" {
@@ -136,17 +122,6 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 		packages = append(packages, pkg)
 	}
 
-	if err = scanner.Err(); err != nil {
-		if errors.Is(err, bufio.ErrTooLong) {
-			return nil, fmt.Errorf(app.T_("String too large: (over %dMB) - "), maxCapacity/(1024*1024))
-		}
-		return nil, fmt.Errorf(app.T_("Scanner error: %w"), err)
-	}
-
-	if err = cmd.Wait(); err != nil {
-		return nil, fmt.Errorf(app.T_("Command execution error: %w"), err)
-	}
-
 	for i := range packages {
 		if installedMap[packages[i].Name] {
 			packages[i].Installed = true
@@ -166,8 +141,7 @@ func (p *AltProvider) RemovePackage(ctx context.Context, containerInfo Container
 	if err := validatePackageName(packageName); err != nil {
 		return err
 	}
-	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "remove", "-y", packageName)
-	_, stderr, err := helper.RunCommand(ctx, args)
+	_, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "remove", "-y", packageName})
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
@@ -179,8 +153,7 @@ func (p *AltProvider) InstallPackage(ctx context.Context, containerInfo Containe
 	if err := validatePackageName(packageName); err != nil {
 		return err
 	}
-	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "install", "-y", packageName)
-	_, stderr, err := helper.RunCommand(ctx, args)
+	_, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "install", "-y", packageName})
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
 	}
@@ -201,8 +174,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 		return paths
 	}
 
-	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", packageName)
-	stdout, stderr, err := helper.RunCommand(ctx, args)
+	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", packageName}, command.WithQuiet())
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
@@ -210,8 +182,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 	filtered := helper.FilterLines(stdout, filePath)
 	paths := parseOutput(filtered)
 	if len(paths) == 0 {
-		qaArgs := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qa")
-		qaStdout, qaStderr, qaErr := helper.RunCommand(ctx, qaArgs)
+		qaStdout, qaStderr, qaErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qa"}, command.WithQuiet())
 		if qaErr != nil {
 			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), qaStderr, qaErr.Error())
 			return []string{}, nil
@@ -224,8 +195,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 			if pkg == "" {
 				continue
 			}
-			qlArgs := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", pkg)
-			qlStdout, _, qlErr := helper.RunCommand(ctx, qlArgs)
+			qlStdout, _, qlErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", pkg}, command.WithQuiet())
 			if qlErr != nil {
 				continue
 			}
@@ -249,8 +219,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 
 // GetPackageOwner определяет пакет-владельца файла через rpm -qf.
 func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
-	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qf", "--queryformat", "%{NAME}", filePath)
-	stdout, stderr, err := helper.RunCommand(ctx, args)
+	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qf", "--queryformat", "%{NAME}", filePath}, command.WithQuiet())
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 		return "", err
@@ -259,20 +228,15 @@ func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo Contain
 }
 
 // getInstalledPackages возвращает карту установленных пакетов
-func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]string, error) {
-	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qia")
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Env = []string{"LC_ALL=C"}
-
-	output, err := cmd.CombinedOutput()
+func (p *AltProvider) getInstalledPackages(ctx context.Context, containerInfo ContainerInfo) ([]string, error) {
+	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qia"}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Error executing command rpm -qia: %w"), err)
 	}
 
 	var packages []string
-	scanner := bufio.NewScanner(strings.NewReader(string(output)))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+	for _, rawLine := range strings.Split(stdout, "\n") {
+		line := strings.TrimSpace(rawLine)
 		if strings.HasPrefix(line, "Name") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
@@ -280,9 +244,6 @@ func (p *AltProvider) getInstalledPackages(containerInfo ContainerInfo) ([]strin
 				packages = append(packages, name)
 			}
 		}
-	}
-	if err = scanner.Err(); err != nil {
-		return nil, fmt.Errorf(app.T_("Error scanning rpm output: %w"), err)
 	}
 	return packages, nil
 }

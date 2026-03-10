@@ -4,6 +4,7 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/filter"
+	"apm/internal/common/command"
 	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
 	"apm/internal/domain/kernel/service"
@@ -256,7 +257,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 		switch b.Initrd.Method {
 		case "dracut":
-			err := rebuildDracut(ctx, defaultDracutPath)
+			err := rebuildDracut(ctx, defaultDracutPath, svc.Runner())
 			if err != nil {
 				return nil, err
 			}
@@ -271,7 +272,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 			dracutPath, dracutErr := exec.LookPath(defaultDracutPath)
 			makeInitrdPath, makeInitrdErr := exec.LookPath(defaultMakeInitrdPath)
 			if dracutPath != "" && dracutErr == nil {
-				if err := rebuildDracut(ctx, dracutPath); err != nil {
+				if err := rebuildDracut(ctx, dracutPath, svc.Runner()); err != nil {
 					return nil, err
 				}
 			} else if makeInitrdPath != "" && makeInitrdErr == nil {
@@ -291,7 +292,7 @@ func rebuildMakeInitrd(_ context.Context, _ string) error {
 	return nil
 }
 
-func rebuildDracut(ctx context.Context, dracutExecutable string) error {
+func rebuildDracut(ctx context.Context, dracutExecutable string, runner command.Runner) error {
 	app.Log.Info("Rebuild initramfs via dracut")
 
 	kernelVersion, err := LatestInstalledKernelVersion()
@@ -299,11 +300,12 @@ func rebuildDracut(ctx context.Context, dracutExecutable string) error {
 		return err
 	}
 
-	if err = osutils.ExecSh(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
+	if _, _, err = runner.Run(ctx, []string{fmt.Sprintf("depmod -a -v '%s'", kernelVersion)}, command.WithShell()); err != nil {
 		return err
 	}
 
-	return osutils.ExecSh(ctx, fmt.Sprintf("%s --force '%s/%s/initramfs.img' %s", dracutExecutable, kernelDir, kernelVersion, kernelVersion), "", false)
+	_, _, err = runner.Run(ctx, []string{fmt.Sprintf("%s --force '%s/%s/initramfs.img' %s", dracutExecutable, kernelDir, kernelVersion, kernelVersion)}, command.WithShell())
+	return err
 }
 
 func LatestInstalledKernelVersion() (string, error) {

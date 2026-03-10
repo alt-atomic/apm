@@ -30,24 +30,24 @@ type RepoListResponse struct {
 
 // RepoAddRemoveResponse структура ответа для Add/Remove методов
 type RepoAddRemoveResponse struct {
-	Message string   `json:"message"`
-	Added   []string `json:"added,omitempty"`
-	Removed []string `json:"removed,omitempty"`
+	Message string               `json:"message"`
+	Added   []service.Repository `json:"added,omitempty"`
+	Removed []service.Repository `json:"removed,omitempty"`
 }
 
 // RepoSetResponse структура ответа для Set метода
 type RepoSetResponse struct {
-	Message string   `json:"message"`
-	Branch  string   `json:"branch"`
-	Added   []string `json:"added,omitempty"`
-	Removed []string `json:"removed,omitempty"`
+	Message string               `json:"message"`
+	Branch  string               `json:"branch"`
+	Added   []service.Repository `json:"added,omitempty"`
+	Removed []service.Repository `json:"removed,omitempty"`
 }
 
 // RepoSimulateResponse структура ответа для симуляции операций
 type RepoSimulateResponse struct {
-	Message    string   `json:"message"`
-	WillAdd    []string `json:"willAdd,omitempty"`
-	WillRemove []string `json:"willRemove,omitempty"`
+	Message    string               `json:"message"`
+	WillAdd    []service.Repository `json:"willAdd,omitempty"`
+	WillRemove []service.Repository `json:"willRemove,omitempty"`
 }
 
 // BranchesResponse структура ответа для GetBranches метода

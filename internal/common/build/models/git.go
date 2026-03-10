@@ -2,7 +2,7 @@ package models
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/osutils"
+	"apm/internal/common/command"
 	"context"
 	"fmt"
 	"os"
@@ -68,13 +68,25 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 	args = append(args, b.Url, tempDir)
 
+	runner := svc.Runner()
+
+	var opts []command.Option
+	opts = append(opts, command.WithShell())
+	if b.Quiet {
+		opts = append(opts, command.WithQuiet())
+	}
+
 	app.Log.Debug(fmt.Sprintf("Cloning %s to %s", b.Url, tempDir))
-	if err = osutils.ExecSh(ctx, "git "+strings.Join(args, " "), "", false); err != nil {
+	if _, _, err = runner.Run(ctx, []string{"git " + strings.Join(args, " ")}, opts...); err != nil {
 		return nil, err
 	}
 
 	app.Log.Debug(fmt.Sprintf("Executing `%s`", b.Command))
-	if err = osutils.ExecSh(ctx, b.Command, tempDir, b.Quiet); err != nil {
+	cmdOpts := []command.Option{command.WithShell(), command.WithDir(tempDir)}
+	if b.Quiet {
+		cmdOpts = append(cmdOpts, command.WithQuiet())
+	}
+	if _, _, err = runner.Run(ctx, []string{b.Command}, cmdOpts...); err != nil {
 		return nil, err
 	}
 

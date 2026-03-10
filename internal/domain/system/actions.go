@@ -23,6 +23,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	aptBinding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
+	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/reply"
 	"apm/internal/common/swcat"
@@ -55,9 +56,12 @@ func NewActions(appConfig *app.Config) *Actions {
 	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
 	hostDBSvc := build.NewHostDBService(appConfig.DatabaseManager)
 
+	cfg := appConfig.ConfigManager.GetConfig()
+	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
 	hostImageSvc := build.NewHostImageService(
-		appConfig.ConfigManager.GetConfig(),
+		cfg,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
+		runner,
 	)
 	hostConfigSvc := build.NewHostConfigService(
 		appConfig.ConfigManager.GetPathImageFile(),
@@ -542,11 +546,15 @@ func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
+	cfg := a.appConfig.ConfigManager.GetConfig()
+	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
+	hostPackageDBSvc := _package.NewPackageDBService(a.appConfig.DatabaseManager)
 	aptActions := aptBinding.NewActions()
-	kernelManager := kservice.NewKernelManager(a.serviceAptDatabase, aptActions)
-	repoService := reposervice.NewRepoService(a.appConfig)
-	buildService := build.NewConfigService(a.appConfig, a.serviceAptActions, a.serviceAptDatabase, kernelManager, repoService, a.serviceHostConfig)
-	err = buildService.Build(ctx)
+	kernelManager := kservice.NewKernelManager(hostPackageDBSvc, aptActions, runner)
+	repoService := reposervice.NewRepoService(hostPackageDBSvc, runner)
+	buildConfigSvc := build.NewConfigService(a.appConfig, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner)
+
+	err = buildConfigSvc.Build(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}

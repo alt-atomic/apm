@@ -18,6 +18,7 @@ package icon
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"apm/internal/common/sandbox"
 	"bytes"
 	"compress/gzip"
@@ -32,18 +33,18 @@ import (
 type Service struct {
 	serviceDistroAPI *sandbox.DistroAPIService
 	dbService        *DBService
-	commandPrefix    string
+	runner           command.Runner
 }
 
 // NewIconService создаёт новый сервис для работы с иконками.
-func NewIconService(dbManager app.DatabaseManager, commandPrefix string) *Service {
-	distroAPISvc := sandbox.NewDistroAPIService(commandPrefix)
+func NewIconService(dbManager app.DatabaseManager, runner command.Runner) *Service {
+	distroAPISvc := sandbox.NewDistroAPIService(runner)
 	iconDB := NewIconDBService(dbManager)
 
 	return &Service{
 		serviceDistroAPI: distroAPISvc,
 		dbService:        iconDB,
-		commandPrefix:    commandPrefix,
+		runner:           runner,
 	}
 }
 
@@ -116,7 +117,7 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 // getPackages получает иконки из SWCatalog для указанного контейнера.
 func (s *Service) getPackages(ctx context.Context, container string) ([]PackageIcon, error) {
 	var packageIcons []PackageIcon
-	systemSwCatService := NewSwCatIconService("/usr/share/swcatalog/xml", container, s.commandPrefix)
+	systemSwCatService := NewSwCatIconService("/usr/share/swcatalog/xml", container, s.runner)
 
 	packageSwCatIcons, err := systemSwCatService.LoadSWCatalogs(ctx)
 	if err != nil {

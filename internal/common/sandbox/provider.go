@@ -18,6 +18,7 @@ package sandbox
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/reply"
 	"context"
@@ -31,14 +32,14 @@ import (
 
 type PackageService struct {
 	serviceDistroDatabase *DistroDBService
-	commandPrefix         string
+	runner                command.Runner
 }
 
 // NewPackageService создаёт новый сервис для работы с пакетами.
-func NewPackageService(serviceDistroDatabase *DistroDBService, commandPrefix string) *PackageService {
+func NewPackageService(serviceDistroDatabase *DistroDBService, runner command.Runner) *PackageService {
 	return &PackageService{
 		serviceDistroDatabase: serviceDistroDatabase,
-		commandPrefix:         commandPrefix,
+		runner:                runner,
 	}
 }
 
@@ -89,14 +90,14 @@ type PackageProvider interface {
 func (p *PackageService) getProvider(osName string) (PackageProvider, error) {
 	lowerName := strings.ToLower(osName)
 	if strings.Contains(lowerName, "ubuntu") || strings.Contains(lowerName, "debian") {
-		return NewUbuntuProvider(p, p.commandPrefix), nil
+		return NewUbuntuProvider(p, p.runner), nil
 	} else if strings.Contains(lowerName, "arch") {
-		return NewArchProvider(p, p.commandPrefix), nil
+		return NewArchProvider(p, p.runner), nil
 	} else if strings.Contains(lowerName, "alt") {
-		return NewAltProvider(p, p.commandPrefix), nil
-	} else {
-		return nil, errors.New(app.T_("This container is not supported: ") + osName)
+		return NewAltProvider(p, p.runner), nil
 	}
+
+	return nil, errors.New(app.T_("This container is not supported: ") + osName)
 }
 
 // InstallPackage установка пакета

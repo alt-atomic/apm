@@ -17,6 +17,7 @@
 package sandbox
 
 import (
+	"apm/internal/common/command"
 	"strings"
 	"testing"
 )
@@ -25,7 +26,7 @@ import (
 func TestGetProvider(t *testing.T) {
 	// Создаем минимальный PackageService для тестирования
 	packageService := &PackageService{
-		commandPrefix: "sudo",
+		runner: command.NewRunner("sudo", false),
 	}
 
 	tests := []struct {
@@ -173,7 +174,7 @@ func getProviderTypeName(provider PackageProvider) string {
 
 // TestGetProviderCaseSensitivity проверяет работу с различными регистрами
 func TestGetProviderCaseSensitivity(t *testing.T) {
-	packageService := &PackageService{commandPrefix: "sudo"}
+	packageService := &PackageService{runner: command.NewRunner("sudo", false)}
 
 	osVariations := []struct {
 		osName       string
@@ -211,7 +212,7 @@ func TestGetProviderCaseSensitivity(t *testing.T) {
 
 // TestGetProviderSubstringMatching проверяет работу поиска подстрок в названиях ОС
 func TestGetProviderSubstringMatching(t *testing.T) {
-	packageService := &PackageService{commandPrefix: "sudo"}
+	packageService := &PackageService{runner: command.NewRunner("sudo", false)}
 
 	tests := []struct {
 		name         string
@@ -269,7 +270,7 @@ func TestGetProviderSubstringMatching(t *testing.T) {
 
 // TestGetProviderErrorMessages проверяет корректность сообщений об ошибках
 func TestGetProviderErrorMessages(t *testing.T) {
-	packageService := &PackageService{commandPrefix: "sudo"}
+	packageService := &PackageService{runner: command.NewRunner("sudo", false)}
 
 	unsupportedOSes := []string{
 		"CentOS",
