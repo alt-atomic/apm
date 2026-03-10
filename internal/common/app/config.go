@@ -64,9 +64,8 @@ type Colors struct {
 	TextLight string `yaml:"textLight"`
 	TextDark  string `yaml:"textDark"`
 
-	TreeBranch    string `yaml:"treeBranch"`
-	ResultSuccess string `yaml:"resultSuccess"`
-	ResultError   string `yaml:"resultError"`
+	TreeBranch  string `yaml:"treeBranch"`
+	ResultError string `yaml:"resultError"`
 
 	DialogAction     string `yaml:"dialogAction"`
 	DialogDanger     string `yaml:"dialogDanger"`
@@ -387,12 +386,11 @@ func (cm *configManagerImpl) EnableVerbose() {
 // GetDefaultColors возвращает цветовую схему по умолчанию
 func GetDefaultColors() Colors {
 	return Colors{
-		Accent:        "#a2734c",
-		TextLight:     "#171717",
-		TextDark:      "#c4c8c6",
-		TreeBranch:    "#c4c8c6",
-		ResultSuccess: "2",
-		ResultError:   "9",
+		Accent:      "#a2734c",
+		TextLight:   "#171717",
+		TextDark:    "#c4c8c6",
+		TreeBranch:  "#c4c8c6",
+		ResultError: "9",
 
 		DialogAction:     "#26a269",
 		DialogDanger:     "#a81c1f",

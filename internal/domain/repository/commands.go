@@ -68,13 +68,23 @@ func CommandList(ctx context.Context) *cli.Command {
 						Aliases: []string{"a"},
 						Value:   false,
 					},
+					&cli.BoolFlag{
+						Name:  "full",
+						Usage: app.T_("Full information output"),
+						Value: false,
+					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.List(ctx, cmd.Bool("all"))
 					if err != nil {
 						return reply.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					full := cmd.Bool("full")
+					return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+						"message":      reply.MessageWithHint(resp.Message, full),
+						"count":        resp.Count,
+						"repositories": FormatRepoOutput(resp.Repositories, full),
+					}))
 				}),
 			},
 			{

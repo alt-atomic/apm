@@ -442,9 +442,10 @@ func CommandList(ctx context.Context) *cli.Command {
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
+				full := cmd.Bool("full")
 				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
-					"message":     resp.Message,
-					"packageInfo": actions.FormatPackageOutput(resp.PackageInfo, cmd.Bool("full")),
+					"message":     reply.MessageWithHint(resp.Message, full),
+					"packageInfo": actions.FormatPackageOutput(resp.PackageInfo, full),
 				}))
 			}),
 			ShellComplete: findPkgInfoOnlyFirstArg(),
@@ -471,9 +472,10 @@ func CommandList(ctx context.Context) *cli.Command {
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
+				full := cmd.Bool("full")
 				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
-					"message":  resp.Message,
-					"packages": actions.FormatPackageOutput(resp.Packages, cmd.Bool("full")),
+					"message":  reply.MessageWithHint(resp.Message, full),
+					"packages": actions.FormatPackageOutput(resp.Packages, full),
 				}))
 			}),
 		},
@@ -549,9 +551,10 @@ func CommandList(ctx context.Context) *cli.Command {
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
+				full := cmd.Bool("full")
 				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
-					"message":    resp.Message,
-					"packages":   actions.FormatPackageOutput(resp.Packages, cmd.Bool("full")),
+					"message":    reply.MessageWithHint(resp.Message, full),
+					"packages":   actions.FormatPackageOutput(resp.Packages, full),
 					"totalCount": resp.TotalCount,
 				}))
 			}),

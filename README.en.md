@@ -91,8 +91,6 @@ colors:
 
     # Tree branch color
     treeBranch: "#c4c8c6"
-    # Success result color
-    resultSuccess: "2"
     # Error result color
     resultError: "9"
 

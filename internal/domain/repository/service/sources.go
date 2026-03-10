@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -103,14 +104,9 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 		Entry:  line,
 	}
 
-	idx := 0
-
-	repo.Type = parts[idx]
-	idx++
-
-	// Ключ (опционально, в квадратных скобках)
+	// Пропускаем тип (rpm) и опциональный ключ ([key])
+	idx := 1
 	if strings.HasPrefix(parts[idx], "[") {
-		repo.Key = strings.Trim(parts[idx], "[]")
 		idx++
 	}
 
@@ -130,6 +126,9 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 	if idx < len(parts) {
 		repo.Components = parts[idx:]
 	}
+
+	// Определяем ветку по URL
+	repo.Branch = s.detectBranch(repo.URL)
 
 	return repo
 }
@@ -210,6 +209,41 @@ func canonicalizeRepoLine(line string) string {
 	fields[idx+1] = realArch
 
 	return strings.Join(fields, " ")
+}
+
+// stripScheme убирает схему
+func stripScheme(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return strings.TrimRight(rawURL, "/")
+	}
+	return strings.TrimRight(u.Host+u.Path, "/")
+}
+
+// detectBranch определяет название ветки по URL репозитория
+func (s *RepoService) detectBranch(repoURL string) string {
+	repoClean := stripScheme(repoURL)
+
+	// Для task-репозиториев
+	if strings.Contains(repoClean, RepoTaskURL) {
+		return "task"
+	}
+
+	for _, branch := range s.branches {
+		if repoClean == stripScheme(branch.URL) {
+			return strings.ToLower(branch.Name)
+		}
+	}
+
+	repoLower := strings.ToLower(repoClean)
+	for _, branch := range s.branches {
+		name := strings.ToLower(branch.Name)
+		if strings.Contains(repoLower, "/"+name+"/") || strings.HasSuffix(repoLower, "/"+name) {
+			return name
+		}
+	}
+
+	return ""
 }
 
 // uncommentRepo раскомментирует репозиторий и возвращает имя файла, в котором он был найден

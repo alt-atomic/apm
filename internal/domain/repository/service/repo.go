@@ -63,14 +63,13 @@ const (
 
 // Repository представляет информацию о репозитории
 type Repository struct {
-	Type       string   `json:"type"`
 	URL        string   `json:"url"`
 	Arch       string   `json:"arch"`
-	Key        string   `json:"key"`
 	Components []string `json:"components"`
 	Active     bool     `json:"active"`
 	File       string   `json:"file"`
 	Entry      string   `json:"entry"`
+	Branch     string   `json:"branch,omitempty"`
 }
 
 // Branch представляет информацию о ветке ALT Linux

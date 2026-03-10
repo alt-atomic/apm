@@ -91,8 +91,6 @@ colors:
 
     # Цвет ветвей дерева
     treeBranch: "#c4c8c6"
-    # Цвет успешного результата
-    resultSuccess: "2"
     # Цвет ошибки
     resultError: "9"
 

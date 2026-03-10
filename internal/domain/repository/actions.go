@@ -28,6 +28,44 @@ import (
 	"strings"
 )
 
+// ShortRepoResponse Сокращённое представление репозитория
+type ShortRepoResponse struct {
+	Branch string `json:"branch"`
+	URL    string `json:"url"`
+	Arch   string `json:"arch"`
+}
+
+// FormatRepoOutput принимает данные (один репозиторий или срез) и флаг full.
+// Если full == true, возвращается полный вывод, иначе — сокращённый.
+func FormatRepoOutput(data interface{}, full bool) interface{} {
+	switch v := data.(type) {
+	case service.Repository:
+		if full {
+			return v
+		}
+		return ShortRepoResponse{
+			Branch: v.Branch,
+			URL:    v.URL,
+			Arch:   v.Arch,
+		}
+	case []service.Repository:
+		if full {
+			return v
+		}
+		shortList := make([]ShortRepoResponse, 0, len(v))
+		for _, repo := range v {
+			shortList = append(shortList, ShortRepoResponse{
+				Branch: repo.Branch,
+				URL:    repo.URL,
+				Arch:   repo.Arch,
+			})
+		}
+		return shortList
+	default:
+		return data
+	}
+}
+
 // Actions объединяет методы для работы с репозиториями
 type Actions struct {
 	appConfig         *app.Config

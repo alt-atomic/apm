@@ -101,7 +101,7 @@ func IsInteractive(appConfig *app.Config) bool {
 
 func (r *ResponseRenderer) formatField(key string, value interface{}) string {
 	valStr := fmt.Sprintf("%v", value)
-	if key == "name" || key == "packageName" {
+	if key == "name" || key == "packageName" || key == "url" {
 		return r.accentStyle.Render(valStr)
 	}
 	return valStr
@@ -224,6 +224,14 @@ func toDataMap(data interface{}) map[string]interface{} {
 		return mm
 	}
 	return nil
+}
+
+// MessageWithHint дополняет message подсказкой об использовании --full
+func MessageWithHint(message string, full bool) string {
+	if full {
+		return message
+	}
+	return message + ". " + app.T_("Use --full for detailed output")
 }
 
 func CliResponse(ctx context.Context, resp APIResponse) error {

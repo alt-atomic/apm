@@ -129,6 +129,7 @@ func (s *RepoService) GetBranches() []string {
 		}
 		branches = append(branches, name)
 	}
+	branches = append(branches, "task")
 	sort.Strings(branches)
 	return branches
 }
