@@ -55,7 +55,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerList))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerList))
 
-	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "ls")
+	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "ls")
 	stdout, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return nil, errors.New(app.T_("Failed to retrieve the list of containers: ") + stderr)
@@ -135,7 +135,7 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 
 	// Обрабатываем desktop приложения
 	for _, path := range desktopPaths {
-		args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "--app", path)
+		args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "--app", path)
 		if suffix != "" {
 			args = append(args, suffix)
 		}
@@ -144,7 +144,7 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 
 	// Обрабатываем консольные приложения
 	for _, path := range consolePaths {
-		args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "-b", path)
+		args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "distrobox-export", "-b", path)
 		if suffix != "" {
 			args = append(args, suffix)
 		}
@@ -188,7 +188,7 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 // fetchOsInfo выполняет команду для получения информации об ОС контейнера
 // и возвращает объект ContainerInfo.
 func (d *DistroAPIService) fetchOsInfo(containerName string) (ContainerInfo, error) {
-	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "enter", containerName, "--", "cat", "/etc/os-release")
+	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "enter", containerName, "--", "cat", "/etc/os-release")
 	cmd := exec.Command(args[0], args[1:]...)
 
 	var stdout, stderr bytes.Buffer
@@ -299,7 +299,7 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 	}
 
 	// Формирование аргументов команды без shell
-	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "create", "-i", image, "-n", containerName, "--yes")
+	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "create", "-i", image, "-n", containerName, "--yes")
 
 	// Добавляем параметр --additional-packages, если переменная addPkg не пустая
 	if addPkg != "" {
@@ -340,7 +340,7 @@ func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName st
 		return osInfo, err
 	}
 
-	args := helper.BuildDistroboxArgs(d.commandPrefix, "distrobox", "rm", "--yes", "--force", containerName)
+	args := helper.BuildCommandArgs(d.commandPrefix, "distrobox", "rm", "--yes", "--force", containerName)
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 
 	var stdout, stderr bytes.Buffer

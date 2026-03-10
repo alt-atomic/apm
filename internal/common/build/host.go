@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -75,14 +74,13 @@ func NewHostImageService(appConfig *app.Configuration, containerPath string) *Ho
 func (h *HostImageService) GetHostImage() (HostImage, error) {
 	var host HostImage
 
-	command := fmt.Sprintf("%s bootc status --format json", h.appConfig.CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
-	output, err := cmd.CombinedOutput()
+	args := helper.BuildCommandArgs(h.appConfig.CommandPrefix, "bootc", "status", "--format", "json")
+	stdout, stderr, err := helper.RunCommand(context.Background(), args)
 	if err != nil {
-		return host, fmt.Errorf(app.T_("Failed to execute bootc command: %v"), string(output))
+		return host, fmt.Errorf(app.T_("Failed to execute bootc command: %v"), stdout+stderr)
 	}
 
-	if err = json.Unmarshal(output, &host); err != nil {
+	if err = json.Unmarshal([]byte(stdout), &host); err != nil {
 		return host, fmt.Errorf(app.T_("Failed to parse JSON: %v"), err)
 	}
 
@@ -123,10 +121,10 @@ func (h *HostImageService) EnableOverlay() error {
 
 	// запускаем если находимся НЕ в контейнере
 	if runOverlay && !helper.IsRunningInContainer() {
-		command := fmt.Sprintf("%s bootc usr-overlay", h.appConfig.CommandPrefix)
-		cmd := exec.Command("sh", "-c", command)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf(app.T_("Error activating usr-overlay: %s"), string(output))
+		args := helper.BuildCommandArgs(h.appConfig.CommandPrefix, "bootc", "usr-overlay")
+		stdout, stderr, err := helper.RunCommand(context.Background(), args)
+		if err != nil {
+			return fmt.Errorf(app.T_("Error activating usr-overlay: %s"), stdout+stderr)
 		}
 	}
 
@@ -138,29 +136,40 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBuildImage))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBuildImage))
 
-	command := fmt.Sprintf("%s podman build --squash -t os -f %s /etc/apm", h.appConfig.CommandPrefix, h.containerPath)
+	pullArg := ""
 	if pullImage {
-		command = fmt.Sprintf("%s podman build --pull=always --squash -t os -f %s /etc/apm", h.appConfig.CommandPrefix, h.containerPath)
+		pullArg = "--pull=always"
 	}
 
-	stdout, err := PullAndProgress(ctx, command)
-	if err != nil {
-		if apmLogs := extractAPMLogs(stdout); apmLogs != "" {
-			return "", fmt.Errorf("%s\n%s\n%s",
-				fmt.Sprintf(app.T_("Failed to build image. Please fix the configuration: %s"), h.appConfig.PathImageFile),
-				app.T_("Build log:"),
-				apmLogs)
+	command := strings.TrimSpace(fmt.Sprintf("%s podman build %s --squash -t os -f %s /etc/apm",
+		h.appConfig.CommandPrefix, pullArg, h.containerPath))
+
+	if h.appConfig.Verbose {
+		args := strings.Fields(command)
+		_, _, err := helper.RunCommand(ctx, args, helper.WithPassthrough(), helper.WithEnv("TMPDIR=/var/tmp", "LC_ALL=C"))
+		if err != nil {
+			return "", fmt.Errorf(app.T_("Failed to build image. Please fix the configuration: %s"), h.appConfig.PathImageFile)
 		}
-		return "", fmt.Errorf("%s\n%v", stdout, err)
+	} else {
+		stdout, err := PullAndProgress(ctx, command)
+		if err != nil {
+			if apmLogs := extractAPMLogs(stdout); apmLogs != "" {
+				return "", fmt.Errorf("%s\n%s\n%s",
+					fmt.Sprintf(app.T_("Failed to build image. Please fix the configuration: %s"), h.appConfig.PathImageFile),
+					app.T_("Build log:"),
+					apmLogs)
+			}
+			return "", fmt.Errorf("%s\n%v", stdout, err)
+		}
 	}
 
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s podman images -q os", h.appConfig.CommandPrefix))
-	output, err := cmd.Output()
+	imgArgs := helper.BuildCommandArgs(h.appConfig.CommandPrefix, "podman", "images", "-q", "os")
+	imgStdout, _, err := helper.RunCommand(ctx, imgArgs)
 	if err != nil {
 		return "", fmt.Errorf(app.T_("Error podman image: %v"), err)
 	}
 
-	podmanImageID := strings.TrimSpace(string(output))
+	podmanImageID := strings.TrimSpace(imgStdout)
 	if podmanImageID == "" {
 		return "", errors.New(app.T_("No valid images with tag 'os'. Please build the image first."))
 	}
@@ -173,24 +182,22 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSwitchImage))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSwitchImage))
 
-	cmdTemplate := ""
+	var args []string
 	if isLocal {
-		cmdTemplate = "%s bootc switch --transport containers-storage %s"
+		args = helper.BuildCommandArgs(h.appConfig.CommandPrefix, "bootc", "switch", "--transport", "containers-storage", podmanImageID)
 	} else {
-		cmdTemplate = "%s bootc switch %s"
+		args = helper.BuildCommandArgs(h.appConfig.CommandPrefix, "bootc", "switch", podmanImageID)
 	}
-
-	command := fmt.Sprintf(cmdTemplate, h.appConfig.CommandPrefix, podmanImageID)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(app.T_("Error switching to the new image: %s"), string(output))
+	stdout, stderr, err := helper.RunCommand(ctx, args)
+	if err != nil {
+		return fmt.Errorf(app.T_("Error switching to the new image: %s"), stdout+stderr)
 	}
 
 	return nil
 }
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
-func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
+func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config Config) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
 	image, err := h.GetHostImage()
@@ -199,14 +206,13 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 	}
 
 	if image.Status.Booted.Image.Image.Transport != "containers-storage" {
-		command := fmt.Sprintf("%s bootc upgrade --check", h.appConfig.CommandPrefix)
-		cmd := exec.Command("sh", "-c", command)
-		output, err := cmd.CombinedOutput()
+		args := helper.BuildCommandArgs(h.appConfig.CommandPrefix, "bootc", "upgrade", "--check")
+		stdout, stderr, err := helper.RunCommand(ctx, args)
 		if err != nil {
-			return fmt.Errorf("bootc upgrade --check failed: %s", string(output))
+			return fmt.Errorf("bootc upgrade --check failed: %s", stdout+stderr)
 		}
 
-		if !strings.Contains(string(output), "No changes in:") {
+		if !strings.Contains(stdout+stderr, "No changes in:") {
 			return h.bootcUpgrade(ctx)
 		}
 
@@ -239,7 +245,7 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 
 	// Генерируем Containerfile если его нет
 	if _, statErr := os.Stat(h.containerPath); statErr != nil {
-		if err = h.GenerateDockerfile(config); err != nil {
+		if err = h.GenerateDockerfile(config, hostCache); err != nil {
 			return fmt.Errorf(app.T_("Failed to generate Containerfile: %w"), err)
 		}
 	}
@@ -254,24 +260,24 @@ type SkopeoInspectInfo struct {
 
 // getRemoteImageDigest используя skopeo, смотрим Layers удалённого или локально образа для сравнения
 func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName string, checkLocal bool) (string, error) {
-	command := fmt.Sprintf("%s skopeo inspect docker://%s", h.appConfig.CommandPrefix, imageName)
+	var args []string
 	if checkLocal {
-		command = fmt.Sprintf("%s skopeo inspect containers-storage:%s", h.appConfig.CommandPrefix, imageName)
+		args = helper.BuildCommandArgs(h.appConfig.CommandPrefix, "skopeo", "inspect", "containers-storage:"+imageName)
+	} else {
+		args = helper.BuildCommandArgs(h.appConfig.CommandPrefix, "skopeo", "inspect", "docker://"+imageName)
 	}
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
-	out, err := cmd.Output()
+	stdout, stderr, err := helper.RunCommand(ctx, args, helper.WithEnv("LC_ALL=C"))
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
-			return "", fmt.Errorf(app.T_("Skopeo inspect error: %s"), strings.TrimSpace(string(exitErr.Stderr)))
+		errMsg := strings.TrimSpace(stderr)
+		if errMsg == "" {
+			errMsg = fmt.Sprintf("%v", err)
 		}
-		return "", fmt.Errorf(app.T_("Skopeo inspect error: %v"), err)
+		return "", fmt.Errorf(app.T_("Skopeo inspect error: %s"), errMsg)
 	}
 
 	var info SkopeoInspectInfo
-	if err = json.Unmarshal(out, &info); err != nil {
+	if err = json.Unmarshal([]byte(stdout), &info); err != nil {
 		return "", fmt.Errorf(app.T_("Failed to parse skopeo inspect: %w"), err)
 	}
 
@@ -316,22 +322,21 @@ func (h *HostImageService) GenerateDefaultConfig() (Config, error) {
 }
 
 // GenerateDockerfile генерирует содержимое Dockerfile, формируя apm команды с модификаторами для пакетов.
-func (h *HostImageService) GenerateDockerfile(config Config) error {
-	// Формирование Dockerfile.
+func (h *HostImageService) GenerateDockerfile(config Config, hostCache bool) error {
 	var dockerfileLines []string
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", config.Image))
-	dockerfileLines = append(
-		dockerfileLines,
-		"RUN --mount=type=bind,ro,source=image.yml,target=/etc/apm/image.yml --mount=type=bind,ro,source=resources,target=/etc/apm/resources apm system image build",
-	)
+
+	runCmd := "RUN --mount=type=bind,ro,source=image.yml,target=/etc/apm/image.yml" +
+		" --mount=type=bind,ro,source=resources,target=/etc/apm/resources"
+	if hostCache {
+		runCmd += " --mount=type=cache,target=/var/cache/apt/archives,id=apt-cache" +
+			" mkdir -p /var/cache/apt/archives/partial &&"
+	}
+	runCmd += " apm system image build"
+	dockerfileLines = append(dockerfileLines, runCmd)
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
-	err := os.WriteFile(h.containerPath, []byte(dockerStr), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(h.containerPath, []byte(dockerStr), 0644)
 }
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ. checkSame - включена ли проверка на изменение конфигурации

@@ -124,7 +124,7 @@ func (m *mockHostImage) EnableOverlay() error { return nil }
 func (m *mockHostImage) GetHostImage() (build.HostImage, error) {
 	return build.HostImage{}, nil
 }
-func (m *mockHostImage) CheckAndUpdateBaseImage(_ context.Context, _ bool, _ build.Config) error {
+func (m *mockHostImage) CheckAndUpdateBaseImage(_ context.Context, _ bool, _ bool, _ build.Config) error {
 	return nil
 }
 func (m *mockHostImage) SwitchImage(_ context.Context, _ string, _ bool) error { return nil }
@@ -141,7 +141,7 @@ type mockHostConfig struct {
 func (m *mockHostConfig) LoadConfig() error                               { return m.loadErr }
 func (m *mockHostConfig) GetConfigEnvVars() (map[string]string, error)    { return nil, nil }
 func (m *mockHostConfig) SaveConfig() error                               { return m.saveErr }
-func (m *mockHostConfig) GenerateDockerfile() error                       { return nil }
+func (m *mockHostConfig) GenerateDockerfile(_ bool) error                 { return nil }
 func (m *mockHostConfig) AddInstallPackage(_ string) error                { return nil }
 func (m *mockHostConfig) AddRemovePackage(_ string) error                 { return nil }
 func (m *mockHostConfig) GetConfig() *build.Config                        { return m.config }

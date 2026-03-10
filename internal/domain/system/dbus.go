@@ -444,7 +444,7 @@ func (w *DBusWrapper) Search(packageName string, transaction string, installed b
 }
 
 // ImageApply декларативно применяет настройки image.yml к образу хост-системы.
-func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
+func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool, pullImage bool, noCache bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
@@ -453,10 +453,12 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 		transaction = helper.GenerateTransactionID()
 	}
 
+	hostCache := !noCache
+
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.ImageApply(ctx)
+			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
 			reply.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
 		}()
 
@@ -473,7 +475,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.ImageApply(ctx)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
@@ -502,7 +504,7 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 }
 
 // ImageUpdate обновляет образ системы.
-func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, background bool) (string, *dbus.Error) {
+func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, background bool, noCache bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
@@ -511,10 +513,12 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 		transaction = helper.GenerateTransactionID()
 	}
 
+	hostCache := !noCache
+
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.ImageUpdate(ctx)
+			resp, err := w.actions.ImageUpdate(ctx, hostCache)
 			reply.SendTaskResult(ctx, reply.EventSystemImageUpdate, resp, err)
 		}()
 
@@ -531,7 +535,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.ImageUpdate(ctx)
+	resp, err := w.actions.ImageUpdate(ctx, hostCache)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}

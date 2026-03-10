@@ -45,13 +45,13 @@ func NewUbuntuProvider(servicePackage *PackageService, commandPrefix string) *Ub
 // и парсит вывод с учётом установленных пакетов.
 func (p *UbuntuProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
 	// Обновляем базу пакетов.
-	updateArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "update")
+	updateArgs := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "update")
 	_, stderr, err := helper.RunCommand(ctx, updateArgs)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
-	searchArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "apt", "search", ".")
+	searchArgs := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "apt", "search", ".")
 	stdout, stderr, err := helper.RunCommand(ctx, searchArgs)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to execute apt search: %v, stderr: %s"), err, stderr)
@@ -85,7 +85,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 		return paths
 	}
 
-	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", packageName)
+	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", packageName)
 	stdout, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
@@ -94,7 +94,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 	filtered := helper.FilterLines(stdout, filePath)
 	paths := parseOutput(filtered)
 	if len(paths) == 0 {
-		dlArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-l")
+		dlArgs := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-l")
 		dlStdout, dlStderr, dlErr := helper.RunCommand(ctx, dlArgs)
 		if dlErr != nil {
 			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), dlStderr, dlErr.Error())
@@ -113,7 +113,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 
 		var allPaths []string
 		for _, pkg := range matchedPackages {
-			pkgArgs := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", pkg)
+			pkgArgs := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", pkg)
 			pkgStdout, _, pkgErr := helper.RunCommand(ctx, pkgArgs)
 			if pkgErr != nil {
 				continue
@@ -138,7 +138,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 
 // GetPackageOwner определяет пакет-владельца файла через dpkg -S.
 func (p *UbuntuProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
-	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-S", filePath)
+	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-S", filePath)
 	stdout, _, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return "", err
@@ -157,7 +157,7 @@ func (p *UbuntuProvider) InstallPackage(ctx context.Context, containerInfo Conta
 	if err := validatePackageName(packageName); err != nil {
 		return err
 	}
-	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "install", "-y", packageName)
+	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "install", "-y", packageName)
 	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to install package %s: %v, stderr: %s"), packageName, err, stderr)
@@ -171,7 +171,7 @@ func (p *UbuntuProvider) RemovePackage(ctx context.Context, containerInfo Contai
 	if err := validatePackageName(packageName); err != nil {
 		return err
 	}
-	args := helper.BuildDistroboxArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "remove", "-y", packageName)
+	args := helper.BuildCommandArgs(p.commandPrefix, "distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "apt-get", "remove", "-y", packageName)
 	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Failed to remove package %s: %v, stderr: %s"), packageName, err, stderr)

@@ -82,7 +82,7 @@ func (s *SwCatIconService) copyDirFromContainer(ctx context.Context, src, dst st
 		return err
 	}
 	// Команда копирования из контейнера.
-	args := helper.BuildDistroboxArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cp", "-r", src+"/.", dst)
+	args := helper.BuildCommandArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cp", "-r", src+"/.", dst)
 	_, stderr, err := helper.RunCommand(ctx, args)
 	if err != nil {
 		return fmt.Errorf(app.T_("Error copying from container: %v, stderr: %s"), err, stderr)
@@ -270,7 +270,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 			}
 		}
 	} else {
-		args := helper.BuildDistroboxArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "find", s.path, "-maxdepth", "1", "-type", "f")
+		args := helper.BuildCommandArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "find", s.path, "-maxdepth", "1", "-type", "f")
 		stdout, stderr, err := helper.RunCommand(ctx, args)
 		if err != nil {
 			return nil, fmt.Errorf(app.T_("Error retrieving files in %s (container %s): %v, stderr: %s"), s.path, s.containerName, err, stderr)
@@ -297,7 +297,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 				return nil, fmt.Errorf(app.T_("Failed to read file %s: %w"), fullPath, err)
 			}
 		} else {
-			catArgs := helper.BuildDistroboxArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cat", fullPath)
+			catArgs := helper.BuildCommandArgs(s.commandPrefix, "distrobox", "enter", s.containerName, "--", "cat", fullPath)
 			stdout, stderr, err := helper.RunCommand(ctx, catArgs)
 			if err != nil {
 				return nil, fmt.Errorf(app.T_("Error executing command for file %s: %v, stderr: %s"), fullPath, err, stderr)

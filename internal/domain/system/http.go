@@ -394,14 +394,16 @@ func (w *HTTPWrapper) ImageStatus(rw http.ResponseWriter, r *http.Request) {
 
 // ImageUpdate обновляет образ системы.
 func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
+	hostCache := r.URL.Query().Get("no_cache") != "true"
+
 	if w.RunBackground(rw, r, reply.EventSystemImageUpdate, func(ctx context.Context) (interface{}, error) {
-		return w.actions.ImageUpdate(ctx)
+		return w.actions.ImageUpdate(ctx, hostCache)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.ImageUpdate(ctx)
+	resp, err := w.actions.ImageUpdate(ctx, hostCache)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -411,14 +413,17 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 
 // ImageApply применяет изменения к образу.
 func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
+	pullImage := r.URL.Query().Get("pull") == "true"
+	hostCache := r.URL.Query().Get("no_cache") != "true"
+
 	if w.RunBackground(rw, r, reply.EventSystemImageApply, func(ctx context.Context) (interface{}, error) {
-		return w.actions.ImageApply(ctx)
+		return w.actions.ImageApply(ctx, pullImage, hostCache)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.ImageApply(ctx)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -929,6 +934,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				Tags:         []string{"image"},
 				QueryParams: []http_server.QueryParam{
 					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+					{Name: "no_cache", Type: "boolean", Required: false, Description: "Отключить кэш APT-пакетов при сборке образа"},
 				},
 			},
 			http_server.Endpoint{
@@ -941,6 +947,8 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				Tags:         []string{"image"},
 				QueryParams: []http_server.QueryParam{
 					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+					{Name: "pull", Type: "boolean", Required: false, Description: "Всегда загружать базовый образ из реестра"},
+					{Name: "no_cache", Type: "boolean", Required: false, Description: "Отключить кэш APT-пакетов при сборке образа"},
 				},
 			},
 			http_server.Endpoint{

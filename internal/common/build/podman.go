@@ -228,7 +228,6 @@ func parseSize(sizeStr string) (float64, error) {
 
 // pruneOldImages удаляет старые образы Podman.
 func pruneOldImages(ctx context.Context) error {
-	// Получаем конфиг из контекста
 	appConfig := app.GetAppConfig(ctx)
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemPruneOldImages))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemPruneOldImages))

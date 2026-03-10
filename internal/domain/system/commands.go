@@ -115,8 +115,15 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 		return &cli.Command{
 			Name:  "upgrade",
 			Usage: app.T_("Upgrade system image"),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "no-cache",
+					Usage: app.T_("Disable APT package cache for image build"),
+					Value: false,
+				},
+			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.ImageUpdate(ctx)
+				resp, err := actions.ImageUpdate(ctx, !cmd.Bool("no-cache"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
@@ -186,8 +193,20 @@ func CommandList(ctx context.Context) *cli.Command {
 				{
 					Name:  "apply",
 					Usage: app.T_("Apply changes to the host"),
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:  "pull",
+							Usage: app.T_("Always pull the base image from the registry"),
+							Value: false,
+						},
+						&cli.BoolFlag{
+							Name:  "no-cache",
+							Usage: app.T_("Disable APT package cache for image build"),
+							Value: false,
+						},
+					},
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						resp, err := actions.ImageApply(ctx)
+						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"))
 						if err != nil {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}
@@ -210,8 +229,15 @@ func CommandList(ctx context.Context) *cli.Command {
 				{
 					Name:  "update",
 					Usage: app.T_("Upgrade system image"),
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:  "no-cache",
+							Usage: app.T_("Disable APT package cache for image build"),
+							Value: false,
+						},
+					},
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						resp, err := actions.ImageUpdate(ctx)
+						resp, err := actions.ImageUpdate(ctx, !cmd.Bool("no-cache"))
 						if err != nil {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}

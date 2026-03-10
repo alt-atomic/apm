@@ -69,7 +69,7 @@ type hostDatabaseService interface {
 type hostImageService interface {
 	EnableOverlay() error
 	GetHostImage() (build.HostImage, error)
-	CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config build.Config) error
+	CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config build.Config) error
 	SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error
 	BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService build.SwitchableConfig) error
 }
@@ -79,7 +79,7 @@ type hostConfigService interface {
 	LoadConfig() error
 	GetConfigEnvVars() (map[string]string, error)
 	SaveConfig() error
-	GenerateDockerfile() error
+	GenerateDockerfile(hostCache bool) error
 	AddInstallPackage(pkg string) error
 	AddRemovePackage(pkg string) error
 	GetConfig() *build.Config

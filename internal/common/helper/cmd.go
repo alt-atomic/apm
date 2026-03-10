@@ -41,10 +41,49 @@ func GenerateTransactionID() string {
 	return fmt.Sprintf("%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
 }
 
+// CmdOption настройка для RunCommand
+type CmdOption func(*cmdOptions)
+
+type cmdOptions struct {
+	env         []string
+	passthrough bool
+}
+
+// WithEnv добавляет переменные окружения к команде
+func WithEnv(env ...string) CmdOption {
+	return func(o *cmdOptions) {
+		o.env = append(o.env, env...)
+	}
+}
+
+// WithPassthrough направляет stdout/stderr напрямую в консоль
+func WithPassthrough() CmdOption {
+	return func(o *cmdOptions) {
+		o.passthrough = true
+	}
+}
+
 // RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
-func RunCommand(ctx context.Context, args []string) (string, string, error) {
+func RunCommand(ctx context.Context, args []string, opts ...CmdOption) (string, string, error) {
+	var o cmdOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	app.Log.Debug("run command: ", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+
+	if len(o.env) > 0 {
+		cmd.Env = append(os.Environ(), o.env...)
+	}
+
+	if o.passthrough {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
+		return "", "", err
+	}
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -52,8 +91,8 @@ func RunCommand(ctx context.Context, args []string) (string, string, error) {
 	return stdout.String(), stderr.String(), err
 }
 
-// BuildDistroboxArgs строит массив аргументов из commandPrefix и дополнительных аргументов.
-func BuildDistroboxArgs(commandPrefix string, args ...string) []string {
+// BuildCommandArgs строит массив аргументов из commandPrefix и дополнительных аргументов.
+func BuildCommandArgs(commandPrefix string, args ...string) []string {
 	var result []string
 	if commandPrefix != "" {
 		result = append(result, strings.Fields(commandPrefix)...)

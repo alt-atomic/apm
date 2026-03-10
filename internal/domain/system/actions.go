@@ -867,7 +867,7 @@ func (a *Actions) ImageStatus(ctx context.Context) (*ImageStatusResponse, error)
 }
 
 // ImageUpdate обновляет образ.
-func (a *Actions) ImageUpdate(ctx context.Context) (*ImageUpdateResponse, error) {
+func (a *Actions) ImageUpdate(ctx context.Context, hostCache bool) (*ImageUpdateResponse, error) {
 	if err := a.serviceHostConfig.LoadConfig(); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
@@ -876,7 +876,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*ImageUpdateResponse, error)
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	err := a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, *a.serviceHostConfig.GetConfig())
+	err := a.serviceHostImage.CheckAndUpdateBaseImage(ctx, true, hostCache, *a.serviceHostConfig.GetConfig())
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
@@ -893,7 +893,7 @@ func (a *Actions) ImageUpdate(ctx context.Context) (*ImageUpdateResponse, error)
 }
 
 // ImageApply применить изменения к хосту
-func (a *Actions) ImageApply(ctx context.Context) (*ImageApplyResponse, error) {
+func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool) (*ImageApplyResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -948,12 +948,12 @@ func (a *Actions) ImageApply(ctx context.Context) (*ImageApplyResponse, error) {
 	}
 
 	if len(a.serviceHostConfig.GetConfig().Modules) > 0 {
-		err = a.serviceHostConfig.GenerateDockerfile()
+		err = a.serviceHostConfig.GenerateDockerfile(hostCache)
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}
 
-		err = a.serviceHostImage.BuildAndSwitch(ctx, false, true, a.serviceHostConfig)
+		err = a.serviceHostImage.BuildAndSwitch(ctx, pullImage, true, a.serviceHostConfig)
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}

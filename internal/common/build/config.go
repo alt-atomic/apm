@@ -108,8 +108,8 @@ func (s *HostConfigService) SaveConfig() error {
 }
 
 // GenerateDockerfile делегирует генерацию Dockerfile к HostImageService
-func (s *HostConfigService) GenerateDockerfile() error {
-	return s.hostImageService.GenerateDockerfile(*s.config)
+func (s *HostConfigService) GenerateDockerfile(hostCache bool) error {
+	return s.hostImageService.GenerateDockerfile(*s.config, hostCache)
 }
 
 // ConfigIsChanged проверяет, изменился ли новый конфиг, используя сервис для работы с базой.
