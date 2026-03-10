@@ -236,6 +236,9 @@ func (s *RepoService) detectBranch(repoURL string) string {
 	}
 
 	repoLower := strings.ToLower(repoClean)
+	if idx := strings.LastIndex(repoLower, "."); idx > strings.LastIndex(repoLower, "/") {
+		repoLower = repoLower[:idx]
+	}
 	for _, branch := range s.branches {
 		name := strings.ToLower(branch.Name)
 		if strings.Contains(repoLower, "/"+name+"/") || strings.HasSuffix(repoLower, "/"+name) {

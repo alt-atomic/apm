@@ -69,7 +69,7 @@ type Repository struct {
 	Active     bool     `json:"active"`
 	File       string   `json:"file"`
 	Entry      string   `json:"entry"`
-	Branch     string   `json:"branch,omitempty"`
+	Branch     string   `json:"branch"`
 }
 
 // Branch представляет информацию о ветке ALT Linux

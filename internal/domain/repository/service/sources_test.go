@@ -412,6 +412,10 @@ func TestDetectBranch(t *testing.T) {
 		{"task repo", "http://git.altlinux.org/repo/410804/", "task"},
 		{"task repo https", "https://git.altlinux.org/repo/370123", "task"},
 
+		// URL с расширением файла
+		{"sisyphus.repo", "https://altlinux.space/api/packages/alt-atomic/alt/group/apm-nightly/sisyphus.repo", "sisyphus"},
+		{"p11.list", "https://example.com/repos/p11.list", "p11"},
+
 		// Неизвестный
 		{"unknown", "http://random.example.com/something", ""},
 
