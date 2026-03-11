@@ -121,8 +121,7 @@ AptResult process_package_reinstalls(const AptCache *cache,
         }
 
         if (!is_rpm_file(raw)) {
-            pkgCache::VerIterator currentVer = pkg.CurrentVer();
-            if (!currentVer.Downloadable()) {
+            if (pkgCache::VerIterator currentVer = pkg.CurrentVer(); !currentVer.Downloadable()) {
                 return make_result(APT_ERROR_DOWNLOAD_FAILED,
                                    (std::string("Reinstallation of ") + pkg.Name() + " " +
                                     currentVer.VerStr() + " is not possible, it cannot be downloaded").c_str());

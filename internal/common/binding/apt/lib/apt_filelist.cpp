@@ -20,8 +20,7 @@ bool apt_filelist_read(const char *hd_list_path, const off_t offset,
     const std::string path(hd_list_path);
     FD_t fd = nullptr;
 
-    const auto it = cache.fds.find(path);
-    if (it != cache.fds.end()) {
+    if (const auto it = cache.fds.find(path); it != cache.fds.end()) {
         fd = it->second;
     } else {
         fd = Fopen(hd_list_path, "r");
@@ -35,11 +34,11 @@ bool apt_filelist_read(const char *hd_list_path, const off_t offset,
     if (lseek(Fileno(fd), offset, SEEK_SET) != offset)
         return false;
 
-    Header hdr = headerRead(fd, HEADER_MAGIC_YES);
+    const auto hdr = headerRead(fd, HEADER_MAGIC_YES);
     if (!hdr)
         return false;
 
-    rpmtd td = rpmtdNew();
+    const auto td = rpmtdNew();
     if (headerGet(hdr, RPMTAG_FILENAMES, td, HEADERGET_EXT)) {
         const char *fn;
         while ((fn = rpmtdNextString(td)) != nullptr) {
