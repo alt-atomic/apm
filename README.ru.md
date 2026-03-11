@@ -19,6 +19,8 @@ apm -help
 ## Установка
 Рекомендуется установить пакет из репозитория
 ```
+apt-repo add rpm https://altlinux.space/api/packages/alt-atomic/alt/group/apm-nightly/sisyphus.repo x86_64 classic
+apt-get update
 apt-get install apm
 ```
 
