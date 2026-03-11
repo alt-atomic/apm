@@ -64,9 +64,9 @@ void      apt_packages_free(AptPackageList *list);
 ## Жизненный цикл
 
 ```
-1. apt_init_config()           — настройка APT
-2. apt_init_system(&sys)       — инициализация, получаем AptSystem*
-3. apt_cache_open(sys, &cache) — открываем кеш, получаем AptCache*
+1. apt_init_config()               — настройка APT
+2. apt_init_system(&system)        — инициализация, получаем AptSystem*
+3. apt_cache_open(system, &cache)  — открываем кеш, получаем AptCache*
 4. apt_transaction_new(cache, &tx) — создаём транзакцию
 
 5. Наполняем транзакцию:
@@ -84,7 +84,7 @@ void      apt_packages_free(AptPackageList *list);
    - apt_free_package_changes(&changes)
    - apt_transaction_free(tx)
    - apt_cache_close(cache)
-   - apt_cleanup_system(sys)
+   - apt_cleanup_system(system)
 ```
 
 ## API по группам
