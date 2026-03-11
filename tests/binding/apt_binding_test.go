@@ -35,6 +35,9 @@ const testPackage = "hello"
 //go:embed files/test-apm-example-1.0-alt1.x86_64.rpm
 var testRpmData []byte
 
+//go:embed files/test-apm-example2-1.0-alt1.x86_64.rpm
+var testRpmData2 []byte
+
 // TestAptNewActions ensures Actions can be constructed and closed
 func TestAptNewActions(t *testing.T) {
 	actions := aptBinding.NewActions()
@@ -362,6 +365,62 @@ func TestAptInstallRemoveRpmFile(t *testing.T) {
 
 	if _, err = os.Stat(installedFile); !os.IsNotExist(err) {
 		t.Errorf("expected %s to be removed after package removal", installedFile)
+	}
+}
+
+// TestAptInstallConflictingRpms installs two RPM files that conflict on the same file path.
+func TestAptInstallConflictingRpms(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root")
+	}
+
+	tmpDir := t.TempDir()
+
+	tmpFile1, err := os.CreateTemp(tmpDir, "test-apm-example-*.rpm")
+	if err != nil {
+		t.Fatalf("failed to create temp file 1: %v", err)
+	}
+	if _, err = tmpFile1.Write(testRpmData); err != nil {
+		t.Fatalf("failed to write RPM data 1: %v", err)
+	}
+	tmpFile1.Close()
+
+	tmpFile2, err := os.CreateTemp(tmpDir, "test-apm-example2-*.rpm")
+	if err != nil {
+		t.Fatalf("failed to create temp file 2: %v", err)
+	}
+	if _, err = tmpFile2.Write(testRpmData2); err != nil {
+		t.Fatalf("failed to write RPM data 2: %v", err)
+	}
+	tmpFile2.Close()
+
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	rpmPaths := []string{tmpFile1.Name(), tmpFile2.Name()}
+	for _, rpm := range rpmPaths {
+		_ = actions.RemovePackages([]string{rpm}, false, false, nil)
+	}
+
+	defer func() {
+		for _, rpm := range rpmPaths {
+			_ = actions.RemovePackages([]string{rpm}, false, false, nil)
+		}
+	}()
+
+	for i, rpm := range rpmPaths {
+		err = actions.InstallPackages([]string{rpm}, nil, false)
+		if i == 0 {
+			if err != nil {
+				t.Fatalf("install first RPM failed: %v", err)
+			}
+		} else {
+			if err == nil {
+				t.Fatal("expected file conflict error when installing second RPM, got nil")
+			}
+			assert.Contains(t, err.Error(), "conflicts", "expected conflict error details")
+			t.Logf("conflict error: %v", err)
+		}
 	}
 }
 

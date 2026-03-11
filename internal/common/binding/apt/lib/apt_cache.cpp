@@ -79,7 +79,10 @@ AptResult apt_cache_open(const AptSystem *system, AptCache **cache, bool with_lo
             return make_result(APT_ERROR_CACHE_OPEN_FAILED, APT_MSG_CACHE_DEP_FAILED);
         }
 
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_UNKNOWN);
+        }
+        return make_result(APT_SUCCESS);
     } catch (const std::exception &e) {
         if (*cache) {
             delete *cache;
@@ -130,7 +133,10 @@ AptResult apt_cache_refresh(AptCache *cache) {
             return make_result(APT_ERROR_CACHE_REFRESH_FAILED, APT_MSG_CACHE_REFRESH_DEP_FAILED);
         }
 
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_UNKNOWN);
+        }
+        return make_result(APT_SUCCESS);
     } catch (const std::exception &e) {
         return make_result(APT_ERROR_CACHE_REFRESH_FAILED,
                            (std::string("Exception during cache refresh: ") + e.what()).c_str());
@@ -215,9 +221,11 @@ AptResult apt_cache_update(AptCache *cache) {
             return make_result(APT_ERROR_CACHE_UPDATE_FAILED, err.c_str());
         }
 
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_UNKNOWN);
+        }
+        return make_result(APT_SUCCESS);
     } catch (const std::exception &e) {
         return make_result(APT_ERROR_UNKNOWN, (std::string("Exception: ") + e.what()).c_str());
     }
 }
-

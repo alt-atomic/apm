@@ -614,7 +614,7 @@ func (s *PackageDBService) SaveSinglePackage(ctx context.Context, pkg Package) e
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "name"}, {Name: "version"}},
 			DoUpdates: clause.AssignmentColumns([]string{
-				"architecture", "section", "installed_size", "maintainer",
+				"architecture", "section", "installedSize", "maintainer",
 				"versionRaw", "versionInstalled", "depends", "provides",
 				"size", "filename", "summary", "description", "changelog",
 				"installed", "typePackage", "aliases", "files",

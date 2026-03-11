@@ -5,6 +5,7 @@
 
 #include <apt-pkg/algorithms.h>
 #include <apt-pkg/depcache.h>
+#include <apt-pkg/error.h>
 
 #include <memory>
 #include <vector>
@@ -140,8 +141,8 @@ static AptResult plan_dist_upgrade(const AptCache *cache, AptPackageChanges *cha
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, APT_MSG_BROKEN_DEPS);
         }
 
-        if (!check_apt_errors()) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN);
         }
 
         const std::set<std::string> empty_set;
@@ -207,8 +208,8 @@ static AptResult plan_autoremove(const AptCache *cache, AptPackageChanges *chang
             return make_result(APT_ERROR_DEPENDENCY_BROKEN, APT_MSG_AUTOREMOVE_RESOLVE_FAILED);
         }
 
-        if (!check_apt_errors()) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN);
         }
 
         const std::set<std::string> empty_set;

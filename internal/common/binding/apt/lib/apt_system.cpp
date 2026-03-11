@@ -11,7 +11,10 @@ AptResult apt_init_config() {
         if (!pkgInitConfig(*_config)) {
             return make_result(APT_ERROR_INIT_FAILED, APT_MSG_INIT_CONFIG_FAILED);
         }
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_UNKNOWN);
+        }
+        return make_result(APT_SUCCESS);
     } catch (const std::exception &e) {
         return make_result(APT_ERROR_INIT_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
@@ -29,7 +32,10 @@ AptResult apt_init_system(AptSystem **system) {
         *system = new AptSystem();
         (*system)->system = _system;
 
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_UNKNOWN);
+        }
+        return make_result(APT_SUCCESS);
     } catch (const std::exception &e) {
         if (*system) {
             delete *system;

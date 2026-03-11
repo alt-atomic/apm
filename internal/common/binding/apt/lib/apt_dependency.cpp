@@ -192,9 +192,9 @@ AptResult finalize_dependency_resolution(const AptCache *cache, const std::set<s
                            "Some packages could not be installed. This may mean that you have requested an impossible situation");
     }
 
-    if (!check_apt_errors()) {
-        return make_result(APT_ERROR_DEPENDENCY_BROKEN, nullptr);
+    if (_error->PendingError()) {
+        return make_result(APT_ERROR_DEPENDENCY_BROKEN);
     }
 
-    return make_result(APT_SUCCESS, nullptr);
+    return make_result(APT_SUCCESS);
 }

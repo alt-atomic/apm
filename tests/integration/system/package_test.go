@@ -20,6 +20,8 @@ import (
 	"apm/internal/domain/system"
 	"apm/tests/integration/common"
 	"context"
+	_ "embed"
+	"os"
 	"strings"
 	"syscall"
 	"testing"
@@ -29,6 +31,9 @@ import (
 )
 
 const testPackage = "hello"
+
+//go:embed files/test-apm-example-1.0-alt1.x86_64.rpm
+var testRpmData []byte
 
 // SystemTestSuite для всех системных тестов (требуют root права)
 type SystemTestSuite struct {
@@ -210,6 +215,33 @@ func contains(s, substr string) bool {
 				(s[:len(substr)] == substr ||
 					s[len(s)-len(substr):] == substr ||
 					strings.Contains(s, substr))))
+}
+
+// TestInstallRpmFile тестирует установку локального RPM файла через actions
+func (s *SystemTestSuite) TestInstallRpmFile() {
+	tmpFile, err := os.CreateTemp(s.T().TempDir(), "test-apm-example-*.rpm")
+	if err != nil {
+		s.T().Fatalf("failed to create temp file: %v", err)
+	}
+	if _, err = tmpFile.Write(testRpmData); err != nil {
+		s.T().Fatalf("failed to write RPM data: %v", err)
+	}
+	tmpFile.Close()
+
+	rpmPath := tmpFile.Name()
+
+	_, _ = s.actions.Remove(s.ctx, []string{rpmPath}, false, false, false)
+
+	defer func() {
+		_, _ = s.actions.Remove(s.ctx, []string{rpmPath}, false, false, false)
+	}()
+
+	resp, err := s.actions.Install(s.ctx, []string{rpmPath}, false, false)
+	if err != nil {
+		s.T().Fatalf("install RPM file failed: %v", err)
+	}
+	assert.NotNil(s.T(), resp)
+	s.T().Logf("Install RPM successful: %+v", resp)
 }
 
 func TestSystemSuite(t *testing.T) {

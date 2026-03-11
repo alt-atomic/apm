@@ -185,7 +185,10 @@ AptResult execute_transaction(AptCache *cache,
             return make_result(APT_ERROR_INSTALL_FAILED, APT_MSG_MARKS_UPDATE_FAILED);
         }
 
-        return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);
+        if (_error->PendingError()) {
+            return make_result(APT_ERROR_UNKNOWN, "MARKER_8_FINAL_PENDING");
+        }
+        return make_result(APT_SUCCESS);
     } catch (const std::exception &e) {
         return make_result(APT_ERROR_INSTALL_FAILED, (std::string("Exception: ") + e.what()).c_str());
     }
