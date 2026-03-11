@@ -17,18 +17,14 @@
 package lib
 
 /*
-// cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
 
 import (
-	"bufio"
-	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"unsafe"
 )
 
@@ -89,7 +85,7 @@ func SetConfig(key, value string) {
 
 // DumpConfig возвращает всю конфигурацию APT в виде строки.
 func DumpConfig() string {
-	cVal := C.apt_dump_config()
+	cVal := C.apt_config_dump()
 	if cVal == nil {
 		return ""
 	}
@@ -145,26 +141,4 @@ func SetNoLocking(noLock bool) {
 	defer C.free(unsafe.Pointer(cKey))
 	defer C.free(unsafe.Pointer(cVal))
 	C.apt_set_config(cKey, cVal)
-}
-
-// isAtomicSystem проверяет является ли корневая ФС composefs/overlay
-func isAtomicSystem() bool {
-	file, err := os.Open("/proc/mounts")
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		if len(fields) < 3 {
-			continue
-		}
-		device, mountpoint, fstype := fields[0], fields[1], fields[2]
-		if mountpoint == "/" && (fstype == "overlay" || device == "composefs") {
-			return true
-		}
-	}
-	return false
 }

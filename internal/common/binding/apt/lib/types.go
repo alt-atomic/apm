@@ -17,8 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
@@ -31,7 +30,7 @@ import (
 
 type PackageState int
 
-// Package states (must match AptPackageState in apt_wrapper.h)
+// Package states (must match AptPackageState in apt_common.h)
 const (
 	//	PackageStateNotInstalled    PackageState = 0
 	PackageStateInstalled PackageState = 1
@@ -43,7 +42,7 @@ const (
 	//	PackageStateTriggersPending PackageState = 7
 )
 
-// APT error codes (must match apt_wrapper.h)
+// APT error codes (must match apt_error.h)
 const (
 	AptErrorPackageNotFound   = 21
 	AptErrorInvalidParameters = 91
@@ -68,9 +67,6 @@ func ErrorFromResult(res C.AptResult) *AptError {
 	if res.message != nil {
 		msg = C.GoString(res.message)
 		C.free(unsafe.Pointer(res.message))
-	}
-	if msg == "" {
-		msg = C.GoString(C.apt_error_string(res.code))
 	}
 	return &AptError{Code: code, Message: msg}
 }

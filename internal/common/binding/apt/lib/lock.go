@@ -17,7 +17,7 @@
 package lib
 
 /*
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"

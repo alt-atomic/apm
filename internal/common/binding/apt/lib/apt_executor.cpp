@@ -1,14 +1,19 @@
-#include "apt_internal.h"
+#include "executor.h"
 
 #include <apt-pkg/error.h>
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/sourcelist.h>
 
+// RAII guard that sets APT::Get::ReInstall if any package has the ReInstall flag.
 class ReInstallConfigGuard {
     bool was_already_set_ = false;
     bool was_set_by_us_ = false;
 
 public:
+    ReInstallConfigGuard(const ReInstallConfigGuard &) = delete;
+    ReInstallConfigGuard &operator=(const ReInstallConfigGuard &) = delete;
+    ReInstallConfigGuard() = default;
+
     bool setIfNeeded(pkgDepCache *cache) {
         was_already_set_ = _config->FindB("APT::Get::ReInstall", false);
 
@@ -17,8 +22,7 @@ public:
         }
 
         for (pkgCache::PkgIterator it = cache->PkgBegin(); !it.end(); ++it) {
-            const pkgDepCache::StateCache &st = (*cache)[it];
-            if ((st.iFlags & pkgDepCache::ReInstall) != 0) {
+            if (const pkgDepCache::StateCache &st = (*cache)[it]; (st.iFlags & pkgDepCache::ReInstall) != 0) {
                 _config->Set("APT::Get::ReInstall", true);
                 was_set_by_us_ = true;
                 return true;
@@ -35,37 +39,55 @@ public:
     }
 };
 
-AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callback, uintptr_t user_data, bool download_only) {
-    if (!pm || !pm->pm || !pm->cache || !pm->cache->dep_cache)
-        return make_result(APT_ERROR_INIT_FAILED, "Invalid package manager instance");
+// Downloads packages and runs the package manager install phase.
+AptResult execute_transaction(AptCache *cache,
+                              AptPackageManager *pm,
+                              AptProgressCallback callback,
+                              uintptr_t user_data,
+                              bool download_only,
+                              bool include_reinstall) {
+    if (!cache || !cache->dep_cache) {
+        return make_result(APT_ERROR_CACHE_OPEN_FAILED, APT_MSG_INVALID_CACHE);
+    }
 
     try {
         CallbackGuard cbGuard;
         ReInstallConfigGuard reinstallGuard;
-        bool hasReinstall = reinstallGuard.setIfNeeded(pm->cache->dep_cache);
+        const bool hasReinstall = include_reinstall ? reinstallGuard.setIfNeeded(cache->dep_cache) : false;
 
-        if (pm->cache->dep_cache->BrokenCount() != 0) {
-            for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-                pkgDepCache::StateCache &st = (*pm->cache->dep_cache)[it];
-                if (st.InstBroken() || st.NowBroken()) {
+        if (cache->dep_cache->BrokenCount() != 0) {
+            for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+                if (pkgDepCache::StateCache &st = (*cache->dep_cache)[it]; st.InstBroken() || st.NowBroken()) {
                     std::string out = std::string(
                                           "Some broken packages were found while trying to process build-dependencies for ")
                                       + it.Name();
                     return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
                 }
             }
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, "Broken dependencies");
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, APT_MSG_BROKEN_DEPS);
         }
 
-        // Early exit if nothing to do
-        if (pm->cache->dep_cache->DelCount() == 0 &&
-            pm->cache->dep_cache->InstCount() == 0 &&
-            pm->cache->dep_cache->BadCount() == 0 &&
+        if (cache->dep_cache->DelCount() == 0 &&
+            cache->dep_cache->InstCount() == 0 &&
+            cache->dep_cache->BadCount() == 0 &&
             !hasReinstall) {
             return make_result(APT_SUCCESS, nullptr);
         }
 
-        if (callback != nullptr) {
+        std::unique_ptr<pkgPackageManager> owned_pm;
+        pkgPackageManager *active_pm = nullptr;
+
+        if (pm && pm->pm) {
+            active_pm = pm->pm.get();
+        } else {
+            owned_pm.reset(_system->CreatePM(cache->dep_cache));
+            if (!owned_pm) {
+                return make_result(APT_ERROR_INIT_FAILED, APT_MSG_INIT_PM_FAILED);
+            }
+            active_pm = owned_pm.get();
+        }
+
+        if (callback) {
             global_callback = callback;
             global_user_data = user_data;
         }
@@ -74,7 +96,7 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
         if (!_config->FindB("Debug::NoLocking", false)) {
             Lock.Fd(GetLock(_config->FindDir("Dir::Cache::Archives") + "lock"));
             if (_error->PendingError()) {
-                return make_result(APT_ERROR_LOCK_FAILED, "Unable to lock the download directory");
+                return make_result(APT_ERROR_LOCK_FAILED, APT_MSG_LOCK_DOWNLOAD_DIR);
             }
         }
 
@@ -88,23 +110,22 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             return make_result(APT_ERROR_INSTALL_FAILED, err.c_str());
         }
 
-        pkgRecords records(*pm->cache->dep_cache);
+        pkgRecords records(*cache->dep_cache);
 
-        if (!pm->pm->GetArchives(&acquire, &source_list, &records)) {
+        if (!active_pm->GetArchives(&acquire, &source_list, &records)) {
             std::string err = collect_pending_errors();
             if (err.empty()) err = "Failed to get package archives";
             return make_result(APT_ERROR_INSTALL_FAILED, err.c_str());
         }
 
-        auto acquire_result = acquire.Run();
+        const auto acquire_result = acquire.Run();
 
-        // Send final download complete event
         if (global_callback != nullptr) {
             global_callback("", APT_CALLBACK_DOWNLOAD_STOP, 100, 100, 0, global_user_data);
         }
 
         if (acquire_result != pkgAcquire::Continue) {
-            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to download packages");
+            return make_result(APT_ERROR_INSTALL_FAILED, APT_MSG_DOWNLOAD_FAILED);
         }
 
         if (download_only) {
@@ -115,22 +136,19 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
             _system->UnLock();
         }
 
-        // Prepare planned package names for fallback (new installs, deletes, downgrades, or reinstalls)
         CallbackBridge bridgeData;
         bridgeData.user_data = user_data;
-        bridgeData.cache = pm->cache;
-        for (pkgCache::PkgIterator it = pm->cache->dep_cache->PkgBegin(); !it.end(); ++it) {
-            auto &st = (*pm->cache->dep_cache)[it];
-            if (st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete() ||
-                (st.iFlags & pkgDepCache::ReInstall) != 0) {
+        bridgeData.cache = cache;
+        for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
+            if (const auto &st = (*cache->dep_cache)[it]; st.NewInstall() || st.Upgrade() || st.Downgrade() || st.Delete() ||
+                                                          (include_reinstall && (st.iFlags & pkgDepCache::ReInstall) != 0)) {
                 bridgeData.planned.emplace_back(it.Name());
             }
         }
 
-        // Use common progress callback implementation
-        PackageManagerCallback_t apt_callback = create_common_progress_callback(&bridgeData);
+        const PackageManagerCallback_t apt_callback = create_common_progress_callback(&bridgeData);
 
-        auto result = pm->pm->DoInstall(apt_callback, &bridgeData);
+        const auto result = active_pm->DoInstall(apt_callback, &bridgeData);
 
         if (_system) _system->Lock();
 
@@ -163,9 +181,8 @@ AptResult apt_install_packages(AptPackageManager *pm, AptProgressCallback callba
                 }
         }
 
-        bool update_result = pm->pm->UpdateMarks();
-        if (!update_result) {
-            return make_result(APT_ERROR_INSTALL_FAILED, "Failed to update package marks");
+        if (bool update_result = active_pm->UpdateMarks(); !update_result) {
+            return make_result(APT_ERROR_INSTALL_FAILED, APT_MSG_MARKS_UPDATE_FAILED);
         }
 
         return make_result(check_apt_errors() ? APT_SUCCESS : last_error, nullptr);

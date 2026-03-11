@@ -16,11 +16,30 @@
 
 package lib
 
-/*
-#cgo CPPFLAGS: -I${SRCDIR}/include -I${SRCDIR}/src -I/usr/include/apt-pkg -DAPT_WRAPPER_BUILD
-#cgo CXXFLAGS: -std=c++17 -fstack-protector-strong
-#cgo LDFLAGS: -lapt-pkg -lstdc++ -lrpm -lrpmio
+import (
+	"bufio"
+	"os"
+	"strings"
+)
 
-#include "apt.h"
-*/
-import "C"
+// isAtomicSystem проверяет является ли корневая ФС composefs/overlay (для атомарных систем)
+func isAtomicSystem() bool {
+	file, err := os.Open("/proc/mounts")
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 3 {
+			continue
+		}
+		device, mountpoint, fstype := fields[0], fields[1], fields[2]
+		if mountpoint == "/" && (fstype == "overlay" || device == "composefs") {
+			return true
+		}
+	}
+	return false
+}

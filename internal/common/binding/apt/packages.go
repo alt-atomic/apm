@@ -142,28 +142,27 @@ func withCache(system *lib.System, readOnly bool, fn func(*lib.Cache) error) err
 	return fn(cache)
 }
 
-// commitWithPM создаёт PackageManager и выполняет установку
-func commitWithPM(cache *lib.Cache, handler lib.ProgressHandler, downloadOnly bool) error {
-	pm, err := lib.NewPackageManager(cache)
-	if err != nil {
-		return err
-	}
-	defer pm.Close()
-	if handler != nil {
-		return pm.InstallPackagesWithProgress(handler, downloadOnly)
-	}
-	return pm.InstallPackages(downloadOnly)
-}
-
 // CombineInstallRemovePackages комбинированный метод установки и удаления
 func (a *Actions) CombineInstallRemovePackages(packagesInstall []string, packagesRemove []string,
 	handler lib.ProgressHandler, purge bool, depends bool, downloadOnly bool) error {
 	return a.runOperation(OperationOptions{RpmArguments: packagesInstall}, func(system *lib.System) error {
 		return withCache(system, false, func(cache *lib.Cache) error {
-			if e := cache.ApplyChanges(packagesInstall, packagesRemove, purge, depends); e != nil {
-				return e
+			tx, err := cache.NewTransaction()
+			if err != nil {
+				return err
 			}
-			return commitWithPM(cache, handler, downloadOnly)
+			defer tx.Close()
+			if len(packagesInstall) > 0 {
+				if err := tx.Install(packagesInstall); err != nil {
+					return err
+				}
+			}
+			if len(packagesRemove) > 0 {
+				if err := tx.Remove(packagesRemove, purge, depends); err != nil {
+					return err
+				}
+			}
+			return tx.Execute(handler, downloadOnly)
 		})
 	})
 }
@@ -175,10 +174,15 @@ func (a *Actions) InstallPackages(packageNames []string, handler lib.ProgressHan
 	}
 	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func(system *lib.System) error {
 		return withCache(system, false, func(cache *lib.Cache) error {
-			if e := cache.ApplyChanges(packageNames, nil, false, false); e != nil {
-				return e
+			tx, err := cache.NewTransaction()
+			if err != nil {
+				return err
 			}
-			return commitWithPM(cache, handler, downloadOnly)
+			defer tx.Close()
+			if err := tx.Install(packageNames); err != nil {
+				return err
+			}
+			return tx.Execute(handler, downloadOnly)
 		})
 	})
 }
@@ -190,10 +194,15 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, depends bool
 	}
 	return a.runOperation(OperationOptions{}, func(system *lib.System) error {
 		return withCache(system, false, func(cache *lib.Cache) error {
-			if e := cache.ApplyChanges(nil, packageNames, purge, depends); e != nil {
-				return e
+			tx, err := cache.NewTransaction()
+			if err != nil {
+				return err
 			}
-			return commitWithPM(cache, handler, false)
+			defer tx.Close()
+			if err := tx.Remove(packageNames, purge, depends); err != nil {
+				return err
+			}
+			return tx.Execute(handler, false)
 		})
 	})
 }
@@ -202,7 +211,15 @@ func (a *Actions) RemovePackages(packageNames []string, purge bool, depends bool
 func (a *Actions) DistUpgrade(handler lib.ProgressHandler, downloadOnly bool) error {
 	return a.runOperation(OperationOptions{}, func(system *lib.System) error {
 		return withCache(system, false, func(cache *lib.Cache) error {
-			return cache.DistUpgradeWithProgress(handler, downloadOnly)
+			tx, err := cache.NewTransaction()
+			if err != nil {
+				return err
+			}
+			defer tx.Close()
+			if err := tx.DistUpgrade(); err != nil {
+				return err
+			}
+			return tx.Execute(handler, downloadOnly)
 		})
 	})
 }
@@ -339,10 +356,15 @@ func (a *Actions) ReinstallPackages(packageNames []string, handler lib.ProgressH
 	}
 	return a.runOperation(OperationOptions{RpmArguments: packageNames}, func(system *lib.System) error {
 		return withCache(system, false, func(cache *lib.Cache) error {
-			if e := cache.ApplyReinstall(packageNames); e != nil {
-				return e
+			tx, err := cache.NewTransaction()
+			if err != nil {
+				return err
 			}
-			return commitWithPM(cache, handler, false)
+			defer tx.Close()
+			if err := tx.Reinstall(packageNames); err != nil {
+				return err
+			}
+			return tx.Execute(handler, false)
 		})
 	})
 }

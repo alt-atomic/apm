@@ -1,4 +1,4 @@
-#include "apt_filelist.h"
+#include "filelist.h"
 
 #include <rpm/rpmlib.h>
 #include <rpm/rpmio.h>
@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <cstdlib>
 
+// Opens (or reuses cached) RPM header list file and reads file names at offset.
 bool apt_filelist_read(const char *hd_list_path, const off_t offset,
                        std::vector<std::string> &out_files,
                        AptFileListCache &cache)
@@ -56,6 +57,7 @@ bool apt_filelist_read(const char *hd_list_path, const off_t offset,
     return true;
 }
 
+// Reads file list from RPM header and allocates info->files array.
 void apt_filelist_fill(pkgCache::VerFileIterator &vf, AptPackageInfo *info,
                        AptFileListCache &cache)
 {

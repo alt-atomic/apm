@@ -18,7 +18,7 @@ package lib
 
 /*
 // cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
@@ -147,25 +147,3 @@ func openCacheUnsafe(system *System, readOnly bool) (*Cache, error) {
 	return c, nil
 }
 
-// simulateOperation выполняет симуляцию операции и конвертирует результат
-func (c *Cache) simulateOperation(
-	simFunc func() (C.AptResult, *C.AptPackageChanges),
-) (*PackageChanges, error) {
-	var result *PackageChanges
-	err := withMutex(func() error {
-		var cc C.AptPackageChanges
-		res, changes := simFunc()
-		if changes != nil {
-			cc = *changes
-		}
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		result = convertPackageChanges(&cc)
-		return nil
-	})
-	return result, err
-}
