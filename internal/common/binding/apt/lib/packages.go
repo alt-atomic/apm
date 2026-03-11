@@ -44,7 +44,7 @@ func (c *Cache) GetPackageInfo(packageName string) (*PackageInfo, error) {
 }
 
 func (c *Cache) SearchPackages(pattern string) ([]PackageInfo, error) {
-	var pkgs []PackageInfo
+	var packages []PackageInfo
 	err := withMutex(func() error {
 		cPattern := C.CString(pattern)
 		defer C.free(unsafe.Pointer(cPattern))
@@ -56,13 +56,13 @@ func (c *Cache) SearchPackages(pattern string) ([]PackageInfo, error) {
 		defer C.apt_packages_free(&list)
 
 		if list.count > 0 {
-			pkgs = make([]PackageInfo, int(list.count))
+			packages = make([]PackageInfo, int(list.count))
 			cp := unsafe.Slice(list.packages, int(list.count))
 			for i, cpi := range cp {
-				pkgs[i].fromCStruct(&cpi)
+				packages[i].fromCStruct(&cpi)
 			}
 		}
 		return nil
 	})
-	return pkgs, err
+	return packages, err
 }
