@@ -21,13 +21,6 @@ src/                  — внутренние заголовки
 *.cpp                 — реализация C API
 ```
 
-## Глобальные типы состояний
-
-```c
-typedef struct AptSystem      AptSystem;       // глобальное состояние APT
-typedef struct AptCache       AptCache;        // открытый кеш пакетов
-typedef struct AptTransaction AptTransaction;  // набор операций для plan/execute
-```
 
 ### Информация о пакетах (apt_package.h)
 
