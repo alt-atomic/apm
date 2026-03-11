@@ -100,18 +100,6 @@ AptResult apt_transaction_autoremove(AptTransaction *tx) {
     return make_result(APT_SUCCESS, nullptr);
 }
 
-// RAII guard that restores dep cache state on destruction.
-class CacheStateGuard {
-    std::unique_ptr<pkgDepCache::State> saved_state;
-
- public:
-    explicit CacheStateGuard(pkgDepCache *cache) : saved_state(std::make_unique<pkgDepCache::State>(cache)) {
-    }
-    ~CacheStateGuard() { if (saved_state) saved_state->Restore(); }
-    CacheStateGuard(const CacheStateGuard &) = delete;
-    CacheStateGuard &operator=(const CacheStateGuard &) = delete;
-};
-
 // Converts a vector of strings to a vector of C string pointers.
 static std::vector<const char *> to_cstr_array(const std::vector<std::string> &v) {
     std::vector<const char *> result(v.size());

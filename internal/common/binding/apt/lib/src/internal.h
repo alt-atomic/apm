@@ -58,6 +58,21 @@ struct AptPackageManager {
     }
 };
 
+// RAII guard that saves dep cache state and restores it on destruction.
+// Call commit() to keep changes instead of rolling back.
+class CacheStateGuard {
+    std::unique_ptr<pkgDepCache::State> saved_state;
+
+ public:
+    explicit CacheStateGuard(pkgDepCache *cache) : saved_state(std::make_unique<pkgDepCache::State>(cache)) {
+    }
+
+    ~CacheStateGuard() { if (saved_state) saved_state->Restore(); }
+    void commit() { saved_state.reset(); }
+    CacheStateGuard(const CacheStateGuard &) = delete;
+    CacheStateGuard &operator=(const CacheStateGuard &) = delete;
+};
+
 // Returns a strdup'd copy of `s`, or nullptr if `s` is null or empty.
 inline char *safe_strdup(const char *s) {
     if (!s || !*s) return nullptr;
