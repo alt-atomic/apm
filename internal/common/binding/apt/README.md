@@ -74,7 +74,7 @@ void      apt_packages_free(AptPackageList *list);
    - apt_transaction_execute(tx, callback, ud, false) — реальная установка/удаление
 
 7. Освобождение всякого последовательно:
-   - apt_free_package_changes(&changes)
+   - apt_free_package_changes(&changes) - только если был вызван apt_transaction_plan
    - apt_transaction_free(tx)
    - apt_cache_close(cache)
    - apt_cleanup_system(system)
