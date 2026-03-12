@@ -388,8 +388,6 @@ func GetDefaultColors() Colors {
 	return Colors{
 		Accent:      "#a2734c",
 		TextLight:   "#171717",
-		TextDark:    "#c4c8c6",
-		TreeBranch:  "#c4c8c6",
 		ResultError: "9",
 
 		DialogAction:     "#26a269",

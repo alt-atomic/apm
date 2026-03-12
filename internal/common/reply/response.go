@@ -64,7 +64,6 @@ type ResponseRenderer struct {
 	accentStyle     lipgloss.Style
 	messageStyle    lipgloss.Style
 	errorMsgStyle   lipgloss.Style
-	itemStyle       lipgloss.Style
 }
 
 func NewResponseRenderer(appConfig *app.Config) *ResponseRenderer {
@@ -74,15 +73,12 @@ func NewResponseRenderer(appConfig *app.Config) *ResponseRenderer {
 }
 
 func NewRendererFromColors(colors app.Colors) *ResponseRenderer {
-	adaptiveColor := lipgloss.AdaptiveColor{Light: colors.TextLight, Dark: colors.TextDark}
-
 	return &ResponseRenderer{
 		colors:          colors,
 		enumeratorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.TreeBranch)).MarginRight(1),
 		accentStyle:     lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colors.Accent)),
 		messageStyle:    lipgloss.NewStyle().Bold(true).MarginBottom(1),
 		errorMsgStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ResultError)),
-		itemStyle:       lipgloss.NewStyle().Foreground(adaptiveColor),
 	}
 }
 

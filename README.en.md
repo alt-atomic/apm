@@ -86,10 +86,6 @@ formatType: "tree"
 colors:
     # Accent and heading color
     accent: "#a2734c"
-    # Text color for light theme
-    textLight: "#171717"
-    # Text color for dark theme
-    textDark: "#c4c8c6"
 
     # Tree branch color
     treeBranch: "#c4c8c6"

@@ -104,10 +104,10 @@ func (tw *treeWriter) writeMessage(msg interface{}, indent, branch, cont string)
 			tw.sb.WriteByte('\n')
 		}
 	case map[string]interface{}:
-		tw.line(indent, branch, cont, tw.r.itemStyle.Render("message"))
+		tw.line(indent, branch, cont, "message")
 		tw.writeMapEntries(shallowNormalize(vv), indent+cont)
 	case []interface{}:
-		tw.line(indent, branch, cont, tw.r.itemStyle.Render("message"))
+		tw.line(indent, branch, cont, "message")
 		tw.writeListEntries(vv, indent+cont)
 	default:
 		text := fmt.Sprintf("%v", vv)
@@ -127,19 +127,19 @@ func (tw *treeWriter) writeEntry(key string, value interface{}, indent, branch, 
 	label := TranslateKey(key)
 	switch vv := value.(type) {
 	case nil, string, bool, int, float64:
-		tw.line(indent, branch, cont, tw.r.itemStyle.Render(tw.r.formatScalarField(key, value)))
+		tw.line(indent, branch, cont, tw.r.formatScalarField(key, value))
 	case map[string]interface{}:
-		tw.line(indent, branch, cont, tw.r.itemStyle.Render(label))
+		tw.line(indent, branch, cont, label)
 		tw.writeMapEntries(shallowNormalize(vv), indent+cont)
 	case []interface{}:
 		if len(vv) == 0 {
-			tw.line(indent, branch, cont, tw.r.itemStyle.Render(label+": []"))
+			tw.line(indent, branch, cont, label+": []")
 			return
 		}
-		tw.line(indent, branch, cont, tw.r.itemStyle.Render(label))
+		tw.line(indent, branch, cont, label)
 		tw.writeListEntries(vv, indent+cont)
 	default:
-		tw.line(indent, branch, cont, tw.r.itemStyle.Render(fmt.Sprintf("%s: %v", label, value)))
+		tw.line(indent, branch, cont, fmt.Sprintf("%s: %v", label, value))
 	}
 }
 
@@ -150,10 +150,10 @@ func (tw *treeWriter) writeListEntries(items []interface{}, indent string) {
 
 		switch vv := elem.(type) {
 		case map[string]interface{}:
-			tw.line(indent, branch, cont, tw.r.itemStyle.Render(num))
+			tw.line(indent, branch, cont, num)
 			tw.writeMapEntries(shallowNormalize(vv), indent+cont)
 		default:
-			tw.line(indent, branch, cont, tw.r.itemStyle.Render(num+" "+fmt.Sprintf("%v", elem)))
+			tw.line(indent, branch, cont, num+" "+fmt.Sprintf("%v", elem))
 		}
 	}
 }
