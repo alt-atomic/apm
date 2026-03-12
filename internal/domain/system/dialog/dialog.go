@@ -218,10 +218,7 @@ func (m model) getHintStyle() lipgloss.Style {
 func (m model) View() string {
 	// Определяем стили для вывода
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent))
-	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: m.appConfig.ConfigManager.GetConfig().Colors.TextLight,
-		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.TextDark,
-	})
+	valueStyle := lipgloss.NewStyle()
 
 	contentView := m.vp.View()
 
@@ -288,10 +285,7 @@ func (m model) buildEssentialWarning() string {
 
 	deleteColor := lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.DialogDanger)
 	keyStyle := lipgloss.NewStyle().Foreground(deleteColor).PaddingLeft(1)
-	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: m.appConfig.ConfigManager.GetConfig().Colors.TextLight,
-		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.TextDark,
-	})
+	valueStyle := lipgloss.NewStyle()
 
 	const keyWidth = 21
 
@@ -331,10 +325,7 @@ func (m model) buildContent() string {
 		Light: m.appConfig.ConfigManager.GetConfig().Colors.DialogLabelLight,
 		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.DialogLabelDark,
 	}).PaddingLeft(1)
-	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: m.appConfig.ConfigManager.GetConfig().Colors.TextLight,
-		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.TextDark,
-	})
+	valueStyle := lipgloss.NewStyle()
 
 	var sb strings.Builder
 	const keyWidth = 21

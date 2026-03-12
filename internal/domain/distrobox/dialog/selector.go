@@ -106,11 +106,7 @@ func (m selectorModel) View() string {
 		Foreground(lipgloss.Color(m.colors.Accent))
 	activeStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(m.colors.DialogAction))
-	itemStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{
-			Light: m.colors.TextLight,
-			Dark:  m.colors.TextDark,
-		})
+	itemStyle := lipgloss.NewStyle()
 	hintStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(m.colors.DialogHint)).Faint(true)
 

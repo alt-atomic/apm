@@ -412,10 +412,7 @@ func (m selectionModel) buildActionButtons() string {
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.Accent))
 	installStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(m.appConfig.ConfigManager.GetConfig().Colors.DialogAction))
-	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{
-		Light: m.appConfig.ConfigManager.GetConfig().Colors.TextLight,
-		Dark:  m.appConfig.ConfigManager.GetConfig().Colors.TextDark,
-	})
+	valueStyle := lipgloss.NewStyle()
 
 	s.WriteString(titleStyle.Render(app.T_("Select an action:")) + "\n")
 

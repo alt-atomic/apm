@@ -60,9 +60,7 @@ type BuildInfo struct {
 
 // Colors конфигурация цветовой схемы
 type Colors struct {
-	Accent    string `yaml:"accent"`
-	TextLight string `yaml:"textLight"`
-	TextDark  string `yaml:"textDark"`
+	Accent string `yaml:"accent"`
 
 	TreeBranch  string `yaml:"treeBranch"`
 	ResultError string `yaml:"resultError"`
@@ -387,7 +385,7 @@ func (cm *configManagerImpl) EnableVerbose() {
 func GetDefaultColors() Colors {
 	return Colors{
 		Accent:      "#a2734c",
-		TextLight:   "#171717",
+		TreeBranch:  "#c4c8c6",
 		ResultError: "9",
 
 		DialogAction:     "#26a269",
