@@ -69,12 +69,17 @@ void fill_package_from_record(const std::string &record, AptPackageInfo *info) {
 
 std::string extract_record_field(const std::string &record, const char *tag) {
     const std::string prefix = std::string(tag) + ": ";
-    const size_t pos = record.find(prefix);
-    if (pos == std::string::npos) return {};
-    const size_t start = pos + prefix.size();
-    size_t end = record.find('\n', start);
-    if (end == std::string::npos) end = record.length();
-    return record.substr(start, end - start);
+    size_t pos = 0;
+    while ((pos = record.find(prefix, pos)) != std::string::npos) {
+        if (pos == 0 || record[pos - 1] == '\n') {
+            const size_t start = pos + prefix.size();
+            size_t end = record.find('\n', start);
+            if (end == std::string::npos) end = record.length();
+            return record.substr(start, end - start);
+        }
+        pos += prefix.size();
+    }
+    return {};
 }
 
 void fill_package_version(pkgCache::PkgIterator &pkg,
@@ -134,8 +139,12 @@ void fill_package_version(pkgCache::PkgIterator &pkg,
         if (const std::string a = extract_record_field(record, "Architecture"); !a.empty()) info->architecture = safe_strdup(a);
         if (const std::string d = extract_record_field(record, "Depends"); !d.empty()) info->depends = safe_strdup(d);
 
-        info->installed_size = 0;
-        info->download_size = 0;
+        if (const std::string is = extract_record_field(record, "Installed Size"); !is.empty()) {
+            info->installed_size = strtoull(is.c_str(), nullptr, 10);
+        }
+        if (const std::string ds = extract_record_field(record, "Size"); !ds.empty()) {
+            info->download_size = strtoull(ds.c_str(), nullptr, 10);
+        }
     }
 
     if (!info->priority) {
@@ -185,6 +194,28 @@ void fill_package_aliases(pkgCache &cache,
     }
 }
 
+bool resolve_virtual_package(pkgCache::PkgIterator &pkg,
+                             pkgCache::VerIterator &ver,
+                             pkgCache::VerFileIterator &vf,
+                             pkgDepCache::Policy &policy) {
+    if (!ver.end()) return false;
+    if (pkg.end()) return false;
+
+    for (pkgCache::PrvIterator prv = pkg.ProvidesList(); !prv.end(); ++prv) {
+        pkgCache::PkgIterator owner = prv.OwnerPkg();
+        if (owner.end()) continue;
+        pkgCache::VerIterator owner_ver = policy.GetCandidateVer(owner);
+        if (owner_ver.end()) continue;
+
+        pkg = owner;
+        ver = owner_ver;
+        vf = ver.FileList();
+        return true;
+    }
+
+    return false;
+}
+
 void fill_package_info(pkgCache &cache,
                        pkgCache::PkgIterator &pkg,
                        pkgCache::VerIterator &ver,
@@ -195,6 +226,9 @@ void fill_package_info(pkgCache &cache,
                        AptPackageInfo *info,
                        AptFileListCache &fl_cache) {
     info->name = safe_strdup(effective_name.c_str());
+
+    // Resolve virtual packages to their real provider before filling any fields
+    resolve_virtual_package(pkg, ver, vf, policy);
 
     if (!pkg.end()) {
         fill_package_flags(pkg, info);

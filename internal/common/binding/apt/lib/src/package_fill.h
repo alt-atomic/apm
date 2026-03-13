@@ -36,6 +36,13 @@ void fill_package_aliases(pkgCache &cache,
                           const std::string &effective_name,
                           AptPackageInfo *info);
 
+// Resolves a virtual package to its real provider.
+// If pkg has no candidate version, searches ProvidesList for the real owner package.
+bool resolve_virtual_package(pkgCache::PkgIterator &pkg,
+                             pkgCache::VerIterator &ver,
+                             pkgCache::VerFileIterator &vf,
+                             pkgDepCache::Policy &policy);
+
 // Fills all package info fields using shared helpers.
 void fill_package_info(pkgCache &cache,
                        pkgCache::PkgIterator &pkg,
