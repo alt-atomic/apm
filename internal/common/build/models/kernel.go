@@ -25,6 +25,7 @@ var (
 		"none",
 		"dracut",
 		"make-initrd",
+		"",
 	}
 	defaultDracutPath      = "/usr/bin/dracut"
 	defaultMakeInitrdPath  = "/usr/sbin/make-initrd"
