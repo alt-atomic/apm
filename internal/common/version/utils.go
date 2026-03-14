@@ -30,7 +30,7 @@ type Version struct {
 	Value   string
 }
 
-func ParseVersion(version string) Version {
+func ParseVersion(version string) (*Version, error) {
 	var ver Version
 	var err error
 
@@ -38,29 +38,29 @@ func ParseVersion(version string) Version {
 	if len(parts) == 2 {
 		ver.Commits, err = strconv.Atoi(parts[1])
 		if err != nil {
-			panic("Wrong version format")
+			return nil, fmt.Errorf("wrong version format: invalid commits %q", parts[1])
 		}
 	}
 	version = strings.TrimPrefix(parts[0], "v")
 
 	parts = strings.Split(version, ".")
 	if len(parts) != 3 {
-		panic("Wrong version format")
+		return nil, fmt.Errorf("wrong version format: expected 3 parts, got %d", len(parts))
 	}
 
 	ver.Major, err = strconv.Atoi(parts[0])
 	if err != nil {
-		panic("Wrong version format")
+		return nil, fmt.Errorf("wrong version format: invalid major %q", parts[0])
 	}
 
 	ver.Minor, err = strconv.Atoi(parts[1])
 	if err != nil {
-		panic("Wrong version format")
+		return nil, fmt.Errorf("wrong version format: invalid minor %q", parts[1])
 	}
 
 	ver.Patch, err = strconv.Atoi(parts[2])
 	if err != nil {
-		panic("Wrong version format")
+		return nil, fmt.Errorf("wrong version format: invalid patch %q", parts[2])
 	}
 
 	postfix := ""
@@ -69,5 +69,5 @@ func ParseVersion(version string) Version {
 	}
 	ver.Value = fmt.Sprintf("%d.%d.%d%s", ver.Major, ver.Minor, ver.Patch, postfix)
 
-	return ver
+	return &ver, nil
 }

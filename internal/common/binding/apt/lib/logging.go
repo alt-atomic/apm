@@ -17,8 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
@@ -26,7 +25,6 @@ import "C"
 import (
 	"fmt"
 	cgoruntime "runtime/cgo"
-	"unsafe"
 )
 
 type LogHandler func(message string)
@@ -37,10 +35,10 @@ var (
 )
 
 //export goAptLogCallback
-func goAptLogCallback(cmsg *C.char, user unsafe.Pointer) {
+func goAptLogCallback(cmsg *C.char, user C.uintptr_t) {
 	defer func() { _ = recover() }()
-	if user != nil {
-		h := cgoruntime.Handle(uintptr(user))
+	if user != 0 {
+		h := cgoruntime.Handle(user)
 		if cb, ok := h.Value().(LogHandler); ok && cb != nil {
 			cb(C.GoString(cmsg))
 			return
@@ -66,14 +64,12 @@ func SetLogHandler(handler LogHandler) {
 	}
 	if handler == nil {
 		C.apt_capture_stdio(C.int(0))
-		C.apt_set_log_callback(nil, nil)
+		C.apt_set_log_callback(nil, 0)
 		return
 	}
 	logHandle = cgoruntime.NewHandle(handler)
 	logHandleSet = true
-	// Note: go vet warns about unsafe.Pointer(uintptr(handle)), but this is the correct
-	// and safe usage pattern for cgo.Handle as documented in runtime/cgo
-	C.apt_enable_go_log_callback(unsafe.Pointer(uintptr(logHandle)))
+	C.apt_enable_go_log_callback(C.uintptr_t(logHandle))
 }
 
 // CaptureStdIO ручное включение/отключение stdout/stderr

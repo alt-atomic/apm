@@ -22,8 +22,6 @@ package models
 
 import "strings"
 
-var Divider = "::::DIVIDER::::"
-
 func GetEnvFromOutput(bytes string) map[string]string {
 	m := make(map[string]string)
 	for _, line := range strings.Split(bytes, "\n") {

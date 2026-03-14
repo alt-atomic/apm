@@ -18,6 +18,7 @@ package helper
 
 import (
 	"apm/internal/common/app"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -46,11 +47,13 @@ func CleanPackageName(pkg string) string {
 	return pkg
 }
 
+var epochRegex = regexp.MustCompile(`^\d+$`)
+
 // GetVersionFromAptCache преобразует полную версию пакетов из apt ALT в коротких вид
 func GetVersionFromAptCache(s string) (string, error) {
 	parts := strings.Split(s, ":")
 	var candidate string
-	if len(parts) > 1 && regexp.MustCompile(`^\d+$`).MatchString(parts[0]) {
+	if len(parts) > 1 && epochRegex.MatchString(parts[0]) {
 		candidate = parts[1]
 	} else {
 		candidate = parts[0]
@@ -64,7 +67,7 @@ func GetVersionFromAptCache(s string) (string, error) {
 	}
 
 	if candidate == "" {
-		return "", fmt.Errorf(app.T_("version not found"))
+		return "", errors.New(app.T_("version not found"))
 	}
 	return candidate, nil
 }
@@ -94,6 +97,25 @@ func ParseBool(val interface{}) (bool, bool) {
 		}
 	}
 	return false, false
+}
+
+// FormatSpeed форматирует скорость в байтах/сек в человекочитаемый вид.
+func FormatSpeed(bytesPerSec uint64) string {
+	if bytesPerSec == 0 {
+		return ""
+	}
+	const (
+		kb = 1024
+		mb = 1024 * 1024
+	)
+	switch {
+	case bytesPerSec >= mb:
+		return fmt.Sprintf("%.1f MB/s", float64(bytesPerSec)/float64(mb))
+	case bytesPerSec >= kb:
+		return fmt.Sprintf("%.0f KB/s", float64(bytesPerSec)/float64(kb))
+	default:
+		return fmt.Sprintf("%d B/s", bytesPerSec)
+	}
 }
 
 // CompareVersions сравнивает две версии пакетов

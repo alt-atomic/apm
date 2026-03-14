@@ -17,25 +17,21 @@
 package lib
 
 /*
-// cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
 
 import (
-	"bufio"
-	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"unsafe"
 )
 
-// System represents APT system configuration
+// System представляет конфигурацию APT системы
 type System struct{ Ptr *C.AptSystem }
 
-// NewSystem initializes APT system
+// NewSystem инициализирует APT систему
 func NewSystem() (*System, error) {
 	AptMutex.Lock()
 	defer AptMutex.Unlock()
@@ -67,7 +63,7 @@ func NewSystem() (*System, error) {
 	return s, nil
 }
 
-// Close frees the system resources
+// Close освобождает ресурсы системы
 func (s *System) Close() {
 	if s.Ptr != nil {
 		BlockSignals()
@@ -78,7 +74,63 @@ func (s *System) Close() {
 	}
 }
 
-// SetNoLocking enables or disables APT file locking.
+// SetConfig устанавливает значение конфигурации APT (например "Dir::Cache::Archives", "/tmp/")
+func SetConfig(key, value string) {
+	cKey := C.CString(key)
+	cVal := C.CString(value)
+	defer C.free(unsafe.Pointer(cKey))
+	defer C.free(unsafe.Pointer(cVal))
+	C.apt_set_config(cKey, cVal)
+}
+
+// DumpConfig возвращает всю конфигурацию APT в виде строки.
+func DumpConfig() string {
+	cVal := C.apt_config_dump()
+	if cVal == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(cVal))
+	return C.GoString(cVal)
+}
+
+// ConfigSnapshot создаёт копию всего дерева конфигурации APT.
+func ConfigSnapshot() unsafe.Pointer {
+	return C.apt_config_snapshot()
+}
+
+// ConfigRestore восстанавливает конфигурацию APT из снимка (освобождает снимок).
+func ConfigRestore(snapshot unsafe.Pointer) {
+	if snapshot != nil {
+		C.apt_config_restore(snapshot)
+	}
+}
+
+// WithConfigOverrides сохраняет снимок конфигурации, применяет overrides, выполняет fn, затем восстанавливает из снимка.
+func WithConfigOverrides(overrides map[string]string, fn func() error) error {
+	if len(overrides) == 0 {
+		return fn()
+	}
+
+	snapshot := ConfigSnapshot()
+	if snapshot == nil {
+		return fn()
+	}
+
+	defer func() {
+		//fmt.Fprintln(os.Stderr, "[APT config] before restore:\n"+DumpConfig())
+		ConfigRestore(snapshot)
+		//fmt.Fprintln(os.Stderr, "[APT config] after restore:\n"+DumpConfig())
+	}()
+
+	for key, value := range overrides {
+		//fmt.Fprintf(os.Stderr, "[APT config] override %s = %q\n", key, value)
+		SetConfig(key, value)
+	}
+
+	return fn()
+}
+
+// SetNoLocking включает или отключает блокировку файлов APT.
 func SetNoLocking(noLock bool) {
 	val := "false"
 	if noLock {
@@ -89,26 +141,4 @@ func SetNoLocking(noLock bool) {
 	defer C.free(unsafe.Pointer(cKey))
 	defer C.free(unsafe.Pointer(cVal))
 	C.apt_set_config(cKey, cVal)
-}
-
-// isAtomicSystem checks if root filesystem is composefs/overlay
-func isAtomicSystem() bool {
-	file, err := os.Open("/proc/mounts")
-	if err != nil {
-		return false
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		if len(fields) < 3 {
-			continue
-		}
-		device, mountpoint, fstype := fields[0], fields[1], fields[2]
-		if mountpoint == "/" && (fstype == "overlay" || device == "composefs") {
-			return true
-		}
-	}
-	return false
 }

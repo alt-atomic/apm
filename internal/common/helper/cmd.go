@@ -18,10 +18,12 @@ package helper
 
 import (
 	"apm/internal/common/app"
-	"bytes"
-	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"os"
-	"os/exec"
+	"strings"
+	"time"
 )
 
 // contextKey is a custom type for context keys to avoid collisions
@@ -29,15 +31,33 @@ type contextKey string
 
 const TransactionKey contextKey = "transaction"
 
-// RunCommand выполняет команду и возвращает stdout, stderr и ошибку.
-func RunCommand(ctx context.Context, command string) (string, string, error) {
-	app.Log.Debug("run command: ", command)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
+// GenerateTransactionID генерирует уникальный ID транзакции
+func GenerateTransactionID() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return fmt.Sprintf("%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
+}
+
+// FilterLines фильтрует строки вывода, оставляя только содержащие substr.
+func FilterLines(output, substr string) string {
+	var result []string
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, substr) {
+			result = append(result, line)
+		}
+	}
+	return strings.Join(result, "\n")
+}
+
+// FilterLinesPrefix фильтрует строки, оставляя начинающиеся с prefix.
+func FilterLinesPrefix(output, prefix string) string {
+	var result []string
+	for _, line := range strings.Split(output, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			result = append(result, line)
+		}
+	}
+	return strings.Join(result, "\n")
 }
 
 // IsRunningInContainer проверка, запущен ли apm внутри контейнера
@@ -56,9 +76,40 @@ func IsRunningInContainer() bool {
 	return false
 }
 
+// AppDescription возвращает описание приложения
+func AppDescription() string {
+	return app.T_("Universal package manager for ALT Linux") + "\n" +
+		app.T_("Manages system packages via APT, distrobox containers, atomic images and kernels") + "\n" +
+		app.T_("Supports repository management") + "\n" +
+		app.T_("Works as CLI tool, D-Bus service (system/session) or HTTP API server") + "\n" +
+		app.T_("Output formats: text (default, types: tree/plain via -ft) and json (-f json)")
+}
+
 func Abs(x int) int {
 	if x < 0 {
 		return -x
 	}
 	return x
+}
+
+// FilterDescription генерирует общее описание фильтра для команд.
+func FilterDescription(examples string, notes ...string) string {
+	result := app.T_("Filtering for the list method:") + "\n\n" +
+		app.T_("Format: key[op]=value or key=value (each field has a default operator)") + "\n\n" +
+		app.T_("Available operators:") + "\n" +
+		"  eq       - " + app.T_("exact match (=)") + "\n" +
+		"  ne       - " + app.T_("not equal (<>)") + "\n" +
+		"  like     - " + app.T_("pattern match (LIKE), use % as wildcard") + "\n" +
+		"  gt       - " + app.T_("greater than (>)") + "\n" +
+		"  gte      - " + app.T_("greater than or equal (>=)") + "\n" +
+		"  lt       - " + app.T_("less than (<)") + "\n" +
+		"  lte      - " + app.T_("less than or equal (<=)") + "\n" +
+		"  contains - " + app.T_("contains value (for JSON/array fields)") + "\n\n" +
+		app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n\n" +
+		app.T_("Examples:") + "\n" +
+		"  " + examples
+	for _, note := range notes {
+		result += "\n\n" + note
+	}
+	return result
 }

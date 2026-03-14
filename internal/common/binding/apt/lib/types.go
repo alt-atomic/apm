@@ -17,8 +17,7 @@
 package lib
 
 /*
-// cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
@@ -31,7 +30,19 @@ import (
 
 type PackageState int
 
-// APT error codes (must match apt_wrapper.h)
+// Package states (must match AptPackageState in apt_common.h)
+const (
+	//	PackageStateNotInstalled    PackageState = 0
+	PackageStateInstalled PackageState = 1
+	//	PackageStateConfigFiles     PackageState = 2
+	//	PackageStateUnpacked        PackageState = 3
+	//	PackageStateHalfConfigured  PackageState = 4
+	//	PackageStateHalfInstalled   PackageState = 5
+	//	PackageStateTriggersAwaited PackageState = 6
+	//	PackageStateTriggersPending PackageState = 7
+)
+
+// APT error codes (must match apt_error.h)
 const (
 	AptErrorPackageNotFound   = 21
 	AptErrorInvalidParameters = 91
@@ -56,9 +67,6 @@ func ErrorFromResult(res C.AptResult) *AptError {
 	if res.message != nil {
 		msg = C.GoString(res.message)
 		C.free(unsafe.Pointer(res.message))
-	}
-	if msg == "" {
-		msg = C.GoString(C.apt_error_string(res.code))
 	}
 	return &AptError{Code: code, Message: msg}
 }
@@ -91,6 +99,13 @@ type PackageInfo struct {
 	DownloadSize     uint64
 	PackageID        uint32
 	Aliases          []string
+	Files            []string
+}
+
+// EssentialPackage represents an essential/important package that will be removed
+type EssentialPackage struct {
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
 }
 
 // PackageChanges represents the changes that would occur during package ops
@@ -99,12 +114,16 @@ type PackageChanges struct {
 	UpgradedPackages     []string `json:"upgradedPackages"`
 	NewInstalledPackages []string `json:"newInstalledPackages"`
 	RemovedPackages      []string `json:"removedPackages"`
+	KeptBackPackages     []string `json:"keptBackPackages"`
 
 	UpgradedCount     int `json:"upgradedCount"`
 	NewInstalledCount int `json:"newInstalledCount"`
 	RemovedCount      int `json:"removedCount"`
-	NotUpgradedCount  int `json:"-"`
+	KeptBackCount     int `json:"keptBackCount"`
+	NotUpgradedCount  int `json:"notUpgradedCount"`
 
 	DownloadSize uint64 `json:"downloadSize"`
 	InstallSize  int64  `json:"installSize"`
+
+	EssentialPackages []EssentialPackage `json:"essentialPackages"`
 }

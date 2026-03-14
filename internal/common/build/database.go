@@ -67,9 +67,12 @@ func (h *HostDBService) db() (*gorm.DB, error) {
 			},
 		)
 
-		var err error
+		conn, err := h.dbManager.GetSystemDB()
+		if err != nil {
+			return nil, fmt.Errorf(app.T_("failed to get system DB: %w"), err)
+		}
 		h.realDb, err = gorm.Open(sqlite.Dialector{
-			Conn:       h.dbManager.GetSystemDB(),
+			Conn:       conn,
 			DriverName: "sqlite3",
 		}, &gorm.Config{
 			Logger: gormLogger,
@@ -88,19 +91,19 @@ func (h *HostDBService) db() (*gorm.DB, error) {
 	return h.realDb, nil
 }
 
-// NewHostDBService — конструктор сервиса
+// NewHostDBService создаёт новый сервис для работы с базой данных хостов.
 func NewHostDBService(dbManager app.DatabaseManager) *HostDBService {
 	return &HostDBService{
 		dbManager: dbManager,
 	}
 }
 
-// TableName - задаём нужное имя таблицы
+// TableName задаёт имя таблицы.
 func (DBHistory) TableName() string {
 	return "host_image_history"
 }
 
-// fromDBModel — превращает DBHistory (структура БД) в бизнес-структуру ImageHistory
+// fromDBModel преобразует модель базы данных в бизнес-структуру.
 func (dbh DBHistory) fromDBModel() (ImageHistory, error) {
 	var err error
 	var cfg Config
@@ -115,7 +118,7 @@ func (dbh DBHistory) fromDBModel() (ImageHistory, error) {
 	}, nil
 }
 
-// toDBModel — превращает бизнес-структуру ImageHistory в DBHistory (для сохранения в БД)
+// toDBModel преобразует бизнес-структуру в модель базы данных.
 func (ih ImageHistory) toDBModel() (DBHistory, error) {
 	parsedDate, err := time.Parse(time.RFC3339, ih.ImageDate)
 	if err != nil {
@@ -136,8 +139,8 @@ func (ih ImageHistory) toDBModel() (DBHistory, error) {
 
 // SaveImageToDB сохраняет историю образов в БД (через GORM).
 func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SaveImageToDB"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SaveImageToDB"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSaveImageToDB))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSaveImageToDB))
 
 	// Преобразуем в модель БД
 	dbHist, err := imageHistory.toDBModel()
@@ -197,7 +200,7 @@ func (h *HostDBService) GetImageHistoriesFiltered(ctx context.Context, imageName
 	return histories, nil
 }
 
-// CountImageHistoriesFiltered — возвращает количество записей с фильтром по имени образа.
+// CountImageHistoriesFiltered возвращает количество записей с учётом фильтров.
 func (h *HostDBService) CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (int, error) {
 	db, err := h.db()
 	if err != nil {

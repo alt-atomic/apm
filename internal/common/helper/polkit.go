@@ -64,10 +64,16 @@ func getStartTime(pid uint32) (uint64, error) {
 	return startTime, err
 }
 
-// PolkitCheck — универсальная проверка доступа.
+// PolkitCheck выполняет универсальную проверку доступа через Polkit.
 func PolkitCheck(conn *dbus.Conn, sender dbus.Sender, actionID string) error {
-	pid, _ := callerPID(conn, sender)
-	stime, _ := getStartTime(pid)
+	pid, err := callerPID(conn, sender)
+	if err != nil {
+		return fmt.Errorf(app.T_("Failed to get caller PID: %w"), err)
+	}
+	stime, err := getStartTime(pid)
+	if err != nil {
+		return fmt.Errorf(app.T_("Failed to get start time: %w"), err)
+	}
 	subject := struct {
 		Kind    string
 		Details map[string]dbus.Variant

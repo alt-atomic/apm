@@ -39,7 +39,6 @@ func SetupHelpTemplates() {
 
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:        "version",
-		Aliases:     []string{"v"},
 		Usage:       app.T_("print the version"),
 		HideDefault: true,
 		Local:       true,
@@ -112,11 +111,13 @@ func SetupHelpTemplates() {
 %s
    {{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
 
-%s{{template "visibleCommandTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+%s{{template "visibleCommandCategoryTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
 
 %s{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
 
-%s{{template "visibleFlagTemplate" .}}{{end}}
+%s{{template "visibleFlagTemplate" .}}{{end}}{{if .VisiblePersistentFlags}}
+
+%s{{template "visiblePersistentFlagTemplate" .}}{{end}}
 `,
 		titleStyle.Render(app.T_("Module:")),
 		titleStyle.Render(app.T_("Usage:")),
@@ -125,6 +126,7 @@ func SetupHelpTemplates() {
 		titleStyle.Render(app.T_("Commands:")),
 		titleStyle.Render(app.T_("Options:")),
 		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Global options:")),
 	)
 
 	cli.FlagStringer = func(fl cli.Flag) string {
@@ -200,4 +202,57 @@ func unquoteUsage(usage string) (string, string) {
 		}
 	}
 	return "", usage
+}
+
+// TranslateUsageError переводит ошибки парсинга CLI (required flags, invalid value и т.д.)
+func TranslateUsageError(err error) error {
+	msg := err.Error()
+
+	if after, ok := strings.CutSuffix(msg, " not set"); ok {
+		if flags, ok := strings.CutPrefix(after, "Required flags "); ok {
+			return fmt.Errorf(app.T_("Required flags %s not set"), flags)
+		}
+		if flag, ok := strings.CutPrefix(after, "Required flag "); ok {
+			return fmt.Errorf(app.T_("Required flag %s not set"), flag)
+		}
+	}
+
+	if flag, ok := strings.CutPrefix(msg, "flag needs an argument: "); ok {
+		return fmt.Errorf(app.T_("flag needs an argument: %s"), flag)
+	}
+
+	if flag, ok := strings.CutPrefix(msg, "flag provided but not defined: "); ok {
+		return fmt.Errorf(app.T_("flag provided but not defined: %s"), flag)
+	}
+
+	if after, ok := strings.CutPrefix(msg, "invalid value "); ok {
+		if idx := strings.Index(after, " for flag "); idx != -1 {
+			value := after[:idx]
+			rest := after[idx+len(" for flag "):]
+			if errIdx := strings.Index(rest, ": "); errIdx != -1 {
+				flagName := rest[:errIdx]
+				reason := rest[errIdx+2:]
+				return fmt.Errorf(app.T_("invalid value %s for flag %s: %s"), value, flagName, reason)
+			}
+			return fmt.Errorf(app.T_("invalid value %s for flag %s"), value, rest)
+		}
+	}
+
+	if flag, ok := strings.CutPrefix(msg, "no such flag "); ok {
+		return fmt.Errorf(app.T_("no such flag %s"), flag)
+	}
+
+	if after, ok := strings.CutPrefix(msg, "could not parse "); ok {
+		if idx := strings.Index(after, " for flag "); idx != -1 {
+			valuePart := after[:idx]
+			rest := after[idx+len(" for flag "):]
+			if errIdx := strings.Index(rest, ": "); errIdx != -1 {
+				flagName := rest[:errIdx]
+				reason := rest[errIdx+2:]
+				return fmt.Errorf(app.T_("could not parse %s for flag %s: %s"), valuePart, flagName, reason)
+			}
+		}
+	}
+
+	return err
 }

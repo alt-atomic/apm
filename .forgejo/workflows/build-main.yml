@@ -8,25 +8,9 @@ on:
       - 'main'
 
 jobs:
-  lint-go:
-    name: Check go files
-    runs-on: alt-sisyphus
-    container:
-      image: altlinux.space/alt-gnome/coding-style-image:latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # TODO: Add lint check
-      - name: Lint go files
-        run: echo 'Trust me bro'
-
   build:
-    name: Test build
+    name: Build and test
     runs-on: alt-sisyphus
-    needs:
-      - lint-go
 
     steps:
       - name: Install deps
@@ -38,9 +22,15 @@ jobs:
             gcc-c++ \
             libapt-devel \
             'pkgconfig(systemd)'
- 
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Unit tests
+        run: go test ./internal/...
 
       - name: Setup
         run: meson setup _build
@@ -51,8 +41,9 @@ jobs:
   rpm-build:
     name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
     runs-on: ${{ matrix.runner }}
+
     container:
-      image: altlinux.space/actions/runner/hasherc:sisyphus
+      image: altlinux.space/alt-gnome/hasherc:latest
 
     strategy:
       matrix:
@@ -61,22 +52,21 @@ jobs:
           - p11
         arch:
           - amd64
-          # - arm64
+          - arm64
         include:
-          # - arch: arm64
-          #   runner: self-hosted-arm64-alt-sisyphus
           - arch: amd64
-            runner: alt-sisyphus
+            runner: als-huge
+          - arch: arm64
+            runner: self-hosted-arm64-huge
 
     needs:
-      - lint-vala
-      - lint-blueprint
+      - build
 
     steps:
       - name: Install utils
         run: |
           apt-get update
-          apt-get install -y meson jq /usr/bin/add_changelog golang
+          apt-get install -y meson jq /usr/bin/add_changelog golang fuse-overlayfs
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -86,12 +76,13 @@ jobs:
           ./build-aux/altlinux/prepare
           git add .
 
-      - uses: alt-gnome/build-rpm-action@main
+      - uses: actions/build-rpm-action@main
         name: Build RPMs
         with:
           branch: ${{ matrix.branch }}
+          arch: ${{ matrix.arch }}
 
-      - uses: alt-gnome/upload-rpm-action@main
+      - uses: actions/upload-rpm-action@main
         name: Upload RPMs
         if: github.event_name != 'pull_request'
         with:

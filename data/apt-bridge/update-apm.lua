@@ -21,4 +21,4 @@ if not message or message == "" then
 end
 
 print(message)
-os.execute("apm s update --no-lock")
+os.execute("apm s update --no-lock --only-db")

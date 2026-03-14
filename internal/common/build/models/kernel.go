@@ -3,9 +3,11 @@ package models
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/filter"
+	"apm/internal/common/command"
 	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
-	"apm/internal/kernel/service"
+	"apm/internal/domain/kernel/service"
 	"context"
 	"errors"
 	"fmt"
@@ -23,6 +25,7 @@ var (
 		"none",
 		"dracut",
 		"make-initrd",
+		"",
 	}
 	defaultDracutPath      = "/usr/bin/dracut"
 	defaultMakeInitrdPath  = "/usr/sbin/make-initrd"
@@ -79,13 +82,12 @@ func (b *KernelBody) Validate() error {
 }
 
 func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
-	b.Validate()
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
 
 	var shouldInstallKernel = !b.KernelInfo.IsEmpty()
 	var shouldRebuildInitrd = !b.Initrd.IsEmpty() || shouldInstallKernel
-
-	app.Log.Warn(shouldInstallKernel)
-	app.Log.Warn(shouldRebuildInitrd)
 
 	if shouldInstallKernel {
 		mgr := svc.KernelManager()
@@ -200,8 +202,8 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 				}
 
 				if !slices.Contains(themes, b.Initrd.PlymouthTheme) {
-					filters := map[string]any{
-						"name": fmt.Sprintf("plymouth-theme-%s", b.Initrd.PlymouthTheme),
+					filters := []filter.Filter{
+						{Field: "name", Op: filter.OpLike, Value: fmt.Sprintf("plymouth-theme-%s", b.Initrd.PlymouthTheme)},
 					}
 					packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 					if err != nil {
@@ -256,7 +258,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 		switch b.Initrd.Method {
 		case "dracut":
-			err := rebuildDracut(ctx, defaultDracutPath)
+			err := rebuildDracut(ctx, defaultDracutPath, svc.Runner())
 			if err != nil {
 				return nil, err
 			}
@@ -271,7 +273,7 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 			dracutPath, dracutErr := exec.LookPath(defaultDracutPath)
 			makeInitrdPath, makeInitrdErr := exec.LookPath(defaultMakeInitrdPath)
 			if dracutPath != "" && dracutErr == nil {
-				if err := rebuildDracut(ctx, dracutPath); err != nil {
+				if err := rebuildDracut(ctx, dracutPath, svc.Runner()); err != nil {
 					return nil, err
 				}
 			} else if makeInitrdPath != "" && makeInitrdErr == nil {
@@ -291,7 +293,7 @@ func rebuildMakeInitrd(_ context.Context, _ string) error {
 	return nil
 }
 
-func rebuildDracut(ctx context.Context, dracutExecutable string) error {
+func rebuildDracut(ctx context.Context, dracutExecutable string, runner command.Runner) error {
 	app.Log.Info("Rebuild initramfs via dracut")
 
 	kernelVersion, err := LatestInstalledKernelVersion()
@@ -299,11 +301,12 @@ func rebuildDracut(ctx context.Context, dracutExecutable string) error {
 		return err
 	}
 
-	if err = osutils.ExecSh(ctx, fmt.Sprintf("depmod -a -v '%s'", kernelVersion), "", true); err != nil {
+	if _, _, err = runner.Run(ctx, []string{fmt.Sprintf("depmod -a -v '%s'", kernelVersion)}, command.WithShell()); err != nil {
 		return err
 	}
 
-	return osutils.ExecSh(ctx, fmt.Sprintf("%s --force '%s/%s/initramfs.img' %s", dracutExecutable, kernelDir, kernelVersion, kernelVersion), "", false)
+	_, _, err = runner.Run(ctx, []string{fmt.Sprintf("%s --force '%s/%s/initramfs.img' %s", dracutExecutable, kernelDir, kernelVersion, kernelVersion)}, command.WithShell())
+	return err
 }
 
 func LatestInstalledKernelVersion() (string, error) {
@@ -324,13 +327,13 @@ func LatestInstalledKernelVersion() (string, error) {
 }
 
 func currentKernelInfo(ctx context.Context, svc Service) (*service.Info, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("kernel.CurrentKernel"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("kernel.CurrentKernel"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
 
-	filters := map[string]any{
-		"typePackage": int(_package.PackageTypeSystem),
-		"name":        "kernel-image-",
-		"installed":   true,
+	filters := []filter.Filter{
+		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
+		{Field: "name", Op: filter.OpLike, Value: "kernel-image-"},
+		{Field: "installed", Op: filter.OpEq, Value: "true"},
 	}
 	packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
 	if err != nil {

@@ -18,33 +18,33 @@ package icon
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/distrobox/service"
+	"apm/internal/common/command"
+	"apm/internal/common/sandbox"
 	"bytes"
 	"compress/gzip"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"runtime"
 	"sync"
-
-	"github.com/akrylysov/pogreb"
 )
 
-// Service — сервис иконок
+// Service предоставляет сервис для работы с иконками.
 type Service struct {
-	serviceDistroAPI *service.DistroAPIService
-	dbConnKv         *pogreb.DB
-	commandPrefix    string
+	serviceDistroAPI *sandbox.DistroAPIService
+	dbService        *DBService
+	runner           command.Runner
 }
 
-// NewIconService — конструктор сервиса
-func NewIconService(db *pogreb.DB, commandPrefix string) *Service {
-	distroAPISvc := service.NewDistroAPIService(commandPrefix)
+// NewIconService создаёт новый сервис для работы с иконками.
+func NewIconService(dbManager app.DatabaseManager, runner command.Runner) *Service {
+	distroAPISvc := sandbox.NewDistroAPIService(runner)
+	iconDB := NewIconDBService(dbManager)
+
 	return &Service{
 		serviceDistroAPI: distroAPISvc,
-		dbConnKv:         db,
-		commandPrefix:    commandPrefix,
+		dbService:        iconDB,
+		runner:           runner,
 	}
 }
 
@@ -58,11 +58,16 @@ type PackageIcon struct {
 
 // GetIcon возвращает распакованную иконку для указанного пакета из базы данных.
 func (s *Service) GetIcon(pkgName, container string) ([]byte, error) {
-	data, err := s.getIconFromDB(pkgName, container)
+	compressedIcon, err := s.dbService.GetIcon(pkgName, container)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Icon for package %s not found: %v"), pkgName, err)
 	}
-	return data, nil
+
+	decompressed, err := decompressIcon(compressedIcon)
+	if err != nil {
+		return nil, fmt.Errorf(app.T_("Error unpacking icon %s: %v"), pkgName, err)
+	}
+	return decompressed, nil
 }
 
 // ReloadIcons загружает и сохраняет иконки из SWCatalog в базу данных.
@@ -71,7 +76,6 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 	if err != nil {
 		app.Log.Error(err.Error())
 		containerList = nil
-		//return err
 	}
 
 	// Вызываем сборщик мусора после загрузки
@@ -82,12 +86,8 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, pkgIcon := range systemPackages {
-		if exists, _ := s.packageIconExists(pkgIcon.Name, pkgIcon.Container); !exists {
-			if err := s.saveIconToDB(pkgIcon.Name, pkgIcon.Container, pkgIcon.Icon); err != nil {
-				app.Log.Error(fmt.Sprintf(app.T_("Error saving icon %s: %v"), pkgIcon.Name, err))
-			}
-		}
+	if err = s.saveNewIcons(systemPackages); err != nil {
+		app.Log.Error(fmt.Sprintf(app.T_("Error saving icon batch: %v"), err))
 	}
 
 	// Обработка иконок для каждого контейнера
@@ -98,18 +98,14 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 				app.Log.Error(err)
 				continue
 			}
-			for _, pkgIcon := range distroPackages {
-				if exists, _ := s.packageIconExists(pkgIcon.Name, pkgIcon.Container); !exists {
-					if err = s.saveIconToDB(pkgIcon.Name, pkgIcon.Container, pkgIcon.Icon); err != nil {
-						app.Log.Error(fmt.Sprintf(app.T_("Error saving icon %s: %v"), pkgIcon.Name, err))
-					}
-				}
+			if err = s.saveNewIcons(distroPackages); err != nil {
+				app.Log.Error(fmt.Sprintf(app.T_("Error saving icon batch: %v"), err))
 			}
 		}
 	}
 
 	// Вывод статистики из БД
-	count, totalSize, err := s.computeDBIconsStats()
+	count, totalSize, err := s.dbService.GetStats()
 	if err != nil {
 		app.Log.Error(app.T_("Error calculating icon statistics: "), err)
 	} else {
@@ -121,7 +117,7 @@ func (s *Service) ReloadIcons(ctx context.Context) error {
 // getPackages получает иконки из SWCatalog для указанного контейнера.
 func (s *Service) getPackages(ctx context.Context, container string) ([]PackageIcon, error) {
 	var packageIcons []PackageIcon
-	systemSwCatService := NewSwCatIconService("/usr/share/swcatalog/xml", container, s.commandPrefix)
+	systemSwCatService := NewSwCatIconService("/usr/share/swcatalog/xml", container, s.runner)
 
 	packageSwCatIcons, err := systemSwCatService.LoadSWCatalogs(ctx)
 	if err != nil {
@@ -141,6 +137,12 @@ func (s *Service) getPackages(ctx context.Context, container string) ([]PackageI
 		stockBase = "/usr/share/icons/hicolor/128x128/apps"
 	}
 
+	// Загружаем все существующие иконки для контейнера одним запросом
+	existingIcons, err := s.dbService.GetExistingPackages(container)
+	if err != nil {
+		return nil, fmt.Errorf(app.T_("Error checking the existence of the icon in the database: %v"), err)
+	}
+
 	var (
 		wg  sync.WaitGroup
 		sem = make(chan struct{}, 20)
@@ -149,12 +151,7 @@ func (s *Service) getPackages(ctx context.Context, container string) ([]PackageI
 
 	for _, pkgSwIcon := range packageSwCatIcons {
 		// Если иконка уже сохранена в БД, пропускаем её
-		exists, err := s.packageIconExists(pkgSwIcon.PkgName, container)
-		if err != nil {
-			app.Log.Error(app.T_("Error checking the existence of the icon in the database: "), err)
-			continue
-		}
-		if exists {
+		if existingIcons[pkgSwIcon.PkgName] {
 			continue
 		}
 
@@ -189,66 +186,20 @@ func (s *Service) getPackages(ctx context.Context, container string) ([]PackageI
 	return packageIcons, nil
 }
 
-// SaveIconToDB сохраняет иконку в базу данных Pogreb.
-// Ключ формируется по схеме: "icon:<container>:<pkgName>"
-func (s *Service) saveIconToDB(pkgName, container string, iconData []byte) error {
-	key := []byte(fmt.Sprintf("icon:%s:%s", container, pkgName))
-	// iconData уже сжат, поэтому записываем его напрямую.
-	if err := s.dbConnKv.Put(key, iconData); err != nil {
-		return fmt.Errorf(app.T_("Error writing icon %s to the database: %v"), pkgName, err)
+// saveNewIcons сохраняет иконки пакетов "батчем"
+func (s *Service) saveNewIcons(icons []PackageIcon) error {
+	if len(icons) == 0 {
+		return nil
 	}
-	return nil
-}
-
-// GetIconFromDB извлекает и возвращает распакованную иконку из базы данных.
-func (s *Service) getIconFromDB(pkgName, container string) ([]byte, error) {
-	// Формируем ключ с учетом переданного контейнера
-	key := []byte(fmt.Sprintf("icon:%s:%s", container, pkgName))
-	compressedIcon, err := s.dbConnKv.Get(key)
-	// Если не найдено и контейнер указан, пробуем без контейнера
-	if (err != nil || len(compressedIcon) == 0) && container != "" {
-		fallbackKey := []byte(fmt.Sprintf("icon::%s", pkgName))
-		compressedIcon, err = s.dbConnKv.Get(fallbackKey)
+	dbIcons := make([]DBIcon, 0, len(icons))
+	for _, ic := range icons {
+		dbIcons = append(dbIcons, DBIcon{
+			Package:   ic.Name,
+			Container: ic.Container,
+			Icon:      ic.Icon,
+		})
 	}
-	if err != nil || len(compressedIcon) == 0 {
-		return nil, fmt.Errorf(app.T_("Icon %s not found"), pkgName)
-	}
-	decompressed, err := decompressIcon(compressedIcon)
-	if err != nil {
-		return nil, fmt.Errorf(app.T_("Error unpacking icon %s: %v"), pkgName, err)
-	}
-	return decompressed, nil
-}
-
-// packageIconExists проверяет наличие иконки в базе по ключу "icon:<container>:<pkgName>".
-func (s *Service) packageIconExists(pkgName, container string) (bool, error) {
-	key := []byte(fmt.Sprintf("icon:%s:%s", container, pkgName))
-	data, err := s.dbConnKv.Get(key)
-	if err != nil {
-		return false, err
-	}
-	return data != nil && len(data) > 0, nil
-}
-
-// computeDBIconsStats вычисляет количество и общий размер всех иконок, сохранённых в БД.
-func (s *Service) computeDBIconsStats() (int, int, error) {
-	it := s.dbConnKv.Items()
-	count := 0
-	totalSize := 0
-	for {
-		key, value, err := it.Next()
-		if errors.Is(pogreb.ErrIterationDone, err) {
-			break
-		}
-		if err != nil {
-			return 0, 0, err
-		}
-		if bytes.HasPrefix(key, []byte("icon:")) {
-			count++
-			totalSize += len(value)
-		}
-	}
-	return count, totalSize, nil
+	return s.dbService.SaveIconsBatch(dbIcons)
 }
 
 // compressIcon сжимает данные с помощью gzip.

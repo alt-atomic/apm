@@ -1,6 +1,7 @@
-APM поддерживает три режима работы:
+APM поддерживает четыре режима работы:
 * DBUS-сервис
-* Консольное приложение
+* Консольное приложение с TUI
+* HTTP API
 * Поддержка атомарных образов (функционал и модель поведения определяется автоматически)
 
 Два формата ответов:
@@ -18,6 +19,8 @@ apm -help
 ## Установка
 Рекомендуется установить пакет из репозитория
 ```
+apt-repo add rpm https://altlinux.space/api/packages/alt-atomic/alt/group/apm-nightly/sisyphus.repo x86_64 classic
+apt-get update
 apt-get install apm
 ```
 
@@ -34,71 +37,85 @@ meson install -C build
 ./po/update_po ru
 ```
 
-## Настройки темы
-```
-/etc/apm/config.yml
-colors:
-    # Основные цвета для вывода
-    enumerator: "#c4c8c6"      # Цвет нумерации веток
-    accent: "#a2734c"          # Цвет акцентов и заголовков
-    itemLight: "#171717"       # Цвет текста для светлой темы
-    itemDark: "#c4c8c6"        # Цвет текста для тёмной темы
-    success: "2"               # Цвет успеха (зелёный)
-    error: "9"                 # Цвет ошибки (красный)
-
-    # Цвета из диалога
-    delete: "#a81c1f"          # Цвет для действий удаления
-    install: "#2bb389"         # Цвет для действий установки
-    shortcut: "#888888"        # Цвет для подсказок и состояния "Нет"
-    scrollBar: "#ff0000"       # Цвет индикатора прокрутки
-    dialogKeyLight: "#234f55"  # Цвет ключей диалога для светлой темы
-    dialogKeyDark: "#82a0a3"   # Цвет ключей диалога для тёмной темы
-
-    # Цвета прогресс-бара
-    progressStart: "#c4c8c6"   # Начальный цвет градиента прогресс-бара
-    progressEnd: "#26a269"     # Конечный цвет градиента прогресс-бара
-```
-
 ## Тесты
 ```
-sudo meson test -C build go-test
+./scripts/test-container.sh all
 ```
 
 Общая справка:
 ```
 apm -h
 
-NAME:
+Модуль:
    apm - Atomic Package Manager
 
-USAGE:
-   apm [global options] [command [command options]]
-
-COMMANDS:
-   dbus-session  Запуск сессии D-Bus service org.altlinux.APM
-   dbus-system   Запуск системной сессии D-Bus service org.altlinux.APM
+Команды:
+   dbus-session  Запустить сессионный сервис D-Bus org.altlinux.APM
+   dbus-system   Запустить системный сервис D-Bus org.altlinux.APM
+   http-server   Запустить системный HTTP API сервер
+   http-session  Запустить сессионный HTTP API сервер
    system, s     Управление системными пакетами
-   distrobox, d  Управление пакетами и контейнерами distrobox
+   repo, r       Управление репозиториями
+   distrobox, d  Управление пакетами и контейнерами в distrobox
    help, h       Показать список команд или справку по каждой команде
+   version, v    Показать версию
 
-GLOBAL OPTIONS:
-   --format value, -f value       Формат вывода: json, text (default: "text")
-   --transaction value, -t value  Внутреннее свойство, добавляет транзакцию к выводу
-   --help, -h                     show help
+Параметры:
+      --format, -f       Формат вывода: json, text
+      --transaction, -t  Внутреннее свойство, добавляющее транзакцию к выводу
+      --help, -h         Показать помощь
+      --version, -v      Показать версию
 ```
 
 ## Файл конфигурации
-Файл config.conf не существует по-умолчанию, но может быть создан по пути /etc/apm/config.yml. Он может содержать следующие параметры в формате yml:
+Файл конфигурации не существует по умолчанию, но может быть создан по пути `/etc/apm/config.yml`.
 
-* commandPrefix - префикс для запуска всех комманд
-* environment - профиль работы. `dev` или `prod`
-* pathLogFile - путь к файлу логов
-* pathDBSQLSystem - путь к базе данных системных пакетов
-* pathDBSQLUser - путь к базе данных пакетов из distrobox
-* pathDBKV - путь к базе данных значков приложений
-* pathImageFile - путь к конфигурационному файлу образа
+```yaml
+# Префикс для запуска всех команд
+commandPrefix: ""
+# Профиль работы: dev или prod
+environment: "prod"
+# Путь к базе данных системных пакетов
+pathDBSQLSystem: ""
+# Путь к базе данных пакетов из distrobox
+pathDBSQLUser: ""
+# Формат вывода: tree или plain
+formatType: "tree"
 
-## Пользовательская сессия _DBUS_
+# Цветовая схема
+colors:
+    # Цвет акцентов и заголовков
+    accent: "#a2734c"
+
+    # Цвет ветвей дерева
+    treeBranch: "#c4c8c6"
+    # Цвет ошибки
+    resultError: "9"
+
+    # Диалог: цвет положительного действия (установка, обновление)
+    dialogAction: "#26a269"
+    # Диалог: цвет опасного действия (удаление)
+    dialogDanger: "#a81c1f"
+    # Диалог: цвет подсказок
+    dialogHint: "#888888"
+    # Диалог: цвет индикатора прокрутки
+    dialogScroll: "#ff0000"
+    # Диалог: цвет меток для светлой темы
+    dialogLabelLight: "#234f55"
+    # Диалог: цвет меток для тёмной темы
+    dialogLabelDark: "#82a0a3"
+
+    # Прогресс-бар: цвет пустого сегмента
+    progressEmpty: "#c4c8c6"
+    # Прогресс-бар: цвет заполненного сегмента
+    progressFilled: "#26a269"
+```
+
+## D-Bus API
+
+APM экспортирует два D-Bus сервиса с именем `org.altlinux.APM`. Подробная документация: [DBUS_API](docs/DBUS_API.md)
+
+### Пользовательская сессия
 При запуске в пользовательской сессии сервис регистрируется в сессионной шине DBUS, что не требует дополнительных привилегий.
 В этом режиме APM работает с контейнерами distrobox, для просмотра всех методов установите, например, D-SPY и найдите там сервис APM
 
@@ -107,7 +124,7 @@ apm dbus-session - запуск
 apm distrobox dbus-doc - онлайн документация
 ```
 
-## Системная сессия DBUS
+### Системная сессия
 В этом режиме APM работает с системными пакетами, для просмотра всех методов установите, например, D-SPY и найдите там сервис APM
 ```
 
@@ -115,29 +132,34 @@ sudo apm dbus-system - запуск
 sudo apm system dbus-doc - онлайн документация
 ```
 
+## HTTP API
+
+APM предоставляет HTTP-серверы с REST API, WebSocket событиями и Swagger UI. Подробная документация: [HTTP_API](docs/HTTP_API.md)
+
 ## Пример работы с системными пакетами
 ```
 apm s
 
-NAME:
+Модуль:
    apm system - Управление системными пакетами
 
-USAGE:
-   apm system [command [command options]] 
+Применение:
+   apm system [command [command options]]
 
-COMMANDS:
-   install     Список пакетов на установку
+Команды:
+   reinstall   Переустановка пакетов
+   install     Список пакетов для установки. Формат package- и package+ поддерживается.
    remove, rm  Список пакетов на удаление
-   update      Обновление пакетной базы
-   upgrade     Общее обновление системы
+   update      Обновление базы данных пакетов
+   upgrade     Обновление образа системы
    info        Информация о пакете
-   search      Быстрый поиск пакетов по названию
-   list        Построение запроса для получения списка пакетов
+   search      Быстрый поиск пакета по имени
+   list        Создание запроса для получения списка пакетов
    image, i    Модуль для работы с образом
+   dbus-doc    Показать онлайн-документацию по dbus
 
-OPTIONS:
-   --help, -h  show help
-
+Параметры:
+      --help, -h  Показать помощь
 ```
 
 ### Установка
@@ -145,20 +167,27 @@ OPTIONS:
 
 Пример запроса:
 ```
-apm s install zip
-
-⚛
-├── zip успешно установлен.
+sudo apm s install zip                          
+[✓] Анализ пакетов
+[✓] Загрузка списка пакетов из репозитория ALT
+[✓] Прогресс: Загрузка всех пакетов завершён
+[✓] Прогресс: Установка zip завершён
+[✓] Работа с пакетами
+[✓] Синхронизация базы данных
+├── 1 пакет успешно установлен и 0 обновлено.
+│                                                                                                                                
 ╰── Информация
+    ├── Размер при загрузке: 0.23 МБ
+    ├── Важные пакеты: нет
     ├── Дополнительно установлено: нет
-    ├── Количество новых установок: 1
-    ├── Новые установленные пакеты:
+    ├── Размер при установке: 0.69 МБ
+    ├── Количество свежеустановленных: 1
+    ├── Свежеустановленные пакеты
     │   ╰── 1) zip
-    ├── Количество не обновленных: 64
-    ├── Количество удаленных: 0
+    ├── Количество удалённых: 0
     ├── Удалённые пакеты: нет
-    ├── Количество обновленных: 0
-    ╰── Обновленные пакеты: нет
+    ├── Количество обновлённых: 0
+    ╰── Обновлённые пакеты: нет
 ```
 
 Если формат ответ не указан как json и источником запроса не является DBUS - запускается диалог предварительного анализа пакетов для установки
@@ -172,6 +201,7 @@ apm s install zip -f json
 
 {
   "data": {
+    "message": "1 пакет успешно установлен и 0 обновлено.",
     "info": {
       "extraInstalled": null,
       "upgradedPackages": null,
@@ -182,10 +212,12 @@ apm s install zip -f json
       "upgradedCount": 0,
       "newInstalledCount": 1,
       "removedCount": 0,
-      "notUpgradedCount": 64
+      "downloadSize": 245806,
+      "installSize": 720012,
+      "essentialPackages": null
     }
   },
-  "error": false
+  "error": null
 }
 ```
 
@@ -194,21 +226,26 @@ apm s install zip -f json
 
 Пример запроса:
 ```
-apm s remove zip
-
-⚛
-├── zip успешно удалён.
+sudo apm s remove zip
+[✓] Анализ пакетов
+[✓] Прогресс: Загрузка всех пакетов завершён
+[✓] Работа с пакетами
+[✓] Синхронизация базы данных
+├── file-roller, zip успешно удалены.
+│                                                                                                                        
 ╰── Информация
+    ├── Размер при загрузке: 0.00 МБ
+    ├── Важные пакеты: нет
     ├── Дополнительно установлено: нет
-    ├── Количество новых установок: 0
-    ├── Новые установленные пакеты: нет
-    ├── Количество не обновленных: 64
-    ├── Количество удаленных: 1
-    ├── Удаленные пакеты
-    │   ╰── 1) zip
-    ├── Количество обновленных: 0
-    ╰── Обновленные пакеты: нет
-    
+    ├── Размер при установке: 0.00 МБ
+    ├── Количество свежеустановленных: 0
+    ├── Свежеустановленные пакеты: нет
+    ├── Количество удалённых: 2
+    ├── Удалённые пакеты
+    │   ├── 1) file-roller
+    │   ╰── 2) zip
+    ├── Количество обновлённых: 0
+    ╰── Обновлённые пакеты: нет
 ```
 
 Если формат ответ не указан как json и источником запроса не является DBUS - запускается диалог предварительного анализа пакетов для удаления
@@ -221,23 +258,12 @@ apm s remove zip
 apm s remove zip -f json
 
 {
-  "data": {
-    "info": {
-      "extraInstalled": null,
-      "upgradedPackages": null,
-      "newInstalledPackages": null,
-      "removedPackages": [
-        "zip"
-      ],
-      "upgradedCount": 0,
-      "newInstalledCount": 0,
-      "removedCount": 1,
-      "notUpgradedCount": 64
-    }
-  },
-  "error": false
+  "data": null,
+  "error": {
+    "errorCode": "PERMISSION",
+    "message": "Для выполнения этого действия необходимы повышенные права. Пожалуйста, используйте sudo или su"
+  }
 }
-
 ```
 
 ### Списки
@@ -245,78 +271,55 @@ apm s remove zip -f json
 
 ```
 apm s list -h
-     
-NAME:
-   apm system list - Построение запроса для получения списка пакетов
 
-USAGE:
+Модуль:
+   apm system list - Создание запроса для получения списка пакетов
+
+Применение:
    apm system list [command [command options]]
 
-OPTIONS:
-   --sort value                       Поле для сортировки, например: name, installed
-   --order value                      Порядок сортировки: ASC или DESC (default: "ASC")
-   --limit value                      Лимит выборки (default: 10)
-   --offset value                     Смещение выборки (default: 0)
-   --filter value [ --filter value ]  Фильтр в формате key=value. Флаг можно указывать несколько раз, например: --filter name=zip --filter installed=true
-   --force-update                     Принудительно обновить все пакеты перед запросом (default: false)
-   --full                             Полный вывод информации (default: false)
-   --help, -h                         show help
-
-GLOBAL OPTIONS:
-   --format value, -f value       Формат вывода: json, text (default: "text")
-   --transaction value, -t value  Внутреннее свойство, добавляет транзакцию к выводу
+Параметры:
+      --sort                 Сортировать пакеты по полю, примеры полей: имя, раздел
+      --order                Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)
+      --limit                Максимальное количество возвращаемых записей
+      --offset               Начальная позиция (смещение) для результата выборки
+      --filter [ --filter ]  Фильтр в формате ключ=занчение. Флаг может быть указан несколько раз, к примеру: --filter name=zip --filter installed=true
+      --force-update         Принудительное обновление всех пакетов до запроса
+      --full                 Полный вывод информации
+      --help, -h             Показать помощь
 ```
 
 Например, что бы достать самый "тяжелый" пакет и отобразить только одну запись:
 ```
 apm system list --sort="size" --order="DESC" -limit 1
 
-⚛
 ├── Найдена 1 запись
+│                   
 ├── Пакеты
 │   ╰── 1)
-│       ├── Зависимости
-│       │   ╰── 1) speed-dreams
-│       ├── Описание: Game data for Speed Dreams                     
-│       │   Speed Dreams ia a fork of the racing car simulator Torcs,
-│       │   with some new features.                                  
-│       ├── Имя файла: speed-dreams-data-2.3.0-alt1.x86_64.rpm
 │       ├── Установлено: нет
-│       ├── Займёт на диске: 2722.10 MB
-│       ├── Мэйнтейнер: Artyom Bystrov <arbars@altlinux.org>
+│       ├── Сопровождающий: Artyom Bystrov <arbars@altlinux.org>
 │       ├── Название: speed-dreams-data
-│       ├── Раздел: Games/Sports
-│       ├── Размер: 1942.57 MB
-│       ├── Версия: 2.3.0
-│       ╰── Установленная версия: нет
-╰── Всего записей: 53865
+│       ├── Краткое описание: Game data for Speed Dreams
+│       ╰── Версия: 2.3.0
+╰── Общее количество: 45538
 ```
 
 Или найти все пакеты установленные в системе и ограничить вывод одним пакетом:
 ```
 apm system list --filter installed=true -limit 1
 
-⚛
 ├── Найдена 1 запись
+│                   
 ├── Пакеты
 │   ╰── 1)
-│       ├── Зависимости
-│       │   ├── 9) perl
-│       │   ├── 10) perl-base
-│       │   ╰── 11) rtld
-│       ├── Описание: Parts of the groff formatting system that is required for viewing manpages
-│       │   A stripped-down groff package containing the components required                    
-│       │   to view man pages in ASCII, Latin-1 and UTF-8.                                      
-│       ├── Имя файла: groff-base-1.22.3-alt2.x86_64.rpm
 │       ├── Установлено: да
-│       ├── Займёт на диске: 3.19 MB
-│       ├── Мэйнтейнер: Alexey Gladkov <legion@altlinux.ru>
-│       ├── Название: groff-base
-│       ├── Раздел: Text tools
-│       ├── Размер: 0.83 MB
-│       ├── Версия: 1.22.3
-│       ╰── Установленная версия: 1.22.3
-╰── Всего записей: 1594
+│       ├── Сопровождающий: Paul Wolneykien <manowar@altlinux.org>
+│       ├── Название: libjemalloc2
+│       ├── Краткое описание: A general-purpose scalable concurrent malloc(3) implementation
+│       ╰── Версия: 5.3.0
+╰── Общее количество: 1740
+
 ```
 
 Для построения запросов лучше посмотреть ответ в формате json что бы увидеть названия полей не отформатированные выводом.
@@ -324,24 +327,26 @@ apm system list --filter installed=true -limit 1
 
 ## Пример работы с distrobox
 ```
-apm d                                    
-NAME:
-   apm distrobox - Управление пакетами и контейнерами distrobox
+apm d
 
-USAGE:
-   apm distrobox [command [command options]] 
+Модуль:
+   apm distrobox - Управление пакетами и контейнерами в distrobox
 
-COMMANDS:
-   update        Обновить и синхронизировать списки установленных пакетов с хостом
+Применение:
+   apm distrobox [command [command options]]
+
+Команды:
+   update        Обновить и синхронизировать список установленных пакетов с хостом
    info          Информация о пакете
-   search        Быстрый поиск пакетов по названию
-   list          Построение запроса для получения списка пакетов
-   install       Установить пакет
-   remove, rm    Удалить пакет
+   search        Быстрый поиск пакета по имени
+   list          Построение запроса для извлечения списка пакетов
+   install       Установка пакета
+   remove        Удаление пакета
+   dbus-doc      Показать онлайн-документацию по dbus
    container, c  Модуль для работы с контейнерами
 
-OPTIONS:
-   --help, -h  show help
+Параметры:
+      --help, -h  Показать помощь
 ```
 
 ### Добавление контейнера
@@ -357,47 +362,51 @@ apm distrobox c create --image alt
 Списки для distrobox построены схожим образом с системными пакетами, описание:
 
 ```
-apm distrobox list -h       
-             
-NAME:
-   apm distrobox list - Построение запроса для получения списка пакетов
+apm distrobox list -h
 
-USAGE:
+Модуль:
+   apm distrobox list - Построение запроса для извлечения списка пакетов
+
+Применение:
    apm distrobox list [command [command options]]
 
-OPTIONS:
-   --container value, -c value        Название контейнера. Необходимо указать
-   --sort value                       Поле для сортировки, например: name, version
-   --order value                      Порядок сортировки: ASC или DESC (default: "ASC")
-   --limit value                      Лимит выборки (default: 10)
-   --offset value                     Смещение выборки (default: 0)
-   --filter value [ --filter value ]  Фильтр в формате key=value. Флаг можно указывать несколько раз, например: --filter name=zip --filter installed=true
-   --force-update                     Принудительно обновить все пакеты перед запросом (default: false)
-   --help, -h                         show help
-
-GLOBAL OPTIONS:
-   --format value, -f value       Формат вывода: json, text (default: "text")
-   --transaction value, -t value  Внутреннее свойство, добавляет транзакцию к выводу
+Параметры:
+      --container, -c        Имя контейнера. Необязательный флаг
+      --sort                 Поле для сортировки, к примеру: name, version
+      --order                Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)
+      --limit                Максимальное количество возвращаемых записей
+      --offset               Начальная позиция (смещение) для результата выборки
+      --filter [ --filter ]  Фильтр в формате ключ=занчение. Флаг может быть указан несколько раз, к примеру: --filter name=zip --filter installed=true
+      --force-update         Принудительное обновление всех пакетов перед запросом
+      --help, -h             Показать помощь
 ```
 
 Для получения всех пакетов контейнера atomic-alt:
 
 ```
-apm distrobox list -c atomic-alt -limit 1
-
-⚛
+apm distrobox list -c alt-software -limit 1
+[✓] Запрос списка контейнеров
+[✓] Запрос информации о контейнере
+[✓] Фильтрация пакетов
 ├── Найдена 1 запись
+│                   
 ├── Пакеты
 │   ╰── 1)
-│       ├── Описание: Libraries and header files for LLVM                       
-│       │   This package contains library and header files needed to develop new
-│       │   native programs that use the LLVM infrastructure.                   
+│       ├── Контейнер: alt-software
+│       ├── Описание: Libre realtime strategy game of ancient warfare               
+│       │   0 A.D. (pronounced "zero ey-dee") is a free software, cross-platform    
+│       │   real-time strategy (RTS) game of ancient warfare. In short, it is a     
+│       │   historically-based war/economy game that allows players to relive or    
+│       │   rewrite the history of Western civilizations, focusing on the years     
+│       │   between 500 B.C. and 500 A.D. The project is highly ambitious, involving
+│       │   state-of-the-art 3D graphics, detailed artwork, sound, and a flexible   
+│       │   and powerful custom-built game engine.                                  
 │       ├── Экспортировано: нет
 │       ├── Установлено: нет
 │       ├── Пакетный менеджер: apt-get
-│       ├── Название пакета: llvm14.0-devel
-│       ╰── Версия: 14.0.6
-╰── Всего записей: 53865
+│       ├── Название: 0ad
+│       ╰── Версия: 0.27.1
+╰── Общее количество: 57415
 ```
 
 ## Работа с атомарным образом
@@ -406,64 +415,57 @@ apm distrobox list -c atomic-alt -limit 1
 ```
 apm s image -h
 
-NAME:
+Модуль:
    apm system image - Модуль для работы с образом
 
-USAGE:
-   apm system image [command [command options]] 
+Применение:
+   apm system image [command [command options]]
 
-COMMANDS:
-   apply    Применить изменения к хосту
+Команды:
+   build    Создать образ
+   apply    Применить изменения на хосте
    status   Статус образа
-   update   Обновление образа
-   history  История изменений образа
+   update   Обновление образа системы
+   history  История изменения образа
 
-OPTIONS:
-   --help, -h  show help
+Параметры:
+      --help, -h  Показать помощь
 ```
 
 APM абстрагируется от docker-формата и вводит новый формат yml, путь к этому файлу указывается в конфигурации, поле pathImageFile.
 Данный файл будет использован в качестве базы данных всех изменений образа, что бы посмотреть текущее состояние вызовите:
 ```
 sudo apm s image status
-
-⚛
 ├── Статус образа
+│                
 ╰── Загруженный образ
     ├── Конфигурация
-    │   ├── Команды: []
-    │   ├── Образ: ghcr.io/alt-gnome/alt-atomic:latest-nv
-    │   ╰── Пакеты
-    │       ├── Установить
-    │       │   ╰── 1) redis
-    │       ╰── Удалить: []
+    │   ├── Образ: altlinux.space/alt-atomic/onyx-nvidia/stable:latest
+    │   ╰── Модули
+    │       ╰── 1)
+    │           ├── body
+    │           │   ╰── Установить
+    │           │       ╰── 1) tmux
+    │           ├── Название: image-apply-results
+    │           ╰── Тип: packages
     ├── Образ
     │   ├── Спецификация
     │   │   ╰── Образ
-    │   │       ├── Образ: a88583f54c8e
+    │   │       ├── Образ: 5942c8885645
     │   │       ╰── Транспорт: containers-storage
     │   ╰── Статус
-    │       ├── Загруженный
+    │       ├── Загружено
     │       │   ├── Образ
     │       │   │   ├── Образ
-    │       │   │   │   ├── Образ: ghcr.io/alt-gnome/alt-atomic:latest-nv
+    │       │   │   │   ├── Образ: 5942c8885645
     │       │   │   │   ╰── Транспорт: containers-storage
-    │       │   │   ├── Хэш образа: sha256:57f696c0ea4a69d877e22c916ee46c4c2f8b9045154fc6ca58ee8419df7d3af2
-    │       │   │   ├── Дата: 2025-03-12T12:11:08.245328960Z
+    │       │   │   ├── Дайджест образа: sha256:b431df1948d2112f01a38ca6b23762dc3469a687a90fb51b61a8fe676abc36d6
+    │       │   │   ├── Дата: 2026-02-22T07:24:20.671370656Z
     │       │   │   ╰── Версия: нет
-    │       │   ├── Закреплён: нет
+    │       │   ├── Закреплено: нет
     │       │   ╰── Тип хранилища: ostreeContainer
-    │       ╰── В очереди
-    │           ├── Образ
-    │           │   ├── Образ
-    │           │   │   ├── Образ: a88583f54c8e
-    │           │   │   ╰── Транспорт: containers-storage
-    │           │   ├── Хэш образа: sha256:21ccfa2b5c6793d0bc9074f0725f45e771706123c8cbd4cb6bbc53b50466aef9
-    │           │   ├── Дата: 2025-03-12T16:36:51.054268321Z
-    │           │   ╰── Версия: нет
-    │           ├── Закреплён: нет
-    │           ╰── Тип хранилища: ostreeContainer
-    ╰── Статус: Изменённый образ. Файл конфигурации: /etc/apm/image.yml
+    │       ╰── Зафиксированно: нет
+    ╰── Статус: Образ изменён. Конфигурационный файл: /etc/apm/image.yml
 ```
 
 Вы увидите путь к конфигурационному файлу, например:

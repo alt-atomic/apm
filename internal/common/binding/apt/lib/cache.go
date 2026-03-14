@@ -17,15 +17,14 @@
 package lib
 
 /*
-// cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
 
 import (
 	"runtime"
-	"unsafe"
+	cgoRuntime "runtime/cgo"
 )
 
 // Cache represents package cache
@@ -53,8 +52,15 @@ func (c *Cache) Close() {
 	}
 }
 
-func (c *Cache) Update() error {
+func (c *Cache) Update(handler ProgressHandler) error {
 	return withMutex(func() error {
+		var userData C.uintptr_t
+		if handler != nil {
+			handle := cgoRuntime.NewHandle(handler)
+			defer handle.Delete()
+			userData = C.uintptr_t(handle)
+			C.apt_use_go_progress_callback(userData)
+		}
 		if res := C.apt_cache_update(c.Ptr); res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}
@@ -71,294 +77,6 @@ func (c *Cache) Refresh() error {
 	})
 }
 
-func (c *Cache) BrokenCount() int {
-	var count int
-	_ = withMutex(func() error {
-		count = int(C.apt_get_broken_count(c.Ptr))
-		return nil
-	})
-	return count
-}
-
-func (c *Cache) HasBrokenPackages() bool {
-	var result bool
-	_ = withMutex(func() error {
-		result = bool(C.apt_has_broken_packages(c.Ptr))
-		return nil
-	})
-	return result
-}
-
-func (c *Cache) MarkInstall(packageName string) error {
-	return withMutex(func() error {
-		cname := C.CString(packageName)
-		defer C.free(unsafe.Pointer(cname))
-		if res := C.apt_mark_install(c.Ptr, cname); res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-		return nil
-	})
-}
-
-func (c *Cache) MarkRemove(packageName string, purge bool, depends bool) error {
-	return withMutex(func() error {
-		cname := C.CString(packageName)
-		defer C.free(unsafe.Pointer(cname))
-		if res := C.apt_mark_remove(c.Ptr, cname, C.bool(purge), C.bool(depends)); res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-		return nil
-	})
-}
-
-func (c *Cache) GetPackageInfo(packageName string) (*PackageInfo, error) {
-	var info *PackageInfo
-	err := withMutex(func() error {
-		cname := C.CString(packageName)
-		defer C.free(unsafe.Pointer(cname))
-
-		var ci C.AptPackageInfo
-		if res := C.apt_get_package_info(c.Ptr, cname, &ci); res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-		defer C.apt_free_package_info(&ci)
-
-		info = &PackageInfo{}
-		info.fromCStruct(&ci)
-		return nil
-	})
-	return info, err
-}
-
-func (c *Cache) SearchPackages(pattern string) ([]PackageInfo, error) {
-	var pkgs []PackageInfo
-	err := withMutex(func() error {
-		cPattern := C.CString(pattern)
-		defer C.free(unsafe.Pointer(cPattern))
-
-		var list C.AptPackageList
-		if res := C.apt_search_packages(c.Ptr, cPattern, &list); res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-		defer C.apt_free_package_list(&list)
-
-		if list.count > 0 {
-			pkgs = make([]PackageInfo, int(list.count))
-			cp := unsafe.Slice(list.packages, int(list.count))
-			for i, cpi := range cp {
-				pkgs[i].fromCStruct(&cpi)
-			}
-		}
-		return nil
-	})
-	return pkgs, err
-}
-
-// SimulateDistUpgrade симулирует обновление системы
-func (c *Cache) SimulateDistUpgrade() (*PackageChanges, error) {
-	var changes *PackageChanges
-	err := withMutex(func() error {
-		var cc C.AptPackageChanges
-		res := C.apt_simulate_dist_upgrade(c.Ptr, &cc)
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		changes = convertPackageChanges(&cc)
-		return nil
-	})
-	return changes, err
-}
-
-// SimulateAutoRemove симулирует автоматическое удаление неиспользуемых пакетов
-func (c *Cache) SimulateAutoRemove() (*PackageChanges, error) {
-	var changes *PackageChanges
-	err := withMutex(func() error {
-		var cc C.AptPackageChanges
-		res := C.apt_simulate_autoremove(c.Ptr, &cc)
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		changes = convertPackageChanges(&cc)
-		return nil
-	})
-	return changes, err
-}
-
-// SimulateInstall симулирует установку пакетов
-func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) {
-	if len(packageNames) == 0 {
-		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
-	}
-
-	var changes *PackageChanges
-	err := withMutex(func() error {
-		cNames := makeCStringArray(packageNames)
-		defer freeCStringArray(cNames)
-
-		var cc C.AptPackageChanges
-		res := C.apt_simulate_install(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		changes = convertPackageChanges(&cc)
-		return nil
-	})
-	return changes, err
-}
-
-// SimulateRemove симулирует удаление пакетов
-func (c *Cache) SimulateRemove(packageNames []string, purge bool, depends bool) (*PackageChanges, error) {
-	if len(packageNames) == 0 {
-		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
-	}
-
-	var changes *PackageChanges
-	err := withMutex(func() error {
-		cNames := makeCStringArray(packageNames)
-		defer freeCStringArray(cNames)
-
-		var cc C.AptPackageChanges
-		res := C.apt_simulate_remove(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), C.bool(purge), C.bool(depends), &cc)
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		changes = convertPackageChanges(&cc)
-		return nil
-	})
-	return changes, err
-}
-
-// SimulateReinstall симулирует переустановку пакетов
-func (c *Cache) SimulateReinstall(packageNames []string) (*PackageChanges, error) {
-	if len(packageNames) == 0 {
-		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
-	}
-
-	var changes *PackageChanges
-	err := withMutex(func() error {
-		cNames := makeCStringArray(packageNames)
-		defer freeCStringArray(cNames)
-
-		var cc C.AptPackageChanges
-		res := C.apt_simulate_reinstall(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)), &cc)
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		changes = convertPackageChanges(&cc)
-		return nil
-	})
-	return changes, err
-}
-
-// ApplyReinstall применяет переустановку пакетов к кэшу
-func (c *Cache) ApplyReinstall(packageNames []string) error {
-	if len(packageNames) == 0 {
-		return CustomError(AptErrorInvalidParameters, "Invalid parameters")
-	}
-
-	return withMutex(func() error {
-		cNames := makeCStringArray(packageNames)
-		defer freeCStringArray(cNames)
-
-		res := C.apt_apply_reinstall(c.Ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(packageNames)))
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-		return nil
-	})
-}
-
-// SimulateChange симулирует установку и удаление пакетов в одной транзакции
-func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool, depends bool) (*PackageChanges, error) {
-	if len(installNames) == 0 && len(removeNames) == 0 {
-		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
-	}
-
-	var changes *PackageChanges
-	err := withMutex(func() error {
-		var cInst **C.char
-		var instCount C.size_t
-		var installArr []*C.char
-
-		if len(installNames) > 0 {
-			installArr = makeCStringArray(installNames)
-			defer freeCStringArray(installArr)
-			cInst = (**C.char)(unsafe.Pointer(&installArr[0]))
-			instCount = C.size_t(len(installNames))
-		}
-
-		var cRem **C.char
-		var remCount C.size_t
-		var removeArr []*C.char
-
-		if len(removeNames) > 0 {
-			removeArr = makeCStringArray(removeNames)
-			defer freeCStringArray(removeArr)
-			cRem = (**C.char)(unsafe.Pointer(&removeArr[0]))
-			remCount = C.size_t(len(removeNames))
-		}
-
-		var cc C.AptPackageChanges
-		res := C.apt_simulate_change(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), C.bool(depends), &cc)
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		changes = convertPackageChanges(&cc)
-		return nil
-	})
-	return changes, err
-}
-
-// ApplyChanges applies package changes to the cache
-func (c *Cache) ApplyChanges(installNames []string, removeNames []string, purge bool, depends bool) error {
-	return withMutex(func() error {
-		var cInst **C.char
-		var instCount C.size_t
-		var installArr []*C.char
-
-		if len(installNames) > 0 {
-			installArr = makeCStringArray(installNames)
-			defer freeCStringArray(installArr)
-			cInst = (**C.char)(unsafe.Pointer(&installArr[0]))
-			instCount = C.size_t(len(installNames))
-		}
-
-		var cRem **C.char
-		var remCount C.size_t
-		var removeArr []*C.char
-
-		if len(removeNames) > 0 {
-			removeArr = makeCStringArray(removeNames)
-			defer freeCStringArray(removeArr)
-			cRem = (**C.char)(unsafe.Pointer(&removeArr[0]))
-			remCount = C.size_t(len(removeNames))
-		}
-
-		res := C.apt_apply_changes(c.Ptr, cInst, instCount, cRem, remCount, C.bool(purge), C.bool(depends))
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-		return nil
-	})
-}
 
 // Helper: safely convert C string to Go string
 func cStringToGo(cstr *C.char) string {
@@ -399,5 +117,8 @@ func (p *PackageInfo) fromCStruct(c *C.AptPackageInfo) {
 
 	if c.alias_count > 0 && c.aliases != nil {
 		p.Aliases = convertCStringArray(c.aliases, c.alias_count)
+	}
+	if c.file_count > 0 && c.files != nil {
+		p.Files = convertCStringArray(c.files, c.file_count)
 	}
 }

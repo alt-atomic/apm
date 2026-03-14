@@ -22,10 +22,11 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/common_types"
 	"apm/internal/common/build/core"
+	"apm/internal/common/command"
+	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
-	"apm/internal/common/version"
-	"apm/internal/kernel/service"
-	_repo_service "apm/internal/repo/service"
+	"apm/internal/domain/kernel/service"
+	reposervice "apm/internal/domain/repository/service"
 	"context"
 	"errors"
 	"fmt"
@@ -36,14 +37,17 @@ import (
 
 type ConfigService struct {
 	appConfig         *app.Config
-	serviceAptActions *_package.Actions
-	serviceDBService  *_package.PackageDBService
+	serviceAptActions buildAptActionsService
+	serviceDBService  buildPackageDBService
 	kernelManager     *service.Manager
-	repoService       *_repo_service.RepoService
-	serviceHostConfig *HostConfigService
+	repoService       *reposervice.RepoService
+	serviceHostConfig buildHostConfigService
+	runner            command.Runner
 }
 
-func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBService *_package.PackageDBService, kernelManager *service.Manager, repoService *_repo_service.RepoService, hostConfig *HostConfigService) *ConfigService {
+func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, dBService buildPackageDBService,
+	kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig buildHostConfigService,
+	runner command.Runner) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
 		serviceAptActions: aptActions,
@@ -51,6 +55,7 @@ func NewConfigService(appConfig *app.Config, aptActions *_package.Actions, dBSer
 		kernelManager:     kernelManager,
 		repoService:       repoService,
 		serviceHostConfig: hostConfig,
+		runner:            runner,
 	}
 }
 
@@ -59,11 +64,11 @@ func (cfgService *ConfigService) IsAtomic() bool {
 }
 
 func (cfgService *ConfigService) Build(ctx context.Context) error {
-	if cfgService.serviceHostConfig.Config == nil {
+	if cfgService.serviceHostConfig.GetConfig() == nil {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
-	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.Config.Modules)
+	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
 	return err
 }
 
@@ -75,7 +80,7 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	exprData := common_types.ExprData{
 		Modules: modulesMap,
 		Env:     osutils.GetEnvMap(),
-		Version: version.ParseVersion(cfgService.appConfig.ConfigManager.GetConfig().Version),
+		Version: *cfgService.appConfig.ConfigManager.GetParsedVersion(),
 	}
 
 	moduleResolvedEnvMap, err := core.ResolveExprMap(module.Env, exprData)
@@ -172,15 +177,15 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	return outputModule, nil
 }
 
-func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters map[string]any, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
+func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
 	return cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, sortField, sortOrder, limit, offset)
 }
 
 func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error) {
 	packageInfo, err := cfgService.serviceDBService.GetPackageByName(ctx, packageName)
 	if err != nil {
-		filters := map[string]interface{}{
-			"provides": packageName,
+		filters := []filter.Filter{
+			{Field: "provides", Op: filter.OpContains, Value: packageName},
 		}
 
 		alternativePackages, errFind := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
@@ -210,7 +215,7 @@ func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageNa
 	return &packageInfo, nil
 }
 
-func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool) error {
+func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool, downloadOnly bool) error {
 	packagesInstall, packagesRemove, errPrepare := cfgService.serviceAptActions.PrepareInstallPackages(ctx, packages)
 	if errPrepare != nil {
 		return errPrepare
@@ -249,6 +254,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 		packagesRemove,
 		purge,
 		depends,
+		downloadOnly,
 	)
 	if errInstall != nil {
 		return errInstall
@@ -258,7 +264,7 @@ func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Contex
 }
 
 func (cfgService *ConfigService) InstallPackages(ctx context.Context, packages []string) error {
-	return cfgService.serviceAptActions.Install(ctx, packages)
+	return cfgService.serviceAptActions.Install(ctx, packages, false)
 }
 
 func (cfgService *ConfigService) UpdatePackages(ctx context.Context) error {
@@ -267,7 +273,7 @@ func (cfgService *ConfigService) UpdatePackages(ctx context.Context) error {
 }
 
 func (cfgService *ConfigService) UpgradePackages(ctx context.Context) error {
-	err := cfgService.serviceAptActions.Upgrade(ctx)
+	err := cfgService.serviceAptActions.Upgrade(ctx, false)
 	return err
 }
 
@@ -275,12 +281,16 @@ func (cfgService *ConfigService) KernelManager() *service.Manager {
 	return cfgService.kernelManager
 }
 
-func (cfgService *ConfigService) RepoService() *_repo_service.RepoService {
+func (cfgService *ConfigService) RepoService() *reposervice.RepoService {
 	return cfgService.repoService
 }
 
 func (cfgService *ConfigService) ResourcesDir() string {
 	return cfgService.appConfig.ConfigManager.GetResourcesDir()
+}
+
+func (cfgService *ConfigService) Runner() command.Runner {
+	return cfgService.runner
 }
 
 func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error) {

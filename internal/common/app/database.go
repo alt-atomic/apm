@@ -23,70 +23,57 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/akrylysov/pogreb"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // databaseManagerImpl реализация DatabaseManager
 type databaseManagerImpl struct {
-	systemDB   *sql.DB
-	userDB     *sql.DB
-	keyValueDB *pogreb.DB
+	systemDB *sql.DB
+	userDB   *sql.DB
 
 	systemPath string
 	userPath   string
-	kvPath     string
 
-	mutex sync.RWMutex
+	mutex sync.Mutex
 
 	systemOnce sync.Once
 	userOnce   sync.Once
-	kvOnce     sync.Once
 }
 
 // NewDatabaseManager создает новый менеджер баз данных
-func NewDatabaseManager(systemPath, userPath, kvPath string) DatabaseManager {
+func NewDatabaseManager(systemPath, userPath string) DatabaseManager {
 	return &databaseManagerImpl{
 		systemPath: systemPath,
 		userPath:   userPath,
-		kvPath:     kvPath,
 	}
 }
 
 // GetSystemDB возвращает системную базу данных с ленивой инициализацией
-func (dm *databaseManagerImpl) GetSystemDB() *sql.DB {
+func (dm *databaseManagerImpl) GetSystemDB() (*sql.DB, error) {
+	var initErr error
 	dm.systemOnce.Do(func() {
 		if err := dm.initSystemDB(); err != nil {
-			Log.Fatal("Failed to initialize system DB: ", err)
+			initErr = err
 		}
 	})
-	dm.mutex.RLock()
-	defer dm.mutex.RUnlock()
-	return dm.systemDB
+	if initErr != nil {
+		return nil, initErr
+	}
+	return dm.systemDB, nil
 }
 
 // GetUserDB возвращает пользовательскую базу данных с ленивой инициализацией
-func (dm *databaseManagerImpl) GetUserDB() *sql.DB {
+func (dm *databaseManagerImpl) GetUserDB() (*sql.DB, error) {
+	var initErr error
 	dm.userOnce.Do(func() {
 		if err := dm.initUserDB(); err != nil {
-			Log.Fatal("Failed to initialize user DB: ", err)
+			initErr = err
 		}
 	})
-	dm.mutex.RLock()
-	defer dm.mutex.RUnlock()
-	return dm.userDB
-}
-
-// GetKeyValueDB возвращает ключ-значение базу данных с ленивой инициализацией
-func (dm *databaseManagerImpl) GetKeyValueDB() *pogreb.DB {
-	dm.kvOnce.Do(func() {
-		if err := dm.initKeyValueDB(); err != nil {
-			Log.Fatal("Failed to initialize key-value DB: ", err)
-		}
-	})
-	dm.mutex.RLock()
-	defer dm.mutex.RUnlock()
-	return dm.keyValueDB
+	if initErr != nil {
+		return nil, initErr
+	}
+	return dm.userDB, nil
 }
 
 // initSystemDB инициализирует системную базу данных
@@ -103,7 +90,7 @@ func (dm *databaseManagerImpl) initSystemDB() error {
 	if err = db.Ping(); err != nil {
 		db.Close()
 		if _, statErr := os.Stat(dm.systemPath); os.IsNotExist(statErr) && syscall.Geteuid() != 0 {
-			return fmt.Errorf(T_("Elevated rights are required to perform this action. Please use sudo or su"))
+			return fmt.Errorf(T_("system database not found (%s). Run 'apm system update' with elevated rights to create it"), dm.systemPath)
 		}
 		return fmt.Errorf(T_("error connecting to system database: %w"), err)
 	}
@@ -132,32 +119,10 @@ func (dm *databaseManagerImpl) initUserDB() error {
 	return nil
 }
 
-// initKeyValueDB инициализирует ключ-значение базу данных
-func (dm *databaseManagerImpl) initKeyValueDB() error {
-	if _, err := os.Stat(dm.kvPath); os.IsNotExist(err) {
-		Log.Warning("Key-value database file not found. It will be created automatically.")
-	}
-
-	db, err := pogreb.Open(dm.kvPath, nil)
-	if err != nil {
-		return fmt.Errorf(T_("error opening key-value database: %w"), err)
-	}
-
-	dm.keyValueDB = db
-	return nil
-}
-
 // Close закрывает все подключения к базам данных
 func (dm *databaseManagerImpl) Close() error {
 	dm.mutex.Lock()
 	defer dm.mutex.Unlock()
-
-	if dm.keyValueDB != nil {
-		if err := dm.keyValueDB.Close(); err != nil {
-			Log.Errorf("Error closing KV database: %v", err)
-		}
-		dm.keyValueDB = nil
-	}
 
 	if dm.systemDB != nil {
 		if err := dm.systemDB.Close(); err != nil {

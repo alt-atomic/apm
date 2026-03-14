@@ -49,6 +49,8 @@ func TranslateKey(key string) string {
 		return app.T_("Container")
 	case "name":
 		return app.T_("Name")
+	case "sections":
+		return app.T_("Sections")
 	case "extraInstalled":
 		return app.T_("Extra Installed")
 	case "upgradedCount":
@@ -89,6 +91,8 @@ func TranslateKey(key string) string {
 		return app.T_("Containers")
 	case "paths":
 		return app.T_("Paths")
+	case "files":
+		return app.T_("Files")
 	case "description":
 		return app.T_("Description")
 	case "date":
@@ -119,6 +123,8 @@ func TranslateKey(key string) string {
 		return app.T_("Size")
 	case "newInstalledPackages":
 		return app.T_("Newly Installed Packages")
+	case "keptBackPackages":
+		return app.T_("Kept Back Packages")
 	case "notUpgradedCount":
 		return app.T_("Not Upgraded Count")
 	case "containerName":
@@ -141,6 +147,8 @@ func TranslateKey(key string) string {
 		return app.T_("Image Name")
 	case "transport":
 		return app.T_("Transport")
+	case "keptBackCount":
+		return app.T_("Kept Back Count")
 	case "pinned":
 		return app.T_("Pinned")
 	case "list":
@@ -221,6 +229,10 @@ func TranslateKey(key string) string {
 		return app.T_("WillAdd")
 	case "willRemove":
 		return app.T_("WillRemove")
+	case "essentialPackages":
+		return app.T_("Essential packages")
+	case "reason":
+		return app.T_("Reason")
 	default:
 		return app.T_(key)
 	}

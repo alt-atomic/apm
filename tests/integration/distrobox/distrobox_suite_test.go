@@ -17,7 +17,7 @@
 package distrobox_test
 
 import (
-	"apm/internal/distrobox"
+	"apm/internal/domain/distrobox"
 	"apm/tests/integration/common"
 	"context"
 	"fmt"
@@ -66,7 +66,6 @@ func (s *DistroboxTestSuite) SetupSuite() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error, "Container creation should succeed")
 	s.T().Logf("Test container created: %s", s.containerName)
 }
 
@@ -77,7 +76,7 @@ func (s *DistroboxTestSuite) TearDownSuite() {
 		if err != nil {
 			s.T().Logf("Failed to cleanup test container: %v", err)
 		} else {
-			s.T().Logf("Test container cleaned up: %+v", resp.Data)
+			s.T().Logf("Test container cleaned up: %+v", resp)
 		}
 	}
 }
@@ -97,9 +96,8 @@ func (s *DistroboxTestSuite) TestContainerList() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
 
-	responseStr := fmt.Sprintf("%+v", resp.Data)
+	responseStr := fmt.Sprintf("%+v", resp.Containers)
 	s.T().Logf("ContainerList response: %s", responseStr)
 	found := strings.Contains(responseStr, s.containerName)
 
@@ -123,7 +121,6 @@ func (s *DistroboxTestSuite) TestPackageInstall() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
 	s.T().Logf("Package installed successfully")
 }
 
@@ -137,7 +134,6 @@ func (s *DistroboxTestSuite) TestPackageSearch() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
 	s.T().Logf("Search completed successfully")
 }
 
@@ -151,7 +147,6 @@ func (s *DistroboxTestSuite) TestPackageInfo() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
 	s.T().Logf("Package info retrieved successfully")
 }
 
@@ -170,7 +165,6 @@ func (s *DistroboxTestSuite) TestPackageList() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
 	s.T().Logf("Package list retrieved successfully")
 }
 
@@ -184,7 +178,6 @@ func (s *DistroboxTestSuite) TestPackageUpdate() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
 	s.T().Logf("Update completed successfully")
 }
 
@@ -198,7 +191,6 @@ func (s *DistroboxTestSuite) TestPackageRemove() {
 	}
 
 	assert.NotNil(s.T(), resp)
-	assert.False(s.T(), resp.Error)
 	s.T().Logf("Package removed successfully")
 }
 

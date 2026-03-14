@@ -23,21 +23,18 @@ import (
 	"apm/internal/common/dbus_doc"
 	"apm/internal/common/helper"
 	"apm/internal/common/http_server"
-	"apm/internal/common/icon"
 	"apm/internal/common/reply"
-	"apm/internal/common/version"
-	"apm/internal/distrobox"
-	"apm/internal/kernel"
-	"apm/internal/repo"
-	"apm/internal/system"
+	"apm/internal/domain/distrobox"
+	"apm/internal/domain/kernel"
+	"apm/internal/domain/repository"
+	"apm/internal/domain/system"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
-
-	"github.com/godbus/dbus/v5"
 
 	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
@@ -65,37 +62,26 @@ func main() {
 	systemCommands := system.CommandList(ctx)
 	distroboxCommands := distrobox.CommandList(ctx)
 	kernelCommands := kernel.CommandList(ctx)
-	repoCommands := repo.CommandList(ctx)
+	repoCommands := repository.CommandList(ctx)
 
 	cmds := []*cli.Command{
 		{
-			Name:   "dbus-session",
-			Usage:  app.T_("Start session D-Bus service org.altlinux.APM"),
-			Action: sessionDbus,
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:    "verbose",
-					Aliases: []string{"v"},
-					Usage:   app.T_("Enable verbose logging to stdout"),
-				},
-			},
+			Name:     "dbus-session",
+			Usage:    app.T_("Start session D-Bus service org.altlinux.APM"),
+			Category: app.T_("Services"),
+			Action:   sessionDbus,
 		},
 		{
-			Name:   "dbus-system",
-			Usage:  app.T_("Start system D-Bus service org.altlinux.APM"),
-			Action: systemDbus,
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:    "verbose",
-					Aliases: []string{"v"},
-					Usage:   app.T_("Enable verbose logging to stdout"),
-				},
-			},
+			Name:     "dbus-system",
+			Usage:    app.T_("Start system D-Bus service org.altlinux.APM"),
+			Category: app.T_("Services"),
+			Action:   systemDbus,
 		},
 		{
-			Name:   "http-server",
-			Usage:  app.T_("Start system HTTP API server"),
-			Action: httpServer,
+			Name:     "http-server",
+			Usage:    app.T_("Start system HTTP API server"),
+			Category: app.T_("Services"),
+			Action:   httpServer,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "listen",
@@ -104,15 +90,17 @@ func main() {
 					Value:   "127.0.0.1:8080",
 				},
 				&cli.StringFlag{
-					Name:  "api-token",
-					Usage: app.T_("API token for authentication"),
+					Name:    "api-token",
+					Usage:   app.T_("API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"),
+					Sources: cli.EnvVars("APM_API_TOKEN"),
 				},
 			},
 		},
 		{
-			Name:   "http-session",
-			Usage:  app.T_("Start session HTTP API"),
-			Action: httpSession,
+			Name:     "http-session",
+			Usage:    app.T_("Start session HTTP API"),
+			Category: app.T_("Services"),
+			Action:   httpSession,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "listen",
@@ -121,8 +109,9 @@ func main() {
 					Value:   "127.0.0.1:8082",
 				},
 				&cli.StringFlag{
-					Name:  "api-token",
-					Usage: app.T_("API token for authentication"),
+					Name:    "api-token",
+					Usage:   app.T_("API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"),
+					Sources: cli.EnvVars("APM_API_TOKEN"),
 				},
 			},
 		},
@@ -150,7 +139,6 @@ func main() {
 			},
 			{
 				Name:      "version",
-				Aliases:   []string{"v"},
 				Usage:     app.T_("Print version"),
 				ArgsUsage: app.T_("[command]"),
 				Action:    printVersion,
@@ -160,9 +148,10 @@ func main() {
 
 	// Основная команда приложения
 	rootCommand := &cli.Command{
-		Name:    "apm",
-		Usage:   "Atomic Package Manager",
-		Version: version.ParseVersion(appConfig.ConfigManager.GetConfig().Version).Value,
+		Name:        "apm",
+		Usage:       "Atomic Package Manager",
+		Description: helper.AppDescription(),
+		Version:     appConfig.ConfigManager.GetParsedVersion().Value,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",
@@ -171,9 +160,25 @@ func main() {
 				Value:   "text",
 			},
 			&cli.StringFlag{
+				Name:    "format_type",
+				Usage:   app.T_("Display type: tree, plain"),
+				Aliases: []string{"ft"},
+				Value:   "",
+			},
+			&cli.StringSliceFlag{
+				Name:    "output",
+				Usage:   app.T_("Output only specified fields"),
+				Aliases: []string{"o"},
+			},
+			&cli.StringFlag{
 				Name:    "transaction",
 				Usage:   app.T_("Internal property, adds the transaction to the output"),
 				Aliases: []string{"t"},
+			},
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"v"},
+				Usage:   app.T_("Enable verbose logging to stdout"),
 			},
 		},
 		Commands: cmds,
@@ -234,6 +239,10 @@ func applyCommandSetting(cliCommand *cli.Command) {
 	cliCommand.HideHelpCommand = true
 	cliCommand.EnableShellCompletion = true
 	cliCommand.Suggest = true
+	cliCommand.OnUsageError = func(ctx context.Context, cmd *cli.Command, err error, _ bool) error {
+		cliError(helper.TranslateUsageError(err))
+		return err
+	}
 
 	for _, sub := range cliCommand.Commands {
 		applyCommandSetting(sub)
@@ -243,7 +252,7 @@ func applyCommandSetting(cliCommand *cli.Command) {
 func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
 	if cmd.Bool("verbose") {
-		app.Log.EnableStdoutLogging()
+		appConfig.ConfigManager.EnableVerbose()
 	}
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
@@ -259,8 +268,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	distroActions := distrobox.NewActions(appConfig)
-	serviceIcon := icon.NewIconService(appConfig.DatabaseManager.GetKeyValueDB(), appConfig.ConfigManager.GetConfig().CommandPrefix)
-	distroObj := distrobox.NewDBusWrapper(distroActions, serviceIcon, ctx)
+	distroObj := distrobox.NewDBusWrapper(distroActions, ctx)
 
 	// Экспортируем в D-Bus
 	if err = appConfig.DBusManager.GetConnection().Export(distroObj, "/org/altlinux/APM", "org.altlinux.APM.distrobox"); err != nil {
@@ -284,20 +292,20 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 
 	// Параллельно обновляем иконки
 	go func() {
-		err = serviceIcon.ReloadIcons(ctx)
-		if err != nil {
-			app.Log.Error(err.Error())
+		errIcon := distroActions.GetIconService().ReloadIcons(ctx)
+		if errIcon != nil {
+			app.Log.Error(errIcon.Error())
 		}
 	}()
 
-	// Блокируем до сигнала
-	select {}
+	<-ctx.Done()
+	return nil
 }
 
 func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(cmd.String("format"))
 	if cmd.Bool("verbose") {
-		app.Log.EnableStdoutLogging()
+		appConfig.ConfigManager.EnableVerbose()
 	}
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
@@ -312,12 +320,8 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	if syscall.Geteuid() != 0 {
-		return errors.New(app.T_("Administrator privileges are required to start"))
-	}
-
 	sysActions := system.NewActions(appConfig)
-	conn, _ := dbus.SystemBus()
+	conn := appConfig.DBusManager.GetConnection()
 
 	// Экспортируем system методы в D-Bus
 	sysObj := system.NewDBusWrapper(sysActions, conn, ctx)
@@ -340,9 +344,9 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		interfaces["org.altlinux.APM.kernel"] = kernelObj
 	}
 
-	// Экспортируем repo методы в D-Bus
-	repoActions := repo.NewActions(appConfig)
-	repoObj := repo.NewDBusWrapper(repoActions, conn, ctx)
+	// Экспортируем repository методы в D-Bus
+	repoActions := repository.NewActions(appConfig)
+	repoObj := repository.NewDBusWrapper(repoActions, conn, ctx)
 	if err = appConfig.DBusManager.GetConnection().Export(repoObj, "/org/altlinux/APM", "org.altlinux.APM.repo"); err != nil {
 		return err
 	}
@@ -358,13 +362,13 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 
-	// Блокируем до сигнала
-	select {}
+	<-ctx.Done()
+	return nil
 }
 
 func httpServer(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
-	app.Log.EnableStdoutLogging()
+	appConfig.ConfigManager.EnableVerbose()
 
 	if syscall.Geteuid() != 0 {
 		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
@@ -382,7 +386,11 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 		config.APIToken = token
 	}
 
-	server := http_server.NewServer(config, appConfig)
+	server, err := http_server.NewServer(config, appConfig)
+	if err != nil {
+		cliError(err)
+		return err
+	}
 
 	wsHub := http_server.GetWebSocketHub()
 	reply.SetWebSocketHub(wsHub)
@@ -398,25 +406,17 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 	// System модуль
 	sysActions := system.NewActions(appConfig)
 	sysHTTPWrapper := system.NewHTTPWrapper(sysActions, appConfig, ctx)
-	sysHTTPWrapper.RegisterRoutes(server.GetMux(), appConfig.ConfigManager.GetConfig().IsAtomic)
+	server.RegisterEndpoints(sysHTTPWrapper.GetEndpoints(appConfig.ConfigManager.GetConfig().IsAtomic))
 
 	// Repo модуль
-	repoActions := repo.NewActions(appConfig)
-	repoHTTPWrapper := repo.NewHTTPWrapper(repoActions, appConfig, ctx)
-	repoHTTPWrapper.RegisterRoutes(server.GetMux())
-
-	// Регистрируем endpoints в registry для OpenAPI документации и проверки прав
-	registry := http_server.NewRegistry()
-	registry.RegisterResponseTypes(system.GetHTTPResponseTypes())
-	registry.RegisterEndpoints(system.GetHTTPEndpoints())
-	registry.RegisterResponseTypes(repo.GetHTTPResponseTypes())
-	registry.RegisterEndpoints(repo.GetHTTPEndpoints())
-	server.SetRegistry(registry)
+	repoActions := repository.NewActions(appConfig)
+	repoHTTPWrapper := repository.NewHTTPWrapper(repoActions, appConfig, ctx)
+	server.RegisterEndpoints(repoHTTPWrapper.GetEndpoints())
 
 	// Регистрируем OpenAPI документацию из registry
-	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, appConfig.ConfigManager.GetConfig().IsAtomic, config.ListenAddr))
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(server.GetRegistry(), appConfig.ConfigManager.GetConfig().Version, config.ListenAddr))
 
-	err := server.Start(ctx)
+	err = server.Start(ctx)
 	if err != nil {
 		cliError(err)
 	}
@@ -425,7 +425,7 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 
 func httpSession(ctx context.Context, cmd *cli.Command) error {
 	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
-	app.Log.EnableStdoutLogging()
+	appConfig.ConfigManager.EnableVerbose()
 
 	if syscall.Geteuid() == 0 {
 		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
@@ -450,7 +450,11 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 		config.APIToken = token
 	}
 
-	server := http_server.NewServer(config, appConfig)
+	server, err := http_server.NewServer(config, appConfig)
+	if err != nil {
+		cliError(err)
+		return err
+	}
 
 	wsHub := http_server.GetWebSocketHub()
 	reply.SetWebSocketHub(wsHub)
@@ -466,17 +470,19 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 	// Distrobox модуль
 	distroboxActions := distrobox.NewActions(appConfig)
 	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, ctx)
-	distroboxHTTPWrapper.RegisterRoutes(server.GetMux())
+	server.RegisterEndpoints(distroboxHTTPWrapper.GetEndpoints())
 
-	registry := http_server.NewRegistry()
-	registry.RegisterResponseTypes(distrobox.GetHTTPResponseTypes())
-	registry.RegisterEndpoints(distrobox.GetHTTPEndpoints())
-	server.SetRegistry(registry)
+	// Параллельно обновляем иконки
+	go func() {
+		if err = distroboxActions.GetIconService().ReloadIcons(ctx); err != nil {
+			app.Log.Error(err.Error())
+		}
+	}()
 
 	// Регистрируем OpenAPI документацию из registry
-	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(registry, appConfig.ConfigManager.GetConfig().Version, false, config.ListenAddr))
+	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(server.GetRegistry(), appConfig.ConfigManager.GetConfig().Version, config.ListenAddr))
 
-	err := server.Start(ctx)
+	err = server.Start(ctx)
 	if err != nil {
 		cliError(err)
 	}
@@ -484,8 +490,7 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 }
 
 func printVersion(_ context.Context, _ *cli.Command) error {
-	v := version.ParseVersion(appConfig.ConfigManager.GetConfig().Version)
-	fmt.Printf("%s version %s\n", "apm", v.Value)
+	fmt.Printf("%s version %s\n", "apm", appConfig.ConfigManager.GetParsedVersion().Value)
 	return nil
 }
 
@@ -494,22 +499,22 @@ func cliError(err error) {
 		return
 	}
 
-	_ = reply.CliResponse(ctx, reply.APIResponse{
-		Data: map[string]interface{}{
-			"message": err.Error(),
-		},
-		Error: true,
-	})
+	_ = reply.CliResponse(ctx, reply.ErrorResponseFromError(err))
 }
 
-func cleanup() {
-	if appConfig != nil {
-		defer func(appConfig *app.Config) {
-			closeApp(appConfig)
-		}(appConfig)
-	}
+var cleanupOnce sync.Once
 
-	defer globalCancel()
+func cleanup() {
+	cleanupOnce.Do(func() {
+		if appConfig != nil {
+			reply.StopSpinner(appConfig)
+			defer func(appConfig *app.Config) {
+				closeApp(appConfig)
+			}(appConfig)
+		}
+
+		defer globalCancel()
+	})
 }
 
 func closeApp(appConfig *app.Config) {

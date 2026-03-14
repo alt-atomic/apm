@@ -18,7 +18,7 @@ package lib
 
 /*
 // cgo-timestamp: 1757445419
-#include "apt_wrapper.h"
+#include "apt.h"
 #include <stdlib.h>
 */
 import "C"
@@ -80,18 +80,52 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 		UpgradedCount:     int(cc.upgraded_count),
 		NewInstalledCount: int(cc.new_installed_count),
 		RemovedCount:      int(cc.removed_count),
+		KeptBackCount:     int(cc.kept_back_count),
 		NotUpgradedCount:  int(cc.not_upgraded_count),
 		DownloadSize:      uint64(cc.download_size),
 		InstallSize:       int64(cc.install_size),
 	}
 
-	// Конвертируем массивы с использованием helper функции
+	// Конвертируем массивы
 	changes.ExtraInstalled = convertCStringArray(cc.extra_installed, cc.extra_installed_count)
 	changes.UpgradedPackages = convertCStringArray(cc.upgraded_packages, cc.upgraded_count)
 	changes.NewInstalledPackages = convertCStringArray(cc.new_installed_packages, cc.new_installed_count)
 	changes.RemovedPackages = convertCStringArray(cc.removed_packages, cc.removed_count)
+	changes.KeptBackPackages = convertCStringArray(cc.kept_back_packages, cc.kept_back_count)
+
+	// Конвертируем essential-пакеты
+	if cc.essential_packages_count > 0 && cc.essential_packages != nil {
+		count := int(cc.essential_packages_count)
+		changes.EssentialPackages = make([]EssentialPackage, count)
+		for i := 0; i < count; i++ {
+			var cName, cReason *C.char
+			C.apt_get_essential_package(cc, C.size_t(i), &cName, &cReason)
+			changes.EssentialPackages[i].Name = cStringToGo(cName)
+			changes.EssentialPackages[i].Reason = cStringToGo(cReason)
+		}
+	}
 
 	return changes
+}
+
+// PreprocessInstallArguments регистрирует аргументы в конфигурации APT до открытия кеша
+func PreprocessInstallArguments(names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+	cNames := makeCStringArray(names)
+	defer freeCStringArray(cNames)
+	var addedNew C.bool
+	res := C.apt_preprocess_install_arguments((**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(names)), &addedNew)
+	if res.code != C.APT_SUCCESS {
+		return ErrorFromResult(res)
+	}
+	return nil
+}
+
+// ClearInstallArguments очищает аргументы
+func ClearInstallArguments() {
+	C.apt_clear_install_arguments()
 }
 
 // withMutex выполняет функцию под защитой глобального мьютекса APT
@@ -113,25 +147,3 @@ func openCacheUnsafe(system *System, readOnly bool) (*Cache, error) {
 	return c, nil
 }
 
-// simulateOperation выполняет симуляцию операции и конвертирует результат
-func (c *Cache) simulateOperation(
-	simFunc func() (C.AptResult, *C.AptPackageChanges),
-) (*PackageChanges, error) {
-	var result *PackageChanges
-	err := withMutex(func() error {
-		var cc C.AptPackageChanges
-		res, changes := simFunc()
-		if changes != nil {
-			cc = *changes
-		}
-		defer C.apt_free_package_changes(&cc)
-
-		if res.code != C.APT_SUCCESS {
-			return ErrorFromResult(res)
-		}
-
-		result = convertPackageChanges(&cc)
-		return nil
-	})
-	return result, err
-}

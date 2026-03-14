@@ -20,8 +20,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/akrylysov/pogreb"
 )
 
 // Глобальные переменные для быстрого доступа к переводу и log
@@ -77,9 +75,8 @@ type LoggerImpl interface {
 
 // DatabaseManager управляет подключениями к базам данных
 type DatabaseManager interface {
-	GetSystemDB() *sql.DB
-	GetUserDB() *sql.DB
-	GetKeyValueDB() *pogreb.DB
+	GetSystemDB() (*sql.DB, error)
+	GetUserDB() (*sql.DB, error)
 	Close() error
 }
 
@@ -97,7 +94,12 @@ func GetAppConfig(ctx context.Context) *Config {
 	if cfg, ok := ctx.Value(AppConfigKey).(*Config); ok {
 		return cfg
 	}
-	panic("AppConfig not found in context")
+	errMsg := "App config not found in context: critical internal error"
+
+	// Компилятору не нравится return nill,
+	// но Log.Fatal и так "убьёт" приложение и до panic не дойдёт, зато IDE не будет жаловаться
+	Log.Fatal(errMsg)
+	panic(errMsg)
 }
 
 // Config централизованный конфиг приложение
@@ -141,7 +143,6 @@ func InitializeApp(buildInfo BuildInfo) (*Config, error) {
 	dbManager := NewDatabaseManager(
 		config.PathDBSQLSystem,
 		config.PathDBSQLUser,
-		config.PathDBKV,
 	)
 
 	dbusManager := NewDBusManager()

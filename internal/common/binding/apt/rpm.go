@@ -18,6 +18,7 @@ package apt
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"bufio"
 	"context"
@@ -46,7 +47,7 @@ func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix str
 	var result map[string]string
 	skipLock := len(noLock) > 0 && noLock[0]
 
-	err := a.operationWrapperWithOptions(skipLock, func() error {
+	err := a.runOperation(OperationOptions{SkipLock: skipLock}, func(_ *lib.System) error {
 		command := fmt.Sprintf("%s rpm -qia", commandPrefix)
 		cmd := exec.CommandContext(ctx, "sh", "-c", command)
 		cmd.Env = []string{"LC_ALL=C"}
@@ -68,7 +69,7 @@ func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix str
 func (a *Actions) RpmQueryKernelPackages(ctx context.Context) ([]KernelRPMInfo, error) {
 	var result []KernelRPMInfo
 
-	err := a.operationWrapper(func() error {
+	err := a.runOperation(OperationOptions{}, func(_ *lib.System) error {
 		cmd := exec.CommandContext(ctx, "rpm", "-qa", "--queryformat",
 			"%{NAME}\t%{VERSION}\t%{RELEASE}\t%{BUILDTIME}\n", "kernel-image-*")
 		cmd.Env = []string{"LC_ALL=C"}
@@ -90,7 +91,7 @@ func (a *Actions) RpmQueryKernelPackages(ctx context.Context) ([]KernelRPMInfo, 
 func (a *Actions) RpmIsPackageInstalled(packageName string) (bool, error) {
 	var installed bool
 
-	err := a.operationWrapper(func() error {
+	err := a.runOperation(OperationOptions{}, func(_ *lib.System) error {
 		cmd := exec.Command("rpm", "-q", packageName)
 		cmdErr := cmd.Run()
 		installed = cmdErr == nil
@@ -104,7 +105,7 @@ func (a *Actions) RpmIsPackageInstalled(packageName string) (bool, error) {
 func (a *Actions) RpmIsAnyPackageInstalled(packageNames []string) (bool, error) {
 	var installed bool
 
-	err := a.operationWrapper(func() error {
+	err := a.runOperation(OperationOptions{}, func(_ *lib.System) error {
 		for _, pkgName := range packageNames {
 			cmd := exec.Command("rpm", "-q", pkgName)
 			if cmd.Run() == nil {

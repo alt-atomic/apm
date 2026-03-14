@@ -20,7 +20,10 @@ import (
 	aptErrors "apm/internal/common/apt"
 	aptBinding "apm/internal/common/binding/apt"
 	aptlib "apm/internal/common/binding/apt/lib"
+	_ "embed"
 	"errors"
+	"os"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -29,6 +32,12 @@ import (
 
 const testPackage = "hello"
 
+//go:embed files/test-apm-example-1.0-alt1.x86_64.rpm
+var testRpmData []byte
+
+//go:embed files/test-apm-example2-1.0-alt1.x86_64.rpm
+var testRpmData2 []byte
+
 // TestAptNewActions ensures Actions can be constructed and closed
 func TestAptNewActions(t *testing.T) {
 	actions := aptBinding.NewActions()
@@ -36,7 +45,36 @@ func TestAptNewActions(t *testing.T) {
 	aptBinding.Close()
 }
 
-// TestAptSearchBasic update system
+// TestAptDownloadOnly verifies download-only mode downloads without installing
+func TestAptDownloadOnly(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	if info, err := actions.GetInfo(testPackage); err == nil && info != nil && info.State == aptlib.PackageStateInstalled {
+		if err = actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
+			t.Fatalf("pre-cleanup remove failed: %v", err)
+		}
+	}
+
+	err := actions.InstallPackages([]string{testPackage}, nil, true)
+	if err != nil {
+		t.Fatalf("download-only failed: %v", err)
+	}
+
+	info, err := actions.GetInfo(testPackage)
+	if err != nil {
+		t.Fatalf("GetInfo failed: %v", err)
+	}
+	assert.NotEqual(t, aptlib.PackageStateInstalled, info.State,
+		"package should NOT be installed after download-only")
+	t.Logf("download-only: package %s state=%d (not installed)", testPackage, info.State)
+}
+
+// TestAptUpdate update system
 func TestAptUpdate(t *testing.T) {
 	if syscall.Geteuid() != 0 {
 		t.Skip("requires root for APT cache write/lock")
@@ -45,7 +83,7 @@ func TestAptUpdate(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	if err := actions.Update(); err != nil {
+	if err := actions.Update(nil); err != nil {
 		t.Fatalf("Update failed: %v", err)
 	}
 }
@@ -109,7 +147,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	defer aptBinding.Close()
 
 	// First, try to install the test package (ignore if already newest version)
-	err := actions.InstallPackages([]string{testPackage}, nil)
+	err := actions.InstallPackages([]string{testPackage}, nil, false)
 	if err != nil {
 		if matchedErr := aptErrors.CheckError(err.Error()); matchedErr != nil {
 			if matchedErr.Entry.Code == aptErrors.ErrPackageIsAlreadyNewest {
@@ -155,7 +193,7 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 	defer aptBinding.Close()
 
 	installedFirst := false
-	if info, err := actions.GetInfo(testPackage); err == nil && info != nil && info.State == 1 {
+	if info, err := actions.GetInfo(testPackage); err == nil && info != nil && info.State == aptlib.PackageStateInstalled {
 		installedFirst = true
 	}
 
@@ -163,11 +201,11 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
-		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
+		if err := actions.InstallPackages([]string{testPackage}, nil, false); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
 	} else {
-		if err := actions.InstallPackages([]string{testPackage}, nil); err != nil {
+		if err := actions.InstallPackages([]string{testPackage}, nil, false); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
 		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
@@ -181,7 +219,7 @@ func TestAptInvalidParameters(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	if err := actions.InstallPackages([]string{}, nil); err == nil {
+	if err := actions.InstallPackages([]string{}, nil, false); err == nil {
 		t.Fatalf("expected error for empty package list in InstallPackages")
 	}
 
@@ -280,6 +318,109 @@ func TestAptMultiplePackageInstall(t *testing.T) {
 		assert.NotNil(t, changes)
 		t.Logf("Multiple packages: new=%d, upgraded=%d, extra=%d",
 			changes.NewInstalledCount, changes.UpgradedCount, len(changes.ExtraInstalled))
+	}
+}
+
+// TestAptInstallRemoveRpmFile tests installing and removing an RPM file from disk.
+func TestAptInstallRemoveRpmFile(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root")
+	}
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-apm-example-*.rpm")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	if _, err = tmpFile.Write(testRpmData); err != nil {
+		t.Fatalf("failed to write RPM data: %v", err)
+	}
+	tmpFile.Close()
+	rpmPath := tmpFile.Name()
+
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	const testPkg = "test-apm-example"
+
+	if info, e := actions.GetInfo(testPkg); e == nil && info != nil && info.State == aptlib.PackageStateInstalled {
+		if err = actions.RemovePackages([]string{testPkg}, false, false, nil); err != nil {
+			t.Fatalf("pre-cleanup remove failed: %v", err)
+		}
+	}
+
+	if err = actions.InstallPackages([]string{rpmPath}, nil, false); err != nil {
+		t.Fatalf("install RPM file failed: %v", err)
+	}
+
+	const installedFile = "/usr/share/test-apm-example/test.txt"
+	content, err := os.ReadFile(installedFile)
+	if err != nil {
+		t.Fatalf("expected file %s not found after install: %v", installedFile, err)
+	}
+	assert.Equal(t, "hello", strings.TrimSpace(string(content)))
+
+	if err = actions.RemovePackages([]string{"test-apm-example"}, false, false, nil); err != nil {
+		t.Fatalf("remove test-apm-example failed: %v", err)
+	}
+
+	if _, err = os.Stat(installedFile); !os.IsNotExist(err) {
+		t.Errorf("expected %s to be removed after package removal", installedFile)
+	}
+}
+
+// TestAptInstallConflictingRpms installs two RPM files that conflict on the same file path.
+func TestAptInstallConflictingRpms(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root")
+	}
+
+	tmpDir := t.TempDir()
+
+	tmpFile1, err := os.CreateTemp(tmpDir, "test-apm-example-*.rpm")
+	if err != nil {
+		t.Fatalf("failed to create temp file 1: %v", err)
+	}
+	if _, err = tmpFile1.Write(testRpmData); err != nil {
+		t.Fatalf("failed to write RPM data 1: %v", err)
+	}
+	tmpFile1.Close()
+
+	tmpFile2, err := os.CreateTemp(tmpDir, "test-apm-example2-*.rpm")
+	if err != nil {
+		t.Fatalf("failed to create temp file 2: %v", err)
+	}
+	if _, err = tmpFile2.Write(testRpmData2); err != nil {
+		t.Fatalf("failed to write RPM data 2: %v", err)
+	}
+	tmpFile2.Close()
+
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	rpmPaths := []string{tmpFile1.Name(), tmpFile2.Name()}
+	for _, rpm := range rpmPaths {
+		_ = actions.RemovePackages([]string{rpm}, false, false, nil)
+	}
+
+	defer func() {
+		for _, rpm := range rpmPaths {
+			_ = actions.RemovePackages([]string{rpm}, false, false, nil)
+		}
+	}()
+
+	for i, rpm := range rpmPaths {
+		err = actions.InstallPackages([]string{rpm}, nil, false)
+		if i == 0 {
+			if err != nil {
+				t.Fatalf("install first RPM failed: %v", err)
+			}
+		} else {
+			if err == nil {
+				t.Fatal("expected file conflict error when installing second RPM, got nil")
+			}
+			assert.Contains(t, err.Error(), "conflicts", "expected conflict error details")
+			t.Logf("conflict error: %v", err)
+		}
 	}
 }
 

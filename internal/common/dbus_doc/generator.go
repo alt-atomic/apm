@@ -17,20 +17,16 @@
 package dbus_doc
 
 import (
-	"apm/internal/common/app"
-	"context"
+	"apm/internal/common/reply"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"net/http"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
-	"time"
+	"unicode"
 )
 
 // DBusMethodInfo содержит информацию о DBus методе
@@ -49,13 +45,43 @@ type DBusParameter struct {
 
 // Config конфигурация для генерации
 type Config struct {
-	ModuleName    string
-	DBusInterface string
-	ServerPort    string
-	DBusWrapper   interface{}
-	ResponseTypes map[string]reflect.Type
-	SourceCode    string
-	DBusSession   string
+	ModuleName      string
+	DBusInterface   string
+	ResponseTypes   map[string]reflect.Type
+	MethodResponses map[string]string // имя метода DBusWrapper → имя типа ответа
+	SourceCode      string
+	DBusSession     string
+}
+
+// ResponseTypeBinaryData маркер для бинарных ответов ([]byte)
+const ResponseTypeBinaryData = "BinaryData"
+
+// DeriveResponseTypes автоматически извлекает типы ответов и маппинг метод→тип из методов Actions через рефлексию.
+// actionsPtr должен быть типизированным nil-указателем на Actions, например (*Actions)(nil).
+func DeriveResponseTypes(actionsPtr interface{}) (map[string]reflect.Type, map[string]string) {
+	responseTypes := make(map[string]reflect.Type)
+	methodResponses := make(map[string]string)
+	actionsType := reflect.TypeOf(actionsPtr)
+	for i := 0; i < actionsType.NumMethod(); i++ {
+		method := actionsType.Method(i)
+		mType := method.Type
+		if mType.NumOut() >= 2 {
+			outType := mType.Out(0)
+			if outType.Kind() == reflect.Ptr {
+				outType = outType.Elem()
+			}
+			name := outType.Name()
+			if name != "" && name != "error" {
+				responseTypes[name] = outType
+				methodResponses[method.Name] = name
+			} else if outType.Kind() == reflect.Slice && outType.Elem().Kind() == reflect.Uint8 {
+				responseTypes[ResponseTypeBinaryData] = outType
+				methodResponses[method.Name] = ResponseTypeBinaryData
+			}
+		}
+	}
+	responseTypes["APIResponse"] = reflect.TypeOf(reply.APIResponse{})
+	return responseTypes, methodResponses
 }
 
 // Generator генератор документации
@@ -70,7 +96,7 @@ func NewGenerator(config Config) *Generator {
 
 // GenerateDBusDocHTML генерирует HTML документацию для DBus API
 func (g *Generator) GenerateDBusDocHTML() string {
-	methods := g.reflectDBusMethods()
+	methods := g.parseSourceMethods()
 
 	busType := "system"
 	if g.config.DBusSession == "session" {
@@ -145,11 +171,6 @@ func (g *Generator) GenerateDBusDocHTML() string {
 	return html
 }
 
-// reflectDBusMethods парсит исходный код и извлекает информацию о методах
-func (g *Generator) reflectDBusMethods() []DBusMethodInfo {
-	return g.parseSourceMethods()
-}
-
 // parseSourceMethods парсит исходный код для извлечения методов
 func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 	var methods []DBusMethodInfo
@@ -160,11 +181,9 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 		return methods
 	}
 
-	// Карты для хранения информации из комментариев
-	responseTypes := make(map[string]string)
+	// Извлекаем описания из комментариев
 	descriptions := make(map[string]string)
 
-	// Извлекаем информацию из комментариев
 	for _, comment := range node.Comments {
 		text := comment.Text()
 
@@ -184,22 +203,11 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 			continue
 		}
 
-		if match := regexp.MustCompile(`doc_response:\s*(\w+)`).FindStringSubmatch(text); match != nil {
-			responseTypes[nextFunc.Name.Name] = match[1]
-		}
-
 		lines := strings.Split(text, "\n")
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
-			if line != "" && !strings.Contains(line, "doc_response:") {
-				if strings.Contains(line, "–") {
-					parts := strings.SplitN(line, "–", 2)
-					if len(parts) == 2 {
-						descriptions[nextFunc.Name.Name] = strings.TrimSpace(parts[1])
-					}
-				} else {
-					descriptions[nextFunc.Name.Name] = line
-				}
+			if line != "" {
+				descriptions[nextFunc.Name.Name] = g.extractDescription(nextFunc.Name.Name, line)
 				break
 			}
 		}
@@ -226,8 +234,8 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 		}
 
 		methodName := funcDecl.Name.Name
-		responseType, hasResponse := responseTypes[methodName]
-		if !hasResponse {
+		responseType := g.config.MethodResponses[methodName]
+		if responseType == "" {
 			continue
 		}
 
@@ -270,6 +278,30 @@ func (g *Generator) parseSourceMethods() []DBusMethodInfo {
 	return methods
 }
 
+// extractDescription извлекает описание метода из doc-комментария.
+// Поддерживает два формата:
+//   - "MethodName – описание" (en-dash разделитель)
+//   - "MethodName описание." (Go doc формат, имя + глагол)
+func (g *Generator) extractDescription(methodName, line string) string {
+	if strings.Contains(line, "–") {
+		parts := strings.SplitN(line, "–", 2)
+		if len(parts) == 2 {
+			return strings.TrimSpace(parts[1])
+		}
+	}
+
+	if strings.HasPrefix(line, methodName+" ") {
+		desc := strings.TrimPrefix(line, methodName+" ")
+		if len(desc) > 0 {
+			runes := []rune(desc)
+			runes[0] = unicode.ToUpper(runes[0])
+			return string(runes)
+		}
+	}
+
+	return line
+}
+
 // getASTTypeString преобразует AST тип в строку
 func (g *Generator) getASTTypeString(expr ast.Expr) string {
 	switch t := expr.(type) {
@@ -286,26 +318,12 @@ func (g *Generator) getASTTypeString(expr ast.Expr) string {
 		}
 	case *ast.ArrayType:
 		return "[]" + g.getASTTypeString(t.Elt)
+	case *ast.MapType:
+		return "map[" + g.getASTTypeString(t.Key) + "]" + g.getASTTypeString(t.Value)
 	case *ast.SelectorExpr:
 		return g.getASTTypeString(t.X) + "." + t.Sel.Name
 	default:
 		return "unknown"
-	}
-}
-
-// getTypeString возвращает строковое представление типа
-func (g *Generator) getTypeString(t reflect.Type) string {
-	switch t.Kind() {
-	case reflect.String:
-		return "string"
-	case reflect.Bool:
-		return "bool"
-	case reflect.Int, reflect.Int32, reflect.Int64:
-		return "int"
-	case reflect.Slice:
-		return "[]" + g.getTypeString(t.Elem())
-	default:
-		return t.String()
 	}
 }
 
@@ -322,26 +340,29 @@ func (g *Generator) formatParameters(params []DBusParameter) string {
 	return strings.Join(parts, "")
 }
 
-// generateDBusCommand генерирует пример dbus-send команды
+// generateDBusCommand генерирует пример gdbus call команды для вызова метода через D-Bus.
 func (g *Generator) generateDBusCommand(method DBusMethodInfo) string {
 	sessionType := g.config.DBusSession
 	if sessionType == "" {
 		sessionType = "system"
 	}
-	cmd := fmt.Sprintf("dbus-send --%s --print-reply --dest=org.altlinux.APM /org/altlinux/APM %s.%s", sessionType, g.config.DBusInterface, method.Name)
+
+	cmd := fmt.Sprintf("gdbus call --%s --dest org.altlinux.APM --object-path /org/altlinux/APM --method %s.%s", sessionType, g.config.DBusInterface, method.Name)
 
 	for _, param := range method.Parameters {
 		switch param.Type {
 		case "string":
-			cmd += " string:\"example\""
+			cmd += ` "example"`
 		case "[]string":
-			cmd += " array:string:\"example1\",\"example2\""
+			cmd += ` '["example1", "example2"]'`
 		case "bool":
-			cmd += " boolean:true"
+			cmd += " true"
 		case "int":
-			cmd += " int32:10"
+			cmd += " 10"
+		case "map[string]string":
+			cmd += ` '{"Key": "Value"}'`
 		default:
-			cmd += " string:\"" + param.Name + "\""
+			cmd += ` "` + param.Name + `"`
 		}
 	}
 
@@ -350,6 +371,10 @@ func (g *Generator) generateDBusCommand(method DBusMethodInfo) string {
 
 // generateJSONExample создаёт JSON пример используя рефлексию
 func (g *Generator) generateJSONExample(responseType string) string {
+	if responseType == ResponseTypeBinaryData {
+		return "Binary data (bytes)"
+	}
+
 	var example interface{}
 
 	if typ, exists := g.config.ResponseTypes[responseType]; exists {
@@ -367,7 +392,7 @@ func (g *Generator) generateJSONExample(responseType string) string {
 	if _, exists := g.config.ResponseTypes["APIResponse"]; exists {
 		wrappedResponse := map[string]interface{}{
 			"data":  example,
-			"error": false,
+			"error": nil,
 		}
 		example = wrappedResponse
 	}
@@ -383,11 +408,12 @@ func (g *Generator) generateJSONExample(responseType string) string {
 // createExampleStruct создаёт пример структуры с заполненными значениями
 func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 	if typ.Kind() == reflect.Slice {
-		if typ.Elem().Name() == "FilterField" {
+		elemType := typ.Elem()
+		if elemType.Kind() == reflect.Struct {
 			slice := reflect.MakeSlice(typ, 1, 1)
 			elem := slice.Index(0)
-			exampleField := g.createExampleStruct(typ.Elem())
-			elem.Set(reflect.ValueOf(exampleField))
+			exampleElem := g.createExampleStruct(elemType)
+			elem.Set(reflect.ValueOf(exampleElem))
 			return slice.Interface()
 		}
 		return reflect.MakeSlice(typ, 0, 0).Interface()
@@ -428,11 +454,15 @@ func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 			fieldValue.Set(slice)
 		case reflect.Struct:
 			fieldValue.Set(reflect.ValueOf(g.createExampleStruct(field.Type)))
+		case reflect.Map:
+			m := reflect.MakeMap(field.Type)
+			if field.Type.Key().Kind() == reflect.String && field.Type.Elem().Kind() == reflect.String {
+				m.SetMapIndex(reflect.ValueOf("Key"), reflect.ValueOf("Value"))
+			}
+			fieldValue.Set(m)
 		case reflect.Ptr:
-			// Создаем новый экземпляр типа, на который указывает указатель
 			elemType := field.Type.Elem()
 			ptrValue := reflect.New(elemType)
-			// Заполняем структуру, на которую указывает указатель
 			filledValue := g.createExampleStruct(elemType)
 			ptrValue.Elem().Set(reflect.ValueOf(filledValue))
 			fieldValue.Set(ptrValue)
@@ -442,41 +472,4 @@ func (g *Generator) createExampleStruct(typ reflect.Type) interface{} {
 	}
 
 	return value.Interface()
-}
-
-// StartDocServer запускает веб-сервер с документацией
-func (g *Generator) StartDocServer(ctx context.Context) error {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		html := g.GenerateDBusDocHTML()
-		_, err := fmt.Fprint(w, html)
-		if err != nil {
-			if !strings.Contains(err.Error(), "broken pipe") {
-				app.Log.Error("HTTP write error: " + err.Error())
-			}
-			return
-		}
-	})
-
-	server := &http.Server{
-		Addr:         ":" + g.config.ServerPort,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-	}
-
-	fmt.Printf("Documentation server started at http://localhost:%s\n", g.config.ServerPort)
-	fmt.Println("Press Ctrl+C to stop")
-
-	go func() {
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			app.Log.Fatal(err.Error())
-		}
-	}()
-
-	<-ctx.Done()
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	return server.Shutdown(shutdownCtx)
 }

@@ -103,6 +103,7 @@ type Schema struct {
 	Type        string             `json:"type,omitempty"`
 	Format      string             `json:"format,omitempty"`
 	Description string             `json:"description,omitempty"`
+	Nullable    bool               `json:"nullable,omitempty"`
 	Properties  map[string]*Schema `json:"properties,omitempty"`
 	Items       *Schema            `json:"items,omitempty"`
 	Ref         string             `json:"$ref,omitempty"`
@@ -127,16 +128,14 @@ type SecurityScheme struct {
 type OpenAPIGenerator struct {
 	registry   *Registry
 	version    string
-	isAtomic   bool
 	listenAddr string
 }
 
 // NewOpenAPIGenerator создает новый генератор
-func NewOpenAPIGenerator(registry *Registry, version string, isAtomic bool, listenAddr string) *OpenAPIGenerator {
+func NewOpenAPIGenerator(registry *Registry, version string, listenAddr string) *OpenAPIGenerator {
 	return &OpenAPIGenerator{
 		registry:   registry,
 		version:    version,
-		isAtomic:   isAtomic,
 		listenAddr: listenAddr,
 	}
 }
@@ -144,7 +143,6 @@ func NewOpenAPIGenerator(registry *Registry, version string, isAtomic bool, list
 // GenerateOpenAPI генерирует OpenAPI спецификацию как map для интерфейса http_server
 func (g *OpenAPIGenerator) GenerateOpenAPI() map[string]interface{} {
 	spec := g.Generate()
-	// Конвертируем в map через JSON
 	data, _ := json.Marshal(spec)
 	var result map[string]interface{}
 	_ = json.Unmarshal(data, &result)
@@ -189,11 +187,6 @@ Subscribe to real-time events (progress updates, notifications) via WebSocket:
 	tagsSet := make(map[string]bool)
 
 	for _, ep := range g.registry.GetHTTPEndpoints() {
-		// Пропускаем image endpoints для не-атомарных систем
-		if !g.isAtomic && strings.Contains(ep.HTTPPath, "/image") {
-			continue
-		}
-
 		// Собираем уникальные теги
 		for _, tag := range ep.Tags {
 			tagsSet[tag] = true
@@ -254,24 +247,7 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 		Summary:     ep.Summary,
 		Description: ep.Description,
 		OperationID: strings.ToLower(ep.HTTPMethod) + "_" + strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(ep.HTTPPath, "/", "_"), "{", ""), "}", ""),
-		Responses: map[string]Response{
-			"200": {
-				Description: "Successful response",
-				Content: map[string]MediaType{
-					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/APIResponse_" + ep.ResponseType},
-					},
-				},
-			},
-			"400": {
-				Description: "Bad request",
-				Content: map[string]MediaType{
-					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/APIResponse"},
-					},
-				},
-			},
-		},
+		Responses:   g.buildResponses(ep),
 	}
 
 	// Path параметры
@@ -306,12 +282,12 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 	// Request body для POST/PUT/DELETE
 	if ep.HTTPMethod == "POST" || ep.HTTPMethod == "PUT" || ep.HTTPMethod == "DELETE" {
 		// Если есть RequestType - используем его
-		if ep.RequestType != "" {
+		if ep.RequestType != nil {
 			op.RequestBody = &RequestBody{
 				Required: true,
 				Content: map[string]MediaType{
 					"application/json": {
-						Schema: &Schema{Ref: "#/components/schemas/" + ep.RequestType},
+						Schema: &Schema{Ref: "#/components/schemas/" + ep.RequestType.Name()},
 					},
 				},
 			}
@@ -331,6 +307,42 @@ func (g *OpenAPIGenerator) createOperation(ep Endpoint) *Operation {
 	}
 
 	return op
+}
+
+// buildResponses формирует блок responses для endpoint
+func (g *OpenAPIGenerator) buildResponses(ep Endpoint) map[string]Response {
+	responses := map[string]Response{
+		"400": {
+			Description: "Bad request",
+			Content: map[string]MediaType{
+				"application/json": {
+					Schema: &Schema{Ref: "#/components/schemas/APIResponse"},
+				},
+			},
+		},
+	}
+
+	if ep.ContentType != "" {
+		responses["200"] = Response{
+			Description: "Successful response",
+			Content: map[string]MediaType{
+				ep.ContentType: {
+					Schema: &Schema{Type: "string", Format: "binary"},
+				},
+			},
+		}
+	} else {
+		responses["200"] = Response{
+			Description: "Successful response",
+			Content: map[string]MediaType{
+				"application/json": {
+					Schema: &Schema{Ref: "#/components/schemas/APIResponse_" + ep.ResponseType.Name()},
+				},
+			},
+		}
+	}
+
+	return responses
 }
 
 // generateBodySchemaFromMappings генерирует схему body из ParamMappings
@@ -388,19 +400,30 @@ func (g *OpenAPIGenerator) mapType(typ string) string {
 
 // generateSchemas генерирует схемы из responseTypes
 func (g *OpenAPIGenerator) generateSchemas() map[string]*Schema {
+	apiErrorSchema := &Schema{
+		Type:        "object",
+		Description: "Error details (null on success)",
+		Nullable:    true,
+		Properties: map[string]*Schema{
+			"errorCode": {Type: "string", Description: "Error type code (e.g. VALIDATION, NOT_FOUND, PERMISSION)"},
+			"message":   {Type: "string", Description: "Human-readable error message"},
+		},
+	}
+
 	schemas := map[string]*Schema{
+		"APIError": apiErrorSchema,
 		"APIResponse": {
 			Type: "object",
 			Properties: map[string]*Schema{
 				"data":        {Type: "object", Description: "Response data"},
-				"error":       {Type: "boolean", Description: "Error flag"},
+				"error":       {Ref: "#/components/schemas/APIError"},
 				"transaction": {Type: "string", Description: "Transaction ID"},
 			},
 		},
 	}
 
 	// Добавляем схемы из registry
-	for name, typ := range g.registry.GetResponseTypes() {
+	for name, typ := range g.registry.CollectResponseTypes() {
 		if _, exists := schemas[name]; !exists {
 			schemas[name] = g.typeToSchema(typ)
 		}
@@ -411,7 +434,7 @@ func (g *OpenAPIGenerator) generateSchemas() map[string]*Schema {
 				Type: "object",
 				Properties: map[string]*Schema{
 					"data":        {Ref: "#/components/schemas/" + name},
-					"error":       {Type: "boolean", Description: "Error flag"},
+					"error":       {Ref: "#/components/schemas/APIError"},
 					"transaction": {Type: "string", Description: "Transaction ID"},
 				},
 			}
@@ -457,7 +480,7 @@ func (g *OpenAPIGenerator) typeToSchema(typ reflect.Type) *Schema {
 		return &Schema{Type: "object"}
 	case reflect.Interface:
 		return &Schema{Type: "object"}
+	default:
+		return &Schema{Type: "object"}
 	}
-
-	return &Schema{Type: "object"}
 }

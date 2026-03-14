@@ -83,7 +83,6 @@ const (
 	ErrRpmDatabaseLock
 	ErrPackageIsAlreadyNewest
 	ErrConflictsViolated
-	// ErrAptInitConfigFailed bindings-specific (APT wrapper messages)
 	ErrAptInitConfigFailed
 	ErrInvalidSystemPointer
 	ErrAptInitSystemFailed
@@ -149,12 +148,19 @@ const (
 	ErrPackagesCouldNotBeInstalled
 	ErrPackagesAlreadyInstalled
 	ErrRpmUnpackingFailed
+	ErrRpmRunningTransaction
+	ErrPackageNotInstalledCannotReinstall
+	ErrUnableToFindPackageFromRpm
+	ErrTransactionSetCheckFailed
+	ErrSomeErrorsRunningTransaction
+	ErrArchiveDirectoryMissing
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
 type MatchedError struct {
-	Entry  ErrorEntry
-	Params []string
+	Entry   ErrorEntry
+	Params  []string
+	Details string
 }
 
 // ErrorEntry описывает шаблон ошибки.
@@ -410,8 +416,8 @@ var errorPatterns = []ErrorEntry{
 	{ErrCannotRemoveTryTogether, "Cannot remove %s. Try removing together: %s", func() string { return app.T_("Cannot remove %s. Try removing together: %s") }, 2},
 	{ErrSomeBrokenDependencies, "Broken dependencies", func() string { return app.T_("Broken dependencies") }, 0},
 	{ErrMultiInstallProvidersSelect, "Virtual package %s is provided by:", func() string {
-		return app.T_("Virtual package %s is provided by:\n%s \nYou should explicitly select one to install")
-	}, 2},
+		return app.T_("Virtual package %s is provided by:")
+	}, 1},
 	{ErrRepositoryUpdateFailed, "Repository update failed: %s", func() string { return app.T_("Repository update failed: %s") }, 1},
 	{ErrPackageIndexUpdateFailed, "Package index update failed: %s", func() string { return app.T_("Package index update failed: %s") }, 1},
 	{ErrConflictingPackages, "Conflicting packages: %s and %s", func() string { return app.T_("Conflicting packages: %s and %s") }, 2},
@@ -423,6 +429,24 @@ var errorPatterns = []ErrorEntry{
 	}, 1},
 	{ErrRpmUnpackingFailed, "unpacking of archive failed: %s", func() string {
 		return app.T_("RPM package unpacking failed: %s. The package may be incompatible with the current system or requires special permissions")
+	}, 1},
+	{ErrRpmRunningTransaction, "Error while running transaction", func() string {
+		return app.T_("Error while running transaction")
+	}, 0},
+	{ErrPackageNotInstalledCannotReinstall, "Package %s is not installed, so cannot be reinstalled", func() string {
+		return app.T_("Package %s is not installed, so cannot be reinstalled")
+	}, 1},
+	{ErrUnableToFindPackageFromRpm, "Unable to find package from RPM file: %s", func() string {
+		return app.T_("Unable to find package from RPM file: %s")
+	}, 1},
+	{ErrTransactionSetCheckFailed, "Transaction set check failed", func() string {
+		return app.T_("Transaction set check failed")
+	}, 0},
+	{ErrSomeErrorsRunningTransaction, "Some errors occurred while running transaction", func() string {
+		return app.T_("Some errors occurred while running transaction")
+	}, 0},
+	{ErrArchiveDirectoryMissing, "Archive directory %s is missing.", func() string {
+		return app.T_("Archive directory %s is missing.")
 	}, 1},
 }
 
@@ -493,10 +517,17 @@ func CheckError(requestError string) *MatchedError {
 func (e *MatchedError) Error() string {
 	var template = e.Entry.TranslatedPattern()
 
+	var msg string
 	if e.Entry.Params > 0 && len(e.Params) >= e.Entry.Params {
-		return fmt.Sprintf(template, toInterfaceSlice(e.Params[:e.Entry.Params])...)
+		msg = fmt.Sprintf(template, toInterfaceSlice(e.Params[:e.Entry.Params])...)
+	} else {
+		msg = template
 	}
-	return template
+
+	if e.Details != "" {
+		msg += "\n" + e.Details
+	}
+	return msg
 }
 
 func (e *MatchedError) IsCritical() bool {
@@ -507,6 +538,16 @@ func (e *MatchedError) IsCritical() bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func (e *MatchedError) IsNotFound() bool {
+	switch e.Entry.Code {
+	case ErrPackageNotFound, ErrPackageIsNotInstalled, ErrNoPackagesFound,
+		ErrSourcePackageNotFound, ErrVersionNotFound, ErrReleaseNotFound:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -523,21 +564,6 @@ func (e *MatchedError) NeedUpdate() bool {
 	}
 }
 
-//func FindCriticalError(errorList []error) error {
-//	for _, err := range errorList {
-//		var matchedErr *MatchedError
-//		if err != nil && !errors.As(err, &matchedErr) {
-//			return err
-//		}
-//
-//		if err != nil && matchedErr.IsCritical() {
-//			return matchedErr
-//		}
-//	}
-//
-//	return nil
-//}
-
 func patternToRegex(pattern string) string {
 	parts := strings.Split(pattern, "%s")
 	for i, part := range parts {
@@ -552,4 +578,54 @@ func toInterfaceSlice(strings []string) []interface{} {
 		result[i] = s
 	}
 	return result
+}
+
+// IsTransactionError проверяет, является ли ошибка связанной с RPM транзакцией.
+func (e *MatchedError) IsTransactionError() bool {
+	switch e.Entry.Code {
+	case ErrRpmRunningTransaction, ErrPMOperationFailed, ErrPMOperationIncomplete,
+		ErrTransactionSetCheckFailed, ErrSomeErrorsRunningTransaction:
+		return true
+	default:
+		return false
+	}
+}
+
+// CollectTransactionDetails извлекает строки RPM problem из логов.
+func CollectTransactionDetails(logs []string) string {
+	var details []string
+	for _, line := range logs {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if isRpmProblemLine(trimmed) {
+			details = append(details, trimmed)
+		}
+	}
+	return strings.Join(details, "\n")
+}
+
+// rpmProblemPatterns подстроки, характерные для ошибок librpm
+var rpmProblemPatterns = []string{
+	" conflicts with ",
+	" conflicts between attempted installs of ",
+	" is needed by ",
+	" is obsoleted by ",
+	" is already installed",
+	" is intended for a ",
+	"which is newer than",
+}
+
+// isRpmProblemLine определяет, является ли строка описанием RPM problem
+func isRpmProblemLine(line string) bool {
+	for _, pattern := range rpmProblemPatterns {
+		if strings.Contains(line, pattern) {
+			return true
+		}
+	}
+	if strings.HasPrefix(line, "installing package ") && strings.Contains(line, " filesystem") {
+		return true
+	}
+	return false
 }

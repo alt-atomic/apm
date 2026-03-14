@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     container:
-      image: altlinux.space/actions/runner/hasherc:sisyphus
+      image: altlinux.space/alt-gnome/hasherc:latest
 
     strategy:
       matrix:
@@ -26,16 +26,18 @@ jobs:
           - p11
         arch:
           - amd64
-          # - arm64
+          - arm64
         include:
-          # - arch: arm64
-          #   runner: self-hosted-arm64-alt-sisyphus
           - arch: amd64
-            runner: alt-sisyphus
+            runner: als-huge
+          - arch: arm64
+            runner: self-hosted-arm64-huge
 
     steps:
-      - name: Install hasherc
-        run: apt-get update && apt-get install -y hasherc
+      - name: Install utils
+        run: |
+          apt-get update
+          apt-get install -y meson jq /usr/bin/add_changelog golang fuse-overlayfs
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,6 +50,7 @@ jobs:
         name: Build RPMs
         with:
           branch: ${{ matrix.branch }}
+          arch: ${{ matrix.arch }}
 
       - uses: actions/upload-rpm-action@main
         name: Upload RPMs

@@ -17,6 +17,7 @@
 package reply
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"context"
@@ -26,343 +27,213 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strings"
 	"unicode"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/tree"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-// APIResponse описывает итоговую структуру ответа.
+type APIError struct {
+	ErrorCode string `json:"errorCode"`
+	Message   string `json:"message"`
+}
+
 type APIResponse struct {
 	Data        interface{} `json:"data"`
-	Error       bool        `json:"error"`
+	Error       *APIError   `json:"error"`
 	Transaction string      `json:"transaction,omitempty"`
 }
 
-// ResponseRenderer структура для рендеринга ответов с общим конфигом
+func OK(data interface{}) APIResponse {
+	return APIResponse{Data: data}
+}
+
+func ErrorResponseFromError(err error) APIResponse {
+	var apmErr apmerr.APMError
+	if errors.As(err, &apmErr) {
+		return APIResponse{Error: &APIError{ErrorCode: apmErr.Type, Message: err.Error()}}
+	}
+	return APIResponse{Error: &APIError{Message: err.Error()}}
+}
+
 type ResponseRenderer struct {
-	appConfig *app.Config
+	appConfig       *app.Config
+	colors          app.Colors
+	enumeratorStyle lipgloss.Style
+	accentStyle     lipgloss.Style
+	messageStyle    lipgloss.Style
+	errorMsgStyle   lipgloss.Style
 }
 
-// NewResponseRenderer создает новый рендер с конфигом
 func NewResponseRenderer(appConfig *app.Config) *ResponseRenderer {
+	r := NewRendererFromColors(appConfig.ConfigManager.GetColors())
+	r.appConfig = appConfig
+	return r
+}
+
+func NewRendererFromColors(colors app.Colors) *ResponseRenderer {
 	return &ResponseRenderer{
-		appConfig: appConfig,
+		colors:          colors,
+		enumeratorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.TreeBranch)).MarginRight(1),
+		accentStyle:     lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colors.Accent)),
+		messageStyle:    lipgloss.NewStyle().Bold(true).MarginBottom(1),
+		errorMsgStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ResultError)),
 	}
 }
 
-// GetColors получить цвета из конфига
 func (r *ResponseRenderer) GetColors() app.Colors {
-	return r.appConfig.ConfigManager.GetColors()
+	return r.colors
 }
 
-// getEnumeratorStyle возвращает стиль нумерации (веток)
-func (r *ResponseRenderer) getEnumeratorStyle() lipgloss.Style {
-	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color(r.GetColors().Enumerator)).
-		MarginRight(1)
-}
-
-// getAdaptiveItemColor возвращает адаптивный цвет для пунктов
-func (r *ResponseRenderer) getAdaptiveItemColor() lipgloss.AdaptiveColor {
-	colors := r.GetColors()
-	return lipgloss.AdaptiveColor{
-		Light: colors.ItemLight,
-		Dark:  colors.ItemDark,
-	}
-}
-
-// getAccentStyle возвращает стиль акцента
-func (r *ResponseRenderer) getAccentStyle() lipgloss.Style {
-	return lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color(r.GetColors().Accent))
-}
-
-// getMessageStyle возвращает стиль для message
-func (r *ResponseRenderer) getMessageStyle() lipgloss.Style {
-	return lipgloss.NewStyle().
-		Bold(true).
-		MarginBottom(1)
-}
-
-// getErrorMessageStyle возвращает стиль для message в случае ошибки
-func (r *ResponseRenderer) getErrorMessageStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(r.GetColors().Error))
-}
-
-// getItemStyle возвращает стиль для узлов дерева
-func (r *ResponseRenderer) getItemStyle() lipgloss.Style {
-	return lipgloss.NewStyle().
-		Foreground(r.getAdaptiveItemColor())
-}
-
-// IsTTY пользователь запустил приложение в интерактивной консоли
 func IsTTY() bool {
 	return terminal.IsTerminal(int(os.Stdout.Fd()))
 }
 
-// formatField форматирует поле с учетом стилей
+// IsInteractive возвращает true если формат text и терминал интерактивный (для TUI и других штук)
+func IsInteractive(appConfig *app.Config) bool {
+	return appConfig.ConfigManager.GetConfig().Format == app.FormatText && IsTTY()
+}
+
 func (r *ResponseRenderer) formatField(key string, value interface{}) string {
 	valStr := fmt.Sprintf("%v", value)
-	if key == "name" || key == "packageName" {
-		return r.getAccentStyle().Render(valStr)
+	if key == "name" || key == "packageName" || key == "url" {
+		return r.accentStyle.Render(valStr)
 	}
 	return valStr
 }
 
-// buildTreeFromMap рекурсивно строит дерево (tree.Tree) из map[string]interface{}.
-func (r *ResponseRenderer) buildTreeFromMap(prefix string, data map[string]interface{}, isError bool) *tree.Tree {
-	// Создаем корень дерева
-	t := tree.New().Root(prefix)
-
-	// 1) Если у нас есть "message", обрабатываем его первым
-	if msgVal, haveMsg := data["message"]; haveMsg {
-		switch vv := msgVal.(type) {
-		case string:
-			if isError {
-				t.Child(r.getErrorMessageStyle().Render(vv))
-			} else {
-				t.Child(r.getMessageStyle().Render(vv))
-			}
-		case int, float64, bool:
-			if isError {
-				t.Child(r.getErrorMessageStyle().Render(fmt.Sprintf("%v", vv)))
-			} else {
-				t.Child(r.getMessageStyle().Render(fmt.Sprintf("%v", vv)))
-			}
-		case map[string]interface{}:
-			subTree := r.buildTreeFromMap("message", vv, isError)
-			t.Child(subTree)
-		case []interface{}:
-			listNode := tree.New().Root("message")
-			for i, elem := range vv {
-				listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
-			}
-			t.Child(listNode)
-		default:
-			rv := reflect.ValueOf(msgVal)
-			switch rv.Kind() {
-			case reflect.Struct:
-				b, err := json.Marshal(vv)
-				if err == nil {
-					var mm map[string]interface{}
-					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := r.buildTreeFromMap("message", mm, isError)
-						t.Child(subTree)
-					} else {
-						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
-					}
-				}
-			case reflect.Slice:
-				b, err := json.Marshal(vv)
-				if err == nil {
-					var arr []interface{}
-					if err2 := json.Unmarshal(b, &arr); err2 == nil {
-						listNode := tree.New().Root("message")
-						for i, elem := range arr {
-							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
-								listNode.Child(subTree)
-							} else {
-								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
-							}
-						}
-						t.Child(listNode)
-					} else {
-						t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(app.T_("%T (slice of unknown type)"), vv)))
-					}
-				}
-			default:
-				t.Child(fmt.Sprintf("message: %s", fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
-			}
+func (r *ResponseRenderer) formatScalarValue(k string, v interface{}) string {
+	switch vv := v.(type) {
+	case nil:
+		return app.T_("no")
+	case string:
+		if vv == "" {
+			return app.T_("no")
 		}
-	}
-
-	// 2) Собираем и сортируем остальные ключи, пропуская "message"
-	keys := make([]string, 0, len(data))
-	for k := range data {
-		if k == "message" {
-			continue
+		return r.formatField(k, vv)
+	case bool:
+		if vv {
+			return app.T_("yes")
 		}
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	// 3) Обрабатываем остальные ключи
-	for _, k := range keys {
-		v := data[k]
-		switch vv := v.(type) {
-
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: значение == nil
-		case nil:
-			t.Child(fmt.Sprintf(app.T_("%s: no"), TranslateKey(k)))
-			//t.Child(fmt.Sprintf("%s: []", translateKey(k)))
-
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: строка
-		case string:
-			if vv == "" {
-				t.Child(fmt.Sprintf(app.T_("%s: no"), TranslateKey(k)))
-			} else {
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), r.formatField(k, vv)))
+		return app.T_("no")
+	case int, float64:
+		if k == "size" || k == "installedSize" || k == "downloadSize" || k == "installSize" {
+			var sizeVal int
+			switch sv := vv.(type) {
+			case int:
+				sizeVal = sv
+			case float64:
+				sizeVal = int(sv)
 			}
-
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: булевский (true/false) → "да"/"нет"
-		case bool:
-			var boolStr string
-			if vv {
-				boolStr = app.T_("yes")
-			} else {
-				boolStr = app.T_("no")
-			}
-			t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), boolStr))
-
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: числа (int, float64)
-		case int, float64:
-			if k == "size" || k == "installedSize" || k == "downloadSize" || k == "installSize" {
-				sizeVal := 0
-				switch valueTyped := vv.(type) {
-				case int:
-					sizeVal = valueTyped
-				case float64:
-					sizeVal = int(valueTyped)
-				}
-
-				sizeHuman := helper.AutoSize(sizeVal)
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), sizeHuman))
-			} else {
-				// Стандартный путь для всех остальных чисел
-				t.Child(fmt.Sprintf("%s: %v", TranslateKey(k), vv))
-			}
-
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: вложенная map
-		case map[string]interface{}:
-			subTree := r.buildTreeFromMap(TranslateKey(k), vv, isError)
-			t.Child(subTree)
-
-		//----------------------------------------------------------------------
-		// СЛУЧАЙ: срез (slice) из interface{}
-		case []interface{}:
-			if len(vv) == 0 {
-				t.Child(fmt.Sprintf("%s: []", TranslateKey(k))) // пустой срез
-				continue
-			}
-			listNode := tree.New().Root(TranslateKey(k))
-			for i, elem := range vv {
-				if mm, ok := elem.(map[string]interface{}); ok {
-					subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
-					listNode.Child(subTree)
-				} else {
-					listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
-				}
-			}
-			t.Child(listNode)
-
-		// СЛУЧАЙ: срез из map[string]interface{}
-		case []map[string]interface{}:
-			if len(vv) == 0 {
-				// Показываем пустой массив как []
-				t.Child(fmt.Sprintf("%s: []", TranslateKey(k)))
-				continue
-			}
-			listNode := tree.New().Root(TranslateKey(k))
-			for i, elem := range vv {
-				subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), elem, isError)
-				listNode.Child(subTree)
-			}
-			t.Child(listNode)
-
-			//----------------------------------------------------------------------
-			// ДРУГИЕ СЛУЧАИ: структуры, срезы непонятных типов и т.д.
-		default:
-			rv := reflect.ValueOf(v)
-			switch rv.Kind() {
-
-			//------------------------------------------------------------------
-			// СЛУЧАЙ: структура
-			case reflect.Struct:
-				b, err := json.Marshal(vv)
-				if err == nil {
-					var mm map[string]interface{}
-					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := r.buildTreeFromMap(TranslateKey(k), mm, isError)
-						t.Child(subTree)
-						continue
-					}
-				}
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
-
-			// СЛУЧАЙ: указатель (попробуем развернуть через JSON как структуру/срез)
-			case reflect.Ptr:
-				b, err := json.Marshal(vv)
-				if err == nil {
-					var mm map[string]interface{}
-					if err2 := json.Unmarshal(b, &mm); err2 == nil {
-						subTree := r.buildTreeFromMap(TranslateKey(k), mm, isError)
-						t.Child(subTree)
-						continue
-					}
-					var arr []interface{}
-					if err2 := json.Unmarshal(b, &arr); err2 == nil {
-						listNode := tree.New().Root(TranslateKey(k))
-						for i, elem := range arr {
-							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
-								listNode.Child(subTree)
-							} else {
-								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
-							}
-						}
-						t.Child(listNode)
-						continue
-					}
-				}
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
-
-			//------------------------------------------------------------------
-			// СЛУЧАЙ: срез (slice) непонятного типа
-			case reflect.Slice:
-				b, err := json.Marshal(vv)
-				if err == nil {
-					var arr []interface{}
-					if err2 := json.Unmarshal(b, &arr); err2 == nil {
-						listNode := tree.New().Root(TranslateKey(k))
-						for i, elem := range arr {
-							if mm, ok := elem.(map[string]interface{}); ok {
-								subTree := r.buildTreeFromMap(fmt.Sprintf("%d)", i+1), mm, isError)
-								listNode.Child(subTree)
-							} else {
-								listNode.Child(fmt.Sprintf("%d) %v", i+1, elem))
-							}
-						}
-						t.Child(listNode)
-						continue
-					}
-				}
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (slice of unknown type)"), vv)))
-
-			//------------------------------------------------------------------
-			default:
-				t.Child(fmt.Sprintf("%s: %s", TranslateKey(k), fmt.Sprintf(app.T_("%T (unknown type)"), vv)))
-			}
+			return helper.AutoSize(sizeVal)
 		}
+		return fmt.Sprintf("%v", vv)
+	default:
+		return fmt.Sprintf("%v", vv)
 	}
-
-	return t
 }
 
-// CliResponse рендерит ответ (обертка для обратной совместимости)
+func (r *ResponseRenderer) formatScalarField(k string, v interface{}) string {
+	return fmt.Sprintf("%s: %s", TranslateKey(k), r.formatScalarValue(k, v))
+}
+
+func (r *ResponseRenderer) formatScalarFieldWithLabel(label, k string, v interface{}) string {
+	return fmt.Sprintf("%s: %s", label, r.formatScalarValue(k, v))
+}
+
+func sortedKeys(data map[string]interface{}) []string {
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		if k != "message" {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func normalizeValue(v interface{}) interface{} {
+	switch v.(type) {
+	case nil, string, bool, int, float64, map[string]interface{}, []interface{}:
+		return v
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Struct, reflect.Ptr:
+		b, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Sprintf("%v", v)
+		}
+		var mm map[string]interface{}
+		if json.Unmarshal(b, &mm) == nil {
+			return mm
+		}
+		var arr []interface{}
+		if json.Unmarshal(b, &arr) == nil {
+			return arr
+		}
+		return fmt.Sprintf("%v", v)
+	case reflect.Slice:
+		if _, ok := v.([]interface{}); ok {
+			return v
+		}
+		if maps, ok := v.([]map[string]interface{}); ok {
+			result := make([]interface{}, len(maps))
+			for i, m := range maps {
+				result[i] = m
+			}
+			return result
+		}
+		b, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Sprintf("%v", v)
+		}
+		var arr []interface{}
+		if json.Unmarshal(b, &arr) == nil {
+			return arr
+		}
+		return fmt.Sprintf("%v", v)
+	default:
+		return v
+	}
+}
+
+func normalizeDataMap(data map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{}, len(data))
+	for k, v := range data {
+		result[k] = normalizeValue(v)
+	}
+	return result
+}
+
+func toDataMap(data interface{}) map[string]interface{} {
+	if dm, ok := data.(map[string]interface{}); ok {
+		return dm
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil
+	}
+	var mm map[string]interface{}
+	if json.Unmarshal(b, &mm) == nil {
+		return mm
+	}
+	return nil
+}
+
+// MessageWithHint дополняет message подсказкой об использовании --full
+func MessageWithHint(message string, full bool) string {
+	if full {
+		return message
+	}
+	return message + ". " + app.T_("Use --full for detailed output")
+}
+
 func CliResponse(ctx context.Context, resp APIResponse) error {
 	return NewResponseRenderer(app.GetAppConfig(ctx)).CliResponse(ctx, resp)
 }
 
-// CliResponse рендерит ответ в зависимости от формата (dbus_doc/json/text).
 func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) error {
 	StopSpinner(r.appConfig)
 	format := r.appConfig.ConfigManager.GetConfig().Format
@@ -372,13 +243,19 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 		resp.Transaction = txStr
 	}
 
+	isError := resp.Error != nil
+
+	fields := r.appConfig.ConfigManager.GetConfig().Fields
+
 	switch format {
-	// ---------------------------------- JSON ----------------------------------
 	case app.FormatJSON:
-		// Если нет ошибки, убираем "message"
-		if !resp.Error {
-			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
+		if !isError {
+			if dataMap := toDataMap(resp.Data); dataMap != nil {
 				delete(dataMap, "message")
+				if len(fields) > 0 {
+					dataMap = filterFields(normalizeDataMap(dataMap), fields)
+				}
+				resp.Data = dataMap
 			}
 		}
 		b, err := json.MarshalIndent(resp, "", "  ")
@@ -387,74 +264,141 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 		}
 		fmt.Println(string(b))
 
-	// ---------------------------------- TEXT (по умолчанию) ------------------
 	default:
-		var dataMap map[string]interface{}
-
-		switch data := resp.Data.(type) {
-		case map[string]interface{}:
-			dataMap = data
-		default:
-			b, err := json.Marshal(resp.Data)
-			if err == nil {
-				var mm map[string]interface{}
-				if err2 := json.Unmarshal(b, &mm); err2 == nil {
-					dataMap = mm
+		var output string
+		if isError {
+			msg := resp.Error.Message
+			if len(msg) > 0 {
+				runes := []rune(msg)
+				if unicode.IsLower(runes[0]) {
+					runes[0] = unicode.ToUpper(runes[0])
+					msg = string(runes)
+				}
+			}
+			dataMap := map[string]interface{}{"message": msg}
+			output = r.renderText(dataMap, true)
+		} else {
+			dataMap := toDataMap(resp.Data)
+			if dataMap != nil {
+				output = r.renderText(dataMap, false)
+			} else {
+				switch dd := resp.Data.(type) {
+				case map[string]string:
+					output = dd["message"]
+				case string:
+					output = dd
+				default:
+					output = fmt.Sprintf("%v", dd)
 				}
 			}
 		}
+		fmt.Println(output)
+	}
 
-		if dataMap != nil {
-			if resp.Error {
-				if rawMsg, haveMsg := dataMap["message"]; haveMsg {
-					if msgStr, ok := rawMsg.(string); ok && len(msgStr) > 0 {
-						runes := []rune(msgStr)
-						if unicode.IsLower(runes[0]) {
-							runes[0] = unicode.ToUpper(runes[0])
-							dataMap["message"] = string(runes)
+	if isError {
+		return errors.New("")
+	}
+	return nil
+}
+
+func (r *ResponseRenderer) renderText(dataMap map[string]interface{}, isError bool) string {
+	dataMap = normalizeDataMap(dataMap)
+	if r.appConfig != nil {
+		if fields := r.appConfig.ConfigManager.GetConfig().Fields; len(fields) > 0 {
+			dataMap = filterFields(dataMap, fields)
+		}
+	}
+	formatType := app.FormatTypeTree
+	if r.appConfig != nil {
+		formatType = r.appConfig.ConfigManager.GetConfig().FormatType
+	}
+	return r.RenderText(dataMap, formatType, isError)
+}
+
+func (r *ResponseRenderer) RenderText(dataMap map[string]interface{}, formatType string, isError bool) string {
+	dataMap = normalizeDataMap(dataMap)
+	switch formatType {
+	case app.FormatTypePlain:
+		return r.renderPlain(dataMap, isError)
+	default:
+		return r.renderTree(dataMap, isError)
+	}
+}
+
+func filterFields(data map[string]interface{}, fields []string) map[string]interface{} {
+	target := data
+	var wrapperKey string
+
+	keys := sortedKeys(data)
+	if len(keys) == 1 {
+		if mm, ok := data[keys[0]].(map[string]interface{}); ok {
+			wrapperKey = keys[0]
+			target = mm
+		}
+	}
+
+	// Разбираем поля: простые "name" и с точкой "appStream.id" для вложенных данных
+	simple := make(map[string]bool)
+	nested := make(map[string][]string)
+	for _, f := range fields {
+		if dot := strings.IndexByte(f, '.'); dot >= 0 {
+			parent := f[:dot]
+			child := f[dot+1:]
+			nested[parent] = append(nested[parent], child)
+		} else {
+			simple[f] = true
+		}
+	}
+
+	filtered := make(map[string]interface{})
+	remainingFields := make([]string, 0)
+	for k, v := range target {
+		if simple[k] {
+			filtered[k] = v
+			continue
+		}
+		if children, ok := nested[k]; ok {
+			if mm, ok := v.(map[string]interface{}); ok {
+				filtered[k] = filterFields(mm, children)
+			}
+		}
+	}
+
+	for _, f := range fields {
+		if _, ok := filtered[f]; !ok {
+			remainingFields = append(remainingFields, f)
+		}
+	}
+
+	if len(remainingFields) > 0 {
+		for k, v := range target {
+			if arr, ok := v.([]interface{}); ok {
+				var items []interface{}
+				for _, elem := range arr {
+					if mm, ok := elem.(map[string]interface{}); ok {
+						fm := filterFields(mm, remainingFields)
+						if len(fm) > 0 {
+							items = append(items, fm)
 						}
 					}
 				}
+				if len(items) > 0 {
+					filtered[k] = items
+				}
 			}
-
-			var t *tree.Tree
-			t = r.buildTreeFromMap("", dataMap, resp.Error)
-
-			var rootColor lipgloss.Style
-			if resp.Error {
-				rootColor = lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color(r.GetColors().Error))
-			} else {
-				rootColor = lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color(r.GetColors().Success))
-			}
-
-			t.Enumerator(tree.RoundedEnumerator).
-				EnumeratorStyle(r.getEnumeratorStyle()).
-				RootStyle(rootColor).
-				ItemStyle(r.getItemStyle())
-
-			fmt.Println(t.String())
-		} else {
-			var message string
-			switch dd := resp.Data.(type) {
-			case map[string]string:
-				message = dd["message"]
-			case string:
-				message = dd
-			default:
-				message = fmt.Sprintf("%v", dd)
-			}
-			fmt.Println(message)
 		}
 	}
 
-	// возвращаем пустую ошибку, что бы вызвать статус exit code 1
-	if resp.Error {
-		return errors.New("")
+	result := make(map[string]interface{})
+	if msg, ok := data["message"]; ok {
+		result["message"] = msg
 	}
-
-	return nil
+	if wrapperKey != "" {
+		result[wrapperKey] = filtered
+	} else {
+		for k, v := range filtered {
+			result[k] = v
+		}
+	}
+	return result
 }

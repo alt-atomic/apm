@@ -18,6 +18,7 @@ package icon
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -28,34 +29,32 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"apm/internal/common/helper"
 )
 
-// SwCatIconService — сервис для работы с XML-файлами SWCatalog.
+// SwCatIconService предоставляет сервис для работы с XML-файлами SWCatalog.
 type SwCatIconService struct {
 	path          string
 	containerName string
-	commandPrefix string
+	runner        command.Runner
 }
 
-// NewSwCatIconService — конструктор сервиса.
-func NewSwCatIconService(path string, containerName string, commandPrefix string) *SwCatIconService {
+// NewSwCatIconService создаёт новый экземпляр сервиса для работы с иконками SWCatalog.
+func NewSwCatIconService(path string, containerName string, runner command.Runner) *SwCatIconService {
 	return &SwCatIconService{
 		path:          path,
 		containerName: containerName,
-		commandPrefix: commandPrefix,
+		runner:        runner,
 	}
 }
 
-// Component – исходная структура из XML.
+// Component описывает исходную структуру компонента из XML.
 type Component struct {
 	XMLName xml.Name `xml:"component"`
 	PkgName string   `xml:"pkgname"`
 	Icons   []Icon   `xml:"icon"`
 }
 
-// Icon – структура для иконок.
+// Icon описывает структуру иконки.
 type Icon struct {
 	Type   string `xml:"type,attr" json:"type"`
 	Width  int    `xml:"width,attr" json:"width"`
@@ -63,13 +62,13 @@ type Icon struct {
 	Value  string `xml:",chardata" json:"value"`
 }
 
-// SWCatalog – структура, соответствующая корневому элементу XML.
+// SWCatalog описывает структуру корневого элемента XML каталога программного обеспечения.
 type SWCatalog struct {
 	XMLName    xml.Name    `xml:"components"`
 	Components []Component `xml:"component"`
 }
 
-// PackageIconsSwCat – итоговая структура для каждого пакета.
+// PackageIconsSwCat описывает итоговую структуру иконок пакета.
 type PackageIconsSwCat struct {
 	PkgName string `json:"pkgName"`
 	Icons   []Icon `json:"icons"`
@@ -82,8 +81,7 @@ func (s *SwCatIconService) copyDirFromContainer(ctx context.Context, src, dst st
 		return err
 	}
 	// Команда копирования из контейнера.
-	cmdStr := fmt.Sprintf("%s distrobox enter %s -- cp -r %s/. %s", s.commandPrefix, s.containerName, src, dst)
-	_, stderr, err := helper.RunCommand(ctx, cmdStr)
+	_, stderr, err := s.runner.Run(ctx, []string{"distrobox", "enter", s.containerName, "--", "cp", "-r", src + "/.", dst}, command.WithQuiet())
 	if err != nil {
 		return fmt.Errorf(app.T_("Error copying from container: %v, stderr: %s"), err, stderr)
 	}
@@ -270,11 +268,9 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 			}
 		}
 	} else {
-		// Для контейнера используем команду find для файлов 1-го уровня.
-		cmdStr := fmt.Sprintf("%s distrobox enter %s -- find %s -maxdepth 1 -type f", s.commandPrefix, s.containerName, s.path)
-		stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
+		stdout, stderr, err := s.runner.Run(ctx, []string{"distrobox", "enter", s.containerName, "--", "find", s.path, "-maxdepth", "1", "-type", "f"}, command.WithQuiet())
 		if err != nil {
-			return nil, fmt.Errorf(app.T_("Error retrieving files in %s: %v, stderr: %s"), s.path, err, stderr)
+			return nil, fmt.Errorf(app.T_("Error retrieving files in %s (container %s): %v, stderr: %s"), s.path, s.containerName, err, stderr)
 		}
 		lines := strings.Split(strings.TrimSpace(stdout), "\n")
 		for _, line := range lines {
@@ -298,8 +294,7 @@ func (s *SwCatIconService) LoadSWCatalogs(ctx context.Context) ([]PackageIconsSw
 				return nil, fmt.Errorf(app.T_("Failed to read file %s: %w"), fullPath, err)
 			}
 		} else {
-			cmdStr := fmt.Sprintf("%s distrobox enter %s -- cat %s", s.commandPrefix, s.containerName, fullPath)
-			stdout, stderr, err := helper.RunCommand(ctx, cmdStr)
+			stdout, stderr, err := s.runner.Run(ctx, []string{"distrobox", "enter", s.containerName, "--", "cat", fullPath}, command.WithQuiet())
 			if err != nil {
 				return nil, fmt.Errorf(app.T_("Error executing command for file %s: %v, stderr: %s"), fullPath, err, stderr)
 			}

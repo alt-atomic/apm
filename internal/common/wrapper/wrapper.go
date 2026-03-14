@@ -17,10 +17,12 @@
 package wrapper
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"context"
+	"errors"
 	"syscall"
 
 	"github.com/urfave/cli/v3"
@@ -43,13 +45,23 @@ const (
 func WithOptions[T any](
 	rootCheck RootCheckMode,
 	newActions func(*app.Config) *T,
-	errorResponse func(string) reply.APIResponse,
+	errorResponse func(error) reply.APIResponse,
 ) func(func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
 	return func(actionFunc func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
 		return func(ctx context.Context, cmd *cli.Command) error {
 			appConfig := app.GetAppConfig(ctx)
 			appConfig.ConfigManager.SetFormat(cmd.String("format"))
+			if ft := cmd.String("format_type"); ft != "" {
+				appConfig.ConfigManager.SetFormatType(ft)
+			}
+			if fields := cmd.StringSlice("output"); len(fields) > 0 {
+				appConfig.ConfigManager.SetFields(fields)
+			}
 			ctx = context.WithValue(ctx, helper.TransactionKey, cmd.String("transaction"))
+
+			if cmd.Bool("verbose") {
+				appConfig.ConfigManager.EnableVerbose()
+			}
 
 			isRoot := syscall.Geteuid() == 0
 
@@ -58,11 +70,13 @@ func WithOptions[T any](
 				// Без проверки, продолжаем выполнение
 			case RequireRoot:
 				if !isRoot {
-					return reply.CliResponse(ctx, errorResponse(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))
+					return reply.CliResponse(ctx, errorResponse(
+						apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))))
 				}
 			case ForbidRoot:
 				if isRoot {
-					return reply.CliResponse(ctx, errorResponse(app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")))
+					return reply.CliResponse(ctx, errorResponse(
+						apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")))))
 				}
 			default:
 				app.Log.Fatal("Unknown root check mode")

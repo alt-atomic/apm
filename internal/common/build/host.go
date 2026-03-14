@@ -18,6 +18,7 @@ package build
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"bufio"
@@ -26,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -58,31 +58,31 @@ type Image struct {
 	ImageDigest string    `json:"imageDigest"`
 }
 
-// HostImageService — единый сервис для операций с образом (build, switch и т.д.).
+// HostImageService предоставляет единый сервис для работы с образами хоста.
 type HostImageService struct {
 	appConfig     *app.Configuration
 	containerPath string
+	runner        command.Runner
 }
 
-// NewHostImageService — конструктор сервиса
-func NewHostImageService(appConfig *app.Configuration, containerPath string) *HostImageService {
+// NewHostImageService создаёт новый сервис для работы с образами хоста.
+func NewHostImageService(appConfig *app.Configuration, containerPath string, runner command.Runner) *HostImageService {
 	return &HostImageService{
 		appConfig:     appConfig,
 		containerPath: containerPath,
+		runner:        runner,
 	}
 }
 
 func (h *HostImageService) GetHostImage() (HostImage, error) {
 	var host HostImage
 
-	command := fmt.Sprintf("%s bootc status --format json", h.appConfig.CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
-	output, err := cmd.CombinedOutput()
+	stdout, stderr, err := h.runner.Run(context.Background(), []string{"bootc", "status", "--format", "json"}, command.WithQuiet())
 	if err != nil {
-		return host, fmt.Errorf(app.T_("Failed to execute bootc command: %v"), string(output))
+		return host, fmt.Errorf(app.T_("Failed to execute bootc command: %v"), stdout+stderr)
 	}
 
-	if err = json.Unmarshal(output, &host); err != nil {
+	if err = json.Unmarshal([]byte(stdout), &host); err != nil {
 		return host, fmt.Errorf(app.T_("Failed to parse JSON: %v"), err)
 	}
 
@@ -123,10 +123,9 @@ func (h *HostImageService) EnableOverlay() error {
 
 	// запускаем если находимся НЕ в контейнере
 	if runOverlay && !helper.IsRunningInContainer() {
-		command := fmt.Sprintf("%s bootc usr-overlay", h.appConfig.CommandPrefix)
-		cmd := exec.Command("sh", "-c", command)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf(app.T_("Error activating usr-overlay: %s"), string(output))
+		stdout, stderr, err := h.runner.Run(context.Background(), []string{"bootc", "usr-overlay"})
+		if err != nil {
+			return fmt.Errorf(app.T_("Error activating usr-overlay: %s"), stdout+stderr)
 		}
 	}
 
@@ -135,26 +134,40 @@ func (h *HostImageService) EnableOverlay() error {
 
 // BuildImage сборка образа
 func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (string, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.BuildImage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.BuildImage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBuildImage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBuildImage))
 
-	command := fmt.Sprintf("%s podman build --squash -t os -f %s /etc/apm", h.appConfig.CommandPrefix, h.containerPath)
+	buildArgs := []string{"podman", "build"}
 	if pullImage {
-		command = fmt.Sprintf("%s podman build --pull=always --squash -t os -f %s /etc/apm", h.appConfig.CommandPrefix, h.containerPath)
+		buildArgs = append(buildArgs, "--pull=always")
+	}
+	buildArgs = append(buildArgs, "--squash", "-t", "os", "-f", h.containerPath, "/etc/apm")
+
+	if h.appConfig.Verbose {
+		_, _, err := h.runner.Run(ctx, buildArgs, command.WithEnv("TMPDIR=/var/tmp", "LC_ALL=C"))
+		if err != nil {
+			return "", fmt.Errorf(app.T_("Failed to build image. Please fix the configuration: %s"), h.appConfig.PathImageFile)
+		}
+	} else {
+		fullCmd := strings.TrimSpace(h.appConfig.CommandPrefix + " " + strings.Join(buildArgs, " "))
+		stdout, err := PullAndProgress(ctx, fullCmd)
+		if err != nil {
+			if apmLogs := extractAPMLogs(stdout); apmLogs != "" {
+				return "", fmt.Errorf("%s\n%s\n%s",
+					fmt.Sprintf(app.T_("Failed to build image. Please fix the configuration: %s"), h.appConfig.PathImageFile),
+					app.T_("Build log:"),
+					apmLogs)
+			}
+			return "", fmt.Errorf("%s\n%v", stdout, err)
+		}
 	}
 
-	stdout, err := PullAndProgress(ctx, command)
-	if err != nil {
-		return "", fmt.Errorf(app.T_("Error building image: %s status: %d"), stdout, err)
-	}
-
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s podman images -q os", h.appConfig.CommandPrefix))
-	output, err := cmd.Output()
+	imgStdout, _, err := h.runner.Run(ctx, []string{"podman", "images", "-q", "os"}, command.WithQuiet())
 	if err != nil {
 		return "", fmt.Errorf(app.T_("Error podman image: %v"), err)
 	}
 
-	podmanImageID := strings.TrimSpace(string(output))
+	podmanImageID := strings.TrimSpace(imgStdout)
 	if podmanImageID == "" {
 		return "", errors.New(app.T_("No valid images with tag 'os'. Please build the image first."))
 	}
@@ -164,43 +177,39 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 // SwitchImage переключение образа
 func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.SwitchImage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.SwitchImage"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSwitchImage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSwitchImage))
 
-	cmdTemplate := ""
+	var args []string
 	if isLocal {
-		cmdTemplate = "%s bootc switch --transport containers-storage %s"
+		args = []string{"bootc", "switch", "--transport", "containers-storage", podmanImageID}
 	} else {
-		cmdTemplate = "%s bootc switch %s"
+		args = []string{"bootc", "switch", podmanImageID}
 	}
-
-	command := fmt.Sprintf(cmdTemplate, h.appConfig.CommandPrefix, podmanImageID)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(app.T_("Error switching to the new image: %s"), string(output))
+	stdout, stderr, err := h.runner.Run(ctx, args)
+	if err != nil {
+		return fmt.Errorf(app.T_("Error switching to the new image: %s"), stdout+stderr)
 	}
 
 	return nil
 }
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
-func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, config Config) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.CheckAndUpdateBaseImage"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.CheckAndUpdateBaseImage"))
+func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config Config) error {
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
 	image, err := h.GetHostImage()
 	if err != nil {
 		return fmt.Errorf(app.T_("Error retrieving information: %v"), err)
 	}
 
 	if image.Status.Booted.Image.Image.Transport != "containers-storage" {
-		command := fmt.Sprintf("%s bootc upgrade --check", h.appConfig.CommandPrefix)
-		cmd := exec.Command("sh", "-c", command)
-		output, err := cmd.CombinedOutput()
+		stdout, stderr, err := h.runner.Run(ctx, []string{"bootc", "upgrade", "--check"}, command.WithQuiet())
 		if err != nil {
-			return fmt.Errorf("bootc upgrade --check failed: %s", string(output))
+			return fmt.Errorf("bootc upgrade --check failed: %s", stdout+stderr)
 		}
 
-		if !strings.Contains(string(output), "No changes in:") {
+		if !strings.Contains(stdout+stderr, "No changes in:") {
 			return h.bootcUpgrade(ctx)
 		}
 
@@ -233,7 +242,7 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 
 	// Генерируем Containerfile если его нет
 	if _, statErr := os.Stat(h.containerPath); statErr != nil {
-		if err = h.GenerateDockerfile(config); err != nil {
+		if err = h.GenerateDockerfile(config, hostCache); err != nil {
 			return fmt.Errorf(app.T_("Failed to generate Containerfile: %w"), err)
 		}
 	}
@@ -248,20 +257,24 @@ type SkopeoInspectInfo struct {
 
 // getRemoteImageDigest используя skopeo, смотрим Layers удалённого или локально образа для сравнения
 func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName string, checkLocal bool) (string, error) {
-	command := fmt.Sprintf("%s skopeo inspect docker://%s", h.appConfig.CommandPrefix, imageName)
+	var args []string
 	if checkLocal {
-		command = fmt.Sprintf("%s skopeo inspect containers-storage:%s", h.appConfig.CommandPrefix, imageName)
+		args = []string{"skopeo", "inspect", "containers-storage:" + imageName}
+	} else {
+		args = []string{"skopeo", "inspect", "docker://" + imageName}
 	}
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	cmd.Env = []string{"LC_ALL=C"}
-	out, err := cmd.Output()
+	stdout, stderr, err := h.runner.Run(ctx, args, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
-		return "", fmt.Errorf(app.T_("Skopeo inspect error: %v"), err)
+		errMsg := strings.TrimSpace(stderr)
+		if errMsg == "" {
+			errMsg = fmt.Sprintf("%v", err)
+		}
+		return "", fmt.Errorf(app.T_("Skopeo inspect error: %s"), errMsg)
 	}
 
 	var info SkopeoInspectInfo
-	if err = json.Unmarshal(out, &info); err != nil {
+	if err = json.Unmarshal([]byte(stdout), &info); err != nil {
 		return "", fmt.Errorf(app.T_("Failed to parse skopeo inspect: %w"), err)
 	}
 
@@ -269,11 +282,11 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 }
 
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName("system.bootcUpgrade"))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName("system.bootcUpgrade"))
+	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBootcUpgrade))
+	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBootcUpgrade))
 
-	command := fmt.Sprintf("%s bootc upgrade", h.appConfig.CommandPrefix)
-	_, err := BootcUpgradeAndProgress(ctx, command)
+	upgradeCmd := fmt.Sprintf("%s bootc upgrade", h.appConfig.CommandPrefix)
+	_, err := BootcUpgradeAndProgress(ctx, upgradeCmd)
 	if err != nil {
 		return fmt.Errorf(app.T_("Bootc upgrade failed: %v"), err)
 	}
@@ -306,26 +319,25 @@ func (h *HostImageService) GenerateDefaultConfig() (Config, error) {
 }
 
 // GenerateDockerfile генерирует содержимое Dockerfile, формируя apm команды с модификаторами для пакетов.
-func (h *HostImageService) GenerateDockerfile(config Config) error {
-	// Формирование Dockerfile.
+func (h *HostImageService) GenerateDockerfile(config Config, hostCache bool) error {
 	var dockerfileLines []string
 	dockerfileLines = append(dockerfileLines, fmt.Sprintf("FROM \"%s\"", config.Image))
-	dockerfileLines = append(
-		dockerfileLines,
-		"RUN --mount=type=bind,ro,source=image.yml,target=/etc/apm/image.yml --mount=type=bind,ro,source=resources,target=/etc/apm/resources apm system image build",
-	)
+
+	runCmd := "RUN --mount=type=bind,ro,source=image.yml,target=/etc/apm/image.yml" +
+		" --mount=type=bind,ro,source=resources,target=/etc/apm/resources"
+	if hostCache {
+		runCmd += " --mount=type=cache,target=/var/cache/apt/archives,id=apt-cache" +
+			" mkdir -p /var/cache/apt/archives/partial &&"
+	}
+	runCmd += " apm system image build"
+	dockerfileLines = append(dockerfileLines, runCmd)
 
 	dockerStr := strings.Join(dockerfileLines, "\n") + "\n"
-	err := os.WriteFile(h.containerPath, []byte(dockerStr), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(h.containerPath, []byte(dockerStr), 0644)
 }
 
 // BuildAndSwitch перестраивает и переключает систему на новый образ. checkSame - включена ли проверка на изменение конфигурации
-func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService *HostConfigService) error {
+func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService SwitchableConfig) error {
 	statusSame, err := hostConfigService.ConfigIsChanged(ctx)
 	if err != nil {
 		return err
@@ -437,4 +449,29 @@ func getImageFromDocker(dockerFilePath string) (string, error) {
 	}
 
 	return "", fmt.Errorf(app.T_("Failed to determine the distribution image in %s"), dockerFilePath)
+}
+
+// extractAPMLogs извлекает логи APM из вывода сборки образа
+func extractAPMLogs(output string) string {
+	var apmLogs []string
+
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if strings.HasPrefix(trimmed, "time=") {
+			apmLogs = append(apmLogs, trimmed)
+			continue
+		}
+
+		if strings.Contains(trimmed, "╰──") {
+			apmLogs = append(apmLogs, trimmed)
+		}
+	}
+
+	if len(apmLogs) > 0 {
+		return strings.Join(apmLogs, "\n")
+	}
+
+	return ""
 }

@@ -21,6 +21,7 @@ package models
 
 import (
 	"apm/internal/common/app"
+	reposervice "apm/internal/domain/repository/service"
 	"context"
 	"fmt"
 	"slices"
@@ -44,7 +45,7 @@ type ReposBody struct {
 	Tasks []string `yaml:"tasks,omitempty" json:"tasks,omitempty"`
 
 	// Имя файла репозиториев
-	Name string `yaml:"name,omitempty" json:"name,omitempty" depricated:"0.4.0"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty" deprecated:"0.4.0"`
 
 	// Не обновлять базу данных после сохранения репозиториев
 	NoUpdate bool `yaml:"no-update,omitempty" json:"no-update,omitempty"`
@@ -65,13 +66,13 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		app.Log.Info(fmt.Sprintf("Cleaned all repos: \n%s", strings.Join(removed, ",\n")))
+		app.Log.Info(fmt.Sprintf("Cleaned all repos: \n%s", repoEntries(removed, ",\n")))
 	} else if b.CleanTemporary {
 		removed, err := repoSvc.CleanTemporary(ctx)
 		if err != nil {
 			return nil, err
 		}
-		app.Log.Info(fmt.Sprintf("Cleaned temporary repos: \n%s", strings.Join(removed, ",\n")))
+		app.Log.Info(fmt.Sprintf("Cleaned temporary repos: \n%s", repoEntries(removed, ",\n")))
 	}
 
 	if b.Branch != "" {
@@ -79,7 +80,7 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		app.Log.Info(fmt.Sprintf("Added repos for branch %s: \n%s", b.Branch, strings.Join(added, ",\n")))
+		app.Log.Info(fmt.Sprintf("Added repos for branch %s: \n%s", b.Branch, repoEntries(added, ",\n")))
 	}
 
 	for _, source := range append(b.Custom, b.Tasks...) {
@@ -88,7 +89,7 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 			return nil, err
 		}
 		if len(added) > 0 {
-			app.Log.Info(fmt.Sprintf("Added repo: %s", strings.Join(added, ", ")))
+			app.Log.Info(fmt.Sprintf("Added repo: %s", repoEntries(added, ", ")))
 		}
 	}
 
@@ -101,4 +102,12 @@ func (b *ReposBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 
 	return nil, nil
+}
+
+func repoEntries(repos []reposervice.Repository, sep string) string {
+	entries := make([]string, len(repos))
+	for i, r := range repos {
+		entries[i] = r.Entry
+	}
+	return strings.Join(entries, sep)
 }

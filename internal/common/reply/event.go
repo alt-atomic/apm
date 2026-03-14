@@ -17,10 +17,14 @@
 package reply
 
 import (
+	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/helper"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -48,13 +52,85 @@ type EventData struct {
 	Transaction     string  `json:"transaction"`
 }
 
-const EventTypeNotification = "NOTIFICATION"
-const EventTypeProgress = "PROGRESS"
-const EventTypeTaskResult = "TASK_RESULT"
+const (
+	EventTypeNotification = "NOTIFICATION"
+	EventTypeProgress     = "PROGRESS"
+	EventTypeTaskResult   = "TASK_RESULT"
+)
 
-var (
+const (
 	StateBefore = "BEFORE"
 	StateAfter  = "AFTER"
+)
+
+// Имена событий — константы для использования в WithEventName.
+const (
+	EventDistroUpdate       = "distrobox.Update"
+	EventDistroContainerAdd = "distrobox.ContainerAdd"
+
+	EventDistroSavePackagesToDB = "distro.SavePackagesToDB"
+	EventDistroGetContainerList = "distro.GetContainerList"
+	EventDistroExportingApp     = "distro.ExportingApp"
+	EventDistroGetContainerInfo = "distro.GetContainerOsInfo"
+	EventDistroCreateContainer  = "distro.CreateContainer"
+	EventDistroRemoveContainer  = "distro.RemoveContainer"
+	EventDistroInstallPackage   = "distro.InstallPackage"
+	EventDistroRemovePackage    = "distro.RemovePackage"
+	EventDistroGetPackages      = "distro.GetPackages"
+	EventDistroGetPackageOwner  = "distro.GetPackageOwner"
+	EventDistroGetPathByPkg     = "distro.GetPathByPackageName"
+	EventDistroGetInfoPackage   = "distro.GetInfoPackage"
+	EventDistroUpdatePackages   = "distro.UpdatePackages"
+	EventDistroGetPackagesQuery = "distro.GetPackagesQuery"
+
+	EventSystemWorking              = "system.Working"
+	EventSystemUpgrade              = "system.Upgrade"
+	EventSystemCheck                = "system.Check"
+	EventSystemUpdate               = "system.Update"
+	EventSystemInstall              = "system.Install"
+	EventSystemRemove               = "system.Remove"
+	EventSystemCheckInstall         = "system.CheckInstall"
+	EventSystemCheckRemove          = "system.CheckRemove"
+	EventSystemCheckUpgrade         = "system.CheckUpgrade"
+	EventSystemImageUpdate          = "system.ImageUpdate"
+	EventSystemImageApply           = "system.ImageApply"
+	EventSystemUpdateKernel         = "system.UpdateKernel"
+	EventSystemUpdateSTPLR          = "system.UpdateSTPLR"
+	EventSystemAptUpdate            = "system.AptUpdate"
+	EventSystemSavePackagesToDB     = "system.SavePackagesToDB"
+	EventSystemSaveImageToDB        = "system.SaveImageToDB"
+	EventSystemBuildImage           = "system.BuildImage"
+	EventSystemSwitchImage          = "system.SwitchImage"
+	EventSystemCheckUpdateBaseImage = "system.CheckAndUpdateBaseImage"
+	EventSystemBootcUpgrade         = "system.bootcUpgrade"
+	EventSystemPruneOldImages       = "system.pruneOldImages"
+	EventSystemUpdateAllPackagesDB  = "system.updateAllPackagesDB"
+	EventSystemUpdateApplications   = "system.UpdateApplications"
+	EventSystemDownloadProgress     = "system.downloadProgress"
+	EventSystemInstallProgress      = "system.installProgress"
+	EventSystemPullImage            = "system.pullImage"
+
+	EventApplicationUpdate   = "application.Update"
+	EventApplicationSaveToDB = "application.SaveToDB"
+
+	EventBootcLayers   = "service.bootc-layers"
+	EventBootcDownload = "service.bootc-download"
+
+	EventKernelCurrent          = "kernel.CurrentKernel"
+	EventKernelList             = "kernel.ListKernels"
+	EventKernelListModules      = "kernel.ListKernelModules"
+	EventKernelInstall          = "kernel.InstallKernel"
+	EventKernelCheckInstall     = "kernel.CheckInstallKernel"
+	EventKernelUpdate           = "kernel.UpdateKernel"
+	EventKernelCheckUpdate      = "kernel.CheckUpdateKernel"
+	EventKernelClean            = "kernel.CleanOldKernels"
+	EventKernelCheckClean       = "kernel.CheckCleanOldKernels"
+	EventKernelInstallMods      = "kernel.InstallKernelModules"
+	EventKernelCheckInstallMods = "kernel.CheckInstallKernelModules"
+	EventKernelRemoveMods       = "kernel.RemoveKernelModules"
+	EventKernelCheckRemoveMods  = "kernel.CheckRemoveKernelModules"
+	EventKernelRemove           = "kernel.RemovePackage"
+	EventKernelCheckRemove      = "kernel.CheckRemovePackage"
 )
 
 // TaskResultEvent содержит результат фоновой задачи
@@ -63,10 +139,10 @@ type TaskResultEvent struct {
 	Name        string      `json:"name"`
 	Transaction string      `json:"transaction,omitempty"`
 	Data        interface{} `json:"data"`
-	Error       bool        `json:"error"`
+	Error       *APIError   `json:"error"`
 }
 
-// NotificationOption — функция-опция для настройки EventData.
+// NotificationOption определяет функцию-опцию для настройки EventData.
 type NotificationOption func(*EventData)
 
 // WithEventName задаёт имя события.
@@ -132,11 +208,11 @@ func CreateEventNotification(ctx context.Context, state string, opts ...Notifica
 		ed.View = getTaskText(ed.Name)
 	}
 
-	SendFuncNameDBUS(ctx, &ed)
+	DispatchEvent(ctx, &ed)
 }
 
-// SendFuncNameDBUS отправляет уведомление через DBUS.
-func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
+// DispatchEvent отправляет уведомления.
+func DispatchEvent(ctx context.Context, eventData *EventData) {
 	appConfig := app.GetAppConfig(ctx)
 	txVal := ctx.Value(helper.TransactionKey)
 	txStr, ok := txVal.(string)
@@ -144,15 +220,15 @@ func SendFuncNameDBUS(ctx context.Context, eventData *EventData) {
 		eventData.Transaction = txStr
 	}
 
-	eventType := "PROGRESS"
-	if eventData.Type != "PROGRESS" {
-		eventType = "TASK"
+	config := appConfig.ConfigManager.GetConfig()
+
+	if config.Verbose {
+		logVerboseEvent(eventData)
+	} else {
+		UpdateTask(appConfig, eventData.Type, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
 	}
 
-	UpdateTask(appConfig, eventType, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
-
-	format := appConfig.ConfigManager.GetConfig().Format
-	switch format {
+	switch config.Format {
 	case app.FormatDBus:
 		SendNotificationResponse(eventData, appConfig.DBusManager.GetConnection())
 	case app.FormatHTTP:
@@ -202,14 +278,16 @@ func SendTaskResult(ctx context.Context, taskName string, data interface{}, task
 		Name:        taskName,
 		Transaction: txStr,
 		Data:        data,
-		Error:       false,
 	}
 
 	if taskErr != nil {
-		event.Error = true
-		event.Data = map[string]interface{}{
-			"message": taskErr.Error(),
+		var apmErr apmerr.APMError
+		if errors.As(taskErr, &apmErr) {
+			event.Error = &APIError{ErrorCode: apmErr.Type, Message: taskErr.Error()}
+		} else {
+			event.Error = &APIError{Message: taskErr.Error()}
 		}
+		event.Data = nil
 	}
 
 	format := appConfig.ConfigManager.GetConfig().Format
@@ -252,79 +330,155 @@ func SendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
 	}
 }
 
+var (
+	verboseProgressMu   sync.Mutex
+	verboseProgressLast = make(map[string]int)
+)
+
+// logVerboseEvent логирует событие как простой текст вместо спиннера
+func logVerboseEvent(eventData *EventData) {
+	if eventData.Type == EventTypeProgress {
+		logVerboseProgress(eventData)
+		return
+	}
+
+	if eventData.State == StateBefore {
+		app.Log.Info("[RUN] ", eventData.View)
+	} else if eventData.State == StateAfter {
+		app.Log.Info("[OK] ", eventData.View)
+	}
+}
+
+// logVerboseProgress логирует прогресс каждые 10%
+func logVerboseProgress(eventData *EventData) {
+	bucket := int(eventData.ProgressPercent / 10)
+
+	verboseProgressMu.Lock()
+	lastBucket, exists := verboseProgressLast[eventData.Name]
+	if exists && bucket <= lastBucket && eventData.State != StateAfter {
+		verboseProgressMu.Unlock()
+		return
+	}
+	verboseProgressLast[eventData.Name] = bucket
+	if eventData.State == StateAfter {
+		delete(verboseProgressLast, eventData.Name)
+	}
+	verboseProgressMu.Unlock()
+
+	if eventData.State == StateAfter {
+		if eventData.ProgressDone != "" {
+			app.Log.Info("[DONE] ", eventData.ProgressDone)
+		} else {
+			app.Log.Info("[DONE] ", eventData.View)
+		}
+	} else {
+		app.Log.Info(fmt.Sprintf("[PROGRESS] %s: %.0f%%", eventData.View, eventData.ProgressPercent))
+	}
+}
+
 func getTaskText(task string) string {
 	switch task {
-	case "distro.SavePackagesToDB":
+	case EventDistroSavePackagesToDB:
 		return app.T_("Saving packages to the database")
-	case "distro.GetContainerList":
+	case EventDistroGetContainerList:
 		return app.T_("Requesting list of containers")
-	case "distro.ExportingApp":
+	case EventDistroExportingApp:
 		return app.T_("Exporting package")
-	case "distro.GetContainerOsInfo":
+	case EventDistroGetContainerInfo:
 		return app.T_("Requesting container information")
-	case "distro.CreateContainer":
+	case EventDistroCreateContainer:
 		return app.T_("Creating container")
-	case "distro.RemoveContainer":
+	case EventDistroRemoveContainer:
 		return app.T_("Deleting container")
-	case "distro.InstallPackage":
+	case EventDistroInstallPackage:
 		return app.T_("Installing package")
-	case "distro.RemovePackage":
+	case EventDistroRemovePackage:
 		return app.T_("Removing package")
-	case "distro.GetPackages":
+	case EventDistroGetPackages:
 		return app.T_("Retrieving list of packages")
-	case "distro.GetPackageOwner":
+	case EventDistroGetPackageOwner:
 		return app.T_("Determining file owner")
-	case "distro.GetPathByPackageName":
+	case EventDistroGetPathByPkg:
 		return app.T_("Searching package paths")
-	case "distro.GetInfoPackage":
+	case EventDistroGetInfoPackage:
 		return app.T_("Retrieving package information")
-	case "distro.UpdatePackages":
+	case EventDistroUpdatePackages:
 		return app.T_("Updating packages")
-	case "distro.GetPackagesQuery":
+	case EventDistroGetPackagesQuery:
 		return app.T_("Filtering packages")
-	case "system.Working":
+	case EventSystemWorking:
 		return app.T_("Working with packages")
-	case "system.Upgrade":
+	case EventSystemUpgrade:
 		return app.T_("System update")
-	case "system.Check":
+	case EventSystemCheck:
 		return app.T_("Analyzing packages")
-	case "system.Update":
+	case EventSystemUpdate:
 		return app.T_("General update process")
-	case "system.UpdateKernel":
+	case EventSystemUpdateKernel:
 		return app.T_("General update kernel")
-	case "system.UpdateSTPLR":
+	case EventSystemUpdateSTPLR:
 		return app.T_("Loading package list from STPLR repository")
-	case "system.AptUpdate":
-		return app.T_("Loading package list from ALT repository")
-	case "system.SavePackagesToDB":
+	case EventSystemAptUpdate:
+		return app.T_("Loading package list from repository")
+	case EventSystemSavePackagesToDB:
 		return app.T_("Saving packages to the database")
-	case "system.SaveImageToDB":
+	case EventSystemSaveImageToDB:
 		return app.T_("Saving image history to the database")
-	case "system.BuildImage":
+	case EventSystemBuildImage:
 		return app.T_("Building local image")
-	case "system.SwitchImage":
+	case EventSystemSwitchImage:
 		return app.T_("Switching to local image")
-	case "system.CheckAndUpdateBaseImage":
+	case EventSystemCheckUpdateBaseImage:
 		return app.T_("General Image Update Process")
-	case "system.bootcUpgrade":
+	case EventSystemBootcUpgrade:
 		return app.T_("Downloading base image update")
-	case "system.pruneOldImages":
+	case EventSystemPruneOldImages:
 		return app.T_("Cleaning up old images")
-	case "system.updateAllPackagesDB":
+	case EventSystemUpdateAllPackagesDB:
 		return app.T_("Synchronizing database")
-	case "system.UpdateAppStream":
-		return app.T_("Update information about applications")
-	case "kernel.CurrentKernel":
+	case EventSystemUpdateApplications:
+		return app.T_("Loading application data from catalogs")
+	case EventSystemDownloadProgress:
+		return app.T_("Downloading packages")
+	case EventSystemPullImage:
+		return app.T_("Downloading image")
+	case EventApplicationUpdate:
+		return app.T_("Updating application data")
+	case EventApplicationSaveToDB:
+		return app.T_("Saving application data")
+	case EventBootcLayers:
+		return app.T_("Fetching layers")
+	case EventBootcDownload:
+		return app.T_("Downloading update")
+	case EventKernelCurrent:
 		return app.T_("Get current kernel")
-	case "kernel.ListKernels":
+	case EventKernelList:
 		return app.T_("Get list kernels")
-	case "kernel.InstallKernel":
+	case EventKernelListModules:
+		return app.T_("Get kernel modules")
+	case EventKernelInstall:
 		return app.T_("Install kernel")
-	case "kernel.InstallModules":
+	case EventKernelCheckInstall:
+		return app.T_("Simulate install kernel")
+	case EventKernelUpdate:
+		return app.T_("Update kernel")
+	case EventKernelCheckUpdate:
+		return app.T_("Simulate update kernel")
+	case EventKernelClean:
+		return app.T_("Clean old kernels")
+	case EventKernelCheckClean:
+		return app.T_("Simulate clean old kernels")
+	case EventKernelInstallMods:
 		return app.T_("Install kernel modules")
-	case "kernel.RemovePackage":
+	case EventKernelCheckInstallMods:
+		return app.T_("Simulate install kernel modules")
+	case EventKernelRemoveMods:
+		return app.T_("Remove kernel modules")
+	case EventKernelCheckRemoveMods:
+		return app.T_("Simulate remove kernel modules")
+	case EventKernelRemove:
 		return app.T_("Remove packages")
-	case "kernel.CheckRemovePackage":
+	case EventKernelCheckRemove:
 		return app.T_("Simulate Remove packages")
 	default:
 		return task

@@ -49,7 +49,7 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			return true // Разрешаем все origins для локального использования
+			return isAllowedOrigin(r.Header.Get("Origin"))
 		},
 	}
 )
@@ -135,8 +135,15 @@ func (h *WebSocketHub) ClientCount() int {
 	return len(h.clients)
 }
 
+const maxWebSocketClients = 100
+
 // HandleWebSocket обрабатывает WebSocket подключения
 func (h *WebSocketHub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	if h.ClientCount() >= maxWebSocketClients {
+		http.Error(w, "Too many connections", http.StatusServiceUnavailable)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		app.Log.Errorf("WebSocket upgrade failed: %v", err)

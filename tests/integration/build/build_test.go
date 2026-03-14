@@ -26,6 +26,7 @@ import (
 
 	"apm/internal/common/app"
 	"apm/internal/common/build"
+	"apm/internal/common/command"
 	"apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
@@ -72,6 +73,7 @@ func (s *BuildTestSuite) SetupSuite() {
 		nil,
 		nil,
 		nil,
+		command.NewRunner("", false),
 	)
 
 	s.T().Log("Build test suite initialized")

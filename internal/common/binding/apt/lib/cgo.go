@@ -17,11 +17,10 @@
 package lib
 
 /*
-// cgo-timestamp: 17574454192
-#cgo CPPFLAGS: -I${SRCDIR} -I/usr/include/apt-pkg -DAPT_WRAPPER_BUILD -D_FILE_OFFSET_BITS=64
-#cgo CXXFLAGS: -std=c++17
-#cgo LDFLAGS: -lapt-pkg -lstdc++
+#cgo CPPFLAGS: -I${SRCDIR}/include -I${SRCDIR}/src -I/usr/include/apt-pkg -DAPT_WRAPPER_BUILD -D_FILE_OFFSET_BITS=64
+#cgo CXXFLAGS: -std=c++17 -fstack-protector-strong
+#cgo LDFLAGS: -lapt-pkg -lstdc++ -lrpm -lrpmio
 
-#include "apt_wrapper.h"
+#include "apt.h"
 */
 import "C"

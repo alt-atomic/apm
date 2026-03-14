@@ -17,8 +17,8 @@
 package system
 
 import (
-	"apm/internal/system"
-	common "apm/tests/integration/common"
+	"apm/internal/domain/system"
+	"apm/tests/integration/common"
 	"context"
 	"runtime"
 	"sync"
@@ -67,7 +67,7 @@ func (s *ThreadSafeTestSuite) TestSimultaneousDifferentOperations() {
 			defer func() {
 				atomic.StoreInt64(&infoDone, time.Since(startTime).Nanoseconds())
 			}()
-			_, infoErr = s.actions.Info(s.ctx, threadSafeTestPackage, false)
+			_, infoErr = s.actions.Info(s.ctx, threadSafeTestPackage)
 		}()
 
 		// Search операция
@@ -77,7 +77,7 @@ func (s *ThreadSafeTestSuite) TestSimultaneousDifferentOperations() {
 			defer func() {
 				atomic.StoreInt64(&searchDone, time.Since(startTime).Nanoseconds())
 			}()
-			_, searchErr = s.actions.Search(s.ctx, threadSafeTestPackage, false, false)
+			_, searchErr = s.actions.Search(s.ctx, threadSafeTestPackage, false)
 		}()
 
 		// GetFilterFields операция
@@ -134,7 +134,7 @@ func (s *ThreadSafeTestSuite) TestConcurrentReadOperationsStress() {
 					// Вызываем разные методы чтения параллельно
 					switch j % 4 {
 					case 0:
-						_, err := s.actions.Info(s.ctx, pkg, false)
+						_, err := s.actions.Info(s.ctx, pkg)
 						if err != nil {
 							atomic.AddInt64(&errorCount, 1)
 							t.Logf("Info error in goroutine %d: %v", goroutineID, err)
@@ -143,7 +143,7 @@ func (s *ThreadSafeTestSuite) TestConcurrentReadOperationsStress() {
 						}
 
 					case 1:
-						_, err := s.actions.Search(s.ctx, pkg, false, false)
+						_, err := s.actions.Search(s.ctx, pkg, false)
 						if err != nil {
 							atomic.AddInt64(&errorCount, 1)
 							t.Logf("Search error in goroutine %d: %v", goroutineID, err)
@@ -168,7 +168,7 @@ func (s *ThreadSafeTestSuite) TestConcurrentReadOperationsStress() {
 							Limit:  5,
 							Offset: 0,
 						}
-						_, err := s.actions.List(s.ctx, params, false)
+						_, err := s.actions.List(s.ctx, params)
 						if err != nil {
 							atomic.AddInt64(&errorCount, 1)
 							t.Logf("List error in goroutine %d: %v", goroutineID, err)
@@ -283,7 +283,7 @@ func (s *ThreadSafeTestSuite) TestDatabaseConcurrency() {
 				for j := 0; j < operationsPerGoroutine; j++ {
 					switch j % 3 {
 					case 0:
-						_, err := s.actions.Info(s.ctx, threadSafeTestPackage, false)
+						_, err := s.actions.Info(s.ctx, threadSafeTestPackage)
 						if err != nil {
 							select {
 							case errors <- err:
@@ -301,7 +301,7 @@ func (s *ThreadSafeTestSuite) TestDatabaseConcurrency() {
 						}
 
 					case 2:
-						_, err := s.actions.Search(s.ctx, "test", false, false)
+						_, err := s.actions.Search(s.ctx, "test", false)
 						if err != nil {
 							select {
 							case errors <- err:
@@ -352,10 +352,10 @@ func (s *ThreadSafeTestSuite) TestMemoryCorruption() {
 			go func(goroutineID int) {
 				defer wg.Done()
 
-				resp, err := s.actions.Info(s.ctx, threadSafeTestPackage, false)
+				resp, err := s.actions.Info(s.ctx, threadSafeTestPackage)
 				if err != nil {
 					results[goroutineID] = "ERROR: " + err.Error()
-				} else if resp != nil && resp.Data != nil {
+				} else if resp != nil {
 					results[goroutineID] = "OK"
 				} else {
 					results[goroutineID] = "NIL_RESPONSE"
