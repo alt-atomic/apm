@@ -29,6 +29,7 @@ import (
 	"apm/internal/common/swcat"
 	kservice "apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
+	"apm/internal/domain/system/browse"
 	"apm/internal/domain/system/dialog"
 	"apm/internal/domain/system/service"
 	"context"
@@ -642,6 +643,15 @@ func (a *Actions) Upgrade(ctx context.Context, downloadOnly bool) (*UpgradeRespo
 		Message: app.T_("The system has been upgrade successfully"),
 		Result:  &messageAnswer,
 	}, nil
+}
+
+// Browse запускает интерактивный TUI-браузер пакетов.
+func (a *Actions) Browse(ctx context.Context) error {
+	err := a.validateDB(ctx, false)
+	if err != nil {
+		return err
+	}
+	return browse.Run(ctx, a.appConfig, a.serviceAptDatabase)
 }
 
 // Info возвращает информацию о системном пакете.

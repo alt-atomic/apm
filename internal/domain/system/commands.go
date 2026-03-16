@@ -427,6 +427,13 @@ func CommandList(ctx context.Context) *cli.Command {
 		},
 		upgradeCommand(appConfig),
 		{
+			Name:  "browse",
+			Usage: app.T_("Interactive package browser"),
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				return actions.Browse(ctx)
+			}),
+		},
+		{
 			Name:      "info",
 			Usage:     app.T_("Package information"),
 			ArgsUsage: "package",
