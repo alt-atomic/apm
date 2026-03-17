@@ -584,6 +584,9 @@ func isAppApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
 	if !ok {
 		return query, true
 	}
+	if f.Op == filter.OpNe {
+		boolVal = !boolVal
+	}
 	if boolVal {
 		return query.Where("idAppStream IS NOT NULL"), true
 	}
@@ -596,7 +599,11 @@ func installedApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
 	if !ok {
 		return query, true
 	}
-	return query.Where(clause.Eq{Column: clause.Column{Name: "installed"}, Value: boolVal}), true
+	col := clause.Column{Name: "installed"}
+	if f.Op == filter.OpNe {
+		return query.Where(clause.Neq{Column: col, Value: boolVal}), true
+	}
+	return query.Where(clause.Eq{Column: col, Value: boolVal}), true
 }
 
 // SaveSinglePackage сохраняет один пакет в базу данных без очистки таблицы
