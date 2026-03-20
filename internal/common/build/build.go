@@ -181,6 +181,18 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	return outputModule, nil
 }
 
+// ValidateDB проверяет, существует ли база данных пакетов, и автоматически запускает обновление если её нет.
+func (cfgService *ConfigService) ValidateDB(ctx context.Context) error {
+	if err := cfgService.serviceDBService.PackageDatabaseExist(ctx); err != nil {
+		app.Log.Info("Package database is empty, running update")
+		_, err = cfgService.serviceAptActions.Update(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to update package database: %w", err)
+		}
+	}
+	return nil
+}
+
 func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
 	return cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, sortField, sortOrder, limit, offset)
 }
@@ -220,6 +232,10 @@ func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageNa
 }
 
 func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool, downloadOnly bool) error {
+	if err := cfgService.ValidateDB(ctx); err != nil {
+		return err
+	}
+
 	packagesInstall, packagesRemove, errPrepare := cfgService.serviceAptActions.PrepareInstallPackages(ctx, packages)
 	if errPrepare != nil {
 		return errPrepare
