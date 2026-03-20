@@ -12,6 +12,7 @@ import (
 
 type Service interface {
 	IsAtomic() bool
+	SetAptConfigOverrides(overrides map[string]string)
 	CombineInstallRemovePackages(ctx context.Context, packages []string, purge, depends bool, downloadOnly bool) error
 	InstallPackages(ctx context.Context, packages []string) error
 	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
@@ -26,7 +27,7 @@ type Service interface {
 }
 
 type Body interface {
-	// context.Context - app context
+	// Execute context.Context - app context
 	// Service - build service
 	//
 	// returns

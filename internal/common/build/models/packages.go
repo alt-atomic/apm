@@ -18,14 +18,22 @@ type PackagesBody struct {
 	// Обновить ли базу данных до транзакции
 	Update bool `yaml:"update,omitempty" json:"update,omitempty"`
 
-	// Обновить ли пакеты до тарнзакции
+	// Обновить ли пакеты до транзакции
 	Upgrade bool `yaml:"upgrade,omitempty" json:"upgrade,omitempty"`
 
 	// Удалить пакеты с зависимостями
 	Depends bool `yaml:"depends,omitempty" json:"depends,omitempty"`
+
+	// Переопределения конфигурации APT (например Dir::Cache::Archives=/tmp)
+	Options map[string]string `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 func (b *PackagesBody) Execute(ctx context.Context, svc Service) (any, error) {
+	if len(b.Options) != 0 {
+		svc.SetAptConfigOverrides(b.Options)
+		defer svc.SetAptConfigOverrides(nil)
+	}
+
 	if b.Update {
 		app.Log.Info("Updating package cache")
 		if err := svc.UpdatePackages(ctx); err != nil {

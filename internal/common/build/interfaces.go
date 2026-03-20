@@ -9,6 +9,7 @@ import (
 
 // buildAptActionsService определяет методы APT операций для сборки образа.
 type buildAptActionsService interface {
+	SetAptConfigOverrides(overrides map[string]string)
 	PrepareInstallPackages(ctx context.Context, packages []string) ([]string, []string, error)
 	FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []_package.Package, *aptLib.PackageChanges, error)
 	CombineInstallRemovePackages(ctx context.Context, install []string, remove []string, purge bool, depends bool, downloadOnly bool) error

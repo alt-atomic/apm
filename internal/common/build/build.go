@@ -63,6 +63,10 @@ func (cfgService *ConfigService) IsAtomic() bool {
 	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomic
 }
 
+func (cfgService *ConfigService) SetAptConfigOverrides(overrides map[string]string) {
+	cfgService.serviceAptActions.SetAptConfigOverrides(overrides)
+}
+
 func (cfgService *ConfigService) Build(ctx context.Context) error {
 	if cfgService.serviceHostConfig.GetConfig() == nil {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
