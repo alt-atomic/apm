@@ -3,9 +3,10 @@ package altfiles
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
-const (
+var (
 	EtcPasswd   = "/etc/passwd"
 	EtcGroup    = "/etc/group"
 	EtcNsswitch = "/etc/nsswitch.conf"
@@ -110,7 +111,8 @@ func cleanEtcPasswd() (etcCount int, libCount int, err error) {
 	return len(cleaned), len(libEntries), os.WriteFile(EtcPasswd, FormatPasswd(cleaned), info.Mode().Perm())
 }
 
-// cleanEtcGroup удаляет из /etc/group записи, которые уже есть в /usr/lib/group
+// cleanEtcGroup удаляет из /etc/group записи, которые уже есть в /usr/lib/group.
+// Сохраняет записи у которых есть member-оверлейды (пользователи, отсутствующие в /usr/lib)
 func cleanEtcGroup() (etcCount int, libCount int, err error) {
 	libData, err := os.ReadFile(LibGroup)
 	if err != nil {
@@ -121,9 +123,9 @@ func cleanEtcGroup() (etcCount int, libCount int, err error) {
 		return 0, 0, err
 	}
 
-	libNames := make(map[string]struct{}, len(libEntries))
+	libMap := make(map[string]GroupEntry, len(libEntries))
 	for _, e := range libEntries {
-		libNames[e.Name] = struct{}{}
+		libMap[e.Name] = e
 	}
 
 	etcData, err := os.ReadFile(EtcGroup)
@@ -137,7 +139,16 @@ func cleanEtcGroup() (etcCount int, libCount int, err error) {
 
 	var cleaned []GroupEntry
 	for _, e := range etcEntries {
-		if _, inLib := libNames[e.Name]; !inLib {
+		libEntry, inLib := libMap[e.Name]
+		if !inLib {
+			cleaned = append(cleaned, e)
+			continue
+		}
+		if hasUniqueMembers(e.Members, libEntry.Members) {
+			// Фиксим GID если расходится с образом
+			if e.GID != libEntry.GID {
+				e.GID = libEntry.GID
+			}
 			cleaned = append(cleaned, e)
 		}
 	}
@@ -148,6 +159,30 @@ func cleanEtcGroup() (etcCount int, libCount int, err error) {
 	}
 
 	return len(cleaned), len(libEntries), os.WriteFile(EtcGroup, FormatGroup(cleaned), info.Mode().Perm())
+}
+
+// hasUniqueMembers проверяет есть ли в etcMembers пользователи, отсутствующие в libMembers
+func hasUniqueMembers(etcMembers, libMembers string) bool {
+	if etcMembers == "" {
+		return false
+	}
+	libSet := make(map[string]struct{})
+	for _, m := range strings.Split(libMembers, ",") {
+		m = strings.TrimSpace(m)
+		if m != "" {
+			libSet[m] = struct{}{}
+		}
+	}
+	for _, m := range strings.Split(etcMembers, ",") {
+		m = strings.TrimSpace(m)
+		if m == "" {
+			continue
+		}
+		if _, ok := libSet[m]; !ok {
+			return true
+		}
+	}
+	return false
 }
 
 // splitPasswdFiles для сборки: мержит /etc и /usr/lib, сплитит, пишет оба файла
