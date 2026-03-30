@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/internal/common/altfiles"
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
@@ -1029,6 +1030,26 @@ func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*Imag
 
 	return &ImageConfigResponse{
 		Config: *a.serviceHostConfig.GetConfig(),
+	}, nil
+}
+
+// ImageFixNss исправляет /etc/passwd и /etc/group на живой атомарной системе
+func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
+	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
+	}
+
+	result, err := altfiles.ApplyFix()
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageFixNssResponse{
+		Message:        app.T_("nss-altfiles configuration applied successfully"),
+		EtcPasswdCount: result.EtcPasswdCount,
+		LibPasswdCount: result.LibPasswdCount,
+		EtcGroupCount:  result.EtcGroupCount,
+		LibGroupCount:  result.LibGroupCount,
 	}, nil
 }
 

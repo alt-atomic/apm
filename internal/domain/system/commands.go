@@ -273,6 +273,18 @@ func CommandList(ctx context.Context) *cli.Command {
 						return reply.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
+				{
+					Name:  "fix-nss",
+					Usage: app.T_("Fix /etc/passwd and /etc/group for nss-altfiles"),
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageFixNss(ctx)
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+
+						return reply.CliResponse(ctx, reply.OK(resp))
+					}),
+				},
 			}...,
 		)
 	}
