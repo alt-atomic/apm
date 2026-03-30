@@ -71,14 +71,10 @@ func ReadSyncConfigs(dir string) ([]SyncConfig, error) {
 	return configs, nil
 }
 
-// ResolveUsers возвращает список пользователей для sync.
-// Если users не пустой - возвращает как есть.
+// ResolveUsers возвращает валидированный список пользователей для sync.
+// Если users указаны - проверяет что они существуют в /etc/passwd.
 // Иначе - все пользователи из wheel с UID 1000-60000.
 func ResolveUsers(users []string) ([]string, error) {
-	if len(users) > 0 {
-		return users, nil
-	}
-
 	passwdData, err := os.ReadFile(EtcPasswd)
 	if err != nil {
 		return nil, err
@@ -88,11 +84,23 @@ func ResolveUsers(users []string) ([]string, error) {
 		return nil, err
 	}
 
+	existingUsers := map[string]struct{}{}
 	realUsers := map[string]struct{}{}
 	for _, e := range passwdEntries {
+		existingUsers[e.Name] = struct{}{}
 		if isRegularUser(e.UID) && e.UID != 0 {
 			realUsers[e.Name] = struct{}{}
 		}
+	}
+
+	if len(users) > 0 {
+		var validated []string
+		for _, u := range users {
+			if _, ok := existingUsers[u]; ok {
+				validated = append(validated, u)
+			}
+		}
+		return validated, nil
 	}
 
 	wheelMembers, err := getWheelMembers()

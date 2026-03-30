@@ -296,6 +296,55 @@ func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
 	}
 }
 
+func TestSyncGroupsNonexistentUser(t *testing.T) {
+	dir := t.TempDir()
+	etcGroup := filepath.Join(dir, "etc_group")
+	libGroup := filepath.Join(dir, "lib_group")
+	etcPasswd := filepath.Join(dir, "etc_passwd")
+
+	os.WriteFile(etcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
+	os.WriteFile(libGroup, []byte("docker:x:948:\n"), 0644)
+	os.WriteFile(etcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+
+	origEtcG, origLibG := EtcGroup, LibGroup
+	origEtcP := EtcPasswd
+	EtcGroup, LibGroup = etcGroup, libGroup
+	EtcPasswd = etcPasswd
+	defer func() {
+		EtcGroup, LibGroup = origEtcG, origLibG
+		EtcPasswd = origEtcP
+	}()
+
+	// dm существует, fakeuser — нет
+	configs := []SyncConfig{{
+		Sync: SyncBody{
+			Groups: []string{"docker"},
+			Users:  []string{"dm", "fakeuser"},
+		},
+	}}
+
+	result, err := SyncGroups(configs)
+	if err != nil {
+		t.Fatalf("SyncGroups: %v", err)
+	}
+
+	if result.Added != 1 {
+		t.Errorf("expected 1 added, got %d", result.Added)
+	}
+
+	// Проверяем что fakeuser НЕ попал в /etc/group
+	data, _ := os.ReadFile(etcGroup)
+	entries, _ := ParseGroup(data)
+
+	for _, e := range entries {
+		if e.Name == "docker" {
+			if e.Members != "dm" {
+				t.Errorf("docker members: got %q, want %q (fakeuser should be filtered)", e.Members, "dm")
+			}
+		}
+	}
+}
+
 func TestSyncGroupsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	etcGroup := filepath.Join(dir, "etc_group")
