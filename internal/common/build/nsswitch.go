@@ -25,7 +25,8 @@ func (cfgService *ConfigService) applyNssAltfiles(ctx context.Context) error {
 
 	app.Log.Info("Configuring nss-altfiles: splitting passwd/group for atomic system")
 
-	result, err := altfiles.ApplyBuild()
+	svc := altfiles.NewDefault()
+	result, err := svc.ApplyBuild()
 	if err != nil {
 		return err
 	}

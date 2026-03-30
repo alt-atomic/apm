@@ -3,16 +3,53 @@ package altfiles
 import (
 	"fmt"
 	"os"
-	"strings"
 )
 
-var (
-	EtcPasswd   = "/etc/passwd"
-	EtcGroup    = "/etc/group"
-	EtcNsswitch = "/etc/nsswitch.conf"
-	LibPasswd   = "/usr/lib/passwd"
-	LibGroup    = "/usr/lib/group"
+const (
+	defaultEtcPasswd   = "/etc/passwd"
+	defaultEtcGroup    = "/etc/group"
+	defaultEtcNsswitch = "/etc/nsswitch.conf"
+	defaultLibPasswd   = "/usr/lib/passwd"
+	defaultLibGroup    = "/usr/lib/group"
 )
+
+// DefaultSyncConfigDir — директория конфигов sync-groups по умолчанию
+const DefaultSyncConfigDir = "/usr/apm/grpconf.d"
+
+// Config содержит пути к файлам passwd/group/nsswitch
+type Config struct {
+	EtcPasswd   string
+	EtcGroup    string
+	EtcNsswitch string
+	LibPasswd   string
+	LibGroup    string
+}
+
+// DefaultConfig возвращает конфигурацию с путями по умолчанию
+func DefaultConfig() Config {
+	return Config{
+		EtcPasswd:   defaultEtcPasswd,
+		EtcGroup:    defaultEtcGroup,
+		EtcNsswitch: defaultEtcNsswitch,
+		LibPasswd:   defaultLibPasswd,
+		LibGroup:    defaultLibGroup,
+	}
+}
+
+// Service предоставляет операции с altfiles (split/fix/sync passwd и group)
+type Service struct {
+	cfg Config
+}
+
+// New создаёт новый Service с заданной конфигурацией
+func New(cfg Config) *Service {
+	return &Service{cfg: cfg}
+}
+
+// NewDefault создаёт Service с путями по умолчанию
+func NewDefault() *Service {
+	return New(DefaultConfig())
+}
 
 // ApplyResult содержит статистику выполнения
 type ApplyResult struct {
@@ -23,18 +60,18 @@ type ApplyResult struct {
 }
 
 // ApplyBuild разделяет passwd/group и патчит nsswitch.conf (для сборки в контейнере)
-func ApplyBuild() (*ApplyResult, error) {
-	etcPasswd, libPasswd, err := splitPasswdFiles()
+func (s *Service) ApplyBuild() (*ApplyResult, error) {
+	etcPasswd, libPasswd, err := s.splitPasswdFiles()
 	if err != nil {
 		return nil, fmt.Errorf("failed to split passwd: %w", err)
 	}
 
-	etcGroup, libGroup, err := splitGroupFiles()
+	etcGroup, libGroup, err := s.splitGroupFiles()
 	if err != nil {
 		return nil, fmt.Errorf("failed to split group: %w", err)
 	}
 
-	if err = patchNsswitchFile(); err != nil {
+	if err = s.patchNsswitchFile(); err != nil {
 		return nil, fmt.Errorf("failed to patch nsswitch.conf: %w", err)
 	}
 
@@ -48,18 +85,18 @@ func ApplyBuild() (*ApplyResult, error) {
 
 // ApplyFix чистит /etc/passwd и /etc/group на живой системе,
 // удаляя записи которые уже есть в /usr/lib (иммутабельный образ)
-func ApplyFix() (*ApplyResult, error) {
-	etcPasswdCount, libPasswdCount, err := cleanEtcPasswd()
+func (s *Service) ApplyFix() (*ApplyResult, error) {
+	etcPasswdCount, libPasswdCount, err := s.cleanEtcPasswd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean /etc/passwd: %w", err)
 	}
 
-	etcGroupCount, libGroupCount, err := cleanEtcGroup()
+	etcGroupCount, libGroupCount, err := s.cleanEtcGroup()
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean /etc/group: %w", err)
 	}
 
-	if err = patchNsswitchFile(); err != nil {
+	if err = s.patchNsswitchFile(); err != nil {
 		return nil, fmt.Errorf("failed to patch nsswitch.conf: %w", err)
 	}
 
@@ -71,201 +108,43 @@ func ApplyFix() (*ApplyResult, error) {
 	}, nil
 }
 
-// cleanEtcPasswd удаляет из /etc/passwd записи, которые уже есть в /usr/lib/passwd
-func cleanEtcPasswd() (etcCount int, libCount int, err error) {
-	libData, err := os.ReadFile(LibPasswd)
-	if err != nil {
-		return 0, 0, fmt.Errorf("%s not found, build the image first", LibPasswd)
-	}
-	libEntries, err := ParsePasswd(libData)
-	if err != nil {
-		return 0, 0, err
-	}
+// SyncGroups выполняет синхронизацию групп из конфигов
+func (s *Service) SyncGroups(configs []SyncConfig) (*SyncResult, error) {
+	libMap := loadGroupMap(s.cfg.LibGroup)
 
-	libNames := make(map[string]struct{}, len(libEntries))
-	for _, e := range libEntries {
-		libNames[e.Name] = struct{}{}
-	}
-
-	etcData, err := os.ReadFile(EtcPasswd)
+	etcData, err := os.ReadFile(s.cfg.EtcGroup)
 	if err != nil {
-		return 0, 0, err
-	}
-	etcEntries, err := ParsePasswd(etcData)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	var cleaned []PasswdEntry
-	for _, e := range etcEntries {
-		if _, inLib := libNames[e.Name]; !inLib {
-			cleaned = append(cleaned, e)
-		}
-	}
-
-	info, err := os.Stat(EtcPasswd)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return len(cleaned), len(libEntries), os.WriteFile(EtcPasswd, FormatPasswd(cleaned), info.Mode().Perm())
-}
-
-// cleanEtcGroup удаляет из /etc/group записи, которые уже есть в /usr/lib/group.
-// Сохраняет записи у которых есть member-оверлейды (пользователи, отсутствующие в /usr/lib)
-func cleanEtcGroup() (etcCount int, libCount int, err error) {
-	libData, err := os.ReadFile(LibGroup)
-	if err != nil {
-		return 0, 0, fmt.Errorf("%s not found, build the image first", LibGroup)
-	}
-	libEntries, err := ParseGroup(libData)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	libMap := make(map[string]GroupEntry, len(libEntries))
-	for _, e := range libEntries {
-		libMap[e.Name] = e
-	}
-
-	etcData, err := os.ReadFile(EtcGroup)
-	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 	etcEntries, err := ParseGroup(etcData)
 	if err != nil {
-		return 0, 0, err
+		return nil, err
+	}
+	etcMap := map[string]int{}
+	for i, e := range etcEntries {
+		etcMap[e.Name] = i
 	}
 
-	var cleaned []GroupEntry
-	for _, e := range etcEntries {
-		libEntry, inLib := libMap[e.Name]
-		if !inLib {
-			cleaned = append(cleaned, e)
+	result := &SyncResult{}
+
+	for _, cfg := range configs {
+		users, err := s.resolveUsers(cfg.Sync.Users)
+		if err != nil {
+			return nil, err
+		}
+		if len(users) == 0 {
 			continue
 		}
-		if hasUniqueMembers(e.Members, libEntry.Members) {
-			// Фиксим GID если расходится с образом
-			if e.GID != libEntry.GID {
-				e.GID = libEntry.GID
-			}
-			cleaned = append(cleaned, e)
+
+		for _, grpName := range cfg.Sync.Groups {
+			syncGroup(grpName, users, libMap, &etcEntries, etcMap, result)
 		}
 	}
 
-	info, err := os.Stat(EtcGroup)
+	info, err := os.Stat(s.cfg.EtcGroup)
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 
-	return len(cleaned), len(libEntries), os.WriteFile(EtcGroup, FormatGroup(cleaned), info.Mode().Perm())
-}
-
-// hasUniqueMembers проверяет есть ли в etcMembers пользователи, отсутствующие в libMembers
-func hasUniqueMembers(etcMembers, libMembers string) bool {
-	if etcMembers == "" {
-		return false
-	}
-	libSet := make(map[string]struct{})
-	for _, m := range strings.Split(libMembers, ",") {
-		m = strings.TrimSpace(m)
-		if m != "" {
-			libSet[m] = struct{}{}
-		}
-	}
-	for _, m := range strings.Split(etcMembers, ",") {
-		m = strings.TrimSpace(m)
-		if m == "" {
-			continue
-		}
-		if _, ok := libSet[m]; !ok {
-			return true
-		}
-	}
-	return false
-}
-
-// splitPasswdFiles для сборки: мержит /etc и /usr/lib, сплитит, пишет оба файла
-func splitPasswdFiles() (etc []PasswdEntry, lib []PasswdEntry, err error) {
-	etcData, err := os.ReadFile(EtcPasswd)
-	if err != nil {
-		return nil, nil, err
-	}
-	etcEntries, err := ParsePasswd(etcData)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var libEntries []PasswdEntry
-	if libData, readErr := os.ReadFile(LibPasswd); readErr == nil {
-		libEntries, _ = ParsePasswd(libData)
-	}
-
-	merged := MergePasswd(etcEntries, libEntries)
-	newEtc, newLib := SplitPasswd(merged)
-
-	info, err := os.Stat(EtcPasswd)
-	if err != nil {
-		return nil, nil, err
-	}
-	perm := info.Mode().Perm()
-
-	if err = os.WriteFile(LibPasswd, FormatPasswd(newLib), perm); err != nil {
-		return nil, nil, err
-	}
-	if err = os.WriteFile(EtcPasswd, FormatPasswd(newEtc), perm); err != nil {
-		return nil, nil, err
-	}
-
-	return newEtc, newLib, nil
-}
-
-// splitGroupFiles для сборки: мержит /etc и /usr/lib, сплитит, пишет оба файла
-func splitGroupFiles() (etc []GroupEntry, lib []GroupEntry, err error) {
-	etcData, err := os.ReadFile(EtcGroup)
-	if err != nil {
-		return nil, nil, err
-	}
-	etcEntries, err := ParseGroup(etcData)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var libEntries []GroupEntry
-	if libData, readErr := os.ReadFile(LibGroup); readErr == nil {
-		libEntries, _ = ParseGroup(libData)
-	}
-
-	merged := MergeGroup(etcEntries, libEntries)
-	newEtc, newLib := SplitGroup(merged)
-
-	info, err := os.Stat(EtcGroup)
-	if err != nil {
-		return nil, nil, err
-	}
-	perm := info.Mode().Perm()
-
-	if err = os.WriteFile(LibGroup, FormatGroup(newLib), perm); err != nil {
-		return nil, nil, err
-	}
-	if err = os.WriteFile(EtcGroup, FormatGroup(newEtc), perm); err != nil {
-		return nil, nil, err
-	}
-
-	return newEtc, newLib, nil
-}
-
-func patchNsswitchFile() error {
-	data, err := os.ReadFile(EtcNsswitch)
-	if err != nil {
-		return err
-	}
-
-	info, err := os.Stat(EtcNsswitch)
-	if err != nil {
-		return err
-	}
-
-	patched := PatchNsswitch(data)
-	return os.WriteFile(EtcNsswitch, patched, info.Mode().Perm())
+	return result, os.WriteFile(s.cfg.EtcGroup, FormatGroup(etcEntries), info.Mode().Perm())
 }

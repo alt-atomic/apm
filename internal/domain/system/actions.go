@@ -1039,7 +1039,8 @@ func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
 	}
 
-	result, err := altfiles.ApplyFix()
+	svc := altfiles.NewDefault()
+	result, err := svc.ApplyFix()
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
@@ -1059,7 +1060,9 @@ func (a *Actions) ImageSyncGroups(_ context.Context, configDir string) (*ImageSy
 		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
 	}
 
-	configs, err := altfiles.ReadSyncConfigs(configDir)
+	svc := altfiles.NewDefault()
+
+	configs, err := svc.ReadSyncConfigs(configDir)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
@@ -1070,7 +1073,7 @@ func (a *Actions) ImageSyncGroups(_ context.Context, configDir string) (*ImageSy
 		}, nil
 	}
 
-	result, err := altfiles.SyncGroups(configs)
+	result, err := svc.SyncGroups(configs)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}

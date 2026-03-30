@@ -167,8 +167,10 @@ func TestSplitGroupReal(t *testing.T) {
 
 	// Проверяем что members сохраняются
 	for _, e := range etc {
-		if e.Name == "wheel" && e.Members != "dm,root" {
-			t.Errorf("wheel members: got %q, want %q", e.Members, "dm,root")
+		if e.Name == "wheel" {
+			if len(e.Members) != 2 || e.Members[0] != "dm" || e.Members[1] != "root" {
+				t.Errorf("wheel members: got %v, want [dm root]", e.Members)
+			}
 		}
 	}
 
@@ -178,7 +180,7 @@ func TestSplitGroupReal(t *testing.T) {
 		if err != nil {
 			t.Errorf("roundtrip failed for %s: %v", e.Name, err)
 		}
-		if len(reparsed) != 1 || reparsed[0] != e {
+		if len(reparsed) != 1 || reparsed[0].String() != e.String() {
 			t.Errorf("roundtrip mismatch for %s", e.Name)
 		}
 	}

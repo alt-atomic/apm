@@ -12,11 +12,11 @@ type GroupEntry struct {
 	Name     string
 	Password string
 	GID      int
-	Members  string
+	Members  []string
 }
 
 func (e GroupEntry) String() string {
-	return fmt.Sprintf("%s:%s:%d:%s", e.Name, e.Password, e.GID, e.Members)
+	return fmt.Sprintf("%s:%s:%d:%s", e.Name, e.Password, e.GID, strings.Join(e.Members, ","))
 }
 
 // ParseGroup парсит содержимое файла group
@@ -38,11 +38,19 @@ func ParseGroup(data []byte) ([]GroupEntry, error) {
 			return nil, fmt.Errorf("invalid GID in group line: %s", s)
 		}
 
+		var members []string
+		for _, m := range strings.Split(fields[3], ",") {
+			m = strings.TrimSpace(m)
+			if m != "" {
+				members = append(members, m)
+			}
+		}
+
 		entries = append(entries, GroupEntry{
 			Name:     fields[0],
 			Password: fields[1],
 			GID:      gid,
-			Members:  fields[3],
+			Members:  members,
 		})
 	}
 	return entries, nil
