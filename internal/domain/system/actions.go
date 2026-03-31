@@ -17,6 +17,7 @@
 package system
 
 import (
+	"apm/internal/common/altfiles"
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
@@ -1029,6 +1030,59 @@ func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*Imag
 
 	return &ImageConfigResponse{
 		Config: *a.serviceHostConfig.GetConfig(),
+	}, nil
+}
+
+// ImageFixNss исправляет /etc/passwd и /etc/group на живой атомарной системе
+func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
+	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
+	}
+
+	svc := altfiles.NewDefault()
+	result, err := svc.ApplyFix()
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageFixNssResponse{
+		Message:        app.T_("nss-altfiles configuration applied successfully"),
+		EtcPasswdCount: result.EtcPasswdCount,
+		LibPasswdCount: result.LibPasswdCount,
+		EtcGroupCount:  result.EtcGroupCount,
+		LibGroupCount:  result.LibGroupCount,
+	}, nil
+}
+
+// ImageSyncGroups синхронизирует группы пользователей из YAML-конфигов
+func (a *Actions) ImageSyncGroups(_ context.Context, configDir string) (*ImageSyncGroupsResponse, error) {
+	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
+	}
+
+	svc := altfiles.NewDefault()
+
+	configs, err := svc.ReadSyncConfigs(configDir)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if len(configs) == 0 {
+		return &ImageSyncGroupsResponse{
+			Message: fmt.Sprintf(app.T_("No configs found in %s"), configDir),
+		}, nil
+	}
+
+	result, err := svc.SyncGroups(configs)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageSyncGroupsResponse{
+		Message: app.T_("Groups synced successfully"),
+		Added:   result.Added,
+		Fixed:   result.Fixed,
+		Skipped: result.Skipped,
 	}, nil
 }
 

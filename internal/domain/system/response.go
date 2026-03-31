@@ -114,6 +114,23 @@ type ImageConfigResponse struct {
 	Config build.Config `json:"config"`
 }
 
+// ImageFixNssResponse структура ответа для ImageFixNss метода
+type ImageFixNssResponse struct {
+	Message        string `json:"message"`
+	EtcPasswdCount int    `json:"etcPasswdCount"`
+	LibPasswdCount int    `json:"libPasswdCount"`
+	EtcGroupCount  int    `json:"etcGroupCount"`
+	LibGroupCount  int    `json:"libGroupCount"`
+}
+
+// ImageSyncGroupsResponse структура ответа для ImageSyncGroups метода
+type ImageSyncGroupsResponse struct {
+	Message string `json:"message"`
+	Added   int    `json:"added"`
+	Fixed   int    `json:"fixed"`
+	Skipped int    `json:"skipped"`
+}
+
 // SectionsResponse структура ответа для метода Sections.
 type SectionsResponse struct {
 	Message  string   `json:"message"`

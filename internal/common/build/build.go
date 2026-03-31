@@ -73,7 +73,17 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
-	return err
+	if err != nil {
+		return err
+	}
+
+	if cfgService.IsAtomic() {
+		if err = cfgService.applyNssAltfiles(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module, modulesMap map[string]*common_types.MapModule) (*common_types.MapModule, error) {
