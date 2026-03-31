@@ -10,7 +10,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CONTAINER_NAME="${CONTAINER_NAME:-apm-test}"
-
 IMAGE="${1:-'registry.altlinux.org/alt/alt:sisyphus'}"
 
 # Colors for output
@@ -72,7 +71,7 @@ if ! podman run --rm -d \
     --privileged \
     --replace \
     --pull=newer \
-    "${CONTAINER_NAME}" \
+    "${IMAGE}" \
     sleep infinity; then
     print_error "Failed to start container"
     exit 1
@@ -91,10 +90,11 @@ meson install --destdir "$TMPDIR" -C "$PROJECT_ROOT/_build"
 print_info "Copy APM to container..."
 
 # Copy source, build and install inside container
-if ! podman cp "$TMPDIR"/. "${CONTAINER_NAME}:/"; then
+if ! podman cp "$TMPDIR"/. "${CONTAINER_NAME}:/tmp/stage"; then
     print_error "Build and install failed in container"
     exit 1
 fi
+podman exec "${CONTAINER_NAME}" sh -c "cp -rfL /tmp/stage/* /" || true
 
 # Remove the cleanup trap for exec mode so container stays running
 trap - EXIT
