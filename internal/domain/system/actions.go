@@ -24,6 +24,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	aptBinding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
+	"apm/internal/common/build/lint"
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/reply"
@@ -37,6 +38,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"syscall"
 )
 
@@ -1000,6 +1002,51 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 		History:    history,
 		TotalCount: totalCount,
 	}, nil
+}
+
+// ImageLint линтер файлов и пакетной базы
+func (a *Actions) ImageLint(ctx context.Context, rootfs string) (*ImageLintResponse, error) {
+	var (
+		tmpFiles lint.TmpFilesAnalysis
+		sysUsers lint.SysusersAnalysis
+		runTmp   lint.RunTmpAnalysis
+		errTmp   error
+		errSys   error
+		errRun   error
+		wg       sync.WaitGroup
+	)
+
+	wg.Add(3)
+	go func() { defer wg.Done(); errTmp = tmpFiles.Analyze(ctx, rootfs) }()
+	go func() { defer wg.Done(); errSys = sysUsers.Analyze(ctx, rootfs) }()
+	go func() { defer wg.Done(); errRun = runTmp.Analyze(ctx, rootfs) }()
+	wg.Wait()
+
+	if err := errors.Join(errTmp, errSys, errRun); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	resp := &ImageLintResponse{}
+
+	if len(tmpFiles.Missing) > 0 || len(tmpFiles.Unsupported) > 0 {
+		t := &ImageLintTmpfiles{
+			Unsupported: tmpFiles.Unsupported,
+		}
+		for _, e := range tmpFiles.Missing {
+			t.Missing = append(t.Missing, e.Line)
+		}
+		resp.Tmpfiles = t
+	}
+
+	if lines := sysUsers.MissingLines(); len(lines) > 0 {
+		resp.Sysusers = &ImageLintSysusers{Missing: lines}
+	}
+
+	if len(runTmp.Unexpected) > 0 {
+		resp.RunTmp = &ImageLintRunTmp{Entries: runTmp.Unexpected}
+	}
+
+	return resp, nil
 }
 
 // ImageGetConfig получить конфиг

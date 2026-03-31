@@ -181,6 +181,24 @@ func CommandList(ctx context.Context) *cli.Command {
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
+				return reply.CliResponse(ctx, reply.OK(resp))
+			}),
+		},
+		{
+			Name:  "lint",
+			Usage: app.T_("Check image for systemd declarative issues (tmpfiles.d, sysusers.d, /run, /tmp)"),
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "root",
+					Usage: app.T_("Root filesystem path to analyze"),
+					Value: "/",
+				},
+			},
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.ImageLint(ctx, cmd.String("root"))
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				}
 
 				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
