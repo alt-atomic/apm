@@ -4,6 +4,7 @@ import (
 	"apm/internal/common/reply"
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type TmpFilesEntry struct {
@@ -29,6 +31,14 @@ type TmpFilesAnalysis struct {
 }
 
 func (a *TmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
+	var (
+		errVar    error
+		errVarSet bool = false
+		errEtc    error
+		errEtcSet bool = false
+		wg        sync.WaitGroup
+	)
+
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintTmpfiles))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintTmpfiles))
 	existing, err := a.readEntries(rootfs)
@@ -37,13 +47,44 @@ func (a *TmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
 	}
 	a.Existing = existing
 
-	varPath := filepath.Join(rootfs, "var")
-	if _, err = os.Lstat(varPath); os.IsNotExist(err) {
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		varPath := filepath.Join(rootfs, "var")
+		if _, err = os.Lstat(varPath); os.IsNotExist(err) {
+			errVarSet = true
+			errVar = nil
+			return
+		}
+
+		if err = a.walkVar(rootfs, varPath); err != nil {
+			errVarSet = true
+			errVar = fmt.Errorf("walking /var: %w", err)
+			return
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		varPath := filepath.Join(rootfs, "etc")
+		if _, err = os.Lstat(varPath); os.IsNotExist(err) {
+			errEtcSet = true
+			errEtc = nil
+			return
+		}
+
+		if err = a.walkEtc(rootfs, varPath); err != nil {
+			errEtcSet = true
+			errEtc = fmt.Errorf("walking /etc: %w", err)
+			return
+		}
+	}()
+	wg.Wait()
+
+	if (errEtc == nil && errEtcSet) && (errVar == nil && errVarSet) {
 		return nil
 	}
-
-	if err = a.walk(rootfs, varPath); err != nil {
-		return fmt.Errorf("walking /var: %w", err)
+	if err := errors.Join(errEtc, errVar); err != nil {
+		return err
 	}
 
 	sort.Slice(a.Missing, func(i, j int) bool {
@@ -131,7 +172,7 @@ var noRecursePaths = map[string]bool{
 	"/var/tmp":       true,
 }
 
-func (a *TmpFilesAnalysis) walk(rootfs, dir string) error {
+func (a *TmpFilesAnalysis) walkVar(rootfs, dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsPermission(err) || os.IsNotExist(err) {
@@ -194,7 +235,7 @@ func (a *TmpFilesAnalysis) walk(rootfs, dir string) error {
 				})
 			}
 			if !noRecursePaths[absPath] {
-				if err = a.walk(rootfs, fullPath); err != nil {
+				if err = a.walkVar(rootfs, fullPath); err != nil {
 					return err
 				}
 			}
@@ -218,6 +259,50 @@ func (a *TmpFilesAnalysis) walk(rootfs, dir string) error {
 			if !covered {
 				a.Unsupported = append(a.Unsupported, canonPath)
 			}
+		}
+	}
+	return nil
+}
+
+func (a *TmpFilesAnalysis) walkEtc(rootfs, dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsPermission(err) || os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("reading dir %s: %w", dir, err)
+	}
+
+	for _, entry := range entries {
+		fullPath := filepath.Join(dir, entry.Name())
+
+		relPath, err := filepath.Rel(rootfs, fullPath)
+		if err != nil {
+			return err
+		}
+		absPath := "/" + relPath
+
+		canonPath := canonicalizePath(absPath)
+
+		covered := a.Existing[canonPath] != ""
+
+		info, err := entry.Info()
+		if err != nil {
+			return fmt.Errorf("stat %s: %w", fullPath, err)
+		}
+
+		if !covered {
+			mode := fmt.Sprintf("%04o", info.Mode().Perm())
+			user, group := lookupOwner(info)
+			escaped := escapePath(canonPath)
+			a.Missing = append(a.Missing, TmpFilesEntry{
+				Type:  "z",
+				Path:  canonPath,
+				Mode:  mode,
+				User:  user,
+				Group: group,
+				Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
+			})
 		}
 	}
 	return nil
