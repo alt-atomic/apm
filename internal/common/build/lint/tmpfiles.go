@@ -199,6 +199,21 @@ func (a *TmpFilesAnalysis) walk(rootfs, dir string) error {
 				}
 			}
 
+		case ft.IsRegular():
+			if !covered {
+				mode := fmt.Sprintf("%04o", info.Mode().Perm())
+				user, group := lookupOwner(info)
+				escaped := escapePath(canonPath)
+				a.Missing = append(a.Missing, TmpFilesEntry{
+					Type:  "z",
+					Path:  canonPath,
+					Mode:  mode,
+					User:  user,
+					Group: group,
+					Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
+				})
+			}
+
 		default:
 			if !covered {
 				a.Unsupported = append(a.Unsupported, canonPath)
