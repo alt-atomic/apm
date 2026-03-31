@@ -9,6 +9,14 @@ import (
 
 const confName = "apm-lint.conf"
 
+func removeConf(rootfs, subdir string) (string, error) {
+	path := filepath.Join(rootfs, "usr", "lib", subdir, confName)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return path, err
+	}
+	return path, nil
+}
+
 // writeConf записывает содержимое conf-файла в rootfs/usr/lib/<subdir>/apm-lint.conf
 func writeConf(rootfs, subdir, content string) (string, error) {
 	dir := filepath.Join(rootfs, "usr", "lib", subdir)

@@ -1016,6 +1016,15 @@ func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*Imag
 		wg       sync.WaitGroup
 	)
 
+	if fix {
+		_, errTmp = tmpFiles.RemoveConf(rootfs)
+		_, errSys = sysUsers.RemoveConf(rootfs)
+	}
+
+	if err := errors.Join(errTmp, errSys); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
 	wg.Add(3)
 	go func() { defer wg.Done(); errTmp = tmpFiles.Analyze(ctx, rootfs) }()
 	go func() { defer wg.Done(); errSys = sysUsers.Analyze(ctx, rootfs) }()

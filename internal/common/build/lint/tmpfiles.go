@@ -63,6 +63,10 @@ func (a *TmpFilesAnalysis) GenerateConf() string {
 	return b.String()
 }
 
+func (a *TmpFilesAnalysis) RemoveConf(rootfs string) (string, error) {
+	return removeConf(rootfs, "tmpfiles.d")
+}
+
 // WriteConf записывает сгенерированный конфиг в rootfs/usr/lib/tmpfiles.d/apm-lint.conf
 func (a *TmpFilesAnalysis) WriteConf(rootfs string) (string, error) {
 	if len(a.Missing) == 0 {

@@ -157,6 +157,10 @@ func (a *SysusersAnalysis) GenerateConf() string {
 	return b.String()
 }
 
+func (a *SysusersAnalysis) RemoveConf(rootfs string) (string, error) {
+	return removeConf(rootfs, "sysusers.d")
+}
+
 // WriteConf записывает сгенерированный конфиг в rootfs/usr/lib/sysusers.d/apm-lint.conf
 func (a *SysusersAnalysis) WriteConf(rootfs string) (string, error) {
 	if len(a.MissingUsers) == 0 && len(a.MissingGroups) == 0 {
