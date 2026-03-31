@@ -38,11 +38,11 @@ func (a *TmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
 	a.Existing = existing
 
 	varPath := filepath.Join(rootfs, "var")
-	if _, err := os.Lstat(varPath); os.IsNotExist(err) {
+	if _, err = os.Lstat(varPath); os.IsNotExist(err) {
 		return nil
 	}
 
-	if err := a.walk(rootfs, varPath); err != nil {
+	if err = a.walk(rootfs, varPath); err != nil {
 		return fmt.Errorf("walking /var: %w", err)
 	}
 
@@ -61,6 +61,14 @@ func (a *TmpFilesAnalysis) GenerateConf() string {
 		b.WriteByte('\n')
 	}
 	return b.String()
+}
+
+// WriteConf записывает сгенерированный конфиг в rootfs/usr/lib/tmpfiles.d/apm-lint.conf
+func (a *TmpFilesAnalysis) WriteConf(rootfs string) (string, error) {
+	if len(a.Missing) == 0 {
+		return "", nil
+	}
+	return writeConf(rootfs, "tmpfiles.d", a.GenerateConf())
 }
 
 func (a *TmpFilesAnalysis) readEntries(rootfs string) (map[string]string, error) {
@@ -110,6 +118,15 @@ func (a *TmpFilesAnalysis) parseFile(path string, entries map[string]string) err
 	return scanner.Err()
 }
 
+// noRecursePaths директории, для которых создаётся tmpfiles.d запись,
+// но содержимое не обходится (управляется другими механизмами).
+var noRecursePaths = map[string]bool{
+	"/var/home":      true,
+	"/var/root":      true,
+	"/var/cache/man": true,
+	"/var/tmp":       true,
+}
+
 func (a *TmpFilesAnalysis) walk(rootfs, dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -126,7 +143,14 @@ func (a *TmpFilesAnalysis) walk(rootfs, dir string) error {
 		if err != nil {
 			return err
 		}
-		canonPath := canonicalizePath("/" + relPath)
+		absPath := "/" + relPath
+
+		// /var/run — симлинк на /run, управляется системой
+		if absPath == "/var/run" {
+			continue
+		}
+
+		canonPath := canonicalizePath(absPath)
 
 		covered := a.Existing[canonPath] != ""
 
@@ -165,8 +189,10 @@ func (a *TmpFilesAnalysis) walk(rootfs, dir string) error {
 					Line:  fmt.Sprintf("d %s %s %s %s - -", escaped, mode, user, group),
 				})
 			}
-			if err = a.walk(rootfs, fullPath); err != nil {
-				return err
+			if !noRecursePaths[absPath] {
+				if err = a.walk(rootfs, fullPath); err != nil {
+					return err
+				}
 			}
 
 		default:

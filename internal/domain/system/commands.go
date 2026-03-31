@@ -185,17 +185,22 @@ func CommandList(ctx context.Context) *cli.Command {
 			}),
 		},
 		{
-			Name:  "lint",
-			Usage: app.T_("Check image for systemd declarative issues (tmpfiles.d, sysusers.d, /run, /tmp)"),
+			Name:   "lint",
+			Usage:  app.T_("Check image for systemd declarative issues (tmpfiles.d, sysusers.d, /run, /tmp)"),
+			Hidden: true,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "root",
 					Usage: app.T_("Root filesystem path to analyze"),
 					Value: "/",
 				},
+				&cli.BoolFlag{
+					Name:  "fix",
+					Usage: app.T_("Write missing tmpfiles.d and sysusers.d config files"),
+				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.ImageLint(ctx, cmd.String("root"))
+				resp, err := actions.ImageLint(ctx, cmd.String("root"), cmd.Bool("fix"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}

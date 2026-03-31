@@ -1005,7 +1005,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 }
 
 // ImageLint линтер файлов и пакетной базы
-func (a *Actions) ImageLint(ctx context.Context, rootfs string) (*ImageLintResponse, error) {
+func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*ImageLintResponse, error) {
 	var (
 		tmpFiles lint.TmpFilesAnalysis
 		sysUsers lint.SysusersAnalysis
@@ -1044,6 +1044,32 @@ func (a *Actions) ImageLint(ctx context.Context, rootfs string) (*ImageLintRespo
 
 	if len(runTmp.Unexpected) > 0 {
 		resp.RunTmp = &ImageLintRunTmp{Entries: runTmp.Unexpected}
+	}
+
+	if fix {
+		var written []string
+		if path, err := tmpFiles.WriteConf(rootfs); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, fmt.Errorf("writing tmpfiles.d: %w", err))
+		} else if path != "" {
+			written = append(written, path)
+		}
+		if path, err := sysUsers.WriteConf(rootfs); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, fmt.Errorf("writing sysusers.d: %w", err))
+		} else if path != "" {
+			written = append(written, path)
+		}
+		if len(written) > 0 {
+			resp.Message = fmt.Sprintf("Fixed: written %s", strings.Join(written, ", "))
+		} else {
+			resp.Message = "Nothing to fix"
+		}
+	} else {
+		hasIssues := resp.Tmpfiles != nil || resp.Sysusers != nil || resp.RunTmp != nil
+		if hasIssues {
+			resp.Message = "Lint issues found"
+		} else {
+			resp.Message = "No issues found"
+		}
 	}
 
 	return resp, nil

@@ -53,6 +53,13 @@ type SysusersAnalysis struct {
 	Entries       []SysusersEntry
 }
 
+const (
+	// Граница системных UID/GID (обычные пользователи >= 1000)
+	systemUIDMax = 999
+	// nobody/nogroup — специальные, всегда включаем
+	nobodyUID = 65534
+)
+
 func (a *SysusersAnalysis) Analyze(ctx context.Context, rootfs string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintSysusers))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintSysusers))
@@ -85,12 +92,12 @@ func (a *SysusersAnalysis) Analyze(ctx context.Context, rootfs string) error {
 	}
 
 	for _, p := range passwd {
-		if !coveredUsers[p.Name] {
+		if !coveredUsers[p.Name] && isSystemID(p.UID) {
 			a.MissingUsers = append(a.MissingUsers, p)
 		}
 	}
 	for _, g := range groups {
-		if !coveredGroups[g.Name] {
+		if !coveredGroups[g.Name] && isSystemID(g.GID) {
 			a.MissingGroups = append(a.MissingGroups, g)
 		}
 	}
@@ -148,6 +155,14 @@ func (a *SysusersAnalysis) GenerateConf() string {
 		b.WriteString(fmt.Sprintf("u %s %d:%d %s %s %s\n", u.Name, u.UID, u.GID, gecos, home, shell))
 	}
 	return b.String()
+}
+
+// WriteConf записывает сгенерированный конфиг в rootfs/usr/lib/sysusers.d/apm-lint.conf
+func (a *SysusersAnalysis) WriteConf(rootfs string) (string, error) {
+	if len(a.MissingUsers) == 0 && len(a.MissingGroups) == 0 {
+		return "", nil
+	}
+	return writeConf(rootfs, "sysusers.d", a.GenerateConf())
 }
 
 func (a *SysusersAnalysis) readEntries(rootfs string) ([]SysusersEntry, error) {
@@ -323,6 +338,11 @@ func parseOptionalID(s string) (*uint32, error) {
 	}
 	u32 := uint32(v)
 	return &u32, nil
+}
+
+// isSystemID проверяет что UID/GID является системным (< 1000 или nobody 65534), но не root (0)
+func isSystemID(id uint32) bool {
+	return (id > 0 && id <= systemUIDMax) || id == nobodyUID
 }
 
 func optionalField(s string, quote bool) string {

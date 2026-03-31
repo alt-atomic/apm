@@ -110,6 +110,7 @@ type ImageHistoryResponse struct {
 }
 
 type ImageLintResponse struct {
+	Message  string             `json:"message"`
 	Tmpfiles *ImageLintTmpfiles `json:"tmpfiles,omitempty"`
 	Sysusers *ImageLintSysusers `json:"sysusers,omitempty"`
 	RunTmp   *ImageLintRunTmp   `json:"runTmp,omitempty"`

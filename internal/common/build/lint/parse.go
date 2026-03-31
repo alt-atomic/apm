@@ -4,7 +4,23 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 )
+
+const confName = "apm-lint.conf"
+
+// writeConf записывает содержимое conf-файла в rootfs/usr/lib/<subdir>/apm-lint.conf
+func writeConf(rootfs, subdir, content string) (string, error) {
+	dir := filepath.Join(rootfs, "usr", "lib", subdir)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("creating %s: %w", dir, err)
+	}
+	path := filepath.Join(dir, confName)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("writing %s: %w", path, err)
+	}
+	return path, nil
+}
 
 // tokenizeQuoted разбивает строку на токены, поддерживая строки в кавычках
 func tokenizeQuoted(line string) []string {
