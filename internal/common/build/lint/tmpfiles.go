@@ -5,7 +5,6 @@ import (
 	"apm/internal/common/reply"
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -13,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type tmpFilesEntry struct {
@@ -32,60 +30,25 @@ type tmpFilesAnalysis struct {
 }
 
 func (a *tmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
-	var (
-		errVar    error
-		errVarSet = false
-		errEtc    error
-		errEtcSet = false
-		wg        sync.WaitGroup
-	)
-
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintTmpfiles))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintTmpfiles))
+
 	existing, err := a.readEntries(rootfs)
 	if err != nil {
 		return fmt.Errorf("reading tmpfiles.d: %w", err)
 	}
 	a.Existing = existing
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		varPath := filepath.Join(rootfs, "var")
-		if _, err = os.Lstat(varPath); os.IsNotExist(err) {
-			errVarSet = true
-			errVar = nil
-			return
-		}
-
+	if varPath := filepath.Join(rootfs, "var"); dirExists(varPath) {
 		if err = a.walkVar(rootfs, varPath); err != nil {
-			errVarSet = true
-			errVar = fmt.Errorf("walking /var: %w", err)
-			return
+			return fmt.Errorf("walking /var: %w", err)
 		}
-	}()
-	go func() {
-		defer wg.Done()
-		varPath := filepath.Join(rootfs, "etc")
-		if _, err = os.Lstat(varPath); os.IsNotExist(err) {
-			errEtcSet = true
-			errEtc = nil
-			return
-		}
-
-		if err = a.walkEtc(rootfs, varPath); err != nil {
-			errEtcSet = true
-			errEtc = fmt.Errorf("walking /etc: %w", err)
-			return
-		}
-	}()
-	wg.Wait()
-
-	if (errEtc == nil && errEtcSet) && (errVar == nil && errVarSet) {
-		return nil
 	}
-	if err := errors.Join(errEtc, errVar); err != nil {
-		return err
+
+	if etcPath := filepath.Join(rootfs, "etc"); dirExists(etcPath) {
+		if err = a.walkEtc(rootfs, etcPath); err != nil {
+			return fmt.Errorf("walking /etc: %w", err)
+		}
 	}
 
 	sort.Slice(a.Missing, func(i, j int) bool {
@@ -93,6 +56,11 @@ func (a *tmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
 	})
 	sort.Strings(a.Unsupported)
 	return nil
+}
+
+func dirExists(path string) bool {
+	_, err := os.Lstat(path)
+	return !os.IsNotExist(err)
 }
 
 func (a *tmpFilesAnalysis) GenerateConf() string {
