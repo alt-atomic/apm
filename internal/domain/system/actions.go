@@ -17,13 +17,13 @@
 package system
 
 import (
-	"apm/internal/common/altfiles"
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
 	aptBinding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
+	"apm/internal/common/build/altfiles"
 	"apm/internal/common/build/lint"
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
@@ -38,7 +38,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"syscall"
 )
 
@@ -1006,79 +1005,26 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 
 // ImageLint линтер файлов и пакетной базы
 func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*ImageLintResponse, error) {
-	var (
-		tmpFiles lint.TmpFilesAnalysis
-		sysUsers lint.SysusersAnalysis
-		runTmp   lint.RunTmpAnalysis
-		errTmp   error
-		errSys   error
-		errRun   error
-		wg       sync.WaitGroup
-	)
-
-	if fix {
-		_, errTmp = tmpFiles.RemoveConf(rootfs)
-		_, errSys = sysUsers.RemoveConf(rootfs)
-	}
-
-	if err := errors.Join(errTmp, errSys); err != nil {
+	svc := lint.New(rootfs)
+	result, err := svc.Analyze(ctx, fix)
+	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	wg.Add(3)
-	go func() { defer wg.Done(); errTmp = tmpFiles.Analyze(ctx, rootfs) }()
-	go func() { defer wg.Done(); errSys = sysUsers.Analyze(ctx, rootfs) }()
-	go func() { defer wg.Done(); errRun = runTmp.Analyze(ctx, rootfs) }()
-	wg.Wait()
+	resp := &ImageLintResponse{Message: result.Message}
 
-	if err := errors.Join(errTmp, errSys, errRun); err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	if result.TmpFiles != nil {
+		resp.Tmpfiles = &ImageLintTmpfiles{
+			Missing:     result.TmpFiles.Missing,
+			Unsupported: result.TmpFiles.Unsupported,
+		}
 	}
 
-	resp := &ImageLintResponse{}
-
-	if len(tmpFiles.Missing) > 0 || len(tmpFiles.Unsupported) > 0 {
-		t := &ImageLintTmpfiles{
-			Unsupported: tmpFiles.Unsupported,
-		}
-		for _, e := range tmpFiles.Missing {
-			t.Missing = append(t.Missing, e.Line)
-		}
-		resp.Tmpfiles = t
+	if result.SysUsers != nil {
+		resp.Sysusers = &ImageLintSysusers{Missing: result.SysUsers.Missing}
 	}
-
-	if lines := sysUsers.MissingLines(); len(lines) > 0 {
-		resp.Sysusers = &ImageLintSysusers{Missing: lines}
-	}
-
-	if len(runTmp.Unexpected) > 0 {
-		resp.RunTmp = &ImageLintRunTmp{Entries: runTmp.Unexpected}
-	}
-
-	if fix {
-		var written []string
-		if path, err := tmpFiles.WriteConf(rootfs); err != nil {
-			return nil, apmerr.New(apmerr.ErrorTypeImage, fmt.Errorf("writing tmpfiles.d: %w", err))
-		} else if path != "" {
-			written = append(written, path)
-		}
-		if path, err := sysUsers.WriteConf(rootfs); err != nil {
-			return nil, apmerr.New(apmerr.ErrorTypeImage, fmt.Errorf("writing sysusers.d: %w", err))
-		} else if path != "" {
-			written = append(written, path)
-		}
-		if len(written) > 0 {
-			resp.Message = fmt.Sprintf("Fixed: written %s", strings.Join(written, ", "))
-		} else {
-			resp.Message = "Nothing to fix"
-		}
-	} else {
-		hasIssues := resp.Tmpfiles != nil || resp.Sysusers != nil || resp.RunTmp != nil
-		if hasIssues {
-			resp.Message = "Lint issues found"
-		} else {
-			resp.Message = "No issues found"
-		}
+	if result.RunTmp != nil {
+		resp.RunTmp = &ImageLintRunTmp{Entries: result.RunTmp.Entries}
 	}
 
 	return resp, nil

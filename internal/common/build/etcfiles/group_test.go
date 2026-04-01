@@ -1,4 +1,4 @@
-package altfiles
+package etcfiles
 
 import (
 	"testing"
@@ -136,8 +136,8 @@ func TestSplitGroupReal(t *testing.T) {
 
 	etc, lib := SplitGroup(entries)
 
-	etcNames := names(etc)
-	expectNames(t, etcNames, []string{"dm", "root", "wheel"}, "/etc")
+	etcNames := groupNames(etc)
+	expectGroupNames(t, etcNames, []string{"dm", "root", "wheel"}, "/etc")
 
 	if len(lib) != 115 {
 		t.Errorf("/usr/lib: expected 115 entries, got %d", len(lib))
@@ -193,8 +193,29 @@ func TestSplitGroupIdempotentReal(t *testing.T) {
 	merged := MergeGroup(etc1, lib1)
 	etc2, lib2 := SplitGroup(merged)
 
-	expectNames(t, names(etc2), names(etc1), "idempotent /etc")
+	expectGroupNames(t, groupNames(etc2), groupNames(etc1), "idempotent /etc")
 	if len(lib2) != len(lib1) {
 		t.Errorf("idempotent /usr/lib: got %d entries, want %d", len(lib2), len(lib1))
+	}
+}
+
+func groupNames(entries []GroupEntry) []string {
+	var result []string
+	for _, e := range entries {
+		result = append(result, e.Name)
+	}
+	return result
+}
+
+func expectGroupNames(t *testing.T, got, want []string, label string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Errorf("%s: got %v, want %v", label, got, want)
+		return
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("%s[%d]: got %q, want %q", label, i, got[i], want[i])
+		}
 	}
 }

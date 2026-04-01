@@ -11,7 +11,7 @@ func TestRunTmpAnalyzeEmpty(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "run"), 0755)
 	os.MkdirAll(filepath.Join(root, "tmp"), 0755)
 
-	var a RunTmpAnalysis
+	var a runTmpAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestRunTmpAnalyzeFindsContent(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "run", "something"), 0755)
 	os.MkdirAll(filepath.Join(root, "tmp", "leftover"), 0755)
 
-	var a RunTmpAnalysis
+	var a runTmpAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestRunTmpAnalyzeIgnoredPrefixes(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "tmp", "apm-src", "deep", "dir"), 0755)
 	os.MkdirAll(filepath.Join(root, "tmp", "go-cache", "ab"), 0755)
 
-	var a RunTmpAnalysis
+	var a runTmpAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestRunTmpAnalyzePrunesKnownFiles(t *testing.T) {
 	os.MkdirAll(resolveDir, 0755)
 	os.WriteFile(filepath.Join(resolveDir, "stub-resolv.conf"), []byte(""), 0644)
 
-	var a RunTmpAnalysis
+	var a runTmpAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestRunTmpAnalyzeMissingDirs(t *testing.T) {
 	root := t.TempDir()
 	// Без /run и /tmp — не должно падать
 
-	var a RunTmpAnalysis
+	var a runTmpAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}

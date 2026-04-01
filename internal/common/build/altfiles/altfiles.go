@@ -1,6 +1,7 @@
 package altfiles
 
 import (
+	"apm/internal/common/build/etcfiles"
 	"fmt"
 	"os"
 )
@@ -116,7 +117,7 @@ func (s *Service) SyncGroups(configs []SyncConfig) (*SyncResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	etcEntries, err := ParseGroup(etcData)
+	etcEntries, err := etcfiles.ParseGroup(etcData)
 	if err != nil {
 		return nil, err
 	}
@@ -146,5 +147,5 @@ func (s *Service) SyncGroups(configs []SyncConfig) (*SyncResult, error) {
 		return nil, err
 	}
 
-	return result, os.WriteFile(s.cfg.EtcGroup, FormatGroup(etcEntries), info.Mode().Perm())
+	return result, os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(etcEntries), info.Mode().Perm())
 }

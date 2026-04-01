@@ -17,7 +17,7 @@
 package system
 
 import (
-	"apm/internal/common/altfiles"
+	"apm/internal/common/build/altfiles"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/helper"

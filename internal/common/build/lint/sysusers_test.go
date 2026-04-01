@@ -35,8 +35,8 @@ func TestParseSysusersLine_User(t *testing.T) {
 			t.Errorf("parseSysusersLine(%q) = nil", tt.line)
 			continue
 		}
-		if entry.Type != SysusersUser {
-			t.Errorf("parseSysusersLine(%q).Type = %d, want SysusersUser", tt.line, entry.Type)
+		if entry.Type != sysusersUser {
+			t.Errorf("parseSysusersLine(%q).Type = %d, want sysusersUser", tt.line, entry.Type)
 		}
 		if entry.Name != tt.name {
 			t.Errorf("parseSysusersLine(%q).Name = %q, want %q", tt.line, entry.Name, tt.name)
@@ -86,8 +86,8 @@ func TestParseSysusersLine_Group(t *testing.T) {
 			t.Errorf("parseSysusersLine(%q) error: %v", tt.line, err)
 			continue
 		}
-		if entry.Type != SysusersGroup {
-			t.Errorf("parseSysusersLine(%q).Type = %d, want SysusersGroup", tt.line, entry.Type)
+		if entry.Type != sysusersGroup {
+			t.Errorf("parseSysusersLine(%q).Type = %d, want sysusersGroup", tt.line, entry.Type)
 		}
 		if entry.Name != tt.name {
 			t.Errorf("parseSysusersLine(%q).Name = %q, want %q", tt.line, entry.Name, tt.name)
@@ -107,8 +107,8 @@ func TestParseSysusersLine_Range(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if entry.Type != SysusersRange {
-		t.Errorf("Type = %d, want SysusersRange", entry.Type)
+	if entry.Type != sysusersRange {
+		t.Errorf("Type = %d, want sysusersRange", entry.Type)
 	}
 	if entry.RangeStart != 500 || entry.RangeEnd != 999 {
 		t.Errorf("Range = %d-%d, want 500-999", entry.RangeStart, entry.RangeEnd)
@@ -122,41 +122,5 @@ func TestParseSysusersLine_Unknown(t *testing.T) {
 	}
 	if entry != nil {
 		t.Errorf("expected nil for unknown type, got %+v", entry)
-	}
-}
-
-func TestParsePasswdLine(t *testing.T) {
-	entry, err := parsePasswdLine("root:x:0:0:System Administrator:/root:/bin/bash")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry.Name != "root" || entry.UID != 0 || entry.GID != 0 {
-		t.Errorf("got %+v", entry)
-	}
-	if entry.Gecos != "System Administrator" {
-		t.Errorf("Gecos = %q, want %q", entry.Gecos, "System Administrator")
-	}
-}
-
-func TestParseGroupLine(t *testing.T) {
-	entry, err := parseGroupLine("wheel:x:10:root,user1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry.Name != "wheel" || entry.GID != 10 {
-		t.Errorf("got %+v", entry)
-	}
-	if len(entry.Users) != 2 || entry.Users[0] != "root" || entry.Users[1] != "user1" {
-		t.Errorf("Users = %v, want [root user1]", entry.Users)
-	}
-}
-
-func TestParseGroupLineEmpty(t *testing.T) {
-	entry, err := parseGroupLine("nogroup:x:65534:")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entry.Users) != 0 {
-		t.Errorf("Users = %v, want empty", entry.Users)
 	}
 }

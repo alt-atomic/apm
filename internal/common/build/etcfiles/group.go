@@ -1,4 +1,4 @@
-package altfiles
+package etcfiles
 
 import (
 	"bytes"
@@ -28,32 +28,41 @@ func ParseGroup(data []byte) ([]GroupEntry, error) {
 			continue
 		}
 
-		fields := strings.SplitN(s, ":", 4)
-		if len(fields) != 4 {
-			return nil, fmt.Errorf("invalid group line: %s", s)
-		}
-
-		gid, err := strconv.Atoi(fields[2])
+		entry, err := ParseGroupLine(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid GID in group line: %s", s)
+			return nil, err
 		}
-
-		var members []string
-		for _, m := range strings.Split(fields[3], ",") {
-			m = strings.TrimSpace(m)
-			if m != "" {
-				members = append(members, m)
-			}
-		}
-
-		entries = append(entries, GroupEntry{
-			Name:     fields[0],
-			Password: fields[1],
-			GID:      gid,
-			Members:  members,
-		})
+		entries = append(entries, entry)
 	}
 	return entries, nil
+}
+
+// ParseGroupLine парсит одну строку формата group
+func ParseGroupLine(line string) (GroupEntry, error) {
+	fields := strings.SplitN(line, ":", 4)
+	if len(fields) != 4 {
+		return GroupEntry{}, fmt.Errorf("invalid group line: expected 4 fields, got %d", len(fields))
+	}
+
+	gid, err := strconv.Atoi(fields[2])
+	if err != nil {
+		return GroupEntry{}, fmt.Errorf("invalid GID in group line: %s", line)
+	}
+
+	var members []string
+	for _, m := range strings.Split(fields[3], ",") {
+		m = strings.TrimSpace(m)
+		if m != "" {
+			members = append(members, m)
+		}
+	}
+
+	return GroupEntry{
+		Name:     fields[0],
+		Password: fields[1],
+		GID:      gid,
+		Members:  members,
+	}, nil
 }
 
 // FormatGroup сериализует записи обратно в формат group
@@ -66,18 +75,10 @@ func FormatGroup(entries []GroupEntry) []byte {
 	return buf.Bytes()
 }
 
-// isRegularGroup возвращает true для root (GID 0), wheel и реальных групп (GID 1000-60000)
-func isRegularGroup(name string, gid int) bool {
-	if gid == 0 || name == "wheel" {
-		return true
-	}
-	return gid >= 1000 && gid <= 60000
-}
-
 // SplitGroup разделяет записи group на /etc (root + wheel + GID 1000-60000) и /usr/lib (остальные)
 func SplitGroup(entries []GroupEntry) (etc []GroupEntry, lib []GroupEntry) {
 	for _, e := range entries {
-		if isRegularGroup(e.Name, e.GID) {
+		if IsRegularGroup(e.Name, e.GID) {
 			etc = append(etc, e)
 		} else {
 			lib = append(lib, e)

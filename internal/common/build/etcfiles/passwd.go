@@ -1,4 +1,4 @@
-package altfiles
+package etcfiles
 
 import (
 	"bytes"
@@ -31,32 +31,41 @@ func ParsePasswd(data []byte) ([]PasswdEntry, error) {
 			continue
 		}
 
-		fields := strings.SplitN(s, ":", 7)
-		if len(fields) != 7 {
-			return nil, fmt.Errorf("invalid passwd line: %s", s)
-		}
-
-		uid, err := strconv.Atoi(fields[2])
+		entry, err := ParsePasswdLine(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid UID in passwd line: %s", s)
+			return nil, err
 		}
-
-		gid, err := strconv.Atoi(fields[3])
-		if err != nil {
-			return nil, fmt.Errorf("invalid GID in passwd line: %s", s)
-		}
-
-		entries = append(entries, PasswdEntry{
-			Name:     fields[0],
-			Password: fields[1],
-			UID:      uid,
-			GID:      gid,
-			Gecos:    fields[4],
-			Home:     fields[5],
-			Shell:    fields[6],
-		})
+		entries = append(entries, entry)
 	}
 	return entries, nil
+}
+
+// ParsePasswdLine парсит одну строку формата passwd
+func ParsePasswdLine(line string) (PasswdEntry, error) {
+	fields := strings.SplitN(line, ":", 7)
+	if len(fields) != 7 {
+		return PasswdEntry{}, fmt.Errorf("invalid passwd line: expected 7 fields, got %d", len(fields))
+	}
+
+	uid, err := strconv.Atoi(fields[2])
+	if err != nil {
+		return PasswdEntry{}, fmt.Errorf("invalid UID in passwd line: %s", line)
+	}
+
+	gid, err := strconv.Atoi(fields[3])
+	if err != nil {
+		return PasswdEntry{}, fmt.Errorf("invalid GID in passwd line: %s", line)
+	}
+
+	return PasswdEntry{
+		Name:     fields[0],
+		Password: fields[1],
+		UID:      uid,
+		GID:      gid,
+		Gecos:    fields[4],
+		Home:     fields[5],
+		Shell:    fields[6],
+	}, nil
 }
 
 // FormatPasswd сериализует записи обратно в формат passwd
@@ -69,15 +78,10 @@ func FormatPasswd(entries []PasswdEntry) []byte {
 	return buf.Bytes()
 }
 
-// isRegularUser возвращает true для root (UID 0) и реальных пользователей (UID 1000-60000)
-func isRegularUser(uid int) bool {
-	return uid == 0 || (uid >= 1000 && uid <= 60000)
-}
-
 // SplitPasswd разделяет записи passwd на /etc (root + UID 1000-60000) и /usr/lib (остальные)
 func SplitPasswd(entries []PasswdEntry) (etc []PasswdEntry, lib []PasswdEntry) {
 	for _, e := range entries {
-		if isRegularUser(e.UID) {
+		if IsRegularUser(e.UID) {
 			etc = append(etc, e)
 		} else {
 			lib = append(lib, e)

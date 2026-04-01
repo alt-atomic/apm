@@ -1,4 +1,4 @@
-package lint
+package etcfiles
 
 import (
 	"os"
@@ -20,14 +20,14 @@ func TestTokenizeQuoted(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := tokenizeQuoted(tt.input)
+		got := TokenizeQuoted(tt.input)
 		if len(got) != len(tt.expected) {
-			t.Errorf("tokenizeQuoted(%q) = %v, want %v", tt.input, got, tt.expected)
+			t.Errorf("TokenizeQuoted(%q) = %v, want %v", tt.input, got, tt.expected)
 			continue
 		}
 		for i := range got {
 			if got[i] != tt.expected[i] {
-				t.Errorf("tokenizeQuoted(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.expected[i])
+				t.Errorf("TokenizeQuoted(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.expected[i])
 			}
 		}
 	}
@@ -41,7 +41,7 @@ func TestParseColonFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entries, err := parseColonFile(path, parsePasswdLine)
+	entries, err := ParseColonFile(path, ParsePasswdLine)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestParseColonFile(t *testing.T) {
 }
 
 func TestParseColonFileMissing(t *testing.T) {
-	entries, err := parseColonFile("/nonexistent/path", parsePasswdLine)
+	entries, err := ParseColonFile("/nonexistent/path", ParsePasswdLine)
 	if err != nil {
 		t.Fatal(err)
 	}

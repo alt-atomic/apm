@@ -1,10 +1,18 @@
 package lint
 
 import (
+	"apm/internal/common/app"
+	"apm/internal/common/testutil"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func testContext() context.Context {
+	cfg := testutil.DefaultAppConfig()
+	return context.WithValue(context.Background(), app.AppConfigKey, cfg)
+}
 
 func TestExtractPath(t *testing.T) {
 	tests := []struct {
@@ -83,7 +91,7 @@ func TestTmpfilesAnalyze(t *testing.T) {
 	os.MkdirAll(tmpDir, 0755)
 	os.WriteFile(filepath.Join(tmpDir, "base.conf"), []byte("d /var/lib 0755 root root - -\n"), 0644)
 
-	var a TmpFilesAnalysis
+	var a tmpFilesAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -115,31 +123,31 @@ func TestTmpfilesAnalyze(t *testing.T) {
 	}
 }
 
-func TestTmpfilesAnalyzeUnsupported(t *testing.T) {
+func TestTmpfilesAnalyzeRegularFile(t *testing.T) {
 	root := t.TempDir()
 	os.MkdirAll(filepath.Join(root, "var", "lib"), 0755)
 	os.WriteFile(filepath.Join(root, "var", "lib", "data.db"), []byte("data"), 0644)
 
-	var a TmpFilesAnalysis
+	var a tmpFilesAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
 
 	found := false
-	for _, p := range a.Unsupported {
-		if p == "/var/lib/data.db" {
+	for _, e := range a.Missing {
+		if e.Path == "/var/lib/data.db" && e.Type == "z" {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("expected /var/lib/data.db in unsupported, got %v", a.Unsupported)
+		t.Errorf("expected /var/lib/data.db as z entry in missing, got %v", a.Missing)
 	}
 }
 
 func TestTmpfilesAnalyzeEmpty(t *testing.T) {
 	root := t.TempDir()
 
-	var a TmpFilesAnalysis
+	var a tmpFilesAnalysis
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}

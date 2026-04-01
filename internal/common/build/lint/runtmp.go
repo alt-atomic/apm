@@ -26,11 +26,11 @@ var ignoredPrefixes = []string{
 
 var runtimeOnlyDirs = []string{"run", "tmp"}
 
-type RunTmpAnalysis struct {
+type runTmpAnalysis struct {
 	Unexpected []string
 }
 
-func (a *RunTmpAnalysis) Analyze(ctx context.Context, rootfs string) error {
+func (a *runTmpAnalysis) Analyze(ctx context.Context, rootfs string) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintRunTmp))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintRunTmp))
 	for _, dir := range runtimeOnlyDirs {

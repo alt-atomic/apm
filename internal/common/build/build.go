@@ -78,7 +78,10 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	if cfgService.IsAtomic() {
-		if err = cfgService.applyNssAltfiles(ctx); err != nil {
+		if err = cfgService.applyNssAltFiles(ctx); err != nil {
+			return err
+		}
+		if err = cfgService.fixTmpFiles(ctx); err != nil {
 			return err
 		}
 	}

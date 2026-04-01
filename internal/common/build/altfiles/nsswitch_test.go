@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func TestPatchNsswitch(t *testing.T) {
+func TestPatchNsswitchBasic(t *testing.T) {
 	input := `passwd:     files systemd
 shadow:     tcb files systemd
 group:      files [SUCCESS=merge] systemd role
 gshadow:    files systemd`
 
-	result := string(PatchNsswitch([]byte(input)))
+	result := string(patchNsswitch([]byte(input)))
 
 	if !strings.Contains(result, "passwd:     files altfiles systemd") {
 		t.Errorf("passwd line not patched correctly:\n%s", result)
@@ -30,7 +30,7 @@ func TestPatchNsswitchIdempotent(t *testing.T) {
 	input := `passwd:     files altfiles systemd
 group:      files [SUCCESS=merge] altfiles [SUCCESS=merge] systemd`
 
-	result := string(PatchNsswitch([]byte(input)))
+	result := string(patchNsswitch([]byte(input)))
 
 	if strings.Count(result, "altfiles") != 2 {
 		t.Errorf("expected 2 altfiles occurrences, got %d:\n%s", strings.Count(result, "altfiles"), result)
