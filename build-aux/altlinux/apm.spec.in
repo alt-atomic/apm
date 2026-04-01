@@ -68,6 +68,7 @@ done
 %_datadir/polkit-1/actions/%service_id.policy
 %_sysconfdir/apt/apt.conf.d/99-apm-update.conf
 %_datadir/apt/scripts/update-apm.lua
+%_datadir/%name/grpconf.d
 %doc README.en.md
 %doc README.md
 %doc README.ru.md

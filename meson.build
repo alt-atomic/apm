@@ -27,6 +27,7 @@ apt_dep = declare_dependency(include_directories: apt_inc, dependencies: [apt_li
 
 SERVICE_ID = 'org.altlinux.APM'
 
+grpconfdir = get_option('datadir') / meson.project_name() / 'grpconf.d'
 varapmdir = get_option('localstatedir') / 'lib' / meson.project_name()
 confapmdir = get_option('sysconfdir') / meson.project_name()
 varcacheapmdir = get_option('localstatedir') / 'cache' / meson.project_name()
@@ -58,6 +59,7 @@ endforeach
 subdir('po')
 subdir('data')
 
+install_emptydir(grpconfdir)
 install_emptydir(varapmdir)
 install_emptydir(varcacheapmdir)
 install_emptydir(confapmdir)
