@@ -144,6 +144,37 @@ func TestTmpfilesAnalyzeRegularFile(t *testing.T) {
 	}
 }
 
+func TestTmpfilesAnalyzeEtcSymlink(t *testing.T) {
+	root := t.TempDir()
+
+	etcDir := filepath.Join(root, "etc")
+	os.MkdirAll(etcDir, 0755)
+
+	os.WriteFile(filepath.Join(etcDir, "hostname"), []byte("test"), 0644)
+	os.Symlink("/proc/mounts", filepath.Join(etcDir, "mtab"))
+
+	var a tmpFilesAnalysis
+	if err := a.Analyze(testContext(), root); err != nil {
+		t.Fatal(err)
+	}
+
+	var foundFile, foundLink bool
+	for _, e := range a.Missing {
+		if e.Path == "/etc/hostname" && e.Type == "z" {
+			foundFile = true
+		}
+		if e.Path == "/etc/mtab" && e.Type == "L" {
+			foundLink = true
+		}
+	}
+	if !foundFile {
+		t.Error("expected /etc/hostname as z entry")
+	}
+	if !foundLink {
+		t.Errorf("expected /etc/mtab as L entry, got entries: %v", a.Missing)
+	}
+}
+
 func TestTmpfilesAnalyzeEmpty(t *testing.T) {
 	root := t.TempDir()
 

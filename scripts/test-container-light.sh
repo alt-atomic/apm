@@ -10,7 +10,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CONTAINER_NAME="${CONTAINER_NAME:-apm-test}"
-IMAGE="${1:-'registry.altlinux.org/alt/alt:sisyphus'}"
+IMAGE="${1:-registry.altlinux.org/alt/alt:sisyphus}"
 
 # Colors for output
 RED='\033[0;31m'

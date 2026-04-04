@@ -254,13 +254,28 @@ func (a *tmpFilesAnalysis) walkEtc(rootfs, dir string) error {
 		canonPath := canonicalizePath(absPath)
 
 		covered := a.Existing[canonPath] != ""
-
-		info, err := entry.Info()
-		if err != nil {
-			return fmt.Errorf("stat %s: %w", fullPath, err)
+		if covered {
+			continue
 		}
 
-		if !covered {
+		switch ft := entry.Type(); {
+		case ft&fs.ModeSymlink != 0:
+			target, err := os.Readlink(fullPath)
+			if err != nil {
+				return fmt.Errorf("readlink %s: %w", fullPath, err)
+			}
+			escaped := escapePath(canonPath)
+			a.Missing = append(a.Missing, tmpFilesEntry{
+				Type: "L",
+				Path: canonPath,
+				Line: fmt.Sprintf("L %s - - - - %s", escaped, target),
+			})
+
+		default:
+			info, err := entry.Info()
+			if err != nil {
+				return fmt.Errorf("stat %s: %w", fullPath, err)
+			}
 			mode := fmt.Sprintf("%04o", info.Mode().Perm())
 			user, group := lookupOwner(info)
 			escaped := escapePath(canonPath)
