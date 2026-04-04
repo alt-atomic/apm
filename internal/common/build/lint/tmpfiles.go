@@ -39,15 +39,12 @@ func (a *tmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
 	}
 	a.Existing = existing
 
-	if varPath := filepath.Join(rootfs, "var"); dirExists(varPath) {
-		if err = a.walkVar(rootfs, varPath); err != nil {
-			return fmt.Errorf("walking /var: %w", err)
-		}
-	}
-
-	if etcPath := filepath.Join(rootfs, "etc"); dirExists(etcPath) {
-		if err = a.walkEtc(rootfs, etcPath); err != nil {
-			return fmt.Errorf("walking /etc: %w", err)
+	for _, sub := range []string{"var", "etc"} {
+		subPath := filepath.Join(rootfs, sub)
+		if dirExists(subPath) {
+			if err = a.walk(rootfs, subPath); err != nil {
+				return fmt.Errorf("walking /%s: %w", sub, err)
+			}
 		}
 	}
 
@@ -164,7 +161,7 @@ func skipContent(absPath string) bool {
 	return false
 }
 
-func (a *tmpFilesAnalysis) walkVar(rootfs, dir string) error {
+func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsPermission(err) || os.IsNotExist(err) {
@@ -188,7 +185,6 @@ func (a *tmpFilesAnalysis) walkVar(rootfs, dir string) error {
 		}
 
 		canonPath := canonicalizePath(absPath)
-
 		covered := a.Existing[canonPath] != ""
 
 		info, err := entry.Info()
@@ -198,19 +194,18 @@ func (a *tmpFilesAnalysis) walkVar(rootfs, dir string) error {
 
 		switch ft := entry.Type(); {
 		case ft&fs.ModeSymlink != 0:
-			if covered {
-				break
+			if !covered {
+				target, err := os.Readlink(fullPath)
+				if err != nil {
+					return fmt.Errorf("readlink %s: %w", fullPath, err)
+				}
+				escaped := escapePath(canonPath)
+				a.Missing = append(a.Missing, tmpFilesEntry{
+					Type: "L",
+					Path: canonPath,
+					Line: fmt.Sprintf("L %s - - - - %s", escaped, target),
+				})
 			}
-			target, err := os.Readlink(fullPath)
-			if err != nil {
-				return fmt.Errorf("readlink %s: %w", fullPath, err)
-			}
-			escaped := escapePath(canonPath)
-			a.Missing = append(a.Missing, tmpFilesEntry{
-				Type: "L",
-				Path: canonPath,
-				Line: fmt.Sprintf("L %s - - - - %s", escaped, target),
-			})
 
 		case ft.IsDir():
 			if !covered {
@@ -227,7 +222,7 @@ func (a *tmpFilesAnalysis) walkVar(rootfs, dir string) error {
 				})
 			}
 			if !skipContent(absPath) {
-				if err = a.walkVar(rootfs, fullPath); err != nil {
+				if err = a.walk(rootfs, fullPath); err != nil {
 					return err
 				}
 			}
@@ -251,84 +246,6 @@ func (a *tmpFilesAnalysis) walkVar(rootfs, dir string) error {
 			if !covered {
 				a.Unsupported = append(a.Unsupported, canonPath)
 			}
-		}
-	}
-	return nil
-}
-
-func (a *tmpFilesAnalysis) walkEtc(rootfs, dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if os.IsPermission(err) || os.IsNotExist(err) {
-			return nil
-		}
-		return fmt.Errorf("reading dir %s: %w", dir, err)
-	}
-
-	for _, entry := range entries {
-		fullPath := filepath.Join(dir, entry.Name())
-
-		relPath, err := filepath.Rel(rootfs, fullPath)
-		if err != nil {
-			return err
-		}
-		absPath := "/" + relPath
-
-		canonPath := canonicalizePath(absPath)
-
-		covered := a.Existing[canonPath] != ""
-		if covered {
-			continue
-		}
-
-		info, err := entry.Info()
-		if err != nil {
-			return fmt.Errorf("stat %s: %w", fullPath, err)
-		}
-
-		switch ft := entry.Type(); {
-		case ft&fs.ModeSymlink != 0:
-			target, err := os.Readlink(fullPath)
-			if err != nil {
-				return fmt.Errorf("readlink %s: %w", fullPath, err)
-			}
-			escaped := escapePath(canonPath)
-			a.Missing = append(a.Missing, tmpFilesEntry{
-				Type: "L",
-				Path: canonPath,
-				Line: fmt.Sprintf("L %s - - - - %s", escaped, target),
-			})
-
-		case ft.IsDir():
-			mode := fmt.Sprintf("%04o", info.Mode().Perm())
-			user, group := lookupOwner(info)
-			escaped := escapePath(canonPath)
-			a.Missing = append(a.Missing, tmpFilesEntry{
-				Type:  "z",
-				Path:  canonPath,
-				Mode:  mode,
-				User:  user,
-				Group: group,
-				Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
-			})
-			if !skipContent(absPath) {
-				if err = a.walkEtc(rootfs, fullPath); err != nil {
-					return err
-				}
-			}
-
-		default:
-			mode := fmt.Sprintf("%04o", info.Mode().Perm())
-			user, group := lookupOwner(info)
-			escaped := escapePath(canonPath)
-			a.Missing = append(a.Missing, tmpFilesEntry{
-				Type:  "z",
-				Path:  canonPath,
-				Mode:  mode,
-				User:  user,
-				Group: group,
-				Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
-			})
 		}
 	}
 	return nil

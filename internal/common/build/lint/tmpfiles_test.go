@@ -189,7 +189,7 @@ func TestTmpfilesAnalyzeEtcRecursive(t *testing.T) {
 
 	var foundDir, foundFile, foundLink bool
 	for _, e := range a.Missing {
-		if e.Path == "/etc/pam.d" && e.Type == "z" {
+		if e.Path == "/etc/pam.d" && e.Type == "d" {
 			foundDir = true
 		}
 		if e.Path == "/etc/pam.d/login" && e.Type == "z" {
