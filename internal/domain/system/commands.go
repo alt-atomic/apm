@@ -17,7 +17,7 @@
 package system
 
 import (
-	"apm/internal/common/altfiles"
+	"apm/internal/common/build/altfiles"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/helper"
@@ -178,6 +178,29 @@ func CommandList(ctx context.Context) *cli.Command {
 			Usage: app.T_("Build image"),
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageBuild(ctx)
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				}
+				return reply.CliResponse(ctx, reply.OK(resp))
+			}),
+		},
+		{
+			Name:   "lint",
+			Usage:  app.T_("Check image for systemd declarative issues (tmpfiles.d, sysusers.d, /run, /tmp)"),
+			Hidden: true,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "root",
+					Usage: app.T_("Root filesystem path to analyze"),
+					Value: "/",
+				},
+				&cli.BoolFlag{
+					Name:  "fix",
+					Usage: app.T_("Write missing tmpfiles.d and sysusers.d config files"),
+				},
+			},
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.ImageLint(ctx, cmd.String("root"), cmd.Bool("fix"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}

@@ -1,4 +1,4 @@
-package altfiles
+package etcfiles
 
 import (
 	"testing"
@@ -74,7 +74,7 @@ func TestSplitPasswdReal(t *testing.T) {
 
 	etc, lib := SplitPasswd(entries)
 
-	etcNames := names(etc)
+	etcNames := passwdNames(etc)
 	expectNames(t, etcNames, []string{"dm", "root"}, "/etc")
 
 	if len(lib) != 54 {
@@ -115,26 +115,22 @@ func TestSplitPasswdIdempotentReal(t *testing.T) {
 	entries, _ := ParsePasswd(realPasswd)
 	etc1, lib1 := SplitPasswd(entries)
 
-	// Имитация повторного запуска: объединяем и разделяем снова
 	merged := MergePasswd(etc1, lib1)
 	etc2, lib2 := SplitPasswd(merged)
 
-	expectNames(t, names(etc2), names(etc1), "idempotent /etc")
+	expectNames(t, passwdNames(etc2), passwdNames(etc1), "idempotent /etc")
 	if len(lib2) != len(lib1) {
 		t.Errorf("idempotent /usr/lib: got %d entries, want %d", len(lib2), len(lib1))
 	}
 }
 
-func names[T interface{ getName() string }](entries []T) []string {
+func passwdNames(entries []PasswdEntry) []string {
 	var result []string
 	for _, e := range entries {
-		result = append(result, e.getName())
+		result = append(result, e.Name)
 	}
 	return result
 }
-
-func (e PasswdEntry) getName() string { return e.Name }
-func (e GroupEntry) getName() string  { return e.Name }
 
 func expectNames(t *testing.T, got, want []string, label string) {
 	t.Helper()

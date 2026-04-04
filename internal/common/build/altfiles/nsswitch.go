@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// PatchNsswitch добавляет altfiles в строки passwd и group nsswitch.conf
-func PatchNsswitch(data []byte) []byte {
+// patchNsswitch добавляет altfiles в строки passwd и group nsswitch.conf
+func patchNsswitch(data []byte) []byte {
 	var buf bytes.Buffer
 	for _, line := range strings.Split(string(data), "\n") {
 		trimmed := strings.TrimSpace(line)

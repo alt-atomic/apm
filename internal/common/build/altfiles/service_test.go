@@ -1,6 +1,7 @@
 package altfiles
 
 import (
+	"apm/internal/common/build/etcfiles"
 	"os"
 	"path/filepath"
 	"slices"
@@ -117,9 +118,9 @@ func TestSyncGroupsAddNew(t *testing.T) {
 	}
 
 	data, _ := os.ReadFile(svc.cfg.EtcGroup)
-	entries, _ := ParseGroup(data)
+	entries, _ := etcfiles.ParseGroup(data)
 
-	grpMap := map[string]GroupEntry{}
+	grpMap := map[string]etcfiles.GroupEntry{}
 	for _, e := range entries {
 		grpMap[e.Name] = e
 	}
@@ -161,7 +162,7 @@ func TestSyncGroupsFixGID(t *testing.T) {
 	}
 
 	data, _ := os.ReadFile(svc.cfg.EtcGroup)
-	entries, _ := ParseGroup(data)
+	entries, _ := etcfiles.ParseGroup(data)
 
 	for _, e := range entries {
 		if e.Name == "docker" {
@@ -244,9 +245,9 @@ func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
 	}
 
 	data, _ := os.ReadFile(svc.cfg.EtcGroup)
-	entries, _ := ParseGroup(data)
+	entries, _ := etcfiles.ParseGroup(data)
 
-	grpMap := map[string]GroupEntry{}
+	grpMap := map[string]etcfiles.GroupEntry{}
 	for _, e := range entries {
 		grpMap[e.Name] = e
 	}
@@ -292,7 +293,7 @@ func TestSyncGroupsNonexistentUser(t *testing.T) {
 	}
 
 	data, _ := os.ReadFile(svc.cfg.EtcGroup)
-	entries, _ := ParseGroup(data)
+	entries, _ := etcfiles.ParseGroup(data)
 
 	for _, e := range entries {
 		if e.Name == "docker" {

@@ -1,8 +1,8 @@
 package build
 
 import (
-	"apm/internal/common/altfiles"
 	"apm/internal/common/app"
+	"apm/internal/common/build/altfiles"
 	"apm/internal/common/helper"
 	"context"
 	"fmt"
@@ -10,8 +10,8 @@ import (
 
 const altFilesPkg = "libnss-altfiles"
 
-// applyNssAltfiles выполняет настройку nss-altfiles для атомарных систем
-func (cfgService *ConfigService) applyNssAltfiles(ctx context.Context) error {
+// applyNssAltFiles выполняет настройку nss-altfiles для атомарных систем
+func (cfgService *ConfigService) applyNssAltFiles(ctx context.Context) error {
 	if !helper.IsRunningInContainer() {
 		app.Log.Info("Not running in container, skipping nss-altfiles setup")
 		return nil

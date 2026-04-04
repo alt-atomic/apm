@@ -109,6 +109,26 @@ type ImageHistoryResponse struct {
 	TotalCount int                  `json:"totalCount"`
 }
 
+type ImageLintResponse struct {
+	Message  string             `json:"message"`
+	Tmpfiles *ImageLintTmpfiles `json:"tmpfiles,omitempty"`
+	Sysusers *ImageLintSysusers `json:"sysusers,omitempty"`
+	RunTmp   *ImageLintRunTmp   `json:"runTmp,omitempty"`
+}
+
+type ImageLintTmpfiles struct {
+	Missing     []string `json:"missing"`
+	Unsupported []string `json:"unsupported"`
+}
+
+type ImageLintSysusers struct {
+	Missing []string `json:"missing"`
+}
+
+type ImageLintRunTmp struct {
+	Entries []string `json:"entries"`
+}
+
 // ImageConfigResponse структура ответа для ImageGetConfig/ImageSaveConfig методов
 type ImageConfigResponse struct {
 	Config build.Config `json:"config"`

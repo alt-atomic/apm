@@ -17,13 +17,14 @@
 package system
 
 import (
-	"apm/internal/common/altfiles"
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
 	"apm/internal/common/apt"
 	_package "apm/internal/common/apt/package"
 	aptBinding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
+	"apm/internal/common/build/altfiles"
+	"apm/internal/common/build/lint"
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/reply"
@@ -1000,6 +1001,33 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 		History:    history,
 		TotalCount: totalCount,
 	}, nil
+}
+
+// ImageLint линтер файлов и пакетной базы
+func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*ImageLintResponse, error) {
+	svc := lint.New(rootfs)
+	result, err := svc.Analyze(ctx, fix)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	resp := &ImageLintResponse{Message: result.Message}
+
+	if result.TmpFiles != nil {
+		resp.Tmpfiles = &ImageLintTmpfiles{
+			Missing:     result.TmpFiles.Missing,
+			Unsupported: result.TmpFiles.Unsupported,
+		}
+	}
+
+	if result.SysUsers != nil {
+		resp.Sysusers = &ImageLintSysusers{Missing: result.SysUsers.Missing}
+	}
+	if result.RunTmp != nil {
+		resp.RunTmp = &ImageLintRunTmp{Entries: result.RunTmp.Entries}
+	}
+
+	return resp, nil
 }
 
 // ImageGetConfig получить конфиг

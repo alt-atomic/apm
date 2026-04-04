@@ -1,6 +1,7 @@
 package altfiles
 
 import (
+	"apm/internal/common/build/etcfiles"
 	"fmt"
 	"os"
 	"slices"
@@ -12,7 +13,7 @@ func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, err error) {
 	if err != nil {
 		return 0, 0, fmt.Errorf("%s not found, build the image first", s.cfg.LibPasswd)
 	}
-	libEntries, err := ParsePasswd(libData)
+	libEntries, err := etcfiles.ParsePasswd(libData)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -26,12 +27,12 @@ func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	etcEntries, err := ParsePasswd(etcData)
+	etcEntries, err := etcfiles.ParsePasswd(etcData)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	var cleaned []PasswdEntry
+	var cleaned []etcfiles.PasswdEntry
 	for _, e := range etcEntries {
 		if _, inLib := libNames[e.Name]; !inLib {
 			cleaned = append(cleaned, e)
@@ -43,7 +44,7 @@ func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, err error) {
 		return 0, 0, err
 	}
 
-	return len(cleaned), len(libEntries), os.WriteFile(s.cfg.EtcPasswd, FormatPasswd(cleaned), info.Mode().Perm())
+	return len(cleaned), len(libEntries), os.WriteFile(s.cfg.EtcPasswd, etcfiles.FormatPasswd(cleaned), info.Mode().Perm())
 }
 
 // cleanEtcGroup удаляет из /etc/group записи, которые уже есть в /usr/lib/group.
@@ -53,12 +54,12 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, err error) {
 	if err != nil {
 		return 0, 0, fmt.Errorf("%s not found, build the image first", s.cfg.LibGroup)
 	}
-	libEntries, err := ParseGroup(libData)
+	libEntries, err := etcfiles.ParseGroup(libData)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	libMap := make(map[string]GroupEntry, len(libEntries))
+	libMap := make(map[string]etcfiles.GroupEntry, len(libEntries))
 	for _, e := range libEntries {
 		libMap[e.Name] = e
 	}
@@ -67,12 +68,12 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	etcEntries, err := ParseGroup(etcData)
+	etcEntries, err := etcfiles.ParseGroup(etcData)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	var cleaned []GroupEntry
+	var cleaned []etcfiles.GroupEntry
 	for _, e := range etcEntries {
 		libEntry, inLib := libMap[e.Name]
 		if !inLib {
@@ -92,27 +93,27 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, err error) {
 		return 0, 0, err
 	}
 
-	return len(cleaned), len(libEntries), os.WriteFile(s.cfg.EtcGroup, FormatGroup(cleaned), info.Mode().Perm())
+	return len(cleaned), len(libEntries), os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(cleaned), info.Mode().Perm())
 }
 
 // splitPasswdFiles для сборки: мержит /etc и /usr/lib, сплитит, пишет оба файла
-func (s *Service) splitPasswdFiles() (etc []PasswdEntry, lib []PasswdEntry, err error) {
+func (s *Service) splitPasswdFiles() (etc []etcfiles.PasswdEntry, lib []etcfiles.PasswdEntry, err error) {
 	etcData, err := os.ReadFile(s.cfg.EtcPasswd)
 	if err != nil {
 		return nil, nil, err
 	}
-	etcEntries, err := ParsePasswd(etcData)
+	etcEntries, err := etcfiles.ParsePasswd(etcData)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var libEntries []PasswdEntry
+	var libEntries []etcfiles.PasswdEntry
 	if libData, readErr := os.ReadFile(s.cfg.LibPasswd); readErr == nil {
-		libEntries, _ = ParsePasswd(libData)
+		libEntries, _ = etcfiles.ParsePasswd(libData)
 	}
 
-	merged := MergePasswd(etcEntries, libEntries)
-	newEtc, newLib := SplitPasswd(merged)
+	merged := etcfiles.MergePasswd(etcEntries, libEntries)
+	newEtc, newLib := etcfiles.SplitPasswd(merged)
 
 	info, err := os.Stat(s.cfg.EtcPasswd)
 	if err != nil {
@@ -120,10 +121,10 @@ func (s *Service) splitPasswdFiles() (etc []PasswdEntry, lib []PasswdEntry, err 
 	}
 	perm := info.Mode().Perm()
 
-	if err = os.WriteFile(s.cfg.LibPasswd, FormatPasswd(newLib), perm); err != nil {
+	if err = os.WriteFile(s.cfg.LibPasswd, etcfiles.FormatPasswd(newLib), perm); err != nil {
 		return nil, nil, err
 	}
-	if err = os.WriteFile(s.cfg.EtcPasswd, FormatPasswd(newEtc), perm); err != nil {
+	if err = os.WriteFile(s.cfg.EtcPasswd, etcfiles.FormatPasswd(newEtc), perm); err != nil {
 		return nil, nil, err
 	}
 
@@ -131,23 +132,23 @@ func (s *Service) splitPasswdFiles() (etc []PasswdEntry, lib []PasswdEntry, err 
 }
 
 // splitGroupFiles для сборки: мержит /etc и /usr/lib, сплитит, пишет оба файла
-func (s *Service) splitGroupFiles() (etc []GroupEntry, lib []GroupEntry, err error) {
+func (s *Service) splitGroupFiles() (etc []etcfiles.GroupEntry, lib []etcfiles.GroupEntry, err error) {
 	etcData, err := os.ReadFile(s.cfg.EtcGroup)
 	if err != nil {
 		return nil, nil, err
 	}
-	etcEntries, err := ParseGroup(etcData)
+	etcEntries, err := etcfiles.ParseGroup(etcData)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var libEntries []GroupEntry
+	var libEntries []etcfiles.GroupEntry
 	if libData, readErr := os.ReadFile(s.cfg.LibGroup); readErr == nil {
-		libEntries, _ = ParseGroup(libData)
+		libEntries, _ = etcfiles.ParseGroup(libData)
 	}
 
-	merged := MergeGroup(etcEntries, libEntries)
-	newEtc, newLib := SplitGroup(merged)
+	merged := etcfiles.MergeGroup(etcEntries, libEntries)
+	newEtc, newLib := etcfiles.SplitGroup(merged)
 
 	info, err := os.Stat(s.cfg.EtcGroup)
 	if err != nil {
@@ -155,10 +156,10 @@ func (s *Service) splitGroupFiles() (etc []GroupEntry, lib []GroupEntry, err err
 	}
 	perm := info.Mode().Perm()
 
-	if err = os.WriteFile(s.cfg.LibGroup, FormatGroup(newLib), perm); err != nil {
+	if err = os.WriteFile(s.cfg.LibGroup, etcfiles.FormatGroup(newLib), perm); err != nil {
 		return nil, nil, err
 	}
-	if err = os.WriteFile(s.cfg.EtcGroup, FormatGroup(newEtc), perm); err != nil {
+	if err = os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(newEtc), perm); err != nil {
 		return nil, nil, err
 	}
 
@@ -176,7 +177,7 @@ func (s *Service) patchNsswitchFile() error {
 		return err
 	}
 
-	patched := PatchNsswitch(data)
+	patched := patchNsswitch(data)
 	return os.WriteFile(s.cfg.EtcNsswitch, patched, info.Mode().Perm())
 }
 
@@ -188,7 +189,7 @@ func (s *Service) resolveUsers(users []string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	passwdEntries, err := ParsePasswd(passwdData)
+	passwdEntries, err := etcfiles.ParsePasswd(passwdData)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +198,7 @@ func (s *Service) resolveUsers(users []string) ([]string, error) {
 	realUsers := map[string]struct{}{}
 	for _, e := range passwdEntries {
 		existingUsers[e.Name] = struct{}{}
-		if isRegularUser(e.UID) && e.UID != 0 {
+		if etcfiles.IsRegularUser(e.UID) && e.UID != 0 {
 			realUsers[e.Name] = struct{}{}
 		}
 	}
@@ -236,7 +237,7 @@ func (s *Service) getWheelMembers() ([]string, error) {
 		if err != nil {
 			continue
 		}
-		entries, err := ParseGroup(data)
+		entries, err := etcfiles.ParseGroup(data)
 		if err != nil {
 			continue
 		}
@@ -270,13 +271,13 @@ func hasUniqueMembers(etcMembers, libMembers []string) bool {
 	return false
 }
 
-func loadGroupMap(path string) map[string]GroupEntry {
-	m := map[string]GroupEntry{}
+func loadGroupMap(path string) map[string]etcfiles.GroupEntry {
+	m := map[string]etcfiles.GroupEntry{}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return m
 	}
-	entries, err := ParseGroup(data)
+	entries, err := etcfiles.ParseGroup(data)
 	if err != nil {
 		return m
 	}
@@ -286,7 +287,7 @@ func loadGroupMap(path string) map[string]GroupEntry {
 	return m
 }
 
-func syncGroup(grpName string, users []string, libMap map[string]GroupEntry, etcEntries *[]GroupEntry, etcMap map[string]int, result *SyncResult) {
+func syncGroup(grpName string, users []string, libMap map[string]etcfiles.GroupEntry, etcEntries *[]etcfiles.GroupEntry, etcMap map[string]int, result *SyncResult) {
 	libEntry, inLib := libMap[grpName]
 	etcIdx, inEtc := etcMap[grpName]
 
@@ -309,7 +310,7 @@ func syncGroup(grpName string, users []string, libMap map[string]GroupEntry, etc
 			result.Skipped++
 		}
 	} else {
-		*etcEntries = append(*etcEntries, GroupEntry{
+		*etcEntries = append(*etcEntries, etcfiles.GroupEntry{
 			Name:     grpName,
 			Password: "x",
 			GID:      gid,
@@ -320,7 +321,7 @@ func syncGroup(grpName string, users []string, libMap map[string]GroupEntry, etc
 	}
 }
 
-func resolveGID(libEntry GroupEntry, inLib bool, etcEntries []GroupEntry, etcIdx int, inEtc bool) int {
+func resolveGID(libEntry etcfiles.GroupEntry, inLib bool, etcEntries []etcfiles.GroupEntry, etcIdx int, inEtc bool) int {
 	if inLib {
 		return libEntry.GID
 	}
@@ -330,7 +331,7 @@ func resolveGID(libEntry GroupEntry, inLib bool, etcEntries []GroupEntry, etcIdx
 	return 0
 }
 
-func addMembersToEntry(entry *GroupEntry, users []string) bool {
+func addMembersToEntry(entry *etcfiles.GroupEntry, users []string) bool {
 	added := false
 	for _, u := range users {
 		if !slices.Contains(entry.Members, u) {
