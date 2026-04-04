@@ -73,7 +73,7 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	}
 
 	if err := cfgService.UpdatePackages(ctx); err != nil {
-		return nil
+		return err
 	}
 
 	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
