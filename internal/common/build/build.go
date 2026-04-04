@@ -72,6 +72,10 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
+	if err := cfgService.UpdatePackages(ctx); err != nil {
+		return nil, err
+	}
+
 	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
 	if err != nil {
 		return err
