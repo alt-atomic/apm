@@ -287,6 +287,13 @@ func (a *tmpFilesAnalysis) walkEtc(rootfs, dir string) error {
 				Group: group,
 				Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
 			})
+			if ft.IsDir() {
+				if !noRecursePaths[absPath] {
+					if err = a.walkVar(rootfs, fullPath); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
 	return nil
