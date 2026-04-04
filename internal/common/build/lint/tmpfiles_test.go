@@ -175,6 +175,41 @@ func TestTmpfilesAnalyzeEtcSymlink(t *testing.T) {
 	}
 }
 
+func TestTmpfilesAnalyzeEtcRecursive(t *testing.T) {
+	root := t.TempDir()
+
+	os.MkdirAll(filepath.Join(root, "etc", "pam.d"), 0755)
+	os.WriteFile(filepath.Join(root, "etc", "pam.d", "login"), []byte("auth"), 0644)
+	os.Symlink("../hostname", filepath.Join(root, "etc", "pam.d", "link"))
+
+	var a tmpFilesAnalysis
+	if err := a.Analyze(testContext(), root); err != nil {
+		t.Fatal(err)
+	}
+
+	var foundDir, foundFile, foundLink bool
+	for _, e := range a.Missing {
+		if e.Path == "/etc/pam.d" && e.Type == "z" {
+			foundDir = true
+		}
+		if e.Path == "/etc/pam.d/login" && e.Type == "z" {
+			foundFile = true
+		}
+		if e.Path == "/etc/pam.d/link" && e.Type == "L" {
+			foundLink = true
+		}
+	}
+	if !foundDir {
+		t.Error("expected /etc/pam.d as z entry")
+	}
+	if !foundFile {
+		t.Error("expected /etc/pam.d/login as z entry")
+	}
+	if !foundLink {
+		t.Errorf("expected /etc/pam.d/link as L entry, got: %v", a.Missing)
+	}
+}
+
 func TestTmpfilesAnalyzeEmpty(t *testing.T) {
 	root := t.TempDir()
 

@@ -132,13 +132,36 @@ func (a *tmpFilesAnalysis) parseFile(path string, entries map[string]string) err
 	return scanner.Err()
 }
 
-// noRecursePaths директории, для которых создаётся tmpfiles.d запись,
+// skipContentDirs директории, для которых создаётся запись,
 // но содержимое не обходится (управляется другими механизмами).
-var noRecursePaths = map[string]bool{
-	"/var/home":      true,
-	"/var/root":      true,
-	"/var/cache/man": true,
-	"/var/tmp":       true,
+var skipContentDirs = []string{
+	"/var/home",
+	"/var/root",
+	"/var/cache/man",
+	"/var/cache/fontconfig",
+	"/var/tmp",
+	"/etc/rc.d",
+	"/etc/tcb",
+	"/etc/alternatives/links",
+}
+
+// skipContentPrefixes пути, совпадающие по префиксу
+var skipContentPrefixes = []string{
+	"/etc/skel",
+}
+
+func skipContent(absPath string) bool {
+	for _, dir := range skipContentDirs {
+		if absPath == dir {
+			return true
+		}
+	}
+	for _, prefix := range skipContentPrefixes {
+		if strings.HasPrefix(absPath, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *tmpFilesAnalysis) walkVar(rootfs, dir string) error {
@@ -203,7 +226,7 @@ func (a *tmpFilesAnalysis) walkVar(rootfs, dir string) error {
 					Line:  fmt.Sprintf("d %s %s %s %s - -", escaped, mode, user, group),
 				})
 			}
-			if !noRecursePaths[absPath] {
+			if !skipContent(absPath) {
 				if err = a.walkVar(rootfs, fullPath); err != nil {
 					return err
 				}
@@ -258,6 +281,11 @@ func (a *tmpFilesAnalysis) walkEtc(rootfs, dir string) error {
 			continue
 		}
 
+		info, err := entry.Info()
+		if err != nil {
+			return fmt.Errorf("stat %s: %w", fullPath, err)
+		}
+
 		switch ft := entry.Type(); {
 		case ft&fs.ModeSymlink != 0:
 			target, err := os.Readlink(fullPath)
@@ -271,11 +299,25 @@ func (a *tmpFilesAnalysis) walkEtc(rootfs, dir string) error {
 				Line: fmt.Sprintf("L %s - - - - %s", escaped, target),
 			})
 
-		default:
-			info, err := entry.Info()
-			if err != nil {
-				return fmt.Errorf("stat %s: %w", fullPath, err)
+		case ft.IsDir():
+			mode := fmt.Sprintf("%04o", info.Mode().Perm())
+			user, group := lookupOwner(info)
+			escaped := escapePath(canonPath)
+			a.Missing = append(a.Missing, tmpFilesEntry{
+				Type:  "z",
+				Path:  canonPath,
+				Mode:  mode,
+				User:  user,
+				Group: group,
+				Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
+			})
+			if !skipContent(absPath) {
+				if err = a.walkEtc(rootfs, fullPath); err != nil {
+					return err
+				}
 			}
+
+		default:
 			mode := fmt.Sprintf("%04o", info.Mode().Perm())
 			user, group := lookupOwner(info)
 			escaped := escapePath(canonPath)
