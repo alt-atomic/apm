@@ -136,6 +136,7 @@ var skipContentDirs = []string{
 	"/var/root",
 	"/var/cache/man",
 	"/var/cache/fontconfig",
+	"/var/cache/apt",
 	"/var/tmp",
 	"/etc/rc.d",
 	"/etc/tcb",
@@ -278,6 +279,8 @@ func escapePath(s string) string {
 	}
 	for _, c := range s {
 		switch c {
+		case '%':
+			b.WriteString(`%%`)
 		case '\n':
 			b.WriteString(`\n`)
 		case '\t':
