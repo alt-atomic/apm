@@ -17,9 +17,9 @@
 package system
 
 import (
-	"apm/internal/common/build/altfiles"
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/build/altfiles"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/common/wrapper"
@@ -298,8 +298,9 @@ func CommandList(ctx context.Context) *cli.Command {
 					}),
 				},
 				{
-					Name:  "fix-nss",
-					Usage: app.T_("Fix /etc/passwd and /etc/group for nss-altfiles"),
+					Name:   "fix-nss",
+					Hidden: true,
+					Usage:  app.T_("Fix /etc/passwd and /etc/group for nss-altfiles"),
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageFixNss(ctx)
 						if err != nil {
@@ -314,11 +315,13 @@ func CommandList(ctx context.Context) *cli.Command {
 					Usage:     app.T_("Sync user groups from config"),
 					ArgsUsage: "[config-dir]",
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						dir := cmd.Args().First()
-						if dir == "" {
-							dir = altfiles.DefaultSyncConfigDir
+						var dirs []string
+						if cmd.Args().Len() > 0 {
+							dirs = []string{cmd.Args().First()}
+						} else {
+							dirs = altfiles.DefaultSyncConfigDirs
 						}
-						resp, err := actions.ImageSyncGroups(ctx, dir)
+						resp, err := actions.ImageSyncGroups(ctx, dirs)
 						if err != nil {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}

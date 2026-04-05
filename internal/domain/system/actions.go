@@ -1083,21 +1083,21 @@ func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
 }
 
 // ImageSyncGroups синхронизирует группы пользователей из YAML-конфигов
-func (a *Actions) ImageSyncGroups(_ context.Context, configDir string) (*ImageSyncGroupsResponse, error) {
+func (a *Actions) ImageSyncGroups(_ context.Context, configDirs []string) (*ImageSyncGroupsResponse, error) {
 	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
 	}
 
 	svc := altfiles.NewDefault()
 
-	configs, err := svc.ReadSyncConfigs(configDir)
+	configs, err := svc.ReadSyncConfigsDirs(configDirs)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
 	if len(configs) == 0 {
 		return &ImageSyncGroupsResponse{
-			Message: fmt.Sprintf(app.T_("No configs found in %s"), configDir),
+			Message: app.T_("No configs found"),
 		}, nil
 	}
 

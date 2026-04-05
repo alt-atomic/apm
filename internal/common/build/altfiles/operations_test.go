@@ -3,95 +3,9 @@ package altfiles
 import (
 	"apm/internal/common/build/etcfiles"
 	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 )
-
-func TestParseSyncConfig(t *testing.T) {
-	input := []byte(`sync:
-  groups:
-    - docker
-    - audio
-    - video
-  users:
-    - dm
-    - testuser
-`)
-	cfg, err := ParseSyncConfig(input)
-	if err != nil {
-		t.Fatalf("ParseSyncConfig: %v", err)
-	}
-
-	if len(cfg.Sync.Groups) != 3 {
-		t.Errorf("expected 3 groups, got %d", len(cfg.Sync.Groups))
-	}
-	if len(cfg.Sync.Users) != 2 {
-		t.Errorf("expected 2 users, got %d", len(cfg.Sync.Users))
-	}
-	if cfg.Sync.Groups[0] != "docker" {
-		t.Errorf("expected docker, got %s", cfg.Sync.Groups[0])
-	}
-}
-
-func TestParseSyncConfigNoUsers(t *testing.T) {
-	input := []byte(`sync:
-  groups:
-    - docker
-    - audio
-`)
-	cfg, err := ParseSyncConfig(input)
-	if err != nil {
-		t.Fatalf("ParseSyncConfig: %v", err)
-	}
-
-	if len(cfg.Sync.Groups) != 2 {
-		t.Errorf("expected 2 groups, got %d", len(cfg.Sync.Groups))
-	}
-	if len(cfg.Sync.Users) != 0 {
-		t.Errorf("expected 0 users, got %d", len(cfg.Sync.Users))
-	}
-}
-
-func TestReadSyncConfigs(t *testing.T) {
-	dir := t.TempDir()
-
-	os.WriteFile(filepath.Join(dir, "desktop.yaml"), []byte(`sync:
-  groups:
-    - docker
-    - audio
-  users:
-    - dm
-`), 0644)
-
-	os.WriteFile(filepath.Join(dir, "extra.yml"), []byte(`sync:
-  groups:
-    - libvirt
-`), 0644)
-
-	// Не yaml — должен быть проигнорирован
-	os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("not a config"), 0644)
-
-	svc := newTestService(dir)
-	configs, err := svc.ReadSyncConfigs(dir)
-	if err != nil {
-		t.Fatalf("ReadSyncConfigs: %v", err)
-	}
-
-	if len(configs) != 2 {
-		t.Fatalf("expected 2 configs, got %d", len(configs))
-	}
-}
-
-func newTestService(dir string) *Service {
-	return New(Config{
-		EtcPasswd:   filepath.Join(dir, "etc_passwd"),
-		EtcGroup:    filepath.Join(dir, "etc_group"),
-		EtcNsswitch: filepath.Join(dir, "nsswitch.conf"),
-		LibPasswd:   filepath.Join(dir, "lib_passwd"),
-		LibGroup:    filepath.Join(dir, "lib_group"),
-	})
-}
 
 func TestSyncGroupsAddNew(t *testing.T) {
 	dir := t.TempDir()
@@ -229,45 +143,6 @@ func TestSyncGroupsNonexistent(t *testing.T) {
 	}
 }
 
-func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
-	dir := t.TempDir()
-	svc := newTestService(dir)
-
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\naudio:x:82:dm\nvideo:x:990:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("audio:x:81:\nvideo:x:990:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
-
-	_, err := svc.ApplyFix()
-	if err != nil {
-		t.Fatalf("ApplyFix: %v", err)
-	}
-
-	data, _ := os.ReadFile(svc.cfg.EtcGroup)
-	entries, _ := etcfiles.ParseGroup(data)
-
-	grpMap := map[string]etcfiles.GroupEntry{}
-	for _, e := range entries {
-		grpMap[e.Name] = e
-	}
-
-	audio, ok := grpMap["audio"]
-	if !ok {
-		t.Fatal("audio should be preserved in /etc/group (has member overlay)")
-	}
-	if audio.GID != 81 {
-		t.Errorf("audio GID: got %d, want 81 (should be fixed from /usr/lib)", audio.GID)
-	}
-	if !slices.Equal(audio.Members, []string{"dm"}) {
-		t.Errorf("audio members: got %v, want [dm]", audio.Members)
-	}
-
-	if _, ok := grpMap["video"]; ok {
-		t.Error("video should be removed from /etc/group (no unique members)")
-	}
-}
-
 func TestSyncGroupsNonexistentUser(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
@@ -336,5 +211,44 @@ func TestSyncGroupsIdempotent(t *testing.T) {
 	}
 	if result2.Skipped != 2 {
 		t.Errorf("second run: expected 2 skipped, got %d", result2.Skipped)
+	}
+}
+
+func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\naudio:x:82:dm\nvideo:x:990:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("audio:x:81:\nvideo:x:990:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	_, err := svc.ApplyFix()
+	if err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcGroup)
+	entries, _ := etcfiles.ParseGroup(data)
+
+	grpMap := map[string]etcfiles.GroupEntry{}
+	for _, e := range entries {
+		grpMap[e.Name] = e
+	}
+
+	audio, ok := grpMap["audio"]
+	if !ok {
+		t.Fatal("audio should be preserved in /etc/group (has member overlay)")
+	}
+	if audio.GID != 81 {
+		t.Errorf("audio GID: got %d, want 81 (should be fixed from /usr/lib)", audio.GID)
+	}
+	if !slices.Equal(audio.Members, []string{"dm"}) {
+		t.Errorf("audio members: got %v, want [dm]", audio.Members)
+	}
+
+	if _, ok := grpMap["video"]; ok {
+		t.Error("video should be removed from /etc/group (no unique members)")
 	}
 }

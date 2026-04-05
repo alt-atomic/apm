@@ -60,6 +60,7 @@ subdir('po')
 subdir('data')
 
 install_emptydir(grpconfdir)
+install_emptydir(confapmdir / 'grpconf.d')
 install_emptydir(varapmdir)
 install_emptydir(varcacheapmdir)
 install_emptydir(confapmdir)

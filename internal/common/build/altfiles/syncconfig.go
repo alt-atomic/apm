@@ -26,6 +26,22 @@ type SyncResult struct {
 	Skipped int
 }
 
+// ReadSyncConfigsDirs читает конфиги из нескольких директорий
+func (s *Service) ReadSyncConfigsDirs(dirs []string) ([]SyncConfig, error) {
+	var all []SyncConfig
+	for _, dir := range dirs {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			continue
+		}
+		configs, err := s.ReadSyncConfigs(dir)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, configs...)
+	}
+	return all, nil
+}
+
 // ReadSyncConfigs читает все .yaml/.yml файлы из директории
 func (s *Service) ReadSyncConfigs(dir string) ([]SyncConfig, error) {
 	entries, err := os.ReadDir(dir)

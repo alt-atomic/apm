@@ -14,8 +14,11 @@ const (
 	defaultLibGroup    = "/usr/lib/group"
 )
 
-// DefaultSyncConfigDir — директория конфигов sync-groups по умолчанию
-const DefaultSyncConfigDir = "/usr/apm/grpconf.d"
+// DefaultSyncConfigDirs директории конфигов sync-groups по умолчанию
+var DefaultSyncConfigDirs = []string{
+	"/usr/share/apm/grpconf.d",
+	"/etc/apm/grpconf.d",
+}
 
 // Config содержит пути к файлам passwd/group/nsswitch
 type Config struct {
