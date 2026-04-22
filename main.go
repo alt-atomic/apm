@@ -160,7 +160,7 @@ func main() {
 				Value:   "text",
 			},
 			&cli.StringFlag{
-				Name:    "format_type",
+				Name:    "format-type",
 				Usage:   app.T_("Display type: tree, plain"),
 				Aliases: []string{"ft"},
 				Value:   "",

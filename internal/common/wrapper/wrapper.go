@@ -51,7 +51,7 @@ func WithOptions[T any](
 		return func(ctx context.Context, cmd *cli.Command) error {
 			appConfig := app.GetAppConfig(ctx)
 			appConfig.ConfigManager.SetFormat(cmd.String("format"))
-			if ft := cmd.String("format_type"); ft != "" {
+			if ft := cmd.String("format-type"); ft != "" {
 				appConfig.ConfigManager.SetFormatType(ft)
 			}
 			if fields := cmd.StringSlice("output"); len(fields) > 0 {
