@@ -523,7 +523,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 	a.appConfig.ConfigManager.EnableVerbose()
 	reply.StopSpinner(a.appConfig)
 
-	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
+	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0755); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
