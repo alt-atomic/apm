@@ -194,6 +194,12 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if w.RunBackground(rw, r, reply.EventDistroInstall, func(ctx context.Context) (interface{}, error) {
+		return w.actions.Install(ctx, container, packageName, export)
+	}) {
+		return
+	}
+
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
 	if err != nil {
@@ -454,6 +460,9 @@ func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 				{Name: "container", Source: "body", Type: "string", ArgIndex: 1},
 				{Name: "package", Source: "body", Type: "string", ArgIndex: 2},
 				{Name: "export", Source: "body", Type: "bool", Default: "false", ArgIndex: 3},
+			},
+			QueryParams: []http_server.QueryParam{
+				{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 			},
 		},
 		{

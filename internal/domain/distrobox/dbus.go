@@ -173,7 +173,30 @@ func (w *DBusWrapper) List(container string, sort string, order string, limit in
 }
 
 // Install устанавливает пакет.
-func (w *DBusWrapper) Install(container string, packageName string, export bool, transaction string) (string, *dbus.Error) {
+func (w *DBusWrapper) Install(container string, packageName string, export bool, transaction string, background bool) (string, *dbus.Error) {
+	if transaction == "" {
+		transaction = helper.GenerateTransactionID()
+	}
+
+	if background {
+		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+		go func() {
+			resp, err := w.actions.Install(ctx, container, packageName, export)
+			reply.SendTaskResult(ctx, reply.EventDistroInstall, resp, err)
+		}()
+
+		bgResp := BackgroundTaskResponse{
+			Message:     app.T_("Task started in background"),
+			Transaction: transaction,
+		}
+		data, jerr := json.Marshal(reply.OK(bgResp))
+		if jerr != nil {
+			return "", dbus.MakeFailedError(jerr)
+		}
+		return string(data), nil
+	}
+
+	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	resp, err := w.actions.Install(ctx, container, packageName, export)
 	if err != nil {

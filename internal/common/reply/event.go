@@ -67,6 +67,7 @@ const (
 const (
 	EventDistroUpdate       = "distrobox.Update"
 	EventDistroContainerAdd = "distrobox.ContainerAdd"
+	EventDistroInstall      = "distrobox.Install"
 
 	EventDistroSavePackagesToDB = "distro.SavePackagesToDB"
 	EventDistroGetContainerList = "distro.GetContainerList"
