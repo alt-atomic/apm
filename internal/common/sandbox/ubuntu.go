@@ -51,7 +51,7 @@ func (p *UbuntuProvider) GetPackages(ctx context.Context, containerInfo Containe
 		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
-	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "apt", "search", "."}, command.WithQuiet())
+	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "apt", "search", "."}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to execute apt search: %v, stderr: %s"), err, stderr)
 	}
@@ -84,7 +84,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 		return paths
 	}
 
-	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", packageName}, command.WithQuiet())
+	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", packageName}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
@@ -92,7 +92,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 	filtered := helper.FilterLines(stdout, filePath)
 	paths := parseOutput(filtered)
 	if len(paths) == 0 {
-		dlStdout, dlStderr, dlErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-l"}, command.WithQuiet())
+		dlStdout, dlStderr, dlErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-l"}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 		if dlErr != nil {
 			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), dlStderr, dlErr.Error())
 			return paths, nil
@@ -110,7 +110,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 
 		var allPaths []string
 		for _, pkg := range matchedPackages {
-			pkgStdout, _, pkgErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", pkg}, command.WithQuiet())
+			pkgStdout, _, pkgErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-L", pkg}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 			if pkgErr != nil {
 				continue
 			}
@@ -134,7 +134,7 @@ func (p *UbuntuProvider) GetPathByPackageName(ctx context.Context, containerInfo
 
 // GetPackageOwner определяет пакет-владельца файла через dpkg -S.
 func (p *UbuntuProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
-	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-S", filePath}, command.WithQuiet())
+	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "dpkg", "-S", filePath}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		return "", err
 	}
