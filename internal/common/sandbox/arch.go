@@ -44,24 +44,33 @@ func NewArchProvider(servicePackage *PackageService, runner command.Runner) *Arc
 
 // GetPackages обновляет базу пакетов и выполняет поиск:
 func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerInfo) ([]PackageInfo, error) {
-	// Обновляем базу пакетов и базу владельцев файлов.
-	if _, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "pacman", "-Suy", "--noconfirm"}); err != nil {
+	if _, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "pacman", "-Sy", "--noconfirm"}, command.WithQuiet()); err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
 	// Получаем пакеты из официальных репозиториев
-	stdoutSs, stderrSs, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "sudo", "pacman", "-Ss"}, command.WithQuiet())
+	stdoutSs, stderrSs, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Ss"}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Failed to search packages (pacman -Ss): %v, stderr: %s"), err, stderrSs)
 	}
 
 	exportingPackages, err := p.servicePackage.GetAllApplicationsByContainer(ctx, containerInfo)
 	if err != nil {
-		app.Log.Error(app.T_("Error retrieving installed packages: "), err)
+		app.Log.Error(app.T_("Error retrieving exporting packages: "), err)
 		exportingPackages = []string{}
 	}
 
-	packagesOfficial, err := p.parseOutput(stdoutSs, exportingPackages)
+	installedPackages, err := p.getInstalledPackages(ctx, containerInfo)
+	if err != nil {
+		app.Log.Error(app.T_("Error retrieving installed packages: "), err)
+		installedPackages = []string{}
+	}
+	installedMap := make(map[string]bool, len(installedPackages))
+	for _, pkg := range installedPackages {
+		installedMap[pkg] = true
+	}
+
+	packagesOfficial, err := p.parseOutput(stdoutSs, exportingPackages, installedMap)
 	if err != nil {
 		app.Log.Errorf(app.T_("Error parsing official packages: %v"), err)
 		return nil, err
@@ -72,6 +81,23 @@ func (p *ArchProvider) GetPackages(ctx context.Context, containerInfo ContainerI
 	}
 
 	return packagesOfficial, nil
+}
+
+// getInstalledPackages возвращает список установленных пакетов через pacman -Qq.
+func (p *ArchProvider) getInstalledPackages(ctx context.Context, containerInfo ContainerInfo) ([]string, error) {
+	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Qq"}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
+	if err != nil {
+		return nil, fmt.Errorf(app.T_("Error executing command pacman -Qq: %w"), err)
+	}
+
+	var packages []string
+	for _, rawLine := range strings.Split(stdout, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if line != "" {
+			packages = append(packages, line)
+		}
+	}
+	return packages, nil
 }
 
 // RemovePackage удаляет указанный пакет с помощью pacman -R.
@@ -103,7 +129,7 @@ func (p *ArchProvider) InstallPackage(ctx context.Context, containerInfo Contain
 // затем, если не найден, выполняется поиск через pacman -F.
 func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, fileName string) (string, error) {
 	// Попытка через pacman -Qo.
-	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Qo", fileName}, command.WithQuiet())
+	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-Qo", fileName}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err == nil {
 		ownerInfo := strings.TrimSpace(stdout)
 		const marker = " is owned by "
@@ -119,7 +145,7 @@ func (p *ArchProvider) GetPackageOwner(ctx context.Context, containerInfo Contai
 	}
 
 	// Если не найдено, пробуем через pacman -F.
-	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-F", fileName}, command.WithQuiet())
+	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "pacman", "-F", fileName}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		return "", fmt.Errorf(app.T_("Failed to find a package for file '%s': %v, stderr: %s"), fileName, err, stderr)
 	}
@@ -211,10 +237,8 @@ func (p *ArchProvider) GetPathByPackageName(ctx context.Context, containerInfo C
 }
 
 // parseOutput парсит вывод команды
-func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([]PackageInfo, error) {
-	// Регулярное выражение для парсинга строки:
-	// Пример: "core/vim 8.2.3456-1 [installed] Vi IMproved, a highly configurable, improved version of the vi text editor"
-	re := regexp.MustCompile(`^([a-z]+)\/([\w\.-]+)\s+([^\s]+)`)
+func (p *ArchProvider) parseOutput(output string, exportingPackages []string, installedMap map[string]bool) ([]PackageInfo, error) {
+	re := regexp.MustCompile(`^([a-z]+)/([\w.-]+)\s+(\S+)`)
 	lines := strings.Split(output, "\n")
 	var results []PackageInfo
 
@@ -237,7 +261,6 @@ func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([
 
 		pkgName := matches[2]
 		version := matches[3]
-		installed := strings.Contains(line, "[installed") || strings.Contains(line, "(установлено:")
 		description := ""
 		if i+1 < len(lines) && !strings.Contains(lines[i+1], "/") {
 			description = strings.TrimSpace(lines[i+1])
@@ -258,7 +281,7 @@ func (p *ArchProvider) parseOutput(output string, exportingPackages []string) ([
 			Name:        pkgName,
 			Version:     version,
 			Description: description,
-			Installed:   installed,
+			Installed:   installedMap[pkgName],
 			Exporting:   slices.Contains(exportingPackages, pkgName),
 			Manager:     "pacman",
 		})

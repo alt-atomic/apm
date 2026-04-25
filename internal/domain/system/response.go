@@ -109,9 +109,46 @@ type ImageHistoryResponse struct {
 	TotalCount int                  `json:"totalCount"`
 }
 
+type ImageLintResponse struct {
+	Message  string             `json:"message"`
+	Tmpfiles *ImageLintTmpfiles `json:"tmpfiles,omitempty"`
+	Sysusers *ImageLintSysusers `json:"sysusers,omitempty"`
+	RunTmp   *ImageLintRunTmp   `json:"runTmp,omitempty"`
+}
+
+type ImageLintTmpfiles struct {
+	Missing     []string `json:"missing"`
+	Unsupported []string `json:"unsupported"`
+}
+
+type ImageLintSysusers struct {
+	Missing []string `json:"missing"`
+}
+
+type ImageLintRunTmp struct {
+	Entries []string `json:"entries"`
+}
+
 // ImageConfigResponse структура ответа для ImageGetConfig/ImageSaveConfig методов
 type ImageConfigResponse struct {
 	Config build.Config `json:"config"`
+}
+
+// ImageFixNssResponse структура ответа для ImageFixNss метода
+type ImageFixNssResponse struct {
+	Message        string `json:"message"`
+	EtcPasswdCount int    `json:"etcPasswdCount"`
+	LibPasswdCount int    `json:"libPasswdCount"`
+	EtcGroupCount  int    `json:"etcGroupCount"`
+	LibGroupCount  int    `json:"libGroupCount"`
+}
+
+// ImageSyncGroupsResponse структура ответа для ImageSyncGroups метода
+type ImageSyncGroupsResponse struct {
+	Message string `json:"message"`
+	Added   int    `json:"added"`
+	Fixed   int    `json:"fixed"`
+	Skipped int    `json:"skipped"`
 }
 
 // SectionsResponse структура ответа для метода Sections.

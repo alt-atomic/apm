@@ -409,7 +409,7 @@ func EnsurePath(path string) error {
 	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		file, err := os.Create(path)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}
@@ -421,7 +421,7 @@ func EnsurePath(path string) error {
 
 // EnsureDir создает директорию при необходимости
 func EnsureDir(path string) error {
-	return os.MkdirAll(path, 0777)
+	return os.MkdirAll(path, 0755)
 }
 
 // expandUser расширяет ~ в начале пути

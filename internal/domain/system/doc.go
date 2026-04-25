@@ -22,7 +22,6 @@ import (
 	"apm/internal/domain/system/appstream"
 	"context"
 	_ "embed"
-	"reflect"
 )
 
 //go:embed dbus.go
@@ -32,19 +31,17 @@ var dbusSource string
 func getDocConfig() dbus_doc.Config {
 	responseTypes, methodResponses := dbus_doc.DeriveResponseTypes((*Actions)(nil))
 
-	// добавление модуля приложений
-	asResponseTypes, _ := dbus_doc.DeriveResponseTypes((*appstream.Actions)(nil))
+	// добавление модуля приложений с префиксом "Application" для избежания коллизий имён типов
+	asResponseTypes, asMethodResponses := dbus_doc.DeriveResponseTypes((*appstream.Actions)(nil))
 	for name, typ := range asResponseTypes {
 		if name == "APIResponse" {
 			continue
 		}
-		responseTypes[name] = typ
+		responseTypes["Application"+name] = typ
 	}
-	methodResponses["ApplicationUpdate"] = reflect.TypeOf(appstream.UpdateResponse{}).Name()
-	methodResponses["ApplicationInfo"] = reflect.TypeOf(appstream.InfoResponse{}).Name()
-	methodResponses["ApplicationList"] = reflect.TypeOf(appstream.ListResponse{}).Name()
-	methodResponses["ApplicationGetFilterFields"] = reflect.TypeOf(appstream.FilterFieldsAppStreamResponse{}).Name()
-	methodResponses["ApplicationCategories"] = reflect.TypeOf(appstream.CategoriesResponse{}).Name()
+	for method, typeName := range asMethodResponses {
+		methodResponses["Application"+method] = "Application" + typeName
+	}
 
 	return dbus_doc.Config{
 		ModuleName:      "System",

@@ -23,6 +23,8 @@ import (
 	_package "apm/internal/common/apt/package"
 	aptBinding "apm/internal/common/binding/apt"
 	"apm/internal/common/build"
+	"apm/internal/common/build/altfiles"
+	"apm/internal/common/build/lint"
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/reply"
@@ -256,6 +258,23 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 		return nil, apmerr.New(apmerr.ErrorTypeApt, errPrepare)
 	}
 
+	// Обновляем индексы ДО симуляции
+	allLocalRpm := len(packagesInstall) > 0 && len(packagesRemove) == 0
+	if allLocalRpm {
+		for _, pkg := range packagesInstall {
+			if !apt.IsRegularFileAndIsPackage(pkg) {
+				allLocalRpm = false
+				break
+			}
+		}
+	}
+	if !allLocalRpm {
+		err = a.serviceAptActions.AptUpdate(ctx)
+		if err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+		}
+	}
+
 	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(
 		ctx,
 		packagesInstall,
@@ -294,23 +313,6 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 		}
 
 		reply.CreateSpinner(a.appConfig)
-	}
-
-	allLocalRpm := len(packagesInstall) > 0 && len(packagesRemove) == 0
-	if allLocalRpm {
-		for _, pkg := range packagesInstall {
-			if !apt.IsRegularFileAndIsPackage(pkg) {
-				allLocalRpm = false
-				break
-			}
-		}
-	}
-	// Проверяем, все ли пакеты на вход являются RPM файлами
-	if !allLocalRpm {
-		err = a.serviceAptActions.AptUpdate(ctx)
-		if err != nil {
-			return nil, apmerr.New(apmerr.ErrorTypeApt, err)
-		}
 	}
 
 	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false, downloadOnly)
@@ -521,7 +523,7 @@ func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 	a.appConfig.ConfigManager.EnableVerbose()
 	reply.StopSpinner(a.appConfig)
 
-	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0644); err != nil {
+	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0755); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
@@ -1001,6 +1003,33 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 	}, nil
 }
 
+// ImageLint линтер файлов и пакетной базы
+func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*ImageLintResponse, error) {
+	svc := lint.New(rootfs)
+	result, err := svc.Analyze(ctx, fix)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	resp := &ImageLintResponse{Message: result.Message}
+
+	if result.TmpFiles != nil {
+		resp.Tmpfiles = &ImageLintTmpfiles{
+			Missing:     result.TmpFiles.Missing,
+			Unsupported: result.TmpFiles.Unsupported,
+		}
+	}
+
+	if result.SysUsers != nil {
+		resp.Sysusers = &ImageLintSysusers{Missing: result.SysUsers.Missing}
+	}
+	if result.RunTmp != nil {
+		resp.RunTmp = &ImageLintRunTmp{Entries: result.RunTmp.Entries}
+	}
+
+	return resp, nil
+}
+
 // ImageGetConfig получить конфиг
 func (a *Actions) ImageGetConfig(_ context.Context) (*ImageConfigResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
@@ -1029,6 +1058,59 @@ func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*Imag
 
 	return &ImageConfigResponse{
 		Config: *a.serviceHostConfig.GetConfig(),
+	}, nil
+}
+
+// ImageFixNss исправляет /etc/passwd и /etc/group на живой атомарной системе
+func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
+	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
+	}
+
+	svc := altfiles.NewDefault()
+	result, err := svc.ApplyFix()
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageFixNssResponse{
+		Message:        app.T_("nss-altfiles configuration applied successfully"),
+		EtcPasswdCount: result.EtcPasswdCount,
+		LibPasswdCount: result.LibPasswdCount,
+		EtcGroupCount:  result.EtcGroupCount,
+		LibGroupCount:  result.LibGroupCount,
+	}, nil
+}
+
+// ImageSyncGroups синхронизирует группы пользователей из YAML-конфигов
+func (a *Actions) ImageSyncGroups(_ context.Context, configDirs []string) (*ImageSyncGroupsResponse, error) {
+	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
+	}
+
+	svc := altfiles.NewDefault()
+
+	configs, err := svc.ReadSyncConfigsDirs(configDirs)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if len(configs) == 0 {
+		return &ImageSyncGroupsResponse{
+			Message: app.T_("No configs found"),
+		}, nil
+	}
+
+	result, err := svc.SyncGroups(configs)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageSyncGroupsResponse{
+		Message: app.T_("Groups synced successfully"),
+		Added:   result.Added,
+		Fixed:   result.Fixed,
+		Skipped: result.Skipped,
 	}, nil
 }
 

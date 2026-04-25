@@ -19,6 +19,7 @@ package system
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/build/altfiles"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/common/wrapper"
@@ -180,6 +181,29 @@ func CommandList(ctx context.Context) *cli.Command {
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
+				return reply.CliResponse(ctx, reply.OK(resp))
+			}),
+		},
+		{
+			Name:   "lint",
+			Usage:  app.T_("Check image for systemd declarative issues (tmpfiles.d, sysusers.d, /run, /tmp)"),
+			Hidden: true,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "root",
+					Usage: app.T_("Root filesystem path to analyze"),
+					Value: "/",
+				},
+				&cli.BoolFlag{
+					Name:  "fix",
+					Usage: app.T_("Write missing tmpfiles.d and sysusers.d config files"),
+				},
+			},
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.ImageLint(ctx, cmd.String("root"), cmd.Bool("fix"))
+				if err != nil {
+					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				}
 
 				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
@@ -266,6 +290,38 @@ func CommandList(ctx context.Context) *cli.Command {
 					},
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+
+						return reply.CliResponse(ctx, reply.OK(resp))
+					}),
+				},
+				{
+					Name:   "fix-nss",
+					Hidden: true,
+					Usage:  app.T_("Fix /etc/passwd and /etc/group for nss-altfiles"),
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageFixNss(ctx)
+						if err != nil {
+							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+
+						return reply.CliResponse(ctx, reply.OK(resp))
+					}),
+				},
+				{
+					Name:      "sync-groups",
+					Usage:     app.T_("Sync user groups from config"),
+					ArgsUsage: "[config-dir]",
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						var dirs []string
+						if cmd.Args().Len() > 0 {
+							dirs = []string{cmd.Args().First()}
+						} else {
+							dirs = altfiles.DefaultSyncConfigDirs
+						}
+						resp, err := actions.ImageSyncGroups(ctx, dirs)
 						if err != nil {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}

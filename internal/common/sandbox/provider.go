@@ -300,9 +300,18 @@ func (p *PackageService) GetAllApplicationsByContainer(ctx context.Context, cont
 	return allApps, nil
 }
 
-// GetDesktopApplicationsByContainer ищет .desktop файлы в каталоге "~/.local/share/applications".
-// Для каждого найденного файла, если его имя начинается с префикса контейнера,
-// удаляет префикс и формирует путь "/usr/share/applications/<trimmedFileName>" для вызова GetPackageOwner.
+// isDesktopFileForContainer проверяет содержимое .desktop файла на наличие маркера
+func isDesktopFileForContainer(filePath, containerName string) bool {
+	contentBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		app.Log.Debugf(app.T_("Error reading desktop file %s: %v"), filePath, err)
+		return false
+	}
+	normalized := strings.Join(strings.Fields(string(contentBytes)), " ")
+	return strings.Contains(normalized, "distrobox-enter -n "+containerName)
+}
+
+// GetDesktopApplicationsByContainer ищет .desktop файлы в "~/.local/share/applications"
 func (p *PackageService) GetDesktopApplicationsByContainer(ctx context.Context, containerInfo ContainerInfo) ([]string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -320,20 +329,32 @@ func (p *PackageService) GetDesktopApplicationsByContainer(ctx context.Context, 
 	packageNamesSet := make(map[string]struct{})
 
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			fileName := entry.Name()
-			if strings.HasPrefix(fileName, prefix) && strings.HasSuffix(fileName, suffix) {
-				trimmedFileName := strings.TrimPrefix(fileName, prefix)
-				packagePath := filepath.Join("/usr/share/applications", trimmedFileName)
-				ownerPackage, err := p.GetPackageOwner(ctx, containerInfo, packagePath)
-				if err != nil {
-					app.Log.Error(fmt.Sprintf(app.T_("Error retrieving owner for file %s: %v"), fileName, err))
-					continue
-				}
-				if ownerPackage != "" {
-					packageNamesSet[ownerPackage] = struct{}{}
-				}
-			}
+		if entry.IsDir() {
+			continue
+		}
+		fileName := entry.Name()
+		if !strings.HasSuffix(fileName, suffix) {
+			continue
+		}
+
+		var originalName string
+		switch {
+		case strings.HasPrefix(fileName, prefix):
+			originalName = strings.TrimPrefix(fileName, prefix)
+		case isDesktopFileForContainer(filepath.Join(localShareApps, fileName), containerInfo.ContainerName):
+			originalName = fileName
+		default:
+			continue
+		}
+
+		packagePath := filepath.Join("/usr/share/applications", originalName)
+		ownerPackage, err := p.GetPackageOwner(ctx, containerInfo, packagePath)
+		if err != nil {
+			app.Log.Error(fmt.Sprintf(app.T_("Error retrieving owner for file %s: %v"), fileName, err))
+			continue
+		}
+		if ownerPackage != "" {
+			packageNamesSet[ownerPackage] = struct{}{}
 		}
 	}
 

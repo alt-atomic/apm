@@ -372,7 +372,11 @@ func distroBoolApplier(query *gorm.DB, f filter.Filter) (*gorm.DB, bool) {
 	if !ok {
 		return query, true
 	}
-	return query.Where(clause.Eq{Column: clause.Column{Name: f.Field}, Value: boolVal}), true
+	col := clause.Column{Name: f.Field}
+	if f.Op == filter.OpNe {
+		return query.Where(clause.Neq{Column: col, Value: boolVal}), true
+	}
+	return query.Where(clause.Eq{Column: col, Value: boolVal}), true
 }
 
 // DistroFilterConfig конфигурация фильтрации для distrobox пакетов.

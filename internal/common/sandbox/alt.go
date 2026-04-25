@@ -46,7 +46,7 @@ func (p *AltProvider) GetPackages(ctx context.Context, containerInfo ContainerIn
 		return nil, fmt.Errorf(app.T_("Failed to update package database: %v, stderr: %s"), err, stderr)
 	}
 
-	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "apt-cache", "dumpavail"}, command.WithQuiet())
+	stdout, _, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "apt-cache", "dumpavail"}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Error executing command: %w"), err)
 	}
@@ -174,7 +174,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 		return paths
 	}
 
-	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", packageName}, command.WithQuiet())
+	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", packageName}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 	}
@@ -182,7 +182,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 	filtered := helper.FilterLines(stdout, filePath)
 	paths := parseOutput(filtered)
 	if len(paths) == 0 {
-		qaStdout, qaStderr, qaErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qa"}, command.WithQuiet())
+		qaStdout, qaStderr, qaErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qa"}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 		if qaErr != nil {
 			app.Log.Debugf(app.T_("Fallback command execution error: %s %s"), qaStderr, qaErr.Error())
 			return []string{}, nil
@@ -195,7 +195,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 			if pkg == "" {
 				continue
 			}
-			qlStdout, _, qlErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", pkg}, command.WithQuiet())
+			qlStdout, _, qlErr := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-ql", pkg}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 			if qlErr != nil {
 				continue
 			}
@@ -219,7 +219,7 @@ func (p *AltProvider) GetPathByPackageName(ctx context.Context, containerInfo Co
 
 // GetPackageOwner определяет пакет-владельца файла через rpm -qf.
 func (p *AltProvider) GetPackageOwner(ctx context.Context, containerInfo ContainerInfo, filePath string) (string, error) {
-	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qf", "--queryformat", "%{NAME}", filePath}, command.WithQuiet())
+	stdout, stderr, err := p.runner.Run(ctx, []string{"distrobox", "enter", containerInfo.ContainerName, "--", "rpm", "-qf", "--queryformat", "%{NAME}", filePath}, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		app.Log.Debugf(app.T_("Command execution error: %s %s"), stderr, err.Error())
 		return "", err

@@ -71,6 +71,7 @@ fi
 # Cleanup function
 cleanup() {
     print_info "Cleaning up container ${CONTAINER_NAME} ..."
+    podman stop -t 0 "${CONTAINER_NAME}" >/dev/null 2>&1 || true
     podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 }
 
@@ -142,8 +143,7 @@ if [ "${TEST_SUITE}" = "exec" ]; then
     fi
     
     # Manual cleanup for exec mode
-    print_info "Cleaning up container ${CONTAINER_NAME} ..."
-    podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+    cleanup
     exit 0
 fi
 

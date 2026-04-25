@@ -9,6 +9,7 @@ import (
 
 // buildAptActionsService определяет методы APT операций для сборки образа.
 type buildAptActionsService interface {
+	SetAptConfigOverrides(overrides map[string]string)
 	PrepareInstallPackages(ctx context.Context, packages []string) ([]string, []string, error)
 	FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []_package.Package, *aptLib.PackageChanges, error)
 	CombineInstallRemovePackages(ctx context.Context, install []string, remove []string, purge bool, depends bool, downloadOnly bool) error
@@ -21,6 +22,7 @@ type buildAptActionsService interface {
 type buildPackageDBService interface {
 	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
 	GetPackageByName(ctx context.Context, packageName string) (_package.Package, error)
+	PackageDatabaseExist(ctx context.Context) error
 }
 
 // buildHostConfigService определяет методы для работы с конфигурацией хоста при сборке.

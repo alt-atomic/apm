@@ -109,6 +109,9 @@ const (
 	EventSystemDownloadProgress     = "system.downloadProgress"
 	EventSystemInstallProgress      = "system.installProgress"
 	EventSystemPullImage            = "system.pullImage"
+	EventSystemLintTmpfiles         = "system.LintTmpfiles"
+	EventSystemLintSysusers         = "system.LintSysusers"
+	EventSystemLintRunTmp           = "system.LintRunTmp"
 
 	EventApplicationUpdate   = "application.Update"
 	EventApplicationSaveToDB = "application.SaveToDB"
@@ -442,6 +445,12 @@ func getTaskText(task string) string {
 		return app.T_("Downloading packages")
 	case EventSystemPullImage:
 		return app.T_("Downloading image")
+	case EventSystemLintTmpfiles:
+		return app.T_("Checking tmpfiles.d")
+	case EventSystemLintSysusers:
+		return app.T_("Checking sysusers.d")
+	case EventSystemLintRunTmp:
+		return app.T_("Checking /run and /tmp")
 	case EventApplicationUpdate:
 		return app.T_("Updating application data")
 	case EventApplicationSaveToDB:

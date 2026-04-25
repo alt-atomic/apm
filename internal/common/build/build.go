@@ -63,13 +63,34 @@ func (cfgService *ConfigService) IsAtomic() bool {
 	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomic
 }
 
+func (cfgService *ConfigService) SetAptConfigOverrides(overrides map[string]string) {
+	cfgService.serviceAptActions.SetAptConfigOverrides(overrides)
+}
+
 func (cfgService *ConfigService) Build(ctx context.Context) error {
 	if cfgService.serviceHostConfig.GetConfig() == nil {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
+	if err := cfgService.UpdatePackages(ctx); err != nil {
+		return err
+	}
+
 	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
-	return err
+	if err != nil {
+		return err
+	}
+
+	if cfgService.IsAtomic() {
+		if err = cfgService.applyNssAltFiles(ctx); err != nil {
+			return err
+		}
+		if err = cfgService.fixTmpFiles(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module, modulesMap map[string]*common_types.MapModule) (*common_types.MapModule, error) {
@@ -177,6 +198,18 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	return outputModule, nil
 }
 
+// ValidateDB проверяет, существует ли база данных пакетов, и автоматически запускает обновление если её нет.
+func (cfgService *ConfigService) ValidateDB(ctx context.Context) error {
+	if err := cfgService.serviceDBService.PackageDatabaseExist(ctx); err != nil {
+		app.Log.Info("Package database is empty, running update")
+		_, err = cfgService.serviceAptActions.Update(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to update package database: %w", err)
+		}
+	}
+	return nil
+}
+
 func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
 	return cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, sortField, sortOrder, limit, offset)
 }
@@ -216,6 +249,10 @@ func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageNa
 }
 
 func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool, downloadOnly bool) error {
+	if err := cfgService.ValidateDB(ctx); err != nil {
+		return err
+	}
+
 	packagesInstall, packagesRemove, errPrepare := cfgService.serviceAptActions.PrepareInstallPackages(ctx, packages)
 	if errPrepare != nil {
 		return errPrepare

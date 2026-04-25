@@ -30,7 +30,7 @@ type BrandingBody struct {
 	ReleaseOverrides map[string]string `yaml:"release-overrides,omitempty" json:"release-overrides,omitempty"`
 
 	// Тип сборки, нужен для os-release
-	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty" needs:"Name"`
+	BuildType string `yaml:"build-type,omitempty" json:"build-type,omitempty"`
 }
 
 func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
@@ -90,9 +90,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			curVer := vars["VERSION"]
 			prettyCurVer := vars["VERSION"]
 
-			if _, err := time.Parse("20060102", vars["VERSION"]); err != nil {
-				app.Log.Warn("Couldn't parse os-release VERSION")
-			} else {
+			if _, err := time.Parse("20060102", vars["VERSION"]); err == nil {
 				now := time.Now()
 				curVer = now.Format("20060102")
 				prettyCurVer = now.Format("02.01.2006")
@@ -109,18 +107,19 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 			releaseType := ""
 			versionId := fmt.Sprintf("%s-%s", curVer, bType)
 
+			prettyType = osutils.Capitalize(bType)
+
 			switch bType {
 			case "stable":
-				prettyType = osutils.Capitalize(bType)
 				releaseType = bType
 			case "nightly":
-				prettyType = osutils.Capitalize(bType)
 				prettyNameSuffix = " " + prettyType
 				releaseType = "development"
+			default:
+				prettyNameSuffix = " " + prettyType
 			}
 
 			if value, ok := vars["PRETTY_NAME"]; ok {
-				// Package was not installed, but installed now
 				if !strings.HasSuffix(value, prettyNameSuffix) {
 					vars["PRETTY_NAME"] = value + prettyNameSuffix
 				}
