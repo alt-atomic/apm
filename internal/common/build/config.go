@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -36,16 +37,33 @@ var (
 type HostConfigService struct {
 	config              *Config
 	serviceHostDatabase *HostDBService
-	pathImageFile       string
 	hostImageService    *HostImageService
 }
 
-func NewHostConfigService(pathImageFile string, hostDBService *HostDBService, hostImageService *HostImageService) *HostConfigService {
+func NewHostConfigService(hostDBService *HostDBService, hostImageService *HostImageService) *HostConfigService {
 	return &HostConfigService{
 		serviceHostDatabase: hostDBService,
-		pathImageFile:       pathImageFile,
 		hostImageService:    hostImageService,
 	}
+}
+
+// ApplyPathOverrides переопределяет путь к файлу конфигурации и/или к рабочей директории сборки.
+func (s *HostConfigService) ApplyPathOverrides(configPath, workdir string) error {
+	if configPath != "" {
+		abs, err := filepath.Abs(configPath)
+		if err != nil {
+			return err
+		}
+		s.hostImageService.appConfig.PathImageFile = abs
+	}
+	if workdir != "" {
+		abs, err := filepath.Abs(workdir)
+		if err != nil {
+			return err
+		}
+		s.hostImageService.appConfig.PathResourcesDir = abs
+	}
+	return nil
 }
 
 // syncYamlMutex защищает операции работы с файлом.
@@ -58,7 +76,7 @@ func (s *HostConfigService) LoadConfig() error {
 		err error
 	)
 
-	if _, err = os.Stat(s.pathImageFile); os.IsNotExist(err) {
+	if _, err = os.Stat(s.hostImageService.appConfig.PathImageFile); os.IsNotExist(err) {
 		if cfg, err = s.hostImageService.GenerateDefaultConfig(); err != nil {
 			return err
 		}
@@ -66,7 +84,7 @@ func (s *HostConfigService) LoadConfig() error {
 		return s.SaveConfig()
 	}
 
-	if cfg, err = core.ReadAndParseConfigYamlFile(s.pathImageFile); err != nil {
+	if cfg, err = core.ReadAndParseConfigYamlFile(s.hostImageService.appConfig.PathImageFile); err != nil {
 		return err
 	}
 
@@ -86,11 +104,11 @@ func (s *HostConfigService) GetConfigEnvVars() (map[string]string, error) {
 		err  error
 	)
 
-	if _, err = os.Stat(s.pathImageFile); os.IsNotExist(err) {
+	if _, err = os.Stat(s.hostImageService.appConfig.PathImageFile); os.IsNotExist(err) {
 		return map[string]string{}, nil
 	}
 
-	if envs, err = core.ReadAndParseConfigEnvYamlFile(s.pathImageFile, *s.hostImageService.appConfig.ParsedVersion); err != nil {
+	if envs, err = core.ReadAndParseConfigEnvYamlFile(s.hostImageService.appConfig.PathImageFile, *s.hostImageService.appConfig.ParsedVersion); err != nil {
 		return map[string]string{}, err
 	}
 	return envs.Env, nil
@@ -104,7 +122,7 @@ func (s *HostConfigService) SaveConfig() error {
 	syncYamlMutex.Lock()
 	defer syncYamlMutex.Unlock()
 
-	return s.config.Save(s.pathImageFile)
+	return s.config.Save(s.hostImageService.appConfig.PathImageFile)
 }
 
 // GenerateDockerfile делегирует генерацию Dockerfile к HostImageService

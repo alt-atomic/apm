@@ -444,7 +444,7 @@ func (w *DBusWrapper) Search(packageName string, transaction string, installed b
 }
 
 // ImageApply декларативно применяет настройки image.yml к образу хост-системы.
-func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool, pullImage bool, noCache bool) (string, *dbus.Error) {
+func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool, pullImage bool, noCache bool, configPath string, workdir string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
@@ -458,7 +458,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
+			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
 			reply.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
 		}()
 
@@ -475,7 +475,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}

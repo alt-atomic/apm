@@ -148,6 +148,7 @@ func (m *mockHostConfig) GetConfig() *build.Config                        { retu
 func (m *mockHostConfig) SetConfig(c *build.Config)                       { m.config = c }
 func (m *mockHostConfig) ConfigIsChanged(_ context.Context) (bool, error) { return false, nil }
 func (m *mockHostConfig) SaveConfigToDB(_ context.Context) error          { return nil }
+func (m *mockHostConfig) ApplyPathOverrides(_, _ string) error            { return nil }
 
 type mockTempConfig struct {
 	config *service.TemporaryConfig

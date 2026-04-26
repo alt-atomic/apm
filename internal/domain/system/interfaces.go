@@ -86,6 +86,7 @@ type hostConfigService interface {
 	SetConfig(config *build.Config)
 	ConfigIsChanged(ctx context.Context) (bool, error)
 	SaveConfigToDB(ctx context.Context) error
+	ApplyPathOverrides(configPath, workdir string) error
 }
 
 // temporaryConfigService определяет методы для работы с временной конфигурацией.

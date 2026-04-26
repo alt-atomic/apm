@@ -66,7 +66,6 @@ func NewActions(appConfig *app.Config) *Actions {
 		runner,
 	)
 	hostConfigSvc := build.NewHostConfigService(
-		appConfig.ConfigManager.GetPathImageFile(),
 		hostDBSvc,
 		hostImageSvc,
 	)
@@ -519,9 +518,13 @@ func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*Update
 }
 
 // ImageBuild Update Сборка образа
-func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
+func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string) (*ImageBuild, error) {
 	a.appConfig.ConfigManager.EnableVerbose()
 	reply.StopSpinner(a.appConfig)
+
+	if err := a.serviceHostConfig.ApplyPathOverrides(configPath, workdir); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
 
 	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0755); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -903,9 +906,13 @@ func (a *Actions) ImageUpdate(ctx context.Context, hostCache bool) (*ImageUpdate
 }
 
 // ImageApply применить изменения к хосту
-func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool) (*ImageApplyResponse, error) {
+func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool, configPath, workdir string) (*ImageApplyResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err = a.serviceHostConfig.ApplyPathOverrides(configPath, workdir); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 

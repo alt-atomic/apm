@@ -103,8 +103,8 @@ type Configuration struct {
 	FormatType      string `yaml:"formatType"`
 
 	PathContainerFile string `yaml:"-"`
-	PathImageFile     string `yaml:"-"`
-	PathResourcesDir  string `yaml:"-"`
+	PathImageFile     string `yaml:"pathImageFile"`
+	PathResourcesDir  string `yaml:"pathResourcesDir"`
 	Version           string `yaml:"-"`
 
 	ParsedVersion *version.Version `yaml:"-"`

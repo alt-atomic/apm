@@ -175,9 +175,21 @@ func CommandList(ctx context.Context) *cli.Command {
 	imageCmds := []*cli.Command{
 		{
 			Name:  "build",
-			Usage: app.T_("Build image"),
+			Usage: app.T_("Apply declarative configuration to the running host"),
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "config",
+					Aliases: []string{"c"},
+					Usage:   app.T_("Path to image configuration file"),
+				},
+				&cli.StringFlag{
+					Name:    "workdir",
+					Aliases: []string{"w"},
+					Usage:   app.T_("Working directory for the build"),
+				},
+			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.ImageBuild(ctx)
+				resp, err := actions.ImageBuild(ctx, cmd.String("config"), cmd.String("workdir"))
 				if err != nil {
 					return reply.CliResponse(ctx, newErrorResponseFromError(err))
 				}
@@ -216,7 +228,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			[]*cli.Command{
 				{
 					Name:  "apply",
-					Usage: app.T_("Apply changes to the host"),
+					Usage: app.T_("Rebuild and deploy a new system image"),
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
 							Name:  "pull",
@@ -228,9 +240,19 @@ func CommandList(ctx context.Context) *cli.Command {
 							Usage: app.T_("Disable APT package cache for image build"),
 							Value: false,
 						},
+						&cli.StringFlag{
+							Name:    "config",
+							Aliases: []string{"c"},
+							Usage:   app.T_("Path to image configuration file"),
+						},
+						&cli.StringFlag{
+							Name:    "workdir",
+							Aliases: []string{"w"},
+							Usage:   app.T_("Working directory for the build"),
+						},
 					},
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"))
+						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"), cmd.String("config"), cmd.String("workdir"))
 						if err != nil {
 							return reply.CliResponse(ctx, newErrorResponseFromError(err))
 						}

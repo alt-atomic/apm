@@ -415,15 +415,17 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 	pullImage := r.URL.Query().Get("pull") == "true"
 	hostCache := r.URL.Query().Get("no_cache") != "true"
+	configPath := r.URL.Query().Get("config")
+	workdir := r.URL.Query().Get("workdir")
 
 	if w.RunBackground(rw, r, reply.EventSystemImageApply, func(ctx context.Context) (interface{}, error) {
-		return w.actions.ImageApply(ctx, pullImage, hostCache)
+		return w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -949,6 +951,8 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 					{Name: "pull", Type: "boolean", Required: false, Description: "Всегда загружать базовый образ из реестра"},
 					{Name: "no_cache", Type: "boolean", Required: false, Description: "Отключить кэш APT-пакетов при сборке образа"},
+					{Name: "config", Type: "string", Required: false, Description: "Путь к файлу конфигурации образа"},
+					{Name: "workdir", Type: "string", Required: false, Description: "Рабочая директория сборки"},
 				},
 			},
 			http_server.Endpoint{

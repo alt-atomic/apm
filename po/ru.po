@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-31 00:56+0600\n"
+"POT-Creation-Date: 2026-04-26 13:59+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -766,7 +766,7 @@ msgid "Package type"
 msgstr "Тип пакета"
 
 #: internal/common/apt/package/progress.go:87
-#: internal/common/reply/event.go:442
+#: internal/common/reply/event.go:445
 msgid "Downloading packages"
 msgstr "Загрузка пакетов"
 
@@ -835,26 +835,26 @@ msgstr "ошибка сканирования вывода RPM: %s"
 msgid "Configuration not loaded. Load config first"
 msgstr "Конфигурация не загружена. Сначала загрузите конфигурацию"
 
-#: internal/common/build/build.go:158
+#: internal/common/build/build.go:161
 #, c-format
 msgid "'%s' type doesn't support output"
 msgstr "Тип '%s' не поддерживает вывод"
 
-#: internal/common/build/build.go:223 internal/domain/system/actions.go:672
+#: internal/common/build/build.go:226 internal/domain/system/actions.go:676
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr "Не удалось извлечь информацию о пакете %s"
 
-#: internal/common/build/build.go:234 internal/domain/system/actions.go:682
+#: internal/common/build/build.go:237 internal/domain/system/actions.go:686
 msgid ". Maybe you were looking for: "
 msgstr ". Возможно, вы искали: "
 
-#: internal/common/build/build.go:425
+#: internal/common/build/build.go:428
 #, c-format
 msgid "module with id='%s'%s will be overriding%s"
 msgstr "модуль с id='%s'%s будет переопределять %s"
 
-#: internal/common/build/config.go:102
+#: internal/common/build/config.go:120
 #: internal/domain/system/service/temporary.go:80
 msgid "Configuration not loaded"
 msgstr "Конфигурация не загружена"
@@ -1456,211 +1456,223 @@ msgstr "неверная длина: ожидалось 9 символов, по
 msgid "Wrong permission format"
 msgstr "Неправильный формат разрешения"
 
-#: internal/common/reply/event.go:247 internal/common/reply/event.go:320
+#: internal/common/reply/event.go:250 internal/common/reply/event.go:323
 msgid "DBus connection is not initialized"
 msgstr "Соединение DBus не было инициализировано"
 
-#: internal/common/reply/event.go:256
+#: internal/common/reply/event.go:259
 msgid "Error sending notification: %v"
 msgstr "Ошибка отправки уведомления: %v"
 
-#: internal/common/reply/event.go:329
+#: internal/common/reply/event.go:332
 msgid "Error sending task result: %v"
 msgstr "Ошибка при отправке результата задачи: %v"
 
-#: internal/common/reply/event.go:382 internal/common/reply/event.go:424
+#: internal/common/reply/event.go:385 internal/common/reply/event.go:427
 msgid "Saving packages to the database"
 msgstr "Сохранение пакетов в базу данных"
 
-#: internal/common/reply/event.go:384
+#: internal/common/reply/event.go:387
 msgid "Requesting list of containers"
 msgstr "Запрос списка контейнеров"
 
-#: internal/common/reply/event.go:386
+#: internal/common/reply/event.go:389
 msgid "Exporting package"
 msgstr "Экспортирование пакета"
 
-#: internal/common/reply/event.go:388
+#: internal/common/reply/event.go:391
 msgid "Requesting container information"
 msgstr "Запрос информации о контейнере"
 
-#: internal/common/reply/event.go:390
+#: internal/common/reply/event.go:393
 msgid "Creating container"
 msgstr "Создание контейнера"
 
-#: internal/common/reply/event.go:392
+#: internal/common/reply/event.go:395
 msgid "Deleting container"
 msgstr "Удаление контейнера"
 
-#: internal/common/reply/event.go:394
+#: internal/common/reply/event.go:397
 msgid "Installing package"
 msgstr "Установка пакета"
 
-#: internal/common/reply/event.go:396
+#: internal/common/reply/event.go:399
 msgid "Removing package"
 msgstr "Удаление пакета"
 
-#: internal/common/reply/event.go:398
+#: internal/common/reply/event.go:401
 msgid "Retrieving list of packages"
 msgstr "Извлечение списка пакетов"
 
-#: internal/common/reply/event.go:400 internal/common/sandbox/provider.go:141
+#: internal/common/reply/event.go:403 internal/common/sandbox/provider.go:141
 msgid "Determining file owner"
 msgstr "Определение владельца файла"
 
-#: internal/common/reply/event.go:402
+#: internal/common/reply/event.go:405
 msgid "Searching package paths"
 msgstr "Поиск путей пакета"
 
-#: internal/common/reply/event.go:404
+#: internal/common/reply/event.go:407
 msgid "Retrieving package information"
 msgstr "Извлечение информации о пакете"
 
-#: internal/common/reply/event.go:406
+#: internal/common/reply/event.go:409
 msgid "Updating packages"
 msgstr "Обновление пакетов"
 
-#: internal/common/reply/event.go:408
+#: internal/common/reply/event.go:411
 msgid "Filtering packages"
 msgstr "Фильтрация пакетов"
 
-#: internal/common/reply/event.go:410
+#: internal/common/reply/event.go:413
 msgid "Working with packages"
 msgstr "Работа с пакетами"
 
-#: internal/common/reply/event.go:412
+#: internal/common/reply/event.go:415
 msgid "System update"
 msgstr "Обновление системы"
 
-#: internal/common/reply/event.go:414
+#: internal/common/reply/event.go:417
 msgid "Analyzing packages"
 msgstr "Анализ пакетов"
 
-#: internal/common/reply/event.go:416
+#: internal/common/reply/event.go:419
 msgid "General update process"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:418
+#: internal/common/reply/event.go:421
 msgid "General update kernel"
 msgstr "Общий процесс обновления"
 
-#: internal/common/reply/event.go:420
+#: internal/common/reply/event.go:423
 msgid "Loading package list from STPLR repository"
 msgstr "Загрузка списка пакетов из репозитория STPLR"
 
-#: internal/common/reply/event.go:422
+#: internal/common/reply/event.go:425
 msgid "Loading package list from repository"
 msgstr "Загрузка списка пакетов из репозитория"
 
-#: internal/common/reply/event.go:426
+#: internal/common/reply/event.go:429
 msgid "Saving image history to the database"
 msgstr "Сохранение истории образа в базу данных"
 
-#: internal/common/reply/event.go:428
+#: internal/common/reply/event.go:431
 msgid "Building local image"
 msgstr "Создание локального образа"
 
-#: internal/common/reply/event.go:430
+#: internal/common/reply/event.go:433
 msgid "Switching to local image"
 msgstr "Переключение на локальный образ"
 
-#: internal/common/reply/event.go:432
+#: internal/common/reply/event.go:435
 msgid "General Image Update Process"
 msgstr "Общий процесс обновления образа"
 
-#: internal/common/reply/event.go:434
+#: internal/common/reply/event.go:437
 msgid "Downloading base image update"
 msgstr "Загрузка обновления базового образа"
 
-#: internal/common/reply/event.go:436
+#: internal/common/reply/event.go:439
 msgid "Cleaning up old images"
 msgstr "Очистка старых образов"
 
-#: internal/common/reply/event.go:438
+#: internal/common/reply/event.go:441
 msgid "Synchronizing database"
 msgstr "Синхронизация базы данных"
 
-#: internal/common/reply/event.go:440
+#: internal/common/reply/event.go:443
 msgid "Loading application data from catalogs"
 msgstr "Загрузка данных о приложениях из каталогов"
 
-#: internal/common/reply/event.go:444
+#: internal/common/reply/event.go:447
 msgid "Downloading image"
 msgstr "Загрузка образа"
 
-#: internal/common/reply/event.go:446
+#: internal/common/reply/event.go:449
+msgid "Checking tmpfiles.d"
+msgstr "Проверка tmpfiles.d"
+
+#: internal/common/reply/event.go:451
+msgid "Checking sysusers.d"
+msgstr "Проверка sysusers.d"
+
+#: internal/common/reply/event.go:453
+msgid "Checking /run and /tmp"
+msgstr "Проверка /run и /tmp"
+
+#: internal/common/reply/event.go:455
 msgid "Updating application data"
 msgstr "Обновление данных о приложениях"
 
-#: internal/common/reply/event.go:448
+#: internal/common/reply/event.go:457
 msgid "Saving application data"
 msgstr "Сохранение данных о приложениях"
 
-#: internal/common/reply/event.go:450
+#: internal/common/reply/event.go:459
 msgid "Fetching layers"
 msgstr "Получение слоёв"
 
-#: internal/common/reply/event.go:452
+#: internal/common/reply/event.go:461
 msgid "Downloading update"
 msgstr "Загрузка обновления"
 
-#: internal/common/reply/event.go:454
+#: internal/common/reply/event.go:463
 msgid "Get current kernel"
 msgstr "Получить актуальное ядро"
 
-#: internal/common/reply/event.go:456
+#: internal/common/reply/event.go:465
 msgid "Get list kernels"
 msgstr "Получить список ядер"
 
-#: internal/common/reply/event.go:458
+#: internal/common/reply/event.go:467
 msgid "Get kernel modules"
 msgstr "Получить модули ядра"
 
-#: internal/common/reply/event.go:460
+#: internal/common/reply/event.go:469
 msgid "Install kernel"
 msgstr "Установить ядро"
 
-#: internal/common/reply/event.go:462
+#: internal/common/reply/event.go:471
 msgid "Simulate install kernel"
 msgstr "Симуляция установки ядра"
 
-#: internal/common/reply/event.go:464
+#: internal/common/reply/event.go:473
 msgid "Update kernel"
 msgstr "Обновление ядра"
 
-#: internal/common/reply/event.go:466
+#: internal/common/reply/event.go:475
 msgid "Simulate update kernel"
 msgstr "Симуляция обновления ядра"
 
-#: internal/common/reply/event.go:468
+#: internal/common/reply/event.go:477
 msgid "Clean old kernels"
 msgstr "Очистка старых ядер"
 
-#: internal/common/reply/event.go:470
+#: internal/common/reply/event.go:479
 msgid "Simulate clean old kernels"
 msgstr "Симуляция очистки старых ядер"
 
-#: internal/common/reply/event.go:472 internal/domain/kernel/commands.go:198
+#: internal/common/reply/event.go:481 internal/domain/kernel/commands.go:198
 msgid "Install kernel modules"
 msgstr "Установить модули ядра"
 
-#: internal/common/reply/event.go:474
+#: internal/common/reply/event.go:483
 msgid "Simulate install kernel modules"
 msgstr "Симуляция установки модулей ядра"
 
-#: internal/common/reply/event.go:476 internal/domain/kernel/commands.go:227
+#: internal/common/reply/event.go:485 internal/domain/kernel/commands.go:227
 msgid "Remove kernel modules"
 msgstr "Удалить модули ядра"
 
-#: internal/common/reply/event.go:478
+#: internal/common/reply/event.go:487
 msgid "Simulate remove kernel modules"
 msgstr "Симуляция удаления модулей ядра"
 
-#: internal/common/reply/event.go:480
+#: internal/common/reply/event.go:489
 msgid "Remove packages"
 msgstr "Удаление пакетов"
 
-#: internal/common/reply/event.go:482
+#: internal/common/reply/event.go:491
 msgid "Simulate Remove packages"
 msgstr "Симуляция удаления пакетов"
 
@@ -1827,7 +1839,7 @@ msgstr "Обновлённые пакеты"
 msgid "Package Name"
 msgstr "Имя пакета"
 
-#: internal/common/reply/translate.go:81 internal/domain/system/commands.go:602
+#: internal/common/reply/translate.go:81 internal/domain/system/commands.go:650
 msgid "Image"
 msgstr "Образ"
 
@@ -2142,7 +2154,7 @@ msgstr "Важные пакеты"
 msgid "Reason"
 msgstr "Причины"
 
-#: internal/common/sandbox/alt.go:46 internal/common/sandbox/arch.go:49
+#: internal/common/sandbox/alt.go:46 internal/common/sandbox/arch.go:48
 #: internal/common/sandbox/ubuntu.go:51
 msgid "Failed to update package database: %v, stderr: %s"
 msgstr "Не удалось обновить базу данных пакетов: %s, ошибка: %s"
@@ -2151,33 +2163,33 @@ msgstr "Не удалось обновить базу данных пакето�
 msgid "Error executing command: %w"
 msgstr "Ошибка исполнения команды: %w"
 
-#: internal/common/sandbox/alt.go:57 internal/common/sandbox/arch.go:60
+#: internal/common/sandbox/alt.go:57 internal/common/sandbox/arch.go:65
 msgid "Error retrieving installed packages: "
 msgstr "Ошибка извлечения установленных пакетов: "
 
-#: internal/common/sandbox/alt.go:146 internal/common/sandbox/arch.go:84
+#: internal/common/sandbox/alt.go:146 internal/common/sandbox/arch.go:110
 #: internal/common/sandbox/ubuntu.go:170
 msgid "Failed to remove package %s: %v, stderr: %s"
 msgstr "Не удалось удалить пакет %s: %v, ошибка: %s"
 
-#: internal/common/sandbox/alt.go:158 internal/common/sandbox/arch.go:96
+#: internal/common/sandbox/alt.go:158 internal/common/sandbox/arch.go:122
 #: internal/common/sandbox/ubuntu.go:157
 msgid "Failed to install package %s: %v, stderr: %s"
 msgstr "Не удалось установить пакет %s: %v, ошибка: %s"
 
 #: internal/common/sandbox/alt.go:179 internal/common/sandbox/alt.go:224
-#: internal/common/sandbox/arch.go:169 internal/common/sandbox/ubuntu.go:89
+#: internal/common/sandbox/arch.go:195 internal/common/sandbox/ubuntu.go:89
 #, c-format
 msgid "Command execution error: %s %s"
 msgstr "Ошибка исполнения команды: %s %s"
 
-#: internal/common/sandbox/alt.go:187 internal/common/sandbox/arch.go:177
+#: internal/common/sandbox/alt.go:187 internal/common/sandbox/arch.go:203
 #: internal/common/sandbox/ubuntu.go:97
 #, c-format
 msgid "Fallback command execution error: %s %s"
 msgstr "Ошибка выполнения резервной команды: %s %s"
 
-#: internal/common/sandbox/alt.go:212 internal/common/sandbox/arch.go:205
+#: internal/common/sandbox/alt.go:212 internal/common/sandbox/arch.go:231
 #: internal/common/sandbox/ubuntu.go:127
 #, c-format
 msgid "Fallback search found %d files"
@@ -2187,24 +2199,32 @@ msgstr "Резервный поиск нашел %d файлов"
 msgid "Error executing command rpm -qia: %w"
 msgstr "Ошибка исполнения команды rpm -qia: %w"
 
-#: internal/common/sandbox/arch.go:55
+#: internal/common/sandbox/arch.go:54
 msgid "Failed to search packages (pacman -Ss): %v, stderr: %s"
 msgstr "Не удалось найти пакеты (pacman -Ss): %v, ошибка: %s"
 
-#: internal/common/sandbox/arch.go:66
+#: internal/common/sandbox/arch.go:59
+msgid "Error retrieving exporting packages: "
+msgstr "Ошибка извлечения экспортируемых пакетов: "
+
+#: internal/common/sandbox/arch.go:75
 msgid "Error parsing official packages: %v"
 msgstr "Ошибка парсинга официальных пакетов: %v"
 
-#: internal/common/sandbox/arch.go:118
+#: internal/common/sandbox/arch.go:90
+msgid "Error executing command pacman -Qq: %w"
+msgstr "Ошибка исполнения команды pacman -Qq: %w"
+
+#: internal/common/sandbox/arch.go:144
 #, c-format
 msgid "Failed to recognize the owner for file '%s'"
 msgstr "Не удалось распознать владельца файла '%s'"
 
-#: internal/common/sandbox/arch.go:124
+#: internal/common/sandbox/arch.go:150
 msgid "Failed to find a package for file '%s': %v, stderr: %s"
 msgstr "Не удалось найти пакет для файла '%s': %v, ошибка: %s"
 
-#: internal/common/sandbox/arch.go:146
+#: internal/common/sandbox/arch.go:172
 #, c-format
 msgid "Failed to determine the package for file '%s'"
 msgstr "Не удалось определить пакет для файла '%s'"
@@ -2336,22 +2356,26 @@ msgstr "Ошибка извлечения desktop-файла приложени�
 msgid "Error retrieving console applications for container %s: %v"
 msgstr "Ошибка извлечения консольных утилит для контейнера %s: %v"
 
-#: internal/common/sandbox/provider.go:309
-#: internal/common/sandbox/provider.go:353
+#: internal/common/sandbox/provider.go:307
+msgid "Error reading desktop file %s: %v"
+msgstr "Ошибка чтения desktop-файла %s: %v"
+
+#: internal/common/sandbox/provider.go:318
+#: internal/common/sandbox/provider.go:374
 msgid "Failed to retrieve home directory: %v"
 msgstr "Не удалось извлечь домашнюю директорию: %v"
 
-#: internal/common/sandbox/provider.go:315
-#: internal/common/sandbox/provider.go:359
+#: internal/common/sandbox/provider.go:324
+#: internal/common/sandbox/provider.go:380
 msgid "Error reading directory %s: %v"
 msgstr "Ошибка чтения директории %s: %v"
 
-#: internal/common/sandbox/provider.go:330
-#: internal/common/sandbox/provider.go:378
+#: internal/common/sandbox/provider.go:353
+#: internal/common/sandbox/provider.go:399
 msgid "Error retrieving owner for file %s: %v"
 msgstr "Ошибка извлечения владельца для файла %s: %v"
 
-#: internal/common/sandbox/provider.go:371
+#: internal/common/sandbox/provider.go:392
 msgid "Error processing file %s: %v"
 msgstr "Ошибка обработки файла %s: %v"
 
@@ -2434,20 +2458,20 @@ msgstr "Список пакетов успешно обновлён"
 #: internal/domain/distrobox/actions.go:130
 #: internal/domain/distrobox/actions.go:201
 #: internal/domain/distrobox/actions.go:243
-#: internal/domain/system/actions.go:843
+#: internal/domain/system/actions.go:847
 #, c-format
 msgid "You must specify the package name, for example `%s package`"
 msgstr "Необходимо указать имя пакета, к примеру `%s package`"
 
 #: internal/domain/distrobox/actions.go:107
-#: internal/domain/system/actions.go:693
+#: internal/domain/system/actions.go:697
 msgid "Package found"
 msgstr "Найден пакет"
 
 #: internal/domain/distrobox/actions.go:139
 #: internal/domain/distrobox/actions.go:187
-#: internal/domain/system/actions.go:799 internal/domain/system/actions.go:857
-#: internal/domain/system/actions.go:996
+#: internal/domain/system/actions.go:803 internal/domain/system/actions.go:861
+#: internal/domain/system/actions.go:1004
 #: internal/domain/system/appstream/actions.go:120
 #, c-format
 msgid "%d record found"
@@ -2516,12 +2540,12 @@ msgid "Container name. Required"
 msgstr "Имя контейнера. Обязательно"
 
 #: internal/domain/distrobox/commands.go:70
-#: internal/domain/system/commands.go:461
+#: internal/domain/system/commands.go:509
 msgid "Package information"
 msgstr "Информация о пакете"
 
 #: internal/domain/distrobox/commands.go:91
-#: internal/domain/system/commands.go:485
+#: internal/domain/system/commands.go:533
 msgid "Quick package search by name"
 msgstr "Быстрый поиск пакета по имени"
 
@@ -2540,27 +2564,27 @@ msgstr "Поле для сортировки, к примеру: name, version"
 
 #: internal/domain/distrobox/commands.go:125
 #: internal/domain/system/appstream/commands.go:90
-#: internal/domain/system/commands.go:537
+#: internal/domain/system/commands.go:585
 msgid "Sorting order: ASC or DESC"
 msgstr "Направление сортировки: по возрастанию (ASC) или по убыванию (DESC)"
 
 #: internal/domain/distrobox/commands.go:130
 #: internal/domain/system/appstream/commands.go:95
-#: internal/domain/system/commands.go:259
-#: internal/domain/system/commands.go:542
+#: internal/domain/system/commands.go:304
+#: internal/domain/system/commands.go:590
 msgid "Maximum number of records to return"
 msgstr "Максимальное количество возвращаемых записей"
 
 #: internal/domain/distrobox/commands.go:135
 #: internal/domain/system/appstream/commands.go:100
-#: internal/domain/system/commands.go:264
-#: internal/domain/system/commands.go:547
+#: internal/domain/system/commands.go:309
+#: internal/domain/system/commands.go:595
 msgid "Starting position (offset) for the result set"
 msgstr "Начальная позиция (смещение) для результата выборки"
 
 #: internal/domain/distrobox/commands.go:140
 #: internal/domain/system/appstream/commands.go:105
-#: internal/domain/system/commands.go:552
+#: internal/domain/system/commands.go:600
 msgid "Filter in the format key[op]=value or key=value"
 msgstr "Фильтр в формате key[op]=value или key=value"
 
@@ -2587,14 +2611,14 @@ msgstr "Удалить только с хоста, оставить пакет �
 #: internal/domain/distrobox/commands.go:222
 #: internal/domain/kernel/commands.go:258
 #: internal/domain/repository/commands.go:252
-#: internal/domain/system/commands.go:607
+#: internal/domain/system/commands.go:655
 msgid "Show dbus online documentation"
 msgstr "Показать онлайн-документацию по dbus"
 
 #: internal/domain/distrobox/commands.go:223
 #: internal/domain/kernel/commands.go:259
 #: internal/domain/repository/commands.go:253
-#: internal/domain/system/commands.go:608
+#: internal/domain/system/commands.go:656
 msgid "Documentation"
 msgstr "Документация"
 
@@ -2850,7 +2874,7 @@ msgstr[0] "%d модуль успешно удален из ядра %s"
 msgstr[1] "%d модуля успешно удалено из ядра %s"
 msgstr[2] "%d модулей успешно удалено из ядра %s"
 
-#: internal/domain/kernel/actions.go:694 internal/domain/system/actions.go:1134
+#: internal/domain/kernel/actions.go:694 internal/domain/system/actions.go:1172
 msgid ""
 "package database is empty. Run 'apm system update' with elevated rights to "
 "create it"
@@ -2890,7 +2914,7 @@ msgstr "Установите дополнительные модули ядра"
 msgid "Install kernel headers"
 msgstr "Установить заголовки ядра"
 
-#: internal/domain/kernel/commands.go:97 internal/domain/system/commands.go:360
+#: internal/domain/kernel/commands.go:97 internal/domain/system/commands.go:408
 msgid "Simulate installation"
 msgstr "Симуляция установки"
 
@@ -3125,13 +3149,13 @@ msgid "Failed to add task repository"
 msgstr "Не удалось добавить репозиторий задачи"
 
 #: internal/domain/repository/actions.go:432
-#: internal/domain/system/actions.go:273 internal/domain/system/actions.go:430
-#: internal/domain/system/actions.go:591
+#: internal/domain/system/actions.go:290 internal/domain/system/actions.go:430
+#: internal/domain/system/actions.go:595
 msgid "The operation will not make any changes"
 msgstr "Операция не будет нести изменений"
 
 #: internal/domain/repository/actions.go:442
-#: internal/domain/system/actions.go:347 internal/domain/system/actions.go:637
+#: internal/domain/system/actions.go:347 internal/domain/system/actions.go:641
 #, c-format
 msgid "%d package successfully installed"
 msgid_plural "%d packages successfully installed"
@@ -3140,12 +3164,12 @@ msgstr[1] "%d пакета успешно установлено"
 msgstr[2] "%d пакетов успешно установлено"
 
 #: internal/domain/repository/actions.go:443
-#: internal/domain/system/actions.go:348 internal/domain/system/actions.go:638
+#: internal/domain/system/actions.go:348 internal/domain/system/actions.go:642
 msgid "and"
 msgstr "и"
 
 #: internal/domain/repository/actions.go:444
-#: internal/domain/system/actions.go:349 internal/domain/system/actions.go:639
+#: internal/domain/system/actions.go:349 internal/domain/system/actions.go:643
 #, c-format
 msgid "%d updated"
 msgid_plural "%d updated"
@@ -3170,8 +3194,8 @@ msgid "Show all repositories including inactive"
 msgstr "Показать все репозитории, включая неактивные"
 
 #: internal/domain/repository/commands.go:73
-#: internal/domain/system/commands.go:496
-#: internal/domain/system/commands.go:561
+#: internal/domain/system/commands.go:544
+#: internal/domain/system/commands.go:609
 msgid "Full information output"
 msgstr "Полный вывод информации"
 
@@ -3306,9 +3330,9 @@ msgstr "Должно быть указан как минимум один пак
 msgid "No candidates for removal found"
 msgstr "Кандидатов на удаление не найдено"
 
-#: internal/domain/system/actions.go:206 internal/domain/system/actions.go:294
-#: internal/domain/system/actions.go:442 internal/domain/system/actions.go:607
-#: internal/domain/system/actions.go:936
+#: internal/domain/system/actions.go:206 internal/domain/system/actions.go:311
+#: internal/domain/system/actions.go:442 internal/domain/system/actions.go:611
+#: internal/domain/system/actions.go:944
 msgid "Cancel dialog"
 msgstr "Отмена диалога"
 
@@ -3336,7 +3360,7 @@ msgstr ""
 "Произошла ошибка при подключении к репозиторию. Список пакетов обновлён, "
 "пожалуйста, попробуйте запустить команду ещё раз"
 
-#: internal/domain/system/actions.go:336 internal/domain/system/actions.go:620
+#: internal/domain/system/actions.go:336 internal/domain/system/actions.go:624
 #, c-format
 msgid "%d package successfully downloaded"
 msgid_plural "%d packages successfully downloaded"
@@ -3360,36 +3384,36 @@ msgstr "Статус установленных пакетов обновлён"
 msgid "Package list updated successfully"
 msgstr "Список пакетов успешно обновлён"
 
-#: internal/domain/system/actions.go:564
+#: internal/domain/system/actions.go:568
 msgid "DONE"
 msgstr "Готово"
 
-#: internal/domain/system/actions.go:625
+#: internal/domain/system/actions.go:629
 msgid "Download complete"
 msgstr "Загрузка завершена"
 
-#: internal/domain/system/actions.go:643
+#: internal/domain/system/actions.go:647
 msgid "The system has been upgrade successfully"
 msgstr "Система была успешно обновлена"
 
-#: internal/domain/system/actions.go:652
+#: internal/domain/system/actions.go:656
 msgid "Package name must be specified, for example info package"
 msgstr "Необходимо указать имя пакета, к примеру, info package"
 
-#: internal/domain/system/actions.go:701 internal/domain/system/actions.go:718
+#: internal/domain/system/actions.go:705 internal/domain/system/actions.go:722
 msgid "Package list must not be empty"
 msgstr "Список пакетов не может быть пустым"
 
-#: internal/domain/system/actions.go:753
+#: internal/domain/system/actions.go:757
 #, c-format
 msgid "Found %d out of %d packages"
 msgstr "Найдено %d из %d пакетов"
 
-#: internal/domain/system/actions.go:794 internal/domain/system/actions.go:852
+#: internal/domain/system/actions.go:798 internal/domain/system/actions.go:856
 msgid "Nothing found"
 msgstr "Ничего не найдено"
 
-#: internal/domain/system/actions.go:829
+#: internal/domain/system/actions.go:833
 #, c-format
 msgid "%d section found"
 msgid_plural "%d sections found"
@@ -3397,41 +3421,41 @@ msgstr[0] "Найдена %d секция"
 msgstr[1] "Найдено %d секции"
 msgstr[2] "Найдено %d секций"
 
-#: internal/domain/system/actions.go:873 internal/domain/system/commands.go:220
+#: internal/domain/system/actions.go:877 internal/domain/system/commands.go:265
 msgid "Image status"
 msgstr "Статус образа"
 
-#: internal/domain/system/actions.go:899
+#: internal/domain/system/actions.go:903
 msgid "Command executed successfully"
 msgstr "Команда успешно выполнена"
 
-#: internal/domain/system/actions.go:979
+#: internal/domain/system/actions.go:987
 msgid "Changes applied successfully. A reboot is required"
 msgstr "Изменения были успешно применены. Необходима перезагрука"
 
-#: internal/domain/system/actions.go:1039
-#: internal/domain/system/actions.go:1059
-#: internal/domain/system/actions.go:1101
+#: internal/domain/system/actions.go:1074
+#: internal/domain/system/actions.go:1095
+#: internal/domain/system/actions.go:1139
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: internal/domain/system/actions.go:1048
+#: internal/domain/system/actions.go:1084
 msgid "nss-altfiles configuration applied successfully"
 msgstr "Конфигурация nss-altfiles успешно применена"
 
-#: internal/domain/system/actions.go:1069
-msgid "No configs found in %s"
-msgstr "Конфигурации не найдены в %s"
+#: internal/domain/system/actions.go:1107
+msgid "No configs found"
+msgstr "Конфигурации не найдены"
 
-#: internal/domain/system/actions.go:1079
+#: internal/domain/system/actions.go:1117
 msgid "Groups synced successfully"
 msgstr "Группы успешно синхронизированы"
 
-#: internal/domain/system/actions.go:1205
+#: internal/domain/system/actions.go:1243
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/domain/system/actions.go:1212
+#: internal/domain/system/actions.go:1250
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
@@ -3503,13 +3527,13 @@ msgstr ""
 "Переопределить параметр конфигурации APT, например Dir::Cache::Archives=/tmp"
 
 #: internal/domain/system/commands.go:118
-#: internal/domain/system/commands.go:232
+#: internal/domain/system/commands.go:277
 msgid "Upgrade system image"
 msgstr "Обновление образа системы"
 
 #: internal/domain/system/commands.go:122
-#: internal/domain/system/commands.go:205
-#: internal/domain/system/commands.go:236
+#: internal/domain/system/commands.go:240
+#: internal/domain/system/commands.go:281
 msgid "Disable APT package cache for image build"
 msgstr "Отключить кэш APT-пакетов при сборке образа"
 
@@ -3522,106 +3546,132 @@ msgid "Simulate upgrade"
 msgstr "Симуляция обновления"
 
 #: internal/domain/system/commands.go:148
-#: internal/domain/system/commands.go:366
+#: internal/domain/system/commands.go:414
 msgid "Download packages without installation"
 msgstr "Скачать пакеты без установки"
 
 #: internal/domain/system/commands.go:178
-msgid "Build image"
-msgstr "Создать образ"
+msgid "Apply declarative configuration to the running host"
+msgstr "Применить декларативную конфигурацию к работающей системе"
 
-#: internal/domain/system/commands.go:196
-msgid "Apply changes to the host"
-msgstr "Применить изменения на хосте"
+#: internal/domain/system/commands.go:183
+#: internal/domain/system/commands.go:246
+msgid "Path to image configuration file"
+msgstr "Путь к файлу конфигурации образа"
 
-#: internal/domain/system/commands.go:200
+#: internal/domain/system/commands.go:188
+#: internal/domain/system/commands.go:251
+msgid "Working directory for the build"
+msgstr "Рабочий каталог для сборки"
+
+#: internal/domain/system/commands.go:201
+msgid ""
+"Check image for systemd declarative issues (tmpfiles.d, sysusers.d, /run, /"
+"tmp)"
+msgstr ""
+"Проверить образ на проблемы декларативной конфигурации systemd (tmpfiles.d, "
+"sysusers.d, /run, /tmp)"
+
+#: internal/domain/system/commands.go:206
+msgid "Root filesystem path to analyze"
+msgstr "Путь к корневой файловой системе для анализа"
+
+#: internal/domain/system/commands.go:211
+msgid "Write missing tmpfiles.d and sysusers.d config files"
+msgstr "Создать недостающие файлы конфигурации tmpfiles.d и sysusers.d"
+
+#: internal/domain/system/commands.go:231
+msgid "Rebuild and deploy a new system image"
+msgstr "Пересобрать и развернуть новый образ системы"
+
+#: internal/domain/system/commands.go:235
 msgid "Always pull the base image from the registry"
 msgstr "Всегда загружать базовый образ из реестра"
 
-#: internal/domain/system/commands.go:251
+#: internal/domain/system/commands.go:296
 msgid "Image changes history"
 msgstr "История изменения образа"
 
-#: internal/domain/system/commands.go:255
+#: internal/domain/system/commands.go:300
 msgid "Filter by image name"
 msgstr "Фильтрация по имени образа"
 
-#: internal/domain/system/commands.go:279
+#: internal/domain/system/commands.go:325
 msgid "Fix /etc/passwd and /etc/group for nss-altfiles"
 msgstr "Исправление файлов /etc/passwd и /etc/group для nss-altfiles"
 
-#: internal/domain/system/commands.go:291
+#: internal/domain/system/commands.go:337
 msgid "Sync user groups from config"
 msgstr "Синхронизация групп пользователей из конфигурации"
 
-#: internal/domain/system/commands.go:313
+#: internal/domain/system/commands.go:361
 msgid "Reinstall packages"
 msgstr "Переустановка пакетов"
 
-#: internal/domain/system/commands.go:318
+#: internal/domain/system/commands.go:366
 msgid "Reinstall without confirmation"
 msgstr "Переустановить без подтверждения"
 
-#: internal/domain/system/commands.go:324
+#: internal/domain/system/commands.go:372
 msgid "Simulate reinstallation"
 msgstr "Симуляция переустановки"
 
-#: internal/domain/system/commands.go:349
+#: internal/domain/system/commands.go:397
 msgid ""
 "Package list for installation. The format package- package+ is supported."
 msgstr ""
 "Список пакетов для установки. Формат package- и package+ поддерживается."
 
-#: internal/domain/system/commands.go:354
+#: internal/domain/system/commands.go:402
 msgid "Install without confirmation"
 msgstr "Установить без подтверждения"
 
-#: internal/domain/system/commands.go:392
+#: internal/domain/system/commands.go:440
 msgid "List of packages to remove"
 msgstr "Список пакетов на удаление"
 
-#: internal/domain/system/commands.go:397
+#: internal/domain/system/commands.go:445
 msgid "Remove without confirmation"
 msgstr "Удалить без подтверждения"
 
-#: internal/domain/system/commands.go:403
+#: internal/domain/system/commands.go:451
 msgid "Attempt to remove depends"
 msgstr "Попытка удалить зависимости"
 
-#: internal/domain/system/commands.go:409
+#: internal/domain/system/commands.go:457
 msgid "Simulate removal"
 msgstr "Симуляция удаления"
 
-#: internal/domain/system/commands.go:435
+#: internal/domain/system/commands.go:483
 msgid "Updating package database"
 msgstr "Обновление базы данных пакетов"
 
-#: internal/domain/system/commands.go:439
+#: internal/domain/system/commands.go:487
 msgid "Skip file locking (use with caution)"
 msgstr "Пропустить блокировку файла (использовать с осторожностью)"
 
-#: internal/domain/system/commands.go:444
+#: internal/domain/system/commands.go:492
 msgid "Only update installed status in DB without refreshing repositories"
 msgstr ""
 "Обновить только статус установленных пакетов в БД без обновления репозиториев"
 
-#: internal/domain/system/commands.go:466
+#: internal/domain/system/commands.go:514
 msgid "Full output of information"
 msgstr "Полный вывод информации"
 
-#: internal/domain/system/commands.go:490
+#: internal/domain/system/commands.go:538
 msgid "Only installed"
 msgstr "Только установленные"
 
-#: internal/domain/system/commands.go:514
+#: internal/domain/system/commands.go:562
 msgid "Show all available package sections"
 msgstr "Показать все доступные секции пакетов"
 
-#: internal/domain/system/commands.go:525
+#: internal/domain/system/commands.go:573
 msgid "Building a query to get a list of packages"
 msgstr "Создание запроса для получения списка пакетов"
 
-#: internal/domain/system/commands.go:528
+#: internal/domain/system/commands.go:576
 msgid ""
 "Application fields are available with the \"app.\" prefix: app.name, app."
 "categories, app.type, etc."
@@ -3629,27 +3679,27 @@ msgstr ""
 "Поля приложений доступны с префиксом \"app.\": app.name, app.categories, app."
 "type и т.д."
 
-#: internal/domain/system/commands.go:533
+#: internal/domain/system/commands.go:581
 msgid "Sort packages by field, example fields: name, section"
 msgstr "Сортировать пакеты по полю, примеры полей: имя, раздел"
 
-#: internal/domain/system/commands.go:556
+#: internal/domain/system/commands.go:604
 msgid "Force update all packages before query"
 msgstr "Принудительное обновление всех пакетов до запроса"
 
-#: internal/domain/system/commands.go:594
+#: internal/domain/system/commands.go:642
 msgid "Module for application information"
 msgstr "Модуль для информации о приложениях"
 
-#: internal/domain/system/commands.go:595
+#: internal/domain/system/commands.go:643
 msgid "Applications"
 msgstr "Приложения"
 
-#: internal/domain/system/commands.go:600
+#: internal/domain/system/commands.go:648
 msgid "Module for working with the image"
 msgstr "Модуль для работы с образом"
 
-#: internal/domain/system/commands.go:619
+#: internal/domain/system/commands.go:667
 msgid "System package management"
 msgstr "Управление системными пакетами"
 
@@ -3937,6 +3987,12 @@ msgstr "Не удалось закрыть базы данных: %s"
 #: data/apt-bridge/update-apm.lua:6
 msgid "Updating apm database"
 msgstr "Обновление базы данных apm"
+
+#~ msgid "Build image"
+#~ msgstr "Создать образ"
+
+#~ msgid "Apply changes to the host"
+#~ msgstr "Применить изменения на хосте"
 
 #~ msgid "Error opening stdout pipe: %w"
 #~ msgstr "Ошибка открытия канала стандартного вывода: %w"
