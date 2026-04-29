@@ -45,12 +45,12 @@ func NewSystem() (*System, error) {
 		C.free(unsafe.Pointer(cKey))
 		C.free(unsafe.Pointer(cVal))
 	}
-	setCfg("Acquire::Retries", strconv.Itoa(1))
-	setCfg("Acquire::http::Timeout", strconv.Itoa(20))
-	setCfg("Acquire::https::Timeout", strconv.Itoa(20))
-	setCfg("Acquire::ftp::Timeout", strconv.Itoa(20))
-	setCfg("Acquire::http::ConnectTimeout", strconv.Itoa(20))
-	setCfg("Acquire::ftp::ConnectTimeout", strconv.Itoa(20))
+	setCfg("Acquire::Retries", strconv.Itoa(2))
+	setCfg("Acquire::http::Timeout", strconv.Itoa(25))
+	setCfg("Acquire::https::Timeout", strconv.Itoa(25))
+	setCfg("Acquire::ftp::Timeout", strconv.Itoa(25))
+	setCfg("Acquire::http::ConnectTimeout", strconv.Itoa(25))
+	setCfg("Acquire::ftp::ConnectTimeout", strconv.Itoa(25))
 	if isAtomicSystem() {
 		setCfg("RPM::Options::", "--ignoresize")
 	}
