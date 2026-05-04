@@ -166,10 +166,12 @@ AptResult finalize_dependency_resolution(const AptCache *cache, const std::set<s
                 broken_info += it.Name();
                 if (pkgCache::VerIterator InstVer = st.InstVerIter(*cache->dep_cache); !InstVer.end()) {
                     for (pkgCache::DepIterator D = InstVer.DependsList(); !D.end(); ++D) {
-                        if (D->Type != pkgCache::Dep::Depends && D->Type != pkgCache::Dep::PreDepends) continue;
-                        if (((*cache->dep_cache)[D] & pkgDepCache::DepInstall) == pkgDepCache::DepInstall) continue;
+                        if (!D.IsCritical()) continue;
+                        if (((*cache->dep_cache)[D] & pkgDepCache::DepGInstall) == pkgDepCache::DepGInstall) continue;
 
-                        broken_info += " (depends: ";
+                        broken_info += " (";
+                        broken_info += D.DepType();
+                        broken_info += ": ";
                         broken_info += D.TargetPkg().Name();
                         if (D.TargetVer() != nullptr) {
                             broken_info += " ";

@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-26 13:59+0600\n"
+"POT-Creation-Date: 2026-05-05 01:07+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -649,6 +649,11 @@ msgid "Conflicting packages: %s and %s"
 msgstr "Конфликтующие пакеты: %s и %s"
 
 #: internal/common/apt/errors.go:425
+#, c-format
+msgid "Some packages could not be installed. Broken dependencies: %s"
+msgstr "Некоторые пакеты не удалось установить. Сломанные зависимости: %s"
+
+#: internal/common/apt/errors.go:428
 msgid ""
 "Some packages could not be installed. This may mean that you have requested "
 "an impossible situation"
@@ -656,12 +661,12 @@ msgstr ""
 "Некоторые пакеты не удалось установить. Это может означать, что вы запросили "
 "невозможную ситуация для разрешения"
 
-#: internal/common/apt/errors.go:428
+#: internal/common/apt/errors.go:431
 #, c-format
 msgid "Packages are already installed: %s"
 msgstr "Пакеты уже установлены: %s"
 
-#: internal/common/apt/errors.go:431
+#: internal/common/apt/errors.go:434
 #, c-format
 msgid ""
 "RPM package unpacking failed: %s. The package may be incompatible with the "
@@ -670,29 +675,29 @@ msgstr ""
 "Ошибка распаковки RPM пакета: %s. Пакет может быть несовместим с текущей "
 "системой или требует специальных разрешений"
 
-#: internal/common/apt/errors.go:434
+#: internal/common/apt/errors.go:437
 msgid "Error while running transaction"
 msgstr "Ошибка во время исполнения транзакции"
 
-#: internal/common/apt/errors.go:437
+#: internal/common/apt/errors.go:440
 #, c-format
 msgid "Package %s is not installed, so cannot be reinstalled"
 msgstr "Пакет %s не установлен, поэтому не может быть переустановлен"
 
-#: internal/common/apt/errors.go:440
+#: internal/common/apt/errors.go:443
 #, c-format
 msgid "Unable to find package from RPM file: %s"
 msgstr "Не удалось найти пакет из RPM файла: %s"
 
-#: internal/common/apt/errors.go:443
+#: internal/common/apt/errors.go:446
 msgid "Transaction set check failed"
 msgstr "Ошибка проверки набора транзакций"
 
-#: internal/common/apt/errors.go:446
+#: internal/common/apt/errors.go:449
 msgid "Some errors occurred while running transaction"
 msgstr "Возникли ошибки при выполнении транзакции"
 
-#: internal/common/apt/errors.go:449
+#: internal/common/apt/errors.go:452
 #, c-format
 msgid "Archive directory %s is missing."
 msgstr "Директория архива %s отсутствует."
