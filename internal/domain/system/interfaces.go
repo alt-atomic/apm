@@ -22,7 +22,7 @@ import (
 	"apm/internal/common/build"
 	"apm/internal/common/filter"
 	"apm/internal/common/swcat"
-	"apm/internal/domain/system/service"
+	"apm/internal/domain/system/temporary"
 	"context"
 )
 
@@ -96,7 +96,7 @@ type temporaryConfigService interface {
 	AddInstallPackage(pkg string) error
 	AddRemovePackage(pkg string) error
 	DeleteFile() error
-	GetConfig() *service.TemporaryConfig
+	GetConfig() *temporary.Config
 }
 
 // appStreamService определяет методы для работы с AppStream данными.

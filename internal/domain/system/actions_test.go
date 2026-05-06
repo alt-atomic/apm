@@ -8,7 +8,7 @@ import (
 	"apm/internal/common/filter"
 	"apm/internal/common/swcat"
 	"apm/internal/common/testutil"
-	"apm/internal/domain/system/service"
+	"apm/internal/domain/system/temporary"
 	"context"
 	"errors"
 	"syscall"
@@ -151,15 +151,15 @@ func (m *mockHostConfig) SaveConfigToDB(_ context.Context) error          { retu
 func (m *mockHostConfig) ApplyPathOverrides(_, _ string) error            { return nil }
 
 type mockTempConfig struct {
-	config *service.TemporaryConfig
+	config *temporary.Config
 }
 
-func (m *mockTempConfig) LoadConfig() error                   { return nil }
-func (m *mockTempConfig) SaveConfig() error                   { return nil }
-func (m *mockTempConfig) AddInstallPackage(_ string) error    { return nil }
-func (m *mockTempConfig) AddRemovePackage(_ string) error     { return nil }
-func (m *mockTempConfig) DeleteFile() error                   { return nil }
-func (m *mockTempConfig) GetConfig() *service.TemporaryConfig { return m.config }
+func (m *mockTempConfig) LoadConfig() error                { return nil }
+func (m *mockTempConfig) SaveConfig() error                { return nil }
+func (m *mockTempConfig) AddInstallPackage(_ string) error { return nil }
+func (m *mockTempConfig) AddRemovePackage(_ string) error  { return nil }
+func (m *mockTempConfig) DeleteFile() error                { return nil }
+func (m *mockTempConfig) GetConfig() *temporary.Config     { return m.config }
 
 type mockAppStream struct {
 	result map[string][]swcat.Component
@@ -191,7 +191,6 @@ func newTestActions(aptAct *mockAptActions, aptDB *mockAptDB, hostDB *mockHostDB
 		serviceAppStreamDB:     &mockAppStream{},
 	}
 }
-
 
 func TestInfo(t *testing.T) {
 	vim := _package.Package{Name: "vim", Version: "9.0", Summary: "Text editor"}

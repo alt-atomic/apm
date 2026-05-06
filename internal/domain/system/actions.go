@@ -32,7 +32,7 @@ import (
 	kservice "apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
 	"apm/internal/domain/system/dialog"
-	"apm/internal/domain/system/service"
+	"apm/internal/domain/system/temporary"
 	"context"
 	"errors"
 	"fmt"
@@ -69,7 +69,7 @@ func NewActions(appConfig *app.Config) *Actions {
 		hostDBSvc,
 		hostImageSvc,
 	)
-	hostTemporarySvc := service.NewTemporaryConfigService(
+	hostTemporarySvc := temporary.NewManager(
 		appConfig.ConfigManager.GetTemporaryImageFile(),
 	)
 	hostAptSvc := _package.NewActions(hostPackageDBSvc, appConfig)

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package temporary
 
 import (
 	"apm/internal/common/app"
@@ -26,22 +26,22 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// TemporaryConfig Config описывает структуру временного конфигурационного файла
-type TemporaryConfig struct {
+// Config описывает структуру временного конфигурационного файла
+type Config struct {
 	Packages struct {
 		Install []string `yaml:"install" json:"install"`
 		Remove  []string `yaml:"remove" json:"remove"`
 	} `yaml:"packages" json:"packages"`
 }
 
-// TemporaryConfigService сервис для работы с временным конфигурационным файлом
-type TemporaryConfigService struct {
-	Config             *TemporaryConfig
+// Manager сервис для работы с временным конфигурационным файлом
+type Manager struct {
+	config             *Config
 	temporaryImageFile string
 }
 
-func NewTemporaryConfigService(temporaryImageFile string) *TemporaryConfigService {
-	return &TemporaryConfigService{
+func NewManager(temporaryImageFile string) *Manager {
+	return &Manager{
 		temporaryImageFile: temporaryImageFile,
 	}
 }
@@ -50,7 +50,7 @@ func NewTemporaryConfigService(temporaryImageFile string) *TemporaryConfigServic
 var syncYamlTemporaryMutex sync.Mutex
 
 // LoadConfig загружает конфигурацию из файла и сохраняет в поле config.
-func (s *TemporaryConfigService) LoadConfig() error {
+func (s *Manager) LoadConfig() error {
 	data, err := os.ReadFile(s.temporaryImageFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -58,32 +58,32 @@ func (s *TemporaryConfigService) LoadConfig() error {
 			if err != nil {
 				return err
 			}
-			s.Config = &cfg
+			s.config = &cfg
 			return s.SaveConfig()
 		}
 		return err
 	}
 
-	var cfg TemporaryConfig
+	var cfg Config
 	if err = yaml.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
 
-	s.Config = &cfg
+	s.config = &cfg
 
 	return nil
 }
 
 // SaveConfig сохраняет текущую конфигурацию сервиса в файл.
-func (s *TemporaryConfigService) SaveConfig() error {
-	if s.Config == nil {
+func (s *Manager) SaveConfig() error {
+	if s.config == nil {
 		return errors.New(app.T_("Configuration not loaded"))
 	}
 
 	syncYamlTemporaryMutex.Lock()
 	defer syncYamlTemporaryMutex.Unlock()
 
-	data, err := yaml.Marshal(s.Config)
+	data, err := yaml.Marshal(s.config)
 	if err != nil {
 		return err
 	}
@@ -91,8 +91,8 @@ func (s *TemporaryConfigService) SaveConfig() error {
 }
 
 // generateDefaultConfig генерирует конфигурацию по умолчанию, если файл не существует.
-func (s *TemporaryConfigService) generateDefaultConfig() (TemporaryConfig, error) {
-	var cfg TemporaryConfig
+func (s *Manager) generateDefaultConfig() (Config, error) {
+	var cfg Config
 	cfg.Packages.Install = []string{}
 	cfg.Packages.Remove = []string{}
 
@@ -109,41 +109,41 @@ func (s *TemporaryConfigService) generateDefaultConfig() (TemporaryConfig, error
 }
 
 // IsInstalled проверяет наличие пакета в списке для установки.
-func (s *TemporaryConfigService) IsInstalled(pkg string) bool {
-	return slices.Contains(s.Config.Packages.Install, pkg)
+func (s *Manager) IsInstalled(pkg string) bool {
+	return slices.Contains(s.config.Packages.Install, pkg)
 }
 
 // IsRemoved проверяет наличие пакета в списке для удаления.
-func (s *TemporaryConfigService) IsRemoved(pkg string) bool {
-	return slices.Contains(s.Config.Packages.Remove, pkg)
+func (s *Manager) IsRemoved(pkg string) bool {
+	return slices.Contains(s.config.Packages.Remove, pkg)
 }
 
 // AddInstallPackage добавляет пакет в список для установки и сохраняет изменения в файл.
-func (s *TemporaryConfigService) AddInstallPackage(pkg string) error {
-	if slices.Contains(s.Config.Packages.Install, pkg) {
+func (s *Manager) AddInstallPackage(pkg string) error {
+	if slices.Contains(s.config.Packages.Install, pkg) {
 		return nil
 	}
-	if slices.Contains(s.Config.Packages.Remove, pkg) {
-		s.Config.Packages.Remove = removeElement(s.Config.Packages.Remove, pkg)
+	if slices.Contains(s.config.Packages.Remove, pkg) {
+		s.config.Packages.Remove = removeElement(s.config.Packages.Remove, pkg)
 	}
-	s.Config.Packages.Install = append(s.Config.Packages.Install, pkg)
+	s.config.Packages.Install = append(s.config.Packages.Install, pkg)
 	return s.SaveConfig()
 }
 
 // AddRemovePackage добавляет пакет в список для удаления и сохраняет изменения в файл.
-func (s *TemporaryConfigService) AddRemovePackage(pkg string) error {
-	if slices.Contains(s.Config.Packages.Remove, pkg) {
+func (s *Manager) AddRemovePackage(pkg string) error {
+	if slices.Contains(s.config.Packages.Remove, pkg) {
 		return nil
 	}
-	if slices.Contains(s.Config.Packages.Install, pkg) {
-		s.Config.Packages.Install = removeElement(s.Config.Packages.Install, pkg)
+	if slices.Contains(s.config.Packages.Install, pkg) {
+		s.config.Packages.Install = removeElement(s.config.Packages.Install, pkg)
 	}
-	s.Config.Packages.Remove = append(s.Config.Packages.Remove, pkg)
+	s.config.Packages.Remove = append(s.config.Packages.Remove, pkg)
 	return s.SaveConfig()
 }
 
 // DeleteFile удаляет временный конфигурационный файл.
-func (s *TemporaryConfigService) DeleteFile() error {
+func (s *Manager) DeleteFile() error {
 	syncYamlTemporaryMutex.Lock()
 	defer syncYamlTemporaryMutex.Unlock()
 
@@ -155,8 +155,8 @@ func (s *TemporaryConfigService) DeleteFile() error {
 }
 
 // GetConfig возвращает текущую конфигурацию.
-func (s *TemporaryConfigService) GetConfig() *TemporaryConfig {
-	return s.Config
+func (s *Manager) GetConfig() *Config {
+	return s.config
 }
 
 // removeElement удаляет элемент из среза строк.

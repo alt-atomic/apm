@@ -1,4 +1,4 @@
-package service
+package temporary
 
 import (
 	"os"
@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-func TestTemporaryConfigService_generateDefaultConfig(t *testing.T) {
+func TestManager_generateDefaultConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
+	service := NewManager(tempFile)
 
 	config, err := service.generateDefaultConfig()
 	if err != nil {
@@ -38,34 +38,34 @@ func TestTemporaryConfigService_generateDefaultConfig(t *testing.T) {
 	}
 }
 
-func TestTemporaryConfigService_LoadConfig_NewFile(t *testing.T) {
+func TestManager_LoadConfig_NewFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
+	service := NewManager(tempFile)
 
 	err := service.LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
 	}
 
-	if service.Config == nil {
+	if service.config == nil {
 		t.Error("Config should not be nil after LoadConfig")
 	}
 
-	if len(service.Config.Packages.Install) != 0 {
+	if len(service.config.Packages.Install) != 0 {
 		t.Error("Install packages should be empty by default")
 	}
 }
 
-func TestTemporaryConfigService_SaveConfig(t *testing.T) {
+func TestManager_SaveConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
-	service.Config = &TemporaryConfig{}
-	service.Config.Packages.Install = []string{"test-package"}
-	service.Config.Packages.Remove = []string{"remove-package"}
+	service := NewManager(tempFile)
+	service.config = &Config{}
+	service.config.Packages.Install = []string{"test-package"}
+	service.config.Packages.Remove = []string{"remove-package"}
 
 	err := service.SaveConfig()
 	if err != nil {
@@ -73,26 +73,26 @@ func TestTemporaryConfigService_SaveConfig(t *testing.T) {
 	}
 
 	// Создаем новый сервис и загружаем конфиг
-	newService := NewTemporaryConfigService(tempFile)
+	newService := NewManager(tempFile)
 	err = newService.LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
 	}
 
-	if len(newService.Config.Packages.Install) != 1 || newService.Config.Packages.Install[0] != "test-package" {
+	if len(newService.config.Packages.Install) != 1 || newService.config.Packages.Install[0] != "test-package" {
 		t.Error("Install packages not saved correctly")
 	}
 
-	if len(newService.Config.Packages.Remove) != 1 || newService.Config.Packages.Remove[0] != "remove-package" {
+	if len(newService.config.Packages.Remove) != 1 || newService.config.Packages.Remove[0] != "remove-package" {
 		t.Error("Remove packages not saved correctly")
 	}
 }
 
-func TestTemporaryConfigService_AddInstallPackage(t *testing.T) {
+func TestManager_AddInstallPackage(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
+	service := NewManager(tempFile)
 	err := service.LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
@@ -114,16 +114,16 @@ func TestTemporaryConfigService_AddInstallPackage(t *testing.T) {
 		t.Fatalf("AddInstallPackage failed on duplicate: %v", err)
 	}
 
-	if len(service.Config.Packages.Install) != 1 {
+	if len(service.config.Packages.Install) != 1 {
 		t.Error("Should not duplicate packages")
 	}
 }
 
-func TestTemporaryConfigService_AddRemovePackage(t *testing.T) {
+func TestManager_AddRemovePackage(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
+	service := NewManager(tempFile)
 	err := service.LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
@@ -145,16 +145,16 @@ func TestTemporaryConfigService_AddRemovePackage(t *testing.T) {
 		t.Fatalf("AddRemovePackage failed on duplicate: %v", err)
 	}
 
-	if len(service.Config.Packages.Remove) != 1 {
+	if len(service.config.Packages.Remove) != 1 {
 		t.Error("Should not duplicate packages")
 	}
 }
 
-func TestTemporaryConfigService_PackageConflictResolution(t *testing.T) {
+func TestManager_PackageConflictResolution(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
+	service := NewManager(tempFile)
 	err := service.LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
@@ -195,11 +195,11 @@ func TestTemporaryConfigService_PackageConflictResolution(t *testing.T) {
 	}
 }
 
-func TestTemporaryConfigService_DeleteFile(t *testing.T) {
+func TestManager_DeleteFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
+	service := NewManager(tempFile)
 	err := service.LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
@@ -228,12 +228,12 @@ func TestTemporaryConfigService_DeleteFile(t *testing.T) {
 	}
 }
 
-func TestTemporaryConfigService_SaveConfig_NilConfig(t *testing.T) {
+func TestManager_SaveConfig_NilConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	tempFile := filepath.Join(tmpDir, "test_temp_config.yaml")
 
-	service := NewTemporaryConfigService(tempFile)
-	service.Config = nil
+	service := NewManager(tempFile)
+	service.config = nil
 
 	err := service.SaveConfig()
 	if err == nil {
