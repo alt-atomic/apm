@@ -32,6 +32,7 @@ import (
 )
 
 type Actions struct {
+	appConfig             *app.Config
 	servicePackage        packageService
 	serviceDistroDatabase distroDBService
 	serviceDistroAPI      distroAPIService
@@ -48,6 +49,7 @@ func NewActions(appConfig *app.Config) *Actions {
 	iconSvc := icon.NewIconService(appConfig.DatabaseManager, runner)
 
 	return &Actions{
+		appConfig:             appConfig,
 		servicePackage:        distroPackageSvc,
 		serviceDistroDatabase: distroDBSvc,
 		serviceDistroAPI:      distroAPISvc,
@@ -352,8 +354,7 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 
 // selectContainerInteractive показывает интерактивный селектор контейнера в TTY-режиме.
 func (a *Actions) selectContainerInteractive(ctx context.Context) (string, error) {
-	appConfig := app.GetAppConfig(ctx)
-	if !reply.IsInteractive(appConfig) {
+	if !reply.IsInteractive(a.appConfig) {
 		return "", apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("Required flag %s not set"), "container"))
 	}
 
@@ -362,14 +363,14 @@ func (a *Actions) selectContainerInteractive(ctx context.Context) (string, error
 		return "", apmerr.New(apmerr.ErrorTypeContainer, err)
 	}
 
-	reply.StopSpinner(appConfig)
+	reply.StopSpinner(a.appConfig)
 
-	selected, err := dialog.SelectContainer(containers, appConfig.ConfigManager.GetColors())
+	selected, err := dialog.SelectContainer(containers, a.appConfig.ConfigManager.GetColors())
 	if err != nil {
 		return "", apmerr.New(apmerr.ErrorTypeValidation, err)
 	}
 
-	reply.CreateSpinner(appConfig)
+	reply.CreateSpinner(a.appConfig)
 
 	return selected, nil
 }

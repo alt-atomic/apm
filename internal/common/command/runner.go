@@ -55,6 +55,10 @@ type options struct {
 	dir           string
 	outputCommand string
 	outputDest    *string
+	pty           bool
+	ptyRows       uint16
+	ptyCols       uint16
+	streamHandler func(io.Reader)
 }
 
 // WithEnv добавляет переменные окружения к команде
@@ -100,11 +104,28 @@ func WithShell() Option {
 }
 
 // WithOutputCommand добавляет вторую команду для захвата дополнительного вывода.
-// Результат второй команды записывается в dest
+// Результат второй команды записывается в dest.
 func WithOutputCommand(command string, dest *string) Option {
 	return func(o *options) {
 		o.outputCommand = command
 		o.outputDest = dest
+	}
+}
+
+// WithPTY запускает команду в pseudo-tty с заданным размером окна.
+// Используется для команд, которые показывают интерактивный прогресс.
+func WithPTY(rows, cols uint16) Option {
+	return func(o *options) {
+		o.pty = true
+		o.ptyRows = rows
+		o.ptyCols = cols
+	}
+}
+
+// WithStreamHandler регистрирует обработчик потока stdout.
+func WithStreamHandler(h func(io.Reader)) Option {
+	return func(o *options) {
+		o.streamHandler = h
 	}
 }
 
@@ -121,6 +142,10 @@ func (r *runner) Run(ctx context.Context, args []string, opts ...Option) (string
 // Execute выполняет команду с заданными аргументами и опциями.
 func (r *runner) execute(ctx context.Context, args []string, opts ...Option) (string, string, error) {
 	o := r.applyOptions(opts)
+
+	if o.pty {
+		return r.executePTY(ctx, args, o)
+	}
 
 	if o.outputCommand != "" {
 		return r.executeDivider(ctx, args, o)

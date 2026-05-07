@@ -18,21 +18,28 @@ package build
 
 import (
 	"apm/internal/common/app"
+	"apm/internal/common/command"
 	"apm/internal/common/reply"
 	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/creack/pty"
 )
+
+// PodmanService инкапсулирует операции с podman/bootc.
+type PodmanService struct {
+	runner command.Runner
+}
+
+// NewPodmanService создаёт сервис для работы с podman/bootc.
+func NewPodmanService(runner command.Runner) *PodmanService {
+	return &PodmanService{runner: runner}
+}
 
 // blobProgress хранит состояние загрузки одного blob'а
 type blobProgress struct {
@@ -85,69 +92,26 @@ func (pt *progressTracker) update(blobKey string, downloaded, total float64) (to
 	return percent, changed
 }
 
-func PullAndProgress(ctx context.Context, cmdLine string) (string, error) {
+// Pull запускает podman build/pull с pty-прогрессом.
+func (p *PodmanService) Pull(ctx context.Context, args []string) (string, error) {
 	tracker := newProgressTracker()
 
-	parts := strings.Fields(cmdLine)
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
-	env := os.Environ()
-	env = append(env, "TERM=xterm-256color")
-	env = append(env, "TMPDIR=/var/tmp")
-	env = append(env, "LC_ALL=C")
-	cmd.Env = env
-
-	ptmx, err := pty.Start(cmd)
+	output, _, err := p.runner.Run(ctx, args,
+		command.WithPTY(40, 120),
+		command.WithEnv("TERM=xterm-256color", "TMPDIR=/var/tmp", "LC_ALL=C"),
+		command.WithStreamHandler(func(r io.Reader) {
+			scanner := bufio.NewScanner(r)
+			scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
+			for scanner.Scan() {
+				parseProgressLine(ctx, scanner.Text(), tracker)
+			}
+			if scanErr := scanner.Err(); scanErr != nil && scanErr != io.EOF {
+				app.Log.Debugf("Pull scanner error: %v", scanErr)
+			}
+		}),
+	)
 	if err != nil {
-		return "", err
-	}
-
-	err = pty.Setsize(ptmx, &pty.Winsize{
-		Rows: 40,
-		Cols: 120,
-	})
-	if err != nil {
-		_ = ptmx.Close()
-		return "", err
-	}
-
-	var outputBuffer bytes.Buffer
-	var mu sync.Mutex
-
-	cmdDone := make(chan error, 1)
-	go func() {
-		cmdDone <- cmd.Wait()
-	}()
-
-	readerDone := make(chan struct{})
-	go func() {
-		defer close(readerDone)
-
-		scanner := bufio.NewScanner(ptmx)
-		scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
-
-		for scanner.Scan() {
-			line := scanner.Text()
-			mu.Lock()
-			outputBuffer.WriteString(line)
-			outputBuffer.WriteByte('\n')
-			mu.Unlock()
-			parseProgressLine(ctx, line, tracker)
-		}
-		if scanErr := scanner.Err(); scanErr != nil && scanErr != io.EOF {
-			app.Log.Debugf("PullAndProgress scanner error: %v", scanErr)
-		}
-	}()
-
-	cmdErr := <-cmdDone
-	_ = ptmx.Close()
-	<-readerDone
-
-	mu.Lock()
-	output := outputBuffer.String()
-	mu.Unlock()
-
-	if cmdErr != nil {
-		return output, fmt.Errorf(app.T_("Command failed with error: %v"), cmdErr)
+		return output, fmt.Errorf(app.T_("Command failed with error: %v"), err)
 	}
 
 	reply.CreateEventNotification(ctx, reply.StateAfter,
@@ -226,39 +190,32 @@ func parseSize(sizeStr string) (float64, error) {
 	return value, nil
 }
 
-// pruneOldImages удаляет старые образы Podman.
-func pruneOldImages(ctx context.Context) error {
-	appConfig := app.GetAppConfig(ctx)
+// PruneOldImages удаляет dangling-образы podman.
+func (p *PodmanService) PruneOldImages(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemPruneOldImages))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemPruneOldImages))
 
-	command := fmt.Sprintf("%s podman image prune -f", appConfig.ConfigManager.GetConfig().CommandPrefix)
-	cmd := exec.Command("sh", "-c", command)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(app.T_("Error deleting old images: %v, output: %s"), err, string(output))
+	if stdout, stderr, err := p.runner.Run(ctx, []string{"podman", "image", "prune", "-f"}, command.WithQuiet()); err != nil {
+		return fmt.Errorf(app.T_("Error deleting old images: %v, output: %s"), err, stdout+stderr)
 	}
 
-	command = fmt.Sprintf("%s podman images --noheading", appConfig.ConfigManager.GetConfig().CommandPrefix)
-	cmd = exec.Command("sh", "-c", command)
-	output, err := cmd.Output()
+	stdout, _, err := p.runner.Run(ctx, []string{"podman", "images", "--noheading"}, command.WithQuiet())
 	if err != nil {
 		return fmt.Errorf(app.T_("Error retrieving podman image: %v"), err)
 	}
 
-	scanner := bufio.NewScanner(bytes.NewReader(output))
+	scanner := bufio.NewScanner(strings.NewReader(stdout))
 	for scanner.Scan() {
-		line := scanner.Text()
-		fields := strings.Fields(line)
+		fields := strings.Fields(scanner.Text())
 		if len(fields) < 3 {
 			continue
 		}
-		if fields[0] == "<none>" {
-			imageID := fields[2]
-			command = fmt.Sprintf("%s podman rmi -f %s", appConfig.ConfigManager.GetConfig().CommandPrefix, imageID)
-			cmd = exec.Command("sh", "-c", command)
-			if out, err := cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf(app.T_("Error deleting image %s: %v, output: %s\n"), imageID, err, string(out))
-			}
+		if fields[0] != "<none>" {
+			continue
+		}
+		imageID := fields[2]
+		if rmStdout, rmStderr, rmErr := p.runner.Run(ctx, []string{"podman", "rmi", "-f", imageID}, command.WithQuiet()); rmErr != nil {
+			return fmt.Errorf(app.T_("Error deleting image %s: %v, output: %s\n"), imageID, rmErr, rmStdout+rmStderr)
 		}
 	}
 
@@ -271,84 +228,37 @@ func removeANSI(s string) string {
 	return ansiRegexp.ReplaceAllString(s, "")
 }
 
-// BootcUpgradeAndProgress запускает bootc upgrade с отображением прогресса
-func BootcUpgradeAndProgress(ctx context.Context, cmdLine string) (string, error) {
-	parts := strings.Fields(cmdLine)
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
-	env := os.Environ()
-	env = append(env, "TERM=xterm-256color")
-	env = append(env, "LC_ALL=C")
-	cmd.Env = env
-
-	ptmx, err := pty.Start(cmd)
-	if err != nil {
-		return "", err
-	}
-
-	err = pty.Setsize(ptmx, &pty.Winsize{
-		Rows: 40,
-		Cols: 120,
-	})
-	if err != nil {
-		_ = ptmx.Close()
-		return "", err
-	}
-
-	var outputBuffer bytes.Buffer
-	var mu sync.Mutex
-
-	cmdDone := make(chan error, 1)
-	go func() {
-		cmdDone <- cmd.Wait()
-	}()
-
-	// Горутина чтения вывода
-	readerDone := make(chan struct{})
-	go func() {
-		defer close(readerDone)
-
-		reader := bufio.NewReader(ptmx)
-		var lineBuffer bytes.Buffer
-
-		for {
-			b, readErr := reader.ReadByte()
-			if readErr != nil {
-				break
-			}
-
-			mu.Lock()
-			outputBuffer.WriteByte(b)
-			mu.Unlock()
-
-			if b == '\n' || b == '\r' {
-				if lineBuffer.Len() > 0 {
-					line := lineBuffer.String()
-					parseBootcProgressLine(ctx, line)
-					lineBuffer.Reset()
+// BootcUpgrade запускает bootc upgrade с отображением прогресса.
+func (p *PodmanService) BootcUpgrade(ctx context.Context, args []string) (string, error) {
+	output, _, err := p.runner.Run(ctx, args,
+		command.WithPTY(40, 120),
+		command.WithEnv("TERM=xterm-256color", "LC_ALL=C"),
+		command.WithStreamHandler(func(r io.Reader) {
+			reader := bufio.NewReader(r)
+			var lineBuffer bytes.Buffer
+			for {
+				b, readErr := reader.ReadByte()
+				if readErr != nil {
+					break
 				}
-			} else {
-				lineBuffer.WriteByte(b)
+				if b == '\n' || b == '\r' {
+					if lineBuffer.Len() > 0 {
+						parseBootcProgressLine(ctx, lineBuffer.String())
+						lineBuffer.Reset()
+					}
+				} else {
+					lineBuffer.WriteByte(b)
+				}
 			}
-		}
-
-		if lineBuffer.Len() > 0 {
-			parseBootcProgressLine(ctx, lineBuffer.String())
-		}
-	}()
-
-	cmdErr := <-cmdDone
-	_ = ptmx.Close()
-	<-readerDone
-
-	mu.Lock()
-	output := outputBuffer.String()
-	mu.Unlock()
-
-	if cmdErr != nil {
-		return output, fmt.Errorf(app.T_("Command failed with error: %v"), cmdErr)
+			if lineBuffer.Len() > 0 {
+				parseBootcProgressLine(ctx, lineBuffer.String())
+			}
+		}),
+	)
+	if err != nil {
+		return output, fmt.Errorf(app.T_("Command failed with error: %v"), err)
 	}
 
-	// Завершаем прогресс-бары
 	reply.CreateEventNotification(ctx, reply.StateAfter,
 		reply.WithEventName(reply.EventBootcLayers),
 		reply.WithProgress(true),

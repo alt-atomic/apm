@@ -63,6 +63,7 @@ type HostImageService struct {
 	appConfig     *app.Configuration
 	containerPath string
 	runner        command.Runner
+	podman        *PodmanService
 }
 
 // NewHostImageService создаёт новый сервис для работы с образами хоста.
@@ -71,6 +72,7 @@ func NewHostImageService(appConfig *app.Configuration, containerPath string, run
 		appConfig:     appConfig,
 		containerPath: containerPath,
 		runner:        runner,
+		podman:        NewPodmanService(runner),
 	}
 }
 
@@ -149,8 +151,7 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 			return "", fmt.Errorf(app.T_("Failed to build image. Please fix the configuration: %s"), h.appConfig.PathImageFile)
 		}
 	} else {
-		fullCmd := strings.TrimSpace(h.appConfig.CommandPrefix + " " + strings.Join(buildArgs, " "))
-		stdout, err := PullAndProgress(ctx, fullCmd)
+		stdout, err := h.podman.Pull(ctx, buildArgs)
 		if err != nil {
 			if apmLogs := extractAPMLogs(stdout); apmLogs != "" {
 				return "", fmt.Errorf("%s\n%s\n%s",
@@ -285,9 +286,7 @@ func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBootcUpgrade))
 	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBootcUpgrade))
 
-	upgradeCmd := fmt.Sprintf("%s bootc upgrade", h.appConfig.CommandPrefix)
-	_, err := BootcUpgradeAndProgress(ctx, upgradeCmd)
-	if err != nil {
+	if _, err := h.podman.BootcUpgrade(ctx, []string{"bootc", "upgrade"}); err != nil {
 		return fmt.Errorf(app.T_("Bootc upgrade failed: %v"), err)
 	}
 
@@ -361,7 +360,7 @@ func (h *HostImageService) BuildAndSwitch(ctx context.Context, pullImage bool, c
 		return err
 	}
 
-	return pruneOldImages(ctx)
+	return h.podman.PruneOldImages(ctx)
 }
 
 // buildAndSwitchSimple упрощенная версия BuildAndSwitch без проверки изменений и сохранения в БД
@@ -376,7 +375,7 @@ func (h *HostImageService) buildAndSwitchSimple(ctx context.Context, pullImage b
 		return err
 	}
 
-	return pruneOldImages(ctx)
+	return h.podman.PruneOldImages(ctx)
 }
 
 // uniqueStrings возвращает новый срез, содержащий только уникальные элементы исходного среза.
