@@ -7,7 +7,7 @@ import (
 )
 
 type treeWriter struct {
-	r       *ResponseRenderer
+	r       *responseRenderer
 	sb      strings.Builder
 	isError bool
 	mid     string
@@ -16,7 +16,7 @@ type treeWriter struct {
 	space   string
 }
 
-func (r *ResponseRenderer) renderTree(dataMap map[string]interface{}, isError bool) string {
+func (r *responseRenderer) renderTree(dataMap map[string]interface{}, isError bool) string {
 	tw := &treeWriter{
 		r:       r,
 		isError: isError,

@@ -57,7 +57,7 @@ func ErrorResponseFromError(err error) APIResponse {
 	return APIResponse{Error: &APIError{Message: err.Error()}}
 }
 
-type ResponseRenderer struct {
+type responseRenderer struct {
 	appConfig       *app.Config
 	colors          app.Colors
 	enumeratorStyle lipgloss.Style
@@ -66,24 +66,20 @@ type ResponseRenderer struct {
 	errorMsgStyle   lipgloss.Style
 }
 
-func NewResponseRenderer(appConfig *app.Config) *ResponseRenderer {
-	r := NewRendererFromColors(appConfig.ConfigManager.GetColors())
+func newResponseRenderer(appConfig *app.Config) *responseRenderer {
+	r := newRendererFromColors(appConfig.ConfigManager.GetColors())
 	r.appConfig = appConfig
 	return r
 }
 
-func NewRendererFromColors(colors app.Colors) *ResponseRenderer {
-	return &ResponseRenderer{
+func newRendererFromColors(colors app.Colors) *responseRenderer {
+	return &responseRenderer{
 		colors:          colors,
 		enumeratorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.TreeBranch)).MarginRight(1),
 		accentStyle:     lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colors.Accent)),
 		messageStyle:    lipgloss.NewStyle().Bold(true).MarginBottom(1),
 		errorMsgStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ResultError)),
 	}
-}
-
-func (r *ResponseRenderer) GetColors() app.Colors {
-	return r.colors
 }
 
 func IsTTY() bool {
@@ -95,7 +91,7 @@ func IsInteractive(appConfig *app.Config) bool {
 	return appConfig.ConfigManager.GetConfig().Format == app.FormatText && IsTTY()
 }
 
-func (r *ResponseRenderer) formatField(key string, value interface{}) string {
+func (r *responseRenderer) formatField(key string, value interface{}) string {
 	valStr := fmt.Sprintf("%v", value)
 	if key == "name" || key == "packageName" || key == "url" {
 		return r.accentStyle.Render(valStr)
@@ -103,7 +99,7 @@ func (r *ResponseRenderer) formatField(key string, value interface{}) string {
 	return valStr
 }
 
-func (r *ResponseRenderer) formatScalarValue(k string, v interface{}) string {
+func (r *responseRenderer) formatScalarValue(k string, v interface{}) string {
 	switch vv := v.(type) {
 	case nil:
 		return app.T_("no")
@@ -134,11 +130,11 @@ func (r *ResponseRenderer) formatScalarValue(k string, v interface{}) string {
 	}
 }
 
-func (r *ResponseRenderer) formatScalarField(k string, v interface{}) string {
+func (r *responseRenderer) formatScalarField(k string, v interface{}) string {
 	return fmt.Sprintf("%s: %s", TranslateKey(k), r.formatScalarValue(k, v))
 }
 
-func (r *ResponseRenderer) formatScalarFieldWithLabel(label, k string, v interface{}) string {
+func (r *responseRenderer) formatScalarFieldWithLabel(label, k string, v interface{}) string {
 	return fmt.Sprintf("%s: %s", label, r.formatScalarValue(k, v))
 }
 
@@ -230,11 +226,13 @@ func MessageWithHint(message string, full bool) string {
 	return message + ". " + app.T_("Use --full for detailed output")
 }
 
+// CliResponse — тонкая обёртка на время миграции на Reporter.CliResponse.
+// TODO(reporter-DI): удалить после перевода всех на reporter.CliResponse.
 func CliResponse(ctx context.Context, resp APIResponse) error {
-	return NewResponseRenderer(app.GetAppConfig(ctx)).CliResponse(ctx, resp)
+	return NewReporter(app.GetAppConfig(ctx)).CliResponse(ctx, resp)
 }
 
-func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) error {
+func (r *responseRenderer) CliResponse(ctx context.Context, resp APIResponse) error {
 	StopSpinner(r.appConfig)
 	format := r.appConfig.ConfigManager.GetConfig().Format
 	txVal := ctx.Value(helper.TransactionKey)
@@ -301,7 +299,7 @@ func (r *ResponseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 	return nil
 }
 
-func (r *ResponseRenderer) renderText(dataMap map[string]interface{}, isError bool) string {
+func (r *responseRenderer) renderText(dataMap map[string]interface{}, isError bool) string {
 	dataMap = normalizeDataMap(dataMap)
 	if r.appConfig != nil {
 		if fields := r.appConfig.ConfigManager.GetConfig().Fields; len(fields) > 0 {
@@ -315,7 +313,7 @@ func (r *ResponseRenderer) renderText(dataMap map[string]interface{}, isError bo
 	return r.RenderText(dataMap, formatType, isError)
 }
 
-func (r *ResponseRenderer) RenderText(dataMap map[string]interface{}, formatType string, isError bool) string {
+func (r *responseRenderer) RenderText(dataMap map[string]interface{}, formatType string, isError bool) string {
 	dataMap = normalizeDataMap(dataMap)
 	switch formatType {
 	case app.FormatTypePlain:

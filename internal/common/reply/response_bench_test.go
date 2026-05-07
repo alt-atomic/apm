@@ -57,7 +57,7 @@ func generateListData(n int) map[string]interface{} {
 
 // BenchmarkTreeDeep глубокая вложенность: 6 уровней по 5 ключей = ~19500 узлов
 func BenchmarkTreeDeep(b *testing.B) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := generateDeepData(6, 5)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -67,7 +67,7 @@ func BenchmarkTreeDeep(b *testing.B) {
 
 // BenchmarkPlainDeep то же для plain
 func BenchmarkPlainDeep(b *testing.B) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := generateDeepData(6, 5)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -77,7 +77,7 @@ func BenchmarkPlainDeep(b *testing.B) {
 
 // BenchmarkTreeWide 3000 вложенных объектов на верхнем уровне
 func BenchmarkTreeWide(b *testing.B) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := generateWideData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -87,7 +87,7 @@ func BenchmarkTreeWide(b *testing.B) {
 
 // BenchmarkPlainWide то же для plain
 func BenchmarkPlainWide(b *testing.B) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := generateWideData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -97,7 +97,7 @@ func BenchmarkPlainWide(b *testing.B) {
 
 // BenchmarkTreeList список из 3000 пакетов (типичный сценарий)
 func BenchmarkTreeList(b *testing.B) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := generateListData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -107,7 +107,7 @@ func BenchmarkTreeList(b *testing.B) {
 
 // BenchmarkPlainList то же для plain
 func BenchmarkPlainList(b *testing.B) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := generateListData(3000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -117,7 +117,7 @@ func BenchmarkPlainList(b *testing.B) {
 
 // BenchmarkFilterFields фильтрация полей из 3000 элементов
 func BenchmarkFilterFields(b *testing.B) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	fields := []string{"name", "version"}
 	data := generateListData(3000)
 	b.ResetTimer()

@@ -17,12 +17,9 @@
 package reply
 
 import (
-	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
-	"apm/internal/common/helper"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -187,60 +184,14 @@ func WithProgressDoneText(text string) NotificationOption {
 	}
 }
 
-// CreateEventNotification создаёт EventData, используя заданное состояние и опции.
+// CreateEventNotification — тонкая обёртка на время миграции на Reporter.CreateEventNotification.
+// TODO(reporter-DI): удалить после перевода всех c на reporter.CreateEventNotification.
 func CreateEventNotification(ctx context.Context, state string, opts ...NotificationOption) {
-	// Устанавливаем значения по умолчанию.
-	ed := EventData{
-		Name:            "",
-		State:           state,
-		Type:            EventTypeNotification,
-		ProgressPercent: 0,
-	}
-
-	// Применяем переданные опции.
-	for _, opt := range opts {
-		opt(&ed)
-	}
-
-	// Если имя события не задано
-	if ed.Name == "" {
-		ed.Name = "unknown"
-	}
-
-	if ed.View == "" {
-		ed.View = getTaskText(ed.Name)
-	}
-
-	DispatchEvent(ctx, &ed)
+	NewReporter(app.GetAppConfig(ctx)).CreateEventNotification(ctx, state, opts...)
 }
 
-// DispatchEvent отправляет уведомления.
-func DispatchEvent(ctx context.Context, eventData *EventData) {
-	appConfig := app.GetAppConfig(ctx)
-	txVal := ctx.Value(helper.TransactionKey)
-	txStr, ok := txVal.(string)
-	if ok {
-		eventData.Transaction = txStr
-	}
-
-	config := appConfig.ConfigManager.GetConfig()
-
-	if config.Verbose {
-		logVerboseEvent(eventData)
-	} else {
-		UpdateTask(appConfig, eventData.Type, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
-	}
-
-	switch config.Format {
-	case app.FormatDBus:
-		SendNotificationResponse(eventData, appConfig.DBusManager.GetConnection())
-	case app.FormatHTTP:
-		SendWebSocketNotification(eventData)
-	}
-}
-
-// SendNotificationResponse отправляет ответы через DBus.
-func SendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
+// sendNotificationResponse отправляет ответы через DBus.
+func sendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
 	message, err := json.Marshal(eventData)
 	if err != nil {
 		app.Log.Debug(err.Error())
@@ -260,8 +211,8 @@ func SendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
 	}
 }
 
-// SendWebSocketNotification отправляет событие через WebSocket
-func SendWebSocketNotification(eventData *EventData) {
+// sendWebSocketNotification отправляет событие через WebSocket.
+func sendWebSocketNotification(eventData *EventData) {
 	if wsHub == nil {
 		app.Log.Debug("WebSocket hub is not initialized")
 		return
@@ -269,41 +220,14 @@ func SendWebSocketNotification(eventData *EventData) {
 	wsHub.BroadcastEvent(eventData)
 }
 
-// SendTaskResult отправляет результат фоновой задачи через WebSocket и D-Bus
+// SendTaskResult — тонкая обёртка на время миграции на Reporter.SendTaskResult.
+// TODO(reporter-DI): удалить после перевода всех на reporter.SendTaskResult.
 func SendTaskResult(ctx context.Context, taskName string, data interface{}, taskErr error) {
-	appConfig := app.GetAppConfig(ctx)
-
-	txVal := ctx.Value(helper.TransactionKey)
-	txStr, _ := txVal.(string)
-
-	event := TaskResultEvent{
-		Type:        EventTypeTaskResult,
-		Name:        taskName,
-		Transaction: txStr,
-		Data:        data,
-	}
-
-	if taskErr != nil {
-		var apmErr apmerr.APMError
-		if errors.As(taskErr, &apmErr) {
-			event.Error = &APIError{ErrorCode: apmErr.Type, Message: taskErr.Error()}
-		} else {
-			event.Error = &APIError{Message: taskErr.Error()}
-		}
-		event.Data = nil
-	}
-
-	format := appConfig.ConfigManager.GetConfig().Format
-	switch format {
-	case app.FormatDBus:
-		SendTaskResultDBus(&event, appConfig.DBusManager.GetConnection())
-	case app.FormatHTTP:
-		SendTaskResultWebSocket(&event)
-	}
+	NewReporter(app.GetAppConfig(ctx)).SendTaskResult(ctx, taskName, data, taskErr)
 }
 
-// SendTaskResultWebSocket отправляет результат задачи через WebSocket
-func SendTaskResultWebSocket(event *TaskResultEvent) {
+// sendTaskResultWebSocket отправляет результат задачи через WebSocket.
+func sendTaskResultWebSocket(event *TaskResultEvent) {
 	if wsHub == nil {
 		app.Log.Debug("WebSocket hub is not initialized")
 		return
@@ -311,8 +235,8 @@ func SendTaskResultWebSocket(event *TaskResultEvent) {
 	wsHub.BroadcastEvent(event)
 }
 
-// SendTaskResultDBus отправляет результат задачи через D-Bus сигнал
-func SendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
+// sendTaskResultDBus отправляет результат задачи через D-Bus сигнал.
+func sendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
 	message, err := json.Marshal(event)
 	if err != nil {
 		app.Log.Debug(err.Error())

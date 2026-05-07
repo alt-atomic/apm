@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (r *ResponseRenderer) renderPlain(dataMap map[string]interface{}, isError ...bool) string {
+func (r *responseRenderer) renderPlain(dataMap map[string]interface{}, isError ...bool) string {
 	var lines []string
 
 	keys := sortedKeys(dataMap)
@@ -35,7 +35,7 @@ func (r *ResponseRenderer) renderPlain(dataMap map[string]interface{}, isError .
 	return strings.Join(lines, "\n")
 }
 
-func (r *ResponseRenderer) plainField(prefix, key string, value interface{}) []string {
+func (r *responseRenderer) plainField(prefix, key string, value interface{}) []string {
 	fullLabel := TranslateKey(key)
 	if prefix != "" {
 		fullLabel = prefix + "." + fullLabel

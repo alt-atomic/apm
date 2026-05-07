@@ -161,8 +161,8 @@ func StopSpinner(appConfig *app.Config) {
 	restoreEcho()
 }
 
-// UpdateTask обновление задачи/прогресса.
-func UpdateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
+// updateTask обновление задачи/прогресса.
+func updateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
 	if !IsInteractive(appConfig) {
 		return
 	}

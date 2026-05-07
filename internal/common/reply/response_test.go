@@ -247,7 +247,7 @@ func TestToDataMap_NilOnInvalid(t *testing.T) {
 }
 
 func TestRenderPlain_MessageFirst(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message": "Package installed",
 		"name":    "vim",
@@ -264,7 +264,7 @@ func TestRenderPlain_MessageFirst(t *testing.T) {
 }
 
 func TestRenderPlain_ScalarFields(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"name":    "bash",
 		"version": "5.2",
@@ -280,7 +280,7 @@ func TestRenderPlain_ScalarFields(t *testing.T) {
 }
 
 func TestRenderPlain_NestedMap(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"info": map[string]interface{}{
 			"name":    "gcc",
@@ -296,7 +296,7 @@ func TestRenderPlain_NestedMap(t *testing.T) {
 }
 
 func TestRenderPlain_ScalarList(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"aliases": []interface{}{"vi", "vim.basic"},
 	}
@@ -308,7 +308,7 @@ func TestRenderPlain_ScalarList(t *testing.T) {
 }
 
 func TestRenderPlain_EmptySlice(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"depends": []interface{}{},
 	}
@@ -319,7 +319,7 @@ func TestRenderPlain_EmptySlice(t *testing.T) {
 }
 
 func TestRenderPlain_ObjectList(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"packages": []interface{}{
 			map[string]interface{}{"name": "vim", "version": "9.0"},
@@ -400,7 +400,7 @@ func TestErrorResponseFromError_WrappedAPMError(t *testing.T) {
 }
 
 func TestRenderText_TreeFormat(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message": "Test message",
 		"name":    "test-package",
@@ -420,7 +420,7 @@ func TestRenderText_TreeFormat(t *testing.T) {
 }
 
 func TestRenderText_PlainFormat(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message": "Test message",
 		"name":    "test-package",
@@ -440,7 +440,7 @@ func TestRenderText_PlainFormat(t *testing.T) {
 }
 
 func TestRenderText_ErrorFlag(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message": "Something went wrong",
 	}
@@ -454,7 +454,7 @@ func TestRenderText_ErrorFlag(t *testing.T) {
 }
 
 func TestRenderText_DefaultsToTree(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message": "hello",
 		"key":     "value",
@@ -469,7 +469,7 @@ func TestRenderText_DefaultsToTree(t *testing.T) {
 }
 
 func TestRenderText_NestedData(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message": "Package info",
 		"details": map[string]interface{}{
@@ -487,7 +487,7 @@ func TestRenderText_NestedData(t *testing.T) {
 }
 
 func TestRenderText_MultilineValue(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"message":     "Package info",
 		"description": "First line\nSecond line\nThird line",
@@ -514,7 +514,7 @@ func TestRenderText_MultilineValue(t *testing.T) {
 }
 
 func TestRenderText_ListData(t *testing.T) {
-	r := NewRendererFromColors(app.GetDefaultColors())
+	r := newRendererFromColors(app.GetDefaultColors())
 	data := map[string]interface{}{
 		"packages": []interface{}{
 			map[string]interface{}{"name": "aaa", "version": "1.0"},
