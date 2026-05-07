@@ -142,14 +142,16 @@ type Manager struct {
 	dbService  packageDBService
 	aptActions aptBindingActions
 	runner     commandRunner
+	reporter   *reply.Reporter
 }
 
-// NewKernelManager создает новый KernelManager
-func NewKernelManager(dbService packageDBService, aptActions aptBindingActions, runner commandRunner) *Manager {
+// NewKernelManager создает новый KernelManager.
+func NewKernelManager(dbService packageDBService, aptActions aptBindingActions, runner commandRunner, reporter *reply.Reporter) *Manager {
 	return &Manager{
 		dbService:  dbService,
 		aptActions: aptActions,
 		runner:     runner,
+		reporter:   reporter,
 	}
 }
 
@@ -191,8 +193,8 @@ func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 
 // GetCurrentKernel возвращает информацию о текущем запущенном ядре
 func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
 
 	stdout, _, err := km.runner.Run(ctx, []string{"uname", "-r"}, command.WithQuiet())
 	if err != nil {
@@ -248,8 +250,8 @@ func (km *Manager) GetDefaultKernel() (*Info, error) {
 
 // ListKernels возвращает список доступных ядер для указанного flavour
 func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*Info, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelList))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelList))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelList))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelList))
 
 	nameValue := "kernel-image-"
 	if flavour != "" {
@@ -401,8 +403,8 @@ func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeader
 
 // InstallKernel устанавливает ядро с модулями
 func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []string, includeHeaders bool, dryRun bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstall))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstall))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstall))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstall))
 
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
 
@@ -416,8 +418,8 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 
 // InstallModules устанавливает или симулирует установку пакетов модулей
 func (km *Manager) InstallModules(ctx context.Context, installPackages []string, dryRun bool) (*libApt.PackageChanges, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstallMods))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstallMods))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstallMods))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstallMods))
 	if dryRun {
 		return km.aptActions.SimulateInstall(installPackages)
 	}
@@ -433,8 +435,8 @@ func (km *Manager) RemovePackages(ctx context.Context, removePackages []string, 
 		event = reply.EventKernelCheckRemove
 	}
 
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
 
 	if dryRun {
 		return km.aptActions.SimulateRemove(removePackages, false, false)

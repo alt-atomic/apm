@@ -24,14 +24,15 @@ type tmpFilesEntry struct {
 }
 
 type tmpFilesAnalysis struct {
+	reporter    *reply.Reporter
 	Missing     []tmpFilesEntry
 	Unsupported []string
 	Existing    map[string]string
 }
 
 func (a *tmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintTmpfiles))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintTmpfiles))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintTmpfiles))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintTmpfiles))
 
 	existing, err := a.readEntries(rootfs)
 	if err != nil {

@@ -33,12 +33,13 @@ import (
 
 // PodmanService инкапсулирует операции с podman/bootc.
 type PodmanService struct {
-	runner command.Runner
+	runner   command.Runner
+	reporter *reply.Reporter
 }
 
 // NewPodmanService создаёт сервис для работы с podman/bootc.
-func NewPodmanService(runner command.Runner) *PodmanService {
-	return &PodmanService{runner: runner}
+func NewPodmanService(runner command.Runner, reporter *reply.Reporter) *PodmanService {
+	return &PodmanService{runner: runner, reporter: reporter}
 }
 
 // blobProgress хранит состояние загрузки одного blob'а
@@ -103,7 +104,7 @@ func (p *PodmanService) Pull(ctx context.Context, args []string) (string, error)
 			scanner := bufio.NewScanner(r)
 			scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 			for scanner.Scan() {
-				parseProgressLine(ctx, scanner.Text(), tracker)
+				p.parseProgressLine(ctx, scanner.Text(), tracker)
 			}
 			if scanErr := scanner.Err(); scanErr != nil && scanErr != io.EOF {
 				app.Log.Debugf("Pull scanner error: %v", scanErr)
@@ -114,7 +115,7 @@ func (p *PodmanService) Pull(ctx context.Context, args []string) (string, error)
 		return output, fmt.Errorf(app.T_("Command failed with error: %v"), err)
 	}
 
-	reply.CreateEventNotification(ctx, reply.StateAfter,
+	p.reporter.CreateEventNotification(ctx, reply.StateAfter,
 		reply.WithEventName(reply.EventSystemPullImage),
 		reply.WithProgress(true),
 		reply.WithProgressPercent(100),
@@ -123,8 +124,8 @@ func (p *PodmanService) Pull(ctx context.Context, args []string) (string, error)
 	return output, nil
 }
 
-// parseProgressLine разбирает строки вывода podman и обновляет общий прогресс
-func parseProgressLine(ctx context.Context, rawLine string, tracker *progressTracker) {
+// parseProgressLine разбирает строки вывода podman и обновляет общий прогресс.
+func (p *PodmanService) parseProgressLine(ctx context.Context, rawLine string, tracker *progressTracker) {
 	line := strings.TrimSpace(removeANSI(rawLine))
 
 	if !strings.HasPrefix(line, "Copying blob ") {
@@ -150,7 +151,7 @@ func parseProgressLine(ctx context.Context, rawLine string, tracker *progressTra
 
 	percent, changed := tracker.update(blobKey, downloadedBytes, totalBytes)
 	if changed {
-		reply.CreateEventNotification(ctx, reply.StateBefore,
+		p.reporter.CreateEventNotification(ctx, reply.StateBefore,
 			reply.WithEventName(reply.EventSystemPullImage),
 			reply.WithEventView(speed),
 			reply.WithProgress(true),
@@ -192,8 +193,8 @@ func parseSize(sizeStr string) (float64, error) {
 
 // PruneOldImages удаляет dangling-образы podman.
 func (p *PodmanService) PruneOldImages(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemPruneOldImages))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemPruneOldImages))
+	p.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemPruneOldImages))
+	defer p.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemPruneOldImages))
 
 	if stdout, stderr, err := p.runner.Run(ctx, []string{"podman", "image", "prune", "-f"}, command.WithQuiet()); err != nil {
 		return fmt.Errorf(app.T_("Error deleting old images: %v, output: %s"), err, stdout+stderr)
@@ -243,7 +244,7 @@ func (p *PodmanService) BootcUpgrade(ctx context.Context, args []string) (string
 				}
 				if b == '\n' || b == '\r' {
 					if lineBuffer.Len() > 0 {
-						parseBootcProgressLine(ctx, lineBuffer.String())
+						p.parseBootcProgressLine(ctx, lineBuffer.String())
 						lineBuffer.Reset()
 					}
 				} else {
@@ -251,7 +252,7 @@ func (p *PodmanService) BootcUpgrade(ctx context.Context, args []string) (string
 				}
 			}
 			if lineBuffer.Len() > 0 {
-				parseBootcProgressLine(ctx, lineBuffer.String())
+				p.parseBootcProgressLine(ctx, lineBuffer.String())
 			}
 		}),
 	)
@@ -259,12 +260,12 @@ func (p *PodmanService) BootcUpgrade(ctx context.Context, args []string) (string
 		return output, fmt.Errorf(app.T_("Command failed with error: %v"), err)
 	}
 
-	reply.CreateEventNotification(ctx, reply.StateAfter,
+	p.reporter.CreateEventNotification(ctx, reply.StateAfter,
 		reply.WithEventName(reply.EventBootcLayers),
 		reply.WithProgress(true),
 		reply.WithProgressPercent(100),
 	)
-	reply.CreateEventNotification(ctx, reply.StateAfter,
+	p.reporter.CreateEventNotification(ctx, reply.StateAfter,
 		reply.WithEventName(reply.EventBootcDownload),
 		reply.WithProgress(true),
 		reply.WithProgressPercent(100),
@@ -273,8 +274,8 @@ func (p *PodmanService) BootcUpgrade(ctx context.Context, args []string) (string
 	return output, nil
 }
 
-// parseBootcProgressLine парсит вывод bootc upgrade для отображения прогресса
-func parseBootcProgressLine(ctx context.Context, rawLine string) {
+// parseBootcProgressLine парсит вывод bootc upgrade для отображения прогресса.
+func (p *PodmanService) parseBootcProgressLine(ctx context.Context, rawLine string) {
 	line := strings.TrimSpace(removeANSI(rawLine))
 
 	if strings.Contains(line, "Fetching layers") {
@@ -286,7 +287,7 @@ func parseBootcProgressLine(ctx context.Context, rawLine string) {
 			if err1 == nil && err2 == nil && total > 0 {
 				percent := (current / total) * 100
 				viewText := fmt.Sprintf(app.T_("Fetching layers %d/%d"), int(current), int(total))
-				reply.CreateEventNotification(ctx, reply.StateBefore,
+				p.reporter.CreateEventNotification(ctx, reply.StateBefore,
 					reply.WithEventName(reply.EventBootcLayers),
 					reply.WithEventView(viewText),
 					reply.WithProgress(true),
@@ -309,7 +310,7 @@ func parseBootcProgressLine(ctx context.Context, rawLine string) {
 			totalBytes, errBytes := parseSize(totalStr)
 			if errDownload == nil && errBytes == nil && totalBytes > 0 {
 				percent := (downloadedBytes / totalBytes) * 100
-				reply.CreateEventNotification(ctx, reply.StateBefore,
+				p.reporter.CreateEventNotification(ctx, reply.StateBefore,
 					reply.WithEventName(reply.EventBootcDownload),
 					reply.WithEventView(speed),
 					reply.WithProgress(true),

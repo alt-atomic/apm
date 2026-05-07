@@ -40,6 +40,7 @@ import (
 // PackageDBService предоставляет сервис для операций с базой данных пакетов.
 type PackageDBService struct {
 	dbManager app.DatabaseManager
+	reporter  *reply.Reporter
 	realDb    *gorm.DB
 }
 
@@ -85,9 +86,10 @@ func (s *PackageDBService) db() (*gorm.DB, error) {
 }
 
 // NewPackageDBService создаёт новый сервис для работы с базой данных пакетов.
-func NewPackageDBService(dbManager app.DatabaseManager) *PackageDBService {
+func NewPackageDBService(dbManager app.DatabaseManager, reporter *reply.Reporter) *PackageDBService {
 	return &PackageDBService{
 		dbManager: dbManager,
+		reporter:  reporter,
 	}
 }
 
@@ -194,8 +196,8 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
 
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSavePackagesToDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSavePackagesToDB))
+	s.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSavePackagesToDB))
+	defer s.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSavePackagesToDB))
 
 	db, err := s.db()
 	if err != nil {

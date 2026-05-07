@@ -43,6 +43,7 @@ import (
 var (
 	ctx, globalCancel = context.WithCancel(context.Background())
 	appConfig         *app.Config
+	reporter          *reply.Reporter
 )
 
 func main() {
@@ -56,13 +57,13 @@ func main() {
 	helper.SetupHelpTemplates()
 	app.Log.Debug("Starting apm…")
 
+	reporter = reply.NewReporter(appConfig)
 	setupSignalHandling()
-	ctx = context.WithValue(ctx, app.AppConfigKey, appConfig)
 
-	systemCommands := system.CommandList(appConfig)
-	distroboxCommands := distrobox.CommandList(appConfig)
-	kernelCommands := kernel.CommandList(appConfig)
-	repoCommands := repository.CommandList(appConfig)
+	systemCommands := system.CommandList(appConfig, reporter)
+	distroboxCommands := distrobox.CommandList(appConfig, reporter)
+	kernelCommands := kernel.CommandList(appConfig, reporter)
+	repoCommands := repository.CommandList(appConfig, reporter)
 
 	cmds := []*cli.Command{
 		{
@@ -267,7 +268,7 @@ func sessionDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	distroActions := distrobox.NewActions(appConfig)
+	distroActions := distrobox.NewActions(appConfig, reporter)
 	distroObj := distrobox.NewDBusWrapper(distroActions, ctx)
 
 	// Экспортируем в D-Bus
@@ -320,7 +321,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	sysActions := system.NewActions(appConfig)
+	sysActions := system.NewActions(appConfig, reporter)
 	conn := appConfig.DBusManager.GetConnection()
 
 	// Экспортируем system методы в D-Bus
@@ -336,7 +337,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 
 	// Экспортируем kernel методы только для не-атомарных систем
 	if !appConfig.ConfigManager.GetConfig().IsAtomic {
-		kernelActions := kernel.NewActions(appConfig)
+		kernelActions := kernel.NewActions(appConfig, reporter)
 		kernelObj := kernel.NewDBusWrapper(kernelActions, conn, ctx)
 		if err = appConfig.DBusManager.GetConnection().Export(kernelObj, "/org/altlinux/APM", "org.altlinux.APM.kernel"); err != nil {
 			return err
@@ -345,7 +346,7 @@ func systemDbus(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// Экспортируем repository методы в D-Bus
-	repoActions := repository.NewActions(appConfig)
+	repoActions := repository.NewActions(appConfig, reporter)
 	repoObj := repository.NewDBusWrapper(repoActions, conn, ctx)
 	if err = appConfig.DBusManager.GetConnection().Export(repoObj, "/org/altlinux/APM", "org.altlinux.APM.repo"); err != nil {
 		return err
@@ -404,13 +405,13 @@ func httpServer(ctx context.Context, cmd *cli.Command) error {
 	)
 
 	// System модуль
-	sysActions := system.NewActions(appConfig)
-	sysHTTPWrapper := system.NewHTTPWrapper(sysActions, appConfig, ctx)
+	sysActions := system.NewActions(appConfig, reporter)
+	sysHTTPWrapper := system.NewHTTPWrapper(sysActions, appConfig, reporter, ctx)
 	server.RegisterEndpoints(sysHTTPWrapper.GetEndpoints(appConfig.ConfigManager.GetConfig().IsAtomic))
 
 	// Repo модуль
-	repoActions := repository.NewActions(appConfig)
-	repoHTTPWrapper := repository.NewHTTPWrapper(repoActions, appConfig, ctx)
+	repoActions := repository.NewActions(appConfig, reporter)
+	repoHTTPWrapper := repository.NewHTTPWrapper(repoActions, appConfig, reporter, ctx)
 	server.RegisterEndpoints(repoHTTPWrapper.GetEndpoints())
 
 	// Регистрируем OpenAPI документацию из registry
@@ -468,8 +469,8 @@ func httpSession(ctx context.Context, cmd *cli.Command) error {
 	)
 
 	// Distrobox модуль
-	distroboxActions := distrobox.NewActions(appConfig)
-	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, ctx)
+	distroboxActions := distrobox.NewActions(appConfig, reporter)
+	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, reporter, ctx)
 	server.RegisterEndpoints(distroboxHTTPWrapper.GetEndpoints())
 
 	// Параллельно обновляем иконки
@@ -499,7 +500,7 @@ func cliError(err error) {
 		return
 	}
 
-	_ = reply.CliResponse(ctx, reply.ErrorResponseFromError(err))
+	_ = reporter.CliResponse(ctx, reply.ErrorResponseFromError(err))
 }
 
 var cleanupOnce sync.Once

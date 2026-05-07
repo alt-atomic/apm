@@ -146,7 +146,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	// First, try to install the test package (ignore if already newest version)
+	// First, try to install the test package (ignore if already the newest version)
 	err := actions.InstallPackages([]string{testPackage}, nil, false)
 	if err != nil {
 		if matchedErr := aptErrors.CheckError(err.Error()); matchedErr != nil {

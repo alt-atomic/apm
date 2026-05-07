@@ -34,9 +34,9 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 }
 
 // CommandList возвращает список CLI-подкоманд для AppStream модуля.
-func CommandList(appConfig *app.Config) []*cli.Command {
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+func CommandList(appConfig *app.Config, reporter *reply.Reporter) []*cli.Command {
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
 
 	return []*cli.Command{
 		{
@@ -45,9 +45,9 @@ func CommandList(appConfig *app.Config) []*cli.Command {
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Update(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -56,13 +56,13 @@ func CommandList(appConfig *app.Config) []*cli.Command {
 			ArgsUsage: "<package_name>",
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				if cmd.Args().Len() == 0 {
-					return reply.CliResponse(ctx, newErrorResponseFromError(errors.New(app.T_("Package name is required"))))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(errors.New(app.T_("Package name is required"))))
 				}
 				resp, err := actions.Info(ctx, cmd.Args().First())
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -71,9 +71,9 @@ func CommandList(appConfig *app.Config) []*cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Categories(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -108,7 +108,7 @@ func CommandList(appConfig *app.Config) []*cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				filters, err := swcat.FilterConfig.Parse(cmd.StringSlice("filter"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				params := ListParams{
@@ -121,9 +121,9 @@ func CommandList(appConfig *app.Config) []*cli.Command {
 
 				resp, err := actions.List(ctx, params)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 	}

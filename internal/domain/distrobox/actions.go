@@ -33,23 +33,25 @@ import (
 
 type Actions struct {
 	appConfig             *app.Config
+	reporter              *reply.Reporter
 	servicePackage        packageService
 	serviceDistroDatabase distroDBService
 	serviceDistroAPI      distroAPIService
 	iconService           IconServiceProvider
 }
 
-func NewActions(appConfig *app.Config) *Actions {
-	distroDBSvc := sandbox.NewDistroDBService(appConfig.DatabaseManager)
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
+	distroDBSvc := sandbox.NewDistroDBService(appConfig.DatabaseManager, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	distroPackageSvc := sandbox.NewPackageService(distroDBSvc, runner)
-	distroAPISvc := sandbox.NewDistroAPIService(runner)
-	iconSvc := icon.NewIconService(appConfig.DatabaseManager, runner)
+	distroPackageSvc := sandbox.NewPackageService(distroDBSvc, runner, reporter)
+	distroAPISvc := sandbox.NewDistroAPIService(runner, reporter)
+	iconSvc := icon.NewIconService(appConfig.DatabaseManager, runner, reporter)
 
 	return &Actions{
 		appConfig:             appConfig,
+		reporter:              reporter,
 		servicePackage:        distroPackageSvc,
 		serviceDistroDatabase: distroDBSvc,
 		serviceDistroAPI:      distroAPISvc,

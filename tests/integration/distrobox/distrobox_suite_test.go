@@ -44,9 +44,9 @@ func (s *DistroboxTestSuite) SetupSuite() {
 		s.T().Skip("Distrobox tests should be run without root privileges")
 	}
 
-	appConfig, ctx := common.GetTestAppConfig(s.T())
+	appConfig, reporter, ctx := common.GetTestAppConfig(s.T())
 
-	s.actions = distrobox.NewActions(appConfig)
+	s.actions = distrobox.NewActions(appConfig, reporter)
 	s.ctx = ctx
 	s.containerName = "apm-test-suite"
 	s.image = "registry.altlinux.org/sisyphus/base:latest"

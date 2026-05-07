@@ -37,7 +37,7 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-func findPkgWithInstalled(appConfig *app.Config, installed bool) func(ctx context.Context, cmd *cli.Command) {
+func findPkgWithInstalled(appConfig *app.Config, reporter *reply.Reporter, installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
 		args := cmd.Args().Slice()
 
@@ -58,7 +58,7 @@ func findPkgWithInstalled(appConfig *app.Config, installed bool) func(ctx contex
 		}
 
 		like := currentToken + "%"
-		svc := NewActions(appConfig).serviceAptDatabase
+		svc := NewActions(appConfig, reporter).serviceAptDatabase
 		if svc == nil {
 			return
 		}
@@ -75,12 +75,12 @@ func findPkgWithInstalled(appConfig *app.Config, installed bool) func(ctx contex
 }
 
 // findPkgInfoOnlyFirstArg выполняет поиск информации о пакете только для первого аргумента.
-func findPkgInfoOnlyFirstArg(appConfig *app.Config) func(ctx context.Context, cmd *cli.Command) {
+func findPkgInfoOnlyFirstArg(appConfig *app.Config, reporter *reply.Reporter) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
 		if cmd.NArg() >= 2 {
 			return
 		}
-		findPkgWithInstalled(appConfig, false)(ctx, cmd)
+		findPkgWithInstalled(appConfig, reporter, false)(ctx, cmd)
 	}
 }
 
@@ -107,8 +107,8 @@ var aptOptionFlag = func() cli.Flag {
 	}
 }
 
-func upgradeCommand(appConfig *app.Config) *cli.Command {
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+func upgradeCommand(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 	if appConfig.ConfigManager.GetConfig().IsAtomic {
 		return &cli.Command{
@@ -124,9 +124,9 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageUpdate(ctx, !cmd.Bool("no-cache"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		}
 	}
@@ -154,22 +154,22 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 			if cmd.Bool("simulate") {
 				resp, err := actions.CheckUpgrade(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}
 			resp, err := actions.Upgrade(ctx, cmd.Bool("download-only"))
 			if err != nil {
-				return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 			}
-			return reply.CliResponse(ctx, reply.OK(resp))
+			return reporter.CliResponse(ctx, reply.OK(resp))
 		}),
 	}
 }
 
-func CommandList(appConfig *app.Config) *cli.Command {
-	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
+	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 	imageCmds := []*cli.Command{
 		{
@@ -190,9 +190,9 @@ func CommandList(appConfig *app.Config) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageBuild(ctx, cmd.String("config"), cmd.String("workdir"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -213,10 +213,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageLint(ctx, cmd.String("root"), cmd.Bool("fix"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 	}
@@ -253,10 +253,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"), cmd.String("config"), cmd.String("workdir"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -265,10 +265,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageStatus(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -284,10 +284,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageUpdate(ctx, !cmd.Bool("no-cache"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -312,10 +312,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -325,10 +325,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageFixNss(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -344,10 +344,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 						}
 						resp, err := actions.ImageSyncGroups(ctx, dirs)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 			}...,
@@ -379,17 +379,17 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckReinstall(ctx, cmd.Args().Slice())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}
 				resp, err := actions.Reinstall(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(appConfig, true),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, true),
 		},
 		{
 			Name:      "install",
@@ -421,17 +421,17 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckInstall(ctx, cmd.Args().Slice())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}
 				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"), cmd.Bool("download-only"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(appConfig, false),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, false),
 		},
 		{
 			Name:      "remove",
@@ -464,18 +464,18 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckRemove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}
 				resp, err := actions.Remove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"),
 					cmd.Bool("yes"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(appConfig, true),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, true),
 		},
 		{
 			Name:  "update",
@@ -496,13 +496,13 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				applyAptOptions(cmd, actions)
 				resp, err := actions.Update(ctx, cmd.Bool("no-lock"), cmd.Bool("only-db"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
-		upgradeCommand(appConfig),
+		upgradeCommand(appConfig, reporter),
 		{
 			Name:      "info",
 			Usage:     app.T_("Package information"),
@@ -517,15 +517,15 @@ func CommandList(appConfig *app.Config) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Info(ctx, cmd.Args().First())
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 				full := cmd.Bool("full")
-				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+				return reporter.CliResponse(ctx, reply.OK(map[string]interface{}{
 					"message":     reply.MessageWithHint(resp.Message, full),
 					"packageInfo": actions.FormatPackageOutput(resp.PackageInfo, full),
 				}))
 			}),
-			ShellComplete: findPkgInfoOnlyFirstArg(appConfig),
+			ShellComplete: findPkgInfoOnlyFirstArg(appConfig, reporter),
 		},
 		{
 			Name:      "search",
@@ -547,10 +547,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Search(ctx, cmd.Args().First(), cmd.Bool("installed"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 				full := cmd.Bool("full")
-				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+				return reporter.CliResponse(ctx, reply.OK(map[string]interface{}{
 					"message":  reply.MessageWithHint(resp.Message, full),
 					"packages": actions.FormatPackageOutput(resp.Packages, full),
 				}))
@@ -562,9 +562,9 @@ func CommandList(appConfig *app.Config) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Sections(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -612,7 +612,7 @@ func CommandList(appConfig *app.Config) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				filters, err := _package.SystemFilterConfig.Parse(cmd.StringSlice("filter"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				params := ListParams{
@@ -626,10 +626,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 
 				resp, err := actions.List(ctx, params)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 				full := cmd.Bool("full")
-				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+				return reporter.CliResponse(ctx, reply.OK(map[string]interface{}{
 					"message":    reply.MessageWithHint(resp.Message, full),
 					"packages":   actions.FormatPackageOutput(resp.Packages, full),
 					"totalCount": resp.TotalCount,
@@ -640,7 +640,7 @@ func CommandList(appConfig *app.Config) *cli.Command {
 			Name:     "application",
 			Usage:    app.T_("Module for application information"),
 			Category: app.T_("Applications"),
-			Commands: appstream.CommandList(appConfig),
+			Commands: appstream.CommandList(appConfig, reporter),
 		},
 		{
 			Name:     "image",

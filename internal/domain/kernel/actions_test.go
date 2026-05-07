@@ -2,9 +2,9 @@ package kernel
 
 import (
 	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	aptlib "apm/internal/common/binding/apt/lib"
+	"apm/internal/common/reply"
 	"apm/internal/common/testutil"
 	"apm/internal/domain/kernel/service"
 	"context"
@@ -152,8 +152,10 @@ func newTestActions(km *mockKernelManager, apt *mockAptActions, db *mockAptDatab
 	if db == nil {
 		db = &mockAptDatabase{}
 	}
+	cfg := testutil.DefaultAppConfig()
 	return &Actions{
-		appConfig:          testutil.DefaultAppConfig(),
+		appConfig:          cfg,
+		reporter:           reply.NewReporter(cfg),
 		kernelManager:      km,
 		serviceAptActions:  apt,
 		serviceAptDatabase: db,
@@ -161,8 +163,7 @@ func newTestActions(km *mockKernelManager, apt *mockAptActions, db *mockAptDatab
 }
 
 func testContext() context.Context {
-	cfg := testutil.DefaultAppConfig()
-	return context.WithValue(context.Background(), app.AppConfigKey, cfg)
+	return context.Background()
 }
 
 func testKernel(flavour, version, fullVersion string) *service.Info {

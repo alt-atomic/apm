@@ -44,8 +44,9 @@ const (
 // T - тип Actions для конкретного модуля.
 func WithOptions[T any](
 	appConfig *app.Config,
+	reporter *reply.Reporter,
 	rootCheck RootCheckMode,
-	newActions func(*app.Config) *T,
+	newActions func(*app.Config, *reply.Reporter) *T,
 	errorResponse func(error) reply.APIResponse,
 ) func(func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
 	return func(actionFunc func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
@@ -70,19 +71,19 @@ func WithOptions[T any](
 				// Без проверки, продолжаем выполнение
 			case RequireRoot:
 				if !isRoot {
-					return reply.CliResponse(ctx, errorResponse(
+					return reporter.CliResponse(ctx, errorResponse(
 						apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))))
 				}
 			case ForbidRoot:
 				if isRoot {
-					return reply.CliResponse(ctx, errorResponse(
+					return reporter.CliResponse(ctx, errorResponse(
 						apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")))))
 				}
 			default:
 				app.Log.Fatal("Unknown root check mode")
 			}
 
-			actions := newActions(appConfig)
+			actions := newActions(appConfig, reporter)
 
 			reply.CreateSpinner(appConfig)
 			return actionFunc(ctx, cmd, actions)

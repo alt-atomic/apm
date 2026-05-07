@@ -89,7 +89,7 @@ func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg 
 					viewText += "  " + speedStr
 				}
 
-				reply.CreateEventNotification(ctx, reply.StateBefore,
+				a.reporter.CreateEventNotification(ctx, reply.StateBefore,
 					reply.WithEventName(reply.EventSystemDownloadProgress),
 					reply.WithProgress(true),
 					reply.WithProgressPercent(float64(percent)),
@@ -104,7 +104,7 @@ func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg 
 			if pkgCount == 1 {
 				doneText = app.T_("Package downloaded")
 			}
-			reply.CreateEventNotification(ctx, reply.StateAfter,
+			a.reporter.CreateEventNotification(ctx, reply.StateAfter,
 				reply.WithEventName(reply.EventSystemDownloadProgress),
 				reply.WithProgress(true),
 				reply.WithProgressPercent(100),
@@ -159,14 +159,14 @@ func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg 
 				ev := fmt.Sprintf("%s-%d", reply.EventSystemInstallProgress, state.id)
 
 				if percent < 100 {
-					reply.CreateEventNotification(ctx, reply.StateBefore,
+					a.reporter.CreateEventNotification(ctx, reply.StateBefore,
 						reply.WithEventName(ev),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(float64(percent)),
 						reply.WithEventView(fmt.Sprintf(app.T_("Installing progress: %s"), pkg)),
 					)
 				} else {
-					reply.CreateEventNotification(ctx, reply.StateAfter,
+					a.reporter.CreateEventNotification(ctx, reply.StateAfter,
 						reply.WithEventName(ev),
 						reply.WithProgress(true),
 						reply.WithProgressPercent(100),
@@ -227,7 +227,7 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 				}
 
 				ev := fmt.Sprintf("%s-%d", reply.EventSystemAptUpdate, id)
-				reply.CreateEventNotification(ctx, reply.StateBefore,
+				a.reporter.CreateEventNotification(ctx, reply.StateBefore,
 					reply.WithEventName(ev),
 					reply.WithProgress(true),
 					reply.WithProgressPercent(float64(percent)),
@@ -252,7 +252,7 @@ func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 
 			if tracked && pkg != "" {
 				ev := fmt.Sprintf("%s-%d", reply.EventSystemAptUpdate, id)
-				reply.CreateEventNotification(ctx, reply.StateAfter,
+				a.reporter.CreateEventNotification(ctx, reply.StateAfter,
 					reply.WithEventName(ev),
 					reply.WithProgress(true),
 					reply.WithProgressPercent(100),

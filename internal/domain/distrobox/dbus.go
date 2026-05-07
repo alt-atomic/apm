@@ -77,7 +77,7 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Update(ctx, container)
-			reply.SendTaskResult(ctx, reply.EventDistroUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventDistroUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -224,7 +224,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
-			reply.SendTaskResult(ctx, reply.EventDistroContainerAdd, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventDistroContainerAdd, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{

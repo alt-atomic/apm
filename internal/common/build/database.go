@@ -50,6 +50,7 @@ type DBHistory struct {
 
 type HostDBService struct {
 	dbManager app.DatabaseManager
+	reporter  *reply.Reporter
 	realDb    *gorm.DB
 }
 
@@ -92,9 +93,10 @@ func (h *HostDBService) db() (*gorm.DB, error) {
 }
 
 // NewHostDBService создаёт новый сервис для работы с базой данных хостов.
-func NewHostDBService(dbManager app.DatabaseManager) *HostDBService {
+func NewHostDBService(dbManager app.DatabaseManager, reporter *reply.Reporter) *HostDBService {
 	return &HostDBService{
 		dbManager: dbManager,
+		reporter:  reporter,
 	}
 }
 
@@ -139,8 +141,8 @@ func (ih ImageHistory) toDBModel() (DBHistory, error) {
 
 // SaveImageToDB сохраняет историю образов в БД (через GORM).
 func (h *HostDBService) SaveImageToDB(ctx context.Context, imageHistory ImageHistory) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSaveImageToDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSaveImageToDB))
+	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSaveImageToDB))
+	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSaveImageToDB))
 
 	// Преобразуем в модель БД
 	dbHist, err := imageHistory.toDBModel()

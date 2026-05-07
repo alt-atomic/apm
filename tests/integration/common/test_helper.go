@@ -21,16 +21,17 @@ import (
 	"testing"
 
 	"apm/internal/common/app"
+	"apm/internal/common/reply"
 )
 
-// GetTestAppConfig возвращает инициализированный app.Config для тестов
-func GetTestAppConfig(t *testing.T) (*app.Config, context.Context) {
+// GetTestAppConfig возвращает инициализированный app.Config и Reporter для тестов.
+func GetTestAppConfig(t *testing.T) (*app.Config, *reply.Reporter, context.Context) {
 	appConfig, err := app.InitializeAppDefault()
 	if err != nil {
 		t.Fatalf("Error initializing app config for test: %v", err)
 	}
+	reporter := reply.NewReporter(appConfig)
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, app.AppConfigKey, appConfig)
 
-	return appConfig, ctx
+	return appConfig, reporter, ctx
 }

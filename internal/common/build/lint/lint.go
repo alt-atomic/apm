@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"fmt"
@@ -12,9 +13,10 @@ import (
 
 const confName = "apm-lint.conf"
 
-// Service предоставляет API для линтинга образов
+// Service предоставляет API для линтинга образов.
 type Service struct {
-	rootfs string
+	rootfs   string
+	reporter *reply.Reporter
 }
 
 // Result содержит результат линтинга
@@ -42,14 +44,14 @@ type RunTmpResult struct {
 	Entries []string
 }
 
-// New создаёт новый Service для линтинга rootfs
-func New(rootfs string) *Service {
-	return &Service{rootfs: rootfs}
+// New создаёт новый Service для линтинга rootfs.
+func New(rootfs string, reporter *reply.Reporter) *Service {
+	return &Service{rootfs: rootfs, reporter: reporter}
 }
 
 // AnalyzeTmpFiles анализирует tmpfiles.d покрытие. При fix=true удаляет старый и записывает новый конфиг.
 func (s *Service) AnalyzeTmpFiles(ctx context.Context, fix bool) (*TmpFilesResult, string, error) {
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: s.reporter}
 
 	if fix {
 		if _, err := a.RemoveConf(s.rootfs); err != nil {
@@ -84,7 +86,7 @@ func (s *Service) AnalyzeTmpFiles(ctx context.Context, fix bool) (*TmpFilesResul
 
 // AnalyzeSysUsers анализирует sysusers.d покрытие. При fix=true удаляет старый и записывает новый конфиг.
 func (s *Service) AnalyzeSysUsers(ctx context.Context, fix bool) (*SysUsersResult, string, error) {
-	var a sysusersAnalysis
+	a := sysusersAnalysis{reporter: s.reporter}
 
 	if fix {
 		if _, err := a.RemoveConf(s.rootfs); err != nil {
@@ -115,7 +117,7 @@ func (s *Service) AnalyzeSysUsers(ctx context.Context, fix bool) (*SysUsersResul
 
 // AnalyzeRunTmp анализирует /run и /tmp на наличие неожиданных файлов.
 func (s *Service) AnalyzeRunTmp(ctx context.Context) (*RunTmpResult, error) {
-	var a runTmpAnalysis
+	a := runTmpAnalysis{reporter: s.reporter}
 
 	if err := a.Analyze(ctx, s.rootfs); err != nil {
 		return nil, err

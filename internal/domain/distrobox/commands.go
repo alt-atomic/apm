@@ -35,8 +35,8 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-func CommandList(appConfig *app.Config) *cli.Command {
-	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.ForbidRoot, NewActions, newErrorResponseFromError)
+func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
+	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.ForbidRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:    "distrobox",
@@ -57,10 +57,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Update(ctx, cmd.String("container"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -78,10 +78,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Info(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -98,10 +98,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Search(ctx, cmd.String("container"), cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -146,7 +146,7 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					filters, err := sandbox.DistroFilterConfig.Parse(cmd.StringSlice("filter"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
 					params := ListParams{
@@ -161,10 +161,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 
 					resp, err := actions.List(ctx, params)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -185,10 +185,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Install(ctx, cmd.String("container"), cmd.Args().First(), !cmd.Bool("no-export"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -209,10 +209,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.Remove(ctx, cmd.String("container"), cmd.Args().First(), cmd.Bool("only-host"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -236,10 +236,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ContainerList(ctx)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponseFromError(err))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
-							return reply.CliResponse(ctx, reply.OK(resp))
+							return reporter.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 					{
@@ -268,7 +268,7 @@ func CommandList(appConfig *app.Config) *cli.Command {
 								}
 							}
 							if !valid {
-								return reply.CliResponse(ctx,
+								return reporter.CliResponse(ctx,
 									newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("The value for image must be one of: alt, ubuntu, arch")))))
 							}
 
@@ -289,10 +289,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 
 							resp, err := actions.ContainerAdd(ctx, imageLink, name, "zsh mc nano", "")
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponseFromError(err))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
-							return reply.CliResponse(ctx, reply.OK(resp))
+							return reporter.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 					{
@@ -327,10 +327,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 
 							resp, err := actions.ContainerAdd(ctx, imageVal, nameVal, addPkgVal, hookVal)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponseFromError(err))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
-							return reply.CliResponse(ctx, reply.OK(resp))
+							return reporter.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 					{
@@ -347,10 +347,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 						Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							resp, err := actions.ContainerRemove(ctx, cmd.String("name"))
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponseFromError(err))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 							}
 
-							return reply.CliResponse(ctx, reply.OK(resp))
+							return reporter.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 				},

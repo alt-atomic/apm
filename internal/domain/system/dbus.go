@@ -45,7 +45,7 @@ type DBusWrapper struct {
 func NewDBusWrapper(a *Actions, c *dbus.Conn, ctx context.Context) *DBusWrapper {
 	return &DBusWrapper{
 		actions:          a,
-		appstreamActions: appstream.NewActions(a.appConfig),
+		appstreamActions: appstream.NewActions(a.appConfig, a.reporter),
 		conn:             c,
 		ctx:              ctx,
 	}
@@ -73,7 +73,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, downloadOnl
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
-			reply.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -114,7 +114,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
-			reply.SendTaskResult(ctx, reply.EventSystemRemove, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemRemove, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -171,7 +171,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Update(ctx, false, false)
-			reply.SendTaskResult(ctx, reply.EventSystemUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -279,7 +279,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckUpgrade(ctx)
-			reply.SendTaskResult(ctx, reply.EventSystemCheckUpgrade, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemCheckUpgrade, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -320,7 +320,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, downloadOnly bool, transaction
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Upgrade(ctx, downloadOnly)
-			reply.SendTaskResult(ctx, reply.EventSystemUpgrade, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemUpgrade, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -361,7 +361,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckInstall(ctx, packages)
-			reply.SendTaskResult(ctx, reply.EventSystemCheckInstall, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemCheckInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -402,7 +402,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckRemove(ctx, packages, false, depends)
-			reply.SendTaskResult(ctx, reply.EventSystemCheckRemove, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemCheckRemove, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -459,7 +459,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
-			reply.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -519,7 +519,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ImageUpdate(ctx, hostCache)
-			reply.SendTaskResult(ctx, reply.EventSystemImageUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemImageUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -590,7 +590,7 @@ func (w *DBusWrapper) ApplicationUpdate(sender dbus.Sender, transaction string, 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.appstreamActions.Update(ctx)
-			reply.SendTaskResult(ctx, reply.EventApplicationUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventApplicationUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{

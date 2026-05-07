@@ -3,8 +3,8 @@ package models
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
-	"apm/internal/common/filter"
 	"apm/internal/common/command"
+	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
 	"apm/internal/domain/kernel/service"
@@ -327,8 +327,9 @@ func LatestInstalledKernelVersion() (string, error) {
 }
 
 func currentKernelInfo(ctx context.Context, svc Service) (*service.Info, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
+	reporter := svc.Reporter()
+	reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
+	defer reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
 
 	filters := []filter.Filter{
 		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},

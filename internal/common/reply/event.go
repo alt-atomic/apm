@@ -18,7 +18,6 @@ package reply
 
 import (
 	"apm/internal/common/app"
-	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -184,12 +183,6 @@ func WithProgressDoneText(text string) NotificationOption {
 	}
 }
 
-// CreateEventNotification — тонкая обёртка на время миграции на Reporter.CreateEventNotification.
-// TODO(reporter-DI): удалить после перевода всех c на reporter.CreateEventNotification.
-func CreateEventNotification(ctx context.Context, state string, opts ...NotificationOption) {
-	NewReporter(app.GetAppConfig(ctx)).CreateEventNotification(ctx, state, opts...)
-}
-
 // sendNotificationResponse отправляет ответы через DBus.
 func sendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
 	message, err := json.Marshal(eventData)
@@ -218,12 +211,6 @@ func sendWebSocketNotification(eventData *EventData) {
 		return
 	}
 	wsHub.BroadcastEvent(eventData)
-}
-
-// SendTaskResult — тонкая обёртка на время миграции на Reporter.SendTaskResult.
-// TODO(reporter-DI): удалить после перевода всех на reporter.SendTaskResult.
-func SendTaskResult(ctx context.Context, taskName string, data interface{}, taskErr error) {
-	NewReporter(app.GetAppConfig(ctx)).SendTaskResult(ctx, taskName, data, taskErr)
 }
 
 // sendTaskResultWebSocket отправляет результат задачи через WebSocket.

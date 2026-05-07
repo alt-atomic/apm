@@ -47,12 +47,13 @@ func (DBAppStream) TableName() string { return "host_appstream_components" }
 // DBService сервис для работы с таблицей AppStream.
 type DBService struct {
 	dbManager app.DatabaseManager
+	reporter  *reply.Reporter
 	realDb    *gorm.DB
 	mu        sync.Mutex
 }
 
-func NewAppStreamDBService(dbManager app.DatabaseManager) *DBService {
-	return &DBService{dbManager: dbManager}
+func NewAppStreamDBService(dbManager app.DatabaseManager, reporter *reply.Reporter) *DBService {
+	return &DBService{dbManager: dbManager, reporter: reporter}
 }
 
 func (s *DBService) db() (*gorm.DB, error) {
@@ -87,8 +88,8 @@ func (s *DBService) db() (*gorm.DB, error) {
 
 // SaveComponentsToDB полностью перезаписывает таблицу AppStream компонентов.
 func (s *DBService) SaveComponentsToDB(ctx context.Context, pkgMap map[string][]Component) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationSaveToDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationSaveToDB))
+	s.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationSaveToDB))
+	defer s.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationSaveToDB))
 
 	db, err := s.db()
 	if err != nil {

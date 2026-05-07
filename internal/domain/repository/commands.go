@@ -33,9 +33,9 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 }
 
 // completeBranches возвращает функцию автодополнения для веток.
-func completeBranches(appConfig *app.Config) func(ctx context.Context, cmd *cli.Command) {
+func completeBranches(appConfig *app.Config, reporter *reply.Reporter) func(ctx context.Context, cmd *cli.Command) {
 	return func(_ context.Context, _ *cli.Command) {
-		actions := NewActions(appConfig)
+		actions := NewActions(appConfig, reporter)
 		branches := actions.repoService.GetBranches()
 		for _, branch := range branches {
 			fmt.Println(branch)
@@ -44,9 +44,9 @@ func completeBranches(appConfig *app.Config) func(ctx context.Context, cmd *cli.
 }
 
 // CommandList возвращает команду repo со всеми подкомандами.
-func CommandList(appConfig *app.Config) *cli.Command {
-	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
+	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:            "repo",
@@ -74,10 +74,10 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.List(ctx, cmd.Bool("all"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
 					full := cmd.Bool("full")
-					return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+					return reporter.CliResponse(ctx, reply.OK(map[string]interface{}{
 						"message":      reply.MessageWithHint(resp.Message, full),
 						"count":        resp.Count,
 						"repositories": FormatRepoOutput(resp.Repositories, full),
@@ -105,17 +105,17 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					if cmd.Bool("simulate") {
 						resp, err := actions.CheckAdd(ctx, args, cmd.String("date"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}
 					resp, err := actions.Add(ctx, args, cmd.String("date"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
-				ShellComplete: completeBranches(appConfig),
+				ShellComplete: completeBranches(appConfig, reporter),
 			},
 			{
 				Name:      "remove",
@@ -139,17 +139,17 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					if cmd.Bool("simulate") {
 						resp, err := actions.CheckRemove(ctx, args, cmd.String("date"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}
 					resp, err := actions.Remove(ctx, args, cmd.String("date"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
-				ShellComplete: completeBranches(appConfig),
+				ShellComplete: completeBranches(appConfig, reporter),
 			},
 			{
 				Name:      "set",
@@ -171,17 +171,17 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					if cmd.Bool("simulate") {
 						resp, err := actions.CheckSet(ctx, cmd.Args().First(), cmd.String("date"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}
 					resp, err := actions.Set(ctx, cmd.Args().First(), cmd.String("date"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
-				ShellComplete: completeBranches(appConfig),
+				ShellComplete: completeBranches(appConfig, reporter),
 			},
 			{
 				Name:  "clean",
@@ -198,15 +198,15 @@ func CommandList(appConfig *app.Config) *cli.Command {
 					if cmd.Bool("simulate") {
 						resp, err := actions.CheckClean(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}
 					resp, err := actions.Clean(ctx)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -215,9 +215,9 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetBranches(ctx)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -227,9 +227,9 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetTaskPackages(ctx, cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -239,9 +239,9 @@ func CommandList(appConfig *app.Config) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.TestTask(ctx, cmd.Args().First())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{

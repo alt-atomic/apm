@@ -226,12 +226,6 @@ func MessageWithHint(message string, full bool) string {
 	return message + ". " + app.T_("Use --full for detailed output")
 }
 
-// CliResponse — тонкая обёртка на время миграции на Reporter.CliResponse.
-// TODO(reporter-DI): удалить после перевода всех на reporter.CliResponse.
-func CliResponse(ctx context.Context, resp APIResponse) error {
-	return NewReporter(app.GetAppConfig(ctx)).CliResponse(ctx, resp)
-}
-
 func (r *responseRenderer) CliResponse(ctx context.Context, resp APIResponse) error {
 	StopSpinner(r.appConfig)
 	format := r.appConfig.ConfigManager.GetConfig().Format

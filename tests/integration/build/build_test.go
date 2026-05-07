@@ -27,6 +27,7 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/build"
 	"apm/internal/common/command"
+	"apm/internal/common/reply"
 	"apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,8 @@ func (s *BuildTestSuite) SetupSuite() {
 	}
 
 	var err error
-	s.appConfig, s.ctx = common.GetTestAppConfig(s.T())
+	var reporter *reply.Reporter
+	s.appConfig, reporter, s.ctx = common.GetTestAppConfig(s.T())
 
 	// Создаем временную директорию для тестов
 	s.testDir = filepath.Join(os.TempDir(), "apm-build-test")
@@ -68,6 +70,7 @@ func (s *BuildTestSuite) SetupSuite() {
 	// Инициализируем ConfigService для тестов
 	s.configService = build.NewConfigService(
 		s.appConfig,
+		reporter,
 		nil,
 		nil,
 		nil,

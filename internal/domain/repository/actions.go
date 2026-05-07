@@ -22,6 +22,7 @@ import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build"
 	"apm/internal/common/command"
+	"apm/internal/common/reply"
 	"apm/internal/domain/repository/service"
 	"context"
 	"errors"
@@ -67,18 +68,19 @@ func FormatRepoOutput(data interface{}, full bool) interface{} {
 	}
 }
 
-// Actions объединяет методы для работы с репозиториями
+// Actions объединяет методы для работы с репозиториями.
 type Actions struct {
 	appConfig         *app.Config
+	reporter          *reply.Reporter
 	repoService       repoService
 	serviceAptActions aptActionsService
 	serviceHostImage  overlayService
 }
 
-// NewActions создаёт новый экземпляр Actions
-func NewActions(appConfig *app.Config) *Actions {
-	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
-	aptActions := _package.NewActions(packageDBSvc, appConfig)
+// NewActions создаёт новый экземпляр Actions.
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
+	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager, reporter)
+	aptActions := _package.NewActions(packageDBSvc, appConfig, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
@@ -86,10 +88,12 @@ func NewActions(appConfig *app.Config) *Actions {
 		cfg,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 		runner,
+		reporter,
 	)
 
 	return &Actions{
 		appConfig:         appConfig,
+		reporter:          reporter,
 		repoService:       service.NewRepoService(packageDBSvc, runner),
 		serviceAptActions: aptActions,
 		serviceHostImage:  hostImageSvc,

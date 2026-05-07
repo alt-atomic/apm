@@ -5,6 +5,7 @@ import (
 	"apm/internal/common/build/common_types"
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
+	"apm/internal/common/reply"
 	"apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
 	"context"
@@ -24,6 +25,7 @@ type Service interface {
 	ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error)
 	RepoService() *reposervice.RepoService
 	Runner() command.Runner
+	Reporter() *reply.Reporter
 }
 
 type Body interface {

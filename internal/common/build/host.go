@@ -61,18 +61,20 @@ type Image struct {
 // HostImageService предоставляет единый сервис для работы с образами хоста.
 type HostImageService struct {
 	appConfig     *app.Configuration
+	reporter      *reply.Reporter
 	containerPath string
 	runner        command.Runner
 	podman        *PodmanService
 }
 
 // NewHostImageService создаёт новый сервис для работы с образами хоста.
-func NewHostImageService(appConfig *app.Configuration, containerPath string, runner command.Runner) *HostImageService {
+func NewHostImageService(appConfig *app.Configuration, containerPath string, runner command.Runner, reporter *reply.Reporter) *HostImageService {
 	return &HostImageService{
 		appConfig:     appConfig,
+		reporter:      reporter,
 		containerPath: containerPath,
 		runner:        runner,
-		podman:        NewPodmanService(runner),
+		podman:        NewPodmanService(runner, reporter),
 	}
 }
 
@@ -136,8 +138,8 @@ func (h *HostImageService) EnableOverlay() error {
 
 // BuildImage сборка образа
 func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (string, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBuildImage))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBuildImage))
+	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBuildImage))
+	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBuildImage))
 
 	buildArgs := []string{"podman", "build"}
 	if pullImage {
@@ -178,8 +180,8 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 // SwitchImage переключение образа
 func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSwitchImage))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSwitchImage))
+	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSwitchImage))
+	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSwitchImage))
 
 	var args []string
 	if isLocal {
@@ -197,8 +199,8 @@ func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string
 
 // CheckAndUpdateBaseImage проверяет обновление базового образа.
 func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config Config) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
+	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
+	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheckUpdateBaseImage))
 	image, err := h.GetHostImage()
 	if err != nil {
 		return fmt.Errorf(app.T_("Error retrieving information: %v"), err)
@@ -283,8 +285,8 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 }
 
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBootcUpgrade))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBootcUpgrade))
+	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBootcUpgrade))
+	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBootcUpgrade))
 
 	if _, err := h.podman.BootcUpgrade(ctx, []string{"bootc", "upgrade"}); err != nil {
 		return fmt.Errorf(app.T_("Bootc upgrade failed: %v"), err)

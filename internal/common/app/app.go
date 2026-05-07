@@ -17,7 +17,6 @@
 package app
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 )
@@ -85,23 +84,6 @@ type Translator interface {
 	T_(messageID string) string
 	TN_(messageID string, pluralMessageID string, count int) string
 }
-type contextKey string
-
-const AppConfigKey contextKey = "appConfig"
-
-// GetAppConfig достать конфиг приложения из контекста
-func GetAppConfig(ctx context.Context) *Config {
-	if cfg, ok := ctx.Value(AppConfigKey).(*Config); ok {
-		return cfg
-	}
-	errMsg := "App config not found in context: critical internal error"
-
-	// Компилятору не нравится return nill,
-	// но Log.Fatal и так "убьёт" приложение и до panic не дойдёт, зато IDE не будет жаловаться
-	Log.Fatal(errMsg)
-	panic(errMsg)
-}
-
 // Config централизованный конфиг приложение
 type Config struct {
 	DatabaseManager DatabaseManager

@@ -44,6 +44,7 @@ import (
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	appConfig              *app.Config
+	reporter               *reply.Reporter
 	serviceHostImage       hostImageService
 	serviceAptActions      aptActionsService
 	serviceAptDatabase     aptDatabaseService
@@ -54,9 +55,9 @@ type Actions struct {
 }
 
 // NewActions создаёт новый экземпляр Actions.
-func NewActions(appConfig *app.Config) *Actions {
-	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
-	hostDBSvc := build.NewHostDBService(appConfig.DatabaseManager)
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
+	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager, reporter)
+	hostDBSvc := build.NewHostDBService(appConfig.DatabaseManager, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
@@ -64,6 +65,7 @@ func NewActions(appConfig *app.Config) *Actions {
 		cfg,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 		runner,
+		reporter,
 	)
 	hostConfigSvc := build.NewHostConfigService(
 		hostDBSvc,
@@ -72,12 +74,13 @@ func NewActions(appConfig *app.Config) *Actions {
 	hostTemporarySvc := temporary.NewManager(
 		appConfig.ConfigManager.GetTemporaryImageFile(),
 	)
-	hostAptSvc := _package.NewActions(hostPackageDBSvc, appConfig)
+	hostAptSvc := _package.NewActions(hostPackageDBSvc, appConfig, reporter)
 
-	appStreamDBSvc := swcat.NewAppStreamDBService(appConfig.DatabaseManager)
+	appStreamDBSvc := swcat.NewAppStreamDBService(appConfig.DatabaseManager, reporter)
 
 	return &Actions{
 		appConfig:              appConfig,
+		reporter:               reporter,
 		serviceHostImage:       hostImageSvc,
 		serviceAptActions:      hostAptSvc,
 		serviceAptDatabase:     hostPackageDBSvc,
@@ -553,11 +556,11 @@ func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string) (*
 
 	cfg := a.appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	hostPackageDBSvc := _package.NewPackageDBService(a.appConfig.DatabaseManager)
+	hostPackageDBSvc := _package.NewPackageDBService(a.appConfig.DatabaseManager, a.reporter)
 	aptActions := aptBinding.NewActions()
-	kernelManager := kservice.NewKernelManager(hostPackageDBSvc, aptActions, runner)
+	kernelManager := kservice.NewKernelManager(hostPackageDBSvc, aptActions, runner, a.reporter)
 	repoService := reposervice.NewRepoService(hostPackageDBSvc, runner)
-	buildConfigSvc := build.NewConfigService(a.appConfig, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner)
+	buildConfigSvc := build.NewConfigService(a.appConfig, a.reporter, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner)
 
 	err = buildConfigSvc.Build(ctx)
 	if err != nil {
@@ -1012,7 +1015,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 
 // ImageLint линтер файлов и пакетной базы
 func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*ImageLintResponse, error) {
-	svc := lint.New(rootfs)
+	svc := lint.New(rootfs, a.reporter)
 	result, err := svc.Analyze(ctx, fix)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -1183,8 +1186,8 @@ func (a *Actions) validateDB(ctx context.Context, noLock bool) error {
 
 // updateAllPackagesDB обновляет состояние всех пакетов в базе данных
 func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
 
 	installedPackages, err := a.serviceAptActions.GetInstalledPackages(ctx)
 	if err != nil {

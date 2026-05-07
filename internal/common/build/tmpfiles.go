@@ -17,7 +17,7 @@ func (cfgService *ConfigService) fixTmpFiles(ctx context.Context) error {
 
 	app.Log.Info("Fixing tmpfiles.d: analyzing /var and /etc coverage")
 
-	svc := lint.New("/")
+	svc := lint.New("/", cfgService.reporter)
 	result, written, err := svc.AnalyzeTmpFiles(ctx, true)
 	if err != nil {
 		return fmt.Errorf("tmpfiles.d fix: %w", err)

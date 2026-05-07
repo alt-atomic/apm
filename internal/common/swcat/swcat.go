@@ -30,13 +30,18 @@ import (
 	"strings"
 )
 
-type Service struct{ path string }
+type Service struct {
+	path     string
+	reporter *reply.Reporter
+}
 
-func NewSwCatService(path string) *Service { return &Service{path: path} }
+func NewSwCatService(path string, reporter *reply.Reporter) *Service {
+	return &Service{path: path, reporter: reporter}
+}
 
 func (s *Service) Load(ctx context.Context) (map[string][]Component, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateApplications))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateApplications))
+	s.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateApplications))
+	defer s.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateApplications))
 	files, err := os.ReadDir(s.path)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("Cannot read dir %s: %w"), s.path, err)

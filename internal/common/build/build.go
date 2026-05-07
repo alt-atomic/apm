@@ -25,6 +25,7 @@ import (
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
+	"apm/internal/common/reply"
 	"apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
 	"context"
@@ -37,6 +38,7 @@ import (
 
 type ConfigService struct {
 	appConfig         *app.Config
+	reporter          *reply.Reporter
 	serviceAptActions buildAptActionsService
 	serviceDBService  buildPackageDBService
 	kernelManager     *service.Manager
@@ -45,11 +47,12 @@ type ConfigService struct {
 	runner            command.Runner
 }
 
-func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, dBService buildPackageDBService,
+func NewConfigService(appConfig *app.Config, reporter *reply.Reporter, aptActions buildAptActionsService, dBService buildPackageDBService,
 	kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig buildHostConfigService,
 	runner command.Runner) *ConfigService {
 	return &ConfigService{
 		appConfig:         appConfig,
+		reporter:          reporter,
 		serviceAptActions: aptActions,
 		serviceDBService:  dBService,
 		kernelManager:     kernelManager,
@@ -57,6 +60,11 @@ func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, 
 		serviceHostConfig: hostConfig,
 		runner:            runner,
 	}
+}
+
+// Reporter возвращает reporter сервиса.
+func (cfgService *ConfigService) Reporter() *reply.Reporter {
+	return cfgService.reporter
 }
 
 func (cfgService *ConfigService) IsAtomic() bool {

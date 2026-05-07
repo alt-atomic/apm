@@ -29,15 +29,17 @@ import (
 	"sync"
 )
 
-// DistroAPIService реализует методы для работы с пакетами в Arch
+// DistroAPIService реализует методы для работы с пакетами в Arch.
 type DistroAPIService struct {
-	runner command.Runner
+	runner   command.Runner
+	reporter *reply.Reporter
 }
 
 // NewDistroAPIService возвращает новый экземпляр DistroAPIService.
-func NewDistroAPIService(runner command.Runner) *DistroAPIService {
+func NewDistroAPIService(runner command.Runner, reporter *reply.Reporter) *DistroAPIService {
 	return &DistroAPIService{
-		runner: runner,
+		runner:   runner,
+		reporter: reporter,
 	}
 }
 
@@ -50,8 +52,8 @@ type ContainerInfo struct {
 // GetContainerList получает список контейнеров, а если требуется полная информация (getFullInfo),
 // то параллельно для каждого контейнера вызывается fetchOsInfo.
 func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo bool) ([]ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerList))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerList))
+	d.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerList))
+	defer d.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerList))
 
 	stdout, stderr, err := d.runner.Run(ctx, []string{"distrobox", "ls"}, command.WithQuiet())
 	if err != nil {
@@ -120,8 +122,8 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 // ExportingApp экспортирует пакет в хост-систему.
 // Принимает отдельные списки для desktop и консольных приложений и обрабатывает каждый тип соответственно.
 func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo ContainerInfo, _ string, desktopPaths, consolePaths []string, deleteApp bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroExportingApp))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroExportingApp))
+	d.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroExportingApp))
+	defer d.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroExportingApp))
 	// Определяем суффикс: "-d", если deleteApp == true, иначе пустая строка.
 	suffix := ""
 	if deleteApp {
@@ -233,8 +235,8 @@ func (d *DistroAPIService) fetchOsInfo(ctx context.Context, containerName string
 
 // GetContainerOsInfo запрос информации о контейнере.
 func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName string) (ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerInfo))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerInfo))
+	d.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroGetContainerInfo))
+	defer d.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroGetContainerInfo))
 
 	// Получаем список контейнеров
 	containers, err := d.GetContainerList(ctx, false)
@@ -259,8 +261,8 @@ func (d *DistroAPIService) GetContainerOsInfo(ctx context.Context, containerName
 
 // CreateContainer создает контейнер, выполняя команду создания, и затем возвращает информацию о контейнере.
 func (d *DistroAPIService) CreateContainer(ctx context.Context, image, containerName string, addPkg string, hook string) (ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroCreateContainer))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroCreateContainer))
+	d.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroCreateContainer))
+	defer d.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroCreateContainer))
 
 	if err := validateContainerName(containerName); err != nil {
 		return ContainerInfo{}, err
@@ -317,8 +319,8 @@ func (d *DistroAPIService) CreateContainer(ctx context.Context, image, container
 
 // RemoveContainer удаление контейнера
 func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName string) (ContainerInfo, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroRemoveContainer))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroRemoveContainer))
+	d.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroRemoveContainer))
+	defer d.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroRemoveContainer))
 
 	if err := validateContainerName(containerName); err != nil {
 		return ContainerInfo{}, err

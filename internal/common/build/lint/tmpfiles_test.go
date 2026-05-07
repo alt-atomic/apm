@@ -1,7 +1,7 @@
 package lint
 
 import (
-	"apm/internal/common/app"
+	"apm/internal/common/reply"
 	"apm/internal/common/testutil"
 	"context"
 	"os"
@@ -10,8 +10,11 @@ import (
 )
 
 func testContext() context.Context {
-	cfg := testutil.DefaultAppConfig()
-	return context.WithValue(context.Background(), app.AppConfigKey, cfg)
+	return context.Background()
+}
+
+func testReporter() *reply.Reporter {
+	return reply.NewReporter(testutil.DefaultAppConfig())
 }
 
 func TestExtractPath(t *testing.T) {
@@ -91,7 +94,7 @@ func TestTmpfilesAnalyze(t *testing.T) {
 	os.MkdirAll(tmpDir, 0755)
 	os.WriteFile(filepath.Join(tmpDir, "base.conf"), []byte("d /var/lib 0755 root root - -\n"), 0644)
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +131,7 @@ func TestTmpfilesAnalyzeRegularFile(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "var", "lib"), 0755)
 	os.WriteFile(filepath.Join(root, "var", "lib", "data.db"), []byte("data"), 0644)
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +156,7 @@ func TestTmpfilesAnalyzeEtcSymlink(t *testing.T) {
 	os.WriteFile(filepath.Join(etcDir, "hostname"), []byte("test"), 0644)
 	os.Symlink("/proc/mounts", filepath.Join(etcDir, "mtab"))
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +185,7 @@ func TestTmpfilesAnalyzeEtcRecursive(t *testing.T) {
 	os.WriteFile(filepath.Join(root, "etc", "pam.d", "login"), []byte("auth"), 0644)
 	os.Symlink("../hostname", filepath.Join(root, "etc", "pam.d", "link"))
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +216,7 @@ func TestTmpfilesAnalyzeEtcRecursive(t *testing.T) {
 func TestTmpfilesAnalyzeEmpty(t *testing.T) {
 	root := t.TempDir()
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}

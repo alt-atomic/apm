@@ -33,10 +33,11 @@ type backgroundTaskResponse struct {
 	Transaction string `json:"transaction"`
 }
 
-// BaseHTTPWrapper общая база для HTTP обёрток модулей
+// BaseHTTPWrapper общая база для HTTP обёрток модулей.
 type BaseHTTPWrapper struct {
 	Ctx       context.Context
 	AppConfig *app.Config
+	Reporter  *reply.Reporter
 }
 
 // CtxWithTransaction создает контекст с transaction из запроса
@@ -87,7 +88,7 @@ func (b *BaseHTTPWrapper) RunBackground(rw http.ResponseWriter, r *http.Request,
 	ctx, txID := b.CtxWithTransactionOrGenerate(r)
 	go func() {
 		resp, err := fn(ctx)
-		reply.SendTaskResult(ctx, event, resp, err)
+		b.Reporter.SendTaskResult(ctx, event, resp, err)
 	}()
 
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")

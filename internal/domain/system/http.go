@@ -43,12 +43,12 @@ type HTTPWrapper struct {
 	appstreamActions *appstream.Actions
 }
 
-// NewHTTPWrapper создаёт новую обёртку над actions
-func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTTPWrapper {
+// NewHTTPWrapper создаёт новую обёртку над actions.
+func NewHTTPWrapper(a *Actions, appConfig *app.Config, reporter *reply.Reporter, ctx context.Context) *HTTPWrapper {
 	return &HTTPWrapper{
-		BaseHTTPWrapper:  http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
+		BaseHTTPWrapper:  http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig, Reporter: reporter},
 		actions:          a,
-		appstreamActions: appstream.NewActions(appConfig),
+		appstreamActions: appstream.NewActions(appConfig, reporter),
 	}
 }
 
