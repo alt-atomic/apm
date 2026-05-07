@@ -33,11 +33,11 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-
 // CommandList возвращает список CLI-подкоманд для AppStream модуля.
-func CommandList(_ context.Context) []*cli.Command {
+func CommandList(appConfig *app.Config) []*cli.Command {
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+
 	return []*cli.Command{
 		{
 			Name:  "update",

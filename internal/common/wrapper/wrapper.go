@@ -43,13 +43,13 @@ const (
 // WithOptions создаёт универсальный wrapper для CLI команд с поддержкой generics.
 // T - тип Actions для конкретного модуля.
 func WithOptions[T any](
+	appConfig *app.Config,
 	rootCheck RootCheckMode,
 	newActions func(*app.Config) *T,
 	errorResponse func(error) reply.APIResponse,
 ) func(func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
 	return func(actionFunc func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
 		return func(ctx context.Context, cmd *cli.Command) error {
-			appConfig := app.GetAppConfig(ctx)
 			appConfig.ConfigManager.SetFormat(cmd.String("format"))
 			if ft := cmd.String("format-type"); ft != "" {
 				appConfig.ConfigManager.SetFormatType(ft)

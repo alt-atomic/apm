@@ -32,13 +32,9 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-
-// completeBranches возвращает функцию автодополнения для веток
-func completeBranches() func(ctx context.Context, cmd *cli.Command) {
-	return func(ctx context.Context, cmd *cli.Command) {
-		appConfig := app.GetAppConfig(ctx)
+// completeBranches возвращает функцию автодополнения для веток.
+func completeBranches(appConfig *app.Config) func(ctx context.Context, cmd *cli.Command) {
+	return func(_ context.Context, _ *cli.Command) {
 		actions := NewActions(appConfig)
 		branches := actions.repoService.GetBranches()
 		for _, branch := range branches {
@@ -47,9 +43,10 @@ func completeBranches() func(ctx context.Context, cmd *cli.Command) {
 	}
 }
 
-// CommandList возвращает команду repo со всеми подкомандами
-func CommandList(ctx context.Context) *cli.Command {
-	appConfig := app.GetAppConfig(ctx)
+// CommandList возвращает команду repo со всеми подкомандами.
+func CommandList(appConfig *app.Config) *cli.Command {
+	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:            "repo",
@@ -118,7 +115,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					}
 					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
-				ShellComplete: completeBranches(),
+				ShellComplete: completeBranches(appConfig),
 			},
 			{
 				Name:      "remove",
@@ -152,7 +149,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					}
 					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
-				ShellComplete: completeBranches(),
+				ShellComplete: completeBranches(appConfig),
 			},
 			{
 				Name:      "set",
@@ -184,7 +181,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					}
 					return reply.CliResponse(ctx, reply.OK(resp))
 				}),
-				ShellComplete: completeBranches(),
+				ShellComplete: completeBranches(appConfig),
 			},
 			{
 				Name:  "clean",

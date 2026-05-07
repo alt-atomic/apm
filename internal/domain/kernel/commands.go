@@ -33,10 +33,8 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-
-func CommandList(ctx context.Context) *cli.Command {
-	appConfig := app.GetAppConfig(ctx)
+func CommandList(appConfig *app.Config) *cli.Command {
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:    "kernel",

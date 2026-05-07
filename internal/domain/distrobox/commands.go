@@ -35,10 +35,8 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-var withGlobalWrapper = wrapper.WithOptions(wrapper.ForbidRoot, NewActions, newErrorResponseFromError)
-
-func CommandList(ctx context.Context) *cli.Command {
-	appConfig := app.GetAppConfig(ctx)
+func CommandList(appConfig *app.Config) *cli.Command {
+	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.ForbidRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:    "distrobox",

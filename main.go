@@ -59,10 +59,10 @@ func main() {
 	setupSignalHandling()
 	ctx = context.WithValue(ctx, app.AppConfigKey, appConfig)
 
-	systemCommands := system.CommandList(ctx)
-	distroboxCommands := distrobox.CommandList(ctx)
-	kernelCommands := kernel.CommandList(ctx)
-	repoCommands := repository.CommandList(ctx)
+	systemCommands := system.CommandList(appConfig)
+	distroboxCommands := distrobox.CommandList(appConfig)
+	kernelCommands := kernel.CommandList(appConfig)
+	repoCommands := repository.CommandList(appConfig)
 
 	cmds := []*cli.Command{
 		{

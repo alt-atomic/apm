@@ -74,7 +74,7 @@ func (a *Actions) Update(ctx context.Context) (*UpdateResponse, error) {
 func (a *Actions) validateDB(ctx context.Context) error {
 	if err := a.dbService.DatabaseExist(ctx); err != nil {
 		if syscall.Geteuid() != 0 {
-			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("applications database is empty. Run 'apm system appstream update' with elevated rights to create it")))
+			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("applications database is empty. Run 'apm system application update' with elevated rights to create it")))
 		}
 		if _, updateErr := a.Update(ctx); updateErr != nil {
 			return updateErr

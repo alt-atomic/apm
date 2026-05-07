@@ -37,9 +37,8 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
+func findPkgWithInstalled(appConfig *app.Config, installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
-		appConfig := app.GetAppConfig(ctx)
 		args := cmd.Args().Slice()
 
 		// Текущий токен — последний позиционный аргумент (если есть)
@@ -76,19 +75,16 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 }
 
 // findPkgInfoOnlyFirstArg выполняет поиск информации о пакете только для первого аргумента.
-func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
+func findPkgInfoOnlyFirstArg(appConfig *app.Config) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
 		if cmd.NArg() >= 2 {
 			return
 		}
-		findPkgWithInstalled(false)(ctx, cmd)
+		findPkgWithInstalled(appConfig, false)(ctx, cmd)
 	}
 }
 
-var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-
-// applyAptOptions парсит -o флаги и применяет к actions
+// applyAptOptions парсит -o флаги и применяет к actions.
 func applyAptOptions(cmd *cli.Command, actions *Actions) {
 	opts := cmd.StringSlice("option")
 	if len(opts) == 0 {
@@ -112,6 +108,8 @@ var aptOptionFlag = func() cli.Flag {
 }
 
 func upgradeCommand(appConfig *app.Config) *cli.Command {
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+
 	if appConfig.ConfigManager.GetConfig().IsAtomic {
 		return &cli.Command{
 			Name:  "upgrade",
@@ -169,8 +167,9 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 	}
 }
 
-func CommandList(ctx context.Context) *cli.Command {
-	appConfig := app.GetAppConfig(ctx)
+func CommandList(appConfig *app.Config) *cli.Command {
+	withGlobalWrapper := wrapper.WithOptions(appConfig, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := wrapper.WithOptions(appConfig, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
 
 	imageCmds := []*cli.Command{
 		{
@@ -390,7 +389,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				}
 				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(true),
+			ShellComplete: findPkgWithInstalled(appConfig, true),
 		},
 		{
 			Name:      "install",
@@ -432,7 +431,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				}
 				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(false),
+			ShellComplete: findPkgWithInstalled(appConfig, false),
 		},
 		{
 			Name:      "remove",
@@ -476,7 +475,7 @@ func CommandList(ctx context.Context) *cli.Command {
 				}
 				return reply.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(true),
+			ShellComplete: findPkgWithInstalled(appConfig, true),
 		},
 		{
 			Name:  "update",
@@ -526,7 +525,7 @@ func CommandList(ctx context.Context) *cli.Command {
 					"packageInfo": actions.FormatPackageOutput(resp.PackageInfo, full),
 				}))
 			}),
-			ShellComplete: findPkgInfoOnlyFirstArg(),
+			ShellComplete: findPkgInfoOnlyFirstArg(appConfig),
 		},
 		{
 			Name:      "search",
@@ -641,7 +640,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			Name:     "application",
 			Usage:    app.T_("Module for application information"),
 			Category: app.T_("Applications"),
-			Commands: appstream.CommandList(ctx),
+			Commands: appstream.CommandList(appConfig),
 		},
 		{
 			Name:     "image",

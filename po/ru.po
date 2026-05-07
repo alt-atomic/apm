@@ -3478,10 +3478,10 @@ msgstr "Данные о приложениях успешно обновлены
 
 #: internal/domain/system/appstream/actions.go:77
 msgid ""
-"applications database is empty. Run 'apm system appstream update' with "
+"applications database is empty. Run 'apm system application update' with "
 "elevated rights to create it"
 msgstr ""
-"база данных приложений пуста. Выполните 'apm system appstream update' с "
+"база данных приложений пуста. Выполните 'apm system application update' с "
 "повышенными правами для её создания"
 
 #: internal/domain/system/appstream/actions.go:94
