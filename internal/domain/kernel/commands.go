@@ -19,8 +19,8 @@ package kernel
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	apmcli "apm/internal/common/cli"
 	"apm/internal/common/reply"
-	"apm/internal/common/wrapper"
 	"context"
 	"errors"
 
@@ -34,7 +34,7 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 }
 
 func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:    "kernel",

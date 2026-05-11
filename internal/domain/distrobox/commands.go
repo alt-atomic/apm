@@ -19,10 +19,10 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
+	apmcli "apm/internal/common/cli"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/common/sandbox"
-	"apm/internal/common/wrapper"
 	"context"
 	"errors"
 
@@ -36,7 +36,7 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 }
 
 func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
-	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.ForbidRoot, NewActions, newErrorResponseFromError)
+	withGlobalWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.ForbidRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:    "distrobox",

@@ -20,11 +20,14 @@ internal/common/build/models/kernel.go
 internal/common/build/models/link.go
 internal/common/build/models/repos.go
 internal/common/build/podman.go
+internal/common/cli/command.go
+internal/common/cli/flags.go
+internal/common/cli/meta.go
+internal/common/cli/wrapper.go
 internal/common/filter/filter.go
 internal/common/helper/cmd.go
 internal/common/helper/polkit.go
 internal/common/helper/text.go
-internal/common/helper/translate.go
 internal/common/http_server/handler.go
 internal/common/http_server/server.go
 internal/common/icon/database.go
@@ -43,7 +46,6 @@ internal/common/sandbox/provider.go
 internal/common/sandbox/ubuntu.go
 internal/common/swcat/database.go
 internal/common/swcat/swcat.go
-internal/common/wrapper/wrapper.go
 internal/domain/distrobox/actions.go
 internal/domain/distrobox/commands.go
 internal/domain/distrobox/dbus.go
@@ -66,5 +68,5 @@ internal/domain/system/commands.go
 internal/domain/system/dbus.go
 internal/domain/system/dialog/dialog.go
 internal/domain/system/dialog/dialog_image.go
-internal/domain/system/service/temporary.go
+internal/domain/system/temporary/temporary.go
 main.go

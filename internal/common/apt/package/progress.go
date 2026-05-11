@@ -141,7 +141,10 @@ func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg 
 			} else if percent == 100 {
 				shouldUpdate = true
 			} else if percent != state.lastPercent {
-				percentDiff := helper.Abs(percent - state.lastPercent)
+				percentDiff := percent - state.lastPercent
+				if percentDiff < 0 {
+					percentDiff = -percentDiff
+				}
 
 				if percentDiff >= 10 {
 					shouldUpdate = elapsed >= 50*time.Millisecond

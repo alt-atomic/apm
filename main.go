@@ -20,10 +20,9 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/binding/apt"
 	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/dbus_doc"
-	"apm/internal/common/helper"
-	"apm/internal/common/http_server"
+	apmcli "apm/internal/common/cli"
 	"apm/internal/common/reply"
+	"apm/internal/common/service"
 	"apm/internal/domain/distrobox"
 	"apm/internal/domain/kernel"
 	"apm/internal/domain/repository"
@@ -32,489 +31,187 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
-	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
 )
 
-var (
-	ctx, globalCancel = context.WithCancel(context.Background())
-	appConfig         *app.Config
-	reporter          *reply.Reporter
+const (
+	defaultSystemHTTPListen  = "127.0.0.1:8080"
+	defaultSessionHTTPListen = "127.0.0.1:8082"
 )
 
-func main() {
-	var errInitial error
-	appConfig, errInitial = app.InitializeAppDefault()
-	if errInitial != nil {
-		panic(errInitial)
-	}
-	defer cleanup()
+type appRuntime struct {
+	config   *app.Config
+	reporter *reply.Reporter
+	ctx      context.Context
+	cancel   context.CancelFunc
+	once     sync.Once
+}
 
-	helper.SetupHelpTemplates()
+func main() {
+	cfg, err := app.InitializeAppDefault()
+	if err != nil {
+		panic(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	rt := &appRuntime{
+		config:   cfg,
+		reporter: reply.NewReporter(cfg),
+		ctx:      ctx,
+		cancel:   cancel,
+	}
+	defer rt.cleanup()
+
+	apmcli.SetupHelpTemplates()
 	app.Log.Debug("Starting apm…")
 
-	reporter = reply.NewReporter(appConfig)
-	setupSignalHandling()
+	apmcli.InstallSignalHandler(rt.onSignal)
 
-	systemCommands := system.CommandList(appConfig, reporter)
-	distroboxCommands := distrobox.CommandList(appConfig, reporter)
-	kernelCommands := kernel.CommandList(appConfig, reporter)
-	repoCommands := repository.CommandList(appConfig, reporter)
-
-	cmds := []*cli.Command{
-		{
-			Name:     "dbus-session",
-			Usage:    app.T_("Start session D-Bus service org.altlinux.APM"),
-			Category: app.T_("Services"),
-			Action:   sessionDbus,
-		},
-		{
-			Name:     "dbus-system",
-			Usage:    app.T_("Start system D-Bus service org.altlinux.APM"),
-			Category: app.T_("Services"),
-			Action:   systemDbus,
-		},
-		{
-			Name:     "http-server",
-			Usage:    app.T_("Start system HTTP API server"),
-			Category: app.T_("Services"),
-			Action:   httpServer,
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:    "listen",
-					Aliases: []string{"l"},
-					Usage:   app.T_("Listen address (host:port)"),
-					Value:   "127.0.0.1:8080",
-				},
-				&cli.StringFlag{
-					Name:    "api-token",
-					Usage:   app.T_("API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"),
-					Sources: cli.EnvVars("APM_API_TOKEN"),
-				},
-			},
-		},
-		{
-			Name:     "http-session",
-			Usage:    app.T_("Start session HTTP API"),
-			Category: app.T_("Services"),
-			Action:   httpSession,
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:    "listen",
-					Aliases: []string{"l"},
-					Usage:   app.T_("Listen address (host:port)"),
-					Value:   "127.0.0.1:8082",
-				},
-				&cli.StringFlag{
-					Name:    "api-token",
-					Usage:   app.T_("API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"),
-					Sources: cli.EnvVars("APM_API_TOKEN"),
-				},
-			},
-		},
-		systemCommands,
-		repoCommands,
-	}
-
-	if appConfig.ConfigManager.GetConfig().ExistDistrobox {
-		cmds = append(cmds, distroboxCommands)
-	}
-
-	if !appConfig.ConfigManager.GetConfig().IsAtomic {
-		cmds = append(cmds, kernelCommands)
-	}
-
-	cmds = append(
-		cmds,
-		[]*cli.Command{
-			{
-				Name:      "help",
-				Aliases:   []string{"h"},
-				Usage:     app.T_("Show the list of commands or help for each command"),
-				ArgsUsage: app.T_("[command]"),
-				HideHelp:  true,
-			},
-			{
-				Name:      "version",
-				Usage:     app.T_("Print version"),
-				ArgsUsage: app.T_("[command]"),
-				Action:    printVersion,
-			},
-		}...,
-	)
-
-	// Основная команда приложения
 	rootCommand := &cli.Command{
 		Name:        "apm",
 		Usage:       "Atomic Package Manager",
-		Description: helper.AppDescription(),
-		Version:     appConfig.ConfigManager.GetParsedVersion().Value,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "format",
-				Usage:   app.T_("Output format: json, text"),
-				Aliases: []string{"f"},
-				Value:   "text",
-			},
-			&cli.StringFlag{
-				Name:    "format-type",
-				Usage:   app.T_("Display type: tree, plain"),
-				Aliases: []string{"ft"},
-				Value:   "",
-			},
-			&cli.StringSliceFlag{
-				Name:    "output",
-				Usage:   app.T_("Output only specified fields"),
-				Aliases: []string{"o"},
-			},
-			&cli.StringFlag{
-				Name:    "transaction",
-				Usage:   app.T_("Internal property, adds the transaction to the output"),
-				Aliases: []string{"t"},
-			},
-			&cli.BoolFlag{
-				Name:    "verbose",
-				Aliases: []string{"v"},
-				Usage:   app.T_("Enable verbose logging to stdout"),
-			},
-		},
-		Commands: cmds,
+		Description: apmcli.AppDescription(),
+		Version:     rt.config.ConfigManager.GetParsedVersion().Value,
+		Flags:       apmcli.RootFlags(),
+		Commands:    rt.buildCommands(),
 	}
 
-	applyCommandSetting(rootCommand)
+	apmcli.ApplyCommandSettings(rootCommand, apmcli.CommandHooks{
+		OnNotFound: func(_ context.Context, cmd *cli.Command, name string) {
+			rt.config.ConfigManager.SetFormat(cmd.String("format"))
+			rt.cliError(fmt.Errorf(app.T_("Unknown command: %s. See 'apm help'"), name))
+		},
+		OnUsageError: func(err error) error {
+			rt.cliError(apmcli.TranslateUsageError(err))
+			return err
+		},
+	})
 
-	if err := rootCommand.Run(ctx, os.Args); err != nil {
+	if err = rootCommand.Run(rt.ctx, os.Args); err != nil {
 		os.Exit(1)
 	}
 }
 
-// setupSignalHandling настраивает обработку системных сигналов
-func setupSignalHandling() {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	aptLib.RegisterSignalChannel(sigs)
+func (rt *appRuntime) buildCommands() []*cli.Command {
+	cfg := rt.config.ConfigManager.GetConfig()
 
-	go func() {
-		sig := <-sigs
-
-		switch sig {
-		case syscall.SIGINT, syscall.SIGTERM:
-			infoText := fmt.Sprintf(app.T_("Recieved correct signal %s. Stopping application…"), sig)
-			app.Log.Info(infoText)
-
-			cleanup()
-			cliError(errors.New(infoText))
-
-		default:
-			infoText := fmt.Sprintf(app.T_("Unexpected signal %s received. Terminating the application with an error."), sig)
-			app.Log.Error(infoText)
-
-			cleanup()
-			cliError(errors.New(infoText))
-		}
-		code := 1
-		if s, ok := sig.(syscall.Signal); ok {
-			switch s {
-			case syscall.SIGINT:
-				code = 130
-			case syscall.SIGTERM:
-				code = 143
-			default:
-				code = 128 + int(s)
-			}
-		}
-		os.Exit(code)
-	}()
+	commands := []*cli.Command{
+		apmcli.NewDBusCommand("dbus-session", app.T_("Start session D-Bus service org.altlinux.APM"), rt.sessionDbus),
+		apmcli.NewDBusCommand("dbus-system", app.T_("Start system D-Bus service org.altlinux.APM"), rt.systemDbus),
+		apmcli.NewHTTPCommand("http-server", app.T_("Start system HTTP API server"), defaultSystemHTTPListen, rt.httpServer),
+		apmcli.NewHTTPCommand("http-session", app.T_("Start session HTTP API"), defaultSessionHTTPListen, rt.httpSession),
+		system.CommandList(rt.config, rt.reporter),
+		repository.CommandList(rt.config, rt.reporter),
+	}
+	if cfg.ExistDistrobox {
+		commands = append(commands, distrobox.CommandList(rt.config, rt.reporter))
+	}
+	if !cfg.IsAtomic {
+		commands = append(commands, kernel.CommandList(rt.config, rt.reporter))
+	}
+	return append(commands, apmcli.HelpCommand(), apmcli.VersionCommand(rt.printVersion))
 }
 
-func applyCommandSetting(cliCommand *cli.Command) {
-	cliCommand.CommandNotFound = func(ctx context.Context, cmd *cli.Command, name string) {
-		appConfig.ConfigManager.SetFormat(cmd.String("format"))
-		msg := fmt.Sprintf(app.T_("Unknown command: %s. See 'apm help'"), name)
-		cliError(errors.New(msg))
+func (rt *appRuntime) onSignal(sig os.Signal, graceful bool) {
+	var msg string
+	if graceful {
+		msg = fmt.Sprintf(app.T_("Recieved correct signal %s. Stopping application…"), sig)
+		app.Log.Info(msg)
+	} else {
+		msg = fmt.Sprintf(app.T_("Unexpected signal %s received. Terminating the application with an error."), sig)
+		app.Log.Error(msg)
 	}
-	cliCommand.HideHelpCommand = true
-	cliCommand.EnableShellCompletion = true
-	cliCommand.Suggest = true
-	cliCommand.OnUsageError = func(ctx context.Context, cmd *cli.Command, err error, _ bool) error {
-		cliError(helper.TranslateUsageError(err))
-		return err
-	}
-
-	for _, sub := range cliCommand.Commands {
-		applyCommandSetting(sub)
-	}
+	rt.cleanup()
+	rt.cliError(errors.New(msg))
 }
 
-func sessionDbus(ctx context.Context, cmd *cli.Command) error {
-	appConfig.ConfigManager.SetFormat(cmd.String("format"))
-	if cmd.Bool("verbose") {
-		appConfig.ConfigManager.EnableVerbose()
-	}
-	if syscall.Geteuid() == 0 {
-		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
-		cliError(errors.New(errPermission))
-		return errors.New(errPermission)
-	}
-	defer cleanup()
-	err := appConfig.DBusManager.ConnectSessionBus()
-	if err != nil {
-		app.Log.Error("ConnectSessionBus failed: ", err)
-		cliError(err)
-		return err
-	}
-
-	distroActions := distrobox.NewActions(appConfig, reporter)
-	distroObj := distrobox.NewDBusWrapper(distroActions, ctx)
-
-	// Экспортируем в D-Bus
-	if err = appConfig.DBusManager.GetConnection().Export(distroObj, "/org/altlinux/APM", "org.altlinux.APM.distrobox"); err != nil {
-		return err
-	}
-
-	// Собираем интерфейсы для интроспекции
-	interfaces := map[string]any{
-		"org.altlinux.APM.distrobox": distroObj,
-	}
-
-	if err = appConfig.DBusManager.GetConnection().Export(
-		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
-		"/org/altlinux/APM",
-		"org.freedesktop.DBus.Introspectable",
-	); err != nil {
-		return err
-	}
-
-	appConfig.ConfigManager.SetFormat(app.FormatDBus)
-
-	// Параллельно обновляем иконки
-	go func() {
-		errIcon := distroActions.GetIconService().ReloadIcons(ctx)
-		if errIcon != nil {
-			app.Log.Error(errIcon.Error())
-		}
-	}()
-
-	<-ctx.Done()
-	return nil
+func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	defer rt.cleanup()
+	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
+		Bus:  service.BusSession,
+		Mode: apmcli.ForbidRoot,
+		Modules: []service.DBusModule{
+			distrobox.DBusFactory(rt.config, rt.reporter),
+		},
+	}))
 }
 
-func systemDbus(ctx context.Context, cmd *cli.Command) error {
-	appConfig.ConfigManager.SetFormat(cmd.String("format"))
-	if cmd.Bool("verbose") {
-		appConfig.ConfigManager.EnableVerbose()
+func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
+	defer rt.cleanup()
+	cfg := rt.config.ConfigManager.GetConfig()
+	modules := []service.DBusModule{
+		system.DBusFactory(rt.config, rt.reporter),
+		repository.DBusFactory(rt.config, rt.reporter),
 	}
-	if syscall.Geteuid() != 0 {
-		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
-		cliError(errors.New(errPermission))
-		return errors.New(errPermission)
+	if !cfg.IsAtomic {
+		modules = append(modules, kernel.DBusFactory(rt.config, rt.reporter))
 	}
-
-	defer cleanup()
-	err := appConfig.DBusManager.ConnectSystemBus()
-	if err != nil {
-		cliError(err)
-		return err
-	}
-
-	sysActions := system.NewActions(appConfig, reporter)
-	conn := appConfig.DBusManager.GetConnection()
-
-	// Экспортируем system методы в D-Bus
-	sysObj := system.NewDBusWrapper(sysActions, conn, ctx)
-	if err = appConfig.DBusManager.GetConnection().Export(sysObj, "/org/altlinux/APM", "org.altlinux.APM.system"); err != nil {
-		return err
-	}
-
-	// Собираем интерфейсы для интроспекции
-	interfaces := map[string]any{
-		"org.altlinux.APM.system": sysObj,
-	}
-
-	// Экспортируем kernel методы только для не-атомарных систем
-	if !appConfig.ConfigManager.GetConfig().IsAtomic {
-		kernelActions := kernel.NewActions(appConfig, reporter)
-		kernelObj := kernel.NewDBusWrapper(kernelActions, conn, ctx)
-		if err = appConfig.DBusManager.GetConnection().Export(kernelObj, "/org/altlinux/APM", "org.altlinux.APM.kernel"); err != nil {
-			return err
-		}
-		interfaces["org.altlinux.APM.kernel"] = kernelObj
-	}
-
-	// Экспортируем repository методы в D-Bus
-	repoActions := repository.NewActions(appConfig, reporter)
-	repoObj := repository.NewDBusWrapper(repoActions, conn, ctx)
-	if err = appConfig.DBusManager.GetConnection().Export(repoObj, "/org/altlinux/APM", "org.altlinux.APM.repo"); err != nil {
-		return err
-	}
-	interfaces["org.altlinux.APM.repo"] = repoObj
-
-	if err = appConfig.DBusManager.GetConnection().Export(
-		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
-		"/org/altlinux/APM",
-		"org.freedesktop.DBus.Introspectable",
-	); err != nil {
-		return err
-	}
-
-	appConfig.ConfigManager.SetFormat(app.FormatDBus)
-
-	<-ctx.Done()
-	return nil
+	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
+		Bus:     service.BusSystem,
+		Mode:    apmcli.RequireRoot,
+		Modules: modules,
+	}))
 }
 
-func httpServer(ctx context.Context, cmd *cli.Command) error {
-	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
-	appConfig.ConfigManager.EnableVerbose()
+func (rt *appRuntime) httpServer(ctx context.Context, cmd *cli.Command) error {
+	defer rt.cleanup()
+	cfg := rt.config.ConfigManager.GetConfig()
+	return rt.reportError(service.RunHTTP(ctx, cmd, rt.config, service.HTTPRunConfig{
+		Mode: apmcli.RequireRoot,
+		APIInfo: service.APIInfo{
+			IsAtomic:     cfg.IsAtomic,
+			HasDistrobox: cfg.ExistDistrobox,
+			HasKernel:    !cfg.IsAtomic,
+		},
+		Modules: []service.HTTPModule{
+			system.HTTPFactory(rt.config, rt.reporter, cfg.IsAtomic),
+			repository.HTTPFactory(rt.config, rt.reporter),
+		},
+	}))
+}
 
-	if syscall.Geteuid() != 0 {
-		errPermission := app.T_("Elevated rights are required to perform this action. Please use sudo or su")
-		cliError(errors.New(errPermission))
-		return errors.New(errPermission)
+func (rt *appRuntime) httpSession(ctx context.Context, cmd *cli.Command) error {
+	defer rt.cleanup()
+	if !rt.config.ConfigManager.GetConfig().ExistDistrobox {
+		return rt.reportError(errors.New(app.T_("Distrobox is not installed")))
 	}
+	return rt.reportError(service.RunHTTP(ctx, cmd, rt.config, service.HTTPRunConfig{
+		Mode:    apmcli.ForbidRoot,
+		APIInfo: service.APIInfo{HasDistrobox: true},
+		Modules: []service.HTTPModule{
+			distrobox.HTTPFactory(rt.config, rt.reporter),
+		},
+	}))
+}
 
-	defer cleanup()
-
-	config := http_server.DefaultConfig()
-	if listen := cmd.String("listen"); listen != "" {
-		config.ListenAddr = listen
-	}
-	if token := cmd.String("api-token"); token != "" {
-		config.APIToken = token
-	}
-
-	server, err := http_server.NewServer(config, appConfig)
+func (rt *appRuntime) reportError(err error) error {
 	if err != nil {
-		cliError(err)
-		return err
-	}
-
-	wsHub := http_server.GetWebSocketHub()
-	reply.SetWebSocketHub(wsHub)
-
-	server.RegisterHealthCheck()
-	server.RegisterWebSocket()
-	server.RegisterAPIInfo(
-		appConfig.ConfigManager.GetConfig().IsAtomic,
-		appConfig.ConfigManager.GetConfig().ExistDistrobox,
-		!appConfig.ConfigManager.GetConfig().IsAtomic,
-	)
-
-	// System модуль
-	sysActions := system.NewActions(appConfig, reporter)
-	sysHTTPWrapper := system.NewHTTPWrapper(sysActions, appConfig, reporter, ctx)
-	server.RegisterEndpoints(sysHTTPWrapper.GetEndpoints(appConfig.ConfigManager.GetConfig().IsAtomic))
-
-	// Repo модуль
-	repoActions := repository.NewActions(appConfig, reporter)
-	repoHTTPWrapper := repository.NewHTTPWrapper(repoActions, appConfig, reporter, ctx)
-	server.RegisterEndpoints(repoHTTPWrapper.GetEndpoints())
-
-	// Регистрируем OpenAPI документацию из registry
-	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(server.GetRegistry(), appConfig.ConfigManager.GetConfig().Version, config.ListenAddr))
-
-	err = server.Start(ctx)
-	if err != nil {
-		cliError(err)
+		rt.cliError(err)
 	}
 	return err
 }
 
-func httpSession(ctx context.Context, cmd *cli.Command) error {
-	appConfig.ConfigManager.SetFormat(app.FormatHTTP)
-	appConfig.ConfigManager.EnableVerbose()
-
-	if syscall.Geteuid() == 0 {
-		errPermission := app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")
-		cliError(errors.New(errPermission))
-		return errors.New(errPermission)
-	}
-
-	if !appConfig.ConfigManager.GetConfig().ExistDistrobox {
-		errMsg := app.T_("Distrobox is not installed")
-		cliError(errors.New(errMsg))
-		return errors.New(errMsg)
-	}
-
-	defer cleanup()
-
-	config := http_server.DefaultConfig()
-	config.ListenAddr = "127.0.0.1:8082"
-	if listen := cmd.String("listen"); listen != "" {
-		config.ListenAddr = listen
-	}
-	if token := cmd.String("api-token"); token != "" {
-		config.APIToken = token
-	}
-
-	server, err := http_server.NewServer(config, appConfig)
-	if err != nil {
-		cliError(err)
-		return err
-	}
-
-	wsHub := http_server.GetWebSocketHub()
-	reply.SetWebSocketHub(wsHub)
-
-	server.RegisterHealthCheck()
-	server.RegisterWebSocket()
-	server.RegisterAPIInfo(
-		false,
-		true,
-		false,
-	)
-
-	// Distrobox модуль
-	distroboxActions := distrobox.NewActions(appConfig, reporter)
-	distroboxHTTPWrapper := distrobox.NewHTTPWrapper(distroboxActions, appConfig, reporter, ctx)
-	server.RegisterEndpoints(distroboxHTTPWrapper.GetEndpoints())
-
-	// Параллельно обновляем иконки
-	go func() {
-		if err = distroboxActions.GetIconService().ReloadIcons(ctx); err != nil {
-			app.Log.Error(err.Error())
-		}
-	}()
-
-	// Регистрируем OpenAPI документацию из registry
-	server.RegisterOpenAPIFromRegistry(http_server.NewOpenAPIGenerator(server.GetRegistry(), appConfig.ConfigManager.GetConfig().Version, config.ListenAddr))
-
-	err = server.Start(ctx)
-	if err != nil {
-		cliError(err)
-	}
-	return err
-}
-
-func printVersion(_ context.Context, _ *cli.Command) error {
-	fmt.Printf("%s version %s\n", "apm", appConfig.ConfigManager.GetParsedVersion().Value)
+func (rt *appRuntime) printVersion(_ context.Context, _ *cli.Command) error {
+	fmt.Printf("%s version %s\n", "apm", rt.config.ConfigManager.GetParsedVersion().Value)
 	return nil
 }
 
-func cliError(err error) {
+func (rt *appRuntime) cliError(err error) {
 	if err == nil {
 		return
 	}
-
-	_ = reporter.CliResponse(ctx, reply.ErrorResponseFromError(err))
+	_ = rt.reporter.CliResponse(rt.ctx, reply.ErrorResponseFromError(err))
 }
 
-var cleanupOnce sync.Once
-
-func cleanup() {
-	cleanupOnce.Do(func() {
-		if appConfig != nil {
-			reply.StopSpinner(appConfig)
-			defer func(appConfig *app.Config) {
-				closeApp(appConfig)
-			}(appConfig)
+func (rt *appRuntime) cleanup() {
+	rt.once.Do(func() {
+		if rt.config != nil {
+			reply.StopSpinner(rt.config)
+			closeApp(rt.config)
 		}
-
-		defer globalCancel()
+		rt.cancel()
 	})
 }
 
@@ -526,14 +223,11 @@ func closeApp(appConfig *app.Config) {
 	aptLib.WaitIdle()
 	defer apt.Close()
 
-	// Закрываем DBus соединение
 	if appConfig.DBusManager != nil {
 		if err := appConfig.DBusManager.Close(); err != nil {
 			app.Log.Errorf(app.T_("failed to close DBus: %w"), err)
 		}
 	}
-
-	// Закрываем базы данных
 	if appConfig.DatabaseManager != nil {
 		if err := appConfig.DatabaseManager.Close(); err != nil {
 			app.Log.Errorf(app.T_("failed to close databases: %w"), err)

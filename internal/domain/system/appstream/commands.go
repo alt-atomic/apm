@@ -18,10 +18,10 @@ package appstream
 
 import (
 	"apm/internal/common/app"
+	apmcli "apm/internal/common/cli"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/common/swcat"
-	"apm/internal/common/wrapper"
 	"context"
 	"errors"
 
@@ -35,8 +35,8 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 
 // CommandList возвращает список CLI-подкоманд для AppStream модуля.
 func CommandList(appConfig *app.Config, reporter *reply.Reporter) []*cli.Command {
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
+	withGlobalWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.NoRootCheck, NewActions, newErrorResponseFromError)
 
 	return []*cli.Command{
 		{

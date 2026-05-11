@@ -24,6 +24,7 @@ import (
 	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/internal/common/service"
 	"apm/internal/common/swcat"
 	"apm/internal/domain/system/appstream"
 	"context"
@@ -32,6 +33,18 @@ import (
 
 	"github.com/godbus/dbus/v5"
 )
+
+const DBusInterface = "org.altlinux.APM.system"
+
+func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) service.DBusModule {
+	return service.DBusModule{
+		Interface: DBusInterface,
+		Build: func(ctx context.Context, conn *dbus.Conn) (service.DBusExport, error) {
+			actions := NewActions(appConfig, reporter)
+			return service.DBusExport{Object: NewDBusWrapper(actions, conn, ctx)}, nil
+		},
+	}
+}
 
 // DBusWrapper предоставляет обёртку для системных действий, предназначенную для экспорта через DBus.
 type DBusWrapper struct {

@@ -21,13 +21,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
+	"syscall"
 	"time"
 )
 
-// ServeHTML запускает HTTP сервер, отдающий HTML на указанном адресе.
-func ServeHTML(ctx context.Context, addr string, htmlGenerator func() string) error {
+const (
+	DocServerHost      = "127.0.0.1"
+	DocServerStartPort = 8080
+	DocServerMaxPorts  = 100
+)
+
+func serveHTMLOnListener(ctx context.Context, listener net.Listener, htmlGenerator func() string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -41,17 +48,16 @@ func ServeHTML(ctx context.Context, addr string, htmlGenerator func() string) er
 	})
 
 	server := &http.Server{
-		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
-	fmt.Printf("Documentation server started at http://%s\n", addr)
+	fmt.Printf("Documentation server started at http://%s\n", listener.Addr().String())
 	fmt.Println("Press Ctrl+C to stop")
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			app.Log.Fatal(err.Error())
 		}
 	}()
@@ -62,4 +68,27 @@ func ServeHTML(ctx context.Context, addr string, htmlGenerator func() string) er
 	defer cancel()
 
 	return server.Shutdown(shutdownCtx)
+}
+
+func ServeHTMLOnFreePort(ctx context.Context, htmlGenerator func() string) error {
+	listener, err := listenFromPort(DocServerHost, DocServerStartPort, DocServerMaxPorts)
+	if err != nil {
+		return err
+	}
+	return serveHTMLOnListener(ctx, listener, htmlGenerator)
+}
+
+func listenFromPort(host string, startPort, maxAttempts int) (net.Listener, error) {
+	for i := 0; i < maxAttempts; i++ {
+		port := startPort + i
+		addr := fmt.Sprintf("%s:%d", host, port)
+		listener, err := net.Listen("tcp", addr)
+		if err == nil {
+			return listener, nil
+		}
+		if !errors.Is(err, syscall.EADDRINUSE) {
+			return nil, fmt.Errorf("listen %s: %w", addr, err)
+		}
+	}
+	return nil, fmt.Errorf("no free port in range %d-%d on %s", startPort, startPort+maxAttempts-1, host)
 }

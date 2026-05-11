@@ -23,11 +23,31 @@ import (
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
 	"apm/internal/common/sandbox"
+	"apm/internal/common/service"
 	"context"
 	"encoding/json"
 
 	"github.com/godbus/dbus/v5"
 )
+
+const DBusInterface = "org.altlinux.APM.distrobox"
+
+func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) service.DBusModule {
+	return service.DBusModule{
+		Interface: DBusInterface,
+		Build: func(ctx context.Context, _ *dbus.Conn) (service.DBusExport, error) {
+			actions := NewActions(appConfig, reporter)
+			return service.DBusExport{
+				Object: NewDBusWrapper(actions, ctx),
+				PostExport: func(ctx context.Context) {
+					if err := actions.GetIconService().ReloadIcons(ctx); err != nil {
+						app.Log.Error(err.Error())
+					}
+				},
+			}, nil
+		},
+	}
+}
 
 // DBusWrapper предоставляет обёртку для действий с контейнерами через DBus.
 type DBusWrapper struct {

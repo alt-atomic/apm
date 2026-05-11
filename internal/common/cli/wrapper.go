@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package wrapper
+package cli
 
 import (
 	"apm/internal/common/apmerr"
@@ -23,34 +23,55 @@ import (
 	"apm/internal/common/reply"
 	"context"
 	"errors"
+	"fmt"
 	"syscall"
 
-	"github.com/urfave/cli/v3"
+	urfave "github.com/urfave/cli/v3"
 )
 
-// RootCheckMode определяет режим проверки root-прав
+// RootCheckMode определяет режим проверки root-прав.
 type RootCheckMode int
 
 const (
-	// NoRootCheck - без проверки root
 	NoRootCheck RootCheckMode = iota
-	// RequireRoot - требует root права
 	RequireRoot
-	// ForbidRoot - запрещает root права
 	ForbidRoot
 )
 
+// CheckRoot проверяет, что текущие права совместимы с заданным режимом.
+func CheckRoot(mode RootCheckMode) error {
+	return evaluateRootCheck(syscall.Geteuid() == 0, mode)
+}
+
+func evaluateRootCheck(isRoot bool, mode RootCheckMode) error {
+	switch mode {
+	case NoRootCheck:
+		return nil
+	case RequireRoot:
+		if !isRoot {
+			return errors.New(app.T_("Elevated rights are required to perform this action. Please use sudo or su"))
+		}
+	case ForbidRoot:
+		if isRoot {
+			return errors.New(app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su"))
+		}
+	default:
+		return fmt.Errorf("unknown root check mode: %d", mode)
+	}
+	return nil
+}
+
 // WithOptions создаёт универсальный wrapper для CLI команд с поддержкой generics.
-// T - тип Actions для конкретного модуля.
+// T — тип Actions для конкретного модуля.
 func WithOptions[T any](
 	appConfig *app.Config,
 	reporter *reply.Reporter,
 	rootCheck RootCheckMode,
 	newActions func(*app.Config, *reply.Reporter) *T,
 	errorResponse func(error) reply.APIResponse,
-) func(func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
-	return func(actionFunc func(context.Context, *cli.Command, *T) error) cli.ActionFunc {
-		return func(ctx context.Context, cmd *cli.Command) error {
+) func(func(context.Context, *urfave.Command, *T) error) urfave.ActionFunc {
+	return func(actionFunc func(context.Context, *urfave.Command, *T) error) urfave.ActionFunc {
+		return func(ctx context.Context, cmd *urfave.Command) error {
 			appConfig.ConfigManager.SetFormat(cmd.String("format"))
 			if ft := cmd.String("format-type"); ft != "" {
 				appConfig.ConfigManager.SetFormatType(ft)
@@ -64,23 +85,9 @@ func WithOptions[T any](
 				appConfig.ConfigManager.EnableVerbose()
 			}
 
-			isRoot := syscall.Geteuid() == 0
-
-			switch rootCheck {
-			case NoRootCheck:
-				// Без проверки, продолжаем выполнение
-			case RequireRoot:
-				if !isRoot {
-					return reporter.CliResponse(ctx, errorResponse(
-						apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are required to perform this action. Please use sudo or su")))))
-				}
-			case ForbidRoot:
-				if isRoot {
-					return reporter.CliResponse(ctx, errorResponse(
-						apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("Elevated rights are not allowed to perform this action. Please do not use sudo or su")))))
-				}
-			default:
-				app.Log.Fatal("Unknown root check mode")
+			if err := CheckRoot(rootCheck); err != nil {
+				return reporter.CliResponse(ctx, errorResponse(
+					apmerr.New(apmerr.ErrorTypePermission, err)))
 			}
 
 			actions := newActions(appConfig, reporter)

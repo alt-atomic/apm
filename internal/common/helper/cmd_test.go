@@ -17,74 +17,10 @@
 package helper
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 )
-
-func TestAbs(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    int
-		expected int
-	}{
-		{
-			name:     "Positive number",
-			input:    5,
-			expected: 5,
-		},
-		{
-			name:     "Negative number",
-			input:    -5,
-			expected: 5,
-		},
-		{
-			name:     "Zero",
-			input:    0,
-			expected: 0,
-		},
-		{
-			name:     "Large positive number",
-			input:    1000000,
-			expected: 1000000,
-		},
-		{
-			name:     "Large negative number",
-			input:    -1000000,
-			expected: 1000000,
-		},
-		{
-			name:     "Maximum negative int",
-			input:    -2147483647,
-			expected: 2147483647,
-		},
-		{
-			name:     "Maximum positive int",
-			input:    2147483647,
-			expected: 2147483647,
-		},
-		{
-			name:     "Negative one",
-			input:    -1,
-			expected: 1,
-		},
-		{
-			name:     "Positive one",
-			input:    1,
-			expected: 1,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := Abs(tt.input)
-			if result != tt.expected {
-				t.Errorf("Abs(%d) = %d, want %d", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
 
 func TestIsRunningInContainer(t *testing.T) {
 	if IsRunningInContainer() {
@@ -195,71 +131,5 @@ func TestIsRunningInContainer_MockFileSystem(t *testing.T) {
 	result := IsRunningInContainer()
 	if result != true && result != false {
 		t.Errorf("IsRunningInContainer() should return a boolean value, got %v", result)
-	}
-}
-
-// Тестирование edge cases для Abs функции
-func TestAbsEdgeCases(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       int
-		expected    int
-		description string
-	}{
-		{
-			name:        "Boundary: -2",
-			input:       -2,
-			expected:    2,
-			description: "Small negative number",
-		},
-		{
-			name:        "Boundary: 2",
-			input:       2,
-			expected:    2,
-			description: "Small positive number",
-		},
-		{
-			name:        "Large computation result",
-			input:       -999999,
-			expected:    999999,
-			description: "Result of some computation that could be negative",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := Abs(tt.input)
-			if result != tt.expected {
-				t.Errorf("Abs(%d) = %d, want %d (%s)", tt.input, result, tt.expected, tt.description)
-			}
-
-			if result < 0 {
-				t.Errorf("Abs(%d) = %d, result should never be negative", tt.input, result)
-			}
-		})
-	}
-}
-
-// Проверка соответствия математическим свойствам
-func TestAbsMathematicalProperties(t *testing.T) {
-	testCases := []int{-100, -10, -1, 0, 1, 10, 100}
-
-	for _, x := range testCases {
-		t.Run(fmt.Sprintf("Properties_for_%d", x), func(t *testing.T) {
-			absX := Abs(x)
-
-			if absX < 0 {
-				t.Errorf("Property |x| >= 0 failed: Abs(%d) = %d", x, absX)
-			}
-
-			absMinusX := Abs(-x)
-			if absX != absMinusX {
-				t.Errorf("Property |x| = |-x| failed: Abs(%d) = %d, Abs(%d) = %d", x, absX, -x, absMinusX)
-			}
-
-			if (absX == 0) != (x == 0) {
-				t.Errorf("Property |x| = 0 iff x = 0 failed: x = %d, Abs(x) = %d", x, absX)
-			}
-		})
 	}
 }

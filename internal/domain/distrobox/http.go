@@ -23,6 +23,7 @@ import (
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
 	"apm/internal/common/sandbox"
+	"apm/internal/common/service"
 	"context"
 	"encoding/json"
 	"errors"
@@ -30,6 +31,20 @@ import (
 	"reflect"
 	"strconv"
 )
+
+func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter) service.HTTPModule {
+	actions := NewActions(appConfig, reporter)
+	return service.HTTPModule{
+		Endpoints: func(ctx context.Context) []http_server.Endpoint {
+			return NewHTTPWrapper(actions, appConfig, reporter, ctx).GetEndpoints()
+		},
+		PostInit: func(ctx context.Context) {
+			if err := actions.GetIconService().ReloadIcons(ctx); err != nil {
+				app.Log.Error(err.Error())
+			}
+		},
+	}
+}
 
 // HTTPWrapper предоставляет обёртку для действий с контейнерами через HTTP.
 type HTTPWrapper struct {

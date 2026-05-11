@@ -21,11 +21,21 @@ import (
 	"apm/internal/common/app"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
+	"apm/internal/common/service"
 	"context"
 	"errors"
 	"net/http"
 	"reflect"
 )
+
+func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter) service.HTTPModule {
+	return service.HTTPModule{
+		Endpoints: func(ctx context.Context) []http_server.Endpoint {
+			actions := NewActions(appConfig, reporter)
+			return NewHTTPWrapper(actions, appConfig, reporter, ctx).GetEndpoints()
+		},
+	}
+}
 
 // HTTPWrapper предоставляет обёртку для действий с репозиториями через HTTP.
 type HTTPWrapper struct {

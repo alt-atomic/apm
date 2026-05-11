@@ -18,8 +18,8 @@ package repository
 
 import (
 	"apm/internal/common/app"
+	apmcli "apm/internal/common/cli"
 	"apm/internal/common/reply"
-	"apm/internal/common/wrapper"
 	"context"
 	"fmt"
 
@@ -45,8 +45,8 @@ func completeBranches(appConfig *app.Config, reporter *reply.Reporter) func(ctx 
 
 // CommandList возвращает команду repo со всеми подкомандами.
 func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
-	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+	withGlobalWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:            "repo",

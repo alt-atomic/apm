@@ -24,6 +24,7 @@ import (
 	"apm/internal/common/filter"
 	"apm/internal/common/http_server"
 	"apm/internal/common/reply"
+	"apm/internal/common/service"
 	"apm/internal/common/swcat"
 	"apm/internal/domain/system/appstream"
 	"context"
@@ -35,6 +36,15 @@ import (
 	"reflect"
 	"strconv"
 )
+
+func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter, isAtomic bool) service.HTTPModule {
+	return service.HTTPModule{
+		Endpoints: func(ctx context.Context) []http_server.Endpoint {
+			actions := NewActions(appConfig, reporter)
+			return NewHTTPWrapper(actions, appConfig, reporter, ctx).GetEndpoints(isAtomic)
+		},
+	}
+}
 
 // HTTPWrapper предоставляет обёртку для системных действий через HTTP.
 type HTTPWrapper struct {

@@ -56,5 +56,5 @@ func getDocConfig() dbus_doc.Config {
 // startDocServer запускает веб-сервер с D-Bus документацией
 func startDocServer(ctx context.Context) error {
 	gen := dbus_doc.NewGenerator(getDocConfig())
-	return http_server.ServeHTML(ctx, "127.0.0.1:8085", gen.GenerateDBusDocHTML)
+	return http_server.ServeHTMLOnFreePort(ctx, gen.GenerateDBusDocHTML)
 }

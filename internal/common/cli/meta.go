@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package helper
+package cli
 
 import (
 	"apm/internal/common/app"
+	"context"
 	"fmt"
 	"strings"
 
@@ -26,9 +27,40 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// SetupHelpTemplates задаёт общий шаблон для отображения
+type CommandHooks struct {
+	OnNotFound   func(ctx context.Context, cmd *cli.Command, name string)
+	OnUsageError func(err error) error
+}
+
+// ApplyCommandSettings обходит дерево команд рекурсивно и применяет общие настройки.
+func ApplyCommandSettings(cmd *cli.Command, hooks CommandHooks) {
+	if hooks.OnNotFound != nil {
+		cmd.CommandNotFound = hooks.OnNotFound
+	}
+	cmd.HideHelpCommand = true
+	cmd.EnableShellCompletion = true
+	cmd.Suggest = true
+	if hooks.OnUsageError != nil {
+		cmd.OnUsageError = func(_ context.Context, _ *cli.Command, err error, _ bool) error {
+			return hooks.OnUsageError(err)
+		}
+	}
+	for _, sub := range cmd.Commands {
+		ApplyCommandSettings(sub, hooks)
+	}
+}
+
+// AppDescription возвращает описание приложения для корневой команды.
+func AppDescription() string {
+	return app.T_("Universal package manager for ALT Linux") + "\n" +
+		app.T_("Manages system packages via APT, distrobox containers, atomic images and kernels") + "\n" +
+		app.T_("Supports repository management") + "\n" +
+		app.T_("Works as CLI tool, D-Bus service (system/session) or HTTP API server") + "\n" +
+		app.T_("Output formats: text (default, types: tree/plain via -ft) and json (-f json)")
+}
+
+// SetupHelpTemplates задаёт общие шаблоны для help и переопределяет встроенные флаги.
 func SetupHelpTemplates() {
-	// Переопределяем HelpFlag для перевода
 	cli.HelpFlag = &cli.BoolFlag{
 		Name:        "help",
 		Aliases:     []string{"h"},
@@ -46,11 +78,10 @@ func SetupHelpTemplates() {
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
 
-	// Overriding the "root" template (the equivalent of AppHelpTemplate)
 	cli.RootCommandHelpTemplate = fmt.Sprintf(`%s
    {{template "helpNameTemplate" .}} {{if .Version}}{{if not .HideVersion}}{{.Version}}{{end}}{{end}}{{if .Description}}
 
-%s 
+%s
    {{if .UsageText}}{{wrap .UsageText 3}}{{else}}{{.FullName}} [command [command options]]{{end}}
 
 %s
@@ -70,7 +101,6 @@ func SetupHelpTemplates() {
 		titleStyle.Render(app.T_("Options:")),
 	)
 
-	// Overriding the template for "command" help
 	cli.CommandHelpTemplate = fmt.Sprintf(`%s
    {{template "helpNameTemplate" .}}
 
@@ -98,7 +128,6 @@ func SetupHelpTemplates() {
 		titleStyle.Render(app.T_("Global options:")),
 	)
 
-	// Overriding the template for "subcommand" help (if nested commands are used)
 	cli.SubcommandHelpTemplate = fmt.Sprintf(`%s
    {{template "helpNameTemplate" .}}
 
@@ -187,7 +216,7 @@ func SetupHelpTemplates() {
 	}
 }
 
-// unquoteUsage извлекает placeholder
+// unquoteUsage извлекает placeholder из usage-строки флага.
 func unquoteUsage(usage string) (string, string) {
 	for i := 0; i < len(usage); i++ {
 		if usage[i] == '`' {
@@ -204,7 +233,7 @@ func unquoteUsage(usage string) (string, string) {
 	return "", usage
 }
 
-// TranslateUsageError переводит ошибки парсинга CLI (required flags, invalid value и т.д.)
+// TranslateUsageError переводит ошибки парсинга CLI (required flags, invalid value и т.д.).
 func TranslateUsageError(err error) error {
 	msg := err.Error()
 

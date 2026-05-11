@@ -20,9 +20,9 @@ import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/altfiles"
+	apmcli "apm/internal/common/cli"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
-	"apm/internal/common/wrapper"
 	"apm/internal/domain/system/appstream"
 	"context"
 	"fmt"
@@ -108,7 +108,7 @@ var aptOptionFlag = func() cli.Flag {
 }
 
 func upgradeCommand(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
 
 	if appConfig.ConfigManager.GetConfig().IsAtomic {
 		return &cli.Command{
@@ -168,8 +168,8 @@ func upgradeCommand(appConfig *app.Config, reporter *reply.Reporter) *cli.Comman
 }
 
 func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
-	withGlobalWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-	withRootCheckWrapper := wrapper.WithOptions(appConfig, reporter, wrapper.RequireRoot, NewActions, newErrorResponseFromError)
+	withGlobalWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
 
 	imageCmds := []*cli.Command{
 		{
