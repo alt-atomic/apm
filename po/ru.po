@@ -754,7 +754,7 @@ msgstr "Ошибка пакетного обновления"
 #: internal/common/apt/package/database.go:489
 #: internal/common/swcat/database.go:202 internal/common/swcat/database.go:257
 msgid "Query execution error: %w"
-msgstr "Ошибка исполнения запроса"
+msgstr "Ошибка исполнения запроса: %w"
 
 #: internal/common/apt/package/database.go:513
 msgid "Package count error: %w"

@@ -17,28 +17,34 @@
 package cli
 
 import (
+	"apm/internal/common/app"
 	aptLib "apm/internal/common/binding/apt/lib"
+	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
-type SignalCallback func(sig os.Signal, graceful bool)
-
-// InstallSignalHandler ловит SIGINT/SIGTERM/SIGQUIT и прокидывает в callback.
-func InstallSignalHandler(cb SignalCallback) {
+// InstallSignalHandler возвращает производный ctx, который отменяется при
+// получении SIGINT/SIGTERM/SIGQUIT - это инициирует graceful shutdown через ctx.Done().
+func InstallSignalHandler(parent context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(parent)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	aptLib.RegisterSignalChannel(sigs)
 
 	go func() {
 		sig := <-sigs
-		graceful := sig == syscall.SIGINT || sig == syscall.SIGTERM
-		if cb != nil {
-			cb(sig, graceful)
-		}
-		os.Exit(signalExitCode(sig))
+		app.Log.Info(fmt.Sprintf(app.T_("Received signal %s, stopping application…"), sig))
+		cancel()
+
+		sig2 := <-sigs
+		app.Log.Warn(fmt.Sprintf(app.T_("Received second signal %s, forcing exit."), sig2))
+		os.Exit(signalExitCode(sig2))
 	}()
+
+	return ctx, cancel
 }
 
 func signalExitCode(sig os.Signal) int {
@@ -46,12 +52,5 @@ func signalExitCode(sig os.Signal) int {
 	if !ok {
 		return 1
 	}
-	switch s {
-	case syscall.SIGINT:
-		return 130
-	case syscall.SIGTERM:
-		return 143
-	default:
-		return 128 + int(s)
-	}
+	return 128 + int(s)
 }

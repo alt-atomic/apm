@@ -54,8 +54,9 @@ type DBusRunConfig struct {
 	Modules []DBusModule
 }
 
-func RunDBus(ctx context.Context, cmd *cli.Command, appConfig *app.Config, cfg DBusRunConfig) error {
-	apmcli.ApplyCLIFlags(cmd, appConfig)
+func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBusRunConfig) error {
+	appConfig.ConfigManager.SetFormat(app.FormatDBus)
+	appConfig.ConfigManager.EnableVerbose()
 	if err := apmcli.CheckRoot(cfg.Mode); err != nil {
 		return err
 	}
@@ -88,8 +89,6 @@ func RunDBus(ctx context.Context, cmd *cli.Command, appConfig *app.Config, cfg D
 	); err != nil {
 		return fmt.Errorf("export introspectable: %w", err)
 	}
-
-	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 
 	var wg sync.WaitGroup
 	for _, hook := range postHooks {

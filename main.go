@@ -45,29 +45,32 @@ type appRuntime struct {
 	config   *app.Config
 	reporter *reply.Reporter
 	ctx      context.Context
-	cancel   context.CancelFunc
 	once     sync.Once
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	cfg, err := app.InitializeAppDefault()
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintln(os.Stderr, "Initialization error:", err)
+		return 1
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := apmcli.InstallSignalHandler(context.Background())
+	defer cancel()
+
 	rt := &appRuntime{
 		config:   cfg,
 		reporter: reply.NewReporter(cfg),
 		ctx:      ctx,
-		cancel:   cancel,
 	}
 	defer rt.cleanup()
 
 	apmcli.SetupHelpTemplates()
 	app.Log.Debug("Starting apm…")
-
-	apmcli.InstallSignalHandler(rt.onSignal)
 
 	rootCommand := &cli.Command{
 		Name:        "apm",
@@ -89,9 +92,11 @@ func main() {
 		},
 	})
 
-	if err = rootCommand.Run(rt.ctx, os.Args); err != nil {
-		os.Exit(1)
+	if err := rootCommand.Run(rt.ctx, os.Args); err != nil {
+		return 1
 	}
+
+	return 0
 }
 
 func (rt *appRuntime) buildCommands() []*cli.Command {
@@ -114,21 +119,7 @@ func (rt *appRuntime) buildCommands() []*cli.Command {
 	return append(commands, apmcli.HelpCommand(), apmcli.VersionCommand(rt.printVersion))
 }
 
-func (rt *appRuntime) onSignal(sig os.Signal, graceful bool) {
-	var msg string
-	if graceful {
-		msg = fmt.Sprintf(app.T_("Recieved correct signal %s. Stopping application…"), sig)
-		app.Log.Info(msg)
-	} else {
-		msg = fmt.Sprintf(app.T_("Unexpected signal %s received. Terminating the application with an error."), sig)
-		app.Log.Error(msg)
-	}
-	rt.cleanup()
-	rt.cliError(errors.New(msg))
-}
-
 func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
-	defer rt.cleanup()
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
 		Bus:  service.BusSession,
 		Mode: apmcli.ForbidRoot,
@@ -139,7 +130,6 @@ func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
-	defer rt.cleanup()
 	cfg := rt.config.ConfigManager.GetConfig()
 	modules := []service.DBusModule{
 		system.DBusFactory(rt.config, rt.reporter),
@@ -156,7 +146,6 @@ func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (rt *appRuntime) httpServer(ctx context.Context, cmd *cli.Command) error {
-	defer rt.cleanup()
 	cfg := rt.config.ConfigManager.GetConfig()
 	return rt.reportError(service.RunHTTP(ctx, cmd, rt.config, service.HTTPRunConfig{
 		Mode: apmcli.RequireRoot,
@@ -173,7 +162,6 @@ func (rt *appRuntime) httpServer(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (rt *appRuntime) httpSession(ctx context.Context, cmd *cli.Command) error {
-	defer rt.cleanup()
 	if !rt.config.ConfigManager.GetConfig().ExistDistrobox {
 		return rt.reportError(errors.New(app.T_("Distrobox is not installed")))
 	}
@@ -211,7 +199,6 @@ func (rt *appRuntime) cleanup() {
 			reply.StopSpinner(rt.config)
 			closeApp(rt.config)
 		}
-		rt.cancel()
 	})
 }
 

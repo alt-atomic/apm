@@ -84,6 +84,7 @@ type Translator interface {
 	T_(messageID string) string
 	TN_(messageID string, pluralMessageID string, count int) string
 }
+
 // Config централизованный конфиг приложение
 type Config struct {
 	DatabaseManager DatabaseManager

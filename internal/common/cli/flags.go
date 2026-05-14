@@ -53,11 +53,3 @@ func RootFlags() []cli.Flag {
 		},
 	}
 }
-
-// ApplyCLIFlags применяет глобальные флаги (format, verbose) к конфигурации приложения.
-func ApplyCLIFlags(cmd *cli.Command, appConfig *app.Config) {
-	appConfig.ConfigManager.SetFormat(cmd.String("format"))
-	if cmd.Bool("verbose") {
-		appConfig.ConfigManager.EnableVerbose()
-	}
-}
