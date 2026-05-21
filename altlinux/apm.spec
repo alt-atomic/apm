@@ -1,3 +1,6 @@
+# If you want to suggest changes, please send PR on
+# https://altlinux.space/alt-atomic/apm to altlinux branch 
+
 %define _unpackaged_files_terminate_build 1
 
 %define service_id org.altlinux.APM
