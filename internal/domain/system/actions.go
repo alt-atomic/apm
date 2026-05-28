@@ -962,11 +962,6 @@ func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool
 		}
 	}
 
-	imageStatus, err := a.getImageStatus(ctx)
-	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
-	}
-
 	if len(a.serviceHostConfig.GetConfig().Modules) > 0 {
 		err = a.serviceHostConfig.GenerateDockerfile(hostCache)
 		if err != nil {
@@ -985,6 +980,11 @@ func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool
 	}
 
 	_ = a.serviceTemporaryConfig.DeleteFile()
+
+	imageStatus, err := a.getImageStatus(ctx)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
 
 	return &ImageApplyResponse{
 		Message:     app.T_("Changes applied successfully. A reboot is required"),
