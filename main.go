@@ -208,7 +208,7 @@ func closeApp(appConfig *app.Config) {
 	}
 
 	aptLib.WaitIdle()
-	defer apt.Close()
+	apt.Close()
 
 	if appConfig.DBusManager != nil {
 		if err := appConfig.DBusManager.Close(); err != nil {
