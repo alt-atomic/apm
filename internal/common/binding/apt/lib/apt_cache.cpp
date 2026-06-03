@@ -26,25 +26,6 @@ AptResult apt_cache_open(const AptSystem *system, AptCache **cache, bool with_lo
         return make_result(APT_ERROR_INIT_FAILED, APT_MSG_CACHE_SYSTEM_NOT_INIT);
     }
 
-    if (with_lock) {
-        if (!system->system->Lock()) {
-            if (_error->PendingError()) {
-                std::string error_msg;
-                std::string all_errors;
-                while (_error->PopMessage(error_msg)) {
-                    if (!all_errors.empty()) {
-                        all_errors += "; ";
-                    }
-                    all_errors += error_msg;
-                }
-                return make_result(APT_ERROR_LOCK_FAILED, all_errors.c_str());
-            }
-            return make_result(APT_ERROR_LOCK_FAILED,
-                               "Unable to acquire APT system lock - another process may be using APT");
-        }
-        system->system->UnLock(true);
-    }
-
     try {
         *cache = new AptCache();
 
