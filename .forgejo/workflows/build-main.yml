@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build and test
-    runs-on: alt-sisyphus
+    runs-on: als-huge
 
     steps:
       - name: Install deps
