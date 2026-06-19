@@ -41,7 +41,7 @@ func (b *MergeBody) Execute(_ context.Context, _ Service) (any, error) {
 
 	if b.Prepend {
 		return nil, osutils.PrependFile(b.Source, b.Destination, mode)
-	} else {
-		return nil, osutils.AppendFile(b.Source, b.Destination, mode)
 	}
+
+	return nil, osutils.AppendFile(b.Source, b.Destination, mode)
 }

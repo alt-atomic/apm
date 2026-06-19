@@ -31,8 +31,8 @@ type GitBody struct {
 }
 
 func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
-	needInstallDeps := []string{}
-	needRemoveDeps := []string{}
+	var needInstallDeps []string
+	var needRemoveDeps []string
 
 	for _, dep := range append(b.Deps, b.BuildDeps...) {
 		pkg, err := svc.GetPackageByName(ctx, dep)
@@ -60,7 +60,7 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	args := []string{"clone"}
 	if b.Rev != "" {

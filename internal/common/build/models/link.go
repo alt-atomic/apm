@@ -21,7 +21,7 @@ type LinkBody struct {
 	Replace bool `yaml:"replace,omitempty" json:"replace,omitempty"`
 }
 
-func (b *LinkBody) Execute(ctx context.Context, svc Service) (any, error) {
+func (b *LinkBody) Execute(_ context.Context, _ Service) (any, error) {
 	if !filepath.IsAbs(b.Target) {
 		return nil, errors.New(app.T_("target in link type must be absolute path"))
 	}

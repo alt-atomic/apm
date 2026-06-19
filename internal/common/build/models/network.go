@@ -34,7 +34,7 @@ type NetworkBody struct {
 	Hostname string `yaml:"hostname,omitempty" json:"hostname,omitempty" required:""`
 }
 
-func (b *NetworkBody) Execute(ctx context.Context, svc Service) (any, error) {
+func (b *NetworkBody) Execute(_ context.Context, _ Service) (any, error) {
 	if err := os.WriteFile(EtcHostname, fmt.Appendf(nil, "%s\n", b.Hostname), 0644); err != nil {
 		return nil, err
 	}

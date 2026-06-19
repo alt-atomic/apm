@@ -43,7 +43,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	if b.Name != "" {
 		var brandingPackagesPrefix = fmt.Sprintf("branding-%s-", b.Name)
-		var brandingSubpackages = []string{}
+		var brandingSubpackages []string
 
 		if len(b.Subpackages) != 0 {
 			brandingSubpackages = b.Subpackages
