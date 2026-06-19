@@ -326,9 +326,16 @@ func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName st
 		return ContainerInfo{}, err
 	}
 
-	osInfo, err := d.GetContainerOsInfo(ctx, containerName)
+	containers, err := d.GetContainerList(ctx, false)
 	if err != nil {
-		return osInfo, err
+		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to get the list of containers: %v"), err)
+	}
+
+	found := slices.ContainsFunc(containers, func(c ContainerInfo) bool {
+		return c.ContainerName == containerName
+	})
+	if !found {
+		return ContainerInfo{}, fmt.Errorf(app.T_("Container %s not found"), containerName)
 	}
 
 	_, stderr, errRm := d.runner.Run(ctx, []string{"distrobox", "rm", "--yes", "--force", containerName})
@@ -336,7 +343,7 @@ func (d *DistroAPIService) RemoveContainer(ctx context.Context, containerName st
 		return ContainerInfo{}, fmt.Errorf(app.T_("Failed to delete container %s: %v, stderr: %s"), containerName, errRm, stderr)
 	}
 
-	return osInfo, nil
+	return ContainerInfo{ContainerName: containerName}, nil
 }
 
 var (
