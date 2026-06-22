@@ -167,6 +167,10 @@ func (a *sysusersAnalysis) readEntries(rootfs string) ([]sysusersEntry, error) {
 		if f.IsDir() || !strings.HasSuffix(f.Name(), ".conf") {
 			continue
 		}
+		// свой конфиг игнорируем
+		if f.Name() == confName {
+			continue
+		}
 		entries, err := a.parseFile(filepath.Join(dir, f.Name()))
 		if err != nil {
 			return nil, err

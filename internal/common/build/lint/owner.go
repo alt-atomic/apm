@@ -2,12 +2,28 @@ package lint
 
 import (
 	"apm/internal/common/app"
+	"fmt"
 	"io/fs"
 	"os/user"
 	"strconv"
 	"sync"
 	"syscall"
 )
+
+// formatMode возвращает права в восьмеричном виде для tmpfiles.d, включая спецбиты setuid/setgid/sticky.
+func formatMode(m fs.FileMode) string {
+	mode := uint32(m.Perm())
+	if m&fs.ModeSetuid != 0 {
+		mode |= 0o4000
+	}
+	if m&fs.ModeSetgid != 0 {
+		mode |= 0o2000
+	}
+	if m&fs.ModeSticky != 0 {
+		mode |= 0o1000
+	}
+	return fmt.Sprintf("%04o", mode)
+}
 
 var ownerCache = struct {
 	sync.RWMutex

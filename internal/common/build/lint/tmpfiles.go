@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -102,6 +103,10 @@ func (a *tmpFilesAnalysis) readEntries(rootfs string) (map[string]string, error)
 			if f.IsDir() || !strings.HasSuffix(f.Name(), ".conf") {
 				continue
 			}
+			// свой конфиг игнорируем
+			if f.Name() == confName {
+				continue
+			}
 			if err = a.parseFile(filepath.Join(dir, f.Name()), entries); err != nil {
 				return nil, err
 			}
@@ -150,10 +155,8 @@ var skipContentPrefixes = []string{
 }
 
 func skipContent(absPath string) bool {
-	for _, dir := range skipContentDirs {
-		if absPath == dir {
-			return true
-		}
+	if slices.Contains(skipContentDirs, absPath) {
+		return true
 	}
 	for _, prefix := range skipContentPrefixes {
 		if strings.HasPrefix(absPath, prefix) {
@@ -211,7 +214,7 @@ func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 
 		case ft.IsDir():
 			if !covered {
-				mode := fmt.Sprintf("%04o", info.Mode().Perm())
+				mode := formatMode(info.Mode())
 				user, group := lookupOwner(info)
 				escaped := escapePath(canonPath)
 				a.Missing = append(a.Missing, tmpFilesEntry{
@@ -231,7 +234,7 @@ func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 
 		case ft.IsRegular():
 			if !covered {
-				mode := fmt.Sprintf("%04o", info.Mode().Perm())
+				mode := formatMode(info.Mode())
 				user, group := lookupOwner(info)
 				escaped := escapePath(canonPath)
 				a.Missing = append(a.Missing, tmpFilesEntry{
