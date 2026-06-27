@@ -87,6 +87,24 @@ func (s *Service) ApplyBuild() (*ApplyResult, error) {
 	}, nil
 }
 
+// ApplyJoin сливает /usr/lib/{passwd,group} в /etc и очищает /usr/lib.
+func (s *Service) ApplyJoin() (*ApplyResult, error) {
+	etcPasswd, err := s.joinPasswdFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to join passwd: %w", err)
+	}
+
+	etcGroup, err := s.joinGroupFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to join group: %w", err)
+	}
+
+	return &ApplyResult{
+		EtcPasswdCount: len(etcPasswd),
+		EtcGroupCount:  len(etcGroup),
+	}, nil
+}
+
 // ApplyFix чистит /etc/passwd и /etc/group на живой системе,
 // удаляя записи которые уже есть в /usr/lib (иммутабельный образ)
 func (s *Service) ApplyFix() (*ApplyResult, error) {

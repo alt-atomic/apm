@@ -166,6 +166,76 @@ func (s *Service) splitGroupFiles() (etc []etcfiles.GroupEntry, lib []etcfiles.G
 	return newEtc, newLib, nil
 }
 
+// joinPasswdFiles сливает /usr/lib/passwd в /etc/passwd и очищает lib.
+func (s *Service) joinPasswdFiles() ([]etcfiles.PasswdEntry, error) {
+	etcData, err := os.ReadFile(s.cfg.EtcPasswd)
+	if err != nil {
+		return nil, err
+	}
+	etcEntries, err := etcfiles.ParsePasswd(etcData)
+	if err != nil {
+		return nil, err
+	}
+
+	var libEntries []etcfiles.PasswdEntry
+	if libData, readErr := os.ReadFile(s.cfg.LibPasswd); readErr == nil {
+		libEntries, _ = etcfiles.ParsePasswd(libData)
+	}
+
+	// /etc выигрывает на конфликте имён.
+	merged := etcfiles.MergePasswd(libEntries, etcEntries)
+
+	info, err := os.Stat(s.cfg.EtcPasswd)
+	if err != nil {
+		return nil, err
+	}
+	perm := info.Mode().Perm()
+
+	if err = os.WriteFile(s.cfg.EtcPasswd, etcfiles.FormatPasswd(merged), perm); err != nil {
+		return nil, err
+	}
+	// Очищаем lib.
+	if err = os.WriteFile(s.cfg.LibPasswd, nil, perm); err != nil {
+		return nil, err
+	}
+
+	return merged, nil
+}
+
+// joinGroupFiles сливает /usr/lib/group в /etc/group и очищает lib.
+func (s *Service) joinGroupFiles() ([]etcfiles.GroupEntry, error) {
+	etcData, err := os.ReadFile(s.cfg.EtcGroup)
+	if err != nil {
+		return nil, err
+	}
+	etcEntries, err := etcfiles.ParseGroup(etcData)
+	if err != nil {
+		return nil, err
+	}
+
+	var libEntries []etcfiles.GroupEntry
+	if libData, readErr := os.ReadFile(s.cfg.LibGroup); readErr == nil {
+		libEntries, _ = etcfiles.ParseGroup(libData)
+	}
+
+	merged := etcfiles.MergeGroup(libEntries, etcEntries)
+
+	info, err := os.Stat(s.cfg.EtcGroup)
+	if err != nil {
+		return nil, err
+	}
+	perm := info.Mode().Perm()
+
+	if err = os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(merged), perm); err != nil {
+		return nil, err
+	}
+	if err = os.WriteFile(s.cfg.LibGroup, nil, perm); err != nil {
+		return nil, err
+	}
+
+	return merged, nil
+}
+
 func (s *Service) patchNsswitchFile() error {
 	data, err := os.ReadFile(s.cfg.EtcNsswitch)
 	if err != nil {

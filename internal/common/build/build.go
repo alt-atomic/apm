@@ -80,21 +80,42 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
-	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
-	if err != nil {
+	if err := cfgService.runModules(ctx); err != nil {
 		return err
 	}
 
 	if cfgService.IsAtomic() {
-		if err = cfgService.applyNssAltFiles(ctx); err != nil {
-			return err
-		}
-		if err = cfgService.fixTmpFiles(ctx); err != nil {
+		if err := cfgService.fixTmpFiles(ctx); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// runModules выполняет модули конфигурации. На атомарной сборке оборачивает их
+// в окно un-split: сливает /usr/lib в /etc перед модулями и восстанавливает.
+func (cfgService *ConfigService) runModules(ctx context.Context) (err error) {
+	reverted := false
+	if cfgService.IsAtomic() {
+		if reverted, err = cfgService.revertNssAltFiles(ctx); err != nil {
+			return err
+		}
+	}
+
+	if reverted {
+		defer func() {
+			if splitErr := cfgService.splitNssAltFiles(); splitErr != nil {
+				app.Log.Error(fmt.Sprintf("nss-altfiles re-split failed: %v", splitErr))
+				if err == nil {
+					err = splitErr
+				}
+			}
+		}()
+	}
+
+	_, err = cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
+	return err
 }
 
 func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module, modulesMap map[string]*common_types.MapModule) (*common_types.MapModule, error) {

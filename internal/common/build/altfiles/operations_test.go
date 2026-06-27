@@ -299,3 +299,152 @@ func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
 		t.Error("video should be removed from /etc/group (no unique members)")
 	}
 }
+
+// parsePasswdFile читает и парсит passwd-файл в тесте.
+func parsePasswdFile(t *testing.T, path string) []etcfiles.PasswdEntry {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	entries, err := etcfiles.ParsePasswd(data)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	return entries
+}
+
+// parseGroupFile читает и парсит group-файл в тесте.
+func parseGroupFile(t *testing.T, path string) []etcfiles.GroupEntry {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	entries, err := etcfiles.ParseGroup(data)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	return entries
+}
+
+func passwdNames(entries []etcfiles.PasswdEntry) map[string]bool {
+	m := map[string]bool{}
+	for _, e := range entries {
+		m[e.Name] = true
+	}
+	return m
+}
+
+func groupByName(entries []etcfiles.GroupEntry) map[string]etcfiles.GroupEntry {
+	m := map[string]etcfiles.GroupEntry{}
+	for _, e := range entries {
+		m[e.Name] = e
+	}
+	return m
+}
+
+// ApplyJoin → всё в /etc; ApplyBuild → исходное split-состояние.
+func TestApplyJoinRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	if _, err := svc.ApplyJoin(); err != nil {
+		t.Fatalf("ApplyJoin: %v", err)
+	}
+
+	// После join всё в /etc.
+	etcUsers := passwdNames(parsePasswdFile(t, svc.cfg.EtcPasswd))
+	if !etcUsers["root"] || !etcUsers["dm"] || !etcUsers["appsvc"] {
+		t.Fatalf("after join /etc/passwd must hold all users, got %v", etcUsers)
+	}
+
+	// Re-split восстанавливает исходное состояние.
+	if _, err := svc.ApplyBuild(); err != nil {
+		t.Fatalf("ApplyBuild: %v", err)
+	}
+
+	etc := passwdNames(parsePasswdFile(t, svc.cfg.EtcPasswd))
+	if !etc["root"] || !etc["dm"] || etc["appsvc"] {
+		t.Errorf("after re-split /etc/passwd want {root,dm}, got %v", etc)
+	}
+	lib := passwdNames(parsePasswdFile(t, svc.cfg.LibPasswd))
+	if !lib["appsvc"] || lib["dm"] || lib["root"] {
+		t.Errorf("after re-split /usr/lib/passwd want {appsvc}, got %v", lib)
+	}
+
+	etcG := groupByName(parseGroupFile(t, svc.cfg.EtcGroup))
+	if _, ok := etcG["appgrp"]; ok {
+		t.Errorf("after re-split appgrp must leave /etc/group")
+	}
+	libG := groupByName(parseGroupFile(t, svc.cfg.LibGroup))
+	if g, ok := libG["appgrp"]; !ok || g.GID != 190 {
+		t.Errorf("after re-split appgrp must be in /usr/lib/group with GID 190, got %+v", libG)
+	}
+}
+
+// После ApplyJoin /usr/lib/{passwd,group} пусты.
+func TestApplyJoinEmptiesLib(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
+
+	if _, err := svc.ApplyJoin(); err != nil {
+		t.Fatalf("ApplyJoin: %v", err)
+	}
+
+	if got := parsePasswdFile(t, svc.cfg.LibPasswd); len(got) != 0 {
+		t.Errorf("/usr/lib/passwd must be empty after join, got %v", got)
+	}
+	if got := parseGroupFile(t, svc.cfg.LibGroup); len(got) != 0 {
+		t.Errorf("/usr/lib/group must be empty after join, got %v", got)
+	}
+}
+
+// Членство, добавленное после join, переживает re-split и уезжает в lib.
+func TestApplyJoinPreservesMemberOnReSplit(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	if _, err := svc.ApplyJoin(); err != nil {
+		t.Fatalf("ApplyJoin: %v", err)
+	}
+
+	// Эмуляция `usermod -aG appgrp appsvc`.
+	entries := parseGroupFile(t, svc.cfg.EtcGroup)
+	for i := range entries {
+		if entries[i].Name == "appgrp" {
+			entries[i].Members = append(entries[i].Members, "appsvc")
+		}
+	}
+	os.WriteFile(svc.cfg.EtcGroup, etcfiles.FormatGroup(entries), 0644)
+
+	if _, err := svc.ApplyBuild(); err != nil {
+		t.Fatalf("ApplyBuild: %v", err)
+	}
+
+	libG := groupByName(parseGroupFile(t, svc.cfg.LibGroup))
+	appgrp, ok := libG["appgrp"]
+	if !ok {
+		t.Fatal("appgrp must be back in /usr/lib/group after re-split")
+	}
+	if !slices.Contains(appgrp.Members, "appsvc") {
+		t.Fatalf("appsvc membership lost after re-split: %v", appgrp.Members)
+	}
+}

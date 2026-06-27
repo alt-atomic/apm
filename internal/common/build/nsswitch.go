@@ -10,23 +10,44 @@ import (
 
 const altFilesPkg = "libnss-altfiles"
 
-// applyNssAltFiles выполняет настройку nss-altfiles для атомарных систем
-func (cfgService *ConfigService) applyNssAltFiles(ctx context.Context) error {
+// altFilesManaged: true, если в контейнере и установлен libnss-altfiles.
+func (cfgService *ConfigService) altFilesManaged(ctx context.Context) bool {
 	if !helper.IsRunningInContainer() {
 		app.Log.Info("Not running in container, skipping nss-altfiles setup")
-		return nil
+		return false
 	}
 
 	pkg, err := cfgService.GetPackageByName(ctx, altFilesPkg)
 	if err != nil || pkg == nil || !pkg.Installed {
 		app.Log.Info(fmt.Sprintf("Package %s is not installed, skipping nss-altfiles setup", altFilesPkg))
-		return nil
+		return false
+	}
+	return true
+}
+
+// revertNssAltFiles сливает /usr/lib в /etc. Возвращает true, если откат выполнен.
+func (cfgService *ConfigService) revertNssAltFiles(ctx context.Context) (bool, error) {
+	if !cfgService.altFilesManaged(ctx) {
+		return false, nil
 	}
 
+	app.Log.Info("nss-altfiles: joining /usr/lib back into /etc for imperative tools")
+
+	result, err := altfiles.NewDefault().ApplyJoin()
+	if err != nil {
+		return false, err
+	}
+
+	app.Log.Info(fmt.Sprintf("nss-altfiles: joined /etc/passwd=%d, /etc/group=%d",
+		result.EtcPasswdCount, result.EtcGroupCount))
+	return true, nil
+}
+
+// splitNssAltFiles разделяет passwd/group по /etc и /usr/lib и патчит nsswitch.conf.
+func (cfgService *ConfigService) splitNssAltFiles() error {
 	app.Log.Info("Configuring nss-altfiles: splitting passwd/group for atomic system")
 
-	svc := altfiles.NewDefault()
-	result, err := svc.ApplyBuild()
+	result, err := altfiles.NewDefault().ApplyBuild()
 	if err != nil {
 		return err
 	}
