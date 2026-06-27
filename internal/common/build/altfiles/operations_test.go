@@ -179,6 +179,53 @@ func TestSyncGroupsNonexistentUser(t *testing.T) {
 	}
 }
 
+// Системный юзер из /usr/lib/passwd должен синкаться в системную группу из
+// /usr/lib/group: в /etc/group появляется overlay-строка.
+func TestSyncGroupsSystemUserFromLibPasswd(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App Service:/var/lib/appsvc:/sbin/nologin\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
+
+	configs := []SyncConfig{{
+		Sync: SyncBody{
+			Groups: []string{"appgrp"},
+			Users:  []string{"appsvc"},
+		},
+	}}
+
+	result, err := svc.SyncGroups(configs)
+	if err != nil {
+		t.Fatalf("SyncGroups: %v", err)
+	}
+
+	if result.Added != 1 {
+		t.Fatalf("expected 1 added, got %d", result.Added)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcGroup)
+	entries, _ := etcfiles.ParseGroup(data)
+
+	grpMap := map[string]etcfiles.GroupEntry{}
+	for _, e := range entries {
+		grpMap[e.Name] = e
+	}
+
+	appgrp, ok := grpMap["appgrp"]
+	if !ok {
+		t.Fatal("appgrp overlay not written to /etc/group")
+	}
+	if appgrp.GID != 190 {
+		t.Errorf("appgrp GID: got %d, want 190", appgrp.GID)
+	}
+	if !slices.Equal(appgrp.Members, []string{"appsvc"}) {
+		t.Errorf("appgrp members: got %v, want [appsvc]", appgrp.Members)
+	}
+}
+
 func TestSyncGroupsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)

@@ -181,36 +181,36 @@ func (s *Service) patchNsswitchFile() error {
 	return os.WriteFile(s.cfg.EtcNsswitch, patched, info.Mode().Perm())
 }
 
-// resolveUsers возвращает валидированный список пользователей для sync.
-// Если users указаны - проверяет что они существуют в /etc/passwd.
-// Иначе - все пользователи из wheel с UID 1000-60000.
+// resolveUsers возвращает валидированный список пользователей для синхронизации.
 func (s *Service) resolveUsers(users []string) ([]string, error) {
-	passwdData, err := os.ReadFile(s.cfg.EtcPasswd)
-	if err != nil {
-		return nil, err
-	}
-	passwdEntries, err := etcfiles.ParsePasswd(passwdData)
-	if err != nil {
-		return nil, err
-	}
-
-	existingUsers := map[string]struct{}{}
-	realUsers := map[string]struct{}{}
-	for _, e := range passwdEntries {
-		existingUsers[e.Name] = struct{}{}
-		if etcfiles.IsRegularUser(e.UID) && e.UID != 0 {
-			realUsers[e.Name] = struct{}{}
-		}
-	}
-
 	if len(users) > 0 {
-		var validated []string
-		for _, u := range users {
-			if _, ok := existingUsers[u]; ok {
-				validated = append(validated, u)
-			}
+		return s.validateUsers(users)
+	}
+	return s.defaultWheelUsers()
+}
+
+// validateUsers оставляет из списка только реально существующих пользователей.
+func (s *Service) validateUsers(users []string) ([]string, error) {
+	existing, err := s.existingUserNames()
+	if err != nil {
+		return nil, err
+	}
+
+	validated := make([]string, 0, len(users))
+	for _, u := range users {
+		if _, ok := existing[u]; ok {
+			validated = append(validated, u)
 		}
-		return validated, nil
+	}
+	return validated, nil
+}
+
+// defaultWheelUsers возвращает членов wheel, являющихся обычными
+// пользователями (UID 1000-60000), исключая системные аккаунты.
+func (s *Service) defaultWheelUsers() ([]string, error) {
+	regular, err := s.regularUserNames()
+	if err != nil {
+		return nil, err
 	}
 
 	wheelMembers, err := s.getWheelMembers()
@@ -218,14 +218,58 @@ func (s *Service) resolveUsers(users []string) ([]string, error) {
 		return nil, err
 	}
 
-	var result []string
-	for _, member := range wheelMembers {
-		if _, ok := realUsers[member]; ok {
-			result = append(result, member)
+	result := make([]string, 0, len(wheelMembers))
+	for _, m := range wheelMembers {
+		if _, ok := regular[m]; ok {
+			result = append(result, m)
 		}
 	}
-
 	return result, nil
+}
+
+// existingUserNames собирает имена из /etc/passwd и /usr/lib/passwd.
+func (s *Service) existingUserNames() (map[string]struct{}, error) {
+	etcEntries, err := s.readPasswd(s.cfg.EtcPasswd)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make(map[string]struct{}, len(etcEntries))
+	for _, e := range etcEntries {
+		names[e.Name] = struct{}{}
+	}
+
+	if libEntries, errLib := s.readPasswd(s.cfg.LibPasswd); errLib == nil {
+		for _, e := range libEntries {
+			names[e.Name] = struct{}{}
+		}
+	}
+	return names, nil
+}
+
+// regularUserNames собирает обычных пользователей (UID 1000-60000) из /etc/passwd.
+func (s *Service) regularUserNames() (map[string]struct{}, error) {
+	etcEntries, err := s.readPasswd(s.cfg.EtcPasswd)
+	if err != nil {
+		return nil, err
+	}
+
+	names := map[string]struct{}{}
+	for _, e := range etcEntries {
+		if etcfiles.IsRegularUser(e.UID) && e.UID != 0 {
+			names[e.Name] = struct{}{}
+		}
+	}
+	return names, nil
+}
+
+// readPasswd читает и парсит passwd-файл.
+func (s *Service) readPasswd(path string) ([]etcfiles.PasswdEntry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return etcfiles.ParsePasswd(data)
 }
 
 // getWheelMembers возвращает объединённый список членов группы wheel
