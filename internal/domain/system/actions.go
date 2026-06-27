@@ -37,6 +37,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -520,38 +521,38 @@ func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*Update
 	}, nil
 }
 
-// ImageBuild Update Сборка образа
-func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string) (*ImageBuild, error) {
+// prepareBuildService готовит окружение сборки и собирает ConfigService.
+func (a *Actions) prepareBuildService(configPath, workdir string) (*build.ConfigService, error) {
 	a.appConfig.ConfigManager.EnableVerbose()
 	reply.StopSpinner(a.appConfig)
 
+	if configPath != "" {
+		if _, err := os.Stat(configPath); err != nil {
+			return nil, fmt.Errorf(app.T_("Configuration file not found: %s"), configPath)
+		}
+	}
+
 	if err := a.serviceHostConfig.ApplyPathOverrides(configPath, workdir); err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		return nil, err
 	}
 
 	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0755); err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		return nil, err
 	}
 
-	err := os.Chdir(a.appConfig.ConfigManager.GetResourcesDir())
-	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	if err := os.Chdir(a.appConfig.ConfigManager.GetResourcesDir()); err != nil {
+		return nil, err
 	}
 
 	envVars, err := a.serviceHostConfig.GetConfigEnvVars()
 	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		return nil, err
 	}
 
 	for key, value := range envVars {
 		if err = os.Setenv(key, value); err != nil {
-			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+			return nil, err
 		}
-	}
-
-	err = a.serviceHostConfig.LoadConfig()
-	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
 	cfg := a.appConfig.ConfigManager.GetConfig()
@@ -560,15 +561,88 @@ func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string) (*
 	aptActions := aptBinding.NewActions()
 	kernelManager := kservice.NewKernelManager(hostPackageDBSvc, aptActions, runner, a.reporter)
 	repoService := reposervice.NewRepoService(hostPackageDBSvc, runner)
-	buildConfigSvc := build.NewConfigService(a.appConfig, a.reporter, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner)
+	return build.NewConfigService(a.appConfig, a.reporter, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner), nil
+}
 
-	err = buildConfigSvc.Build(ctx)
+// ImageBuild Update Сборка образа
+func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string) (*ImageBuild, error) {
+	buildConfigSvc, err := a.prepareBuildService(configPath, workdir)
 	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err = a.serviceHostConfig.LoadConfig(); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err = buildConfigSvc.Build(ctx); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
 	return &ImageBuild{
 		Message: app.T_("DONE"),
+	}, nil
+}
+
+// ImageBuildPhase выполняет одну фазу окна un-split.
+func (a *Actions) ImageBuildPhase(ctx context.Context, configPath, workdir, phase string) (*ImageBuild, error) {
+	buildConfigSvc, err := a.prepareBuildService(configPath, workdir)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err = buildConfigSvc.BuildPhase(ctx, phase); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageBuild{
+		Message: app.T_("DONE"),
+	}, nil
+}
+
+// ImageBuildStep выполняет один сериализованный модуль.
+func (a *Actions) ImageBuildStep(ctx context.Context, configPath, workdir, stepJSON string) (*ImageBuild, error) {
+	buildConfigSvc, err := a.prepareBuildService(configPath, workdir)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err = buildConfigSvc.BuildStep(ctx, []byte(stepJSON)); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageBuild{
+		Message: app.T_("DONE"),
+	}, nil
+}
+
+// ImageGenerate генерирует Containerfile из конфигурации.
+func (a *Actions) ImageGenerate(_ context.Context, configPath, workdir string, opts build.GenerateOptions) (*ImageGenerateResponse, error) {
+	if opts.Output == "" {
+		opts.Output = "Containerfile"
+	}
+	absOutput, err := filepath.Abs(opts.Output)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+	opts.Output = absOutput
+
+	buildConfigSvc, err := a.prepareBuildService(configPath, workdir)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err = a.serviceHostConfig.LoadConfig(); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if _, err = buildConfigSvc.Generate(opts); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageGenerateResponse{
+		Message: app.T_("Containerfile generated"),
+		Path:    opts.Output,
 	}, nil
 }
 

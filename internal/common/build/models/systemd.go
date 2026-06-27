@@ -15,7 +15,7 @@ type SystemdBody struct {
 	// Включать или нет
 	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" conflicts:"Masked"`
 
-	// Включать ли сервис глбоально, для всех пользоваетелей
+	// Включать ли сервис глобально, для всех пользователей
 	Global bool `yaml:"global,omitempty" json:"global,omitempty"`
 
 	// Маскировать ли сервис
@@ -50,4 +50,8 @@ func (b *SystemdBody) Execute(ctx context.Context, _ Service) (any, error) {
 		}
 	}
 	return nil, nil
+}
+
+func (b *SystemdBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
 }

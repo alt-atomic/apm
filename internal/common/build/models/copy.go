@@ -37,3 +37,11 @@ func (b *CopyBody) Execute(_ context.Context, _ Service) (any, error) {
 
 	return nil, osutils.Copy(b.Source, b.Destination, b.Replace)
 }
+
+func (b *CopyBody) CacheHash(baseDir string) (string, error) {
+	digest, err := resourceDigest(baseDir, b.Source)
+	if err != nil {
+		return "", err
+	}
+	return HashBody(b, digest)
+}

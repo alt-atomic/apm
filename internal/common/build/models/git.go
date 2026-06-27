@@ -99,3 +99,7 @@ func (b *GitBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 	return nil, nil
 }
+
+func (b *GitBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}

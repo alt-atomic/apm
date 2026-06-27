@@ -46,3 +46,7 @@ func (b *LinkBody) Execute(_ context.Context, _ Service) (any, error) {
 	}
 	return nil, os.Symlink(b.To, b.Target)
 }
+
+func (b *LinkBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}

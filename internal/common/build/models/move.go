@@ -53,3 +53,7 @@ func (b *MoveBody) Execute(ctx context.Context, svc Service) (any, error) {
 	}
 	return nil, nil
 }
+
+func (b *MoveBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}

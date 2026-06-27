@@ -40,3 +40,7 @@ func (b *ShellBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	return output, nil
 }
+
+func (b *ShellBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}

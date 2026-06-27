@@ -84,6 +84,12 @@ type ImageBuild struct {
 	Message string `json:"message"`
 }
 
+// ImageGenerateResponse структура ответа для ImageGenerate метода
+type ImageGenerateResponse struct {
+	Message string `json:"message"`
+	Path    string `json:"path"`
+}
+
 // ImageStatusResponse структура ответа для ImageStatus метода
 type ImageStatusResponse struct {
 	Message     string      `json:"message"`

@@ -19,6 +19,7 @@ package system
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
+	"apm/internal/common/build"
 	"apm/internal/common/build/altfiles"
 	apmcli "apm/internal/common/cli"
 	"apm/internal/common/helper"
@@ -186,9 +187,31 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					Aliases: []string{"w"},
 					Usage:   app.T_("Working directory for the build"),
 				},
+				&cli.StringFlag{
+					Name:   "phase",
+					Usage:  app.T_("Run a single build phase (pre-modules|post-modules)"),
+					Hidden: true,
+				},
+				&cli.StringFlag{
+					Name:   "step-inline",
+					Usage:  app.T_("Execute a single inline module (JSON)"),
+					Hidden: true,
+				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.ImageBuild(ctx, cmd.String("config"), cmd.String("workdir"))
+				config, workdir := cmd.String("config"), cmd.String("workdir")
+
+				var resp *ImageBuild
+				var err error
+				switch {
+				case cmd.String("phase") != "":
+					resp, err = actions.ImageBuildPhase(ctx, config, workdir, cmd.String("phase"))
+				case cmd.String("step-inline") != "":
+					resp, err = actions.ImageBuildStep(ctx, config, workdir, cmd.String("step-inline"))
+				default:
+					resp, err = actions.ImageBuild(ctx, config, workdir)
+				}
+
 				if err != nil {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
@@ -216,6 +239,52 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
+				return reporter.CliResponse(ctx, reply.OK(resp))
+			}),
+		},
+		{
+			Name:  "generate",
+			Usage: app.T_("Generate a Containerfile with one RUN per module for layer caching"),
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "config",
+					Aliases: []string{"c"},
+					Usage:   app.T_("Path to image configuration file"),
+				},
+				&cli.StringFlag{
+					Name:    "workdir",
+					Aliases: []string{"w"},
+					Usage:   app.T_("Working directory for the build"),
+				},
+				&cli.StringFlag{
+					Name:    "output",
+					Aliases: []string{"o"},
+					Usage:   app.T_("Output Containerfile path"),
+				},
+				&cli.StringFlag{
+					Name:  "resources-source",
+					Usage: app.T_("Build-context path to bind as resources"),
+					Value: "./src/resources",
+				},
+				&cli.BoolFlag{
+					Name:  "expand-remote",
+					Usage: app.T_("Expand remote includes into steps instead of one RUN"),
+				},
+				&cli.StringFlag{
+					Name:  "cache-bust",
+					Usage: app.T_("Token that invalidates all build steps when changed (e.g. a date) to refresh upstream packages"),
+				},
+			},
+			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				resp, err := actions.ImageGenerate(ctx, cmd.String("config"), cmd.String("workdir"), build.GenerateOptions{
+					Output:          cmd.String("output"),
+					ResourcesSource: cmd.String("resources-source"),
+					ExpandRemote:    cmd.Bool("expand-remote"),
+					CacheBust:       cmd.String("cache-bust"),
+				})
+				if err != nil {
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
+				}
 				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},

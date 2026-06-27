@@ -2,11 +2,13 @@ package models
 
 import (
 	"apm/internal/common/build/common_types"
+	"apm/internal/common/osutils"
 	"context"
+	"crypto/sha256"
 )
 
 type IncludeBody struct {
-	// yml конфиги для выполнения
+	// YAML конфиги для выполнения
 	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" required:""`
 }
 
@@ -24,4 +26,19 @@ func (b *IncludeBody) Execute(ctx context.Context, svc Service) (any, error) {
 		}
 	}
 	return includeOutput, nil
+}
+
+func (b *IncludeBody) CacheHash(_ string) (string, error) {
+	h := sha256.New()
+	for _, target := range b.Targets {
+		if !osutils.IsURL(target) {
+			continue
+		}
+		data, err := fetchURL(target)
+		if err != nil {
+			return "", err
+		}
+		h.Write(data)
+	}
+	return HashBody(b, h.Sum(nil))
 }

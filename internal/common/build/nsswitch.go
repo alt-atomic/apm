@@ -10,8 +10,12 @@ import (
 
 const altFilesPkg = "libnss-altfiles"
 
-// altFilesManaged: true, если в контейнере и установлен libnss-altfiles.
+// altFilesManaged: true, если атомарная сборка в контейнере с установленным libnss-altfiles.
 func (cfgService *ConfigService) altFilesManaged(ctx context.Context) bool {
+	if !cfgService.IsAtomic() {
+		return false
+	}
+
 	if !helper.IsRunningInContainer() {
 		app.Log.Info("Not running in container, skipping nss-altfiles setup")
 		return false

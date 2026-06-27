@@ -7,11 +7,57 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/ast"
+	"github.com/expr-lang/expr/parser"
 )
 
 var placeholderRegexp = regexp.MustCompile(`\$\{\{\s*([A-Za-z0-9_\-.]+)\s*}}`)
+
+// PlaceholderExprs возвращает выражения из всех ${{ }} в строке.
+func PlaceholderExprs(s string) []string {
+	matches := placeholderRegexp.FindAllStringSubmatch(s, -1)
+	out := make([]string, 0, len(matches))
+	for _, m := range matches {
+		out = append(out, m[1])
+	}
+	return out
+}
+
+// ReplacePlaceholders заменяет каждый ${{ expr }} результатом fn(expr).
+func ReplacePlaceholders(s string, fn func(expr string) string) string {
+	return placeholderRegexp.ReplaceAllStringFunc(s, func(match string) string {
+		return fn(placeholderRegexp.FindStringSubmatch(match)[1])
+	})
+}
+
+// identVisitor ищет идентификатор по имени в AST выражения.
+type identVisitor struct {
+	name  string
+	found bool
+}
+
+func (v *identVisitor) Visit(node *ast.Node) {
+	if id, ok := (*node).(*ast.IdentifierNode); ok && id.Value == v.name {
+		v.found = true
+	}
+}
+
+// ExprUsesVar сообщает, ссылается ли выражение на переменную name.
+func ExprUsesVar(raw, name string) (bool, error) {
+	if strings.TrimSpace(raw) == "" {
+		return false, nil
+	}
+	tree, err := parser.Parse(raw)
+	if err != nil {
+		return false, err
+	}
+	v := &identVisitor{name: name}
+	ast.Walk(&tree.Node, v)
+	return v.found, nil
+}
 
 func ResolveExpr(str string, exprData any) (string, error) {
 	data, err := resolvePlaceholders([]byte(str), exprData)

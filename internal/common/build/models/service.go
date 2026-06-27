@@ -35,4 +35,7 @@ type Body interface {
 	// returns
 	// any as output struct
 	Execute(context.Context, Service) (any, error)
+
+	// CacheHash возвращает хэш шага для послойного кэша.
+	CacheHash(baseDir string) (string, error)
 }

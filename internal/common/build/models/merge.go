@@ -45,3 +45,11 @@ func (b *MergeBody) Execute(_ context.Context, _ Service) (any, error) {
 
 	return nil, osutils.AppendFile(b.Source, b.Destination, mode)
 }
+
+func (b *MergeBody) CacheHash(baseDir string) (string, error) {
+	digest, err := resourceDigest(baseDir, b.Source)
+	if err != nil {
+		return "", err
+	}
+	return HashBody(b, digest)
+}

@@ -72,3 +72,7 @@ func (b *PackagesBody) Execute(ctx context.Context, svc Service) (any, error) {
 
 	return nil, svc.CombineInstallRemovePackages(ctx, ops, false, b.Depends, false)
 }
+
+func (b *PackagesBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}

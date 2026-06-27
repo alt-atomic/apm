@@ -49,3 +49,7 @@ func (b *NetworkBody) Execute(_ context.Context, _ Service) (any, error) {
 
 	return nil, nil
 }
+
+func (b *NetworkBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}

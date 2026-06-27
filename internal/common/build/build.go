@@ -29,11 +29,17 @@ import (
 	"apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+const (
+	PhasePreModules  = "pre-modules"
+	PhasePostModules = "post-modules"
 )
 
 type ConfigService struct {
@@ -80,41 +86,64 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
-	if err := cfgService.runModules(ctx); err != nil {
+	reverted, err := cfgService.JoinPhase(ctx)
+	if err != nil {
 		return err
 	}
 
-	if cfgService.IsAtomic() {
-		if err := cfgService.fixTmpFiles(ctx); err != nil {
-			return err
+	_, modErr := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
+
+	return cfgService.SplitLintPhase(ctx, reverted, modErr)
+}
+
+// JoinPhase сливает /usr/lib в /etc перед модулями.
+func (cfgService *ConfigService) JoinPhase(ctx context.Context) (bool, error) {
+	return cfgService.revertNssAltFiles(ctx)
+}
+
+// SplitLintPhase восстанавливает разделение passwd/group и чинит tmpfiles.d после модулей.
+func (cfgService *ConfigService) SplitLintPhase(ctx context.Context, reverted bool, modErr error) error {
+	if reverted {
+		if splitErr := cfgService.splitNssAltFiles(); splitErr != nil {
+			app.Log.Error(fmt.Sprintf("nss-altfiles re-split failed: %v", splitErr))
+			if modErr == nil {
+				modErr = splitErr
+			}
 		}
+	}
+
+	if modErr != nil {
+		return modErr
+	}
+
+	if cfgService.IsAtomic() {
+		return cfgService.fixTmpFiles(ctx)
 	}
 
 	return nil
 }
 
-// runModules выполняет модули конфигурации. На атомарной сборке оборачивает их
-// в окно un-split: сливает /usr/lib в /etc перед модулями и восстанавливает.
-func (cfgService *ConfigService) runModules(ctx context.Context) (err error) {
-	reverted := false
-	if cfgService.IsAtomic() {
-		if reverted, err = cfgService.revertNssAltFiles(ctx); err != nil {
-			return err
-		}
+// BuildPhase выполняет одну фазу окна un-split.
+func (cfgService *ConfigService) BuildPhase(ctx context.Context, phase string) error {
+	switch phase {
+	case PhasePreModules:
+		_, err := cfgService.JoinPhase(ctx)
+		return err
+	case PhasePostModules:
+		return cfgService.SplitLintPhase(ctx, cfgService.altFilesManaged(ctx), nil)
+	default:
+		return fmt.Errorf(app.T_("unknown build phase: %s"), phase)
+	}
+}
+
+// BuildStep выполняет один сериализованный модуль.
+func (cfgService *ConfigService) BuildStep(ctx context.Context, moduleJSON []byte) error {
+	var module core.Module
+	if err := json.Unmarshal(moduleJSON, &module); err != nil {
+		return err
 	}
 
-	if reverted {
-		defer func() {
-			if splitErr := cfgService.splitNssAltFiles(); splitErr != nil {
-				app.Log.Error(fmt.Sprintf("nss-altfiles re-split failed: %v", splitErr))
-				if err == nil {
-					err = splitErr
-				}
-			}
-		}()
-	}
-
-	_, err = cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
+	_, err := cfgService.ExecuteModule(ctx, module, map[string]*common_types.MapModule{})
 	return err
 }
 

@@ -16,9 +16,9 @@ type MapModule struct {
 func (m MapModule) GetLabel() any {
 	if m.Name != "" {
 		return m.Name
-	} else {
-		return fmt.Sprintf("id=%s", m.Id)
 	}
+
+	return fmt.Sprintf("id=%s", m.Id)
 }
 
 type ExprData struct {

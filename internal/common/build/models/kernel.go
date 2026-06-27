@@ -354,3 +354,7 @@ func currentKernelInfo(ctx context.Context, svc Service) (*service.Info, error) 
 
 	return kernelInfo, nil
 }
+
+func (b *KernelBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}

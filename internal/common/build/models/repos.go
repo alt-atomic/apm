@@ -112,3 +112,7 @@ func repoEntries(repos []reposervice.Repository, sep string) string {
 	}
 	return strings.Join(entries, sep)
 }
+
+func (b *ReposBody) CacheHash(_ string) (string, error) {
+	return HashBody(b)
+}
