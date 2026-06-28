@@ -105,6 +105,25 @@ func (s *Service) ApplyJoin() (*ApplyResult, error) {
 	}, nil
 }
 
+// IsSplit сообщает, находится ли система в split-режиме nss-altfiles:
+// /usr/lib/passwd существует и содержит записи.
+func (s *Service) IsSplit() (bool, error) {
+	data, err := os.ReadFile(s.cfg.LibPasswd)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	entries, err := etcfiles.ParsePasswd(data)
+	if err != nil {
+		return false, err
+	}
+
+	return len(entries) > 0, nil
+}
+
 // ApplyFix чистит /etc/passwd и /etc/group на живой системе,
 // удаляя записи которые уже есть в /usr/lib (иммутабельный образ)
 func (s *Service) ApplyFix() (*ApplyResult, error) {

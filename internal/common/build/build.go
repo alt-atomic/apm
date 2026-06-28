@@ -93,20 +93,16 @@ func (cfgService *ConfigService) Build(ctx context.Context) error {
 	return nil
 }
 
-// runModules выполняет модули конфигурации. На атомарной сборке оборачивает их
-// в окно un-split: сливает /usr/lib в /etc перед модулями и восстанавливает.
+// runModules выполняет модули: до них сливает altfiles в /etc, после — формирует обратно.
 func (cfgService *ConfigService) runModules(ctx context.Context) (err error) {
-	reverted := false
 	if cfgService.IsAtomic() {
-		if reverted, err = cfgService.revertNssAltFiles(ctx); err != nil {
+		if err = cfgService.revertNssAltFiles(); err != nil {
 			return err
 		}
-	}
 
-	if reverted {
 		defer func() {
-			if splitErr := cfgService.splitNssAltFiles(); splitErr != nil {
-				app.Log.Error(fmt.Sprintf("nss-altfiles re-split failed: %v", splitErr))
+			if splitErr := cfgService.splitNssAltFiles(ctx); splitErr != nil {
+				app.Log.Error(fmt.Sprintf("nss-altfiles split failed: %v", splitErr))
 				if err == nil {
 					err = splitErr
 				}

@@ -25,26 +25,39 @@ func (cfgService *ConfigService) altFilesManaged(ctx context.Context) bool {
 	return true
 }
 
-// revertNssAltFiles сливает /usr/lib в /etc. Возвращает true, если откат выполнен.
-func (cfgService *ConfigService) revertNssAltFiles(ctx context.Context) (bool, error) {
-	if !cfgService.altFilesManaged(ctx) {
-		return false, nil
+// revertNssAltFiles сливает /usr/lib в /etc, если система в split-режиме.
+func (cfgService *ConfigService) revertNssAltFiles() error {
+	if !helper.IsRunningInContainer() {
+		return nil
+	}
+
+	svc := altfiles.NewDefault()
+	split, err := svc.IsSplit()
+	if err != nil {
+		return err
+	}
+	if !split {
+		return nil
 	}
 
 	app.Log.Info("nss-altfiles: joining /usr/lib back into /etc for imperative tools")
 
-	result, err := altfiles.NewDefault().ApplyJoin()
+	result, err := svc.ApplyJoin()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	app.Log.Info(fmt.Sprintf("nss-altfiles: joined /etc/passwd=%d, /etc/group=%d",
 		result.EtcPasswdCount, result.EtcGroupCount))
-	return true, nil
+	return nil
 }
 
-// splitNssAltFiles разделяет passwd/group по /etc и /usr/lib и патчит nsswitch.conf.
-func (cfgService *ConfigService) splitNssAltFiles() error {
+// splitNssAltFiles формирует altfiles, если установлен libnss-altfiles.
+func (cfgService *ConfigService) splitNssAltFiles(ctx context.Context) error {
+	if !cfgService.altFilesManaged(ctx) {
+		return nil
+	}
+
 	app.Log.Info("Configuring nss-altfiles: splitting passwd/group for atomic system")
 
 	result, err := altfiles.NewDefault().ApplyBuild()
