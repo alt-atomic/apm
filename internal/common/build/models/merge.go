@@ -10,7 +10,7 @@ import (
 )
 
 type MergeBody struct {
-	// Путь до файла, содеримое которого нужно взять
+	// Путь до файла, содержимое которого нужно взять
 	Source string `yaml:"source,omitempty" json:"source,omitempty" required:""`
 
 	// Путь до файла, куда нужно добавить содержимое

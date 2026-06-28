@@ -23,7 +23,7 @@ type BrandingBody struct {
 	// Имя брендинга для пакетов
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// Подпакетоы брендинга, которые нужно поставить. Если пуст, поставятся все
+	// Подпакеты брендинга, которые нужно поставить. Если пуст, поставятся все
 	Subpackages []string `yaml:"subpackages,omitempty" json:"subpackages,omitempty" needs:"Name"`
 
 	// Словарь переопределения или добавления полей в os-release.

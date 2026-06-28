@@ -41,7 +41,7 @@ type KernelInfo struct {
 	// Версия ядра
 	Flavour string `yaml:"flavour,omitempty" json:"flavour,omitempty"`
 
-	// Модуля ядра
+	// Модули ядра
 	Modules []string `yaml:"modules,omitempty" json:"modules,omitempty"`
 
 	// Включать хедеры
@@ -54,7 +54,7 @@ func (i *KernelInfo) IsEmpty() bool {
 
 type Initrd struct {
 	// Поддерживаются: dracut, auto. Если пусто и прописан один из
-	// flavour, modules, inckude-headers, то используется auto
+	// flavour, modules, include-headers, то используется auto
 	Method string `yaml:"method,omitempty" json:"method,omitempty"`
 
 	// Тема плимут
