@@ -32,8 +32,13 @@ func (b *ShellBody) Execute(ctx context.Context, svc Service) (any, error) {
 	var envOutput string
 	opts = append(opts, command.WithOutputCommand("env", &envOutput))
 
-	if _, _, err := svc.Runner().Run(ctx, []string{b.Command}, opts...); err != nil {
+	stdout, _, err := svc.Runner().Run(ctx, []string{b.Command}, opts...)
+	if err != nil {
 		return nil, err
+	}
+
+	if !b.Quiet {
+		svc.CollectOutput(stdout)
 	}
 
 	output.Env = GetEnvFromOutput(envOutput)

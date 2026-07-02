@@ -46,7 +46,8 @@ type ConfigService struct {
 	serviceHostConfig buildHostConfigService
 	runner            command.Runner
 
-	moduleSeq int
+	moduleSeq       int
+	collectedOutput []string
 }
 
 func NewConfigService(appConfig *app.Config, reporter *reply.Reporter, aptActions buildAptActionsService, dBService buildPackageDBService,
@@ -67,6 +68,18 @@ func NewConfigService(appConfig *app.Config, reporter *reply.Reporter, aptAction
 // Reporter возвращает reporter сервиса.
 func (cfgService *ConfigService) Reporter() *reply.Reporter {
 	return cfgService.reporter
+}
+
+// CollectOutput копит вывод модулей для итогового ответа.
+func (cfgService *ConfigService) CollectOutput(text string) {
+	if trimmed := strings.TrimSpace(text); trimmed != "" {
+		cfgService.collectedOutput = append(cfgService.collectedOutput, trimmed)
+	}
+}
+
+// CollectedOutput возвращает накопленный вывод модулей.
+func (cfgService *ConfigService) CollectedOutput() string {
+	return strings.Join(cfgService.collectedOutput, "\n")
 }
 
 func (cfgService *ConfigService) IsAtomic() bool {

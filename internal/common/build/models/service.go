@@ -26,6 +26,7 @@ type Service interface {
 	RepoService() *reposervice.RepoService
 	Runner() command.Runner
 	Reporter() *reply.Reporter
+	CollectOutput(text string)
 }
 
 type Body interface {

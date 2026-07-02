@@ -569,8 +569,15 @@ func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string, pr
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
+	message := app.T_("DONE")
+	if pretty {
+		if output := buildConfigSvc.CollectedOutput(); output != "" {
+			message = output
+		}
+	}
+
 	return &ImageBuild{
-		Message: app.T_("DONE"),
+		Message: message,
 	}, nil
 }
 
