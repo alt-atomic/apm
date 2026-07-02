@@ -78,7 +78,7 @@ custom_target(
     'build', '-v',
     '-ldflags', ' '.join(ldflags),
     '-o', '@OUTPUT@',
-    meson.current_source_dir()
+    meson.current_source_dir() / 'cmd' / 'apm'
   ],
   env: [
     'CGO_ENABLED=1',
