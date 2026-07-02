@@ -96,6 +96,7 @@ const (
 	EventSystemSavePackagesToDB     = "system.SavePackagesToDB"
 	EventSystemSaveImageToDB        = "system.SaveImageToDB"
 	EventSystemBuildImage           = "system.BuildImage"
+	EventSystemImageModule          = "system.imageModule"
 	EventSystemSwitchImage          = "system.SwitchImage"
 	EventSystemCheckUpdateBaseImage = "system.CheckAndUpdateBaseImage"
 	EventSystemBootcUpgrade         = "system.bootcUpgrade"

@@ -45,6 +45,8 @@ type ConfigService struct {
 	repoService       *reposervice.RepoService
 	serviceHostConfig buildHostConfigService
 	runner            command.Runner
+
+	moduleSeq int
 }
 
 func NewConfigService(appConfig *app.Config, reporter *reply.Reporter, aptActions buildAptActionsService, dBService buildPackageDBService,
@@ -115,10 +117,6 @@ func (cfgService *ConfigService) runModules(ctx context.Context) (err error) {
 }
 
 func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module, modulesMap map[string]*common_types.MapModule) (*common_types.MapModule, error) {
-	if module.Name != "" {
-		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
-	}
-
 	exprData := common_types.ExprData{
 		Modules: modulesMap,
 		Env:     osutils.GetEnvMap(),
@@ -169,6 +167,15 @@ func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.
 	if body == nil {
 		return nil, fmt.Errorf("module %s has no body", module.Type)
 	}
+
+	cfgService.moduleSeq++
+	eventName := fmt.Sprintf("%s.%d", reply.EventSystemImageModule, cfgService.moduleSeq)
+	eventView := module.Name
+	if eventView == "" {
+		eventView = fmt.Sprintf("%v", module.GetLabel())
+	}
+	cfgService.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(eventName), reply.WithEventView(eventView))
+	defer cfgService.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(eventName), reply.WithEventView(eventView))
 
 	exprData.Env = osutils.GetEnvMap()
 

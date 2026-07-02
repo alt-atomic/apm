@@ -23,6 +23,7 @@ internal/common/build/podman.go
 internal/common/cli/command.go
 internal/common/cli/flags.go
 internal/common/cli/meta.go
+internal/common/cli/signals.go
 internal/common/cli/wrapper.go
 internal/common/filter/filter.go
 internal/common/helper/cmd.go

@@ -521,9 +521,11 @@ func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*Update
 }
 
 // ImageBuild Update Сборка образа
-func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string) (*ImageBuild, error) {
-	a.appConfig.ConfigManager.EnableVerbose()
-	reply.StopSpinner(a.appConfig)
+func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string, pretty bool) (*ImageBuild, error) {
+	if !pretty {
+		a.appConfig.ConfigManager.EnableVerbose()
+		reply.StopSpinner(a.appConfig)
+	}
 
 	if err := a.serviceHostConfig.ApplyPathOverrides(configPath, workdir); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)

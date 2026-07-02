@@ -227,9 +227,9 @@ func (m Module) GetLabel() any {
 		return m.Name
 	} else if m.Id != "" {
 		return fmt.Sprintf("id=%s", m.Id)
-	} else {
-		return fmt.Sprintf("type=%s", m.Type)
 	}
+
+	return fmt.Sprintf("type=%s", m.Type)
 }
 
 func (m *Module) UnmarshalYAML(n ast.Node) error {

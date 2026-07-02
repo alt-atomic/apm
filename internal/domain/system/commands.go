@@ -186,9 +186,13 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					Aliases: []string{"w"},
 					Usage:   app.T_("Working directory for the build"),
 				},
+				&cli.BoolFlag{
+					Name:  "pretty",
+					Usage: app.T_("Show progress events instead of the raw build log"),
+				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.ImageBuild(ctx, cmd.String("config"), cmd.String("workdir"))
+				resp, err := actions.ImageBuild(ctx, cmd.String("config"), cmd.String("workdir"), cmd.Bool("pretty"))
 				if err != nil {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
