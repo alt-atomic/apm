@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"golang.org/x/sys/unix"
 )
 
@@ -58,6 +59,24 @@ type simpleSpinner struct {
 	doneCh      chan struct{}
 	filledStyle lipgloss.Style
 	emptyStyle  lipgloss.Style
+}
+
+// termWidth возвращает ширину терминала в колонках.
+func termWidth() int {
+	ws, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
+	if err != nil || ws.Col == 0 {
+		return 80
+	}
+	return int(ws.Col)
+}
+
+// truncLine обрезает строку до ширины терминала, чтобы строка не заворачивалась и не ломала перерисовку.
+func truncLine(s string, width int) string {
+	out := ansi.Truncate(s, width, "…")
+	if out != s {
+		out += "\x1b[m"
+	}
+	return out
 }
 
 func disableEcho() {
@@ -134,12 +153,13 @@ func StopSpinner(appConfig *app.Config) {
 	}
 
 	// Печатаем завершённые задачи, которые не успел напечатать render
+	maxWidth := termWidth() - 1
 	linesUsed := 0
 	for i := range activeSp.tasks {
 		t := &activeSp.tasks[i]
 		if t.state == StateAfter && !t.printed {
 			t.printed = true
-			fmt.Printf("%s[✓] %s\n", clearLine, t.viewName)
+			fmt.Printf("%s%s\n", clearLine, truncLine("[✓] "+t.viewName, maxWidth))
 			linesUsed++
 		}
 	}
@@ -258,6 +278,9 @@ func (sp *simpleSpinner) render() {
 
 	sp.mu.Unlock()
 
+	// Строки не должны быть шире терминала, иначе перенос ломает перерисовку
+	maxWidth := termWidth() - 1
+
 	var buf strings.Builder
 
 	if prevActiveLines > 1 {
@@ -266,23 +289,21 @@ func (sp *simpleSpinner) render() {
 
 	for _, line := range completedLines {
 		buf.WriteString(clearLine)
-		buf.WriteString("[✓] ")
-		buf.WriteString(line)
+		buf.WriteString(truncLine("[✓] "+line, maxWidth))
 		buf.WriteByte('\n')
 	}
 
 	// Активные задачи со спиннером
 	if len(actives) > 0 {
 		for idx := range actives {
-			buf.WriteString(clearLine)
-			buf.WriteByte('[')
-			buf.WriteString(frame)
-			buf.WriteString("] ")
+			line := "[" + frame + "] "
 			if actives[idx].eventType == EventTypeProgress {
-				buf.WriteString(renderProgressBar(actives[idx], filledStyle, emptyStyle))
+				line += renderProgressBar(actives[idx], filledStyle, emptyStyle)
 			} else {
-				buf.WriteString(actives[idx].viewName)
+				line += actives[idx].viewName
 			}
+			buf.WriteString(clearLine)
+			buf.WriteString(truncLine(line, maxWidth))
 			if idx < len(actives)-1 {
 				buf.WriteByte('\n')
 			}
