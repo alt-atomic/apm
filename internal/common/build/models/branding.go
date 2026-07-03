@@ -16,8 +16,8 @@ import (
 	"github.com/thediveo/osrelease"
 )
 
-var usrLibOsRelease = "/usr/lib/os-release"
-var etcOsRelease = "/etc/os-release"
+const usrLibOsRelease = "/usr/lib/os-release"
+const etcOsRelease = "/etc/os-release"
 
 type BrandingBody struct {
 	// Имя брендинга для пакетов
@@ -166,12 +166,7 @@ func (b *BrandingBody) Execute(ctx context.Context, svc Service) (any, error) {
 }
 
 func saveOsRelease(ctx context.Context, svc Service, vars map[string]string, perm fs.FileMode) error {
-	var newLines []string
-	for name, value := range vars {
-		newLines = append(newLines, fmt.Sprintf("%s=\"%s\"", name, value))
-	}
-
-	newOsReleaseContent := strings.Join(newLines, "\n") + "\n"
+	newOsReleaseContent := renderOsRelease(vars, osReleaseKeyOrder(usrLibOsRelease))
 	if err := os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), perm); err != nil {
 		return err
 	}
@@ -191,4 +186,56 @@ func saveOsRelease(ctx context.Context, svc Service, vars map[string]string, per
 	}
 
 	return nil
+}
+
+// renderOsRelease собирает os-release в стабильном порядке.
+func renderOsRelease(vars map[string]string, fileOrder []string) string {
+	written := make(map[string]bool, len(vars))
+	var lines []string
+
+	for _, name := range fileOrder {
+		if value, ok := vars[name]; ok && !written[name] {
+			written[name] = true
+			lines = append(lines, name+"="+quoteOsReleaseValue(value))
+		}
+	}
+
+	var restKeys []string
+	for name := range vars {
+		if !written[name] {
+			restKeys = append(restKeys, name)
+		}
+	}
+	slices.Sort(restKeys)
+	for _, name := range restKeys {
+		lines = append(lines, name+"="+quoteOsReleaseValue(vars[name]))
+	}
+
+	return strings.Join(lines, "\n") + "\n"
+}
+
+// quoteOsReleaseValue экранирует спецсимволы.
+func quoteOsReleaseValue(v string) string {
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, `$`, `\$`, "`", "\\`")
+	return `"` + r.Replace(v) + `"`
+}
+
+// osReleaseKeyOrder возвращает порядок ключей из файла os-release.
+func osReleaseKeyOrder(path string) []string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+
+	var keys []string
+	for line := range strings.SplitSeq(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if key, _, found := strings.Cut(line, "="); found {
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
