@@ -17,14 +17,23 @@
 package render
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
+
+// decodeJSON decodes with UseNumber so integers keep their exact text
+func decodeJSON(b []byte, v interface{}) error {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	return dec.Decode(v)
+}
 
 // FormatType selects the text layout
 type FormatType string
@@ -101,6 +110,13 @@ func (r *Renderer) formatField(key string, value interface{}) string {
 }
 
 func (r *Renderer) formatScalarValue(k string, v interface{}) string {
+	switch v.(type) {
+	case nil, string, bool, json.Number:
+	default:
+		if n, ok := canonicalNumber(v); ok {
+			v = n
+		}
+	}
 	if r.valueFormatter != nil {
 		if s, ok := r.valueFormatter(k, v); ok {
 			return s
@@ -132,6 +148,21 @@ func (r *Renderer) formatScalarFieldWithLabel(label, k string, v interface{}) st
 	return fmt.Sprintf("%s: %s", label, r.formatScalarValue(k, v))
 }
 
+// AsInt extracts an int from a canonical json.Number value
+func AsInt(value interface{}) (int, bool) {
+	vv, ok := value.(json.Number)
+	if !ok {
+		return 0, false
+	}
+	if n, err := vv.Int64(); err == nil {
+		return int(n), true
+	}
+	if f, err := vv.Float64(); err == nil {
+		return int(f), true
+	}
+	return 0, false
+}
+
 func sortedKeys(data map[string]interface{}) []string {
 	keys := make([]string, 0, len(data))
 	for k := range data {
@@ -143,10 +174,34 @@ func sortedKeys(data map[string]interface{}) []string {
 	return keys
 }
 
+// canonicalNumber converts any plain numeric value to json.Number.
+// Types with their own String() keep their textual form.
+func canonicalNumber(v interface{}) (json.Number, bool) {
+	if _, ok := v.(fmt.Stringer); ok {
+		return "", false
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return json.Number(strconv.FormatInt(rv.Int(), 10)), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return json.Number(strconv.FormatUint(rv.Uint(), 10)), true
+	case reflect.Float32:
+		return json.Number(strconv.FormatFloat(rv.Float(), 'g', -1, 32)), true
+	case reflect.Float64:
+		return json.Number(strconv.FormatFloat(rv.Float(), 'g', -1, 64)), true
+	default:
+		return "", false
+	}
+}
+
 func normalizeValue(v interface{}) interface{} {
 	switch v.(type) {
-	case nil, string, bool, int, float64, map[string]interface{}, []interface{}:
+	case nil, string, bool, json.Number, map[string]interface{}, []interface{}:
 		return v
+	}
+	if n, ok := canonicalNumber(v); ok {
+		return n
 	}
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
@@ -156,11 +211,11 @@ func normalizeValue(v interface{}) interface{} {
 			return fmt.Sprintf("%v", v)
 		}
 		var mm map[string]interface{}
-		if json.Unmarshal(b, &mm) == nil {
+		if decodeJSON(b, &mm) == nil {
 			return mm
 		}
 		var arr []interface{}
-		if json.Unmarshal(b, &arr) == nil {
+		if decodeJSON(b, &arr) == nil {
 			return arr
 		}
 		return fmt.Sprintf("%v", v)
@@ -180,7 +235,7 @@ func normalizeValue(v interface{}) interface{} {
 			return fmt.Sprintf("%v", v)
 		}
 		var arr []interface{}
-		if json.Unmarshal(b, &arr) == nil {
+		if decodeJSON(b, &arr) == nil {
 			return arr
 		}
 		return fmt.Sprintf("%v", v)
@@ -208,7 +263,7 @@ func ToDataMap(data interface{}) map[string]interface{} {
 		return nil
 	}
 	var mm map[string]interface{}
-	if json.Unmarshal(b, &mm) == nil {
+	if decodeJSON(b, &mm) == nil {
 		return mm
 	}
 	return nil

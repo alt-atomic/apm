@@ -2,25 +2,32 @@
 
 Рендер произвольных Go-структур в красивое дерево или plain-текст для терминала.
 
-Построение дерева здесь собственное, на `strings.Builder` — без промежуточных узлов-объектов. Изначально дерево строилось через `lipgloss/tree`, но на больших ответах (тысячи пакетов) это было значительно медленнее и жрало аллокации, поэтому осталась только стилизация из lipgloss (цвета, bold), а разметку веток пакет рисует сам. Ориентир по скорости: дерево из 3000 элементов рендерится за ~8-9 мс (`go test -bench=. ./pkg/render/`).
+Построение дерева здесь собственное, на `strings.Builder` — без промежуточных узлов-объектов. Изначально дерево строилось через `lipgloss/tree`, но на больших ответах (тысячи пакетов) это было значительно медленнее и жрало аллокации, поэтому осталась только стилизация из lipgloss (цвета, bold), а разметку веток пакет рисует сам. Ориентир по скорости: дерево из 3000 элементов рендерится за ~4-5 мс (`go test -bench=. ./pkg/render/`).
 
 ## Пример
 
 ```go
+type Pkg struct {
+    Name    string `json:"name"`
+    Version string `json:"version"`
+}
+
+type Response struct {
+    Message string `json:"message"`
+    Package Pkg    `json:"package"`
+}
+
 r := render.New(render.DefaultColors(),
     render.WithAccentKeys("name"), // значения этих ключей — акцентным цветом
 )
 
-data := map[string]interface{}{
-    "message": "Package found",
-    "package": map[string]interface{}{
-        "name":    "vim",
-        "version": "9.1",
-        "size":    3145728,
-    },
+resp := Response{
+    Message: "Package found",
+    Package: Pkg{Name: "vim", Version: "9.1"},
 }
 
-fmt.Println(r.RenderText(data, render.FormatTypeTree, false))
+// ToDataMap превращает структуру в map, ключи — из json-тегов
+fmt.Println(r.RenderText(render.ToDataMap(resp), render.FormatTypeTree, false))
 ```
 
 ```
@@ -28,13 +35,12 @@ fmt.Println(r.RenderText(data, render.FormatTypeTree, false))
 │
 ╰── package
     ├── name: vim
-    ├── size: 3145728
     ╰── version: 9.1
 ```
 
-Сигнатура: `RenderText(data map[string]interface{}, formatType FormatType, isError bool)`. `FormatTypePlain` вместо `FormatTypeTree` даёт плоский вывод построчно (`name: vim`), вложенность — через точку (`appStream.id: ...`); единственная обёртка верхнего уровня разворачивается — удобно для grep. `isError=true` рисует `message` в цвете ошибки вместо жирного заголовка.
+`FormatTypePlain` даёт плоский вывод, вложенность — через точку (`appStream.id: ...`) — удобно для grep. `isError=true` рисует `message` цветом ошибки.
 
-На вход идёт `map[string]interface{}`, но любую структуру можно скормить через `render.ToDataMap(v)` (JSON round-trip). Ключ `message` — контракт пакета (как `msg` в slog): всегда рендерится первым и стилизуется как заголовок (или как ошибка при `isError=true`), а `FilterFields` его сохраняет. Если в ваших данных `message` — обычное поле, переименуйте его до рендера.
+Числа приходят в `WithValueFormatter` единым типом `json.Number` и печатаются точно (`render.AsInt` в помощь); типы со своим `String()` не трогаются. Ключ `message` — контракт пакета (как `msg` в slog): рендерится первым как заголовок, `FilterFields` его сохраняет; если у вас это обычное поле — переименуйте его до рендера.
 
 ## Зависимости задаются снаружи
 
@@ -53,8 +59,6 @@ r := render.New(myColors,
     render.WithValueFormatter(mySizeFormatter), // своё форматирование значения по ключу
 )
 ```
-
-`WithValueFormatter` получает `(key, value)` и возвращает `(string, bool)` — при `true` заменяет стандартный вывод (так apm форматирует поля размеров в «3.00 MB»). Цвета — структура `Colors` с yaml-тегами, её можно грузить прямо из конфига; `DefaultColors()` — рабочая палитра по умолчанию.
 
 ## Фильтрация полей
 

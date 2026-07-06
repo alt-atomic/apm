@@ -69,3 +69,19 @@ func TestErrorResponseFromError_WrappedAPMError(t *testing.T) {
 		t.Errorf("expected error code NOT_FOUND, got %q", resp.Error.ErrorCode)
 	}
 }
+
+func TestRegisterFieldFormatter(t *testing.T) {
+	RegisterFieldFormatter(func(key string, value interface{}) (string, bool) {
+		if key == "testField" {
+			return "custom", true
+		}
+		return "", false
+	})
+
+	if got, ok := formatFieldValue("testField", 1); !ok || got != "custom" {
+		t.Errorf("registered formatter not applied: got (%q, %v)", got, ok)
+	}
+	if _, ok := formatFieldValue("otherField", 1); ok {
+		t.Error("unrelated key should not be handled")
+	}
+}

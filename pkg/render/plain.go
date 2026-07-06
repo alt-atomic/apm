@@ -1,6 +1,7 @@
 package render
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -42,7 +43,7 @@ func (r *Renderer) plainField(prefix, key string, value interface{}) []string {
 	}
 
 	switch vv := value.(type) {
-	case nil, string, bool, int, float64:
+	case nil, string, bool, int, float64, json.Number:
 		return []string{r.formatScalarFieldWithLabel(fullLabel, key, value)}
 
 	case map[string]interface{}:

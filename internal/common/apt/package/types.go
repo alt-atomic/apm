@@ -20,8 +20,45 @@ import (
 	"database/sql/driver"
 	"time"
 
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/pkg/render"
 )
+
+// Регистрируем текстовый вид полей пакета
+func init() {
+	reply.RegisterFieldFormatter(formatSizeValue)
+	reply.RegisterFieldFormatter(formatTypePackageValue)
+}
+
+// formatSizeValue выводит поля размеров в мегабайтах
+func formatSizeValue(key string, value interface{}) (string, bool) {
+	switch key {
+	case "size", "installedSize", "downloadSize", "installSize":
+		if n, ok := render.AsInt(value); ok {
+			return helper.AutoSize(n), true
+		}
+	}
+	return "", false
+}
+
+// formatTypePackageValue выводит typePackage именем типа вместо числа
+func formatTypePackageValue(key string, value interface{}) (string, bool) {
+	if key != "typePackage" {
+		return "", false
+	}
+	n, ok := render.AsInt(value)
+	if !ok {
+		return "", false
+	}
+	switch t := PackageType(n); t {
+	case PackageTypeSystem, PackageTypeStplr:
+		return t.String(), true
+	default:
+		return "", false
+	}
+}
 
 // Package описывает структуру для хранения информации о пакете.
 type Package struct {

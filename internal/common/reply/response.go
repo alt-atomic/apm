@@ -71,20 +71,26 @@ func newResponseRenderer(appConfig *app.Config) *responseRenderer {
 		appConfig: appConfig,
 		Renderer: render.New(appConfig.ConfigManager.GetColors(),
 			render.WithAccentKeys("name", "packageName", "url"),
-			render.WithValueFormatter(formatSizeValue),
+			render.WithValueFormatter(formatFieldValue),
 		),
 	}
 }
 
-// formatSizeValue выводит поля размеров в мегабайтах
-func formatSizeValue(key string, value interface{}) (string, bool) {
-	switch key {
-	case "size", "installedSize", "downloadSize", "installSize":
-		switch vv := value.(type) {
-		case int:
-			return helper.AutoSize(vv), true
-		case float64:
-			return helper.AutoSize(int(vv)), true
+// fieldFormatters — форматтеры значений, зарегистрированные доменными пакетами
+var fieldFormatters []func(key string, value interface{}) (string, bool)
+
+// RegisterFieldFormatter добавляет форматтер значения поля для текстового вывода
+func RegisterFieldFormatter(fn func(key string, value interface{}) (string, bool)) {
+	if fn != nil {
+		fieldFormatters = append(fieldFormatters, fn)
+	}
+}
+
+// formatFieldValue прогоняет значение по зарегистрированным форматтерам
+func formatFieldValue(key string, value interface{}) (string, bool) {
+	for _, fn := range fieldFormatters {
+		if s, ok := fn(key, value); ok {
+			return s, true
 		}
 	}
 	return "", false

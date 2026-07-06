@@ -1,6 +1,7 @@
 package _package
 
 import (
+	"encoding/json"
 	"testing"
 
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
@@ -187,5 +188,51 @@ func TestConvertAptPackage_EmptyDepends(t *testing.T) {
 	}
 	if pkg.Provides != nil {
 		t.Errorf("Provides should be nil for empty input, got %v", pkg.Provides)
+	}
+}
+
+func TestFormatSizeValue(t *testing.T) {
+	cases := []struct {
+		key     string
+		value   interface{}
+		want    string
+		handled bool
+	}{
+		{"size", json.Number("3145728"), "3.00 MB", true},
+		{"installedSize", json.Number("4823449"), "4.60 MB", true},
+		{"downloadSize", json.Number("1048576.5"), "1.00 MB", true},
+		{"installSize", json.Number("1048576"), "1.00 MB", true},
+		{"size", "not a number", "", false},
+		{"name", json.Number("1"), "", false},
+	}
+	for _, c := range cases {
+		got, handled := formatSizeValue(c.key, c.value)
+		if handled != c.handled || got != c.want {
+			t.Errorf("formatSizeValue(%q, %v) = (%q, %v), want (%q, %v)",
+				c.key, c.value, got, handled, c.want, c.handled)
+		}
+	}
+}
+
+func TestFormatTypePackageValue(t *testing.T) {
+	cases := []struct {
+		value   interface{}
+		want    string
+		handled bool
+	}{
+		{json.Number("0"), "system", true},
+		{json.Number("1"), "stplr", true},
+		{json.Number("42"), "", false},
+		{"oops", "", false},
+	}
+	for _, c := range cases {
+		got, handled := formatTypePackageValue("typePackage", c.value)
+		if handled != c.handled || got != c.want {
+			t.Errorf("formatTypePackageValue(typePackage, %v) = (%q, %v), want (%q, %v)",
+				c.value, got, handled, c.want, c.handled)
+		}
+	}
+	if _, handled := formatTypePackageValue("name", json.Number("0")); handled {
+		t.Error("foreign key must not be handled")
 	}
 }

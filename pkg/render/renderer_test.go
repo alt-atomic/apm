@@ -1,6 +1,8 @@
 package render
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -461,5 +463,38 @@ func TestRenderText_ListData(t *testing.T) {
 		if !strings.Contains(result, "aaa") || !strings.Contains(result, "bbb") {
 			t.Errorf("format %s: list items not found in output", ft)
 		}
+	}
+}
+
+func TestNormalizeValue_NumbersCanonical(t *testing.T) {
+	cases := []struct {
+		in   interface{}
+		want string
+	}{
+		{int(42), "42"},
+		{int64(9007199254740993), "9007199254740993"},
+		{uint32(7), "7"},
+		{float64(4.6), "4.6"},
+		{float32(1.5), "1.5"},
+	}
+	for _, c := range cases {
+		got, ok := normalizeValue(c.in).(json.Number)
+		if !ok || got.String() != c.want {
+			t.Errorf("normalizeValue(%v) = %v (%T), want json.Number(%q)", c.in, got, normalizeValue(c.in), c.want)
+		}
+	}
+}
+
+type stringerLevel int
+
+func (l stringerLevel) String() string { return "high" }
+
+func TestNormalizeValue_StringerKept(t *testing.T) {
+	v := normalizeValue(stringerLevel(3))
+	if _, isNum := v.(json.Number); isNum {
+		t.Fatal("Stringer numeric type must not be canonicalized")
+	}
+	if s := fmt.Sprintf("%v", v); s != "high" {
+		t.Errorf("expected Stringer text, got %q", s)
 	}
 }

@@ -1,6 +1,7 @@
 package render
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -126,7 +127,7 @@ func (tw *treeWriter) writeMessage(msg interface{}, indent, branch, cont string)
 func (tw *treeWriter) writeEntry(key string, value interface{}, indent, branch, cont string) {
 	label := translateKey(key)
 	switch vv := value.(type) {
-	case nil, string, bool, int, float64:
+	case nil, string, bool, int, float64, json.Number:
 		tw.line(indent, branch, cont, tw.r.formatScalarField(key, value))
 	case map[string]interface{}:
 		tw.line(indent, branch, cont, label)
@@ -158,11 +159,11 @@ func (tw *treeWriter) writeListEntries(items []interface{}, indent string) {
 	}
 }
 
-// shallowNormalize возвращает map без копирования, если все значения уже базовых типов.
+// shallowNormalize returns the map as is when all values are already basic types
 func shallowNormalize(data map[string]interface{}) map[string]interface{} {
 	for _, v := range data {
 		switch v.(type) {
-		case nil, string, bool, int, float64, map[string]interface{}, []interface{}:
+		case nil, string, bool, int, float64, json.Number, map[string]interface{}, []interface{}:
 			continue
 		default:
 			return NormalizeDataMap(data)
