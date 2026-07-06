@@ -8,6 +8,7 @@
 // Copyright (C) Elara Musayelyan (LURE)
 // Copyright (C) 2025 The ALR Authors
 // Copyright (C) 2025 The Stapler Authors
+// Copyright (C) 2026 The APM Authors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -35,28 +36,26 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
-
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 func parseSymbolicMode(s string) (os.FileMode, error) {
 	if len(s) != 9 {
-		return 0, fmt.Errorf(app.T_("invalid length: expected 9 characters, got %d"), len(s))
+		return 0, fmt.Errorf(T_("invalid length: expected 9 characters, got %d"), len(s))
 	}
 
 	var mode os.FileMode
 
-	// Битовые маски для обычных прав (позиции 1–9 в строке, индексы 1–9 в s)
+	// Bit masks for regular permissions (positions 1–9 in the string)
 	bitMasks := []os.FileMode{
-		0400, // 1: owner — чтение
-		0200, // 2: owner — запись
-		0100, // 3: owner — исполнение
-		0040, // 4: group — чтение
-		0020, // 5: group — запись
-		0010, // 6: group — исполнение
-		0004, // 7: other — чтение
-		0002, // 8: other — запись
-		0001, // 9: other — исполнение
+		0400, // 1: owner — read
+		0200, // 2: owner — write
+		0100, // 3: owner — execute
+		0040, // 4: group — read
+		0020, // 5: group — write
+		0010, // 6: group — execute
+		0004, // 7: other — read
+		0002, // 8: other — write
+		0001, // 9: other — execute
 	}
 
 	for i := range 9 {
@@ -67,19 +66,19 @@ func parseSymbolicMode(s string) (os.FileMode, error) {
 		}
 	}
 
-	// Проверка setuid
+	// setuid check
 	switch rune(s[2]) {
 	case 's', 'S':
 		mode |= 04000 // setuid
 	}
 
-	// Проверка setgid
+	// setgid check
 	switch rune(s[5]) {
 	case 's', 'S':
 		mode |= 02000 // setgid
 	}
 
-	// Проверка sticky
+	// sticky check
 	switch rune(s[8]) {
 	case 't', 'T':
 		mode |= 01000 // sticky
@@ -101,13 +100,13 @@ func StringToFileMode(s string) (os.FileMode, error) {
 		return parseSymbolicMode(s)
 	}
 
-	return 0, errors.New(app.T_("Wrong permission format"))
+	return 0, errors.New(T_("Wrong permission format"))
 }
 
 func Clean(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
-		// File doesn't exists, do nothing
+		// File doesn't exist, do nothing
 		return nil
 	}
 
@@ -170,20 +169,20 @@ func AppendFile(sourcePath, destPath string, perm fs.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	dst, err := os.OpenFile(destPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, perm)
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }()
 
 	_, err = io.Copy(dst, src)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return dst.Close()
 }
 
 func PrependFile(sourcePath, destPath string, perm fs.FileMode) error {
@@ -208,47 +207,6 @@ func PrependFile(sourcePath, destPath string, perm fs.FileMode) error {
 	}
 
 	return nil
-}
-
-type Writer struct {
-	RealWriter       io.Writer
-	RealOutputWriter io.Writer
-	Divider          string
-	dividerPassed    bool
-}
-
-func (w *Writer) Write(p []byte) (n int, err error) {
-	if w.dividerPassed {
-		n, err = w.RealOutputWriter.Write(p)
-		if err != nil {
-			return
-		}
-	} else {
-		if strings.Contains(string(p), w.Divider) {
-			w.dividerPassed = true
-
-			parts := strings.SplitN(string(p), w.Divider, 2)
-
-			n, err = w.RealWriter.Write([]byte(parts[0]))
-			if err != nil {
-				return
-			}
-			n, err = w.RealOutputWriter.Write([]byte(parts[1]))
-			if err != nil {
-				return
-			}
-			n = len(p)
-			err = nil
-
-		} else {
-			n, err = w.RealWriter.Write(p)
-			if err != nil {
-				return
-			}
-		}
-	}
-
-	return
 }
 
 func Move(sourcePath, destPath string, replace bool) error {
@@ -329,18 +287,18 @@ func copyFile(sourcePath, destPath string, replace bool) error {
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+	defer func() { _ = sourceFile.Close() }()
 
 	destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, sourceInfo.Mode())
 	if err != nil {
 		return err
 	}
-	defer destFile.Close()
+	defer func() { _ = destFile.Close() }()
 
 	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return destFile.Close()
 }

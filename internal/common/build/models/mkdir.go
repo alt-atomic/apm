@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
-	"altlinux.space/alt-atomic/apm/internal/common/osutils"
+	"altlinux.space/alt-atomic/apm/pkg/osutils"
 )
 
 type MkdirBody struct {

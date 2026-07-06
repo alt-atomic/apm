@@ -14,15 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package apt
+package osutils
 
-import (
-	"altlinux.space/alt-atomic/apm/internal/common/app"
-	aptbinding "altlinux.space/alt-atomic/apm/pkg/apt"
-)
+// T_ is the string translation hook, defaults to identity
+var T_ = func(msgId string) string { return msgId }
 
-// ConnectBinding подключает биндингу переводы apm и анализатор ошибок
-func ConnectBinding() {
-	aptbinding.SetTranslator(func(msgId string) string { return app.T_(msgId) })
-	aptbinding.SetErrorAnalyzer(AnalyzeOperationError)
+// SetTranslator sets the translation function
+func SetTranslator(fn func(msgId string) string) {
+	if fn != nil {
+		T_ = fn
+	}
 }

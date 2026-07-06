@@ -1,7 +1,6 @@
 package osutils
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -108,62 +107,6 @@ func TestCapitalize(t *testing.T) {
 		if got != c.expected {
 			t.Errorf("Capitalize(%q) = %q, want %q", c.input, got, c.expected)
 		}
-	}
-}
-
-func TestWriter_BeforeDivider(t *testing.T) {
-	var main, output bytes.Buffer
-	w := &Writer{
-		RealWriter:       &main,
-		RealOutputWriter: &output,
-		Divider:          "---SPLIT---",
-	}
-
-	w.Write([]byte("before divider"))
-
-	if main.String() != "before divider" {
-		t.Errorf("main should get data before divider, got %q", main.String())
-	}
-	if output.String() != "" {
-		t.Error("output should be empty before divider")
-	}
-}
-
-func TestWriter_AfterDivider(t *testing.T) {
-	var main, output bytes.Buffer
-	w := &Writer{
-		RealWriter:       &main,
-		RealOutputWriter: &output,
-		Divider:          "---SPLIT---",
-	}
-
-	w.Write([]byte("before---SPLIT---after"))
-	w.Write([]byte(" more output"))
-
-	if main.String() != "before" {
-		t.Errorf("main should get data before divider, got %q", main.String())
-	}
-	if output.String() != "after more output" {
-		t.Errorf("output should get data after divider, got %q", output.String())
-	}
-}
-
-func TestWriter_DividerInSeparateWrite(t *testing.T) {
-	var main, output bytes.Buffer
-	w := &Writer{
-		RealWriter:       &main,
-		RealOutputWriter: &output,
-		Divider:          "DONE",
-	}
-
-	w.Write([]byte("line1\n"))
-	w.Write([]byte("line2\nDONEresult"))
-
-	if main.String() != "line1\nline2\n" {
-		t.Errorf("main should accumulate before divider, got %q", main.String())
-	}
-	if output.String() != "result" {
-		t.Errorf("output should get data after divider, got %q", output.String())
 	}
 }
 

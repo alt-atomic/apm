@@ -9,7 +9,7 @@ import (
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/build/models"
-	"altlinux.space/alt-atomic/apm/internal/common/osutils"
+	"altlinux.space/alt-atomic/apm/pkg/osutils"
 )
 
 // ValidationService рекурсивно валидирует конфиг включая все include файлы.

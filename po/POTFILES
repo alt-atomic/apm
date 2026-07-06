@@ -34,7 +34,6 @@ internal/common/http_server/server.go
 internal/common/icon/database.go
 internal/common/icon/service.go
 internal/common/icon/swcat.go
-internal/common/osutils/osutils.go
 internal/common/reply/event.go
 internal/common/reply/preloader.go
 internal/common/reply/response.go
@@ -72,4 +71,5 @@ internal/domain/system/dialog/dialog_image.go
 internal/domain/system/temporary/temporary.go
 pkg/apt/lib/lock.go
 pkg/apt/rpm.go
+pkg/osutils/osutils.go
 pkg/render/renderer.go

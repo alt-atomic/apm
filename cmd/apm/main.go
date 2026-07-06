@@ -35,6 +35,7 @@ import (
 	"altlinux.space/alt-atomic/apm/pkg/apt"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 	"altlinux.space/alt-atomic/apm/pkg/command"
+	"altlinux.space/alt-atomic/apm/pkg/osutils"
 
 	"github.com/urfave/cli/v3"
 )
@@ -64,6 +65,7 @@ func run() int {
 
 	aptWrapper.ConnectBinding()
 	command.SetLogger(app.Log)
+	osutils.SetTranslator(func(msgId string) string { return app.T_(msgId) })
 
 	ctx, cancel := apmcli.InstallSignalHandler(context.Background())
 	defer cancel()

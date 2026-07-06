@@ -14,10 +14,10 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
-	"altlinux.space/alt-atomic/apm/internal/common/osutils"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
 	"altlinux.space/alt-atomic/apm/pkg/command"
+	"altlinux.space/alt-atomic/apm/pkg/osutils"
 )
 
 var (
