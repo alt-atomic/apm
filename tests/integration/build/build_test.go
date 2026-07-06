@@ -26,8 +26,8 @@ import (
 
 	"apm/internal/common/app"
 	"apm/internal/common/build"
-	"apm/internal/common/command"
 	"apm/internal/common/reply"
+	"apm/pkg/command"
 	"apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"

@@ -19,12 +19,12 @@ package distrobox
 import (
 	"apm/internal/common/apmerr"
 	"apm/internal/common/app"
-	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/icon"
 	"apm/internal/common/reply"
 	"apm/internal/common/sandbox"
 	"apm/internal/domain/distrobox/dialog"
+	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"

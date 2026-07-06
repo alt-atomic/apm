@@ -3,11 +3,11 @@ package models
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
-	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/osutils"
 	"apm/internal/common/reply"
 	"apm/internal/domain/kernel/service"
+	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"

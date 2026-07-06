@@ -2,7 +2,7 @@ package models
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/command"
+	"apm/pkg/command"
 	"context"
 	"fmt"
 	"os"

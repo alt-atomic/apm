@@ -3,11 +3,11 @@ package models
 import (
 	_package "apm/internal/common/apt/package"
 	"apm/internal/common/build/common_types"
-	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/reply"
 	"apm/internal/domain/kernel/service"
 	reposervice "apm/internal/domain/repository/service"
+	"apm/pkg/command"
 	"context"
 )
 

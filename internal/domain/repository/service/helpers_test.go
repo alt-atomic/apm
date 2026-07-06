@@ -2,7 +2,7 @@ package service
 
 import (
 	_package "apm/internal/common/apt/package"
-	"apm/internal/common/command"
+	"apm/pkg/command"
 	"context"
 	"errors"
 	"net/http"

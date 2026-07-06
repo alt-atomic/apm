@@ -18,8 +18,8 @@ package sandbox
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/command"
 	"apm/internal/common/reply"
+	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"

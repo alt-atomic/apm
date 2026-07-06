@@ -17,7 +17,7 @@
 package sandbox
 
 import (
-	"apm/internal/common/command"
+	"apm/pkg/command"
 	"strings"
 	"testing"
 )

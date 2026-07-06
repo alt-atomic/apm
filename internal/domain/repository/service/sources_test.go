@@ -1,7 +1,7 @@
 package service
 
 import (
-	"apm/internal/common/command"
+	"apm/pkg/command"
 	"context"
 	"errors"
 	"strings"

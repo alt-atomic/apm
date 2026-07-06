@@ -23,19 +23,17 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"apm/internal/common/app"
 )
 
 const divider = "::::CMD_DIVIDER::::"
 
-// runner реализация Runner
+// runner implements Runner
 type runner struct {
 	commandPrefix string
 	verbose       bool
 }
 
-// NewRunner создаёт новый Runner.
+// NewRunner creates a new Runner.
 func NewRunner(commandPrefix string, verbose bool) Runner {
 	return &runner{
 		commandPrefix: commandPrefix,
@@ -43,7 +41,7 @@ func NewRunner(commandPrefix string, verbose bool) Runner {
 	}
 }
 
-// Option настройка выполнения команды
+// Option configures command execution
 type Option func(*options)
 
 type options struct {
@@ -61,50 +59,50 @@ type options struct {
 	streamHandler func(io.Reader)
 }
 
-// WithEnv добавляет переменные окружения к команде
+// WithEnv adds environment variables to the command
 func WithEnv(env ...string) Option {
 	return func(o *options) {
 		o.env = append(o.env, env...)
 	}
 }
 
-// WithPassthrough направляет stdout/stderr напрямую в консоль
+// WithPassthrough routes stdout/stderr directly to the console
 func WithPassthrough() Option {
 	return func(o *options) {
 		o.passthrough = true
 	}
 }
 
-// WithQuiet подавляет вывод в консоль, даже если runner в verbose-режиме
+// WithQuiet suppresses console output even if the runner is verbose
 func WithQuiet() Option {
 	return func(o *options) {
 		o.quiet = true
 	}
 }
 
-// WithStdin устанавливает stdin для команды
+// WithStdin sets stdin for the command
 func WithStdin(r io.Reader) Option {
 	return func(o *options) {
 		o.stdin = r
 	}
 }
 
-// WithDir устанавливает рабочую директорию для команды
+// WithDir sets the working directory for the command
 func WithDir(dir string) Option {
 	return func(o *options) {
 		o.dir = dir
 	}
 }
 
-// WithShell выполняет команду через bash -c (для пайпов и спецсимволов)
+// WithShell runs the command via bash -c (for pipes and special characters)
 func WithShell() Option {
 	return func(o *options) {
 		o.shell = true
 	}
 }
 
-// WithOutputCommand добавляет вторую команду для захвата дополнительного вывода.
-// Результат второй команды записывается в dest.
+// WithOutputCommand adds a second command to capture extra output.
+// The second command's result is written to dest.
 func WithOutputCommand(command string, dest *string) Option {
 	return func(o *options) {
 		o.outputCommand = command
@@ -112,8 +110,8 @@ func WithOutputCommand(command string, dest *string) Option {
 	}
 }
 
-// WithPTY запускает команду в pseudo-tty с заданным размером окна.
-// Используется для команд, которые показывают интерактивный прогресс.
+// WithPTY runs the command in a pseudo-tty with the given window size.
+// Used for commands that show interactive progress.
 func WithPTY(rows, cols uint16) Option {
 	return func(o *options) {
 		o.pty = true
@@ -122,14 +120,14 @@ func WithPTY(rows, cols uint16) Option {
 	}
 }
 
-// WithStreamHandler регистрирует обработчик потока stdout.
+// WithStreamHandler registers a stdout stream handler.
 func WithStreamHandler(h func(io.Reader)) Option {
 	return func(o *options) {
 		o.streamHandler = h
 	}
 }
 
-// Run выполняет команду с автоматической подстановкой commandPrefix.
+// Run executes a command with commandPrefix applied.
 func (r *runner) Run(ctx context.Context, args []string, opts ...Option) (string, string, error) {
 	var fullArgs []string
 	if r.commandPrefix != "" {
@@ -139,7 +137,7 @@ func (r *runner) Run(ctx context.Context, args []string, opts ...Option) (string
 	return r.execute(ctx, fullArgs, opts...)
 }
 
-// Execute выполняет команду с заданными аргументами и опциями.
+// Execute executes a command with the given arguments and options.
 func (r *runner) execute(ctx context.Context, args []string, opts ...Option) (string, string, error) {
 	o := r.applyOptions(opts)
 
@@ -158,7 +156,7 @@ func (r *runner) execute(ctx context.Context, args []string, opts ...Option) (st
 	return r.executeCommand(ctx, args, o)
 }
 
-// applyOptions применяет опции и учитывает verbose-режим.
+// applyOptions applies options and honors verbose mode.
 func (r *runner) applyOptions(opts []Option) options {
 	var o options
 	for _, opt := range opts {
@@ -174,32 +172,32 @@ func (r *runner) applyOptions(opts []Option) options {
 	return o
 }
 
-// executeCommand выполняет прямую команду (без shell).
+// executeCommand executes a direct command (no shell).
 func (r *runner) executeCommand(ctx context.Context, args []string, o options) (string, string, error) {
 	if len(args) == 0 {
 		return "", "", ErrEmptyCommand
 	}
 
-	app.Log.Debug("run command: ", strings.Join(args, " "))
+	logger.Debug("run command: ", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 
 	return r.runCmd(cmd, o)
 }
 
-// executeShell выполняет команду через sh -c.
+// executeShell executes a command via sh -c.
 func (r *runner) executeShell(ctx context.Context, args []string, o options) (string, string, error) {
 	command := strings.Join(args, " ")
 	if command == "" {
 		return "", "", ErrEmptyCommand
 	}
 
-	app.Log.Debug("run shell command: ", command)
+	logger.Debug("run shell command: ", command)
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 
 	return r.runCmd(cmd, o)
 }
 
-// executeDivider выполняет основную команду и команду захвата вывода через разделитель.
+// executeDivider executes the main command and the output-capture command via a divider.
 func (r *runner) executeDivider(ctx context.Context, args []string, o options) (string, string, error) {
 	command := strings.Join(args, " ")
 	if command == "" {
@@ -208,7 +206,7 @@ func (r *runner) executeDivider(ctx context.Context, args []string, o options) (
 
 	script := "set -e\n" + command + "\necho '" + divider + "'\n" + o.outputCommand
 
-	app.Log.Debug("run divider command: ", script)
+	logger.Debug("run divider command: ", script)
 	cmd := exec.CommandContext(ctx, "bash", "-c", script)
 
 	r.setupCmd(cmd, o)
@@ -246,7 +244,7 @@ func (r *runner) executeDivider(ctx context.Context, args []string, o options) (
 	return mainBuf.String(), stderr.String(), nil
 }
 
-// setupCmd настраивает exec.Cmd общими опциями (env, stdin, dir).
+// setupCmd configures exec.Cmd with common options (env, stdin, dir).
 func (r *runner) setupCmd(cmd *exec.Cmd, o options) {
 	if len(o.env) > 0 {
 		cmd.Env = append(os.Environ(), o.env...)
@@ -261,7 +259,7 @@ func (r *runner) setupCmd(cmd *exec.Cmd, o options) {
 	}
 }
 
-// runCmd запускает exec.Cmd с настроенными опциями.
+// runCmd runs exec.Cmd with the configured options.
 func (r *runner) runCmd(cmd *exec.Cmd, o options) (string, string, error) {
 	r.setupCmd(cmd, o)
 

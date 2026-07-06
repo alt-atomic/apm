@@ -28,6 +28,7 @@ import (
 	"apm/internal/domain/system"
 	"apm/pkg/apt"
 	aptLib "apm/pkg/apt/lib"
+	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"
@@ -61,6 +62,7 @@ func run() int {
 	}
 
 	aptWrapper.ConnectBinding()
+	command.SetLogger(app.Log)
 
 	ctx, cancel := apmcli.InstallSignalHandler(context.Background())
 	defer cancel()

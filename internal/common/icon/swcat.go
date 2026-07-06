@@ -18,7 +18,7 @@ package icon
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/command"
+	"apm/pkg/command"
 	"bytes"
 	"compress/gzip"
 	"context"

@@ -17,7 +17,7 @@
 package service
 
 import (
-	"apm/internal/common/command"
+	"apm/pkg/command"
 	"bufio"
 	"context"
 	"net/http"

@@ -18,9 +18,9 @@ package build
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/command"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	"apm/pkg/command"
 	"bufio"
 	"context"
 	"encoding/json"

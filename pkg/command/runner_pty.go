@@ -24,18 +24,16 @@ import (
 	"strings"
 	"sync"
 
-	"apm/internal/common/app"
-
 	"github.com/creack/pty"
 )
 
-// executePTY запускает команду через pseudo-tty.
+// executePTY runs the command via a pseudo-tty.
 func (r *runner) executePTY(ctx context.Context, args []string, o options) (string, string, error) {
 	if len(args) == 0 {
 		return "", "", ErrEmptyCommand
 	}
 
-	app.Log.Debug("run pty command: ", strings.Join(args, " "))
+	logger.Debug("run pty command: ", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	r.setupCmd(cmd, o)
 

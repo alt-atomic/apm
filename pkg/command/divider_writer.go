@@ -21,7 +21,7 @@ import (
 	"io"
 )
 
-// dividerWriter разделяет поток вывода по строке-разделителю.
+// dividerWriter splits an output stream by a divider line.
 type dividerWriter struct {
 	mainWriter   io.Writer
 	outputWriter io.Writer
@@ -83,7 +83,7 @@ func (w *dividerWriter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-// flush записывает оставшийся буфер в mainWriter.
+// flush writes the remaining buffer to mainWriter.
 func (w *dividerWriter) flush() error {
 	if len(w.buf) > 0 && !w.found {
 		_, err := w.mainWriter.Write(w.buf)
