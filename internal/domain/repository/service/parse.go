@@ -59,7 +59,7 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 
 	if branch, ok := s.lookupBranch(source); ok {
 		if date != "" {
-			formattedDate, err := s.parseArchiveDate(source, date)
+			formattedDate, err := s.parseArchiveDate(branch.Name, date)
 			if err != nil {
 				return nil, err
 			}

@@ -204,3 +204,22 @@ func TestParseSource_SisyphusCapital(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSource_SisyphusCapitalArchive(t *testing.T) {
+	s, _ := newTestService(t)
+	ctx := context.Background()
+	writeSourcesList(t, s, "")
+
+	urls, err := s.parseSource(ctx, "Sisyphus", "20260606")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(urls) == 0 {
+		t.Fatal("expected archive URLs for Sisyphus with date")
+	}
+	for _, u := range urls {
+		if !strings.Contains(u, "/archive/sisyphus/date/2026/06/06") {
+			t.Errorf("expected archive path in URL: %s", u)
+		}
+	}
+}
