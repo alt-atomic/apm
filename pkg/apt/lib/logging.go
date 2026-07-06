@@ -53,7 +53,7 @@ func goAptLogCallback(cmsg *C.char, user C.uintptr_t) {
 	fmt.Println(C.GoString(cmsg))
 }
 
-// SetLogHandler перехват stdout/stderr через LogHandler
+// SetLogHandler intercepts stdout/stderr via LogHandler
 func SetLogHandler(handler LogHandler) {
 	AptMutex.Lock()
 	defer AptMutex.Unlock()
@@ -72,7 +72,17 @@ func SetLogHandler(handler LogHandler) {
 	C.apt_enable_go_log_callback(C.uintptr_t(logHandle))
 }
 
-// CaptureStdIO ручное включение/отключение stdout/stderr
+// BeginLogCapture starts capturing APT output into handler, returns a stop function.
+func BeginLogCapture(handler LogHandler) (stop func()) {
+	SetLogHandler(handler)
+	CaptureStdIO(true)
+	return func() {
+		CaptureStdIO(false)
+		SetLogHandler(nil)
+	}
+}
+
+// CaptureStdIO manually enables/disables stdout/stderr capture
 func CaptureStdIO(enable bool) {
 	AptMutex.Lock()
 	defer AptMutex.Unlock()

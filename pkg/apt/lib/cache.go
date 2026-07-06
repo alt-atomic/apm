@@ -77,7 +77,6 @@ func (c *Cache) Refresh() error {
 	})
 }
 
-
 // Helper: safely convert C string to Go string
 func cStringToGo(cstr *C.char) string {
 	if cstr != nil {

@@ -18,9 +18,9 @@ package _package
 
 import (
 	"apm/internal/common/app"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 	"fmt"
 	"sync"

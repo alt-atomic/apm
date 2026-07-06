@@ -3,12 +3,12 @@ package system
 import (
 	"apm/internal/common/apmerr"
 	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/build"
 	"apm/internal/common/filter"
 	"apm/internal/common/swcat"
 	"apm/internal/common/testutil"
 	"apm/internal/domain/system/temporary"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"syscall"

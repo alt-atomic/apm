@@ -18,8 +18,8 @@ package _package
 
 import (
 	aptParser "apm/internal/common/apt"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
+	aptLib "apm/pkg/apt/lib"
 	"strings"
 )
 

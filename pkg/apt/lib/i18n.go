@@ -16,30 +16,13 @@
 
 package lib
 
-import (
-	"bufio"
-	"os"
-	"strings"
-)
+// T_ is the string translation hook, defaults to identity
+var T_ = func(msgid string) string { return msgid }
 
-// isAtomicSystem проверяет является ли корневая ФС composefs/overlay (для атомарных систем)
-func isAtomicSystem() bool {
-	file, err := os.Open("/proc/mounts")
-	if err != nil {
-		return false
+// SetTranslator sets the translation function
+func SetTranslator(fn func(msgid string) string) {
+	if fn == nil {
+		return
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		if len(fields) < 3 {
-			continue
-		}
-		device, mountpoint, fstype := fields[0], fields[1], fields[2]
-		if mountpoint == "/" && (fstype == "overlay" || device == "composefs") {
-			return true
-		}
-	}
-	return false
+	T_ = fn
 }

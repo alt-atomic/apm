@@ -17,7 +17,6 @@
 package lib
 
 /*
-// cgo-timestamp: 1757445419
 #include "apt.h"
 #include <stdlib.h>
 */
@@ -29,17 +28,17 @@ import (
 	"unsafe"
 )
 
-// AptMutex Глобальный mutex на все операции apt-lib
+// AptMutex is the global mutex for all apt-lib operations
 var AptMutex sync.Mutex
 
-// convertCStringArray конвертирует массив C строк в Go slice
+// convertCStringArray converts a C string array to a Go slice
 func convertCStringArray(ptr **C.char, count C.size_t) []string {
 	if ptr == nil || count == 0 {
 		return nil
 	}
 
 	result := make([]string, int(count))
-	// Используем unsafe.Slice для безопасной работы с C массивом
+	// unsafe.Slice gives bounds-safe access to the C array
 	cStrings := unsafe.Slice(ptr, int(count))
 	for i, cStr := range cStrings {
 		if cStr != nil {
@@ -49,7 +48,7 @@ func convertCStringArray(ptr **C.char, count C.size_t) []string {
 	return result
 }
 
-// freeCStringArray освобождает память C массива строк
+// freeCStringArray frees the C string array memory
 func freeCStringArray(arr []*C.char) {
 	for _, str := range arr {
 		if str != nil {
@@ -58,7 +57,7 @@ func freeCStringArray(arr []*C.char) {
 	}
 }
 
-// makeCStringArray создаёт массив C строк из Go slice
+// makeCStringArray creates a C string array from a Go slice
 func makeCStringArray(strs []string) []*C.char {
 	if len(strs) == 0 {
 		return nil
@@ -70,7 +69,7 @@ func makeCStringArray(strs []string) []*C.char {
 	return result
 }
 
-// convertPackageChanges конвертирует C структуру AptPackageChanges в Go
+// convertPackageChanges converts the C AptPackageChanges struct to Go
 func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 	if cc == nil {
 		return nil
@@ -86,14 +85,14 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 		InstallSize:       int64(cc.install_size),
 	}
 
-	// Конвертируем массивы
+	// Convert arrays
 	changes.ExtraInstalled = convertCStringArray(cc.extra_installed, cc.extra_installed_count)
 	changes.UpgradedPackages = convertCStringArray(cc.upgraded_packages, cc.upgraded_count)
 	changes.NewInstalledPackages = convertCStringArray(cc.new_installed_packages, cc.new_installed_count)
 	changes.RemovedPackages = convertCStringArray(cc.removed_packages, cc.removed_count)
 	changes.KeptBackPackages = convertCStringArray(cc.kept_back_packages, cc.kept_back_count)
 
-	// Конвертируем essential-пакеты
+	// Convert essential packages
 	if cc.essential_packages_count > 0 && cc.essential_packages != nil {
 		count := int(cc.essential_packages_count)
 		changes.EssentialPackages = make([]EssentialPackage, count)
@@ -108,7 +107,7 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 	return changes
 }
 
-// PreprocessInstallArguments регистрирует аргументы в конфигурации APT до открытия кеша
+// PreprocessInstallArguments registers arguments in APT config before opening the cache
 func PreprocessInstallArguments(names []string) error {
 	if len(names) == 0 {
 		return nil
@@ -123,19 +122,19 @@ func PreprocessInstallArguments(names []string) error {
 	return nil
 }
 
-// ClearInstallArguments очищает аргументы
+// ClearInstallArguments clears the arguments
 func ClearInstallArguments() {
 	C.apt_clear_install_arguments()
 }
 
-// withMutex выполняет функцию под защитой глобального мьютекса APT
+// withMutex runs fn under the global APT mutex
 func withMutex(fn func() error) error {
 	AptMutex.Lock()
 	defer AptMutex.Unlock()
 	return fn()
 }
 
-// openCacheUnsafe открывает кеш без блокировки мьютекса (должен вызываться под мьютексом)
+// openCacheUnsafe opens the cache without locking (must be called under the mutex)
 func openCacheUnsafe(system *System, readOnly bool) (*Cache, error) {
 	var ptr *C.AptCache
 	withLock := C.bool(!readOnly)
@@ -146,4 +145,3 @@ func openCacheUnsafe(system *System, readOnly bool) (*Cache, error) {
 	runtime.SetFinalizer(c, (*Cache).Close)
 	return c, nil
 }
-

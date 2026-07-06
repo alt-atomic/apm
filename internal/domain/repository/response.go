@@ -17,8 +17,8 @@
 package repository
 
 import (
-	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/domain/repository/service"
+	aptlib "apm/pkg/apt/lib"
 )
 
 // RepoListResponse структура ответа для List метода

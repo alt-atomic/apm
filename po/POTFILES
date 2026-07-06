@@ -3,13 +3,11 @@ internal/common/app/app.go
 internal/common/app/database.go
 internal/common/app/dbus.go
 internal/common/app/translator.go
+internal/common/apt/analyze.go
 internal/common/apt/errors.go
 internal/common/apt/package/actions.go
 internal/common/apt/package/database.go
 internal/common/apt/package/progress.go
-internal/common/binding/apt/lib/lock.go
-internal/common/binding/apt/packages.go
-internal/common/binding/apt/rpm.go
 internal/common/build/build.go
 internal/common/build/config.go
 internal/common/build/core/expr.go
@@ -71,3 +69,5 @@ internal/domain/system/dbus.go
 internal/domain/system/dialog/dialog.go
 internal/domain/system/dialog/dialog_image.go
 internal/domain/system/temporary/temporary.go
+pkg/apt/lib/lock.go
+pkg/apt/rpm.go

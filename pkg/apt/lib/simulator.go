@@ -24,7 +24,7 @@ import "C"
 
 import "unsafe"
 
-// planWithTransaction создаёт транзакцию, выполняет setup, планирует и опционально вызывает afterPlan
+// planWithTransaction creates a transaction, runs setup, plans and optionally calls afterPlan
 func (c *Cache) planWithTransaction(setup func(tx *C.AptTransaction) C.AptResult, afterPlan func() error) (*PackageChanges, error) {
 	var changes *PackageChanges
 	err := withMutex(func() error {
@@ -57,21 +57,21 @@ func (c *Cache) planWithTransaction(setup func(tx *C.AptTransaction) C.AptResult
 	return changes, err
 }
 
-// SimulateDistUpgrade симулирует обновление системы
+// SimulateDistUpgrade simulates a system upgrade
 func (c *Cache) SimulateDistUpgrade() (*PackageChanges, error) {
 	return c.planWithTransaction(func(tx *C.AptTransaction) C.AptResult {
 		return C.apt_transaction_dist_upgrade(tx)
 	}, nil)
 }
 
-// SimulateAutoRemove симулирует автоматическое удаление неиспользуемых пакетов
+// SimulateAutoRemove simulates removal of unused packages
 func (c *Cache) SimulateAutoRemove() (*PackageChanges, error) {
 	return c.planWithTransaction(func(tx *C.AptTransaction) C.AptResult {
 		return C.apt_transaction_autoremove(tx)
 	}, nil)
 }
 
-// SimulateInstall симулирует установку пакетов
+// SimulateInstall simulates package installation
 func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) {
 	if len(packageNames) == 0 {
 		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
@@ -84,7 +84,7 @@ func (c *Cache) SimulateInstall(packageNames []string) (*PackageChanges, error) 
 	}, nil)
 }
 
-// SimulateRemove симулирует удаление пакетов
+// SimulateRemove simulates package removal
 func (c *Cache) SimulateRemove(packageNames []string, purge bool, depends bool) (*PackageChanges, error) {
 	if len(packageNames) == 0 {
 		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
@@ -98,7 +98,7 @@ func (c *Cache) SimulateRemove(packageNames []string, purge bool, depends bool) 
 	}, nil)
 }
 
-// SimulateReinstall симулирует переустановку пакетов
+// SimulateReinstall simulates package reinstallation
 func (c *Cache) SimulateReinstall(packageNames []string) (*PackageChanges, error) {
 	if len(packageNames) == 0 {
 		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
@@ -111,7 +111,7 @@ func (c *Cache) SimulateReinstall(packageNames []string) (*PackageChanges, error
 	}, nil)
 }
 
-// SimulateChange симулирует установку и удаление пакетов в одной транзакции
+// SimulateChange simulates install and remove in a single transaction
 func (c *Cache) SimulateChange(installNames []string, removeNames []string, purge bool, depends bool) (*PackageChanges, error) {
 	if len(installNames) == 0 && len(removeNames) == 0 {
 		return nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")
@@ -141,7 +141,7 @@ func (c *Cache) SimulateChange(installNames []string, removeNames []string, purg
 	}, nil)
 }
 
-// SimulateChangeWithRpmInfo симуляция изменений с получением информации о RPM файлах за одну сессию кеша
+// SimulateChangeWithRpmInfo simulates changes and fetches RPM file info in a single cache session
 func (c *Cache) SimulateChangeWithRpmInfo(installNames []string, removeNames []string, purge bool, depends bool, rpmFiles []string) (*PackageChanges, []*PackageInfo, error) {
 	if len(installNames) == 0 && len(removeNames) == 0 {
 		return nil, nil, CustomError(AptErrorInvalidParameters, "Invalid parameters")

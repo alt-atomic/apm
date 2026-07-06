@@ -18,8 +18,8 @@ package repository
 
 import (
 	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/domain/repository/service"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 )
 

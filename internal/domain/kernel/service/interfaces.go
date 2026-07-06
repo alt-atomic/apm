@@ -2,10 +2,10 @@ package service
 
 import (
 	_package "apm/internal/common/apt/package"
-	apt "apm/internal/common/binding/apt"
-	libApt "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
+	apt "apm/pkg/apt"
+	libApt "apm/pkg/apt/lib"
 	"context"
 )
 

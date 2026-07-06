@@ -18,8 +18,7 @@ package main
 
 import (
 	"apm/internal/common/app"
-	"apm/internal/common/binding/apt"
-	aptLib "apm/internal/common/binding/apt/lib"
+	aptWrapper "apm/internal/common/apt"
 	apmcli "apm/internal/common/cli"
 	"apm/internal/common/reply"
 	"apm/internal/common/service"
@@ -27,6 +26,8 @@ import (
 	"apm/internal/domain/kernel"
 	"apm/internal/domain/repository"
 	"apm/internal/domain/system"
+	"apm/pkg/apt"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"fmt"
@@ -58,6 +59,8 @@ func run() int {
 		_, _ = fmt.Fprintln(os.Stderr, "Initialization error:", err)
 		return 1
 	}
+
+	aptWrapper.ConnectBinding()
 
 	ctx, cancel := apmcli.InstallSignalHandler(context.Background())
 	defer cancel()

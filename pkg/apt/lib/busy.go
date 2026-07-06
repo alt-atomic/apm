@@ -20,32 +20,30 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"sync/atomic"
 	"syscall"
 )
 
 var (
-	aptWG   sync.WaitGroup
-	aptBusy int32
+	aptWG sync.WaitGroup
 
 	signalChan chan os.Signal
 	signalMu   sync.Mutex
 )
 
-// RegisterSignalChannel регистрирует канал сигналов для восстановления после APT операций
+// RegisterSignalChannel registers the signal channel to restore after APT operations
 func RegisterSignalChannel(ch chan os.Signal) {
 	signalMu.Lock()
 	signalChan = ch
 	signalMu.Unlock()
 }
 
-// BlockSignals блокирует сигналы прерывания на время критических операций
-func BlockSignals() {
+// blockSignals blocks interrupt signals during critical operations
+func blockSignals() {
 	signal.Ignore(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 }
 
-// RestoreSignals восстанавливает обработку сигналов после критических операций
-func RestoreSignals() {
+// restoreSignals restores signal handling after critical operations
+func restoreSignals() {
 	signalMu.Lock()
 	ch := signalChan
 	signalMu.Unlock()
@@ -55,17 +53,17 @@ func RestoreSignals() {
 	}
 }
 
-// StartOperation начало маркировки APT операций
-func StartOperation() {
+// BeginOperation blocks signals and marks an active APT operation
+func BeginOperation() {
+	blockSignals()
 	aptWG.Add(1)
-	atomic.AddInt32(&aptBusy, 1)
 }
 
-// EndOperation окончание маркировки APT операций
+// EndOperation unmarks the operation and restores signals
 func EndOperation() {
-	atomic.AddInt32(&aptBusy, -1)
 	aptWG.Done()
+	restoreSignals()
 }
 
-// WaitIdle Ожидание выполнения всех процессов внутри APT
+// WaitIdle waits for all APT operations to finish
 func WaitIdle() { aptWG.Wait() }

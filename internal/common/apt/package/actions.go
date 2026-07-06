@@ -19,10 +19,10 @@ package _package
 import (
 	"apm/internal/common/app"
 	aptParser "apm/internal/common/apt"
-	aptBinding "apm/internal/common/binding/apt"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	aptBinding "apm/pkg/apt"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"fmt"

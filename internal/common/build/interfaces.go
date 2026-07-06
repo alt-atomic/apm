@@ -2,8 +2,8 @@ package build
 
 import (
 	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/filter"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 )
 

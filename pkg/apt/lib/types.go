@@ -26,8 +26,6 @@ import (
 	"unsafe"
 )
 
-// Public Go types and error codes
-
 type PackageState int
 
 // Package states (must match AptPackageState in apt_common.h)

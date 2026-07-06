@@ -18,7 +18,7 @@ package cli
 
 import (
 	"apm/internal/common/app"
-	aptLib "apm/internal/common/binding/apt/lib"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 	"fmt"
 	"os"

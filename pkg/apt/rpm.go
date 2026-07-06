@@ -17,24 +17,23 @@
 package apt
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/binding/apt/lib"
-	"apm/internal/common/helper"
+	"apm/pkg/apt/lib"
 	"bufio"
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
-// InstalledPackageInfo информация об установленном пакете из rpm
+// InstalledPackageInfo holds installed package info from rpm
 type InstalledPackageInfo struct {
 	Name    string
 	Version string
 	Arch    string
 }
 
-// KernelRPMInfo информация о ядре из rpm
+// KernelRPMInfo holds kernel package info from rpm
 type KernelRPMInfo struct {
 	Name      string
 	Version   string
@@ -42,7 +41,7 @@ type KernelRPMInfo struct {
 	BuildTime string
 }
 
-// RpmGetInstalledPackages возвращает карту установленных пакетов (имя -> версия)
+// RpmGetInstalledPackages returns a map of installed packages (name -> version)
 func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix string, noLock ...bool) (map[string]string, error) {
 	var result map[string]string
 	skipLock := len(noLock) > 0 && noLock[0]
@@ -54,7 +53,7 @@ func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix str
 
 		output, cmdErr := cmd.CombinedOutput()
 		if cmdErr != nil {
-			return fmt.Errorf(app.T_("Error executing the rpm -qia command: %w"), cmdErr)
+			return fmt.Errorf(T_("Error executing the rpm -qia command: %w"), cmdErr)
 		}
 
 		var parseErr error
@@ -65,7 +64,7 @@ func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix str
 	return result, err
 }
 
-// RpmQueryKernelPackages возвращает список установленных ядер через rpm
+// RpmQueryKernelPackages returns installed kernels via rpm
 func (a *Actions) RpmQueryKernelPackages(ctx context.Context) ([]KernelRPMInfo, error) {
 	var result []KernelRPMInfo
 
@@ -76,7 +75,7 @@ func (a *Actions) RpmQueryKernelPackages(ctx context.Context) ([]KernelRPMInfo, 
 
 		output, cmdErr := cmd.Output()
 		if cmdErr != nil {
-			return fmt.Errorf(app.T_("failed to query installed kernels: %s"), cmdErr.Error())
+			return fmt.Errorf(T_("failed to query installed kernels: %s"), cmdErr.Error())
 		}
 
 		var parseErr error
@@ -87,7 +86,7 @@ func (a *Actions) RpmQueryKernelPackages(ctx context.Context) ([]KernelRPMInfo, 
 	return result, err
 }
 
-// RpmIsPackageInstalled проверяет установлен ли пакет
+// RpmIsPackageInstalled checks whether the package is installed
 func (a *Actions) RpmIsPackageInstalled(packageName string) (bool, error) {
 	var installed bool
 
@@ -95,13 +94,13 @@ func (a *Actions) RpmIsPackageInstalled(packageName string) (bool, error) {
 		cmd := exec.Command("rpm", "-q", packageName)
 		cmdErr := cmd.Run()
 		installed = cmdErr == nil
-		return nil // Не возвращаем ошибку - отсутствие пакета это не ошибка
+		return nil // missing package is not an error
 	})
 
 	return installed, err
 }
 
-// RpmIsAnyPackageInstalled проверяет установлен ли хотя бы один из пакетов
+// RpmIsAnyPackageInstalled checks whether at least one of the packages is installed
 func (a *Actions) RpmIsAnyPackageInstalled(packageNames []string) (bool, error) {
 	var installed bool
 
@@ -119,7 +118,7 @@ func (a *Actions) RpmIsAnyPackageInstalled(packageNames []string) (bool, error) 
 	return installed, err
 }
 
-// parseRpmQiaOutput парсит вывод rpm -qia и возвращает карту имя -> версия
+// parseRpmQiaOutput parses rpm -qia output into a name -> version map
 func parseRpmQiaOutput(output string) (map[string]string, error) {
 	installed := make(map[string]string)
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -134,9 +133,9 @@ func parseRpmQiaOutput(output string) (map[string]string, error) {
 			name = strings.TrimPrefix(name, "i586-")
 		}
 
-		// Если пакет уже есть, выбираем более новую версию
+		// If the package already exists, keep the newer version
 		if existingVersion, exists := installed[name]; exists {
-			if helper.CompareVersions(currentVersion, existingVersion) > 0 {
+			if compareVersions(currentVersion, existingVersion) > 0 {
 				installed[name] = currentVersion
 			}
 		} else {
@@ -185,13 +184,47 @@ func parseRpmQiaOutput(output string) (map[string]string, error) {
 	flushCurrent()
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf(app.T_("error scanning RPM output: %w"), err)
+		return nil, fmt.Errorf(T_("error scanning RPM output: %w"), err)
 	}
 
 	return installed, nil
 }
 
-// parseKernelRpmOutput парсит вывод rpm -qa для ядер
+// compareVersions compares two package versions
+// Returns: 1 if a > b, -1 if a < b, 0 if equal
+func compareVersions(a, b string) int {
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+
+	maxLen := len(aParts)
+	if len(bParts) > maxLen {
+		maxLen = len(bParts)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		aVal := 0
+		bVal := 0
+
+		if i < len(aParts) {
+			aVal, _ = strconv.Atoi(aParts[i])
+		}
+
+		if i < len(bParts) {
+			bVal, _ = strconv.Atoi(bParts[i])
+		}
+
+		if aVal > bVal {
+			return 1
+		}
+		if aVal < bVal {
+			return -1
+		}
+	}
+
+	return 0
+}
+
+// parseKernelRpmOutput parses rpm -qa output for kernels
 func parseKernelRpmOutput(output string) ([]KernelRPMInfo, error) {
 	var kernels []KernelRPMInfo
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -221,7 +254,7 @@ func parseKernelRpmOutput(output string) ([]KernelRPMInfo, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf(app.T_("error scanning RPM output: %s"), err.Error())
+		return nil, fmt.Errorf(T_("error scanning RPM output: %s"), err.Error())
 	}
 
 	return kernels, nil

@@ -19,11 +19,11 @@ package service
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
-	libApt "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/command"
 	"apm/internal/common/filter"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	libApt "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"fmt"

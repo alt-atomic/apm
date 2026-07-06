@@ -19,9 +19,9 @@ package dialog
 import (
 	"apm/internal/common/app"
 	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/helper"
 	"apm/internal/common/reply"
+	aptLib "apm/pkg/apt/lib"
 	"errors"
 	"fmt"
 	"os"

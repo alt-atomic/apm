@@ -18,8 +18,8 @@ package kernel
 
 import (
 	_package "apm/internal/common/apt/package"
-	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/domain/kernel/service"
+	aptlib "apm/pkg/apt/lib"
 	"context"
 )
 

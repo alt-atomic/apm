@@ -18,8 +18,8 @@ package binding
 
 import (
 	aptErrors "apm/internal/common/apt"
-	aptBinding "apm/internal/common/binding/apt"
-	aptlib "apm/internal/common/binding/apt/lib"
+	aptBinding "apm/pkg/apt"
+	aptlib "apm/pkg/apt/lib"
 	_ "embed"
 	"errors"
 	"os"

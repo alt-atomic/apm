@@ -23,7 +23,6 @@ package lib
 import "C"
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 )
 
@@ -71,15 +70,15 @@ func (e *ErrLocked) Error() string {
 
 	lockSuffix := ""
 	if lockFile != "" {
-		lockSuffix = fmt.Sprintf(", %s: %s", app.T_("lock file"), lockFile)
+		lockSuffix = fmt.Sprintf(", %s: %s", T_("lock file"), lockFile)
 	}
 
 	if e.Status.LockHolder != "" && e.Status.LockPID > 0 {
-		return fmt.Sprintf(app.T_("Package operations are locked by %s (PID %d)%s"),
+		return fmt.Sprintf(T_("Package operations are locked by %s (PID %d)%s"),
 			e.Status.LockHolder, e.Status.LockPID, lockSuffix)
 	}
 	if e.Status.LockPID > 0 {
-		return fmt.Sprintf(app.T_("Package operations are locked by process with PID %d%s"),
+		return fmt.Sprintf(T_("Package operations are locked by process with PID %d%s"),
 			e.Status.LockPID, lockSuffix)
 	}
 	if e.Status.ErrorMessage != "" {
@@ -88,7 +87,7 @@ func (e *ErrLocked) Error() string {
 		}
 		return e.Status.ErrorMessage
 	}
-	return fmt.Sprintf(app.T_("Package operations are locked by another process%s"), lockSuffix)
+	return fmt.Sprintf(T_("Package operations are locked by another process%s"), lockSuffix)
 }
 
 // CheckLockOrError checks if APT/RPM is locked and returns an error if it is.

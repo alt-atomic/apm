@@ -1,7 +1,7 @@
 package _package
 
 import (
-	aptLib "apm/internal/common/binding/apt/lib"
+	aptLib "apm/pkg/apt/lib"
 	"testing"
 )
 

@@ -3,10 +3,10 @@ package kernel
 import (
 	"apm/internal/common/apmerr"
 	_package "apm/internal/common/apt/package"
-	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/reply"
 	"apm/internal/common/testutil"
 	"apm/internal/domain/kernel/service"
+	aptlib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"syscall"
@@ -632,7 +632,7 @@ func TestListKernelModules(t *testing.T) {
 
 	t.Run("find modules error propagates", func(t *testing.T) {
 		km := &mockKernelManager{
-			findLatestResult: latest,
+			findLatestResult:    latest,
 			availableModulesErr: errors.New("db error"),
 		}
 		actions := newTestActions(km, nil, nil)

@@ -28,10 +28,10 @@ import (
 	"unsafe"
 )
 
-// System представляет конфигурацию APT системы
+// System represents the APT system configuration
 type System struct{ Ptr *C.AptSystem }
 
-// NewSystem инициализирует APT систему
+// NewSystem initializes the APT system
 func NewSystem() (*System, error) {
 	AptMutex.Lock()
 	defer AptMutex.Unlock()
@@ -63,18 +63,18 @@ func NewSystem() (*System, error) {
 	return s, nil
 }
 
-// Close освобождает ресурсы системы
+// Close releases system resources
 func (s *System) Close() {
 	if s.Ptr != nil {
-		BlockSignals()
-		defer RestoreSignals()
+		blockSignals()
+		defer restoreSignals()
 		C.apt_cleanup_system(s.Ptr)
 		s.Ptr = nil
 		runtime.SetFinalizer(s, nil)
 	}
 }
 
-// SetConfig устанавливает значение конфигурации APT (например "Dir::Cache::Archives", "/tmp/")
+// SetConfig sets an APT config value (e.g. "Dir::Cache::Archives", "/tmp/")
 func SetConfig(key, value string) {
 	cKey := C.CString(key)
 	cVal := C.CString(value)
@@ -83,7 +83,7 @@ func SetConfig(key, value string) {
 	C.apt_set_config(cKey, cVal)
 }
 
-// DumpConfig возвращает всю конфигурацию APT в виде строки.
+// DumpConfig returns the whole APT configuration as a string.
 func DumpConfig() string {
 	cVal := C.apt_config_dump()
 	if cVal == nil {
@@ -93,19 +93,19 @@ func DumpConfig() string {
 	return C.GoString(cVal)
 }
 
-// ConfigSnapshot создаёт копию всего дерева конфигурации APT.
+// ConfigSnapshot creates a copy of the whole APT configuration tree.
 func ConfigSnapshot() unsafe.Pointer {
 	return C.apt_config_snapshot()
 }
 
-// ConfigRestore восстанавливает конфигурацию APT из снимка (освобождает снимок).
+// ConfigRestore restores APT configuration from the snapshot (frees it).
 func ConfigRestore(snapshot unsafe.Pointer) {
 	if snapshot != nil {
 		C.apt_config_restore(snapshot)
 	}
 }
 
-// WithConfigOverrides сохраняет снимок конфигурации, применяет overrides, выполняет fn, затем восстанавливает из снимка.
+// WithConfigOverrides snapshots the configuration, applies overrides, runs fn, then restores the snapshot.
 func WithConfigOverrides(overrides map[string]string, fn func() error) error {
 	if len(overrides) == 0 {
 		return fn()
@@ -117,20 +117,17 @@ func WithConfigOverrides(overrides map[string]string, fn func() error) error {
 	}
 
 	defer func() {
-		//fmt.Fprintln(os.Stderr, "[APT config] before restore:\n"+DumpConfig())
 		ConfigRestore(snapshot)
-		//fmt.Fprintln(os.Stderr, "[APT config] after restore:\n"+DumpConfig())
 	}()
 
 	for key, value := range overrides {
-		//fmt.Fprintf(os.Stderr, "[APT config] override %s = %q\n", key, value)
 		SetConfig(key, value)
 	}
 
 	return fn()
 }
 
-// SetNoLocking включает или отключает блокировку файлов APT.
+// SetNoLocking enables or disables APT file locking.
 func SetNoLocking(noLock bool) {
 	val := "false"
 	if noLock {

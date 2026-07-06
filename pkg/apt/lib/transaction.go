@@ -28,12 +28,12 @@ import (
 	"unsafe"
 )
 
-// Transaction инкапсулирует жизненный цикл операции с пакетами
+// Transaction encapsulates the lifecycle of a package operation
 type Transaction struct {
 	ptr *C.AptTransaction
 }
 
-// NewTransaction создаёт новую транзакцию для данного кеша
+// NewTransaction creates a new transaction for the cache
 func (c *Cache) NewTransaction() (*Transaction, error) {
 	var tx *Transaction
 	err := withMutex(func() error {
@@ -48,7 +48,7 @@ func (c *Cache) NewTransaction() (*Transaction, error) {
 	return tx, err
 }
 
-// Close освобождает ресурсы транзакции
+// Close releases transaction resources
 func (tx *Transaction) Close() {
 	if tx.ptr != nil {
 		C.apt_transaction_free(tx.ptr)
@@ -57,7 +57,7 @@ func (tx *Transaction) Close() {
 	}
 }
 
-// Install добавляет пакеты для установки
+// Install adds packages to install
 func (tx *Transaction) Install(names []string) error {
 	if len(names) == 0 {
 		return CustomError(AptErrorInvalidParameters, "No package names")
@@ -73,7 +73,7 @@ func (tx *Transaction) Install(names []string) error {
 	})
 }
 
-// Remove добавляет пакеты для удаления
+// Remove adds packages to remove
 func (tx *Transaction) Remove(names []string, purge, depends bool) error {
 	if len(names) == 0 {
 		return CustomError(AptErrorInvalidParameters, "No package names")
@@ -90,7 +90,7 @@ func (tx *Transaction) Remove(names []string, purge, depends bool) error {
 	})
 }
 
-// Reinstall добавляет пакеты для переустановки
+// Reinstall adds packages to reinstall
 func (tx *Transaction) Reinstall(names []string) error {
 	if len(names) == 0 {
 		return CustomError(AptErrorInvalidParameters, "No package names")
@@ -106,7 +106,7 @@ func (tx *Transaction) Reinstall(names []string) error {
 	})
 }
 
-// DistUpgrade помечает транзакцию как обновление системы
+// DistUpgrade marks the transaction as a system upgrade
 func (tx *Transaction) DistUpgrade() error {
 	return withMutex(func() error {
 		res := C.apt_transaction_dist_upgrade(tx.ptr)
@@ -117,7 +117,7 @@ func (tx *Transaction) DistUpgrade() error {
 	})
 }
 
-// AutoRemove помечает транзакцию как автоматическое удаление неиспользуемых пакетов
+// AutoRemove marks the transaction as removal of unused packages
 func (tx *Transaction) AutoRemove() error {
 	return withMutex(func() error {
 		res := C.apt_transaction_autoremove(tx.ptr)
@@ -128,7 +128,7 @@ func (tx *Transaction) AutoRemove() error {
 	})
 }
 
-// Plan выполняет симуляцию транзакции
+// Plan simulates the transaction
 func (tx *Transaction) Plan() (*PackageChanges, error) {
 	var changes *PackageChanges
 	err := withMutex(func() error {
@@ -146,7 +146,7 @@ func (tx *Transaction) Plan() (*PackageChanges, error) {
 	return changes, err
 }
 
-// Execute выполняет транзакцию
+// Execute executes the transaction
 func (tx *Transaction) Execute(handler ProgressHandler, downloadOnly bool) error {
 	return withMutex(func() error {
 		var userData C.uintptr_t

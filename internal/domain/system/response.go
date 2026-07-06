@@ -18,9 +18,9 @@ package system
 
 import (
 	_package "apm/internal/common/apt/package"
-	aptlib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/build"
 	"apm/internal/common/filter"
+	aptlib "apm/pkg/apt/lib"
 )
 
 // CheckResponse структура ответа для Check* методов

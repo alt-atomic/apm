@@ -3,9 +3,9 @@ package repository
 import (
 	"apm/internal/common/apmerr"
 	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
 	"apm/internal/common/testutil"
 	"apm/internal/domain/repository/service"
+	aptLib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"testing"
@@ -59,12 +59,12 @@ func (m *mockRepoService) SimulateRemove(_ context.Context, _ []string, _ string
 }
 
 type mockAptActions struct {
-	updateErr    error
-	findInstall  []string
-	findRemove   []string
-	findChanges  *aptLib.PackageChanges
-	findErr      error
-	combineErr   error
+	updateErr   error
+	findInstall []string
+	findRemove  []string
+	findChanges *aptLib.PackageChanges
+	findErr     error
+	combineErr  error
 }
 
 func (m *mockAptActions) Update(_ context.Context, _ ...bool) ([]_package.Package, error) {
