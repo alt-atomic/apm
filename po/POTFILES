@@ -4,6 +4,7 @@ internal/common/app/database.go
 internal/common/app/dbus.go
 internal/common/app/translator.go
 internal/common/apt/analyze.go
+internal/common/apt/binding.go
 internal/common/apt/errors.go
 internal/common/apt/package/actions.go
 internal/common/apt/package/database.go
