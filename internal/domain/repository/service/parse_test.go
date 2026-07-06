@@ -181,3 +181,26 @@ func TestBuildURLRepos(t *testing.T) {
 		}
 	})
 }
+
+func TestParseSource_SisyphusCapital(t *testing.T) {
+	s, _ := newTestService(t)
+	ctx := context.Background()
+	writeSourcesList(t, s, "")
+
+	lower, err := s.parseSource(ctx, "sisyphus", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	capital, err := s.parseSource(ctx, "Sisyphus", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(capital) != len(lower) {
+		t.Fatalf("expected same URL count, got %d vs %d", len(capital), len(lower))
+	}
+	for i := range lower {
+		if capital[i] != lower[i] {
+			t.Errorf("URL mismatch:\n  Sisyphus: %s\n  sisyphus: %s", capital[i], lower[i])
+		}
+	}
+}

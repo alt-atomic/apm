@@ -280,15 +280,15 @@ func TestCheckRepoExists(t *testing.T) {
 		s, _ := newTestService(t)
 		writeSourcesList(t, s, "rpm http://example.com x86_64 classic\n")
 
-		active, commented, err := s.checkRepoExists(ctx, "rpm http://example.com x86_64 classic")
+		found, active, err := s.checkRepoExists(ctx, "rpm http://example.com x86_64 classic")
 		if err != nil {
 			t.Fatal(err)
 		}
+		if !found {
+			t.Error("expected found=true")
+		}
 		if !active {
 			t.Error("expected active=true")
-		}
-		if commented {
-			t.Error("expected commented=false")
 		}
 	})
 
@@ -296,15 +296,15 @@ func TestCheckRepoExists(t *testing.T) {
 		s, _ := newTestService(t)
 		writeSourcesList(t, s, "# rpm http://example.com x86_64 classic\n")
 
-		active, commented, err := s.checkRepoExists(ctx, "rpm http://example.com x86_64 classic")
+		found, active, err := s.checkRepoExists(ctx, "rpm http://example.com x86_64 classic")
 		if err != nil {
 			t.Fatal(err)
 		}
+		if !found {
+			t.Error("expected found=true")
+		}
 		if active {
 			t.Error("expected active=false")
-		}
-		if !commented {
-			t.Error("expected commented=true")
 		}
 	})
 
@@ -312,11 +312,11 @@ func TestCheckRepoExists(t *testing.T) {
 		s, _ := newTestService(t)
 		writeSourcesList(t, s, "rpm http://other.com x86_64 classic\n")
 
-		active, commented, err := s.checkRepoExists(ctx, "rpm http://example.com x86_64 classic")
+		found, active, err := s.checkRepoExists(ctx, "rpm http://example.com x86_64 classic")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if active || commented {
+		if found || active {
 			t.Error("expected both false")
 		}
 	})
@@ -325,7 +325,7 @@ func TestCheckRepoExists(t *testing.T) {
 		s, _ := newTestService(t)
 		writeSourcesList(t, s, "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64 classic\n")
 
-		active, _, err := s.checkRepoExists(ctx, "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic")
+		_, active, err := s.checkRepoExists(ctx, "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -487,4 +487,71 @@ func TestGetRepositories_BranchField(t *testing.T) {
 	if repos[2].Branch != "task" {
 		t.Errorf("expected branch=task, got %q", repos[2].Branch)
 	}
+}
+
+func TestRewriteHelpers_ExactContent(t *testing.T) {
+	canonical := canonicalizeRepoLine("rpm http://a.example.com/repo x86_64 classic")
+
+	t.Run("removeFromFile keeps layout byte-for-byte", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "# header\n\nrpm http://a.example.com/repo x86_64 classic\n  rpm http://b.example.com/repo x86_64 classic\n# rpm http://c.example.com/repo x86_64 classic\n")
+
+		if err := s.removeFromFile(s.confMain, canonical); err != nil {
+			t.Fatal(err)
+		}
+
+		want := "# header\n\n  rpm http://b.example.com/repo x86_64 classic\n# rpm http://c.example.com/repo x86_64 classic\n"
+		if got := readSourcesList(t, s); got != want {
+			t.Errorf("content mismatch:\n got: %q\nwant: %q", got, want)
+		}
+	})
+
+	t.Run("commentInFile prepends hash preserving indent", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "# header\n  rpm http://a.example.com/repo x86_64 classic\n")
+
+		if err := s.commentInFile(s.confMain, canonical); err != nil {
+			t.Fatal(err)
+		}
+
+		want := "# header\n#  rpm http://a.example.com/repo x86_64 classic\n"
+		if got := readSourcesList(t, s); got != want {
+			t.Errorf("content mismatch:\n got: %q\nwant: %q", got, want)
+		}
+	})
+
+	t.Run("uncommentRepo trims comment only on target line", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "# header\n# rpm http://a.example.com/repo x86_64 classic\n")
+
+		file, err := s.uncommentRepo("rpm http://a.example.com/repo x86_64 classic")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if file != s.confMain {
+			t.Errorf("expected foundFile=%s, got %s", s.confMain, file)
+		}
+
+		want := "# header\nrpm http://a.example.com/repo x86_64 classic\n"
+		if got := readSourcesList(t, s); got != want {
+			t.Errorf("content mismatch:\n got: %q\nwant: %q", got, want)
+		}
+	})
+
+	t.Run("no match leaves file untouched", func(t *testing.T) {
+		s, _ := newTestService(t)
+		content := "# header\nrpm http://b.example.com/repo x86_64 classic\n"
+		writeSourcesList(t, s, content)
+
+		if err := s.removeFromFile(s.confMain, canonical); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.commentInFile(s.confMain, canonical); err != nil {
+			t.Fatal(err)
+		}
+
+		if got := readSourcesList(t, s); got != content {
+			t.Errorf("content mismatch:\n got: %q\nwant: %q", got, content)
+		}
+	})
 }

@@ -57,7 +57,7 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 	source = strings.TrimSpace(source)
 	date = strings.TrimSpace(date)
 
-	if branch, ok := s.branches[source]; ok {
+	if branch, ok := s.lookupBranch(source); ok {
 		if date != "" {
 			formattedDate, err := s.parseArchiveDate(source, date)
 			if err != nil {
@@ -68,14 +68,13 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 		return s.buildBranchURLs(ctx, branch), nil
 	}
 
-	if isTaskNumber(source) {
+	if isDigits(source) {
 		return s.buildTaskURLs(ctx, source)
 	}
 
-	if strings.HasPrefix(source, "task ") {
-		taskNum := strings.TrimPrefix(source, "task ")
+	if taskNum, ok := strings.CutPrefix(source, "task "); ok {
 		taskNum = strings.TrimSpace(taskNum)
-		if isTaskNumber(taskNum) {
+		if isDigits(taskNum) {
 			return s.buildTaskURLs(ctx, taskNum)
 		}
 	}
@@ -149,7 +148,7 @@ func (s *RepoService) buildURLRepos(url string) []string {
 	return urls
 }
 
-// isURL проверяет, является ли строка URL
+// isURL проверяет, является ли строка источником APT.
 func isURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") ||
 		strings.HasPrefix(s, "ftp://") || strings.HasPrefix(s, "rsync://") ||

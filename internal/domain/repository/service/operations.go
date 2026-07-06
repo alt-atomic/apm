@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
@@ -28,6 +29,12 @@ import (
 
 // AddRepository добавляет репозиторий
 func (s *RepoService) AddRepository(ctx context.Context, args []string, date string) ([]Repository, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.addRepository(ctx, args, date)
+}
+
+func (s *RepoService) addRepository(ctx context.Context, args []string, date string) ([]Repository, error) {
 	s.ensureInitialized()
 	urls, err := s.parseSourceArgs(ctx, args, date)
 	if err != nil {
@@ -41,17 +48,17 @@ func (s *RepoService) AddRepository(ctx context.Context, args []string, date str
 	var added []Repository
 
 	for _, u := range urls {
-		exists, commented, err := s.checkRepoExists(ctx, u)
+		found, active, err := s.checkRepoExists(ctx, u)
 		if err != nil {
 			return added, err
 		}
 
-		if exists {
+		if active {
 			continue
 		}
 
 		var file string
-		if commented {
+		if found {
 			file, err = s.uncommentRepo(u)
 			if err != nil {
 				return added, err
@@ -78,6 +85,12 @@ func (s *RepoService) AddRepository(ctx context.Context, args []string, date str
 
 // RemoveRepository удаляет репозиторий
 func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]Repository, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.removeRepository(ctx, args, date, purge)
+}
+
+func (s *RepoService) removeRepository(ctx context.Context, args []string, date string, purge bool) ([]Repository, error) {
 	s.ensureInitialized()
 	var removed []Repository
 
@@ -112,24 +125,20 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 		return removed, nil
 	}
 
-	urls, err := s.parseSourceArgs(ctx, args, date)
+	urls, err := s.removalURLs(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}
 
 	// Получаем текущие репозитории для поиска файлов
-	allRepos, _ := s.GetRepositories(ctx, true)
-	repoByEntry := make(map[string]Repository, len(allRepos))
-	for _, r := range allRepos {
-		repoByEntry[canonicalizeRepoLine(r.Entry)] = r
-	}
+	index := s.repoIndex(ctx)
 
 	for _, u := range urls {
-		active, commented, checkErr := s.checkRepoExists(ctx, u)
+		found, _, checkErr := s.checkRepoExists(ctx, u)
 		if checkErr != nil {
 			continue
 		}
-		if !active && !commented {
+		if !found {
 			continue
 		}
 
@@ -138,16 +147,13 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 			continue
 		}
 
-		canonical := canonicalizeRepoLine(u)
-		if repo, ok := repoByEntry[canonical]; ok {
+		if repo := s.findRepo(index, u, false); repo != nil {
 			repo.Active = false
-			removed = append(removed, repo)
-		} else if parsed := s.parseLine(u, "", false); parsed != nil {
-			removed = append(removed, *parsed)
+			removed = append(removed, *repo)
 		}
 	}
 
-	if _, ok := s.branches[source]; ok {
+	if _, ok := s.lookupBranch(source); ok {
 		s.removePriorityMacro()
 	}
 
@@ -156,17 +162,20 @@ func (s *RepoService) RemoveRepository(ctx context.Context, args []string, date 
 
 // SetBranch устанавливает ветку (удаляет все и добавляет)
 func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added []Repository, removed []Repository, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.ensureInitialized()
-	if _, ok := s.branches[branch]; !ok {
+	if _, ok := s.lookupBranch(branch); !ok {
 		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branch)
 	}
 
-	removed, err = s.RemoveRepository(ctx, []string{"all"}, "", false)
+	removed, err = s.removeRepository(ctx, []string{"all"}, "", false)
 	if err != nil {
 		return nil, removed, err
 	}
 
-	added, err = s.AddRepository(ctx, []string{branch}, date)
+	added, err = s.addRepository(ctx, []string{branch}, date)
 	if err != nil {
 		return added, removed, err
 	}
@@ -176,6 +185,9 @@ func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added
 
 // CleanTemporary удаляет cdrom и task репозитории
 func (s *RepoService) CleanTemporary(ctx context.Context) ([]Repository, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.ensureInitialized()
 	var removed []Repository
 
@@ -186,13 +198,7 @@ func (s *RepoService) CleanTemporary(ctx context.Context) ([]Repository, error) 
 
 	for _, repo := range repos {
 		isCdrom := strings.Contains(repo.URL, "cdrom:")
-		isTask := false
-		for _, comp := range repo.Components {
-			if comp == "task" {
-				isTask = true
-				break
-			}
-		}
+		isTask := slices.Contains(repo.Components, "task")
 
 		if isCdrom || isTask {
 			err = s.removeOrCommentRepo(repo.Entry)
@@ -217,8 +223,8 @@ func (s *RepoService) SimulateAdd(ctx context.Context, args []string, date strin
 
 	var willAdd []Repository
 	for _, u := range urls {
-		exists, _, _ := s.checkRepoExists(ctx, u)
-		if !exists || force {
+		_, active, _ := s.checkRepoExists(ctx, u)
+		if !active || force {
 			if repo := s.parseLine(u, s.confMain, true); repo != nil {
 				willAdd = append(willAdd, *repo)
 			}
@@ -247,30 +253,70 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 		return repos, nil
 	}
 
-	urls, err := s.parseSourceArgs(ctx, args, date)
+	urls, err := s.removalURLs(ctx, args, date)
 	if err != nil {
 		return nil, err
 	}
 
-	allRepos, _ := s.GetRepositories(ctx, true)
-	repoByEntry := make(map[string]Repository, len(allRepos))
-	for _, r := range allRepos {
-		repoByEntry[canonicalizeRepoLine(r.Entry)] = r
-	}
+	index := s.repoIndex(ctx)
 
 	for _, u := range urls {
-		exists, _, _ := s.checkRepoExists(ctx, u)
-		if exists {
-			canonical := canonicalizeRepoLine(u)
-			if repo, ok := repoByEntry[canonical]; ok {
-				willRemove = append(willRemove, repo)
-			} else if parsed := s.parseLine(u, "", true); parsed != nil {
-				willRemove = append(willRemove, *parsed)
+		_, active, _ := s.checkRepoExists(ctx, u)
+		if active {
+			if repo := s.findRepo(index, u, true); repo != nil {
+				willRemove = append(willRemove, *repo)
 			}
 		}
 	}
 
 	return willRemove, nil
+}
+
+// removalURLs формирует кандидатов на удаление.
+func (s *RepoService) removalURLs(ctx context.Context, args []string, date string) ([]string, error) {
+	var urls []string
+	if taskNum, ok := taskNumberArg(args); ok {
+		urls = s.buildTaskURLsForRemove(ctx, taskNum)
+	} else {
+		var err error
+		urls, err = s.parseSourceArgs(ctx, args, date)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return withAlternateSchemes(urls), nil
+}
+
+// withAlternateSchemes добавляет к каждому URL вариант с противоположной схемой http/https
+func withAlternateSchemes(urls []string) []string {
+	all := make([]string, 0, len(urls)*2)
+	for _, u := range urls {
+		all = append(all, u)
+		if flipped := strings.Replace(u, " http://", " https://", 1); flipped != u {
+			all = append(all, flipped)
+		} else if flipped := strings.Replace(u, " https://", " http://", 1); flipped != u {
+			all = append(all, flipped)
+		}
+	}
+	return all
+}
+
+// repoIndex строит индекс текущих репозиториев по канонической строке
+func (s *RepoService) repoIndex(ctx context.Context) map[string]Repository {
+	allRepos, _ := s.GetRepositories(ctx, true)
+	index := make(map[string]Repository, len(allRepos))
+	for _, r := range allRepos {
+		index[canonicalizeRepoLine(r.Entry)] = r
+	}
+	return index
+}
+
+// findRepo ищет репозиторий в индексе по канонической строке, иначе парсит её
+func (s *RepoService) findRepo(index map[string]Repository, line string, active bool) *Repository {
+	if repo, ok := index[canonicalizeRepoLine(line)]; ok {
+		return &repo
+	}
+	return s.parseLine(line, "", active)
 }
 
 // setPriorityMacro устанавливает макрос %_priority_distbranch

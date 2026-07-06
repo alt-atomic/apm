@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -294,6 +295,180 @@ func TestSimulateRemove(t *testing.T) {
 		_, err := s.SimulateRemove(ctx, []string{}, "", false)
 		if err == nil {
 			t.Error("expected error")
+		}
+	})
+}
+
+func TestSimulateRemove_CommentedRepo(t *testing.T) {
+	s, _ := newTestService(t)
+	ctx := context.Background()
+	writeSourcesList(t, s, "# rpm http://example.com/repo x86_64 classic\n")
+
+	willRemove, err := s.SimulateRemove(ctx, []string{"rpm http://example.com/repo x86_64 classic"}, "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Закомментированный репозиторий в симуляцию удаления не попадает
+	if len(willRemove) != 0 {
+		t.Errorf("expected 0 for commented repo, got %d", len(willRemove))
+	}
+}
+
+func TestRemoveRepository_PreservesUnrelatedLines(t *testing.T) {
+	s, _ := newTestService(t)
+	ctx := context.Background()
+	writeSourcesList(t, s, "# comment header\n\nrpm http://example.com/repo x86_64 classic\nrpm http://other.com/repo x86_64 classic\n")
+
+	_, err := s.RemoveRepository(ctx, []string{"rpm http://example.com/repo x86_64 classic"}, "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	content := readSourcesList(t, s)
+	if !strings.Contains(content, "# comment header") {
+		t.Error("unrelated comment should survive removal")
+	}
+	if !strings.Contains(content, "other.com") {
+		t.Error("unrelated repo should survive removal")
+	}
+	if strings.Contains(content, "example.com") {
+		t.Error("target repo should be removed")
+	}
+}
+
+func TestAddRepository_UncommentKeepsIndentedNeighbors(t *testing.T) {
+	s, _ := newTestService(t)
+	ctx := context.Background()
+	writeSourcesList(t, s, "# just a note about repos\n# rpm http://example.com/repo x86_64 classic\n")
+
+	added, err := s.AddRepository(ctx, []string{"rpm http://example.com/repo x86_64 classic"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(added) != 1 {
+		t.Fatalf("expected 1 uncommented repo, got %d", len(added))
+	}
+
+	content := readSourcesList(t, s)
+	if !strings.Contains(content, "# just a note about repos") {
+		t.Error("unrelated comment should stay commented")
+	}
+	if !strings.Contains(content, "rpm http://example.com/repo x86_64 classic") {
+		t.Error("repo should be uncommented")
+	}
+}
+
+func TestConcurrentMutations(t *testing.T) {
+	s, _ := newTestService(t)
+	ctx := context.Background()
+	writeSourcesList(t, s, "")
+
+	repos := []string{
+		"rpm http://a.example.com/repo x86_64 classic",
+		"rpm http://b.example.com/repo x86_64 classic",
+		"rpm http://c.example.com/repo x86_64 classic",
+		"rpm http://d.example.com/repo x86_64 classic",
+	}
+
+	var wg sync.WaitGroup
+	for _, line := range repos {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := s.AddRepository(ctx, []string{line}, ""); err != nil {
+				t.Errorf("AddRepository(%q): %v", line, err)
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Параллельные добавления не должны терять правки друг друга
+	content := readSourcesList(t, s)
+	for _, line := range repos {
+		if !strings.Contains(content, line) {
+			t.Errorf("lost repo line under concurrency: %s", line)
+		}
+	}
+}
+
+func TestRemoveRepository_Task(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("active task without network", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "rpm http://git.altlinux.org/repo/12345/ x86_64 task\nrpm http://git.altlinux.org/repo/12345/ x86_64-i586 task\n")
+
+		removed, err := s.RemoveRepository(ctx, []string{"12345"}, "", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(removed) != 2 {
+			t.Errorf("expected 2 removed, got %d", len(removed))
+		}
+		if content := readSourcesList(t, s); strings.Contains(content, "12345") {
+			t.Errorf("task should be removed: %s", content)
+		}
+	})
+
+	t.Run("archived task by number", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "rpm http://git.altlinux.org/tasks/archive/done/_12/12345/build/repo/ x86_64 task\n")
+
+		removed, err := s.RemoveRepository(ctx, []string{"task", "12345"}, "", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(removed) != 1 {
+			t.Errorf("expected 1 removed, got %d", len(removed))
+		}
+		if content := readSourcesList(t, s); strings.Contains(content, "12345") {
+			t.Errorf("archived task should be removed: %s", content)
+		}
+	})
+
+	t.Run("nonexistent task is no-op", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "rpm http://example.com/repo x86_64 classic\n")
+
+		removed, err := s.RemoveRepository(ctx, []string{"99999"}, "", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(removed) != 0 {
+			t.Errorf("expected 0 removed, got %d", len(removed))
+		}
+	})
+}
+
+func TestRemoveRepository_SchemeMismatch(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("https entry removed by http source", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "rpm https://example.com/repo x86_64 classic\n")
+
+		removed, err := s.RemoveRepository(ctx, []string{"http://example.com/repo"}, "", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(removed) != 1 {
+			t.Errorf("expected 1 removed, got %d", len(removed))
+		}
+		if content := readSourcesList(t, s); strings.Contains(content, "example.com") {
+			t.Errorf("repo should be removed despite scheme mismatch: %s", content)
+		}
+	})
+
+	t.Run("simulate remove sees scheme mismatch", func(t *testing.T) {
+		s, _ := newTestService(t)
+		writeSourcesList(t, s, "rpm https://example.com/repo x86_64 classic\n")
+
+		willRemove, err := s.SimulateRemove(ctx, []string{"http://example.com/repo"}, "", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(willRemove) != 1 {
+			t.Errorf("expected 1, got %d", len(willRemove))
 		}
 	})
 }

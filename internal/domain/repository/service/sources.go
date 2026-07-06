@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
@@ -145,15 +145,15 @@ func (s *RepoService) getSourceFiles() ([]string, error) {
 	pattern := filepath.Join(s.confDir, "*.list")
 	matches, err := filepath.Glob(pattern)
 	if err == nil {
-		sort.Strings(matches)
+		slices.Sort(matches)
 		files = append(files, matches...)
 	}
 
 	return files, nil
 }
 
-// checkRepoExists проверяет, существует ли репозиторий
-func (s *RepoService) checkRepoExists(ctx context.Context, repoLine string) (active bool, commented bool, err error) {
+// checkRepoExists проверяет, есть ли репозиторий в источниках и активен ли он
+func (s *RepoService) checkRepoExists(ctx context.Context, repoLine string) (found bool, active bool, err error) {
 	repos, err := s.GetRepositories(ctx, true)
 	if err != nil {
 		return false, false, err
@@ -162,9 +162,8 @@ func (s *RepoService) checkRepoExists(ctx context.Context, repoLine string) (act
 	canonical := canonicalizeRepoLine(repoLine)
 
 	for _, repo := range repos {
-		repoCanonical := canonicalizeRepoLine(repo.Entry)
-		if repoCanonical == canonical {
-			return repo.Active, !repo.Active, nil
+		if canonicalizeRepoLine(repo.Entry) == canonical {
+			return true, repo.Active, nil
 		}
 	}
 
@@ -250,6 +249,36 @@ func (s *RepoService) detectBranch(repoURL string) string {
 	return ""
 }
 
+// rewriteLines применяет transform к строкам файла и перезаписывает его при изменениях.
+func rewriteLines(filename string, transform func(line string) (string, bool)) (bool, error) {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return false, err
+	}
+
+	lines := strings.Split(string(content), "\n")
+	newLines := make([]string, 0, len(lines))
+	modified := false
+
+	for _, line := range lines {
+		newLine, keep := transform(line)
+		if !keep {
+			modified = true
+			continue
+		}
+		if newLine != line {
+			modified = true
+		}
+		newLines = append(newLines, newLine)
+	}
+
+	if !modified {
+		return false, nil
+	}
+
+	return true, os.WriteFile(filename, []byte(strings.Join(newLines, "\n")), 0644)
+}
+
 // uncommentRepo раскомментирует репозиторий и возвращает имя файла, в котором он был найден
 func (s *RepoService) uncommentRepo(repoLine string) (string, error) {
 	files, err := s.getSourceFiles()
@@ -261,32 +290,24 @@ func (s *RepoService) uncommentRepo(repoLine string) (string, error) {
 	var foundFile string
 
 	for _, filename := range files {
-		content, err := os.ReadFile(filename)
-		if err != nil {
-			continue
-		}
-
-		lines := strings.Split(string(content), "\n")
-		modified := false
-
-		for i, line := range lines {
+		modified, errRewrite := rewriteLines(filename, func(line string) (string, bool) {
 			trimmed := strings.TrimSpace(line)
-			if strings.HasPrefix(trimmed, "#") {
-				commented := strings.TrimPrefix(trimmed, "#")
+			if commented, ok := strings.CutPrefix(trimmed, "#"); ok {
 				commented = strings.TrimSpace(commented)
 				if canonicalizeRepoLine(commented) == canonical {
-					lines[i] = commented
-					modified = true
-					foundFile = filename
+					return commented, true
 				}
 			}
-		}
-
-		if modified {
-			errWrite := os.WriteFile(filename, []byte(strings.Join(lines, "\n")), 0644)
-			if errWrite != nil {
-				return "", errWrite
+			return line, true
+		})
+		if errRewrite != nil {
+			if os.IsNotExist(errRewrite) {
+				continue
 			}
+			return "", errRewrite
+		}
+		if modified {
+			foundFile = filename
 		}
 	}
 
@@ -331,9 +352,7 @@ func (s *RepoService) removeOrCommentRepo(repoLine string) error {
 		if filename == s.confMain {
 			continue
 		}
-		if err = s.commentInFile(filename, canonical); err != nil {
-			continue
-		}
+		_ = s.commentInFile(filename, canonical)
 	}
 
 	return nil
@@ -341,48 +360,24 @@ func (s *RepoService) removeOrCommentRepo(repoLine string) error {
 
 // removeFromFile удаляет строку из файла
 func (s *RepoService) removeFromFile(filename string, canonicalLine string) error {
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
+	_, err := rewriteLines(filename, func(line string) (string, bool) {
+		return line, canonicalizeRepoLine(line) != canonicalLine
+	})
+	if os.IsNotExist(err) {
+		return nil
 	}
-
-	lines := strings.Split(string(content), "\n")
-	var newLines []string
-
-	for _, line := range lines {
-		if canonicalizeRepoLine(line) != canonicalLine {
-			newLines = append(newLines, line)
-		}
-	}
-
-	return os.WriteFile(filename, []byte(strings.Join(newLines, "\n")), 0644)
+	return err
 }
 
 // commentInFile комментирует строку в файле
 func (s *RepoService) commentInFile(filename string, canonicalLine string) error {
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	lines := strings.Split(string(content), "\n")
-	modified := false
-
-	for i, line := range lines {
+	_, err := rewriteLines(filename, func(line string) (string, bool) {
 		if canonicalizeRepoLine(line) == canonicalLine {
-			lines[i] = "#" + line
-			modified = true
+			return "#" + line, true
 		}
-	}
-
-	if modified {
-		return os.WriteFile(filename, []byte(strings.Join(lines, "\n")), 0644)
-	}
-
-	return nil
+		return line, true
+	})
+	return err
 }
 
 // purgeAllRepos полностью удаляет все файлы репозиториев

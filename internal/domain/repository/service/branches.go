@@ -21,11 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
+
+// archiveDateRe формат даты архива YYYY/MM/DD
+var archiveDateRe = regexp.MustCompile(`^\d{4}/\d{2}/\d{2}$`)
 
 // archivingBranches список веток, для которых есть архивы
 var archivingBranches = []string{"p7", "p8", "p9", "p10", "p11", "t7", "sisyphus"}
@@ -35,12 +38,6 @@ func (s *RepoService) initBranches() {
 	s.branches = map[string]Branch{
 		"sisyphus": {
 			Name:       "sisyphus",
-			URL:        RepoBaseURL + "/Sisyphus",
-			Key:        "alt",
-			Components: []string{"classic", "gostcrypto"},
-		},
-		"Sisyphus": {
-			Name:       "Sisyphus",
 			URL:        RepoBaseURL + "/Sisyphus",
 			Key:        "alt",
 			Components: []string{"classic", "gostcrypto"},
@@ -125,37 +122,38 @@ func (s *RepoService) GetBranches() []string {
 	s.ensureInitialized()
 	branches := make([]string, 0, len(s.branches))
 	for name := range s.branches {
-		if name == "Sisyphus" || strings.HasPrefix(name, "autoimports.") {
+		if strings.HasPrefix(name, "autoimports.") {
 			continue
 		}
 		branches = append(branches, name)
 	}
 	branches = append(branches, "task")
-	sort.Strings(branches)
+	slices.Sort(branches)
 	return branches
+}
+
+// lookupBranch ищет ветку по имени без учёта регистра
+func (s *RepoService) lookupBranch(name string) (Branch, bool) {
+	if branch, ok := s.branches[name]; ok {
+		return branch, true
+	}
+	branch, ok := s.branches[strings.ToLower(name)]
+	return branch, ok
 }
 
 // parseArchiveDate парсит и валидирует дату архива
 func (s *RepoService) parseArchiveDate(branchName, date string) (string, error) {
-	// Проверяем, поддерживает ли ветка архивы
-	hasArchive := false
-	for _, b := range archivingBranches {
-		if b == branchName {
-			hasArchive = true
-			break
-		}
-	}
-	if !hasArchive {
+	if !slices.Contains(archivingBranches, branchName) {
 		return "", fmt.Errorf(app.T_("Branch %s has no archive"), branchName)
 	}
 
 	// Формат YYYYMMDD -> YYYY/MM/DD
-	if len(date) == 8 && isTaskNumber(date) {
+	if len(date) == 8 && isDigits(date) {
 		return fmt.Sprintf("%s/%s/%s", date[0:4], date[4:6], date[6:8]), nil
 	}
 
 	// Формат YYYY/MM/DD
-	if regexp.MustCompile(`^\d{4}/\d{2}/\d{2}$`).MatchString(date) {
+	if archiveDateRe.MatchString(date) {
 		return date, nil
 	}
 
@@ -211,10 +209,8 @@ func (s *RepoService) hasGostcryptoInSources(ctx context.Context) bool {
 	}
 
 	for _, repo := range repos {
-		for _, comp := range repo.Components {
-			if comp == "gostcrypto" {
-				return true
-			}
+		if slices.Contains(repo.Components, "gostcrypto") {
+			return true
 		}
 	}
 

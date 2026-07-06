@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
@@ -58,6 +59,37 @@ func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]stri
 	return urls, nil
 }
 
+// buildTaskURLsForRemove формирует активный и архивный URL задачи без сетевых проверок.
+func (s *RepoService) buildTaskURLsForRemove(ctx context.Context, taskNum string) []string {
+	scheme := s.httpScheme(ctx)
+	num, _ := strconv.Atoi(taskNum)
+	archiveURL := fmt.Sprintf("%s%s/archive/done/_%d/%s/build/repo/", scheme, RepoTasksURL, num/1024, taskNum)
+	activeURL := fmt.Sprintf("%s%s/%s/", scheme, RepoTaskURL, taskNum)
+
+	urls := []string{
+		fmt.Sprintf("rpm %s %s task", archiveURL, s.arch),
+		fmt.Sprintf("rpm %s %s task", activeURL, s.arch),
+	}
+	if s.useArepo && s.arch == "x86_64" {
+		urls = append(urls,
+			fmt.Sprintf("rpm %s x86_64-i586 task", archiveURL),
+			fmt.Sprintf("rpm %s x86_64-i586 task", activeURL))
+	}
+	return urls
+}
+
+// taskNumberArg возвращает номер задачи из аргументов вида ["12345"] или ["task", "12345"]
+func taskNumberArg(args []string) (string, bool) {
+	source := strings.TrimSpace(strings.Join(args, " "))
+	if num, ok := strings.CutPrefix(source, "task "); ok {
+		source = strings.TrimSpace(num)
+	}
+	if source != "" && isDigits(source) {
+		return source, true
+	}
+	return "", false
+}
+
 // checkTaskExists проверяет существование задачи и возвращает базовый URL (с учётом редиректа для архивных задач)
 func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exists bool, baseURL string, err error) {
 	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), RepoTasksURL, taskNum)
@@ -73,11 +105,11 @@ func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exis
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return false, "", nil
 	}
 
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
 		finalURL := resp.Request.URL.String()
 		baseURL = strings.TrimSuffix(finalURL, "/plan/add-bin")
 		return true, baseURL, nil
@@ -101,7 +133,7 @@ func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bo
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return false, nil
 	}
 
@@ -113,8 +145,8 @@ func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bo
 	return len(strings.TrimSpace(string(body))) > 0, nil
 }
 
-// isTaskNumber проверяет, является ли строка номером задачи
-func isTaskNumber(s string) bool {
+// isDigits проверяет, состоит ли строка только из цифр
+func isDigits(s string) bool {
 	if len(s) == 0 {
 		return false
 	}
@@ -128,15 +160,7 @@ func isTaskNumber(s string) bool {
 
 // GetTaskPackages возвращает список пакетов из задачи
 func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]string, error) {
-	exists, baseURL, err := s.checkTaskExists(ctx, taskNum)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, fmt.Errorf(app.T_("Task %s not found or still building"), taskNum)
-	}
-
-	url := baseURL + "/plan/add-bin"
+	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), RepoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -149,8 +173,8 @@ func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]st
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf(app.T_("Failed to get task packages: HTTP %d"), resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(app.T_("Task %s not found or still building"), taskNum)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -160,23 +184,23 @@ func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]st
 
 	var packages []string
 	seen := make(map[string]bool)
-	lines := strings.Split(string(body), "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		fields := strings.Fields(line)
-		if len(fields) >= 1 {
-			pkg := fields[0]
+		if len(fields) == 0 {
+			continue
+		}
+		pkg := fields[0]
 
-			if strings.HasSuffix(pkg, "-debuginfo") ||
-				strings.HasSuffix(pkg, "-checkinstall") ||
-				strings.HasSuffix(pkg, "-devel") ||
-				strings.HasPrefix(pkg, "kernel-headers-") {
-				continue
-			}
+		if strings.HasSuffix(pkg, "-debuginfo") ||
+			strings.HasSuffix(pkg, "-checkinstall") ||
+			strings.HasSuffix(pkg, "-devel") ||
+			strings.HasPrefix(pkg, "kernel-headers-") {
+			continue
+		}
 
-			if !seen[pkg] {
-				seen[pkg] = true
-				packages = append(packages, pkg)
-			}
+		if !seen[pkg] {
+			seen[pkg] = true
+			packages = append(packages, pkg)
 		}
 	}
 

@@ -92,6 +92,7 @@ type RepoService struct {
 	serviceAptDatabase packageDBService
 	runner             commandRunner
 	initOnce           sync.Once
+	mu                 sync.Mutex
 }
 
 // NewRepoService создает новый сервис для работы с репозиториями
@@ -182,27 +183,30 @@ func (s *RepoService) checkHTTPSEnabled(ctx context.Context) bool {
 	return err == nil
 }
 
+// aptConfigRe разбирает вывод apt-config shell вида VAR='значение'
+var aptConfigRe = regexp.MustCompile(`^([A-Z]+)=(.*)$`)
+
 // detectAPTConfig получает пути конфигурации из apt-config
 func (s *RepoService) detectAPTConfig() {
-	stdout, _, err := s.runner.Run(context.Background(), []string{"apt-config", "shell", "FILE", "Dir::Etc::sourcelist/f"}, command.WithQuiet())
-	if err == nil {
-		if matches := regexp.MustCompile(`^FILE=(.*)$`).FindStringSubmatch(strings.TrimSpace(stdout)); len(matches) > 1 {
-			path := strings.Trim(matches[1], `"'`)
-			if path != "" {
-				s.confMain = path
-			}
-		}
+	if path := s.aptConfigPath("FILE", "Dir::Etc::sourcelist/f"); path != "" {
+		s.confMain = path
 	}
+	if path := s.aptConfigPath("DIR", "Dir::Etc::sourceparts/d"); path != "" {
+		s.confDir = path
+	}
+}
 
-	stdout, _, err = s.runner.Run(context.Background(), []string{"apt-config", "shell", "DIR", "Dir::Etc::sourceparts/d"}, command.WithQuiet())
-	if err == nil {
-		if matches := regexp.MustCompile(`^DIR=(.*)$`).FindStringSubmatch(strings.TrimSpace(stdout)); len(matches) > 1 {
-			path := strings.Trim(matches[1], `"'`)
-			if path != "" {
-				s.confDir = path
-			}
-		}
+// aptConfigPath запрашивает путь из apt-config, пустая строка если недоступен
+func (s *RepoService) aptConfigPath(varName, key string) string {
+	stdout, _, err := s.runner.Run(context.Background(), []string{"apt-config", "shell", varName, key}, command.WithQuiet())
+	if err != nil {
+		return ""
 	}
+	matches := aptConfigRe.FindStringSubmatch(strings.TrimSpace(stdout))
+	if len(matches) < 3 || matches[1] != varName {
+		return ""
+	}
+	return strings.Trim(matches[2], `"'`)
 }
 
 // GetArch возвращает архитектуру системы
