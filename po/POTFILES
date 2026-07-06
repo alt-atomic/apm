@@ -72,3 +72,4 @@ internal/domain/system/dialog/dialog_image.go
 internal/domain/system/temporary/temporary.go
 pkg/apt/lib/lock.go
 pkg/apt/rpm.go
+pkg/render/renderer.go

@@ -1,11 +1,11 @@
-package reply
+package render
 
 import (
 	"fmt"
 	"strings"
 )
 
-func (r *responseRenderer) renderPlain(dataMap map[string]interface{}, isError ...bool) string {
+func (r *Renderer) renderPlain(dataMap map[string]interface{}, isError ...bool) string {
 	var lines []string
 
 	keys := sortedKeys(dataMap)
@@ -23,7 +23,7 @@ func (r *responseRenderer) renderPlain(dataMap map[string]interface{}, isError .
 	inner := dataMap
 	if len(keys) == 1 {
 		if mm, ok := dataMap[keys[0]].(map[string]interface{}); ok {
-			inner = normalizeDataMap(mm)
+			inner = NormalizeDataMap(mm)
 			keys = sortedKeys(inner)
 		}
 	}
@@ -35,8 +35,8 @@ func (r *responseRenderer) renderPlain(dataMap map[string]interface{}, isError .
 	return strings.Join(lines, "\n")
 }
 
-func (r *responseRenderer) plainField(prefix, key string, value interface{}) []string {
-	fullLabel := TranslateKey(key)
+func (r *Renderer) plainField(prefix, key string, value interface{}) []string {
+	fullLabel := translateKey(key)
 	if prefix != "" {
 		fullLabel = prefix + "." + fullLabel
 	}
@@ -46,7 +46,7 @@ func (r *responseRenderer) plainField(prefix, key string, value interface{}) []s
 		return []string{r.formatScalarFieldWithLabel(fullLabel, key, value)}
 
 	case map[string]interface{}:
-		normalized := normalizeDataMap(vv)
+		normalized := NormalizeDataMap(vv)
 		var lines []string
 		for _, k := range sortedKeys(normalized) {
 			lines = append(lines, r.plainField(fullLabel, k, normalized[k])...)
@@ -68,7 +68,7 @@ func (r *responseRenderer) plainField(prefix, key string, value interface{}) []s
 		for i, elem := range vv {
 			itemPrefix := fmt.Sprintf("%s.%d", fullLabel, i+1)
 			if mm, ok := elem.(map[string]interface{}); ok {
-				normalized := normalizeDataMap(mm)
+				normalized := NormalizeDataMap(mm)
 				for _, k := range sortedKeys(normalized) {
 					lines = append(lines, r.plainField(itemPrefix, k, normalized[k])...)
 				}

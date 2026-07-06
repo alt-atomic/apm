@@ -1,4 +1,4 @@
-package reply
+package render
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 type treeWriter struct {
-	r       *responseRenderer
+	r       *Renderer
 	sb      strings.Builder
 	isError bool
 	mid     string
@@ -16,7 +16,7 @@ type treeWriter struct {
 	space   string
 }
 
-func (r *responseRenderer) renderTree(dataMap map[string]interface{}, isError bool) string {
+func (r *Renderer) renderTree(dataMap map[string]interface{}, isError bool) string {
 	tw := &treeWriter{
 		r:       r,
 		isError: isError,
@@ -124,7 +124,7 @@ func (tw *treeWriter) writeMessage(msg interface{}, indent, branch, cont string)
 }
 
 func (tw *treeWriter) writeEntry(key string, value interface{}, indent, branch, cont string) {
-	label := TranslateKey(key)
+	label := translateKey(key)
 	switch vv := value.(type) {
 	case nil, string, bool, int, float64:
 		tw.line(indent, branch, cont, tw.r.formatScalarField(key, value))
@@ -165,7 +165,7 @@ func shallowNormalize(data map[string]interface{}) map[string]interface{} {
 		case nil, string, bool, int, float64, map[string]interface{}, []interface{}:
 			continue
 		default:
-			return normalizeDataMap(data)
+			return NormalizeDataMap(data)
 		}
 	}
 	return data

@@ -22,18 +22,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
-	"sort"
-	"strings"
 	"unicode"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/pkg/render"
 
-	"github.com/charmbracelet/lipgloss"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
+
+// Подключаем к рендереру переводы apm и словарь имён полей
+func init() {
+	render.SetTranslator(func(msgid string) string { return app.T_(msgid) })
+	render.SetKeyTranslator(TranslateKey)
+}
 
 type APIError struct {
 	ErrorCode string `json:"errorCode"`
@@ -59,164 +62,41 @@ func ErrorResponseFromError(err error) APIResponse {
 }
 
 type responseRenderer struct {
-	appConfig       *app.Config
-	colors          app.Colors
-	enumeratorStyle lipgloss.Style
-	accentStyle     lipgloss.Style
-	messageStyle    lipgloss.Style
-	errorMsgStyle   lipgloss.Style
+	appConfig *app.Config
+	*render.Renderer
 }
 
 func newResponseRenderer(appConfig *app.Config) *responseRenderer {
-	r := newRendererFromColors(appConfig.ConfigManager.GetColors())
-	r.appConfig = appConfig
-	return r
-}
-
-func newRendererFromColors(colors app.Colors) *responseRenderer {
 	return &responseRenderer{
-		colors:          colors,
-		enumeratorStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.TreeBranch)).MarginRight(1),
-		accentStyle:     lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(colors.Accent)),
-		messageStyle:    lipgloss.NewStyle().Bold(true).MarginBottom(1),
-		errorMsgStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ResultError)),
+		appConfig: appConfig,
+		Renderer: render.New(appConfig.ConfigManager.GetColors(),
+			render.WithAccentKeys("name", "packageName", "url"),
+			render.WithValueFormatter(formatSizeValue),
+		),
 	}
 }
 
+// formatSizeValue выводит поля размеров в мегабайтах
+func formatSizeValue(key string, value interface{}) (string, bool) {
+	switch key {
+	case "size", "installedSize", "downloadSize", "installSize":
+		switch vv := value.(type) {
+		case int:
+			return helper.AutoSize(vv), true
+		case float64:
+			return helper.AutoSize(int(vv)), true
+		}
+	}
+	return "", false
+}
+
 func IsTTY() bool {
-	return terminal.IsTerminal(int(os.Stdout.Fd()))
+	return term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 // IsInteractive возвращает true если формат text и терминал интерактивный (для TUI и других штук)
 func IsInteractive(appConfig *app.Config) bool {
 	return appConfig.ConfigManager.GetConfig().Format == app.FormatText && IsTTY()
-}
-
-func (r *responseRenderer) formatField(key string, value interface{}) string {
-	valStr := fmt.Sprintf("%v", value)
-	if key == "name" || key == "packageName" || key == "url" {
-		return r.accentStyle.Render(valStr)
-	}
-	return valStr
-}
-
-func (r *responseRenderer) formatScalarValue(k string, v interface{}) string {
-	switch vv := v.(type) {
-	case nil:
-		return app.T_("no")
-	case string:
-		if vv == "" {
-			return app.T_("no")
-		}
-		return r.formatField(k, vv)
-	case bool:
-		if vv {
-			return app.T_("yes")
-		}
-		return app.T_("no")
-	case int, float64:
-		if k == "size" || k == "installedSize" || k == "downloadSize" || k == "installSize" {
-			var sizeVal int
-			switch sv := vv.(type) {
-			case int:
-				sizeVal = sv
-			case float64:
-				sizeVal = int(sv)
-			}
-			return helper.AutoSize(sizeVal)
-		}
-		return fmt.Sprintf("%v", vv)
-	default:
-		return fmt.Sprintf("%v", vv)
-	}
-}
-
-func (r *responseRenderer) formatScalarField(k string, v interface{}) string {
-	return fmt.Sprintf("%s: %s", TranslateKey(k), r.formatScalarValue(k, v))
-}
-
-func (r *responseRenderer) formatScalarFieldWithLabel(label, k string, v interface{}) string {
-	return fmt.Sprintf("%s: %s", label, r.formatScalarValue(k, v))
-}
-
-func sortedKeys(data map[string]interface{}) []string {
-	keys := make([]string, 0, len(data))
-	for k := range data {
-		if k != "message" {
-			keys = append(keys, k)
-		}
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func normalizeValue(v interface{}) interface{} {
-	switch v.(type) {
-	case nil, string, bool, int, float64, map[string]interface{}, []interface{}:
-		return v
-	}
-	rv := reflect.ValueOf(v)
-	switch rv.Kind() {
-	case reflect.Struct, reflect.Ptr:
-		b, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Sprintf("%v", v)
-		}
-		var mm map[string]interface{}
-		if json.Unmarshal(b, &mm) == nil {
-			return mm
-		}
-		var arr []interface{}
-		if json.Unmarshal(b, &arr) == nil {
-			return arr
-		}
-		return fmt.Sprintf("%v", v)
-	case reflect.Slice:
-		if _, ok := v.([]interface{}); ok {
-			return v
-		}
-		if maps, ok := v.([]map[string]interface{}); ok {
-			result := make([]interface{}, len(maps))
-			for i, m := range maps {
-				result[i] = m
-			}
-			return result
-		}
-		b, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Sprintf("%v", v)
-		}
-		var arr []interface{}
-		if json.Unmarshal(b, &arr) == nil {
-			return arr
-		}
-		return fmt.Sprintf("%v", v)
-	default:
-		return v
-	}
-}
-
-func normalizeDataMap(data map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{}, len(data))
-	for k, v := range data {
-		result[k] = normalizeValue(v)
-	}
-	return result
-}
-
-func toDataMap(data interface{}) map[string]interface{} {
-	if dm, ok := data.(map[string]interface{}); ok {
-		return dm
-	}
-	b, err := json.Marshal(data)
-	if err != nil {
-		return nil
-	}
-	var mm map[string]interface{}
-	if json.Unmarshal(b, &mm) == nil {
-		return mm
-	}
-	return nil
 }
 
 // MessageWithHint дополняет message подсказкой об использовании --full
@@ -243,10 +123,10 @@ func (r *responseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 	switch format {
 	case app.FormatJSON:
 		if !isError {
-			if dataMap := toDataMap(resp.Data); dataMap != nil {
+			if dataMap := render.ToDataMap(resp.Data); dataMap != nil {
 				delete(dataMap, "message")
 				if len(fields) > 0 {
-					dataMap = filterFields(normalizeDataMap(dataMap), fields)
+					dataMap = render.FilterFields(render.NormalizeDataMap(dataMap), fields)
 				}
 				resp.Data = dataMap
 			}
@@ -271,7 +151,7 @@ func (r *responseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 			dataMap := map[string]interface{}{"message": msg}
 			output = r.renderText(dataMap, true)
 		} else {
-			dataMap := toDataMap(resp.Data)
+			dataMap := render.ToDataMap(resp.Data)
 			if dataMap != nil {
 				output = r.renderText(dataMap, false)
 			} else {
@@ -295,103 +175,15 @@ func (r *responseRenderer) CliResponse(ctx context.Context, resp APIResponse) er
 }
 
 func (r *responseRenderer) renderText(dataMap map[string]interface{}, isError bool) string {
-	dataMap = normalizeDataMap(dataMap)
+	dataMap = render.NormalizeDataMap(dataMap)
 	if r.appConfig != nil {
 		if fields := r.appConfig.ConfigManager.GetConfig().Fields; len(fields) > 0 {
-			dataMap = filterFields(dataMap, fields)
+			dataMap = render.FilterFields(dataMap, fields)
 		}
 	}
 	formatType := app.FormatTypeTree
 	if r.appConfig != nil {
 		formatType = r.appConfig.ConfigManager.GetConfig().FormatType
 	}
-	return r.RenderText(dataMap, formatType, isError)
-}
-
-func (r *responseRenderer) RenderText(dataMap map[string]interface{}, formatType string, isError bool) string {
-	dataMap = normalizeDataMap(dataMap)
-	switch formatType {
-	case app.FormatTypePlain:
-		return r.renderPlain(dataMap, isError)
-	default:
-		return r.renderTree(dataMap, isError)
-	}
-}
-
-func filterFields(data map[string]interface{}, fields []string) map[string]interface{} {
-	target := data
-	var wrapperKey string
-
-	keys := sortedKeys(data)
-	if len(keys) == 1 {
-		if mm, ok := data[keys[0]].(map[string]interface{}); ok {
-			wrapperKey = keys[0]
-			target = mm
-		}
-	}
-
-	// Разбираем поля: простые "name" и с точкой "appStream.id" для вложенных данных
-	simple := make(map[string]bool)
-	nested := make(map[string][]string)
-	for _, f := range fields {
-		if dot := strings.IndexByte(f, '.'); dot >= 0 {
-			parent := f[:dot]
-			child := f[dot+1:]
-			nested[parent] = append(nested[parent], child)
-		} else {
-			simple[f] = true
-		}
-	}
-
-	filtered := make(map[string]interface{})
-	remainingFields := make([]string, 0)
-	for k, v := range target {
-		if simple[k] {
-			filtered[k] = v
-			continue
-		}
-		if children, ok := nested[k]; ok {
-			if mm, ok := v.(map[string]interface{}); ok {
-				filtered[k] = filterFields(mm, children)
-			}
-		}
-	}
-
-	for _, f := range fields {
-		if _, ok := filtered[f]; !ok {
-			remainingFields = append(remainingFields, f)
-		}
-	}
-
-	if len(remainingFields) > 0 {
-		for k, v := range target {
-			if arr, ok := v.([]interface{}); ok {
-				var items []interface{}
-				for _, elem := range arr {
-					if mm, ok := elem.(map[string]interface{}); ok {
-						fm := filterFields(mm, remainingFields)
-						if len(fm) > 0 {
-							items = append(items, fm)
-						}
-					}
-				}
-				if len(items) > 0 {
-					filtered[k] = items
-				}
-			}
-		}
-	}
-
-	result := make(map[string]interface{})
-	if msg, ok := data["message"]; ok {
-		result["message"] = msg
-	}
-	if wrapperKey != "" {
-		result[wrapperKey] = filtered
-	} else {
-		for k, v := range filtered {
-			result[k] = v
-		}
-	}
-	return result
+	return r.RenderText(dataMap, render.FormatType(formatType), isError)
 }
