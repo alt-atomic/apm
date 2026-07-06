@@ -34,6 +34,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/domain/system"
 	"altlinux.space/alt-atomic/apm/pkg/apt"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 
@@ -66,6 +67,8 @@ func run() int {
 	aptWrapper.ConnectBinding()
 	command.SetLogger(app.Log)
 	osutils.SetTranslator(func(msgId string) string { return app.T_(msgId) })
+	aptrepo.SetTranslator(func(msgId string) string { return app.T_(msgId) })
+	aptrepo.SetLogger(app.Log)
 
 	ctx, cancel := apmcli.InstallSignalHandler(context.Background())
 	defer cancel()

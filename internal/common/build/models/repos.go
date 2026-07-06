@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
-	reposervice "altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
 )
 
 type ReposBody struct {

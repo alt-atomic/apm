@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package aptrepo
 
 import (
 	"context"
@@ -23,8 +23,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // buildTaskURLs формирует URL для задачи
@@ -34,14 +32,14 @@ func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]stri
 		return nil, err
 	}
 	if !exists {
-		return nil, fmt.Errorf(app.T_("Task %s not found or still building"), taskNum)
+		return nil, fmt.Errorf(T_("Task %s not found or still building"), taskNum)
 	}
 
 	var repoURL string
 	if strings.Contains(baseURL, "archive/done") {
 		repoURL = baseURL + "/build/repo/"
 	} else {
-		repoURL = fmt.Sprintf("%s%s/%s/", s.httpScheme(ctx), RepoTaskURL, taskNum)
+		repoURL = fmt.Sprintf("%s%s/%s/", s.httpScheme(ctx), repoTaskURL, taskNum)
 	}
 
 	urls := []string{fmt.Sprintf("rpm %s %s task", repoURL, s.arch)}
@@ -49,7 +47,7 @@ func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]stri
 	if s.useArepo && s.arch == "x86_64" {
 		hasArepo, err := s.checkTaskHasArepo(ctx, taskNum)
 		if err != nil {
-			app.Log.Debugf("failed to check arepo for task %s: %v", taskNum, err)
+			logger.Debugf("failed to check arepo for task %s: %v", taskNum, err)
 		}
 		if hasArepo {
 			urls = append(urls, fmt.Sprintf("rpm %s x86_64-i586 task", repoURL))
@@ -63,8 +61,8 @@ func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]stri
 func (s *RepoService) buildTaskURLsForRemove(ctx context.Context, taskNum string) []string {
 	scheme := s.httpScheme(ctx)
 	num, _ := strconv.Atoi(taskNum)
-	archiveURL := fmt.Sprintf("%s%s/archive/done/_%d/%s/build/repo/", scheme, RepoTasksURL, num/1024, taskNum)
-	activeURL := fmt.Sprintf("%s%s/%s/", scheme, RepoTaskURL, taskNum)
+	archiveURL := fmt.Sprintf("%s%s/archive/done/_%d/%s/build/repo/", scheme, repoTasksURL, num/1024, taskNum)
+	activeURL := fmt.Sprintf("%s%s/%s/", scheme, repoTaskURL, taskNum)
 
 	urls := []string{
 		fmt.Sprintf("rpm %s %s task", archiveURL, s.arch),
@@ -92,7 +90,7 @@ func taskNumberArg(args []string) (string, bool) {
 
 // checkTaskExists проверяет существование задачи и возвращает базовый URL (с учётом редиректа для архивных задач)
 func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exists bool, baseURL string, err error) {
-	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), RepoTasksURL, taskNum)
+	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), repoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {
@@ -120,7 +118,7 @@ func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exis
 
 // checkTaskHasArepo проверяет есть ли arepo у задачи
 func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bool, error) {
-	url := fmt.Sprintf("%s%s/%s/plan/arepo-add-x86_64-i586", s.httpScheme(ctx), RepoTasksURL, taskNum)
+	url := fmt.Sprintf("%s%s/%s/plan/arepo-add-x86_64-i586", s.httpScheme(ctx), repoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -160,7 +158,7 @@ func isDigits(s string) bool {
 
 // GetTaskPackages возвращает список пакетов из задачи
 func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]string, error) {
-	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), RepoTasksURL, taskNum)
+	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), repoTasksURL, taskNum)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -174,7 +172,7 @@ func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]st
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(app.T_("Task %s not found or still building"), taskNum)
+		return nil, fmt.Errorf(T_("Task %s not found or still building"), taskNum)
 	}
 
 	body, err := io.ReadAll(resp.Body)

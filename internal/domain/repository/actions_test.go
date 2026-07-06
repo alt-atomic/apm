@@ -8,54 +8,54 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/testutil"
-	"altlinux.space/alt-atomic/apm/internal/domain/repository/service"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 )
 
 type mockRepoService struct {
-	getReposResult     []service.Repository
+	getReposResult     []aptrepo.Repository
 	getReposErr        error
-	addResult          []service.Repository
+	addResult          []aptrepo.Repository
 	addErr             error
-	removeResult       []service.Repository
+	removeResult       []aptrepo.Repository
 	removeErr          error
-	setBranchAdded     []service.Repository
-	setBranchRemoved   []service.Repository
+	setBranchAdded     []aptrepo.Repository
+	setBranchRemoved   []aptrepo.Repository
 	setBranchErr       error
-	cleanResult        []service.Repository
+	cleanResult        []aptrepo.Repository
 	cleanErr           error
 	branches           []string
 	taskPackagesResult []string
 	taskPackagesErr    error
-	simulateAddResult  []service.Repository
+	simulateAddResult  []aptrepo.Repository
 	simulateAddErr     error
-	simulateRemResult  []service.Repository
+	simulateRemResult  []aptrepo.Repository
 	simulateRemErr     error
 }
 
-func (m *mockRepoService) GetRepositories(_ context.Context, _ bool) ([]service.Repository, error) {
+func (m *mockRepoService) GetRepositories(_ context.Context, _ bool) ([]aptrepo.Repository, error) {
 	return m.getReposResult, m.getReposErr
 }
-func (m *mockRepoService) AddRepository(_ context.Context, _ []string, _ string) ([]service.Repository, error) {
+func (m *mockRepoService) AddRepository(_ context.Context, _ []string, _ string) ([]aptrepo.Repository, error) {
 	return m.addResult, m.addErr
 }
-func (m *mockRepoService) RemoveRepository(_ context.Context, _ []string, _ string, _ bool) ([]service.Repository, error) {
+func (m *mockRepoService) RemoveRepository(_ context.Context, _ []string, _ string, _ bool) ([]aptrepo.Repository, error) {
 	return m.removeResult, m.removeErr
 }
-func (m *mockRepoService) SetBranch(_ context.Context, _ string, _ string) ([]service.Repository, []service.Repository, error) {
+func (m *mockRepoService) SetBranch(_ context.Context, _ string, _ string) ([]aptrepo.Repository, []aptrepo.Repository, error) {
 	return m.setBranchAdded, m.setBranchRemoved, m.setBranchErr
 }
-func (m *mockRepoService) CleanTemporary(_ context.Context) ([]service.Repository, error) {
+func (m *mockRepoService) CleanTemporary(_ context.Context) ([]aptrepo.Repository, error) {
 	return m.cleanResult, m.cleanErr
 }
 func (m *mockRepoService) GetBranches() []string { return m.branches }
 func (m *mockRepoService) GetTaskPackages(_ context.Context, _ string) ([]string, error) {
 	return m.taskPackagesResult, m.taskPackagesErr
 }
-func (m *mockRepoService) SimulateAdd(_ context.Context, _ []string, _ string, _ bool) ([]service.Repository, error) {
+func (m *mockRepoService) SimulateAdd(_ context.Context, _ []string, _ string, _ bool) ([]aptrepo.Repository, error) {
 	return m.simulateAddResult, m.simulateAddErr
 }
-func (m *mockRepoService) SimulateRemove(_ context.Context, _ []string, _ string, _ bool) ([]service.Repository, error) {
+func (m *mockRepoService) SimulateRemove(_ context.Context, _ []string, _ string, _ bool) ([]aptrepo.Repository, error) {
 	return m.simulateRemResult, m.simulateRemErr
 }
 
@@ -98,7 +98,7 @@ func newTestActions(repo *mockRepoService, apt *mockAptActions) *Actions {
 }
 
 func TestList(t *testing.T) {
-	repos := []service.Repository{
+	repos := []aptrepo.Repository{
 		{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Active: true},
 		{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Arch: "noarch", Active: true},
 	}
@@ -119,7 +119,7 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("returns all repositories including inactive", func(t *testing.T) {
-		allRepos := []service.Repository{
+		allRepos := []aptrepo.Repository{
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Active: true},
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/Sisyphus", Active: false},
 		}
@@ -135,7 +135,7 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("empty list returns zero count", func(t *testing.T) {
-		actions := newTestActions(&mockRepoService{getReposResult: []service.Repository{}}, nil)
+		actions := newTestActions(&mockRepoService{getReposResult: []aptrepo.Repository{}}, nil)
 
 		resp, err := actions.List(context.Background(), false)
 		if err != nil {
@@ -156,7 +156,7 @@ func TestList(t *testing.T) {
 
 func TestAdd(t *testing.T) {
 	t.Run("success adds repositories", func(t *testing.T) {
-		repo := &mockRepoService{addResult: []service.Repository{
+		repo := &mockRepoService{addResult: []aptrepo.Repository{
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Arch: "x86_64", Components: []string{"classic"}, Active: true, File: "/etc/apt/sources.list", Entry: "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic"},
 		}}
 		actions := newTestActions(repo, nil)
@@ -178,7 +178,7 @@ func TestAdd(t *testing.T) {
 	})
 
 	t.Run("all already exist returns no operation", func(t *testing.T) {
-		repo := &mockRepoService{addResult: []service.Repository{}}
+		repo := &mockRepoService{addResult: []aptrepo.Repository{}}
 		actions := newTestActions(repo, nil)
 
 		_, err := actions.Add(context.Background(), []string{"p11"}, "")
@@ -196,7 +196,7 @@ func TestAdd(t *testing.T) {
 
 func TestCheckAdd(t *testing.T) {
 	t.Run("success returns simulation", func(t *testing.T) {
-		repo := &mockRepoService{simulateAddResult: []service.Repository{
+		repo := &mockRepoService{simulateAddResult: []aptrepo.Repository{
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Arch: "x86_64", Components: []string{"classic"}, Active: true, Entry: "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic"},
 		}}
 		actions := newTestActions(repo, nil)
@@ -218,7 +218,7 @@ func TestCheckAdd(t *testing.T) {
 	})
 
 	t.Run("nothing to add returns no operation", func(t *testing.T) {
-		repo := &mockRepoService{simulateAddResult: []service.Repository{}}
+		repo := &mockRepoService{simulateAddResult: []aptrepo.Repository{}}
 		actions := newTestActions(repo, nil)
 
 		_, err := actions.CheckAdd(context.Background(), []string{"p11"}, "")
@@ -236,7 +236,7 @@ func TestCheckAdd(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	t.Run("success removes repositories", func(t *testing.T) {
-		repo := &mockRepoService{removeResult: []service.Repository{
+		repo := &mockRepoService{removeResult: []aptrepo.Repository{
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Arch: "x86_64", Components: []string{"classic"}, Active: false, File: "/etc/apt/sources.list", Entry: "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic"},
 		}}
 		actions := newTestActions(repo, nil)
@@ -258,7 +258,7 @@ func TestRemove(t *testing.T) {
 	})
 
 	t.Run("nothing found returns no operation", func(t *testing.T) {
-		repo := &mockRepoService{removeResult: []service.Repository{}}
+		repo := &mockRepoService{removeResult: []aptrepo.Repository{}}
 		actions := newTestActions(repo, nil)
 
 		_, err := actions.Remove(context.Background(), []string{"p11"}, "")
@@ -276,7 +276,7 @@ func TestRemove(t *testing.T) {
 
 func TestCheckRemove(t *testing.T) {
 	t.Run("success returns simulation", func(t *testing.T) {
-		repo := &mockRepoService{simulateRemResult: []service.Repository{
+		repo := &mockRepoService{simulateRemResult: []aptrepo.Repository{
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Arch: "x86_64", Components: []string{"classic"}, Active: true, Entry: "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic"},
 		}}
 		actions := newTestActions(repo, nil)
@@ -298,7 +298,7 @@ func TestCheckRemove(t *testing.T) {
 	})
 
 	t.Run("nothing to remove returns no operation", func(t *testing.T) {
-		repo := &mockRepoService{simulateRemResult: []service.Repository{}}
+		repo := &mockRepoService{simulateRemResult: []aptrepo.Repository{}}
 		actions := newTestActions(repo, nil)
 
 		_, err := actions.CheckRemove(context.Background(), []string{"p11"}, "")
@@ -317,10 +317,10 @@ func TestCheckRemove(t *testing.T) {
 func TestSet(t *testing.T) {
 	t.Run("success sets branch", func(t *testing.T) {
 		repo := &mockRepoService{
-			setBranchAdded: []service.Repository{
+			setBranchAdded: []aptrepo.Repository{
 				{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Arch: "x86_64", Components: []string{"classic"}, Active: true, Entry: "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic"},
 			},
-			setBranchRemoved: []service.Repository{
+			setBranchRemoved: []aptrepo.Repository{
 				{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch", Arch: "x86_64", Components: []string{"classic"}, Active: false, Entry: "rpm [p10] http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch x86_64 classic"},
 			},
 		}
@@ -342,7 +342,7 @@ func TestSet(t *testing.T) {
 	})
 
 	t.Run("branch with date shows combined name", func(t *testing.T) {
-		repo := &mockRepoService{setBranchAdded: []service.Repository{
+		repo := &mockRepoService{setBranchAdded: []aptrepo.Repository{
 			{URL: "http://ftp.altlinux.org/pub/distributions/archive/p11/date/2025/01/01", Arch: "x86_64", Components: []string{"classic"}, Active: true, Entry: "rpm [p11] http://ftp.altlinux.org/pub/distributions/archive/p11/date/2025/01/01 x86_64 classic"},
 		}}
 		actions := newTestActions(repo, nil)
@@ -375,10 +375,10 @@ func TestSet(t *testing.T) {
 func TestCheckSet(t *testing.T) {
 	t.Run("success returns simulation", func(t *testing.T) {
 		repo := &mockRepoService{
-			simulateRemResult: []service.Repository{
+			simulateRemResult: []aptrepo.Repository{
 				{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch", Arch: "x86_64", Components: []string{"classic"}, Active: true, Entry: "rpm [p10] http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch x86_64 classic"},
 			},
-			simulateAddResult: []service.Repository{
+			simulateAddResult: []aptrepo.Repository{
 				{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", Arch: "x86_64", Components: []string{"classic"}, Active: true, Entry: "rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch x86_64 classic"},
 			},
 		}
@@ -413,7 +413,7 @@ func TestCheckSet(t *testing.T) {
 
 	t.Run("simulate add error propagates", func(t *testing.T) {
 		repo := &mockRepoService{
-			simulateRemResult: []service.Repository{
+			simulateRemResult: []aptrepo.Repository{
 				{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch", Arch: "x86_64", Components: []string{"classic"}, Active: true, Entry: "rpm [p10] http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch x86_64 classic"},
 			},
 			simulateAddErr: errors.New("fail"),
@@ -427,7 +427,7 @@ func TestCheckSet(t *testing.T) {
 
 func TestClean(t *testing.T) {
 	t.Run("success removes temporary repos", func(t *testing.T) {
-		repo := &mockRepoService{cleanResult: []service.Repository{
+		repo := &mockRepoService{cleanResult: []aptrepo.Repository{
 			{URL: "cdrom:[ALT Linux p11] /media/ALTLinux", Arch: "x86_64", Components: []string{"classic"}, Active: false, Entry: "rpm cdrom:[ALT Linux p11] /media/ALTLinux x86_64 classic"},
 		}}
 		actions := newTestActions(repo, nil)
@@ -442,7 +442,7 @@ func TestClean(t *testing.T) {
 	})
 
 	t.Run("nothing to clean returns no operation", func(t *testing.T) {
-		repo := &mockRepoService{cleanResult: []service.Repository{}}
+		repo := &mockRepoService{cleanResult: []aptrepo.Repository{}}
 		actions := newTestActions(repo, nil)
 
 		_, err := actions.Clean(context.Background())
@@ -460,7 +460,7 @@ func TestClean(t *testing.T) {
 
 func TestCheckClean(t *testing.T) {
 	t.Run("finds cdrom and task repos", func(t *testing.T) {
-		repos := []service.Repository{
+		repos := []aptrepo.Repository{
 			{URL: "cdrom:[ALT Linux p11] /media/ALTLinux", Entry: "rpm cdrom:[ALT Linux p11] /media/ALTLinux x86_64 classic", Active: true},
 			{URL: "http://git.altlinux.org/repo/370123/", Components: []string{"task"}, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task", Active: true},
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/Sisyphus", Components: []string{"classic"}, Entry: "rpm [alt] http://ftp.altlinux.org/pub/distributions/ALTLinux/Sisyphus x86_64 classic", Active: true},
@@ -477,7 +477,7 @@ func TestCheckClean(t *testing.T) {
 	})
 
 	t.Run("nothing to clean returns no operation", func(t *testing.T) {
-		repos := []service.Repository{
+		repos := []aptrepo.Repository{
 			{URL: "http://ftp.altlinux.org/pub/distributions/ALTLinux/Sisyphus", Components: []string{"classic"}, Active: true},
 		}
 		actions := newTestActions(&mockRepoService{getReposResult: repos}, nil)
@@ -580,7 +580,7 @@ func TestTestTask(t *testing.T) {
 	t.Run("apt update error propagates", func(t *testing.T) {
 		repo := &mockRepoService{
 			taskPackagesResult: []string{"vim"},
-			addResult:          []service.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
+			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{updateErr: errors.New("apt update failed")}
 		actions := newTestActions(repo, apt)
@@ -592,7 +592,7 @@ func TestTestTask(t *testing.T) {
 	t.Run("find package error propagates", func(t *testing.T) {
 		repo := &mockRepoService{
 			taskPackagesResult: []string{"vim"},
-			addResult:          []service.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
+			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{findErr: errors.New("dependency conflict")}
 		actions := newTestActions(repo, apt)
@@ -604,7 +604,7 @@ func TestTestTask(t *testing.T) {
 	t.Run("no changes returns no operation", func(t *testing.T) {
 		repo := &mockRepoService{
 			taskPackagesResult: []string{"vim"},
-			addResult:          []service.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
+			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{
 			findChanges: &aptLib.PackageChanges{NewInstalledCount: 0, UpgradedCount: 0},
@@ -618,7 +618,7 @@ func TestTestTask(t *testing.T) {
 	t.Run("success installs task packages", func(t *testing.T) {
 		repo := &mockRepoService{
 			taskPackagesResult: []string{"vim"},
-			addResult:          []service.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
+			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{
 			findInstall: []string{"vim"},
@@ -641,7 +641,7 @@ func TestTestTask(t *testing.T) {
 	t.Run("combine error propagates", func(t *testing.T) {
 		repo := &mockRepoService{
 			taskPackagesResult: []string{"vim"},
-			addResult:          []service.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
+			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{
 			findInstall: []string{"vim"},

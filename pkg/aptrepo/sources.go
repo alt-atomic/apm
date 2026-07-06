@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package aptrepo
 
 import (
 	"bufio"
@@ -25,8 +25,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // GetRepositories возвращает список репозиториев
@@ -225,7 +223,7 @@ func (s *RepoService) detectBranch(repoURL string) string {
 	repoClean := stripScheme(repoURL)
 
 	// Для task-репозиториев
-	if strings.Contains(repoClean, RepoTaskURL) {
+	if strings.Contains(repoClean, repoTaskURL) {
 		return "task"
 	}
 
@@ -318,18 +316,18 @@ func (s *RepoService) uncommentRepo(repoLine string) (string, error) {
 func (s *RepoService) appendRepo(repoLine string) error {
 	parts := strings.Fields(repoLine)
 	if len(parts) < 3 {
-		return fmt.Errorf(app.T_("Invalid repository line: %s"), repoLine)
+		return fmt.Errorf(T_("Invalid repository line: %s"), repoLine)
 	}
 
 	file, err := os.OpenFile(s.confMain, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf(app.T_("Failed to open %s: %v"), s.confMain, err)
+		return fmt.Errorf(T_("Failed to open %s: %v"), s.confMain, err)
 	}
 	defer func() { _ = file.Close() }()
 
 	_, err = file.WriteString(repoLine + "\n")
 	if err != nil {
-		return fmt.Errorf(app.T_("Failed to write to %s: %v"), s.confMain, err)
+		return fmt.Errorf(T_("Failed to write to %s: %v"), s.confMain, err)
 	}
 
 	return nil
@@ -384,18 +382,18 @@ func (s *RepoService) commentInFile(filename string, canonicalLine string) error
 func (s *RepoService) purgeAllRepos() error {
 	entries, err := os.ReadDir(s.confDir)
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf(app.T_("Failed to read %s: %v"), s.confDir, err)
+		return fmt.Errorf(T_("Failed to read %s: %v"), s.confDir, err)
 	}
 
 	for _, entry := range entries {
 		path := filepath.Join(s.confDir, entry.Name())
 		if err = os.RemoveAll(path); err != nil {
-			return fmt.Errorf(app.T_("Failed to remove %s: %v"), path, err)
+			return fmt.Errorf(T_("Failed to remove %s: %v"), path, err)
 		}
 	}
 
 	if err = os.WriteFile(s.confMain, []byte("\n"), 0644); err != nil {
-		return fmt.Errorf(app.T_("Failed to clear %s: %v"), s.confMain, err)
+		return fmt.Errorf(T_("Failed to clear %s: %v"), s.confMain, err)
 	}
 
 	return nil

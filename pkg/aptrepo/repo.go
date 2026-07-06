@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package aptrepo
 
 import (
 	"bufio"
@@ -31,35 +31,35 @@ import (
 )
 
 const (
-	// DefaultSourcesList is the main APT sources configuration file.
-	DefaultSourcesList = "/etc/apt/sources.list"
-	// DefaultSourcesListDir is the directory for additional APT source files.
-	DefaultSourcesListDir = "/etc/apt/sources.list.d/"
-	// ArepoConfigFile is the arepo configuration file path.
-	ArepoConfigFile = "/etc/sysconfig/apt-repo"
+	// defaultSourcesList is the main APT sources configuration file.
+	defaultSourcesList = "/etc/apt/sources.list"
+	// defaultSourcesListDir is the directory for additional APT source files.
+	defaultSourcesListDir = "/etc/apt/sources.list.d/"
+	// arepoConfigFile is the arepo configuration file path.
+	arepoConfigFile = "/etc/sysconfig/apt-repo"
 
-	// RPMMacrosDir is the directory for RPM macros.
-	RPMMacrosDir = "/etc/rpm/macros.d"
-	// PriorityDistbranchMacro is the priority distbranch macro file.
-	PriorityDistbranchMacro = "/etc/rpm/macros.d/priority_distbranch"
-	// LegacyP10Macro is the legacy p10 macro file.
-	LegacyP10Macro = "/etc/rpm/macros.d/p10"
+	// rpmMacrosDir is the directory for RPM macros.
+	rpmMacrosDir = "/etc/rpm/macros.d"
+	// priorityDistbranchMacro is the priority distbranch macro file.
+	priorityDistbranchMacro = "/etc/rpm/macros.d/priority_distbranch"
+	// legacyP10Macro is the legacy p10 macro file.
+	legacyP10Macro = "/etc/rpm/macros.d/p10"
 
-	// RepoBaseURL is the base URL for ALT Linux repositories (ftp.altlinux.org).
-	RepoBaseURL = "ftp.altlinux.org/pub/distributions/ALTLinux"
-	// RepoBaseURLRu is the base URL for ALT Linux repositories (ftp.altlinux.ru).
-	RepoBaseURLRu = "ftp.altlinux.ru/pub/distributions/ALTLinux"
-	// RepoArchiveURL is the base URL for archived ALT Linux repositories.
-	RepoArchiveURL = "ftp.altlinux.org/pub/distributions/archive"
-	// RepoTaskURL is the URL for active task repositories.
-	RepoTaskURL = "git.altlinux.org/repo"
-	// RepoTasksURL is the URL for task information.
-	RepoTasksURL = "git.altlinux.org/tasks"
-	// RepoCert8URL RepoTasksArchive = "git.altlinux.org/tasks/archive/done"
-	RepoCert8URL = "update.altsp.su/pub/distributions/ALTLinux/c8/branch"
+	// repoBaseURL is the base URL for ALT Linux repositories (ftp.altlinux.org).
+	repoBaseURL = "ftp.altlinux.org/pub/distributions/ALTLinux"
+	// repoBaseURLRu is the base URL for ALT Linux repositories (ftp.altlinux.ru).
+	repoBaseURLRu = "ftp.altlinux.ru/pub/distributions/ALTLinux"
+	// repoArchiveURL is the base URL for archived ALT Linux repositories.
+	repoArchiveURL = "ftp.altlinux.org/pub/distributions/archive"
+	// repoTaskURL is the URL for active task repositories.
+	repoTaskURL = "git.altlinux.org/repo"
+	// repoTasksURL is the URL for task information.
+	repoTasksURL = "git.altlinux.org/tasks"
+	// repoCert8URL is the base URL for the c8 certified branch.
+	repoCert8URL = "update.altsp.su/pub/distributions/ALTLinux/c8/branch"
 
-	// HTTPTimeout is the default timeout for HTTP requests.
-	HTTPTimeout = 10 * time.Second
+	// httpTimeout is the default timeout for HTTP requests.
+	httpTimeout = 10 * time.Second
 )
 
 // Repository представляет информацию о репозитории
@@ -73,8 +73,8 @@ type Repository struct {
 	Branch     string   `json:"branch"`
 }
 
-// Branch представляет информацию о ветке ALT Linux
-type Branch struct {
+// branchInfo представляет информацию о ветке ALT Linux
+type branchInfo struct {
 	Name       string
 	URL        string
 	Key        string
@@ -83,30 +83,31 @@ type Branch struct {
 
 // RepoService сервис для работы с репозиториями APT
 type RepoService struct {
-	confMain           string
-	confDir            string
-	arch               string
-	branches           map[string]Branch
-	useArepo           bool
-	httpClient         *http.Client
-	serviceAptDatabase packageDBService
-	runner             commandRunner
-	initOnce           sync.Once
-	mu                 sync.Mutex
+	confMain   string
+	confDir    string
+	arch       string
+	branches   map[string]branchInfo
+	useArepo   bool
+	httpClient *http.Client
+	hasPackage HasPackageFunc
+	runner     commandRunner
+	initOnce   sync.Once
+	mu         sync.Mutex
 }
 
-// NewRepoService создает новый сервис для работы с репозиториями
-func NewRepoService(dbService packageDBService, runner commandRunner) *RepoService {
+// NewRepoService создает новый сервис для работы с репозиториями.
+// hasPackage используется для определения наличия apt-https (схема URL)
+func NewRepoService(hasPackage HasPackageFunc, runner commandRunner) *RepoService {
 	return &RepoService{
-		confMain: DefaultSourcesList,
-		confDir:  DefaultSourcesListDir,
+		confMain: defaultSourcesList,
+		confDir:  defaultSourcesListDir,
 		arch:     detectArch(runner),
 		useArepo: checkArepoEnabled(),
 		httpClient: &http.Client{
-			Timeout: HTTPTimeout,
+			Timeout: httpTimeout,
 		},
-		serviceAptDatabase: dbService,
-		runner:             runner,
+		hasPackage: hasPackage,
+		runner:     runner,
 	}
 }
 
@@ -152,7 +153,7 @@ func detectArch(runner commandRunner) string {
 
 // checkArepoEnabled проверяет включен ли arepo
 func checkArepoEnabled() bool {
-	file, err := os.Open(ArepoConfigFile)
+	file, err := os.Open(arepoConfigFile)
 	if err != nil {
 		return true
 	}
@@ -179,8 +180,10 @@ func (s *RepoService) httpScheme(ctx context.Context) string {
 
 // checkHTTPSEnabled проверяет установлен ли пакет apt-https
 func (s *RepoService) checkHTTPSEnabled(ctx context.Context) bool {
-	_, err := s.serviceAptDatabase.GetPackageByName(ctx, "apt-https")
-	return err == nil
+	if s.hasPackage == nil {
+		return false
+	}
+	return s.hasPackage(ctx, "apt-https")
 }
 
 // aptConfigRe разбирает вывод apt-config shell вида VAR='значение'

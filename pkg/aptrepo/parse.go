@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package aptrepo
 
 import (
 	"context"
@@ -23,14 +23,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // parseSourceArgs парсит аргументы в URL
 func (s *RepoService) parseSourceArgs(ctx context.Context, args []string, date string) ([]string, error) {
 	if len(args) == 0 {
-		return nil, errors.New(app.T_("Repository source must be specified"))
+		return nil, errors.New(T_("Repository source must be specified"))
 	}
 
 	date = strings.TrimSpace(date)
@@ -93,7 +91,7 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 		return []string{source}, nil
 	}
 
-	return nil, fmt.Errorf(app.T_("Unknown repository format: %s"), source)
+	return nil, fmt.Errorf(T_("Unknown repository format: %s"), source)
 }
 
 // buildRepoFromArgs собирает строку репозитория из аргументов [type, url, arch, components...]

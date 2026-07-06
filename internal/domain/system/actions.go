@@ -35,10 +35,10 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	kservice "altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
-	reposervice "altlinux.space/alt-atomic/apm/internal/domain/repository/service"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/dialog"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
 	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
@@ -562,7 +562,11 @@ func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string, pr
 	hostPackageDBSvc := _package.NewPackageDBService(a.appConfig.DatabaseManager, a.reporter)
 	aptActions := aptBinding.NewActions()
 	kernelManager := kservice.NewKernelManager(hostPackageDBSvc, aptActions, runner, a.reporter)
-	repoService := reposervice.NewRepoService(hostPackageDBSvc, runner)
+	hasPackage := func(ctx context.Context, name string) bool {
+		pkg, err := hostPackageDBSvc.GetPackageByName(ctx, name)
+		return err == nil && pkg.Installed
+	}
+	repoService := reposervice.NewRepoService(hasPackage, runner)
 	buildConfigSvc := build.NewConfigService(a.appConfig, a.reporter, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner)
 
 	err = buildConfigSvc.Build(ctx)

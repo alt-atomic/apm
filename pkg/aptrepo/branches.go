@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package aptrepo
 
 import (
 	"context"
@@ -23,8 +23,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // archiveDateRe формат даты архива YYYY/MM/DD
@@ -35,82 +33,82 @@ var archivingBranches = []string{"p7", "p8", "p9", "p10", "p11", "t7", "sisyphus
 
 // initBranches инициализирует известные ветки ALT Linux
 func (s *RepoService) initBranches() {
-	s.branches = map[string]Branch{
+	s.branches = map[string]branchInfo{
 		"sisyphus": {
 			Name:       "sisyphus",
-			URL:        RepoBaseURL + "/Sisyphus",
+			URL:        repoBaseURL + "/Sisyphus",
 			Key:        "alt",
 			Components: []string{"classic", "gostcrypto"},
 		},
 		"p11": {
 			Name:       "p11",
-			URL:        RepoBaseURL + "/p11/branch",
+			URL:        repoBaseURL + "/p11/branch",
 			Key:        "p11",
 			Components: []string{"classic", "gostcrypto"},
 		},
 		"p10": {
 			Name:       "p10",
-			URL:        RepoBaseURL + "/p10/branch",
+			URL:        repoBaseURL + "/p10/branch",
 			Key:        "p10",
 			Components: []string{"classic", "gostcrypto"},
 		},
 		"p9": {
 			Name:       "p9",
-			URL:        RepoBaseURL + "/p9/branch",
+			URL:        repoBaseURL + "/p9/branch",
 			Key:        "p9",
 			Components: []string{"classic", "gostcrypto"},
 		},
 		"p8": {
 			Name:       "p8",
-			URL:        RepoBaseURL + "/p8/branch",
+			URL:        repoBaseURL + "/p8/branch",
 			Key:        "updates",
 			Components: []string{"classic"},
 		},
 		"c8": {
 			Name:       "c8",
-			URL:        RepoCert8URL,
+			URL:        repoCert8URL,
 			Key:        "cert8",
 			Components: []string{"classic"},
 		},
 		"c8.1": {
 			Name:       "c8.1",
-			URL:        RepoBaseURL + "/c8.1/branch",
+			URL:        repoBaseURL + "/c8.1/branch",
 			Key:        "updates",
 			Components: []string{"classic"},
 		},
 		"c9f2": {
 			Name:       "c9f2",
-			URL:        RepoBaseURL + "/c9f2/branch",
+			URL:        repoBaseURL + "/c9f2/branch",
 			Key:        "c9f2",
 			Components: []string{"classic"},
 		},
 		"c10f1": {
 			Name:       "c10f1",
-			URL:        RepoBaseURL + "/c10f1/branch",
+			URL:        repoBaseURL + "/c10f1/branch",
 			Key:        "c10f1",
 			Components: []string{"classic"},
 		},
 		"c10f2": {
 			Name:       "c10f2",
-			URL:        RepoBaseURL + "/c10f2/branch",
+			URL:        repoBaseURL + "/c10f2/branch",
 			Key:        "c10f2",
 			Components: []string{"classic"},
 		},
 		"autoimports.sisyphus": {
 			Name:       "autoimports.sisyphus",
-			URL:        RepoBaseURLRu + "/autoimports/Sisyphus",
+			URL:        repoBaseURLRu + "/autoimports/Sisyphus",
 			Key:        "",
 			Components: []string{"autoimports"},
 		},
 		"autoimports.p10": {
 			Name:       "autoimports.p10",
-			URL:        RepoBaseURLRu + "/autoimports/p10",
+			URL:        repoBaseURLRu + "/autoimports/p10",
 			Key:        "",
 			Components: []string{"autoimports"},
 		},
 		"autoimports.p11": {
 			Name:       "autoimports.p11",
-			URL:        RepoBaseURLRu + "/autoimports/p11",
+			URL:        repoBaseURLRu + "/autoimports/p11",
 			Key:        "",
 			Components: []string{"autoimports"},
 		},
@@ -133,7 +131,7 @@ func (s *RepoService) GetBranches() []string {
 }
 
 // lookupBranch ищет ветку по имени без учёта регистра
-func (s *RepoService) lookupBranch(name string) (Branch, bool) {
+func (s *RepoService) lookupBranch(name string) (branchInfo, bool) {
 	if branch, ok := s.branches[name]; ok {
 		return branch, true
 	}
@@ -144,7 +142,7 @@ func (s *RepoService) lookupBranch(name string) (Branch, bool) {
 // parseArchiveDate парсит и валидирует дату архива
 func (s *RepoService) parseArchiveDate(branchName, date string) (string, error) {
 	if !slices.Contains(archivingBranches, branchName) {
-		return "", fmt.Errorf(app.T_("Branch %s has no archive"), branchName)
+		return "", fmt.Errorf(T_("Branch %s has no archive"), branchName)
 	}
 
 	// Формат YYYYMMDD -> YYYY/MM/DD
@@ -157,16 +155,16 @@ func (s *RepoService) parseArchiveDate(branchName, date string) (string, error) 
 		return date, nil
 	}
 
-	return "", errors.New(app.T_("Archive date should be YYYYMMDD or YYYY/MM/DD format"))
+	return "", errors.New(T_("Archive date should be YYYYMMDD or YYYY/MM/DD format"))
 }
 
 // buildBranchURLs формирует URL для ветки
-func (s *RepoService) buildBranchURLs(ctx context.Context, branch Branch) []string {
+func (s *RepoService) buildBranchURLs(ctx context.Context, branch branchInfo) []string {
 	return s.buildBranchURLsWithArchive(ctx, branch, "")
 }
 
 // buildBranchURLsWithArchive формирует URL для ветки с опциональной датой архива
-func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch Branch, archiveDate string) []string {
+func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch branchInfo, archiveDate string) []string {
 	var urls []string
 
 	keyPart := ""
@@ -183,7 +181,7 @@ func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch Bra
 	// Формируем базовый URL с учётом схемы и архива
 	var baseURL string
 	if archiveDate != "" {
-		baseURL = fmt.Sprintf("%s%s/%s/date/%s", s.httpScheme(ctx), RepoArchiveURL, branch.Name, archiveDate)
+		baseURL = fmt.Sprintf("%s%s/%s/date/%s", s.httpScheme(ctx), repoArchiveURL, branch.Name, archiveDate)
 	} else {
 		baseURL = s.httpScheme(ctx) + branch.URL
 	}

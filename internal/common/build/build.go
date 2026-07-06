@@ -32,7 +32,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
-	reposervice "altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 )

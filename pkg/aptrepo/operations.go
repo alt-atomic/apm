@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package service
+package aptrepo
 
 import (
 	"context"
@@ -23,8 +23,6 @@ import (
 	"os"
 	"slices"
 	"strings"
-
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // AddRepository добавляет репозиторий
@@ -42,7 +40,7 @@ func (s *RepoService) addRepository(ctx context.Context, args []string, date str
 	}
 
 	if len(urls) == 0 {
-		return nil, errors.New(app.T_("Failed to parse repository source"))
+		return nil, errors.New(T_("Failed to parse repository source"))
 	}
 
 	var added []Repository
@@ -95,7 +93,7 @@ func (s *RepoService) removeRepository(ctx context.Context, args []string, date 
 	var removed []Repository
 
 	if len(args) == 0 {
-		return nil, errors.New(app.T_("Repository source must be specified"))
+		return nil, errors.New(T_("Repository source must be specified"))
 	}
 
 	source := args[0]
@@ -167,7 +165,7 @@ func (s *RepoService) SetBranch(ctx context.Context, branch, date string) (added
 
 	s.ensureInitialized()
 	if _, ok := s.lookupBranch(branch); !ok {
-		return nil, nil, fmt.Errorf(app.T_("Unknown branch: %s"), branch)
+		return nil, nil, fmt.Errorf(T_("Unknown branch: %s"), branch)
 	}
 
 	removed, err = s.removeRepository(ctx, []string{"all"}, "", false)
@@ -240,7 +238,7 @@ func (s *RepoService) SimulateRemove(ctx context.Context, args []string, date st
 	var willRemove []Repository
 
 	if len(args) == 0 {
-		return nil, errors.New(app.T_("Repository source must be specified"))
+		return nil, errors.New(T_("Repository source must be specified"))
 	}
 
 	source := args[0]
@@ -329,14 +327,14 @@ func (s *RepoService) setPriorityMacro(source, date string) {
 
 	for _, pb := range priorityBranches {
 		if source == pb {
-			if err := os.MkdirAll(RPMMacrosDir, 0755); err != nil {
-				app.Log.Debugf("failed to create macros dir: %v", err)
+			if err := os.MkdirAll(rpmMacrosDir, 0755); err != nil {
+				logger.Debugf("failed to create macros dir: %v", err)
 				return
 			}
 
 			content := fmt.Sprintf("%%_priority_distbranch %s\n", source)
-			if err := os.WriteFile(PriorityDistbranchMacro, []byte(content), 0644); err != nil {
-				app.Log.Debugf("failed to write priority macro: %v", err)
+			if err := os.WriteFile(priorityDistbranchMacro, []byte(content), 0644); err != nil {
+				logger.Debugf("failed to write priority macro: %v", err)
 			}
 			return
 		}
@@ -345,10 +343,10 @@ func (s *RepoService) setPriorityMacro(source, date string) {
 
 // removePriorityMacro удаляет макрос приоритета
 func (s *RepoService) removePriorityMacro() {
-	if err := os.Remove(PriorityDistbranchMacro); err != nil && !os.IsNotExist(err) {
-		app.Log.Debugf("failed to remove priority macro: %v", err)
+	if err := os.Remove(priorityDistbranchMacro); err != nil && !os.IsNotExist(err) {
+		logger.Debugf("failed to remove priority macro: %v", err)
 	}
-	if err := os.Remove(LegacyP10Macro); err != nil && !os.IsNotExist(err) {
-		app.Log.Debugf("failed to remove legacy macro: %v", err)
+	if err := os.Remove(legacyP10Macro); err != nil && !os.IsNotExist(err) {
+		logger.Debugf("failed to remove legacy macro: %v", err)
 	}
 }

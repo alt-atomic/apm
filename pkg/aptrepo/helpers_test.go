@@ -1,4 +1,4 @@
-package service
+package aptrepo
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
@@ -23,16 +22,8 @@ func (m *mockRunner) Run(ctx context.Context, args []string, opts ...command.Opt
 	return "", "", errors.New("not implemented")
 }
 
-type mockPackageDB struct {
-	hasHTTPS bool
-}
-
-func (m *mockPackageDB) GetPackageByName(_ context.Context, name string) (_package.Package, error) {
-	if name == "apt-https" && m.hasHTTPS {
-		return _package.Package{Name: "apt-https"}, nil
-	}
-	return _package.Package{}, errors.New("not found")
-}
+// noPackages сообщает, что ни один пакет не установлен (схема http)
+func noPackages(context.Context, string) bool { return false }
 
 // newTestService создаёт RepoService с temp-директорией для тестов
 func newTestService(t *testing.T) (*RepoService, string) {
@@ -48,16 +39,15 @@ func newTestService(t *testing.T) (*RepoService, string) {
 	}
 
 	runner := &mockRunner{}
-	db := &mockPackageDB{hasHTTPS: false}
 
 	s := &RepoService{
-		confMain:           confMain,
-		confDir:            confDir,
-		arch:               "x86_64",
-		useArepo:           true,
-		httpClient:         &http.Client{},
-		serviceAptDatabase: db,
-		runner:             runner,
+		confMain:   confMain,
+		confDir:    confDir,
+		arch:       "x86_64",
+		useArepo:   true,
+		httpClient: &http.Client{},
+		hasPackage: noPackages,
+		runner:     runner,
 	}
 	s.initBranches()
 	return s, tmpDir

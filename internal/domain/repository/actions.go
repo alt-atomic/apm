@@ -27,7 +27,7 @@ import (
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/build"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
-	"altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
@@ -42,7 +42,7 @@ type ShortRepoResponse struct {
 // Если full == true, возвращается полный вывод, иначе — сокращённый.
 func FormatRepoOutput(data interface{}, full bool) interface{} {
 	switch v := data.(type) {
-	case service.Repository:
+	case aptrepo.Repository:
 		if full {
 			return v
 		}
@@ -51,7 +51,7 @@ func FormatRepoOutput(data interface{}, full bool) interface{} {
 			URL:    v.URL,
 			Arch:   v.Arch,
 		}
-	case []service.Repository:
+	case []aptrepo.Repository:
 		if full {
 			return v
 		}
@@ -92,10 +92,15 @@ func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
 		reporter,
 	)
 
+	hasPackage := func(ctx context.Context, name string) bool {
+		pkg, err := packageDBSvc.GetPackageByName(ctx, name)
+		return err == nil && pkg.Installed
+	}
+
 	return &Actions{
 		appConfig:         appConfig,
 		reporter:          reporter,
-		repoService:       service.NewRepoService(packageDBSvc, runner),
+		repoService:       aptrepo.NewRepoService(hasPackage, runner),
 		serviceAptActions: aptActions,
 		serviceHostImage:  hostImageSvc,
 	}
@@ -310,7 +315,7 @@ func (a *Actions) CheckClean(ctx context.Context) (*RepoSimulateResponse, error)
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
-	var willRemove []service.Repository
+	var willRemove []aptrepo.Repository
 	for _, repo := range repos {
 		isCdrom := strings.Contains(repo.URL, "cdrom:")
 		isTask := false
