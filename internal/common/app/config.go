@@ -60,8 +60,32 @@ type BuildInfo struct {
 	Version           string
 }
 
-// Colors конфигурация цветовой схемы, тип живёт в pkg/render
-type Colors = render.Colors
+// Colors конфигурация цветовой схемы
+type Colors struct {
+	Accent string `yaml:"accent"`
+
+	TreeBranch  string `yaml:"treeBranch"`
+	ResultError string `yaml:"resultError"`
+
+	DialogAction     string `yaml:"dialogAction"`
+	DialogDanger     string `yaml:"dialogDanger"`
+	DialogHint       string `yaml:"dialogHint"`
+	DialogScroll     string `yaml:"dialogScroll"`
+	DialogLabelLight string `yaml:"dialogLabelLight"`
+	DialogLabelDark  string `yaml:"dialogLabelDark"`
+
+	ProgressEmpty  string `yaml:"progressEmpty"`
+	ProgressFilled string `yaml:"progressFilled"`
+}
+
+// RenderColors возвращает часть палитры для pkg/render
+func (c Colors) RenderColors() render.Colors {
+	return render.Colors{
+		Accent:      c.Accent,
+		TreeBranch:  c.TreeBranch,
+		ResultError: c.ResultError,
+	}
+}
 
 const defaultConfigPath = "/etc/apm/config.yml"
 
@@ -370,7 +394,21 @@ func (cm *configManagerImpl) EnableVerbose() {
 
 // GetDefaultColors возвращает цветовую схему по умолчанию
 func GetDefaultColors() Colors {
-	return render.DefaultColors()
+	return Colors{
+		Accent:      "#a2734c",
+		TreeBranch:  "#c4c8c6",
+		ResultError: "9",
+
+		DialogAction:     "#26a269",
+		DialogDanger:     "#a81c1f",
+		DialogHint:       "#888888",
+		DialogScroll:     "#ff0000",
+		DialogLabelLight: "#234f55",
+		DialogLabelDark:  "#82a0a3",
+
+		ProgressEmpty:  "#c4c8c6",
+		ProgressFilled: "#26a269",
+	}
 }
 
 // EnsurePath создает файл и его директорию при необходимости

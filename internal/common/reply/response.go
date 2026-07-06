@@ -69,7 +69,7 @@ type responseRenderer struct {
 func newResponseRenderer(appConfig *app.Config) *responseRenderer {
 	return &responseRenderer{
 		appConfig: appConfig,
-		Renderer: render.New(appConfig.ConfigManager.GetColors(),
+		Renderer: render.New(appConfig.ConfigManager.GetColors().RenderColors(),
 			render.WithAccentKeys("name", "packageName", "url"),
 			render.WithValueFormatter(formatFieldValue),
 		),
