@@ -17,15 +17,16 @@
 package binding
 
 import (
-	aptErrors "apm/internal/common/apt"
-	aptBinding "apm/pkg/apt"
-	aptlib "apm/pkg/apt/lib"
 	_ "embed"
 	"errors"
 	"os"
 	"strings"
 	"syscall"
 	"testing"
+
+	aptErrors "altlinux.space/alt-atomic/apm/internal/common/apt"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 
 	"github.com/stretchr/testify/assert"
 )

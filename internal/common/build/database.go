@@ -17,8 +17,6 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,6 +27,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"gorm.io/gorm/logger"
 

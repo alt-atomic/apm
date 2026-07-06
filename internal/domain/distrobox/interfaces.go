@@ -17,8 +17,9 @@
 package distrobox
 
 import (
-	"apm/internal/common/sandbox"
 	"context"
+
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
 )
 
 // packageService определяет методы для работы с пакетами в контейнерах.

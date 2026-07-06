@@ -17,15 +17,16 @@
 package sandbox
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
-	"apm/pkg/command"
 	"context"
 	"fmt"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // UbuntuProvider реализует интерфейс PackageProvider для Ubuntu

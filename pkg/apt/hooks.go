@@ -16,7 +16,7 @@
 
 package apt
 
-import "apm/pkg/apt/lib"
+import "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 
 // T_ is the string translation hook, defaults to identity
 var T_ = func(msgId string) string { return msgId }

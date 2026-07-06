@@ -1,10 +1,11 @@
 package altfiles
 
 import (
-	"apm/internal/common/build/etcfiles"
 	"os"
 	"slices"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
 )
 
 func TestSyncGroupsAddNew(t *testing.T) {

@@ -17,10 +17,11 @@
 package cli
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"fmt"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"github.com/charmbracelet/lipgloss"
 

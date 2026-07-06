@@ -1,13 +1,14 @@
 package models
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/osutils"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/osutils"
 )
 
 type RemoveBody struct {

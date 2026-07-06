@@ -1,11 +1,12 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/build/altfiles"
-	"apm/internal/common/helper"
 	"context"
 	"fmt"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/altfiles"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
 )
 
 const altFilesPkg = "libnss-altfiles"

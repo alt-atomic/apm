@@ -17,10 +17,6 @@
 package sandbox
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"fmt"
@@ -28,6 +24,11 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"

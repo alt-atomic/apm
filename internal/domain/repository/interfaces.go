@@ -17,10 +17,11 @@
 package repository
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/internal/domain/repository/service"
-	aptLib "apm/pkg/apt/lib"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // repoService определяет методы для работы с репозиториями.

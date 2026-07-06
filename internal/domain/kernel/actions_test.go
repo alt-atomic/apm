@@ -1,16 +1,17 @@
 package kernel
 
 import (
-	"apm/internal/common/apmerr"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/reply"
-	"apm/internal/common/testutil"
-	"apm/internal/domain/kernel/service"
-	aptlib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"syscall"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/testutil"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 type mockAptActions struct {

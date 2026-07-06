@@ -1,14 +1,15 @@
 package service
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/pkg/command"
 	"context"
 	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 type mockRunner struct {

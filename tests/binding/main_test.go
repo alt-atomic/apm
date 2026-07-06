@@ -17,9 +17,10 @@
 package binding
 
 import (
-	"apm/internal/common/apt"
 	"os"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apt"
 )
 
 func TestMain(m *testing.M) {

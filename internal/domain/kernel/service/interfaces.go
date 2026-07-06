@@ -1,12 +1,13 @@
 package service
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/filter"
-	"apm/pkg/apt"
-	libApt "apm/pkg/apt/lib"
-	"apm/pkg/command"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/pkg/apt"
+	libApt "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // packageDBService определяет методы для запросов к базе данных пакетов.

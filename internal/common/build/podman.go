@@ -17,9 +17,6 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
-	"apm/pkg/command"
 	"bufio"
 	"bytes"
 	"context"
@@ -29,6 +26,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // PodmanService инкапсулирует операции с podman/bootc.

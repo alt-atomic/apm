@@ -17,13 +17,14 @@
 package cli
 
 import (
-	"apm/internal/common/app"
-	aptLib "apm/pkg/apt/lib"
 	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // InstallSignalHandler возвращает производный ctx, который отменяется при

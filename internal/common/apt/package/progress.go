@@ -17,14 +17,15 @@
 package _package
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	aptLib "apm/pkg/apt/lib"
 	"context"
 	"fmt"
 	"sync"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // progressThrottler управляет throttling-ом для прогресс-событий.

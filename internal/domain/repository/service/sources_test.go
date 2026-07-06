@@ -1,11 +1,12 @@
 package service
 
 import (
-	"apm/pkg/command"
 	"context"
 	"errors"
 	"strings"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 func TestCanonicalizeRepoLine(t *testing.T) {

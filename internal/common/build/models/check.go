@@ -21,11 +21,12 @@
 package models
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"reflect"
 	"strings"
 	"unicode"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 func KebabToPascal(s string) string {

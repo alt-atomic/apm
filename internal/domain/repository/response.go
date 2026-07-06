@@ -17,8 +17,8 @@
 package repository
 
 import (
-	"apm/internal/domain/repository/service"
-	aptlib "apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // RepoListResponse структура ответа для List метода

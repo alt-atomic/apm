@@ -17,7 +17,6 @@
 package service
 
 import (
-	"apm/pkg/command"
 	"bufio"
 	"context"
 	"net/http"
@@ -27,6 +26,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 const (

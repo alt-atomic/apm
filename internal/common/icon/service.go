@@ -17,10 +17,6 @@
 package icon
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
-	"apm/internal/common/sandbox"
-	"apm/pkg/command"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -28,6 +24,11 @@ import (
 	"io"
 	"runtime"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // Service предоставляет сервис для работы с иконками.

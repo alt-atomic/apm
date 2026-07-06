@@ -17,11 +17,12 @@
 package system
 
 import (
-	"apm/internal/common/dbus_doc"
-	"apm/internal/common/http_server"
-	"apm/internal/domain/system/appstream"
 	"context"
 	_ "embed"
+
+	"altlinux.space/alt-atomic/apm/internal/common/dbus_doc"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
 )
 
 //go:embed dbus.go

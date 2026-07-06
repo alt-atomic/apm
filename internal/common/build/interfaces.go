@@ -1,10 +1,11 @@
 package build
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/filter"
-	aptLib "apm/pkg/apt/lib"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // buildAptActionsService определяет методы APT операций для сборки образа.

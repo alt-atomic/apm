@@ -1,8 +1,9 @@
 package _package
 
 import (
-	aptLib "apm/pkg/apt/lib"
 	"testing"
+
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 func TestExtractLastMessage(t *testing.T) {

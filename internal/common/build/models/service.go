@@ -1,14 +1,15 @@
 package models
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build/common_types"
-	"apm/internal/common/filter"
-	"apm/internal/common/reply"
-	"apm/internal/domain/kernel/service"
-	reposervice "apm/internal/domain/repository/service"
-	"apm/pkg/command"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build/common_types"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	reposervice "altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 type Service interface {

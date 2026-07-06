@@ -17,8 +17,9 @@
 package apt
 
 import (
-	"apm/internal/common/app"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // enrichErrorDetails добавляет детали к ошибке из логов и строк ошибки

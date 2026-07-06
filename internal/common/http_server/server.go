@@ -17,9 +17,6 @@
 package http_server
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
 	"bufio"
 	"context"
 	"crypto/subtle"
@@ -31,6 +28,10 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 // Config конфигурация HTTP сервера

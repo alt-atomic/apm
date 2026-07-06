@@ -1,7 +1,7 @@
 package reply
 
 import (
-	"apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // TranslateKey принимает ключ и возвращает английский текст.

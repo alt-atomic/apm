@@ -17,7 +17,7 @@
 package cli
 
 import (
-	"apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"github.com/urfave/cli/v3"
 )

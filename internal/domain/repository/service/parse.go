@@ -17,13 +17,14 @@
 package service
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // parseSourceArgs парсит аргументы в URL

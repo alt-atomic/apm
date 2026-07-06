@@ -17,14 +17,15 @@
 package system
 
 import (
-	"apm/internal/domain/system"
-	"apm/tests/integration/common"
 	"context"
 	_ "embed"
 	"os"
 	"strings"
 	"syscall"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/domain/system"
+	"altlinux.space/alt-atomic/apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

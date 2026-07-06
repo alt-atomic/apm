@@ -17,13 +17,14 @@
 package apt
 
 import (
-	"apm/pkg/apt/lib"
 	"bufio"
 	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // InstalledPackageInfo holds installed package info from rpm

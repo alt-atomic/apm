@@ -17,10 +17,11 @@
 package kernel
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/internal/domain/kernel/service"
-	aptlib "apm/pkg/apt/lib"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // aptActionsService определяет методы APT операций, используемых в домене kernel.

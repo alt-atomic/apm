@@ -17,13 +17,14 @@
 package helper
 
 import (
-	"apm/internal/common/app"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // contextKey is a custom type for context keys to avoid collisions

@@ -17,19 +17,20 @@
 package kernel
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/reply"
-	"apm/internal/domain/kernel/service"
-	"apm/pkg/apt"
-	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	"altlinux.space/alt-atomic/apm/pkg/apt"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // Actions объединяет методы для выполнения системных действий.

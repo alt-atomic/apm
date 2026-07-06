@@ -17,11 +17,12 @@
 package icon
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"log"
 	"os"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

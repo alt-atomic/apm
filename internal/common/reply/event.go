@@ -17,10 +17,11 @@
 package reply
 
 import (
-	"apm/internal/common/app"
 	"encoding/json"
 	"fmt"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"github.com/godbus/dbus/v5"
 )

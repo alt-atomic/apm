@@ -1,11 +1,12 @@
 package models
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/osutils"
 	"context"
 	"fmt"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/osutils"
 )
 
 type PackagesBody struct {

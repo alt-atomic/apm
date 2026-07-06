@@ -17,23 +17,24 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/apt"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build/common_types"
-	"apm/internal/common/build/core"
-	"apm/internal/common/filter"
-	"apm/internal/common/osutils"
-	"apm/internal/common/reply"
-	"apm/internal/domain/kernel/service"
-	reposervice "apm/internal/domain/repository/service"
-	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/apt"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build/common_types"
+	"altlinux.space/alt-atomic/apm/internal/common/build/core"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/osutils"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	reposervice "altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 type ConfigService struct {

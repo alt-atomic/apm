@@ -17,9 +17,6 @@
 package reply
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,6 +26,10 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
 
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/crypto/ssh/terminal"

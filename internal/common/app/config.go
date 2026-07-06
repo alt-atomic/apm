@@ -17,12 +17,13 @@
 package app
 
 import (
-	"apm/internal/common/version"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/version"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/ilyakaznacheev/cleanenv"

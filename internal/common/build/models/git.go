@@ -1,13 +1,14 @@
 package models
 
 import (
-	"apm/internal/common/app"
-	"apm/pkg/command"
 	"context"
 	"fmt"
 	"os"
 	"slices"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 type GitBody struct {

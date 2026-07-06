@@ -157,7 +157,6 @@ func TestConfigParse(t *testing.T) {
 	})
 }
 
-
 func TestEscapeLike(t *testing.T) {
 	tests := []struct {
 		input string
@@ -275,13 +274,13 @@ func TestIsSafeFieldName(t *testing.T) {
 
 func TestColOpToSQL(t *testing.T) {
 	tests := []struct {
-		name     string
-		col      string
-		op       Op
-		value    string
-		wantCol  string
-		wantOp   string
-		wantVal  string
+		name    string
+		col     string
+		op      Op
+		value   string
+		wantCol string
+		wantOp  string
+		wantVal string
 	}{
 		{"eq", "name", OpEq, "test", "name", "= ?", "test"},
 		{"ne", "name", OpNe, "test", "name", "<> ?", "test"},

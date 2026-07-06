@@ -1,13 +1,6 @@
 package models
 
 import (
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/filter"
-	"apm/internal/common/osutils"
-	"apm/internal/common/reply"
-	"apm/internal/domain/kernel/service"
-	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"
@@ -17,6 +10,14 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/osutils"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 var (

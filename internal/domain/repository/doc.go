@@ -17,10 +17,11 @@
 package repository
 
 import (
-	"apm/internal/common/dbus_doc"
-	"apm/internal/common/http_server"
 	"context"
 	_ "embed"
+
+	"altlinux.space/alt-atomic/apm/internal/common/dbus_doc"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
 )
 
 //go:embed dbus.go

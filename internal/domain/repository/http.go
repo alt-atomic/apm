@@ -17,15 +17,16 @@
 package repository
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/http_server"
-	"apm/internal/common/reply"
-	"apm/internal/common/service"
 	"context"
 	"errors"
 	"net/http"
 	"reflect"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
 )
 
 func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter) service.HTTPModule {

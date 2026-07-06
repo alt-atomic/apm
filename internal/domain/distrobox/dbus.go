@@ -17,15 +17,16 @@
 package distrobox
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/common/sandbox"
-	"apm/internal/common/service"
 	"context"
 	"encoding/json"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
 
 	"github.com/godbus/dbus/v5"
 )

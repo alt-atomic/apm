@@ -1,11 +1,12 @@
 package models
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 type SystemdBody struct {

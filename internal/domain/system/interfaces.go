@@ -17,13 +17,14 @@
 package system
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
-	"apm/internal/common/swcat"
-	"apm/internal/domain/system/temporary"
-	aptLib "apm/pkg/apt/lib"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // aptActionsService определяет методы для APT операций с пакетами.

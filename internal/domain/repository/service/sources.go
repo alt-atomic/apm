@@ -17,7 +17,6 @@
 package service
 
 import (
-	"apm/internal/common/app"
 	"bufio"
 	"context"
 	"fmt"
@@ -26,6 +25,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // GetRepositories возвращает список репозиториев

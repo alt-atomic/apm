@@ -1,11 +1,6 @@
 package core
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/build/common_types"
-	"apm/internal/common/build/models"
-	"apm/internal/common/osutils"
-	"apm/internal/common/version"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -16,6 +11,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/common_types"
+	"altlinux.space/alt-atomic/apm/internal/common/build/models"
+	"altlinux.space/alt-atomic/apm/internal/common/osutils"
+	"altlinux.space/alt-atomic/apm/internal/common/version"
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"

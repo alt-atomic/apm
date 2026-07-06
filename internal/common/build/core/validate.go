@@ -1,14 +1,15 @@
 package core
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/build/models"
-	"apm/internal/common/osutils"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/models"
+	"altlinux.space/alt-atomic/apm/internal/common/osutils"
 )
 
 // ValidationService рекурсивно валидирует конфиг включая все include файлы.

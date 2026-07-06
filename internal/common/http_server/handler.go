@@ -17,14 +17,15 @@
 package http_server
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 // backgroundTaskResponse структура ответа при запуске фоновой задачи

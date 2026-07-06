@@ -1,12 +1,13 @@
 package distrobox
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/sandbox"
-	"apm/internal/common/testutil"
 	"context"
 	"errors"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/internal/common/testutil"
 )
 
 type mockPackageService struct {

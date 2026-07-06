@@ -17,12 +17,13 @@
 package service
 
 import (
-	"apm/internal/common/app"
-	apmcli "apm/internal/common/cli"
-	"apm/internal/common/dbus_doc"
 	"context"
 	"fmt"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/dbus_doc"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"

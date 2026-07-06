@@ -17,14 +17,15 @@
 package cli
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"fmt"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	urfave "github.com/urfave/cli/v3"
 )

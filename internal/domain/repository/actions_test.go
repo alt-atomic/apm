@@ -1,14 +1,15 @@
 package repository
 
 import (
-	"apm/internal/common/apmerr"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/testutil"
-	"apm/internal/domain/repository/service"
-	aptLib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/testutil"
+	"altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 type mockRepoService struct {

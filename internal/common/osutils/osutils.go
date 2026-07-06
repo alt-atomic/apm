@@ -25,7 +25,6 @@
 package osutils
 
 import (
-	"apm/internal/common/app"
 	"errors"
 	"fmt"
 	"io"
@@ -36,6 +35,8 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 func parseSymbolicMode(s string) (os.FileMode, error) {

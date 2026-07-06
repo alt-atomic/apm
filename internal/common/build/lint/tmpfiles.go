@@ -1,8 +1,6 @@
 package lint
 
 import (
-	"apm/internal/common/build/etcfiles"
-	"apm/internal/common/reply"
 	"bufio"
 	"context"
 	"fmt"
@@ -13,6 +11,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 type tmpFilesEntry struct {

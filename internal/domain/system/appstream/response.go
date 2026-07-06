@@ -17,8 +17,8 @@
 package appstream
 
 import (
-	"apm/internal/common/filter"
-	"apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 )
 
 // UpdateResponse структура ответа для метода Update.

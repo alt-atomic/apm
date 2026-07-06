@@ -17,12 +17,13 @@
 package service
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // AddRepository добавляет репозиторий

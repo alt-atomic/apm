@@ -1,8 +1,9 @@
 package common_types
 
 import (
-	"apm/internal/common/version"
 	"fmt"
+
+	"altlinux.space/alt-atomic/apm/internal/common/version"
 )
 
 type MapModule struct {

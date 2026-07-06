@@ -1,9 +1,10 @@
 package reply
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // generateDeepData создаёт структуру с depth уровнями вложенности и width ключами на каждом уровне.

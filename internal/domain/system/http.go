@@ -17,16 +17,6 @@
 package system
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
-	"apm/internal/common/http_server"
-	"apm/internal/common/reply"
-	"apm/internal/common/service"
-	"apm/internal/common/swcat"
-	"apm/internal/domain/system/appstream"
 	"context"
 	"encoding/json"
 	"errors"
@@ -35,6 +25,17 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
 )
 
 func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter, isAtomic bool) service.HTTPModule {

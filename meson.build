@@ -41,14 +41,14 @@ IMAGE_FILEPATH = confapmdir / 'image.yml'
 RESOURCES_FILEPATH = confapmdir / 'resources'
 
 constants = [
-  ['apm/internal/common/app.BuildCommandPrefix', COMMAND_PREFIX],
-  ['apm/internal/common/app.BuildEnvironment', PROFILE],
-  ['apm/internal/common/app.BuildPathLocales', LOCALES_DIR],
-  ['apm/internal/common/app.BuildPathDBSQLSystem', DBSQL_FILEPATH],
-  ['apm/internal/common/app.BuildPathContainerFile', CONTAINERFILE_FILEPATH],
-  ['apm/internal/common/app.BuildPathImageFile', IMAGE_FILEPATH],
-  ['apm/internal/common/app.BuildPathResourcesDir', RESOURCES_FILEPATH],
-  ['apm/internal/common/app.BuildVersion', version],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildCommandPrefix', COMMAND_PREFIX],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildEnvironment', PROFILE],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildPathLocales', LOCALES_DIR],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildPathDBSQLSystem', DBSQL_FILEPATH],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildPathContainerFile', CONTAINERFILE_FILEPATH],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildPathImageFile', IMAGE_FILEPATH],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildPathResourcesDir', RESOURCES_FILEPATH],
+  ['altlinux.space/alt-atomic/apm/internal/common/app.BuildVersion', version],
 ]
 
 ldflags = []

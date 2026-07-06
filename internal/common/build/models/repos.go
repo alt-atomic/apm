@@ -21,12 +21,13 @@
 package models
 
 import (
-	"apm/internal/common/app"
-	reposervice "apm/internal/domain/repository/service"
 	"context"
 	"fmt"
 	"slices"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	reposervice "altlinux.space/alt-atomic/apm/internal/domain/repository/service"
 )
 
 type ReposBody struct {

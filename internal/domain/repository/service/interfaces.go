@@ -1,9 +1,10 @@
 package service
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/pkg/command"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // commandRunner определяет методы для выполнения системных команд.

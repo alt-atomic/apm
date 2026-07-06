@@ -1,13 +1,14 @@
 package lint
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"io/fs"
 	"os/user"
 	"strconv"
 	"sync"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // formatMode возвращает права в восьмеричном виде для tmpfiles.d, включая спецбиты setuid/setgid/sticky.

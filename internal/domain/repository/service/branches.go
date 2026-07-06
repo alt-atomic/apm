@@ -17,13 +17,14 @@
 package service
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"errors"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // archivingBranches список веток, для которых есть архивы

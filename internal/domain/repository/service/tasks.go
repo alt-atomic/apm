@@ -17,12 +17,13 @@
 package service
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // buildTaskURLs формирует URL для задачи

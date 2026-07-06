@@ -1,4 +1,4 @@
-module apm
+module altlinux.space/alt-atomic/apm
 
 go 1.25.0
 

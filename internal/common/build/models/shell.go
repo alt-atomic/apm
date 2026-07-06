@@ -1,10 +1,11 @@
 package models
 
 import (
-	"apm/internal/common/app"
-	"apm/pkg/command"
 	"context"
 	"fmt"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 type ShellBody struct {

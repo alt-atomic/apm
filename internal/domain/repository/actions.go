@@ -17,17 +17,18 @@
 package repository
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build"
-	"apm/internal/common/reply"
-	"apm/internal/domain/repository/service"
-	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/repository/service"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // ShortRepoResponse Сокращённое представление репозитория

@@ -1,12 +1,13 @@
 package reply
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 func TestFilterFields_SimpleTopLevel(t *testing.T) {

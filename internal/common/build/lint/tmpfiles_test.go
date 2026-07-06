@@ -1,12 +1,13 @@
 package lint
 
 import (
-	"apm/internal/common/reply"
-	"apm/internal/common/testutil"
 	"context"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/testutil"
 )
 
 func testContext() context.Context {

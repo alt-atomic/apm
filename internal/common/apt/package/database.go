@@ -17,17 +17,18 @@
 package _package
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 
 	"gorm.io/gorm/clause"
 

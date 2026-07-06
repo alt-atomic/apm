@@ -1,10 +1,11 @@
 package altfiles
 
 import (
-	"apm/internal/common/build/etcfiles"
 	"fmt"
 	"os"
 	"slices"
+
+	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
 )
 
 // cleanEtcPasswd удаляет из /etc/passwd записи, которые уже есть в /usr/lib/passwd

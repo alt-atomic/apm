@@ -17,18 +17,19 @@
 package _package
 
 import (
-	"apm/internal/common/app"
-	aptParser "apm/internal/common/apt"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	aptBinding "apm/pkg/apt"
-	aptLib "apm/pkg/apt/lib"
 	"context"
 	"errors"
 	"fmt"
 	"runtime"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	aptParser "altlinux.space/alt-atomic/apm/internal/common/apt"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 type Actions struct {

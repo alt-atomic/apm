@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"apm/internal/common/reply"
 	"context"
 	"fmt"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 var containerRuntimeFiles = []string{

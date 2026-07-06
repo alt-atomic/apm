@@ -17,8 +17,9 @@
 package apt
 
 import (
-	"apm/pkg/apt/lib"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // Single APT system instance, must be CLOSED at the end

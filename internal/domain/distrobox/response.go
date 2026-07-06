@@ -17,8 +17,8 @@
 package distrobox
 
 import (
-	"apm/internal/common/filter"
-	"apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
 )
 
 // UpdateResponse структура ответа для Update метода

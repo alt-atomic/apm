@@ -1,11 +1,12 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/build/lint"
-	"apm/internal/common/helper"
 	"context"
 	"fmt"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/lint"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
 )
 
 // fixTmpFiles выполняет анализ и фикс tmpfiles.d после сборки образа

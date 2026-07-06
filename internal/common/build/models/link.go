@@ -1,13 +1,14 @@
 package models
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 type LinkBody struct {

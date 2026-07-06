@@ -1,13 +1,14 @@
 package models
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 type ReplaceBody struct {

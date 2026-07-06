@@ -17,8 +17,8 @@
 package apt
 
 import (
-	"apm/internal/common/app"
-	aptbinding "apm/pkg/apt"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	aptbinding "altlinux.space/alt-atomic/apm/pkg/apt"
 )
 
 // ConnectBinding подключает биндингу переводы apm и анализатор ошибок

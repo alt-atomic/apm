@@ -17,14 +17,15 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/build/core"
 	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/core"
 )
 
 type Config = core.Config

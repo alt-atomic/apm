@@ -17,16 +17,17 @@
 package system
 
 import (
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build/altfiles"
-	apmcli "apm/internal/common/cli"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/domain/system/appstream"
 	"context"
 	"fmt"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build/altfiles"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
 
 	"github.com/urfave/cli/v3"
 )

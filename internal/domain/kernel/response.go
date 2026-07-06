@@ -17,8 +17,8 @@
 package kernel
 
 import (
-	"apm/internal/domain/kernel/service"
-	aptlib "apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // ListKernelsResponse структура ответа для ListKernels метода

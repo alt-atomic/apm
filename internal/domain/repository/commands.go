@@ -17,11 +17,12 @@
 package repository
 
 import (
-	"apm/internal/common/app"
-	apmcli "apm/internal/common/cli"
-	"apm/internal/common/reply"
 	"context"
 	"fmt"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/urfave/cli/v3"
 )

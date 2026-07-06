@@ -17,12 +17,13 @@
 package kernel
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	apmcli "apm/internal/common/cli"
-	"apm/internal/common/reply"
 	"context"
 	"errors"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/urfave/cli/v3"
 )

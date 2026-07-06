@@ -1,9 +1,6 @@
 package models
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/osutils"
 	"context"
 	"fmt"
 	"io/fs"
@@ -12,6 +9,10 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/osutils"
 
 	"github.com/thediveo/osrelease"
 )

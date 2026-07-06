@@ -17,12 +17,13 @@
 package reply
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"

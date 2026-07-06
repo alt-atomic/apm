@@ -1,9 +1,10 @@
 package altfiles
 
 import (
-	"apm/internal/common/build/etcfiles"
 	"fmt"
 	"os"
+
+	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
 )
 
 const (

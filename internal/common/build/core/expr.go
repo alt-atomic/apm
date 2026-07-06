@@ -1,12 +1,13 @@
 package core
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/build/common_types"
 	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/common_types"
 
 	"github.com/expr-lang/expr"
 )

@@ -17,10 +17,11 @@
 package filter
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // safeFieldName проверяет, что имя поля содержит только допустимые символы (защита от SQL-инъекции).

@@ -17,8 +17,6 @@
 package swcat
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -28,6 +26,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 type Service struct {
@@ -123,7 +124,6 @@ func applyLegacyFields(c *Component) {
 		c.Launchable = c.LegacyLaunch
 	}
 }
-
 
 func dedupTexts(src LocalizedMap) LocalizedMap {
 	seen := make(map[string]struct{}, len(src))

@@ -17,7 +17,6 @@
 package http_server
 
 import (
-	"apm/internal/common/app"
 	"context"
 	"errors"
 	"fmt"
@@ -26,6 +25,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 const (

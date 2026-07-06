@@ -17,11 +17,12 @@
 package reply
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
 	"context"
 	"errors"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
 )
 
 // Reporter инкапсулирует доставку ответов и событий приложения.

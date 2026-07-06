@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 const confName = "apm-lint.conf"

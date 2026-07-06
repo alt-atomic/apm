@@ -17,10 +17,11 @@
 package apt
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 const (

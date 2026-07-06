@@ -17,13 +17,14 @@
 package distrobox_test
 
 import (
-	"apm/internal/domain/distrobox"
-	"apm/tests/integration/common"
 	"context"
 	"fmt"
 	"strings"
 	"syscall"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/domain/distrobox"
+	"altlinux.space/alt-atomic/apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

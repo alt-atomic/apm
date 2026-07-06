@@ -17,18 +17,19 @@
 package build
 
 import (
-	"apm/internal/common/build/core"
 	"context"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
 
-	"apm/internal/common/app"
-	"apm/internal/common/build"
-	"apm/internal/common/reply"
-	"apm/pkg/command"
-	"apm/tests/integration/common"
+	"altlinux.space/alt-atomic/apm/internal/common/build/core"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/pkg/command"
+	"altlinux.space/alt-atomic/apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

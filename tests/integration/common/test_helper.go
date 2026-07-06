@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 // GetTestAppConfig возвращает инициализированный app.Config и Reporter для тестов.

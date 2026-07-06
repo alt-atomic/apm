@@ -17,23 +17,24 @@
 package main
 
 import (
-	"apm/internal/common/app"
-	aptWrapper "apm/internal/common/apt"
-	apmcli "apm/internal/common/cli"
-	"apm/internal/common/reply"
-	"apm/internal/common/service"
-	"apm/internal/domain/distrobox"
-	"apm/internal/domain/kernel"
-	"apm/internal/domain/repository"
-	"apm/internal/domain/system"
-	"apm/pkg/apt"
-	aptLib "apm/pkg/apt/lib"
-	"apm/pkg/command"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	aptWrapper "altlinux.space/alt-atomic/apm/internal/common/apt"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
+	"altlinux.space/alt-atomic/apm/internal/domain/distrobox"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel"
+	"altlinux.space/alt-atomic/apm/internal/domain/repository"
+	"altlinux.space/alt-atomic/apm/internal/domain/system"
+	"altlinux.space/alt-atomic/apm/pkg/apt"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 
 	"github.com/urfave/cli/v3"
 )

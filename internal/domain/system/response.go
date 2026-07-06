@@ -17,10 +17,10 @@
 package system
 
 import (
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
-	aptlib "apm/pkg/apt/lib"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // CheckResponse структура ответа для Check* методов

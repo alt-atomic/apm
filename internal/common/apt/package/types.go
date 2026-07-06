@@ -17,9 +17,10 @@
 package _package
 
 import (
-	"apm/internal/common/swcat"
 	"database/sql/driver"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 )
 
 // Package описывает структуру для хранения информации о пакете.

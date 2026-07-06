@@ -17,11 +17,12 @@
 package temporary
 
 import (
-	"apm/internal/common/app"
 	"errors"
 	"os"
 	"slices"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"github.com/goccy/go-yaml"
 )
