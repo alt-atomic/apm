@@ -132,6 +132,7 @@ func (m *mockHostImage) SwitchImage(_ context.Context, _ string, _ bool) error {
 func (m *mockHostImage) BuildAndSwitch(_ context.Context, _ bool, _ bool, _ build.SwitchableConfig) error {
 	return nil
 }
+func (m *mockHostImage) VerifyRemoteImage(_ context.Context, _ string) error { return nil }
 
 type mockHostConfig struct {
 	config  *build.Config
@@ -139,9 +140,13 @@ type mockHostConfig struct {
 	saveErr error
 }
 
-func (m *mockHostConfig) LoadConfig() error                               { return m.loadErr }
-func (m *mockHostConfig) GetConfigEnvVars() (map[string]string, error)    { return nil, nil }
-func (m *mockHostConfig) SaveConfig() error                               { return m.saveErr }
+func (m *mockHostConfig) LoadConfig() error                            { return m.loadErr }
+func (m *mockHostConfig) GetConfigEnvVars() (map[string]string, error) { return nil, nil }
+func (m *mockHostConfig) SaveConfig() error                            { return m.saveErr }
+func (m *mockHostConfig) SetImage(image string) error {
+	m.config.Image = image
+	return m.saveErr
+}
 func (m *mockHostConfig) GenerateDockerfile(_ bool) error                 { return nil }
 func (m *mockHostConfig) AddInstallPackage(_ string) error                { return nil }
 func (m *mockHostConfig) AddRemovePackage(_ string) error                 { return nil }

@@ -102,6 +102,12 @@ type ImageApplyResponse struct {
 	BootedImage ImageStatus `json:"bootedImage"`
 }
 
+// ImageSwitchResponse структура ответа для ImageSwitch метода
+type ImageSwitchResponse struct {
+	Message     string      `json:"message"`
+	BootedImage ImageStatus `json:"bootedImage"`
+}
+
 // ImageHistoryResponse структура ответа для ImageHistory метода
 type ImageHistoryResponse struct {
 	Message    string               `json:"message"`

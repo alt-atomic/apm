@@ -73,6 +73,7 @@ type hostImageService interface {
 	CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config build.Config) error
 	SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error
 	BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService build.SwitchableConfig) error
+	VerifyRemoteImage(ctx context.Context, imageName string) error
 }
 
 // hostConfigService определяет методы для работы с конфигурацией хоста.
@@ -80,6 +81,7 @@ type hostConfigService interface {
 	LoadConfig() error
 	GetConfigEnvVars() (map[string]string, error)
 	SaveConfig() error
+	SetImage(image string) error
 	GenerateDockerfile(hostCache bool) error
 	AddInstallPackage(pkg string) error
 	AddRemovePackage(pkg string) error

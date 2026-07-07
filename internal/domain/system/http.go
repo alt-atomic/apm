@@ -444,6 +444,27 @@ func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
+// ImageSwitch переключает систему на другой базовый образ.
+func (w *HTTPWrapper) ImageSwitch(rw http.ResponseWriter, r *http.Request) {
+	image := r.URL.Query().Get("image")
+	pullImage := r.URL.Query().Get("pull") == "true"
+	hostCache := r.URL.Query().Get("no_cache") != "true"
+
+	if w.RunBackground(rw, r, reply.EventSystemImageSwitch, func(ctx context.Context) (interface{}, error) {
+		return w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
+	}) {
+		return
+	}
+
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
 // ImageHistory возвращает историю обновлений образа.
 func (w *HTTPWrapper) ImageHistory(rw http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
@@ -964,6 +985,21 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 					{Name: "no_cache", Type: "boolean", Required: false, Description: "Отключить кэш APT-пакетов при сборке образа"},
 					{Name: "config", Type: "string", Required: false, Description: "Путь к файлу конфигурации образа"},
 					{Name: "workdir", Type: "string", Required: false, Description: "Рабочая директория сборки"},
+				},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageSwitch,
+				HTTPMethod:   "POST",
+				HTTPPath:     "/api/v1/image/switch",
+				ResponseType: reflect.TypeOf(ImageSwitchResponse{}),
+				Permission:   http_server.PermManage,
+				Summary:      "Переключить систему на другой базовый образ",
+				Tags:         []string{"image"},
+				QueryParams: []http_server.QueryParam{
+					{Name: "image", Type: "string", Required: true, Description: "Целевой базовый образ"},
+					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+					{Name: "pull", Type: "boolean", Required: false, Description: "Всегда загружать базовый образ из реестра"},
+					{Name: "no_cache", Type: "boolean", Required: false, Description: "Отключить кэш APT-пакетов при сборке образа"},
 				},
 			},
 			http_server.Endpoint{

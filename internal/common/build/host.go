@@ -285,6 +285,12 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 	return strings.Join(info.Layers, ","), nil
 }
 
+// VerifyRemoteImage проверяет, что образ доступен в реестре
+func (h *HostImageService) VerifyRemoteImage(ctx context.Context, imageName string) error {
+	_, err := h.getRemoteImageInfo(ctx, imageName, false)
+	return err
+}
+
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBootcUpgrade))
 	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBootcUpgrade))

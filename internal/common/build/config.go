@@ -168,6 +168,12 @@ func (s *HostConfigService) IsRemoved(pkg string) bool {
 	return s.config.IsRemoved(pkg)
 }
 
+// SetImage меняет базовый образ и сохраняет изменения в файл.
+func (s *HostConfigService) SetImage(image string) error {
+	s.config.Image = image
+	return s.SaveConfig()
+}
+
 // AddInstallPackage добавляет пакет в список для установки и сохраняет изменения в файл.
 func (s *HostConfigService) AddInstallPackage(pkg string) error {
 	s.config.AddInstallPackage(pkg)

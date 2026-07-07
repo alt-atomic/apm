@@ -517,6 +517,48 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 	return string(data), nil
 }
 
+// ImageSwitch переключает систему на другой базовый образ.
+func (w *DBusWrapper) ImageSwitch(sender dbus.Sender, transaction string, background bool, image string, pullImage bool, noCache bool) (string, *dbus.Error) {
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
+	}
+
+	if transaction == "" {
+		transaction = helper.GenerateTransactionID()
+	}
+
+	hostCache := !noCache
+
+	if background {
+		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+		go func() {
+			resp, err := w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemImageSwitch, resp, err)
+		}()
+
+		bgResp := BackgroundTaskResponse{
+			Message:     app.T_("Task started in background"),
+			Transaction: transaction,
+		}
+		data, jerr := json.Marshal(reply.OK(bgResp))
+		if jerr != nil {
+			return "", dbus.MakeFailedError(jerr)
+		}
+		return string(data), nil
+	}
+
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // ImageUpdate обновляет образ системы.
 func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, background bool, noCache bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {

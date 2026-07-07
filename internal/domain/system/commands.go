@@ -265,6 +265,31 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					}),
 				},
 				{
+					Name:      "switch",
+					Usage:     app.T_("Switch the system to another base image"),
+					ArgsUsage: "IMAGE",
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:  "pull",
+							Usage: app.T_("Always pull the base image from the registry"),
+							Value: false,
+						},
+						&cli.BoolFlag{
+							Name:  "no-cache",
+							Usage: app.T_("Disable APT package cache for image build"),
+							Value: false,
+						},
+					},
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageSwitch(ctx, cmd.Args().First(), cmd.Bool("pull"), !cmd.Bool("no-cache"))
+						if err != nil {
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+
+						return reporter.CliResponse(ctx, reply.OK(resp))
+					}),
+				},
+				{
 					Name:  "status",
 					Usage: app.T_("Image status"),
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {

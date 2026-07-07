@@ -91,6 +91,7 @@ const (
 	EventSystemCheckUpgrade         = "system.CheckUpgrade"
 	EventSystemImageUpdate          = "system.ImageUpdate"
 	EventSystemImageApply           = "system.ImageApply"
+	EventSystemImageSwitch          = "system.ImageSwitch"
 	EventSystemUpdateKernel         = "system.UpdateKernel"
 	EventSystemUpdateSTPLR          = "system.UpdateSTPLR"
 	EventSystemAptUpdate            = "system.AptUpdate"

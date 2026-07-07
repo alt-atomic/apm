@@ -1006,6 +1006,54 @@ func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool
 	}, nil
 }
 
+// ImageSwitch переключает систему на другой базовый образ.
+func (a *Actions) ImageSwitch(ctx context.Context, image string, pullImage bool, hostCache bool) (*ImageSwitchResponse, error) {
+	image = strings.TrimSpace(image)
+	if image == "" {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the target image")))
+	}
+
+	if err := a.serviceHostConfig.LoadConfig(); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	config := a.serviceHostConfig.GetConfig()
+	if config.Image == image {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("The system is already based on image %s"), image))
+	}
+
+	if err := a.serviceHostImage.VerifyRemoteImage(ctx, image); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err := a.serviceHostConfig.SetImage(image); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if len(config.Modules) > 0 {
+		if err := a.serviceHostConfig.GenerateDockerfile(hostCache); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		}
+		if err := a.serviceHostImage.BuildAndSwitch(ctx, pullImage, false, a.serviceHostConfig); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		}
+	} else {
+		if err := a.serviceHostImage.SwitchImage(ctx, image, false); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		}
+	}
+
+	imageStatus, err := a.getImageStatus(ctx)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageSwitchResponse{
+		Message:     app.T_("Image switched successfully. A reboot is required"),
+		BootedImage: imageStatus,
+	}, nil
+}
+
 // ImageHistory история изменений образа
 func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int, offset int) (*ImageHistoryResponse, error) {
 	history, err := a.serviceHostDatabase.GetImageHistoriesFiltered(ctx, imageName, limit, offset)
