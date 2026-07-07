@@ -22,14 +22,15 @@ import (
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 )
 
-var (
-	goodInitrdMethods = []string{
-		"auto",
-		"none",
-		"dracut",
-		"make-initrd",
-		"",
-	}
+var goodInitrdMethods = []string{
+	"auto",
+	"none",
+	"dracut",
+	"make-initrd",
+	"",
+}
+
+const (
 	defaultDracutPath      = "/usr/bin/dracut"
 	defaultMakeInitrdPath  = "/usr/sbin/make-initrd"
 	kernelDir              = "/usr/lib/modules"

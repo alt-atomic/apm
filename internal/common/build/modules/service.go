@@ -24,8 +24,27 @@ type DomainContext interface {
 	GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error)
 	UpdatePackages(ctx context.Context) error
 	UpgradePackages(ctx context.Context) error
-	KernelManager() *service.Manager
-	RepoService() *reposervice.RepoService
+	KernelManager() KernelManager
+	RepoService() RepoManager
+}
+
+// RepoManager управления репозиториями.
+type RepoManager interface {
+	GetBranches() []string
+	AddRepository(ctx context.Context, args []string, date string) ([]reposervice.Repository, error)
+	RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]reposervice.Repository, error)
+	SetBranch(ctx context.Context, branch, date string) (added, removed []reposervice.Repository, err error)
+	CleanTemporary(ctx context.Context) ([]reposervice.Repository, error)
+}
+
+// KernelManager управления ядром.
+type KernelManager interface {
+	FindLatestKernel(ctx context.Context, flavour string) (*service.Info, error)
+	InheritModulesFromKernel(target, source *service.Info) ([]string, error)
+	AutoSelectHeadersAndFirmware(ctx context.Context, kernel *service.Info, includeHeaders bool) ([]string, error)
+	RemoveKernel(kernel *service.Info, purge bool) error
+	InstallKernel(ctx context.Context, kernel *service.Info, modules []string, includeHeaders, dryRun bool) error
+	ParseKernelPackageFromDB(pkg _package.Package) *service.Info
 }
 
 // withDomain поднимает нейтральный RuntimeContext до доменного и зовёт run.

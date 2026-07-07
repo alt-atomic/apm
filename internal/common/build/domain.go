@@ -25,6 +25,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/apt"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build/modules"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
 	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
@@ -156,10 +157,10 @@ func (d *domainService) UpgradePackages(ctx context.Context) error {
 	return err
 }
 
-func (d *domainService) KernelManager() *service.Manager {
+func (d *domainService) KernelManager() modules.KernelManager {
 	return d.kernelManager
 }
 
-func (d *domainService) RepoService() *reposervice.RepoService {
+func (d *domainService) RepoService() modules.RepoManager {
 	return d.repoService
 }
