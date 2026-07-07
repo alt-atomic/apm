@@ -91,6 +91,10 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 	var shouldRebuildInitrd = !b.Initrd.IsEmpty() || shouldInstallKernel
 
 	if shouldInstallKernel {
+		if err := svc.ValidateDB(ctx); err != nil {
+			return nil, err
+		}
+
 		mgr := svc.KernelManager()
 		modules := append([]string{}, b.KernelInfo.Modules...)
 
@@ -203,6 +207,10 @@ func (b *KernelBody) Execute(ctx context.Context, svc Service) (any, error) {
 				}
 
 				if !slices.Contains(themes, b.Initrd.PlymouthTheme) {
+					if err := svc.ValidateDB(ctx); err != nil {
+						return nil, err
+					}
+
 					filters := []filter.Filter{
 						{Field: "name", Op: filter.OpLike, Value: fmt.Sprintf("plymouth-theme-%s", b.Initrd.PlymouthTheme)},
 					}
