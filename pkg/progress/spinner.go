@@ -179,7 +179,7 @@ func (sp *Spinner) render() {
 		if t.done && !t.printed {
 			t.printed = true
 			if t.isProgress && len(t.doneText) > 0 {
-				completedLines = append(completedLines, fmt.Sprintf(translate("Progress: %s completed"), t.doneText))
+				completedLines = append(completedLines, fmt.Sprintf(T_("Progress: %s completed"), t.doneText))
 			} else {
 				completedLines = append(completedLines, t.view)
 			}

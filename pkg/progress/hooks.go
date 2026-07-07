@@ -16,12 +16,12 @@
 
 package progress
 
-// translate is the string translation hook, no-op by default.
-var translate = func(msgID string) string { return msgID }
+// T_ translates a message id, no-op by default.
+var T_ = func(msgID string) string { return msgID }
 
-// SetTranslator installs the host translator.
+// SetTranslator sets the translation function.
 func SetTranslator(fn func(msgID string) string) {
 	if fn != nil {
-		translate = fn
+		T_ = fn
 	}
 }
