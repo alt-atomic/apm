@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-// parseSourceArgs парсит аргументы в URL
+// parseSourceArgs turns command arguments into source lines
 func (s *RepoService) parseSourceArgs(ctx context.Context, args []string, date string) ([]string, error) {
 	if len(args) == 0 {
 		return nil, errors.New(T_("Repository source must be specified"))
@@ -50,7 +50,7 @@ func (s *RepoService) parseSourceArgs(ctx context.Context, args []string, date s
 	return s.parseSource(ctx, combined, date)
 }
 
-// parseSource парсит источник в URL
+// parseSource turns a single source spec into source lines
 func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]string, error) {
 	source = strings.TrimSpace(source)
 	date = strings.TrimSpace(date)
@@ -86,7 +86,7 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 	}
 
 	if strings.HasPrefix(source, "rpm") {
-		// Заменяем _arch_ на текущую архитектуру
+		// Substitute _arch_ with the current architecture
 		source = strings.ReplaceAll(source, "_arch_", s.arch)
 		return []string{source}, nil
 	}
@@ -94,7 +94,7 @@ func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]s
 	return nil, fmt.Errorf(T_("Unknown repository format: %s"), source)
 }
 
-// buildRepoFromArgs собирает строку репозитория из аргументов [type, url, arch, components...]
+// buildRepoFromArgs builds a source line from [type, url, arch, components...] arguments
 func (s *RepoService) buildRepoFromArgs(args []string) []string {
 	var processed []string
 	for _, arg := range args {
@@ -107,7 +107,7 @@ func (s *RepoService) buildRepoFromArgs(args []string) []string {
 	return []string{strings.Join(processed, " ")}
 }
 
-// buildURLReposFromArgs формирует репозитории из аргументов [url, arch, components...]
+// buildURLReposFromArgs builds source lines from [url, arch, components...] arguments
 func (s *RepoService) buildURLReposFromArgs(args []string) []string {
 	if len(args) < 2 {
 		return s.buildURLRepos(args[0])
@@ -128,7 +128,7 @@ func (s *RepoService) buildURLReposFromArgs(args []string) []string {
 	return []string{fmt.Sprintf("rpm %s %s %s", url, archArg, strings.Join(components, " "))}
 }
 
-// buildURLRepos формирует репозитории из URL
+// buildURLRepos builds source lines for a plain URL
 func (s *RepoService) buildURLRepos(url string) []string {
 	var urls []string
 
@@ -146,7 +146,7 @@ func (s *RepoService) buildURLRepos(url string) []string {
 	return urls
 }
 
-// isURL проверяет, является ли строка источником APT.
+// isURL reports whether the string is an APT source URL.
 func isURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") ||
 		strings.HasPrefix(s, "ftp://") || strings.HasPrefix(s, "rsync://") ||

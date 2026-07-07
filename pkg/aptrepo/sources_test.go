@@ -389,14 +389,14 @@ func TestDetectBranch(t *testing.T) {
 		url  string
 		want string
 	}{
-		// Точное совпадение с известными ветками
+		// Exact match with known branches
 		{"p11 http", "http://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", "p11"},
 		{"p11 https", "https://ftp.altlinux.org/pub/distributions/ALTLinux/p11/branch", "p11"},
 		{"sisyphus", "http://ftp.altlinux.org/pub/distributions/ALTLinux/Sisyphus", "sisyphus"},
 		{"sisyphus https", "https://ftp.altlinux.org/pub/distributions/ALTLinux/Sisyphus", "sisyphus"},
 		{"p10", "http://ftp.altlinux.org/pub/distributions/ALTLinux/p10/branch", "p10"},
 
-		// Зеркала (fallback по имени в пути)
+		// Mirrors (fallback by name in path)
 		{"yandex sisyphus ftp", "ftp://mirror.yandex.ru/altlinux/Sisyphus", "sisyphus"},
 		{"yandex p11 http", "http://mirror.yandex.ru/altlinux/p11/branch", "p11"},
 		{"msu p11", "http://mirror.cs.msu.ru/alt/p11/branch", "p11"},
@@ -405,19 +405,19 @@ func TestDetectBranch(t *testing.T) {
 		{"datacenter.by p11", "http://mirror.datacenter.by/pub/ALTLinux/p11/branch", "p11"},
 		{"hoster.kz sisyphus", "https://mirror.hoster.kz/altlinux/Sisyphus", "sisyphus"},
 
-		// Архивные репозитории
+		// Archive repositories
 		{"archive p11", "http://ftp.altlinux.org/pub/distributions/archive/p11/date/2025/01/01", "p11"},
 		{"archive sisyphus", "https://ftp.altlinux.org/pub/distributions/archive/sisyphus/date/2024/03/15", "sisyphus"},
 
-		// Task-репозитории
+		// Task repositories
 		{"task repo", "http://git.altlinux.org/repo/410804/", "task"},
 		{"task repo https", "https://git.altlinux.org/repo/370123", "task"},
 
-		// URL с расширением файла
+		// URL with a file extension
 		{"sisyphus.repo", "https://altlinux.space/api/packages/alt-atomic/alt/group/apm-nightly/sisyphus.repo", "sisyphus"},
 		{"p11.list", "https://example.com/repos/p11.list", "p11"},
 
-		// Неизвестный
+		// Unknown
 		{"unknown", "http://random.example.com/something", ""},
 
 		// Trailing slash

@@ -72,7 +72,7 @@ func TestGetBranches(t *testing.T) {
 		t.Error("sisyphus should be in list")
 	}
 
-	// Проверка сортировки
+	// Sorted output
 	for i := 1; i < len(branches); i++ {
 		if branches[i] < branches[i-1] {
 			t.Errorf("branches not sorted: %v", branches)
@@ -124,7 +124,7 @@ func TestBuildBranchURLs(t *testing.T) {
 			t.Fatalf("got %d URLs, want 3: %v", len(urls), urls)
 		}
 
-		// Главная строка — только classic
+		// Main line carries only classic
 		if strings.Contains(urls[0], "gostcrypto") {
 			t.Errorf("expected no gostcrypto in main URL: %s", urls[0])
 		}

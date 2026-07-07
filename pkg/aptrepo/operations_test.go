@@ -131,7 +131,7 @@ func TestRemoveRepository(t *testing.T) {
 			t.Fatal("expected repos to be removed")
 		}
 
-		// В extra-файлах repo должен быть закомментирован, а не удалён
+		// In extra files the source must be commented out, not deleted
 		data, _ := os.ReadFile(filepath.Join(s.confDir, "test.list"))
 		content := string(data)
 		if !strings.Contains(content, "#") {
@@ -308,7 +308,7 @@ func TestSimulateRemove_CommentedRepo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Закомментированный репозиторий в симуляцию удаления не попадает
+	// A commented source is not reported by remove simulation
 	if len(willRemove) != 0 {
 		t.Errorf("expected 0 for commented repo, got %d", len(willRemove))
 	}
@@ -382,7 +382,7 @@ func TestConcurrentMutations(t *testing.T) {
 	}
 	wg.Wait()
 
-	// Параллельные добавления не должны терять правки друг друга
+	// Concurrent additions must not lose each other's writes
 	content := readSourcesList(t, s)
 	for _, line := range repos {
 		if !strings.Contains(content, line) {

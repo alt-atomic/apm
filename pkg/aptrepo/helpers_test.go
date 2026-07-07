@@ -22,10 +22,10 @@ func (m *mockRunner) Run(ctx context.Context, args []string, opts ...command.Opt
 	return "", "", errors.New("not implemented")
 }
 
-// noPackages сообщает, что ни один пакет не установлен (схема http)
+// noPackages reports no packages installed (http scheme)
 func noPackages(context.Context, string) bool { return false }
 
-// newTestService создаёт RepoService с temp-директорией для тестов
+// newTestService creates a RepoService backed by a temp directory
 func newTestService(t *testing.T) (*RepoService, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -53,7 +53,7 @@ func newTestService(t *testing.T) (*RepoService, string) {
 	return s, tmpDir
 }
 
-// writeSourcesList записывает содержимое sources.list
+// writeSourcesList writes the sources.list content
 func writeSourcesList(t *testing.T, s *RepoService, content string) {
 	t.Helper()
 	if err := os.WriteFile(s.confMain, []byte(content), 0644); err != nil {
@@ -61,7 +61,7 @@ func writeSourcesList(t *testing.T, s *RepoService, content string) {
 	}
 }
 
-// writeExtraList записывает дополнительный .list файл
+// writeExtraList writes an extra .list file
 func writeExtraList(t *testing.T, s *RepoService, name, content string) {
 	t.Helper()
 	path := filepath.Join(s.confDir, name)
@@ -70,7 +70,7 @@ func writeExtraList(t *testing.T, s *RepoService, name, content string) {
 	}
 }
 
-// readSourcesList читает sources.list
+// readSourcesList reads the sources.list content
 func readSourcesList(t *testing.T, s *RepoService) string {
 	t.Helper()
 	data, err := os.ReadFile(s.confMain)

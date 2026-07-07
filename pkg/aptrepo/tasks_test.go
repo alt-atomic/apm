@@ -24,7 +24,7 @@ import (
 	"testing"
 )
 
-// mockTransport подменяет HTTP-ответы по пути запроса
+// mockTransport stubs HTTP responses by request path
 type mockTransport struct {
 	handler func(req *http.Request) *http.Response
 }
@@ -136,7 +136,7 @@ func TestBuildTaskURLs(t *testing.T) {
 	})
 }
 
-// archiveHandler эмулирует редирект git.altlinux.org для архивных задач
+// archiveHandler emulates the git.altlinux.org redirect for archived tasks
 func archiveHandler(archiveBase string) func(req *http.Request) *http.Response {
 	return func(req *http.Request) *http.Response {
 		p := req.URL.Path

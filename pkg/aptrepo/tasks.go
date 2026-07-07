@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-// buildTaskURLs формирует URL для задачи
+// buildTaskURLs builds source lines for a task
 func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]string, error) {
 	exists, baseURL, err := s.checkTaskExists(ctx, taskNum)
 	if err != nil {
@@ -57,7 +57,7 @@ func (s *RepoService) buildTaskURLs(ctx context.Context, taskNum string) ([]stri
 	return urls, nil
 }
 
-// buildTaskURLsForRemove формирует активный и архивный URL задачи без сетевых проверок.
+// buildTaskURLsForRemove builds both active and archived task source lines without network checks.
 func (s *RepoService) buildTaskURLsForRemove(ctx context.Context, taskNum string) []string {
 	scheme := s.httpScheme(ctx)
 	num, _ := strconv.Atoi(taskNum)
@@ -76,7 +76,7 @@ func (s *RepoService) buildTaskURLsForRemove(ctx context.Context, taskNum string
 	return urls
 }
 
-// taskNumberArg возвращает номер задачи из аргументов вида ["12345"] или ["task", "12345"]
+// taskNumberArg extracts the task number from ["12345"] or ["task", "12345"] arguments
 func taskNumberArg(args []string) (string, bool) {
 	source := strings.TrimSpace(strings.Join(args, " "))
 	if num, ok := strings.CutPrefix(source, "task "); ok {
@@ -88,7 +88,7 @@ func taskNumberArg(args []string) (string, bool) {
 	return "", false
 }
 
-// checkTaskExists проверяет существование задачи и возвращает базовый URL (с учётом редиректа для архивных задач)
+// checkTaskExists reports whether the task exists and returns its base URL (following the archive redirect)
 func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exists bool, baseURL string, err error) {
 	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), repoTasksURL, taskNum)
 
@@ -116,7 +116,7 @@ func (s *RepoService) checkTaskExists(ctx context.Context, taskNum string) (exis
 	return false, "", nil
 }
 
-// checkTaskHasArepo проверяет есть ли arepo у задачи
+// checkTaskHasArepo reports whether the task has an arepo plan
 func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bool, error) {
 	url := fmt.Sprintf("%s%s/%s/plan/arepo-add-x86_64-i586", s.httpScheme(ctx), repoTasksURL, taskNum)
 
@@ -143,7 +143,7 @@ func (s *RepoService) checkTaskHasArepo(ctx context.Context, taskNum string) (bo
 	return len(strings.TrimSpace(string(body))) > 0, nil
 }
 
-// isDigits проверяет, состоит ли строка только из цифр
+// isDigits reports whether the string consists of digits only
 func isDigits(s string) bool {
 	if len(s) == 0 {
 		return false
@@ -156,7 +156,7 @@ func isDigits(s string) bool {
 	return true
 }
 
-// GetTaskPackages возвращает список пакетов из задачи
+// GetTaskPackages returns the package list of a task
 func (s *RepoService) GetTaskPackages(ctx context.Context, taskNum string) ([]string, error) {
 	url := fmt.Sprintf("%s%s/%s/plan/add-bin", s.httpScheme(ctx), repoTasksURL, taskNum)
 

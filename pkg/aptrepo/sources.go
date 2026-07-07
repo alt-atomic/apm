@@ -27,7 +27,7 @@ import (
 	"strings"
 )
 
-// GetRepositories возвращает список репозиториев
+// GetRepositories returns sources from all config files
 func (s *RepoService) GetRepositories(_ context.Context, all bool) ([]Repository, error) {
 	s.ensureInitialized()
 	var repos []Repository
@@ -48,7 +48,7 @@ func (s *RepoService) GetRepositories(_ context.Context, all bool) ([]Repository
 	return repos, nil
 }
 
-// parseSourceFile парсит один файл с репозиториями
+// parseSourceFile parses a single sources file
 func (s *RepoService) parseSourceFile(filename string, all bool) ([]Repository, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -66,7 +66,7 @@ func (s *RepoService) parseSourceFile(filename string, all bool) ([]Repository, 
 			continue
 		}
 
-		// Активные репозитории
+		// Active sources
 		if !strings.HasPrefix(trimmed, "#") {
 			if repo := s.parseLine(trimmed, filename, true); repo != nil {
 				repos = append(repos, *repo)
@@ -85,7 +85,7 @@ func (s *RepoService) parseSourceFile(filename string, all bool) ([]Repository, 
 	return repos, nil
 }
 
-// parseLine парсит строку репозитория
+// parseLine parses a single source line
 func (s *RepoService) parseLine(line string, filename string, active bool) *Repository {
 	if !strings.HasPrefix(line, "rpm") {
 		return nil
@@ -103,7 +103,7 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 		Entry:  line,
 	}
 
-	// Пропускаем тип (rpm) и опциональный ключ ([key])
+	// Skip type (rpm) and optional key ([key])
 	idx := 1
 	if strings.HasPrefix(parts[idx], "[") {
 		idx++
@@ -115,24 +115,24 @@ func (s *RepoService) parseLine(line string, filename string, active bool) *Repo
 		idx++
 	}
 
-	// Архитектура
+	// Architecture
 	if idx < len(parts) {
 		repo.Arch = parts[idx]
 		idx++
 	}
 
-	// Компоненты
+	// Components
 	if idx < len(parts) {
 		repo.Components = parts[idx:]
 	}
 
-	// Определяем ветку по URL
+	// Detect branch by URL
 	repo.Branch = s.detectBranch(repo.URL)
 
 	return repo
 }
 
-// getSourceFiles возвращает список файлов с источниками
+// getSourceFiles returns the list of sources files
 func (s *RepoService) getSourceFiles() ([]string, error) {
 	var files []string
 
@@ -150,7 +150,7 @@ func (s *RepoService) getSourceFiles() ([]string, error) {
 	return files, nil
 }
 
-// checkRepoExists проверяет, есть ли репозиторий в источниках и активен ли он
+// checkRepoExists reports whether the source is present and whether it is active
 func (s *RepoService) checkRepoExists(ctx context.Context, repoLine string) (found bool, active bool, err error) {
 	repos, err := s.GetRepositories(ctx, true)
 	if err != nil {
@@ -168,14 +168,14 @@ func (s *RepoService) checkRepoExists(ctx context.Context, repoLine string) (fou
 	return false, false, nil
 }
 
-// canonicalizeRepoLine приводит строку репозитория к каноническому виду для сравнения.
-// apt-repo использует "new_format", перемещая последние компоненты URL-пути в поле arch:
+// canonicalizeRepoLine normalizes a source line for comparison.
+// apt-repo uses "new_format", moving trailing URL path components into the arch field:
 //
 //	Old: rpm [key] http://host/path/comp1/comp2 x86_64 classic
 //	New: rpm [key] http://host/path comp1/comp2/x86_64 classic
 //
-// Функция разворачивает new_format обратно, перемещая путевые компоненты из arch в URL.
-// TODO Возможно стоит использовать так называемый "новый" формат как в коде apt-repo, а не поддерживать ОБА
+// The function unfolds new_format back, moving path components from arch into the URL.
+// TODO Consider writing the "new" format like apt-repo does instead of supporting BOTH
 func canonicalizeRepoLine(line string) string {
 	fields := strings.Fields(line)
 	if len(fields) < 4 {
@@ -209,7 +209,7 @@ func canonicalizeRepoLine(line string) string {
 	return strings.Join(fields, " ")
 }
 
-// stripScheme убирает схему
+// stripScheme drops the URL scheme
 func stripScheme(rawURL string) string {
 	u, err := url.Parse(rawURL)
 	if err != nil {
@@ -218,11 +218,11 @@ func stripScheme(rawURL string) string {
 	return strings.TrimRight(u.Host+u.Path, "/")
 }
 
-// detectBranch определяет название ветки по URL репозитория
+// detectBranch resolves the branch name from a source URL
 func (s *RepoService) detectBranch(repoURL string) string {
 	repoClean := stripScheme(repoURL)
 
-	// Для task-репозиториев
+	// Task repositories
 	if strings.Contains(repoClean, repoTaskURL) {
 		return "task"
 	}
@@ -247,7 +247,7 @@ func (s *RepoService) detectBranch(repoURL string) string {
 	return ""
 }
 
-// rewriteLines применяет transform к строкам файла и перезаписывает его при изменениях.
+// rewriteLines applies transform to file lines and rewrites the file if anything changed.
 func rewriteLines(filename string, transform func(line string) (string, bool)) (bool, error) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
@@ -277,7 +277,7 @@ func rewriteLines(filename string, transform func(line string) (string, bool)) (
 	return true, os.WriteFile(filename, []byte(strings.Join(newLines, "\n")), 0644)
 }
 
-// uncommentRepo раскомментирует репозиторий и возвращает имя файла, в котором он был найден
+// uncommentRepo uncomments the source and returns the file it was found in
 func (s *RepoService) uncommentRepo(repoLine string) (string, error) {
 	files, err := s.getSourceFiles()
 	if err != nil {
@@ -312,7 +312,7 @@ func (s *RepoService) uncommentRepo(repoLine string) (string, error) {
 	return foundFile, nil
 }
 
-// appendRepo добавляет репозиторий в sources.list
+// appendRepo appends the source to the main sources.list
 func (s *RepoService) appendRepo(repoLine string) error {
 	parts := strings.Fields(repoLine)
 	if len(parts) < 3 {
@@ -333,7 +333,7 @@ func (s *RepoService) appendRepo(repoLine string) error {
 	return nil
 }
 
-// removeOrCommentRepo удаляет или комментирует репозиторий
+// removeOrCommentRepo removes the source from the main file and comments it in the others
 func (s *RepoService) removeOrCommentRepo(repoLine string) error {
 	canonical := canonicalizeRepoLine(repoLine)
 
@@ -356,7 +356,7 @@ func (s *RepoService) removeOrCommentRepo(repoLine string) error {
 	return nil
 }
 
-// removeFromFile удаляет строку из файла
+// removeFromFile deletes matching lines from the file
 func (s *RepoService) removeFromFile(filename string, canonicalLine string) error {
 	_, err := rewriteLines(filename, func(line string) (string, bool) {
 		return line, canonicalizeRepoLine(line) != canonicalLine
@@ -367,7 +367,7 @@ func (s *RepoService) removeFromFile(filename string, canonicalLine string) erro
 	return err
 }
 
-// commentInFile комментирует строку в файле
+// commentInFile comments out matching lines in the file
 func (s *RepoService) commentInFile(filename string, canonicalLine string) error {
 	_, err := rewriteLines(filename, func(line string) (string, bool) {
 		if canonicalizeRepoLine(line) == canonicalLine {
@@ -378,7 +378,7 @@ func (s *RepoService) commentInFile(filename string, canonicalLine string) error
 	return err
 }
 
-// purgeAllRepos полностью удаляет все файлы репозиториев
+// purgeAllRepos deletes all sources files entirely
 func (s *RepoService) purgeAllRepos() error {
 	entries, err := os.ReadDir(s.confDir)
 	if err != nil && !os.IsNotExist(err) {

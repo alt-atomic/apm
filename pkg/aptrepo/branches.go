@@ -25,13 +25,13 @@ import (
 	"strings"
 )
 
-// archiveDateRe формат даты архива YYYY/MM/DD
+// archiveDateRe matches the YYYY/MM/DD archive date format
 var archiveDateRe = regexp.MustCompile(`^\d{4}/\d{2}/\d{2}$`)
 
-// archivingBranches список веток, для которых есть архивы
+// archivingBranches lists branches that have archives
 var archivingBranches = []string{"p7", "p8", "p9", "p10", "p11", "t7", "sisyphus"}
 
-// initBranches инициализирует известные ветки ALT Linux
+// initBranches fills the known ALT Linux branches
 func (s *RepoService) initBranches() {
 	s.branches = map[string]branchInfo{
 		"sisyphus": {
@@ -115,7 +115,7 @@ func (s *RepoService) initBranches() {
 	}
 }
 
-// GetBranches возвращает список доступных веток
+// GetBranches returns the available branch names
 func (s *RepoService) GetBranches() []string {
 	s.ensureInitialized()
 	branches := make([]string, 0, len(s.branches))
@@ -130,7 +130,7 @@ func (s *RepoService) GetBranches() []string {
 	return branches
 }
 
-// lookupBranch ищет ветку по имени без учёта регистра
+// lookupBranch finds a branch by name, case-insensitive
 func (s *RepoService) lookupBranch(name string) (branchInfo, bool) {
 	if branch, ok := s.branches[name]; ok {
 		return branch, true
@@ -139,18 +139,18 @@ func (s *RepoService) lookupBranch(name string) (branchInfo, bool) {
 	return branch, ok
 }
 
-// parseArchiveDate парсит и валидирует дату архива
+// parseArchiveDate validates and normalizes an archive date
 func (s *RepoService) parseArchiveDate(branchName, date string) (string, error) {
 	if !slices.Contains(archivingBranches, branchName) {
 		return "", fmt.Errorf(T_("Branch %s has no archive"), branchName)
 	}
 
-	// Формат YYYYMMDD -> YYYY/MM/DD
+	// YYYYMMDD -> YYYY/MM/DD
 	if len(date) == 8 && isDigits(date) {
 		return fmt.Sprintf("%s/%s/%s", date[0:4], date[4:6], date[6:8]), nil
 	}
 
-	// Формат YYYY/MM/DD
+	// YYYY/MM/DD as is
 	if archiveDateRe.MatchString(date) {
 		return date, nil
 	}
@@ -158,12 +158,12 @@ func (s *RepoService) parseArchiveDate(branchName, date string) (string, error) 
 	return "", errors.New(T_("Archive date should be YYYYMMDD or YYYY/MM/DD format"))
 }
 
-// buildBranchURLs формирует URL для ветки
+// buildBranchURLs builds source lines for a branch
 func (s *RepoService) buildBranchURLs(ctx context.Context, branch branchInfo) []string {
 	return s.buildBranchURLsWithArchive(ctx, branch, "")
 }
 
-// buildBranchURLsWithArchive формирует URL для ветки с опциональной датой архива
+// buildBranchURLsWithArchive builds source lines for a branch with an optional archive date
 func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch branchInfo, archiveDate string) []string {
 	var urls []string
 
@@ -178,7 +178,7 @@ func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch bra
 		allComponents = strings.Join(branch.Components, " ")
 	}
 
-	// Формируем базовый URL с учётом схемы и архива
+	// Base URL with scheme and optional archive path
 	var baseURL string
 	if archiveDate != "" {
 		baseURL = fmt.Sprintf("%s%s/%s/date/%s", s.httpScheme(ctx), repoArchiveURL, branch.Name, archiveDate)
@@ -199,7 +199,7 @@ func (s *RepoService) buildBranchURLsWithArchive(ctx context.Context, branch bra
 	return urls
 }
 
-// hasGostcryptoInSources проверяет есть ли gostcrypto в существующих репозиториях
+// hasGostcryptoInSources reports whether any existing source uses gostcrypto
 func (s *RepoService) hasGostcryptoInSources(ctx context.Context) bool {
 	repos, err := s.GetRepositories(ctx, true)
 	if err != nil {

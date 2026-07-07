@@ -62,7 +62,7 @@ const (
 	httpTimeout = 10 * time.Second
 )
 
-// Repository представляет информацию о репозитории
+// Repository describes a single APT source entry
 type Repository struct {
 	URL        string   `json:"url"`
 	Arch       string   `json:"arch"`
@@ -73,7 +73,7 @@ type Repository struct {
 	Branch     string   `json:"branch"`
 }
 
-// branchInfo представляет информацию о ветке ALT Linux
+// branchInfo describes a known ALT Linux branch
 type branchInfo struct {
 	Name       string
 	URL        string
@@ -81,7 +81,7 @@ type branchInfo struct {
 	Components []string
 }
 
-// RepoService сервис для работы с репозиториями APT
+// RepoService manages APT repository sources
 type RepoService struct {
 	confMain   string
 	confDir    string
@@ -95,8 +95,8 @@ type RepoService struct {
 	mu         sync.Mutex
 }
 
-// NewRepoService создает новый сервис для работы с репозиториями.
-// hasPackage используется для определения наличия apt-https (схема URL)
+// NewRepoService creates a repository service.
+// hasPackage is used to detect apt-https (URL scheme)
 func NewRepoService(hasPackage HasPackageFunc, runner commandRunner) *RepoService {
 	return &RepoService{
 		confMain: defaultSourcesList,
@@ -111,7 +111,7 @@ func NewRepoService(hasPackage HasPackageFunc, runner commandRunner) *RepoServic
 	}
 }
 
-// ensureInitialized выполняет отложенную инициализацию конфигурации APT и веток
+// ensureInitialized lazily loads APT config paths and known branches
 func (s *RepoService) ensureInitialized() {
 	s.initOnce.Do(func() {
 		s.detectAPTConfig()
@@ -119,7 +119,7 @@ func (s *RepoService) ensureInitialized() {
 	})
 }
 
-// detectArch определяет архитектуру системы
+// detectArch returns the system architecture in APT notation
 func detectArch(runner commandRunner) string {
 	arch := runtime.GOARCH
 	if arch == "amd64" {
@@ -135,7 +135,7 @@ func detectArch(runner commandRunner) string {
 		return "aarch64"
 	}
 
-	// Fallback через uname
+	// Fallback via uname
 	stdout, _, err := runner.Run(context.Background(), []string{"uname", "-m"}, command.WithQuiet())
 	if err == nil {
 		archStr := strings.TrimSpace(stdout)
@@ -151,7 +151,7 @@ func detectArch(runner commandRunner) string {
 	return "x86_64"
 }
 
-// checkArepoEnabled проверяет включен ли arepo
+// checkArepoEnabled reports whether arepo sources are enabled
 func checkArepoEnabled() bool {
 	file, err := os.Open(arepoConfigFile)
 	if err != nil {
@@ -170,7 +170,7 @@ func checkArepoEnabled() bool {
 	return true
 }
 
-// httpScheme возвращает схему URL (http или https) в зависимости от наличия apt-https
+// httpScheme returns the URL scheme depending on apt-https presence
 func (s *RepoService) httpScheme(ctx context.Context) string {
 	if s.checkHTTPSEnabled(ctx) {
 		return "https://"
@@ -178,7 +178,7 @@ func (s *RepoService) httpScheme(ctx context.Context) string {
 	return "http://"
 }
 
-// checkHTTPSEnabled проверяет установлен ли пакет apt-https
+// checkHTTPSEnabled reports whether the apt-https package is installed
 func (s *RepoService) checkHTTPSEnabled(ctx context.Context) bool {
 	if s.hasPackage == nil {
 		return false
@@ -186,10 +186,10 @@ func (s *RepoService) checkHTTPSEnabled(ctx context.Context) bool {
 	return s.hasPackage(ctx, "apt-https")
 }
 
-// aptConfigRe разбирает вывод apt-config shell вида VAR='значение'
+// aptConfigRe matches apt-config shell output like VAR='value'
 var aptConfigRe = regexp.MustCompile(`^([A-Z]+)=(.*)$`)
 
-// detectAPTConfig получает пути конфигурации из apt-config
+// detectAPTConfig reads configuration paths from apt-config
 func (s *RepoService) detectAPTConfig() {
 	if path := s.aptConfigPath("FILE", "Dir::Etc::sourcelist/f"); path != "" {
 		s.confMain = path
@@ -199,7 +199,7 @@ func (s *RepoService) detectAPTConfig() {
 	}
 }
 
-// aptConfigPath запрашивает путь из apt-config, пустая строка если недоступен
+// aptConfigPath queries a path from apt-config, empty string if unavailable
 func (s *RepoService) aptConfigPath(varName, key string) string {
 	stdout, _, err := s.runner.Run(context.Background(), []string{"apt-config", "shell", varName, key}, command.WithQuiet())
 	if err != nil {
@@ -212,12 +212,12 @@ func (s *RepoService) aptConfigPath(varName, key string) string {
 	return strings.Trim(matches[2], `"'`)
 }
 
-// GetArch возвращает архитектуру системы
+// GetArch returns the system architecture
 func (s *RepoService) GetArch() string {
 	return s.arch
 }
 
-// GetConfMain возвращает путь к основному файлу конфигурации
+// GetConfMain returns the main sources.list path
 func (s *RepoService) GetConfMain() string {
 	s.ensureInitialized()
 	return s.confMain
