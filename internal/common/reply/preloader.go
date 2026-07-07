@@ -17,89 +17,16 @@
 package reply
 
 import (
-	"fmt"
-	"os"
-	"strings"
 	"sync"
-	"time"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
-	"golang.org/x/sys/unix"
+	"altlinux.space/alt-atomic/apm/pkg/progress"
 )
-
-const clearLine = "\r\033[K"
-
-var spinnerFrames = []string{"|", "/", "-", "\\"}
 
 var (
-	mu           sync.Mutex
-	activeSp     *simpleSpinner
-	savedTermios *unix.Termios
+	mu       sync.Mutex
+	activeSp *progress.Spinner
 )
-
-type task struct {
-	eventType        string
-	name             string
-	viewName         string
-	state            string
-	printed          bool
-	progressPercent  float64
-	progressDoneText string
-}
-
-type simpleSpinner struct {
-	mu          sync.Mutex
-	tasks       []task
-	frame       int
-	colors      app.Colors
-	activeLines int
-	stopCh      chan struct{}
-	doneCh      chan struct{}
-	filledStyle lipgloss.Style
-	emptyStyle  lipgloss.Style
-}
-
-// termWidth возвращает ширину терминала в колонках.
-func termWidth() int {
-	ws, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
-	if err != nil || ws.Col == 0 {
-		return 80
-	}
-	return int(ws.Col)
-}
-
-// truncLine обрезает строку до ширины терминала, чтобы строка не заворачивалась и не ломала перерисовку.
-func truncLine(s string, width int) string {
-	out := ansi.Truncate(s, width, "…")
-	if out != s {
-		out += "\x1b[m"
-	}
-	return out
-}
-
-func disableEcho() {
-	fd := int(os.Stdin.Fd())
-	termios, err := unix.IoctlGetTermios(fd, unix.TCGETS)
-	if err != nil {
-		return
-	}
-	saved := *termios
-	savedTermios = &saved
-	termios.Lflag &^= unix.ECHO
-	_ = unix.IoctlSetTermios(fd, unix.TCSETS, termios)
-}
-
-func restoreEcho() {
-	if savedTermios == nil {
-		return
-	}
-	fd := int(os.Stdin.Fd())
-	_ = unix.IoctlSetTermios(fd, unix.TCSETS, savedTermios)
-	savedTermios = nil
-}
 
 // CreateSpinner создание и запуск спиннера.
 func CreateSpinner(appConfig *app.Config) {
@@ -114,22 +41,16 @@ func CreateSpinner(appConfig *app.Config) {
 		return
 	}
 
-	disableEcho()
-	fmt.Print("\033[?25l") // скрыть курсор
-
 	colors := appConfig.ConfigManager.GetColors()
-	sp := &simpleSpinner{
-		colors:      colors,
-		stopCh:      make(chan struct{}),
-		doneCh:      make(chan struct{}),
-		filledStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressFilled)),
-		emptyStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressEmpty)),
-	}
+	sp := progress.New(progress.Colors{
+		Filled: colors.ProgressFilled,
+		Empty:  colors.ProgressEmpty,
+	})
+	sp.Start()
 	activeSp = sp
-
-	go sp.run()
 }
 
+// StopSpinner останавливает активный спиннер.
 func StopSpinner(appConfig *app.Config) {
 	if !IsInteractive(appConfig) {
 		return
@@ -142,44 +63,8 @@ func StopSpinner(appConfig *app.Config) {
 		return
 	}
 
-	close(activeSp.stopCh)
-	<-activeSp.doneCh
-
-	activeSp.mu.Lock()
-	al := activeSp.activeLines
-
-	// Возвращаем курсор к началу анимируемой области
-	if al > 1 {
-		fmt.Printf("\033[%dA", al-1)
-	}
-
-	// Печатаем завершённые задачи, которые не успел напечатать render
-	maxWidth := termWidth() - 1
-	linesUsed := 0
-	for i := range activeSp.tasks {
-		t := &activeSp.tasks[i]
-		if t.state == StateAfter && !t.printed {
-			t.printed = true
-			fmt.Printf("%s%s\n", clearLine, truncLine("[✓] "+t.viewName, maxWidth))
-			linesUsed++
-		}
-	}
-
-	// Очищаем оставшиеся строки анимации
-	if extra := al - linesUsed; extra > 0 {
-		for i := 0; i < extra; i++ {
-			fmt.Print(clearLine)
-			if i < extra-1 {
-				fmt.Print("\n")
-			}
-		}
-	}
-	activeSp.mu.Unlock()
-
-	fmt.Print(clearLine)
-	fmt.Print("\033[?25h") // показать курсор
+	activeSp.Stop()
 	activeSp = nil
-	restoreEcho()
 }
 
 // updateTask обновление задачи/прогресса.
@@ -190,151 +75,17 @@ func updateTask(appConfig *app.Config, eventType string, taskName string, viewNa
 
 	mu.Lock()
 	sp := activeSp
+	mu.Unlock()
 	if sp == nil {
-		mu.Unlock()
 		return
 	}
-	sp.mu.Lock()
-	mu.Unlock()
-	defer sp.mu.Unlock()
 
-	for i, t := range sp.tasks {
-		if t.name == taskName {
-			sp.tasks[i].state = state
-			sp.tasks[i].viewName = viewName
-			sp.tasks[i].eventType = eventType
-			if eventType == EventTypeProgress {
-				sp.tasks[i].progressPercent = progressValue
-				sp.tasks[i].progressDoneText = progressDone
-			}
-			return
-		}
-	}
-
-	sp.tasks = append(sp.tasks, task{
-		eventType:        eventType,
-		name:             taskName,
-		viewName:         viewName,
-		state:            state,
-		progressPercent:  progressValue,
-		progressDoneText: progressDone,
+	sp.Update(progress.TaskUpdate{
+		Name:       taskName,
+		View:       viewName,
+		IsProgress: eventType == EventTypeProgress,
+		Percent:    progressValue,
+		DoneText:   progressDone,
+		Done:       state == StateAfter,
 	})
-}
-
-func (sp *simpleSpinner) run() {
-	defer close(sp.doneCh)
-	ticker := time.NewTicker(120 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-sp.stopCh:
-			return
-		case <-ticker.C:
-			sp.render()
-		}
-	}
-}
-
-func (sp *simpleSpinner) render() {
-	sp.mu.Lock()
-
-	prevActiveLines := sp.activeLines
-
-	var completedLines []string
-	for i := range sp.tasks {
-		t := &sp.tasks[i]
-		if t.state == StateAfter && !t.printed {
-			t.printed = true
-			if t.eventType == EventTypeProgress && len(t.progressDoneText) > 0 {
-				completedLines = append(completedLines, fmt.Sprintf(app.T_("Progress: %s completed"), t.progressDoneText))
-			} else {
-				completedLines = append(completedLines, t.viewName)
-			}
-		}
-	}
-
-	n := 0
-	for i := range sp.tasks {
-		if !(sp.tasks[i].state == StateAfter && sp.tasks[i].printed) {
-			sp.tasks[n] = sp.tasks[i]
-			n++
-		}
-	}
-	sp.tasks = sp.tasks[:n]
-
-	var actives []task
-	for i := range sp.tasks {
-		if sp.tasks[i].state != StateAfter {
-			actives = append(actives, sp.tasks[i])
-		}
-	}
-
-	frame := spinnerFrames[sp.frame%len(spinnerFrames)]
-	sp.frame++
-	sp.activeLines = len(actives)
-
-	filledStyle := sp.filledStyle
-	emptyStyle := sp.emptyStyle
-
-	sp.mu.Unlock()
-
-	// Строки не должны быть шире терминала, иначе перенос ломает перерисовку
-	maxWidth := termWidth() - 1
-
-	var buf strings.Builder
-
-	if prevActiveLines > 1 {
-		fmt.Fprintf(&buf, "\033[%dA", prevActiveLines-1)
-	}
-
-	for _, line := range completedLines {
-		buf.WriteString(clearLine)
-		buf.WriteString(truncLine("[✓] "+line, maxWidth))
-		buf.WriteByte('\n')
-	}
-
-	// Активные задачи со спиннером
-	if len(actives) > 0 {
-		for idx := range actives {
-			line := "[" + frame + "] "
-			if actives[idx].eventType == EventTypeProgress {
-				line += renderProgressBar(actives[idx], filledStyle, emptyStyle)
-			} else {
-				line += actives[idx].viewName
-			}
-			buf.WriteString(clearLine)
-			buf.WriteString(truncLine(line, maxWidth))
-			if idx < len(actives)-1 {
-				buf.WriteByte('\n')
-			}
-		}
-	}
-
-	if extra := prevActiveLines - len(actives); extra > 0 {
-		for i := 0; i < extra; i++ {
-			buf.WriteString("\n\033[K")
-		}
-		fmt.Fprintf(&buf, "\033[%dA", extra)
-	}
-
-	if len(actives) == 0 {
-		buf.WriteString(clearLine)
-	}
-
-	os.Stdout.WriteString(buf.String())
-}
-
-func renderProgressBar(t task, filledStyle, emptyStyle lipgloss.Style) string {
-	const width = 30
-	pct := t.progressPercent
-	if pct < 0 {
-		pct = 0
-	} else if pct > 100 {
-		pct = 100
-	}
-
-	filled := int(pct / 100 * float64(width))
-	bar := filledStyle.Render(strings.Repeat("█", filled)) + emptyStyle.Render(strings.Repeat("░", width-filled))
-	return fmt.Sprintf("[%s] %.0f%% %s", bar, pct, t.viewName)
 }
