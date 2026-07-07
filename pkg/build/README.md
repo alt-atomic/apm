@@ -16,7 +16,7 @@ import (
 	"context"
 
 	"altlinux.space/alt-atomic/apm/pkg/build"
-	_ "altlinux.space/alt-atomic/apm/pkg/build/modules
+	_ "altlinux.space/alt-atomic/apm/pkg/build/modules"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
