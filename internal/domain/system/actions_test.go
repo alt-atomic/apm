@@ -8,8 +8,8 @@ import (
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
-	"altlinux.space/alt-atomic/apm/internal/common/build"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	"altlinux.space/alt-atomic/apm/internal/common/testutil"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
@@ -106,13 +106,13 @@ func (m *mockAptDB) GetSections(_ context.Context) ([]string, error) {
 }
 
 type mockHostDB struct {
-	historyResult []build.ImageHistory
+	historyResult []imagesvc.ImageHistory
 	historyErr    error
 	countResult   int
 	countErr      error
 }
 
-func (m *mockHostDB) GetImageHistoriesFiltered(_ context.Context, _ string, _ int, _ int) ([]build.ImageHistory, error) {
+func (m *mockHostDB) GetImageHistoriesFiltered(_ context.Context, _ string, _ int, _ int) ([]imagesvc.ImageHistory, error) {
 	return m.historyResult, m.historyErr
 }
 func (m *mockHostDB) CountImageHistoriesFiltered(_ context.Context, _ string) (int, error) {
@@ -122,20 +122,20 @@ func (m *mockHostDB) CountImageHistoriesFiltered(_ context.Context, _ string) (i
 type mockHostImage struct{}
 
 func (m *mockHostImage) EnableOverlay() error { return nil }
-func (m *mockHostImage) GetHostImage() (build.HostImage, error) {
-	return build.HostImage{}, nil
+func (m *mockHostImage) GetHostImage() (imagesvc.HostImage, error) {
+	return imagesvc.HostImage{}, nil
 }
-func (m *mockHostImage) CheckAndUpdateBaseImage(_ context.Context, _ bool, _ bool, _ build.Config) error {
+func (m *mockHostImage) CheckAndUpdateBaseImage(_ context.Context, _ bool, _ bool, _ imagesvc.Config) error {
 	return nil
 }
 func (m *mockHostImage) SwitchImage(_ context.Context, _ string, _ bool) error { return nil }
-func (m *mockHostImage) BuildAndSwitch(_ context.Context, _ bool, _ bool, _ build.SwitchableConfig) error {
+func (m *mockHostImage) BuildAndSwitch(_ context.Context, _ bool, _ bool, _ imagesvc.SwitchableConfig) error {
 	return nil
 }
 func (m *mockHostImage) VerifyRemoteImage(_ context.Context, _ string) error { return nil }
 
 type mockHostConfig struct {
-	config  *build.Config
+	config  *imagesvc.Config
 	loadErr error
 	saveErr error
 }
@@ -150,8 +150,8 @@ func (m *mockHostConfig) SetImage(image string) error {
 func (m *mockHostConfig) GenerateDockerfile(_ bool) error                 { return nil }
 func (m *mockHostConfig) AddInstallPackage(_ string) error                { return nil }
 func (m *mockHostConfig) AddRemovePackage(_ string) error                 { return nil }
-func (m *mockHostConfig) GetConfig() *build.Config                        { return m.config }
-func (m *mockHostConfig) SetConfig(c *build.Config)                       { m.config = c }
+func (m *mockHostConfig) GetConfig() *imagesvc.Config                     { return m.config }
+func (m *mockHostConfig) SetConfig(c *imagesvc.Config)                    { m.config = c }
 func (m *mockHostConfig) ConfigIsChanged(_ context.Context) (bool, error) { return false, nil }
 func (m *mockHostConfig) SaveConfigToDB(_ context.Context) error          { return nil }
 func (m *mockHostConfig) ApplyPathOverrides(_, _ string) error            { return nil }
@@ -629,7 +629,7 @@ func TestCheckReinstall(t *testing.T) {
 }
 
 func TestImageHistory(t *testing.T) {
-	history := []build.ImageHistory{
+	history := []imagesvc.ImageHistory{
 		{ImageName: "alt:p11"},
 		{ImageName: "alt:p11"},
 	}
@@ -669,7 +669,7 @@ func TestImageHistory(t *testing.T) {
 
 func TestImageGetConfig(t *testing.T) {
 	t.Run("returns loaded config", func(t *testing.T) {
-		cfg := &build.Config{Image: "alt:p11"}
+		cfg := &imagesvc.Config{Image: "alt:p11"}
 		actions := newTestActions(nil, &mockAptDB{}, nil)
 		actions.serviceHostConfig = &mockHostConfig{config: cfg}
 
@@ -693,11 +693,11 @@ func TestImageGetConfig(t *testing.T) {
 
 func TestImageSaveConfig(t *testing.T) {
 	t.Run("replaces config and saves", func(t *testing.T) {
-		hcfg := &mockHostConfig{config: &build.Config{Image: "old"}}
+		hcfg := &mockHostConfig{config: &imagesvc.Config{Image: "old"}}
 		actions := newTestActions(nil, &mockAptDB{}, nil)
 		actions.serviceHostConfig = hcfg
 
-		newCfg := build.Config{Image: "alt:p12"}
+		newCfg := imagesvc.Config{Image: "alt:p12"}
 		resp, err := actions.ImageSaveConfig(context.Background(), newCfg)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -713,11 +713,11 @@ func TestImageSaveConfig(t *testing.T) {
 	t.Run("save error propagates as image error", func(t *testing.T) {
 		actions := newTestActions(nil, &mockAptDB{}, nil)
 		actions.serviceHostConfig = &mockHostConfig{
-			config:  &build.Config{},
+			config:  &imagesvc.Config{},
 			saveErr: errors.New("disk full"),
 		}
 
-		_, err := actions.ImageSaveConfig(context.Background(), build.Config{Image: "new"})
+		_, err := actions.ImageSaveConfig(context.Background(), imagesvc.Config{Image: "new"})
 		testutil.AssertAPMError(t, err, apmerr.ErrorTypeImage)
 	})
 }

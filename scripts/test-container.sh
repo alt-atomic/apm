@@ -2,7 +2,7 @@
 # Test runner script for containerized testing using pre-built container
 # Builds and installs APM inside container, then runs go test directly (no meson)
 # Usage: ./scripts/test-container.sh [test-suite]
-# Test suites: integration, all, exec
+# Test suites: integration, build, all, exec
 # Usage: ./scripts/test-container.sh exec - to enter container interactively
 
 set -euo pipefail
@@ -174,12 +174,25 @@ case "${TEST_SUITE}" in
             echo 'Running binding tests...' && \
             go test ./tests/binding/... -v && \
             echo 'Running unit tests...' && \
-            go test ./internal/... -v
+            go test ./internal/... -v && \
+            echo 'Running build tests...' && \
+            go test ./tests/integration/build/... -v
+        "
+        ;;
+    "build")
+        print_info "Running build integration tests (requires root)..."
+        podman exec --user root "${CONTAINER_NAME}" bash -c "
+            cd /tmp/apm-src && \
+            export GOCACHE=/tmp/go-cache && \
+            export GOMODCACHE=/tmp/go-mod && \
+            export GO111MODULE=on && \
+            echo 'Running build tests...' && \
+            go test ./tests/integration/build/... -v
         "
         ;;
     *)
         print_error "Unknown test suite: ${TEST_SUITE}"
-        print_info "Available test suites: unit, system, distrobox, all, exec"
+        print_info "Available test suites: integration, build, all, exec"
         exit 1
         ;;
 esac

@@ -20,8 +20,8 @@ import (
 	"context"
 
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
-	"altlinux.space/alt-atomic/apm/internal/common/build"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
@@ -62,17 +62,17 @@ type aptDatabaseService interface {
 
 // hostDatabaseService определяет методы для работы с базой данных образов.
 type hostDatabaseService interface {
-	GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int) ([]build.ImageHistory, error)
+	GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int) ([]imagesvc.ImageHistory, error)
 	CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (int, error)
 }
 
 // hostImageService определяет методы для работы с образами хоста.
 type hostImageService interface {
 	EnableOverlay() error
-	GetHostImage() (build.HostImage, error)
-	CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config build.Config) error
+	GetHostImage() (imagesvc.HostImage, error)
+	CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config imagesvc.Config) error
 	SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error
-	BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService build.SwitchableConfig) error
+	BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService imagesvc.SwitchableConfig) error
 	VerifyRemoteImage(ctx context.Context, imageName string) error
 }
 
@@ -85,8 +85,8 @@ type hostConfigService interface {
 	GenerateDockerfile(hostCache bool) error
 	AddInstallPackage(pkg string) error
 	AddRemovePackage(pkg string) error
-	GetConfig() *build.Config
-	SetConfig(config *build.Config)
+	GetConfig() *imagesvc.Config
+	SetConfig(config *imagesvc.Config)
 	ConfigIsChanged(ctx context.Context) (bool, error)
 	SaveConfigToDB(ctx context.Context) error
 	ApplyPathOverrides(configPath, workdir string) error

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 )
 
 type Version struct {
@@ -28,6 +30,20 @@ type Version struct {
 	Patch   int
 	Commits int
 	Value   string
+}
+
+// ToBuildVersion конвертирует версию в тип версии движка сборки.
+func (v *Version) ToBuildVersion() pkgbuild.Version {
+	if v == nil {
+		return pkgbuild.Version{}
+	}
+	return pkgbuild.Version{
+		Major:   v.Major,
+		Minor:   v.Minor,
+		Patch:   v.Patch,
+		Commits: v.Commits,
+		Value:   v.Value,
+	}
 }
 
 func ParseVersion(version string) (*Version, error) {

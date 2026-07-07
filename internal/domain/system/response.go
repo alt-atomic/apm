@@ -18,8 +18,8 @@ package system
 
 import (
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
-	"altlinux.space/alt-atomic/apm/internal/common/build"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
@@ -110,9 +110,9 @@ type ImageSwitchResponse struct {
 
 // ImageHistoryResponse структура ответа для ImageHistory метода
 type ImageHistoryResponse struct {
-	Message    string               `json:"message"`
-	History    []build.ImageHistory `json:"history"`
-	TotalCount int                  `json:"totalCount"`
+	Message    string                  `json:"message"`
+	History    []imagesvc.ImageHistory `json:"history"`
+	TotalCount int                     `json:"totalCount"`
 }
 
 type ImageLintResponse struct {
@@ -137,7 +137,7 @@ type ImageLintRunTmp struct {
 
 // ImageConfigResponse структура ответа для ImageGetConfig/ImageSaveConfig методов
 type ImageConfigResponse struct {
-	Config build.Config `json:"config"`
+	Config imagesvc.Config `json:"config"`
 }
 
 // ImageFixNssResponse структура ответа для ImageFixNss метода

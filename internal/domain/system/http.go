@@ -22,14 +22,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
 	"net/http"
 	"reflect"
 	"strconv"
 
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
-	"altlinux.space/alt-atomic/apm/internal/common/build"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	"altlinux.space/alt-atomic/apm/internal/common/http_server"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
@@ -506,7 +508,7 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 
 // ImageSaveConfig сохраняет конфигурацию образа.
 func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
-	var config build.Config
+	var config imagesvc.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 		if errors.Is(err, io.EOF) {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
@@ -1029,7 +1031,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				Handler:      w.ImageSaveConfig,
 				HTTPMethod:   "PUT",
 				HTTPPath:     "/api/v1/image/config",
-				RequestType:  reflect.TypeOf(build.Config{}),
+				RequestType:  reflect.TypeOf(imagesvc.Config{}),
 				ResponseType: reflect.TypeOf(ImageConfigResponse{}),
 				Permission:   http_server.PermManage,
 				Summary:      "Сохранить конфигурацию образа",

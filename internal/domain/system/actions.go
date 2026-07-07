@@ -32,6 +32,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/build/altfiles"
 	"altlinux.space/alt-atomic/apm/internal/common/build/lint"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	kservice "altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
@@ -58,17 +59,17 @@ type Actions struct {
 // NewActions создаёт новый экземпляр Actions.
 func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
 	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager, reporter)
-	hostDBSvc := build.NewHostDBService(appConfig.DatabaseManager, reporter)
+	hostDBSvc := imagesvc.NewHostDBService(appConfig.DatabaseManager, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	hostImageSvc := build.NewHostImageService(
+	hostImageSvc := imagesvc.NewHostImageService(
 		cfg,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 		runner,
 		reporter,
 	)
-	hostConfigSvc := build.NewHostConfigService(
+	hostConfigSvc := imagesvc.NewHostConfigService(
 		hostDBSvc,
 		hostImageSvc,
 	)
@@ -108,9 +109,9 @@ func (a *Actions) GetAptConfigOverrides() (*AptConfigResponse, error) {
 }
 
 type ImageStatus struct {
-	Image  build.HostImage `json:"image"`
-	Status string          `json:"status"`
-	Config build.Config    `json:"config"`
+	Image  imagesvc.HostImage `json:"image"`
+	Status string             `json:"status"`
+	Config imagesvc.Config    `json:"config"`
 }
 
 // CheckRemove проверяем пакеты перед удалением
@@ -1115,7 +1116,7 @@ func (a *Actions) ImageGetConfig(_ context.Context) (*ImageConfigResponse, error
 }
 
 // ImageSaveConfig сохранить конфиг
-func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*ImageConfigResponse, error) {
+func (a *Actions) ImageSaveConfig(_ context.Context, config imagesvc.Config) (*ImageConfigResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)

@@ -25,7 +25,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
-	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 	"altlinux.space/alt-atomic/apm/pkg/command"
@@ -85,7 +85,7 @@ func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	hostImageSvc := build.NewHostImageService(
+	hostImageSvc := imagesvc.NewHostImageService(
 		cfg,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 		runner,
