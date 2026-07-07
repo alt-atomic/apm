@@ -3,8 +3,7 @@ package modules
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
+	"strings"
 
 	"altlinux.space/alt-atomic/apm/pkg/build"
 )
@@ -23,34 +22,40 @@ type SystemdBody struct {
 	Masked bool `yaml:"masked,omitempty" json:"masked,omitempty" conflicts:"Enabled"`
 }
 
-func (b *SystemdBody) Execute(ctx context.Context, _ build.RuntimeContext) (any, error) {
+func (b *SystemdBody) Execute(ctx context.Context, svc build.RuntimeContext) (any, error) {
 	for _, target := range b.Targets {
-		var text = fmt.Sprintf("Disabling %s", target)
-		var action = "disable"
-		if b.Masked {
-			text = fmt.Sprintf("Masking %s", target)
-			action = "mask"
-		}
-		if b.Enabled {
-			text = fmt.Sprintf("Enabling %s", target)
-			action = "enable"
-		}
-		build.Log().Info(text)
+		action, verb := systemdAction(b.Masked, b.Enabled)
+		build.Log().Info(fmt.Sprintf("%s %s", verb, target))
 
-		var args []string
-		if b.Global {
-			args = append(args, "--global")
+		args := systemctlArgs(action, b.Global, target)
+		stdout, stderr, err := svc.Runner().Run(ctx, args)
+		if err != nil {
+			return nil, fmt.Errorf("%s %s: %w: %s", action, target, err, strings.TrimSpace(stderr))
 		}
-		args = append(args, action, target)
-
-		cmd := exec.CommandContext(ctx, "systemctl", args...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return nil, err
-		}
+		svc.CollectOutput(stdout)
 	}
 	return nil, nil
+}
+
+// systemdAction picks the systemctl action and its log verb; enable wins over mask.
+func systemdAction(masked, enabled bool) (action, verb string) {
+	switch {
+	case enabled:
+		return "enable", "Enabling"
+	case masked:
+		return "mask", "Masking"
+	default:
+		return "disable", "Disabling"
+	}
+}
+
+// systemctlArgs builds the systemctl command line.
+func systemctlArgs(action string, global bool, target string) []string {
+	args := []string{"systemctl"}
+	if global {
+		args = append(args, "--global")
+	}
+	return append(args, action, target)
 }
 
 func init() { build.Register(TypeSystemd, func() build.Body { return &SystemdBody{} }) }
