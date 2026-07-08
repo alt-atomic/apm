@@ -477,6 +477,43 @@ modules:
 	s.T().Log("Config validation test passed")
 }
 
+// writeResource пишет include-файл в resources директорию
+func (s *BuildTestSuite) writeResource(name, content string) {
+	s.Require().NoError(os.WriteFile(filepath.Join(s.resourcesDir, name), []byte(content), 0644))
+}
+
+// TestIncludeNestedValidates проверяет, что валидная цепочка includes a→b→c проходит рекурсивную валидацию
+func (s *BuildTestSuite) TestIncludeNestedValidates() {
+	s.writeResource("a.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - b.yml\n")
+	s.writeResource("b.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - c.yml\n")
+	s.writeResource("c.yml", "modules:\n  - name: leaf\n    type: shell\n    body:\n      command: \"true\"\n")
+
+	top := "image: \"alt:sisyphus\"\nmodules:\n  - type: include\n    body:\n      targets:\n        - a.yml\n"
+	s.Require().NoError(os.WriteFile(s.testImageFile, []byte(top), 0644))
+
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
+
+	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir)
+	s.Require().NoError(err, "valid nested include chain should validate")
+}
+
+// TestIncludeCircularDetected проверяет, что рекурсивная валидация ловит цикл includes
+func (s *BuildTestSuite) TestIncludeCircularDetected() {
+	s.writeResource("a.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - b.yml\n")
+	s.writeResource("b.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - a.yml\n")
+
+	top := "image: \"alt:sisyphus\"\nmodules:\n  - type: include\n    body:\n      targets:\n        - a.yml\n"
+	s.Require().NoError(os.WriteFile(s.testImageFile, []byte(top), 0644))
+
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
+
+	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir)
+	s.Require().Error(err, "circular include must be detected")
+	assert.Contains(s.T(), err.Error(), "circular")
+}
+
 // TestRunner запускает тест-сьют
 func TestBuildIntegration(t *testing.T) {
 	suite.Run(t, new(BuildTestSuite))
