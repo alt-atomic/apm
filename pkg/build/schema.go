@@ -83,7 +83,7 @@ func (m Module) GetLabel() any {
 }
 
 func CheckModules(modules *[]Module) error {
-	moduleIds := []string{}
+	var moduleIds []string
 
 	re, err := regexp.Compile(`^[A-z][A-z0-9_]*$`)
 	if err != nil {

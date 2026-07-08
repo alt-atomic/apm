@@ -104,7 +104,7 @@ func (v *ValidationService) validateDir(dir string) error {
 			continue
 		}
 		name := file.Name()
-		if strings.HasSuffix(name, ".yml") || strings.HasSuffix(name, ".yaml") {
+		if isRecipeFile(name) {
 			filePath := filepath.Join(dir, name)
 
 			// Replace the dir on the stack with the concrete file.
