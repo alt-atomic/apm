@@ -235,7 +235,7 @@ func (e *Engine) ExecuteInclude(ctx context.Context, bc RuntimeContext, target s
 	return e.executeIncludeFileWithCD(ctx, bc, target)
 }
 
-// executeIncludeDir runs every YAML file in the directory.
+// executeIncludeDir runs every recipe file in the directory.
 func (e *Engine) executeIncludeDir(ctx context.Context, bc RuntimeContext, dir string) error {
 	files, err := os.ReadDir(dir)
 	if err != nil {
@@ -248,7 +248,7 @@ func (e *Engine) executeIncludeDir(ctx context.Context, bc RuntimeContext, dir s
 		}
 
 		path := filepath.Join(dir, file.Name())
-		if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
+		if isRecipeFile(path) {
 			// Ignore the dir so include ids stay scoped to a single file.
 			if _, err = e.executeIncludeFileWithCD(ctx, bc, path); err != nil {
 				return err

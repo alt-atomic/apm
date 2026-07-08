@@ -88,7 +88,7 @@ func (s *HostConfigService) LoadConfig() error {
 		return s.SaveConfig()
 	}
 
-	if cfg, err = pkgbuild.ReadAndParseConfigYamlFile(s.hostImageService.appConfig.PathImageFile); err != nil {
+	if cfg, err = pkgbuild.ReadAndParseConfig(s.hostImageService.appConfig.PathImageFile); err != nil {
 		return err
 	}
 
@@ -112,7 +112,7 @@ func (s *HostConfigService) GetConfigEnvVars() (map[string]string, error) {
 		return map[string]string{}, nil
 	}
 
-	if envs, err = pkgbuild.ReadAndParseConfigEnvYamlFile(s.hostImageService.appConfig.PathImageFile, s.hostImageService.appConfig.ParsedVersion.ToBuildVersion()); err != nil {
+	if envs, err = pkgbuild.ReadAndParseConfigEnv(s.hostImageService.appConfig.PathImageFile, s.hostImageService.appConfig.ParsedVersion.ToBuildVersion()); err != nil {
 		return map[string]string{}, err
 	}
 	return envs.Env, nil

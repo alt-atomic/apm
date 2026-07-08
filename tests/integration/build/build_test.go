@@ -124,7 +124,7 @@ modules:
 	assert.NoError(s.T(), err)
 
 	// Загружаем и выполняем конфигурацию
-	cfg, err := pkgbuild.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 	assert.Equal(s.T(), 1, len(cfg.Modules))
 	assert.Equal(s.T(), modules.TypeCopy, cfg.Modules[0].Type)
@@ -167,7 +167,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := pkgbuild.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
@@ -207,7 +207,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := pkgbuild.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
@@ -240,7 +240,7 @@ modules:
 	err := os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := pkgbuild.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
@@ -277,7 +277,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := pkgbuild.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
@@ -324,7 +324,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := pkgbuild.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
@@ -381,7 +381,7 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := pkgbuild.ReadAndParseConfigYamlFile(s.testImageFile)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 	assert.Equal(s.T(), 3, len(cfg.Modules), "Should have 3 modules")
 
@@ -462,7 +462,7 @@ modules:
 			err := os.WriteFile(testFile, []byte(tt.yaml), 0644)
 			assert.NoError(t, err)
 
-			_, err = pkgbuild.ReadAndParseConfigYamlFile(testFile)
+			_, err = pkgbuild.ReadAndParseConfig(testFile)
 			if tt.shouldErr {
 				assert.Error(t, err, "Should fail validation")
 				if tt.errMsg != "" {
