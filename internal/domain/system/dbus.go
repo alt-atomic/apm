@@ -21,10 +21,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
-	"altlinux.space/alt-atomic/apm/internal/common/build"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	"altlinux.space/alt-atomic/apm/internal/common/helper"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
@@ -801,7 +802,7 @@ func (w *DBusWrapper) ImageSaveConfig(sender dbus.Sender, config string) (string
 		return "", err
 	}
 
-	configObject := build.Config{}
+	configObject := imagesvc.Config{}
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
 		return "", dbus.MakeFailedError(fmt.Errorf(app.T_("Failed to parse JSON: %w"), err))
 	}

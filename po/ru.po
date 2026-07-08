@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-07 14:55+0600\n"
+"POT-Creation-Date: 2026-07-07 18:17+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -22,36 +22,36 @@ msgstr ""
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Generator: Gtranslator 49.0\n"
 
-#: cmd/apm/main.go:98
+#: cmd/apm/main.go:101
 #, c-format
 msgid "Unknown command: %s. See 'apm help'"
 msgstr "Неизвестная команда: %s. Посмотрите 'apm help'"
 
-#: cmd/apm/main.go:117
+#: cmd/apm/main.go:120
 msgid "Start session D-Bus service org.altlinux.APM"
 msgstr "Запустить сессионный сервис D-Bus org.altlinux.APM"
 
-#: cmd/apm/main.go:118
+#: cmd/apm/main.go:121
 msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
-#: cmd/apm/main.go:119
+#: cmd/apm/main.go:122
 msgid "Start system HTTP API server"
 msgstr "Запустить системный HTTP API сервер"
 
-#: cmd/apm/main.go:120
+#: cmd/apm/main.go:123
 msgid "Start session HTTP API"
 msgstr "Запустить сессионный HTTP API сервер"
 
-#: cmd/apm/main.go:177
+#: cmd/apm/main.go:180
 msgid "Distrobox is not installed"
 msgstr "Distrobox не установлен"
 
-#: cmd/apm/main.go:226
+#: cmd/apm/main.go:229
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
 
-#: cmd/apm/main.go:231
+#: cmd/apm/main.go:234
 msgid "failed to close databases: %w"
 msgstr "Не удалось закрыть базы данных: %s"
 
@@ -830,60 +830,23 @@ msgstr "Прогресс установки: %s"
 msgid "Installing %s"
 msgstr "Установка %s"
 
-#: internal/common/build/build.go:96
+#: internal/common/build/build.go:140
 msgid "Configuration not loaded. Load config first"
 msgstr "Конфигурация не загружена. Сначала загрузите конфигурацию"
 
-#: internal/common/build/build.go:207
-#, c-format
-msgid "'%s' type doesn't support output"
-msgstr "Тип '%s' не поддерживает вывод"
-
-#: internal/common/build/build.go:272 internal/domain/system/actions.go:693
+#: internal/common/build/build.go:181 internal/domain/system/actions.go:693
 #, c-format
 msgid "Failed to retrieve information about the package %s"
 msgstr "Не удалось извлечь информацию о пакете %s"
 
-#: internal/common/build/build.go:283 internal/domain/system/actions.go:703
+#: internal/common/build/build.go:192 internal/domain/system/actions.go:703
 msgid ". Maybe you were looking for: "
 msgstr ". Возможно, вы искали: "
 
-#: internal/common/build/build.go:474
-#, c-format
-msgid "module with id='%s'%s will be overriding%s"
-msgstr "модуль с id='%s'%s будет переопределять %s"
-
-#: internal/common/build/config.go:121
+#: internal/common/build/config.go:123
 #: internal/domain/system/temporary/temporary.go:81
 msgid "Configuration not loaded"
 msgstr "Конфигурация не загружена"
-
-#: internal/common/build/core/expr.go:187
-msgid "unknown expr output type"
-msgstr "неизвестный тип вывода выражения"
-
-#: internal/common/build/core/models.go:181
-msgid "Image can not be empty"
-msgstr "Образ не может быть пустым"
-
-#: internal/common/build/core/models.go:322
-#, c-format
-msgid ""
-"Invalid id '%s'. Acceptable characters are letters, numbers, and "
-"underscores. The key must start with a letter."
-msgstr ""
-"Недопустимый идентификатор '%s'. Допустимыми символами являются буквы, цифры "
-"и подчеркивания. Ключ должен начинаться с буквы."
-
-#: internal/common/build/core/validate.go:62
-#, c-format
-msgid "circular include detected: %s"
-msgstr "Обнаружено циклическое добавление: %s"
-
-#: internal/common/build/core/validate.go:88
-#, c-format
-msgid "include target not found: %s"
-msgstr "Цель не найдена: %s"
 
 #: internal/common/build/database.go:84
 msgid "SQLite connection error via GORM: %w"
@@ -1009,25 +972,16 @@ msgstr "Ошибка чтения файла %s: %w"
 msgid "Failed to determine the distribution image in %s"
 msgstr "Не удалось определить образ дистрибутива в %s"
 
-#: internal/common/build/models/kernel.go:78
+#: internal/common/build/modules/kernel.go:80
 #, c-format
 msgid "unknown initrd method %s"
 msgstr "неизвестный метод initrd %s"
 
-#: internal/common/build/models/kernel.go:350
+#: internal/common/build/modules/kernel.go:364
 msgid "failed to parse kernel package from database"
 msgstr "не удалось проанализировать пакет ядра из базы данных"
 
-#: internal/common/build/models/link.go:27
-msgid "target in link type must be absolute path"
-msgstr "цель в типе ссылки должна быть абсолютным путем"
-
-#: internal/common/build/models/link.go:31
-#, c-format
-msgid "path %s for link doesn't exists"
-msgstr "путь %s для ссылки не существует"
-
-#: internal/common/build/models/repos.go:63
+#: internal/common/build/modules/repos.go:70
 #, c-format
 msgid "unknown branch %s"
 msgstr "неизвестная ветвь %s"
@@ -2500,7 +2454,7 @@ msgstr "Найден пакет"
 #: internal/domain/distrobox/actions.go:144
 #: internal/domain/distrobox/actions.go:192
 #: internal/domain/system/actions.go:820 internal/domain/system/actions.go:878
-#: internal/domain/system/actions.go:1070
+#: internal/domain/system/actions.go:1069
 #: internal/domain/system/appstream/actions.go:123
 #, c-format
 msgid "%d record found"
@@ -2903,7 +2857,7 @@ msgstr[0] "%d модуль успешно удален из ядра %s"
 msgstr[1] "%d модуля успешно удалено из ядра %s"
 msgstr[2] "%d модулей успешно удалено из ядра %s"
 
-#: internal/domain/kernel/actions.go:697 internal/domain/system/actions.go:1238
+#: internal/domain/kernel/actions.go:697 internal/domain/system/actions.go:1237
 msgid ""
 "package database is empty. Run 'apm system update' with elevated rights to "
 "create it"
@@ -3415,33 +3369,33 @@ msgstr "Необходимо указать целевой образ"
 msgid "The system is already based on image %s"
 msgstr "Система уже основана на образе %s"
 
-#: internal/domain/system/actions.go:1053
+#: internal/domain/system/actions.go:1052
 msgid "Image switched successfully. A reboot is required"
 msgstr "Образ успешно переключён. Необходима перезагрузка"
 
-#: internal/domain/system/actions.go:1140
-#: internal/domain/system/actions.go:1161
-#: internal/domain/system/actions.go:1205
+#: internal/domain/system/actions.go:1139
+#: internal/domain/system/actions.go:1160
+#: internal/domain/system/actions.go:1204
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: internal/domain/system/actions.go:1150
+#: internal/domain/system/actions.go:1149
 msgid "nss-altfiles configuration applied successfully"
 msgstr "Конфигурация nss-altfiles успешно применена"
 
-#: internal/domain/system/actions.go:1173
+#: internal/domain/system/actions.go:1172
 msgid "No configs found"
 msgstr "Конфигурации не найдены"
 
-#: internal/domain/system/actions.go:1183
+#: internal/domain/system/actions.go:1182
 msgid "Groups synced successfully"
 msgstr "Группы успешно синхронизированы"
 
-#: internal/domain/system/actions.go:1309
+#: internal/domain/system/actions.go:1308
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/domain/system/actions.go:1316
+#: internal/domain/system/actions.go:1315
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 
@@ -3974,6 +3928,52 @@ msgstr "ошибка сканирования вывода RPM: %w"
 #, c-format
 msgid "error scanning RPM output: %s"
 msgstr "ошибка сканирования вывода RPM: %s"
+
+#: pkg/build/engine.go:188
+#, c-format
+msgid "'%s' type doesn't support output"
+msgstr "Тип '%s' не поддерживает вывод"
+
+#: pkg/build/engine.go:323
+#, c-format
+msgid "module with id='%s'%s will be overriding%s"
+msgstr "модуль с id='%s'%s будет переопределять %s"
+
+#: pkg/build/expr.go:184
+msgid "unknown expr output type"
+msgstr "неизвестный тип вывода выражения"
+
+#: pkg/build/modules/link.go:27
+msgid "target in link type must be absolute path"
+msgstr "цель в типе ссылки должна быть абсолютным путем"
+
+#: pkg/build/modules/link.go:31
+#, c-format
+msgid "path %s for link doesn't exists"
+msgstr "путь %s для ссылки не существует"
+
+#: pkg/build/schema.go:38
+msgid "Image can not be empty"
+msgstr "Образ не может быть пустым"
+
+#: pkg/build/schema.go:178
+#, c-format
+msgid ""
+"Invalid id '%s'. Acceptable characters are letters, numbers, and "
+"underscores. The key must start with a letter."
+msgstr ""
+"Недопустимый идентификатор '%s'. Допустимыми символами являются буквы, цифры "
+"и подчеркивания. Ключ должен начинаться с буквы."
+
+#: pkg/build/validate.go:65
+#, c-format
+msgid "circular include detected: %s"
+msgstr "Обнаружено циклическое добавление: %s"
+
+#: pkg/build/validate.go:91
+#, c-format
+msgid "include target not found: %s"
+msgstr "Цель не найдена: %s"
 
 #: pkg/osutils/osutils.go:43
 #, c-format

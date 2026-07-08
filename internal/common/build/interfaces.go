@@ -6,6 +6,7 @@ import (
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 )
 
 // buildAptActionsService определяет методы APT операций для сборки образа.
@@ -28,11 +29,5 @@ type buildPackageDBService interface {
 
 // buildHostConfigService определяет методы для работы с конфигурацией хоста при сборке.
 type buildHostConfigService interface {
-	GetConfig() *Config
-}
-
-// SwitchableConfig определяет методы конфигурации для BuildAndSwitch.
-type SwitchableConfig interface {
-	ConfigIsChanged(ctx context.Context) (bool, error)
-	SaveConfigToDB(ctx context.Context) error
+	GetConfig() *pkgbuild.Config
 }
