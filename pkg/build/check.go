@@ -85,14 +85,12 @@ func checkRequired(parent reflect.Value, field reflect.Value, fieldType reflect.
 }
 
 func checkDeprecated(parent reflect.Value, _ reflect.Value, fieldType reflect.StructField) error {
-	// Required equal something or not present at all
-	value, ok := fieldType.Tag.Lookup("deprecated")
+	_, ok := fieldType.Tag.Lookup("deprecated")
 	if ok {
 		logger.Warning(fmt.Sprintf(
-			"'%s' in '%s' is deprecated and will be dropped in %s",
+			"'%s' in '%s' is deprecated and will be dropped in future releases",
 			pascalToKebab(fieldType.Name),
 			BodyTypeToType(parent.Type().Name()),
-			value,
 		))
 	}
 
