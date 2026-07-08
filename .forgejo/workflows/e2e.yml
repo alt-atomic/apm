@@ -1,0 +1,27 @@
+name: E2E
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-e2e:
+    name: APM Podman E2E
+    runs-on: als-huge
+
+    steps:
+      - name: Install podman
+        run: |
+          apt-get update
+          apt-get install -y podman rsync
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run containerized tests
+        run: bash ./scripts/test-container.sh all
