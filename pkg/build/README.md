@@ -45,7 +45,7 @@ func main() {
 	eng := build.NewEngine(build.Version{}, "myapp.module")
 	h := &host{engine: eng, runner: command.NewRunner("", false)}
 
-	cfg, err := build.ReadAndParseConfigYamlFile("recipe.yml")
+	cfg, err := build.ReadAndParseConfig("recipe.yml")
 	if err != nil {
 		panic(err)
 	}
@@ -137,7 +137,11 @@ build.SetTranslator(func (s string) string { … }) // напр. gettext
 ```
 
 ## Хелперы
-- `ReadAndParseConfigYamlFile(path)` / `ParseYamlConfigData(bytes)` / `ParseJsonConfigData(bytes)` — разобрать полный
-  `Config`.
-- `ReadAndParseModules(target)` — разобрать список модулей из файла, директории или URL.
+
+Разбор делится на два слоя: по **источнику** (файл/URL, формат определяется по расширению) и по **байтам** (формат задан явно).
+
+- `ReadAndParseConfig(target)` — прочитать и разобрать полный `Config` из файла или URL; YAML/JSON выбирается по расширению.
+- `ReadAndParseModules(target)` — то же для списка модулей (файл, директория или URL).
+- `ReadAndParseConfigEnv(target, ver)` — прочитать переменные окружения рецепта.
+- `ParseYamlConfigData(bytes)` / `ParseJsonConfigData(bytes)` — разобрать полный `Config` из готовых байт с явным форматом.
 - `ValidateConfigRecursive(cfg, basePath)` — провалидировать конфиг и все его `include`-цели.
