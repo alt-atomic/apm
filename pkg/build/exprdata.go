@@ -25,4 +25,5 @@ type ExprData struct {
 	Env     map[string]string
 	Version Version
 	Arch    string
+	GoArch  string
 }
