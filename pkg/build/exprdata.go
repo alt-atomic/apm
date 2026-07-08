@@ -24,4 +24,5 @@ type ExprData struct {
 	Modules map[string]*MapModule
 	Env     map[string]string
 	Version Version
+	Arch    string
 }

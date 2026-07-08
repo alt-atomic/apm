@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"runtime"
 
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 )
@@ -113,6 +114,7 @@ func (e *Engine) ExecuteModule(ctx context.Context, bc RuntimeContext, module Mo
 		Modules: modulesMap,
 		Env:     osutils.GetEnvMap(),
 		Version: e.version,
+		Arch:    runtime.GOARCH,
 	}
 
 	moduleResolvedEnvMap, err := ResolveExprMap(module.Env, exprData)
