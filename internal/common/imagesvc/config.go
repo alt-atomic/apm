@@ -94,7 +94,7 @@ func (s *HostConfigService) LoadConfig() error {
 
 	// Рекурсивная валидация всех include файлов
 	basePath := s.hostImageService.appConfig.PathResourcesDir
-	if err = pkgbuild.ValidateConfigRecursive(&cfg, basePath); err != nil {
+	if err = pkgbuild.ValidateConfigRecursive(&cfg, basePath, s.hostImageService.appConfig.ParsedVersion.ToBuildVersion()); err != nil {
 		return err
 	}
 

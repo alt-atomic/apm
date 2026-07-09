@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
@@ -110,13 +109,8 @@ func (e *Engine) runModules(ctx context.Context, bc RuntimeContext, modules []Mo
 }
 
 func (e *Engine) ExecuteModule(ctx context.Context, bc RuntimeContext, module Module, modulesMap map[string]*MapModule) (*MapModule, error) {
-	exprData := ExprData{
-		Modules: modulesMap,
-		Env:     osutils.GetEnvMap(),
-		Version: e.version,
-		Arch:    detectArch(),
-		GoArch:  runtime.GOARCH,
-	}
+	exprData := newExprData(e.version)
+	exprData.Modules = modulesMap
 
 	moduleResolvedEnvMap, err := ResolveExprMap(module.Env, exprData)
 	if err != nil {

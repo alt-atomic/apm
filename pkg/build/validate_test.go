@@ -19,6 +19,7 @@ package build_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestValidateNestedIncludes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse top: %v", err)
 	}
-	if err := build.ValidateConfigRecursive(&cfg, dir); err != nil {
+	if err := build.ValidateConfigRecursive(&cfg, dir, build.Version{}); err != nil {
 		t.Errorf("nested includes should validate: %v", err)
 	}
 }
@@ -59,7 +60,7 @@ func TestValidateCircularInclude(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse top: %v", err)
 	}
-	err = build.ValidateConfigRecursive(&cfg, dir)
+	err = build.ValidateConfigRecursive(&cfg, dir, build.Version{})
 	if err == nil {
 		t.Fatal("circular include not detected")
 	}
@@ -75,7 +76,68 @@ func TestValidateMissingTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse top: %v", err)
 	}
-	if err := build.ValidateConfigRecursive(&cfg, dir); err == nil {
+	if err := build.ValidateConfigRecursive(&cfg, dir, build.Version{}); err == nil {
 		t.Error("missing include target should error")
+	}
+}
+
+// TestValidateResolvesEnvInTarget checks that ${{ Env.* }} in an include target resolves.
+func TestValidateResolvesEnvInTarget(t *testing.T) {
+	t.Setenv("FLAVOUR", "qcm")
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "flavour"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeInclude(t, filepath.Join(dir, "flavour"), "qcm.yml", "modules: []\n")
+
+	cfg, err := build.ParseYamlConfigData([]byte("modules:\n  - type: include\n    body:\n      targets:\n        - flavour/${{ Env.FLAVOUR }}.yml\n"))
+	if err != nil {
+		t.Fatalf("parse top: %v", err)
+	}
+	if err := build.ValidateConfigRecursive(&cfg, dir, build.Version{}); err != nil {
+		t.Errorf("env-resolved include target should validate: %v", err)
+	}
+}
+
+// TestValidateResolvedMissingTargetErrors checks that a resolved-but-missing target errors.
+func TestValidateResolvedMissingTargetErrors(t *testing.T) {
+	t.Setenv("FLAVOUR", "absent")
+	dir := t.TempDir()
+	cfg, err := build.ParseYamlConfigData([]byte("modules:\n  - type: include\n    body:\n      targets:\n        - flavour/${{ Env.FLAVOUR }}.yml\n"))
+	if err != nil {
+		t.Fatalf("parse top: %v", err)
+	}
+	if err := build.ValidateConfigRecursive(&cfg, dir, build.Version{}); err == nil {
+		t.Error("resolved-but-missing include target should error")
+	}
+}
+
+// TestValidateResolvesGoArchInTarget checks that ${{ GoArch }} in an include target resolves.
+func TestValidateResolvesGoArchInTarget(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "arch")
+	if err := os.MkdirAll(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeInclude(t, sub, runtime.GOARCH+".yml", "modules: []\n")
+
+	cfg, err := build.ParseYamlConfigData([]byte("modules:\n  - type: include\n    body:\n      targets:\n        - arch/${{ GoArch }}.yml\n"))
+	if err != nil {
+		t.Fatalf("parse top: %v", err)
+	}
+	if err := build.ValidateConfigRecursive(&cfg, dir, build.Version{}); err != nil {
+		t.Errorf("GoArch-resolved include target should validate: %v", err)
+	}
+}
+
+// TestValidateSkipsRuntimeTarget checks that a runtime-only target is deferred, not errored.
+func TestValidateSkipsRuntimeTarget(t *testing.T) {
+	dir := t.TempDir()
+	cfg, err := build.ParseYamlConfigData([]byte("modules:\n  - type: include\n    body:\n      targets:\n        - out/${{ Modules.foo.Id }}.yml\n"))
+	if err != nil {
+		t.Fatalf("parse top: %v", err)
+	}
+	if err := build.ValidateConfigRecursive(&cfg, dir, build.Version{}); err != nil {
+		t.Errorf("runtime-dependent include target should be skipped, got: %v", err)
 	}
 }

@@ -494,7 +494,7 @@ func (s *BuildTestSuite) TestIncludeNestedValidates() {
 	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 
-	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir)
+	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir, pkgbuild.Version{})
 	s.Require().NoError(err, "valid nested include chain should validate")
 }
 
@@ -509,7 +509,7 @@ func (s *BuildTestSuite) TestIncludeCircularDetected() {
 	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
 	s.Require().NoError(err)
 
-	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir)
+	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir, pkgbuild.Version{})
 	s.Require().Error(err, "circular include must be detected")
 	assert.Contains(s.T(), err.Error(), "circular")
 }

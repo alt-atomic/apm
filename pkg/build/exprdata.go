@@ -2,6 +2,9 @@ package build
 
 import (
 	"fmt"
+	"runtime"
+
+	"altlinux.space/alt-atomic/apm/pkg/osutils"
 )
 
 type MapModule struct {
@@ -26,4 +29,14 @@ type ExprData struct {
 	Version Version
 	Arch    string
 	GoArch  string
+}
+
+// newExprData builds the base expr data (env, version, arch); Modules is set per module.
+func newExprData(version Version) ExprData {
+	return ExprData{
+		Env:     osutils.GetEnvMap(),
+		Version: version,
+		Arch:    detectArch(),
+		GoArch:  runtime.GOARCH,
+	}
 }

@@ -44,10 +44,7 @@ func parseConfigEnvData(data []byte, codec Codec, version Version) (Envs, error)
 		return envs, err
 	}
 
-	resolved, err := ResolveExprMap(envs.Env, ExprData{
-		Env:     osutils.GetEnvMap(),
-		Version: version,
-	})
+	resolved, err := ResolveExprMap(envs.Env, newExprData(version))
 	if err != nil {
 		return Envs{}, err
 	}

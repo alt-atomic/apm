@@ -15,13 +15,15 @@ import (
 type ValidationService struct {
 	pathStack []string
 	validated map[string]bool
+	exprData  ExprData
 }
 
 // NewValidationService creates a validation service.
-func NewValidationService() *ValidationService {
+func NewValidationService(exprData ExprData) *ValidationService {
 	return &ValidationService{
 		pathStack: []string{},
 		validated: make(map[string]bool),
+		exprData:  exprData,
 	}
 }
 
@@ -55,7 +57,12 @@ func (v *ValidationService) validateInclude(module *Module, basePath string) err
 	}
 
 	for _, target := range body.IncludeTargets() {
-		resolvedPath := v.resolvePath(target, basePath)
+		resolved, err := ResolveExpr(target, v.exprData)
+		if err != nil {
+			continue
+		}
+
+		resolvedPath := v.resolvePath(resolved, basePath)
 
 		if v.inStack(resolvedPath) {
 			return v.wrapError(fmt.Errorf(T_("circular include detected: %s"), resolvedPath))
@@ -162,6 +169,6 @@ func getBasePath(path string) string {
 }
 
 // ValidateConfigRecursive validates a config and all its includes recursively.
-func ValidateConfigRecursive(cfg *Config, basePath string) error {
-	return NewValidationService().Validate(&cfg.Modules, basePath)
+func ValidateConfigRecursive(cfg *Config, basePath string, version Version) error {
+	return NewValidationService(newExprData(version)).Validate(&cfg.Modules, basePath)
 }
