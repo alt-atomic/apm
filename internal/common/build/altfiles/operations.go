@@ -89,6 +89,8 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, err error) {
 		}
 	}
 
+	cleaned, _ = removeGIDConflicts(cleaned, libMap)
+
 	info, err := os.Stat(s.cfg.EtcGroup)
 	if err != nil {
 		return 0, 0, err
@@ -384,6 +386,26 @@ func hasUniqueMembers(etcMembers, libMembers []string) bool {
 		}
 	}
 	return false
+}
+
+// removeGIDConflicts удаляет локальные системные группы, чей GID занят
+// в /usr/lib/group группой с другим именем: приоритет у групп образа.
+func removeGIDConflicts(entries []etcfiles.GroupEntry, libMap map[string]etcfiles.GroupEntry) (kept []etcfiles.GroupEntry, removed int) {
+	libGIDs := make(map[int]struct{}, len(libMap))
+	for _, e := range libMap {
+		libGIDs[e.GID] = struct{}{}
+	}
+
+	for _, e := range entries {
+		_, sameName := libMap[e.Name]
+		_, gidTaken := libGIDs[e.GID]
+		if gidTaken && !sameName && !etcfiles.IsRegularGroup(e.Name, e.GID) {
+			removed++
+			continue
+		}
+		kept = append(kept, e)
+	}
+	return kept, removed
 }
 
 func loadGroupMap(path string) map[string]etcfiles.GroupEntry {

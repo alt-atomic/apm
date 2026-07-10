@@ -262,6 +262,98 @@ func TestSyncGroupsIdempotent(t *testing.T) {
 	}
 }
 
+// Осиротевшая локальная группа, чей GID переиспользован образом,
+// удаляется: приоритет у групп из /usr/lib/group.
+func TestSyncGroupsRemovesGIDConflict(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\nusershares:x:946:dm\ntcpdump:x:945:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("hashman:x:946:\ndocker:x:948:\n"), 0644)
+
+	configs := []SyncConfig{{
+		Sync: SyncBody{
+			Groups: []string{"docker"},
+			Users:  []string{"dm"},
+		},
+	}}
+
+	result, err := svc.SyncGroups(configs)
+	if err != nil {
+		t.Fatalf("SyncGroups: %v", err)
+	}
+
+	if result.Removed != 1 {
+		t.Errorf("expected 1 removed, got %d", result.Removed)
+	}
+
+	grpMap := groupByName(parseGroupFile(t, svc.cfg.EtcGroup))
+
+	if _, ok := grpMap["usershares"]; ok {
+		t.Error("usershares must be removed: GID 946 belongs to hashman in /usr/lib/group")
+	}
+	// Локальная группа без конфликта GID остаётся
+	if _, ok := grpMap["tcpdump"]; !ok {
+		t.Error("tcpdump must be preserved: GID 945 is free in /usr/lib/group")
+	}
+	if _, ok := grpMap["wheel"]; !ok {
+		t.Error("wheel must be preserved")
+	}
+	if docker, ok := grpMap["docker"]; !ok || docker.GID != 948 {
+		t.Errorf("docker must be synced with GID 948, got %+v", grpMap["docker"])
+	}
+}
+
+func TestSyncGroupsKeepsProtectedOnGIDConflict(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
+	// Кривой образ занял GID wheel и обычного пользователя
+	os.WriteFile(svc.cfg.LibGroup, []byte("badgrp:x:10:\nbadusr:x:1000:\n"), 0644)
+
+	result, err := svc.SyncGroups(nil)
+	if err != nil {
+		t.Fatalf("SyncGroups: %v", err)
+	}
+
+	if result.Removed != 0 {
+		t.Errorf("expected 0 removed, got %d", result.Removed)
+	}
+
+	grpMap := groupByName(parseGroupFile(t, svc.cfg.EtcGroup))
+	for _, name := range []string{"root", "wheel", "dm"} {
+		if _, ok := grpMap[name]; !ok {
+			t.Errorf("%s must never be removed", name)
+		}
+	}
+}
+
+func TestFixNssRemovesGIDConflict(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\nusershares:x:946:dm\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("hashman:x:946:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	if _, err := svc.ApplyFix(); err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+
+	grpMap := groupByName(parseGroupFile(t, svc.cfg.EtcGroup))
+	if _, ok := grpMap["usershares"]; ok {
+		t.Error("usershares must be removed: GID 946 belongs to hashman in /usr/lib/group")
+	}
+	if _, ok := grpMap["wheel"]; !ok {
+		t.Error("wheel must be preserved")
+	}
+}
+
 func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)

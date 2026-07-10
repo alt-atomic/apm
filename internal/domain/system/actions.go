@@ -1183,6 +1183,7 @@ func (a *Actions) ImageSyncGroups(_ context.Context, configDirs []string) (*Imag
 		Message: app.T_("Groups synced successfully"),
 		Added:   result.Added,
 		Fixed:   result.Fixed,
+		Removed: result.Removed,
 		Skipped: result.Skipped,
 	}, nil
 }

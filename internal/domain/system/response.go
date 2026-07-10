@@ -154,6 +154,7 @@ type ImageSyncGroupsResponse struct {
 	Message string `json:"message"`
 	Added   int    `json:"added"`
 	Fixed   int    `json:"fixed"`
+	Removed int    `json:"removed"`
 	Skipped int    `json:"skipped"`
 }
 

@@ -162,12 +162,15 @@ func (s *Service) SyncGroups(configs []SyncConfig) (*SyncResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	etcEntries, removed := removeGIDConflicts(etcEntries, libMap)
+
 	etcMap := map[string]int{}
 	for i, e := range etcEntries {
 		etcMap[e.Name] = i
 	}
 
-	result := &SyncResult{}
+	result := &SyncResult{Removed: removed}
 
 	for _, cfg := range configs {
 		users, err := s.resolveUsers(cfg.Sync.Users)

@@ -23,6 +23,7 @@ type SyncBody struct {
 type SyncResult struct {
 	Added   int
 	Fixed   int
+	Removed int
 	Skipped int
 }
 
