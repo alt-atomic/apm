@@ -198,12 +198,13 @@ func (p *PodmanService) PruneOldImages(ctx context.Context) error {
 	defer p.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemPruneOldImages))
 
 	if stdout, stderr, err := p.runner.Run(ctx, []string{"podman", "image", "prune", "-f"}, command.WithQuiet()); err != nil {
-		return fmt.Errorf(app.T_("Error deleting old images: %v, output: %s"), err, stdout+stderr)
+		app.Log.Warn(fmt.Sprintf(app.T_("Error deleting old images: %v, output: %s"), err, stdout+stderr))
 	}
 
 	stdout, _, err := p.runner.Run(ctx, []string{"podman", "images", "--noheading"}, command.WithQuiet())
 	if err != nil {
-		return fmt.Errorf(app.T_("Error retrieving podman image: %v"), err)
+		app.Log.Warn(fmt.Sprintf(app.T_("Error retrieving podman image: %v"), err))
+		return nil
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(stdout))
@@ -217,7 +218,7 @@ func (p *PodmanService) PruneOldImages(ctx context.Context) error {
 		}
 		imageID := fields[2]
 		if rmStdout, rmStderr, rmErr := p.runner.Run(ctx, []string{"podman", "rmi", "-f", imageID}, command.WithQuiet()); rmErr != nil {
-			return fmt.Errorf(app.T_("Error deleting image %s: %v, output: %s\n"), imageID, rmErr, rmStdout+rmStderr)
+			app.Log.Warn(fmt.Sprintf(app.T_("Error deleting image %s: %v, output: %s\n"), imageID, rmErr, rmStdout+rmStderr))
 		}
 	}
 
