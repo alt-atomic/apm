@@ -1191,14 +1191,14 @@ func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
 }
 
 // ImageSyncGroups синхронизирует группы пользователей из YAML-конфигов
-func (a *Actions) ImageSyncGroups(_ context.Context, configDirs []string) (*ImageSyncGroupsResponse, error) {
+func (a *Actions) ImageSyncGroups(_ context.Context) (*ImageSyncGroupsResponse, error) {
 	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
 	}
 
 	svc := altfiles.NewDefault()
 
-	configs, err := svc.ReadSyncConfigsDirs(configDirs)
+	configs, err := svc.ReadSyncConfigsDirs(altfiles.DefaultSyncConfigDirs)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}

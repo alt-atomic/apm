@@ -23,7 +23,6 @@ import (
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
-	"altlinux.space/alt-atomic/apm/internal/common/build/altfiles"
 	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
 	"altlinux.space/alt-atomic/apm/internal/common/helper"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
@@ -362,17 +361,10 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					}),
 				},
 				{
-					Name:      "sync-groups",
-					Usage:     app.T_("Sync user groups from config"),
-					ArgsUsage: "[config-dir]",
+					Name:  "sync-groups",
+					Usage: app.T_("Sync user groups from config"),
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						var dirs []string
-						if cmd.Args().Len() > 0 {
-							dirs = []string{cmd.Args().First()}
-						} else {
-							dirs = altfiles.DefaultSyncConfigDirs
-						}
-						resp, err := actions.ImageSyncGroups(ctx, dirs)
+						resp, err := actions.ImageSyncGroups(ctx)
 						if err != nil {
 							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}

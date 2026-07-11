@@ -495,6 +495,17 @@ func (w *HTTPWrapper) ImageHistory(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
+// ImageSyncGroups синхронизирует группы пользователей из конфигурации.
+func (w *HTTPWrapper) ImageSyncGroups(rw http.ResponseWriter, r *http.Request) {
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.actions.ImageSyncGroups(ctx)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
 // ImageGetConfig возвращает конфигурацию образа.
 func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
@@ -1017,6 +1028,15 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 					{Name: "limit", Type: "integer", Required: false, Description: "Лимит записей"},
 					{Name: "offset", Type: "integer", Required: false, Description: "Смещение"},
 				},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageSyncGroups,
+				HTTPMethod:   "POST",
+				HTTPPath:     "/api/v1/image/sync-groups",
+				ResponseType: reflect.TypeOf(ImageSyncGroupsResponse{}),
+				Permission:   http_server.PermManage,
+				Summary:      "Синхронизировать группы пользователей из конфигурации",
+				Tags:         []string{"image"},
 			},
 			http_server.Endpoint{
 				Handler:      w.ImageGetConfig,

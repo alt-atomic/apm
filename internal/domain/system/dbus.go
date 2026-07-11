@@ -620,6 +620,23 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	return string(data), nil
 }
 
+// ImageSyncGroups синхронизирует группы пользователей из конфигурации.
+func (w *DBusWrapper) ImageSyncGroups(sender dbus.Sender, transaction string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
+	}
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.ImageSyncGroups(ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // ImageGetConfig возвращает текущую конфигурацию image.yml.
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig(w.ctx)
