@@ -65,6 +65,23 @@ func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix str
 	return result, err
 }
 
+// RpmInstallSourcePackages installs .src.rpm files into the rpm build tree
+func (a *Actions) RpmInstallSourcePackages(ctx context.Context, commandPrefix string, files []string) error {
+	return a.runOperation(OperationOptions{SkipLock: true}, func(_ *lib.System) error {
+		for _, file := range files {
+			command := fmt.Sprintf("%s rpm -ivh %q", commandPrefix, file)
+			cmd := exec.CommandContext(ctx, "sh", "-c", command)
+			cmd.Env = []string{"LC_ALL=C"}
+
+			if output, cmdErr := cmd.CombinedOutput(); cmdErr != nil {
+				return fmt.Errorf(T_("failed to install source package %s: %s"),
+					file, strings.TrimSpace(string(output)))
+			}
+		}
+		return nil
+	})
+}
+
 // RpmQueryKernelPackages returns installed kernels via rpm
 func (a *Actions) RpmQueryKernelPackages(ctx context.Context) ([]KernelRPMInfo, error) {
 	var result []KernelRPMInfo

@@ -44,6 +44,8 @@ type aptActionsService interface {
 	Upgrade(ctx context.Context, downloadOnly bool) error
 	ReinstallPackages(ctx context.Context, packages []string) error
 	Install(ctx context.Context, packages []string, downloadOnly bool) error
+	DownloadSource(ctx context.Context, packages []string, destDir string) ([]aptLib.SourcePackage, error)
+	InstallSourcePackages(ctx context.Context, files []string) error
 }
 
 // aptDatabaseService определяет методы для запросов к базе данных пакетов.

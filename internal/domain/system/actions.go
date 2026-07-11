@@ -369,6 +369,41 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 	}, nil
 }
 
+// Source скачивает исходные пакеты .src.rpm и устанавливает их в сборочное дерево rpm
+func (a *Actions) Source(ctx context.Context, packages []string, downloadOnly bool) (*SourceResponse, error) {
+	if len(packages) == 0 {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify at least one package")))
+	}
+
+	sources, err := a.serviceAptActions.DownloadSource(ctx, packages, "")
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+	}
+
+	messageAnswer := app.T_("Source packages successfully downloaded")
+	if !downloadOnly {
+		files := make([]string, 0, len(sources))
+		for _, src := range sources {
+			files = append(files, src.File)
+		}
+		if errInstall := a.serviceAptActions.InstallSourcePackages(ctx, files); errInstall != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeApt, errInstall)
+		}
+		messageAnswer = app.T_("Source packages successfully downloaded and installed")
+	}
+
+	resp := &SourceResponse{Message: messageAnswer}
+	for _, src := range sources {
+		resp.Packages = append(resp.Packages, SourcePackageInfo{
+			Name:    src.Name,
+			Version: src.Version,
+			File:    src.File,
+		})
+	}
+
+	return resp, nil
+}
+
 // CheckReinstall проверяем пакеты перед переустановкой
 func (a *Actions) CheckReinstall(ctx context.Context, packages []string) (*CheckResponse, error) {
 	if len(packages) == 0 {

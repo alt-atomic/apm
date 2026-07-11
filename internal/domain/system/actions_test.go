@@ -61,6 +61,10 @@ func (m *mockAptActions) GetInstalledPackages(_ context.Context, _ ...bool) (map
 func (m *mockAptActions) Upgrade(_ context.Context, _ bool) error               { return nil }
 func (m *mockAptActions) ReinstallPackages(_ context.Context, _ []string) error { return nil }
 func (m *mockAptActions) Install(_ context.Context, _ []string, _ bool) error   { return nil }
+func (m *mockAptActions) DownloadSource(_ context.Context, _ []string, _ string) ([]aptLib.SourcePackage, error) {
+	return nil, nil
+}
+func (m *mockAptActions) InstallSourcePackages(_ context.Context, _ []string) error { return nil }
 
 type mockAptDB struct {
 	dbExistErr       error

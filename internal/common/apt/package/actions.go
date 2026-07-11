@@ -296,6 +296,20 @@ func (a *Actions) Upgrade(ctx context.Context, downloadOnly bool) error {
 	return nil
 }
 
+// DownloadSource скачивает .src.rpm пакеты в директорию destDir
+func (a *Actions) DownloadSource(ctx context.Context, packages []string, destDir string) ([]aptLib.SourcePackage, error) {
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
+
+	return a.serviceAptBinding.DownloadSourcePackages(packages, destDir, a.getHandler(ctx, len(packages)))
+}
+
+// InstallSourcePackages устанавливает .src.rpm файлы в сборочное дерево rpm
+func (a *Actions) InstallSourcePackages(ctx context.Context, files []string) error {
+	prefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
+	return a.serviceAptBinding.RpmInstallSourcePackages(ctx, prefix, files)
+}
+
 func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))

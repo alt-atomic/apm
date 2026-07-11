@@ -158,6 +158,19 @@ type ImageSyncGroupsResponse struct {
 	Skipped int    `json:"skipped"`
 }
 
+// SourcePackageInfo описывает скачанный исходный пакет
+type SourcePackageInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	File    string `json:"file"`
+}
+
+// SourceResponse структура ответа для Source метода
+type SourceResponse struct {
+	Message  string              `json:"message"`
+	Packages []SourcePackageInfo `json:"packages"`
+}
+
 // SectionsResponse структура ответа для метода Sections.
 type SectionsResponse struct {
 	Message  string   `json:"message"`

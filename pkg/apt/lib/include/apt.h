@@ -7,6 +7,7 @@
 #include "apt_config.h"
 #include "apt_transaction.h"
 #include "apt_package.h"
+#include "apt_source.h"
 #include "apt_logging.h"
 #include "apt_lock.h"
 #include "apt_ext_rpm.h"

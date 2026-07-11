@@ -17,6 +17,8 @@
 package apt
 
 import (
+	"fmt"
+	"os"
 	"sync"
 
 	"altlinux.space/alt-atomic/apm/pkg/apt/lib"
@@ -201,6 +203,30 @@ func (a *Actions) DistUpgrade(handler lib.ProgressHandler, downloadOnly bool) er
 			return tx.Execute(handler, downloadOnly)
 		})
 	})
+}
+
+// DownloadSourcePackages downloads .src.rpm files for the given names into destDir
+func (a *Actions) DownloadSourcePackages(packageNames []string, destDir string,
+	handler lib.ProgressHandler) (packages []lib.SourcePackage, err error) {
+	if len(packageNames) == 0 {
+		return nil, lib.CustomError(lib.AptErrorInvalidParameters, "no packages specified")
+	}
+	if destDir == "" {
+		if destDir, err = os.Getwd(); err != nil {
+			return nil, err
+		}
+	}
+	if info, statErr := os.Stat(destDir); statErr != nil || !info.IsDir() {
+		return nil, lib.CustomError(lib.AptErrorInvalidParameters,
+			fmt.Sprintf("destination directory is not accessible: %s", destDir))
+	}
+	err = a.runOperation(OperationOptions{SkipLock: true}, func(system *lib.System) error {
+		return withCache(system, true, func(cache *lib.Cache) error {
+			packages, err = cache.DownloadSource(packageNames, destDir, handler)
+			return err
+		})
+	})
+	return
 }
 
 // Update refreshes the local package database

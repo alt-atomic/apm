@@ -464,6 +464,29 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 			ShellComplete: findPkgWithInstalled(appConfig, reporter, false),
 		},
 		{
+			Name:      "source",
+			Usage:     app.T_("Download source packages (.src.rpm) and install them into the rpm build tree"),
+			ArgsUsage: "packages",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "download-only",
+					Usage:   app.T_("Download packages without installation"),
+					Aliases: []string{"d"},
+					Value:   false,
+				},
+				aptOptionFlag(),
+			},
+			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				applyAptOptions(cmd, actions)
+				resp, err := actions.Source(ctx, cmd.Args().Slice(), cmd.Bool("download-only"))
+				if err != nil {
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
+				}
+				return reporter.CliResponse(ctx, reply.OK(resp))
+			}),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, false),
+		},
+		{
 			Name:      "remove",
 			Aliases:   []string{"rm"},
 			Usage:     app.T_("List of packages to remove"),

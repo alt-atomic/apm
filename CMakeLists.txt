@@ -3,7 +3,7 @@ project(apm)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(LIB_DIR internal/common/binding/apt/lib)
+set(LIB_DIR pkg/apt/lib)
 
 include_directories(
         ${LIB_DIR}/include
@@ -15,10 +15,12 @@ add_executable(apm
         ${LIB_DIR}/include/apt_common.h
         ${LIB_DIR}/include/apt_cache.h
         ${LIB_DIR}/include/apt_config.h
+        ${LIB_DIR}/include/apt_error.h
         ${LIB_DIR}/include/apt_ext_rpm.h
         ${LIB_DIR}/include/apt_lock.h
         ${LIB_DIR}/include/apt_logging.h
         ${LIB_DIR}/include/apt_package.h
+        ${LIB_DIR}/include/apt_source.h
         ${LIB_DIR}/include/apt_system.h
         ${LIB_DIR}/include/apt_transaction.h
 
@@ -53,4 +55,5 @@ add_executable(apm
         ${LIB_DIR}/apt_packages.cpp
         ${LIB_DIR}/apt_resolve.cpp
         ${LIB_DIR}/apt_system.cpp
-        ${LIB_DIR}/apt_transaction.cpp)
+        ${LIB_DIR}/apt_transaction.cpp
+        ${LIB_DIR}/apt_source.cpp)
