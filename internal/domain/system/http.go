@@ -210,13 +210,13 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	downloadOnly := r.URL.Query().Get("download_only") == "true"
 
 	if w.RunBackground(rw, r, reply.EventSystemInstall, func(ctx context.Context) (interface{}, error) {
-		return w.actions.Install(ctx, packages, true, downloadOnly)
+		return w.actions.Install(ctx, packages, true, downloadOnly, false)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
+	resp, err := w.actions.Install(ctx, packages, true, downloadOnly, false)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return

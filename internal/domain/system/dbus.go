@@ -87,7 +87,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, downloadOnl
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
+			resp, err := w.actions.Install(ctx, packages, true, downloadOnly, false)
 			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
 		}()
 
@@ -104,7 +104,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, downloadOnl
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
+	resp, err := w.actions.Install(ctx, packages, true, downloadOnly, false)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}

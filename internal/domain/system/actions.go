@@ -246,7 +246,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, downloadOnly bool) (*InstallRemoveResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, downloadOnly bool, noUpdate bool) (*InstallRemoveResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -276,7 +276,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 			}
 		}
 	}
-	if !allLocalRpm {
+	if !allLocalRpm && !noUpdate {
 		err = a.serviceAptActions.AptUpdateIfStale(ctx, aptListsTTL)
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeApt, err)

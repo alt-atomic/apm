@@ -436,6 +436,12 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					Aliases: []string{"d"},
 					Value:   false,
 				},
+				&cli.BoolFlag{
+					Name:    "no-update",
+					Usage:   app.T_("Skip updating the package list from the repository"),
+					Aliases: []string{"nu"},
+					Value:   false,
+				},
 				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
@@ -447,7 +453,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					}
 					return reporter.CliResponse(ctx, reply.OK(resp))
 				}
-				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"), cmd.Bool("download-only"))
+				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"), cmd.Bool("download-only"), cmd.Bool("no-update"))
 				if err != nil {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
