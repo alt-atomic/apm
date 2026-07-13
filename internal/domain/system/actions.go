@@ -23,6 +23,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
@@ -42,6 +43,9 @@ import (
 	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 )
+
+// aptListsTTL максимальный возраст списков пакетов, при котором Install не делает повторный update
+const aptListsTTL = 4 * time.Hour
 
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
@@ -273,7 +277,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 		}
 	}
 	if !allLocalRpm {
-		err = a.serviceAptActions.AptUpdate(ctx)
+		err = a.serviceAptActions.AptUpdateIfStale(ctx, aptListsTTL)
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 		}

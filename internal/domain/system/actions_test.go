@@ -5,6 +5,7 @@ import (
 	"errors"
 	"syscall"
 	"testing"
+	"time"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
@@ -55,6 +56,9 @@ func (m *mockAptActions) UpdateDBOnly(_ context.Context, _ ...bool) ([]_package.
 	return nil, nil
 }
 func (m *mockAptActions) AptUpdate(_ context.Context, _ ...bool) error { return nil }
+func (m *mockAptActions) AptUpdateIfStale(_ context.Context, _ time.Duration, _ ...bool) error {
+	return nil
+}
 func (m *mockAptActions) GetInstalledPackages(_ context.Context, _ ...bool) (map[string]string, error) {
 	return nil, nil
 }

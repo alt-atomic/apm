@@ -18,6 +18,7 @@ package system
 
 import (
 	"context"
+	"time"
 
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
@@ -40,6 +41,7 @@ type aptActionsService interface {
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	UpdateDBOnly(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	AptUpdate(ctx context.Context, noLock ...bool) error
+	AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLock ...bool) error
 	GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error)
 	Upgrade(ctx context.Context, downloadOnly bool) error
 	ReinstallPackages(ctx context.Context, packages []string) error

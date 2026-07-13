@@ -20,9 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	aptParser "altlinux.space/alt-atomic/apm/internal/common/apt"
@@ -460,7 +463,35 @@ func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemAptUpdate))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))
 
-	return a.serviceAptBinding.Update(a.getUpdateHandler(ctx), noLock...)
+	err := a.serviceAptBinding.Update(a.getUpdateHandler(ctx), noLock...)
+	if err == nil {
+		a.touchListsStamp()
+	}
+	return err
+}
+
+// AptUpdateIfStale обновляет списки пакетов, только если последний успешный update был раньше, чем ttl назад
+func (a *Actions) AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLock ...bool) error {
+	if ttl > 0 {
+		if info, err := os.Stat(a.listsStampPath()); err == nil && time.Since(info.ModTime()) < ttl {
+			app.Log.Debugf("Skipping package list update, last update was %s ago", time.Since(info.ModTime()).Round(time.Second))
+			return nil
+		}
+	}
+
+	return a.AptUpdate(ctx, noLock...)
+}
+
+// listsStampPath путь к файлу-отметке последнего успешного apt update
+func (a *Actions) listsStampPath() string {
+	return filepath.Join(filepath.Dir(a.appConfig.ConfigManager.GetConfig().PathDBSQLSystem), "lists-update.stamp")
+}
+
+// touchListsStamp обновляет отметку времени последнего успешного apt update
+func (a *Actions) touchListsStamp() {
+	if err := os.WriteFile(a.listsStampPath(), nil, 0644); err != nil {
+		app.Log.Debugf("Failed to write lists update stamp: %v", err)
+	}
 }
 
 // saveRpmInfoToDatabase сохраняет PackageInfo в базу данных
