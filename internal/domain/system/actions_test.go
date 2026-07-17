@@ -93,10 +93,10 @@ func (m *mockAptDB) GetPackageByName(_ context.Context, _ string) (_package.Pack
 func (m *mockAptDB) GetPackagesByNames(_ context.Context, _ []string) ([]_package.Package, error) {
 	return m.getByNamesResult, m.getByNamesErr
 }
-func (m *mockAptDB) QueryHostImagePackages(_ context.Context, _ []filter.Filter, _ string, _ string, _ int, _ int) ([]_package.Package, error) {
+func (m *mockAptDB) QueryHostImagePackages(_ context.Context, _ []filter.FilterGroup, _ string, _ string, _ int, _ int) ([]_package.Package, error) {
 	return m.queryResult, m.queryErr
 }
-func (m *mockAptDB) CountHostImagePackages(_ context.Context, _ []filter.Filter) (int64, error) {
+func (m *mockAptDB) CountHostImagePackages(_ context.Context, _ []filter.FilterGroup) (int64, error) {
 	return m.countResult, m.countErr
 }
 func (m *mockAptDB) SearchPackagesByNameLike(_ context.Context, _ string, _ bool) ([]_package.Package, error) {

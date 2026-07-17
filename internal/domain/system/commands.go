@@ -622,7 +622,8 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 			Name:  "list",
 			Usage: app.T_("Building a query to get a list of packages"),
 			Description: helper.FilterDescription(
-				"--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education",
+				"--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education\n"+
+					"  --filter installed=true --or-filter name[like]=office --or-filter description[like]=office",
 				app.T_("Application fields are available with the \"app.\" prefix: app.name, app.categories, app.type, etc."),
 			),
 			Flags: []cli.Flag{
@@ -649,6 +650,10 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					Name:  "filter",
 					Usage: app.T_("Filter in the format key[op]=value or key=value"),
 				},
+				&cli.StringSliceFlag{
+					Name:  "or-filter",
+					Usage: app.T_("Filter added to a single OR group, format is the same as --filter"),
+				},
 				&cli.BoolFlag{
 					Name:  "force-update",
 					Usage: app.T_("Force update all packages before query"),
@@ -661,7 +666,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				filters, err := _package.SystemFilterConfig.Parse(cmd.StringSlice("filter"))
+				groups, err := _package.SystemFilterConfig.ParseGroups(cmd.StringSlice("filter"), cmd.StringSlice("or-filter"))
 				if err != nil {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
@@ -671,7 +676,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					Order:       cmd.String("order"),
 					Offset:      cmd.Int("offset"),
 					Limit:       cmd.Int("limit"),
-					Filters:     filters,
+					Filters:     groups,
 					ForceUpdate: cmd.Bool("force-update"),
 				}
 

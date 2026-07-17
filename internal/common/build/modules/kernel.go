@@ -221,7 +221,7 @@ func (b *KernelBody) run(ctx context.Context, svc DomainContext) (any, error) {
 					filters := []filter.Filter{
 						{Field: "name", Op: filter.OpLike, Value: fmt.Sprintf("plymouth-theme-%s", b.Initrd.PlymouthTheme)},
 					}
-					packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+					packages, err := svc.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 					if err != nil {
 						return nil, err
 					}
@@ -351,7 +351,7 @@ func currentKernelInfo(ctx context.Context, svc DomainContext) (*service.Info, e
 		{Field: "name", Op: filter.OpLike, Value: "kernel-image-"},
 		{Field: "installed", Op: filter.OpEq, Value: "true"},
 	}
-	packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	packages, err := svc.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 	if err != nil {
 		return nil, err
 	}

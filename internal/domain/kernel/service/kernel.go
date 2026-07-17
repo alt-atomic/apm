@@ -265,7 +265,7 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 	}
 
 	// Ищем в базе данных с сортировкой по версии
-	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to search kernel packages in database: %s"), err.Error())
 	}
@@ -470,7 +470,7 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
 		{Field: "name", Op: filter.OpLike, Value: "kernel-image-"},
 	}
-	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to search kernels in database: %s"), err.Error())
 	}
@@ -611,7 +611,7 @@ func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
 		{Field: "name", Op: filter.OpLike, Value: fmt.Sprintf("kernel-image-%s", kernel.Flavour)},
 	}
-	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 	if err != nil {
 		return
 	}

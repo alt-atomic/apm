@@ -148,13 +148,13 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Container   string          `json:"container"`
-	Sort        string          `json:"sort"`
-	Order       string          `json:"order"`
-	Limit       int             `json:"limit"`
-	Offset      int             `json:"offset"`
-	Filters     []filter.Filter `json:"filters"`
-	ForceUpdate bool            `json:"forceUpdate"`
+	Container   string               `json:"container"`
+	Sort        string               `json:"sort"`
+	Order       string               `json:"order"`
+	Limit       int                  `json:"limit"`
+	Offset      int                  `json:"offset"`
+	Filters     []filter.FilterGroup `json:"filters"`
+	ForceUpdate bool                 `json:"forceUpdate"`
 }
 
 // List возвращает список пакетов согласно заданным параметрам.

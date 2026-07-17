@@ -724,7 +724,7 @@ func (a *Actions) Info(ctx context.Context, packageName string) (*InfoResponse, 
 			{Field: "provides", Op: filter.OpContains, Value: packageName},
 		}
 
-		alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
+		alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filter.AndGroups(filters), "", "", 5, 0)
 		if errFind != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeDatabase, errFind)
 		}
@@ -798,9 +798,9 @@ func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiI
 
 	var notFound []string
 	for _, name := range missing {
-		providesPackages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, []filter.Filter{
+		providesPackages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, filter.AndGroups([]filter.Filter{
 			{Field: "provides", Op: filter.OpContains, Value: name},
-		}, "", "", 1, 0)
+		}), "", "", 1, 0)
 		if err != nil || len(providesPackages) == 0 {
 			notFound = append(notFound, name)
 			continue
@@ -819,13 +819,13 @@ func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiI
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Sort        string          `json:"sort"`
-	Order       string          `json:"order"`
-	Limit       int             `json:"limit"`
-	Offset      int             `json:"offset"`
-	Filters     []filter.Filter `json:"filters"`
-	ForceUpdate bool            `json:"forceUpdate"`
-	Full        bool            `json:"full"`
+	Sort        string               `json:"sort"`
+	Order       string               `json:"order"`
+	Limit       int                  `json:"limit"`
+	Offset      int                  `json:"offset"`
+	Filters     []filter.FilterGroup `json:"filters"`
+	ForceUpdate bool                 `json:"forceUpdate"`
+	Full        bool                 `json:"full"`
 }
 
 // List возвращает список пакетов

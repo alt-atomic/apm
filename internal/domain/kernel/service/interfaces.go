@@ -12,7 +12,7 @@ import (
 
 // packageDBService определяет методы для запросов к базе данных пакетов.
 type packageDBService interface {
-	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
+	QueryHostImagePackages(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
 	SearchPackagesByNameLike(ctx context.Context, likePattern string, installed bool) ([]_package.Package, error)
 	GetPackageByName(ctx context.Context, packageName string) (_package.Package, error)
 }

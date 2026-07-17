@@ -138,6 +138,10 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 						Name:  "filter",
 						Usage: app.T_("Filter in the format key[op]=value or key=value"),
 					},
+					&cli.StringSliceFlag{
+						Name:  "or-filter",
+						Usage: app.T_("Filter added to a single OR group, format is the same as --filter"),
+					},
 					&cli.BoolFlag{
 						Name:  "force-update",
 						Usage: app.T_("Force update all packages before the request"),
@@ -145,7 +149,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 					},
 				},
 				Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-					filters, err := sandbox.DistroFilterConfig.Parse(cmd.StringSlice("filter"))
+					groups, err := sandbox.DistroFilterConfig.ParseGroups(cmd.StringSlice("filter"), cmd.StringSlice("or-filter"))
 					if err != nil {
 						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
@@ -156,7 +160,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 						Order:       cmd.String("order"),
 						Offset:      cmd.Int("offset"),
 						Limit:       cmd.Int("limit"),
-						Filters:     filters,
+						Filters:     groups,
 						ForceUpdate: cmd.Bool("force-update"),
 					}
 

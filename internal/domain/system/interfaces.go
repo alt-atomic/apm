@@ -55,8 +55,8 @@ type aptDatabaseService interface {
 	PackageDatabaseExist(ctx context.Context) error
 	GetPackageByName(ctx context.Context, packageName string) (_package.Package, error)
 	GetPackagesByNames(ctx context.Context, names []string) ([]_package.Package, error)
-	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
-	CountHostImagePackages(ctx context.Context, filters []filter.Filter) (int64, error)
+	QueryHostImagePackages(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
+	CountHostImagePackages(ctx context.Context, filters []filter.FilterGroup) (int64, error)
 	SearchPackagesByNameLike(ctx context.Context, likePattern string, installed bool) ([]_package.Package, error)
 	SearchPackagesMultiLimit(ctx context.Context, likePattern string, limit int, installed bool) ([]_package.Package, error)
 	SyncPackageInstallationInfo(ctx context.Context, installedPackages map[string]string) error

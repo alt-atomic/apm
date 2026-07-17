@@ -137,7 +137,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	validated, err := sandbox.DistroFilterConfig.Validate(body.Filters)
+	groups, err := sandbox.DistroFilterConfig.ValidateBody(body)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -163,7 +163,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		Order:       query.Get("order"),
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     validated,
+		Filters:     groups,
 		ForceUpdate: query.Get("forceUpdate") == "true",
 	}
 
@@ -382,7 +382,7 @@ func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 				"Поиск пакетов в контейнере",
 				"name, section, installed",
 				"POST /api/v1/distrobox/packages/list?container=ubuntu&sort=name&limit=20",
-				`{"filters": [{"field": "name", "op": "like", "value": "hello"}]}`,
+				`{"filters": [{"field": "installed", "value": "true"}], "orFilters": [{"field": "name", "op": "like", "value": "hello"}, {"field": "description", "op": "like", "value": "hello"}]}`,
 				"/api/v1/distrobox/packages/filter-fields",
 			),
 			Tags: []string{"distrobox"},

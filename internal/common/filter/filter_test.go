@@ -28,6 +28,10 @@ func TestSplitFilterString(t *testing.T) {
 		{"name=", "", "", "", true},
 		{"=value", "", "", "", true},
 		{"name[eq=value", "", "", "", true},
+		// оператор допустим только в конце ключа
+		{"name[eq]|summary[like]=zip", "", "", "", true},
+		{"name[eq]junk=zip", "", "", "", true},
+		{"name|summary[like]=zip", "name|summary", OpLike, "zip", false},
 		// SQL injection attempt
 		{"field); DROP TABLE--[eq]=x", "field); DROP TABLE--", OpEq, "x", false},
 	}
@@ -401,5 +405,193 @@ func TestIsValidOp(t *testing.T) {
 	}
 	if isValidOp("invalid") {
 		t.Error("expected 'invalid' to be invalid op")
+	}
+}
+
+func groupsTestConfig() *Config {
+	return &Config{
+		Fields: map[string]FieldConfig{
+			"name":        {DefaultOp: OpLike},
+			"description": {DefaultOp: OpLike},
+			"installed":   {DefaultOp: OpEq, AllowedOps: []Op{OpEq, OpNe}},
+			"size":        {DefaultOp: OpEq},
+		},
+	}
+}
+
+func TestValidateMultiField(t *testing.T) {
+	cfg := groupsTestConfig()
+
+	t.Run("valid multi-field", func(t *testing.T) {
+		filters, err := cfg.Validate([]Filter{{Field: "name|description", Op: OpLike, Value: "x"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filters[0].Field != "name|description" {
+			t.Errorf("expected normalized field, got %q", filters[0].Field)
+		}
+	})
+
+	t.Run("normalizes spaces", func(t *testing.T) {
+		filters, err := cfg.Validate([]Filter{{Field: "name | description", Op: OpLike, Value: "x"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filters[0].Field != "name|description" {
+			t.Errorf("expected normalized field, got %q", filters[0].Field)
+		}
+	})
+
+	t.Run("uniform default op", func(t *testing.T) {
+		filters, err := cfg.Validate([]Filter{{Field: "name|description", Value: "x"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filters[0].Op != OpLike {
+			t.Errorf("expected op %q, got %q", OpLike, filters[0].Op)
+		}
+	})
+
+	t.Run("differing default ops require explicit op", func(t *testing.T) {
+		if _, err := cfg.Validate([]Filter{{Field: "name|size", Value: "x"}}); err == nil {
+			t.Fatal("expected error: name defaults to like, size to eq")
+		}
+		filters, err := cfg.Validate([]Filter{{Field: "name|size", Op: OpEq, Value: "x"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filters[0].Op != OpEq {
+			t.Errorf("expected explicit op kept, got %q", filters[0].Op)
+		}
+	})
+
+	t.Run("unknown subfield rejected", func(t *testing.T) {
+		if _, err := cfg.Validate([]Filter{{Field: "name|unknown", Op: OpLike, Value: "x"}}); err == nil {
+			t.Fatal("expected error for unknown subfield")
+		}
+	})
+
+	t.Run("op disallowed for one subfield rejected", func(t *testing.T) {
+		if _, err := cfg.Validate([]Filter{{Field: "name|installed", Op: OpLike, Value: "x"}}); err == nil {
+			t.Fatal("expected error: like is not allowed for installed")
+		}
+	})
+
+	t.Run("unsafe subfield rejected", func(t *testing.T) {
+		if _, err := cfg.Validate([]Filter{{Field: "name|na me", Op: OpLike, Value: "x"}}); err == nil {
+			t.Fatal("expected error for unsafe subfield")
+		}
+	})
+}
+
+func TestMakeGroups(t *testing.T) {
+	filters := []Filter{{Field: "installed", Op: OpEq, Value: "true"}, {Field: "size", Op: OpGt, Value: "1"}}
+	orFilters := []Filter{{Field: "name", Op: OpLike, Value: "x"}, {Field: "description", Op: OpLike, Value: "x"}}
+
+	groups := MakeGroups(filters, orFilters)
+	if len(groups) != 3 {
+		t.Fatalf("expected 3 groups, got %d", len(groups))
+	}
+	if len(groups[0]) != 1 || len(groups[1]) != 1 {
+		t.Errorf("expected AND filters as single-element groups, got %v", groups)
+	}
+	if len(groups[2]) != 2 {
+		t.Errorf("expected orFilters as one group of 2, got %v", groups[2])
+	}
+
+	if got := MakeGroups(nil, nil); len(got) != 0 {
+		t.Errorf("expected no groups, got %v", got)
+	}
+	if got := AndGroups(filters); len(got) != 2 {
+		t.Errorf("expected 2 groups, got %v", got)
+	}
+}
+
+func TestConfigParseGroups(t *testing.T) {
+	cfg := groupsTestConfig()
+
+	t.Run("filters and or-filters", func(t *testing.T) {
+		groups, err := cfg.ParseGroups(
+			[]string{"installed=true"},
+			[]string{"name[like]=office", "description[like]=office"},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(groups) != 2 {
+			t.Fatalf("expected 2 groups, got %d", len(groups))
+		}
+		if len(groups[0]) != 1 || groups[0][0].Field != "installed" {
+			t.Errorf("unexpected AND group: %v", groups[0])
+		}
+		if len(groups[1]) != 2 {
+			t.Errorf("expected OR group of 2, got %v", groups[1])
+		}
+	})
+
+	t.Run("or-filters only", func(t *testing.T) {
+		groups, err := cfg.ParseGroups(nil, []string{"name=zip", "size[gt]=1000"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(groups) != 1 || len(groups[0]) != 2 {
+			t.Fatalf("expected single OR group of 2, got %v", groups)
+		}
+	})
+
+	t.Run("invalid or-filter", func(t *testing.T) {
+		if _, err := cfg.ParseGroups(nil, []string{"unknown=x"}); err == nil {
+			t.Fatal("expected error for unknown field in or-filter")
+		}
+	})
+}
+
+func TestParseJSONBody(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		body, err := ParseJSONBody("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(body.Filters) != 0 || len(body.OrFilters) != 0 {
+			t.Errorf("expected empty body, got %+v", body)
+		}
+	})
+
+	t.Run("object", func(t *testing.T) {
+		body, err := ParseJSONBody(`{"filters":[{"field":"installed","value":"true"}],"orFilters":[{"field":"name","op":"like","value":"x"},{"field":"size","op":"gt","value":"1"}]}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(body.Filters) != 1 || len(body.OrFilters) != 2 {
+			t.Errorf("unexpected body: %+v", body)
+		}
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		if _, err := ParseJSONBody("{broken"); err == nil {
+			t.Fatal("expected error for invalid json")
+		}
+	})
+}
+
+func TestValidateBody(t *testing.T) {
+	cfg := groupsTestConfig()
+
+	groups, err := cfg.ValidateBody(ListBody{
+		Filters:   []Filter{{Field: "installed", Value: "true"}},
+		OrFilters: []Filter{{Field: "name", Value: "x"}, {Field: "description", Value: "x"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(groups) != 2 {
+		t.Fatalf("expected 2 groups, got %d", len(groups))
+	}
+	if groups[1][0].Op != OpLike {
+		t.Errorf("expected default op filled in OR group, got %q", groups[1][0].Op)
+	}
+
+	if _, err = cfg.ValidateBody(ListBody{OrFilters: []Filter{{Field: "unknown", Value: "x"}}}); err == nil {
+		t.Fatal("expected error for unknown field in orFilters")
 	}
 }

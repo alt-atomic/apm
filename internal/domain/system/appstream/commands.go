@@ -105,9 +105,13 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) []*cli.Command
 					Name:  "filter",
 					Usage: app.T_("Filter in the format key[op]=value or key=value"),
 				},
+				&cli.StringSliceFlag{
+					Name:  "or-filter",
+					Usage: app.T_("Filter added to a single OR group, format is the same as --filter"),
+				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				filters, err := swcat.FilterConfig.Parse(cmd.StringSlice("filter"))
+				groups, err := swcat.FilterConfig.ParseGroups(cmd.StringSlice("filter"), cmd.StringSlice("or-filter"))
 				if err != nil {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
@@ -117,7 +121,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) []*cli.Command
 					Order:   cmd.String("order"),
 					Offset:  cmd.Int("offset"),
 					Limit:   cmd.Int("limit"),
-					Filters: filters,
+					Filters: groups,
 				}
 
 				resp, err := actions.List(ctx, params)

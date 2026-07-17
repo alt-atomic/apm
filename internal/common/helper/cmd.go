@@ -90,7 +90,8 @@ func FilterDescription(examples string, notes ...string) string {
 		"  lt       - " + app.T_("less than (<)") + "\n" +
 		"  lte      - " + app.T_("less than or equal (<=)") + "\n" +
 		"  contains - " + app.T_("contains value (for JSON/array fields)") + "\n\n" +
-		app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n\n" +
+		app.T_("OR: use \"|\" to combine values or fields: key[op]=value1|value2, key1|key2[op]=value") + "\n\n" +
+		app.T_("OR between different conditions: --or-filter builds one OR group, combined with --filter via AND") + "\n\n" +
 		app.T_("Examples:") + "\n" +
 		"  " + examples
 	for _, note := range notes {

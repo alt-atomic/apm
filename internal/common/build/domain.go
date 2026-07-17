@@ -53,7 +53,7 @@ func (d *domainService) ValidateDB(ctx context.Context) error {
 	return nil
 }
 
-func (d *domainService) QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
+func (d *domainService) QueryHostImagePackages(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
 	return d.dbService.QueryHostImagePackages(ctx, filters, sortField, sortOrder, limit, offset)
 }
 
@@ -64,7 +64,7 @@ func (d *domainService) GetPackageByName(ctx context.Context, packageName string
 			{Field: "provides", Op: filter.OpContains, Value: packageName},
 		}
 
-		alternativePackages, errFind := d.dbService.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
+		alternativePackages, errFind := d.dbService.QueryHostImagePackages(ctx, filter.AndGroups(filters), "", "", 5, 0)
 		if errFind != nil {
 			return nil, errFind
 		}

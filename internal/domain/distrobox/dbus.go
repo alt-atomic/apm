@@ -153,21 +153,19 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 	return string(data), nil
 }
 
-// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON - это JSON-строка вида [{"field":"name","op":"like","value":"fire"}]
+// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON — JSON-объект {"filters","orFilters"}.
 func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filtersJSON string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
 		limit = 50
 	}
 
-	var filters []filter.Filter
-	if filtersJSON != "" {
-		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
-			return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
-		}
+	body, err := filter.ParseJSONBody(filtersJSON)
+	if err != nil {
+		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
 
-	validated, err := sandbox.DistroFilterConfig.Validate(filters)
+	groups, err := sandbox.DistroFilterConfig.ValidateBody(body)
 	if err != nil {
 		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
@@ -178,7 +176,7 @@ func (w *DBusWrapper) List(container string, sort string, order string, limit in
 		Order:       order,
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     validated,
+		Filters:     groups,
 		ForceUpdate: forceUpdate,
 	}
 

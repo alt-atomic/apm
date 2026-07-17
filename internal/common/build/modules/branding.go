@@ -60,7 +60,7 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 				{Field: "name", Op: filter.OpLike, Value: brandingPackagesPrefix},
 			}
 			var err error
-			packages, err := svc.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+			packages, err := svc.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 			if err != nil {
 				return nil, err
 			}

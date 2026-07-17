@@ -65,12 +65,12 @@ type PackageQueryResult struct {
 
 // PackageQueryBuilder задаёт параметры запроса.
 type PackageQueryBuilder struct {
-	ForceUpdate bool            // Обновление перед тем как выполнить запрос
-	Limit       int             // Если Limit <= 0, то ограничение не применяется
-	Offset      int             // Если Offset < 0, то считается 0
-	Filters     []filter.Filter // фильтры с полем, оператором и значением
-	SortField   string          // Поле сортировки (например, "packageName")
-	SortOrder   string          // "ASC" или "DESC"
+	ForceUpdate bool                 // Обновление перед тем как выполнить запрос
+	Limit       int                  // Если Limit <= 0, то ограничение не применяется
+	Offset      int                  // Если Offset < 0, то считается 0
+	Filters     []filter.FilterGroup // группы фильтров: внутри группы OR, между группами AND
+	SortField   string               // Поле сортировки (например, "packageName")
+	SortOrder   string               // "ASC" или "DESC"
 }
 
 type InfoPackageAnswer struct {
@@ -177,14 +177,14 @@ func (p *PackageService) GetInfoPackage(ctx context.Context, containerInfo Conta
 	// Получаем пути для GUI-приложений
 	desktopPaths, err := p.GetPathByPackageName(ctx, containerInfo, packageName, "/usr/share/applications/")
 	if err != nil {
-		app.Log.Debugf(fmt.Sprintf(app.T_("Error retrieving desktop file path: %v"), err))
+		app.Log.Debugf(app.T_("Error retrieving desktop file path: %v"), err)
 		desktopPaths = []string{}
 	}
 
 	// Получаем пути для консольных приложений
 	consolePaths, err := p.GetPathByPackageName(ctx, containerInfo, packageName, "/usr/bin/")
 	if err != nil {
-		app.Log.Debugf(fmt.Sprintf(app.T_("Error retrieving console path: %v"), err))
+		app.Log.Debugf(app.T_("Error retrieving console path: %v"), err)
 		consolePaths = []string{}
 	}
 

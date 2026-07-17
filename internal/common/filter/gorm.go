@@ -33,31 +33,51 @@ type GormApplier struct {
 	CustomAppliers map[string]FieldApplier
 }
 
-// Apply применяет список фильтров к GORM-запросу. Поддерживает OR через разделитель "|" в значении для всех applier-ов
+// Apply применяет список фильтров (AND) к GORM-запросу.
 func (a *GormApplier) Apply(query *gorm.DB, filters []Filter) *gorm.DB {
 	for _, f := range filters {
-		values := SplitOrValues(f.Value)
-		if len(values) == 1 {
+		if len(SplitOrValues(f.Field)) == 1 && len(SplitOrValues(f.Value)) == 1 {
 			query = a.applyOne(query, f)
 			continue
 		}
+		query = query.Where(a.buildCondition(query, f))
+	}
+	return query
+}
 
-		// OR-группа: каждое значение применяется через applyOne на отдельной сессии,
-		// затем объединяется через Or
-		sub := query.Session(&gorm.Session{NewDB: true})
-		for i, val := range values {
-			sf := Filter{Field: f.Field, Op: f.Op, Value: val}
+// ApplyGroups применяет группы фильтров: внутри группы — OR, между группами — AND.
+func (a *GormApplier) ApplyGroups(query *gorm.DB, groups []FilterGroup) *gorm.DB {
+	for _, g := range groups {
+		switch len(g) {
+		case 0:
+		case 1:
+			query = a.Apply(query, []Filter(g))
+		default:
+			sub := a.buildCondition(query, g[0])
+			for _, f := range g[1:] {
+				sub = sub.Or(a.buildCondition(query, f))
+			}
+			query = query.Where(sub)
+		}
+	}
+	return query
+}
+
+// buildCondition собирает OR-скобку одного фильтра по комбинациям полей и значений ("|").
+func (a *GormApplier) buildCondition(query *gorm.DB, f Filter) *gorm.DB {
+	var sub *gorm.DB
+	for _, fld := range SplitOrValues(f.Field) {
+		for _, val := range SplitOrValues(f.Value) {
 			part := query.Session(&gorm.Session{NewDB: true})
-			part = a.applyOne(part, sf)
-			if i == 0 {
+			part = a.applyOne(part, Filter{Field: fld, Op: f.Op, Value: val})
+			if sub == nil {
 				sub = part
 			} else {
 				sub = sub.Or(part)
 			}
 		}
-		query = query.Where(sub)
 	}
-	return query
+	return sub
 }
 
 // applyOne применяет один фильтр (без OR) через кастомный или стандартный applier

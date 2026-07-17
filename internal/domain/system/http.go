@@ -281,7 +281,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	validated, err := _package.SystemFilterConfig.Validate(body.Filters)
+	groups, err := _package.SystemFilterConfig.ValidateBody(body)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -306,7 +306,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		Order:       query.Get("order"),
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     validated,
+		Filters:     groups,
 		ForceUpdate: query.Get("forceUpdate") == "true",
 		Full:        query.Get("full") != "false",
 	}
@@ -594,9 +594,7 @@ func (w *HTTPWrapper) ApplicationInfo(rw http.ResponseWriter, r *http.Request) {
 
 // ApplicationList возвращает список приложений.
 func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Filters []filter.Filter `json:"filters"`
-	}
+	var body filter.ListBody
 	if r.Body != nil && r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && err.Error() != "EOF" {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
@@ -604,7 +602,7 @@ func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	validated, err := swcat.FilterConfig.Validate(body.Filters)
+	groups, err := swcat.FilterConfig.ValidateBody(body)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -629,7 +627,7 @@ func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
 		Order:   query.Get("order"),
 		Limit:   limit,
 		Offset:  offset,
-		Filters: validated,
+		Filters: groups,
 	}
 
 	ctx := w.CtxWithTransaction(r)
@@ -798,7 +796,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				"Поиск пакетов",
 				"name, section, installed, app.categories",
 				"POST /api/v1/packages/list?sort=name&limit=20",
-				`{"filters": [{"field": "name", "op": "like", "value": "hello"}]}`,
+				`{"filters": [{"field": "installed", "value": "true"}], "orFilters": [{"field": "name", "op": "like", "value": "office"}, {"field": "description", "op": "like", "value": "office"}]}`,
 				"/api/v1/packages/filter-fields",
 			),
 			Tags: []string{"packages"},
@@ -928,7 +926,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				"Поиск приложений",
 				"pkgname, components.name, components.categories",
 				"POST /api/v1/applications/list?sort=pkgname&limit=20",
-				`{"filters": [{"field": "components.categories", "op": "eq", "value": "Game"}]}`,
+				`{"filters": [{"field": "components.categories", "op": "eq", "value": "Game"}], "orFilters": [{"field": "components.name", "op": "like", "value": "chess"}, {"field": "components.summary", "op": "like", "value": "chess"}]}`,
 				"/api/v1/applications/filter-fields",
 			),
 			Tags: []string{"applications"},

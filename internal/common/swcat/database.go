@@ -170,7 +170,7 @@ func (s *DBService) GetByPkgNames(ctx context.Context, names []string) (map[stri
 }
 
 // QueryComponents запрашивает компоненты с фильтрами, сортировкой и пагинацией.
-func (s *DBService) QueryComponents(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit,
+func (s *DBService) QueryComponents(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit,
 	offset int) ([]DBAppStream, error) {
 	db, err := s.db()
 	if err != nil {
@@ -178,7 +178,7 @@ func (s *DBService) QueryComponents(ctx context.Context, filters []filter.Filter
 	}
 
 	query := db.WithContext(ctx).Model(&DBAppStream{})
-	query = FilterApplier.Apply(query, filters)
+	query = FilterApplier.ApplyGroups(query, filters)
 
 	if sortField != "" {
 		if err = FilterConfig.ValidateSortField(sortField); err != nil {
@@ -206,14 +206,14 @@ func (s *DBService) QueryComponents(ctx context.Context, filters []filter.Filter
 }
 
 // CountComponents возвращает количество записей с учётом фильтров.
-func (s *DBService) CountComponents(ctx context.Context, filters []filter.Filter) (int64, error) {
+func (s *DBService) CountComponents(ctx context.Context, filters []filter.FilterGroup) (int64, error) {
 	db, err := s.db()
 	if err != nil {
 		return 0, err
 	}
 
 	query := db.WithContext(ctx).Model(&DBAppStream{})
-	query = FilterApplier.Apply(query, filters)
+	query = FilterApplier.ApplyGroups(query, filters)
 
 	var count int64
 	if err = query.Count(&count).Error; err != nil {

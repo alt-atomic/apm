@@ -215,7 +215,7 @@ func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerN
 }
 
 // CountTotalPackages возвращает количество записей (COUNT(*)) c учётом фильтра containerName и других полей.
-func (s *DistroDBService) CountTotalPackages(containerName string, filters []filter.Filter) (int, error) {
+func (s *DistroDBService) CountTotalPackages(containerName string, filters []filter.FilterGroup) (int, error) {
 	gormDB, err := s.db()
 	if err != nil {
 		return 0, err
@@ -226,7 +226,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters []fil
 		db = db.Where("container = ?", containerName)
 	}
 
-	db = DistroFilterApplier.Apply(db, filters)
+	db = DistroFilterApplier.ApplyGroups(db, filters)
 
 	var total int64
 	if err = db.Count(&total).Error; err != nil {
@@ -236,7 +236,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters []fil
 }
 
 // QueryPackages возвращает записи с фильтрами, сортировкой, limit/offset.
-func (s *DistroDBService) QueryPackages(containerName string, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
+func (s *DistroDBService) QueryPackages(containerName string, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
 	gormDB, err := s.db()
 	if err != nil {
 		return nil, err
@@ -248,7 +248,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters []filter.F
 		db = db.Where("container = ?", containerName)
 	}
 
-	db = DistroFilterApplier.Apply(db, filters)
+	db = DistroFilterApplier.ApplyGroups(db, filters)
 
 	if sortField != "" {
 		if err = DistroFilterConfig.ValidateSortField(sortField); err != nil {

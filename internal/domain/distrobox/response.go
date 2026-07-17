@@ -40,10 +40,8 @@ type SearchResponse struct {
 	Packages []sandbox.PackageInfo `json:"packages"`
 }
 
-// ListFiltersBody тело запроса для List — только фильтры.
-type ListFiltersBody struct {
-	Filters []filter.Filter `json:"filters"`
-}
+// ListFiltersBody тело запроса для List: filters — AND-условия, orFilters — одна OR-скобка.
+type ListFiltersBody = filter.ListBody
 
 // ListResponse структура ответа для List метода
 type ListResponse struct {

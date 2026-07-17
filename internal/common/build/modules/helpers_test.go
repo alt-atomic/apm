@@ -66,7 +66,7 @@ func (f *fakeDomain) InstallPackages(_ context.Context, packages []string) error
 	return nil
 }
 
-func (f *fakeDomain) QueryHostImagePackages(context.Context, []filter.Filter, string, string, int, int) ([]_package.Package, error) {
+func (f *fakeDomain) QueryHostImagePackages(context.Context, []filter.FilterGroup, string, string, int, int) ([]_package.Package, error) {
 	return f.queryResult, f.queryErr
 }
 

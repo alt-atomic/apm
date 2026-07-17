@@ -36,11 +36,11 @@ type ListResponse struct {
 
 // ListParams параметры запроса списка AppStream компонентов.
 type ListParams struct {
-	Sort    string          `json:"sort"`
-	Order   string          `json:"order"`
-	Limit   int             `json:"limit"`
-	Offset  int             `json:"offset"`
-	Filters []filter.Filter `json:"filters"`
+	Sort    string               `json:"sort"`
+	Order   string               `json:"order"`
+	Limit   int                  `json:"limit"`
+	Offset  int                  `json:"offset"`
+	Filters []filter.FilterGroup `json:"filters"`
 }
 
 // InfoResponse структура ответа для метода Info.
@@ -50,10 +50,8 @@ type InfoResponse struct {
 	Components []swcat.Component `json:"components"`
 }
 
-// ListFiltersBody тело запроса для List — только фильтры.
-type ListFiltersBody struct {
-	Filters []filter.Filter `json:"filters"`
-}
+// ListFiltersBody тело запроса для List: filters — AND-условия, orFilters — одна OR-скобка.
+type ListFiltersBody = filter.ListBody
 
 // CategoriesResponse структура ответа для метода Categories.
 type CategoriesResponse struct {
