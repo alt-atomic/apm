@@ -1129,6 +1129,7 @@ func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*Imag
 		resp.Tmpfiles = &ImageLintTmpfiles{
 			Missing:     result.TmpFiles.Missing,
 			Unsupported: result.TmpFiles.Unsupported,
+			Factory:     result.TmpFiles.Factory,
 		}
 	}
 

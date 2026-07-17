@@ -33,6 +33,7 @@ func (cfgService *ConfigService) fixTmpFiles(ctx context.Context) error {
 		app.Log.Warn(fmt.Sprintf("tmpfiles.d: %d unsupported paths (not regular files, dirs, or symlinks): %v", len(result.Unsupported), result.Unsupported))
 	}
 
-	app.Log.Info(fmt.Sprintf("tmpfiles.d: fixed %d missing entries, written %s", len(result.Missing), written))
+	app.Log.Info(fmt.Sprintf("tmpfiles.d: fixed %d missing entries (%d factory files), written %s",
+		len(result.Missing), len(result.Factory), written))
 	return nil
 }

@@ -43,6 +43,15 @@ func lookupOwner(info fs.FileInfo) (string, string) {
 	return cachedUser(stat.Uid), cachedGroup(stat.Gid)
 }
 
+// ownerIDs возвращает числовые uid/gid файла
+func ownerIDs(info fs.FileInfo) (int, int) {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		app.Log.Fatal("unexpected: Stat_t unavailable")
+	}
+	return int(stat.Uid), int(stat.Gid)
+}
+
 func cachedUser(uid uint32) string {
 	ownerCache.RLock()
 	if name, ok := ownerCache.users[uid]; ok {

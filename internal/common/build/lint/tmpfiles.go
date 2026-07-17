@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -136,37 +135,6 @@ func (a *tmpFilesAnalysis) parseFile(path string, entries map[string]string) err
 	return scanner.Err()
 }
 
-// skipContentDirs директории, для которых создаётся запись,
-// но содержимое не обходится (управляется другими механизмами).
-var skipContentDirs = []string{
-	"/var/home",
-	"/var/root",
-	"/var/cache/man",
-	"/var/cache/fontconfig",
-	"/var/cache/apt",
-	"/var/tmp",
-	"/etc/rc.d",
-	"/etc/tcb",
-	"/etc/alternatives/links",
-}
-
-// skipContentPrefixes пути, совпадающие по префиксу
-var skipContentPrefixes = []string{
-	"/etc/skel",
-}
-
-func skipContent(absPath string) bool {
-	if slices.Contains(skipContentDirs, absPath) {
-		return true
-	}
-	for _, prefix := range skipContentPrefixes {
-		if strings.HasPrefix(absPath, prefix) {
-			return true
-		}
-	}
-	return false
-}
-
 func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -227,7 +195,7 @@ func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 					Line:  fmt.Sprintf("d %s %s %s %s - -", escaped, mode, user, group),
 				})
 			}
-			if !skipContent(absPath) {
+			if policyFor(absPath) != policySkipContent {
 				if err = a.walk(rootfs, fullPath); err != nil {
 					return err
 				}
@@ -235,17 +203,33 @@ func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 
 		case ft.IsRegular():
 			if !covered {
+				policy := policyFor(absPath)
+				if policy == policySkipFiles {
+					continue
+				}
 				mode := formatMode(info.Mode())
 				user, group := lookupOwner(info)
 				escaped := escapePath(canonPath)
-				a.Missing = append(a.Missing, tmpFilesEntry{
-					Type:  "z",
-					Path:  canonPath,
-					Mode:  mode,
-					User:  user,
-					Group: group,
-					Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
-				})
+				if policy == policyNoFactory {
+					a.Missing = append(a.Missing, tmpFilesEntry{
+						Type:  "z",
+						Path:  canonPath,
+						Mode:  mode,
+						User:  user,
+						Group: group,
+						Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
+					})
+				} else {
+					// Восстановление из /usr/share/factory
+					a.Missing = append(a.Missing, tmpFilesEntry{
+						Type:  "C",
+						Path:  canonPath,
+						Mode:  mode,
+						User:  user,
+						Group: group,
+						Line:  fmt.Sprintf("C %s %s %s %s - -", escaped, mode, user, group),
+					})
+				}
 			}
 
 		default:

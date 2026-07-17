@@ -33,6 +33,7 @@ type Result struct {
 type TmpFilesResult struct {
 	Missing     []string
 	Unsupported []string
+	Factory     []string
 }
 
 // SysUsersResult результат анализа sysusers.d
@@ -50,11 +51,15 @@ func New(rootfs string, reporter *reply.Reporter) *Service {
 	return &Service{rootfs: rootfs, reporter: reporter}
 }
 
-// AnalyzeTmpFiles анализирует tmpfiles.d покрытие. При fix=true удаляет старый и записывает новый конфиг.
+// AnalyzeTmpFiles анализирует tmpfiles.d покрытие. При fix=true удаляет старый конфиг
+// с его factory-файлами и записывает новые.
 func (s *Service) AnalyzeTmpFiles(ctx context.Context, fix bool) (*TmpFilesResult, string, error) {
 	a := tmpFilesAnalysis{reporter: s.reporter}
 
 	if fix {
+		if err := a.CleanFactory(s.rootfs); err != nil {
+			return nil, "", fmt.Errorf("cleaning factory: %w", err)
+		}
 		if _, err := a.RemoveConf(s.rootfs); err != nil {
 			return nil, "", err
 		}
@@ -80,6 +85,12 @@ func (s *Service) AnalyzeTmpFiles(ctx context.Context, fix bool) (*TmpFilesResul
 			return nil, "", fmt.Errorf("writing tmpfiles.d: %w", err)
 		}
 		written = path
+
+		factory, err := a.WriteFactory(s.rootfs)
+		if err != nil {
+			return nil, "", fmt.Errorf("writing factory: %w", err)
+		}
+		result.Factory = factory
 	}
 
 	return result, written, nil

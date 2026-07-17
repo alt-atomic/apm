@@ -123,6 +123,7 @@ type ImageLintResponse struct {
 type ImageLintTmpfiles struct {
 	Missing     []string `json:"missing"`
 	Unsupported []string `json:"unsupported"`
+	Factory     []string `json:"factory,omitempty"`
 }
 
 type ImageLintSysusers struct {
