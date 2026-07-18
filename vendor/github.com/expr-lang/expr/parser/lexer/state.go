@@ -25,6 +25,14 @@ func root(l *Lexer) stateFn {
 		l.emitValue(String, str)
 	case r == '`':
 		l.scanRawString(r)
+	case (r == 'b' || r == 'B') && (l.peek() == '\'' || l.peek() == '"'):
+		quote := l.next()
+		l.scanString(quote)
+		str, err := unescapeBytes(l.word()[1:]) // skip 'b'
+		if err != nil {
+			l.error("%v", err)
+		}
+		l.emitValue(Bytes, str)
 	case '0' <= r && r <= '9':
 		l.backup()
 		return number
@@ -129,8 +137,14 @@ loop:
 			switch l.word() {
 			case "not":
 				return not
-			case "in", "or", "and", "matches", "contains", "startsWith", "endsWith", "let", "if", "else":
+			case "in", "or", "and", "matches", "contains", "startsWith", "endsWith", "let":
 				l.emit(Operator)
+			case "if", "else":
+				if !l.DisableIfOperator {
+					l.emit(Operator)
+				} else {
+					l.emit(Identifier)
+				}
 			default:
 				l.emit(Identifier)
 			}
