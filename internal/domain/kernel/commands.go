@@ -17,12 +17,13 @@
 package kernel
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
-	"apm/internal/common/wrapper"
 	"context"
 	"errors"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/urfave/cli/v3"
 )
@@ -33,10 +34,8 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-
-func CommandList(ctx context.Context) *cli.Command {
-	appConfig := app.GetAppConfig(ctx)
+func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
 
 	return &cli.Command{
 		Name:    "kernel",
@@ -62,9 +61,9 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.ListKernels(ctx, cmd.String("flavour"), cmd.Bool("installed"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -73,9 +72,9 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.GetCurrentKernel(ctx)
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -102,14 +101,14 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					flavour := cmd.Args().First()
 					if flavour == "" {
-						return reply.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Kernel flavour must be specified")))))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("Kernel flavour must be specified")))))
 					}
 
 					resp, err := actions.InstallKernel(ctx, flavour, cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("simulate"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -139,9 +138,9 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.UpdateKernel(ctx, cmd.String("flavour"), cmd.StringSlice("modules"), cmd.Bool("headers"), cmd.Bool("simulate"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -163,9 +162,9 @@ func CommandList(ctx context.Context) *cli.Command {
 				Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 					resp, err := actions.CleanOldKernels(ctx, cmd.Bool("no-backup"), cmd.Bool("simulate"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}),
 			},
 			{
@@ -188,9 +187,9 @@ func CommandList(ctx context.Context) *cli.Command {
 							}
 							resp, err := actions.ListKernelModules(ctx, flavour)
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponseFromError(err))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 							}
-							return reply.CliResponse(ctx, reply.OK(resp))
+							return reporter.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 					{
@@ -212,14 +211,14 @@ func CommandList(ctx context.Context) *cli.Command {
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							modules := cmd.Args().Slice()
 							if len(modules) == 0 {
-								return reply.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))))
 							}
 
 							resp, err := actions.InstallKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("simulate"))
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponseFromError(err))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 							}
-							return reply.CliResponse(ctx, reply.OK(resp))
+							return reporter.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 					{
@@ -241,14 +240,14 @@ func CommandList(ctx context.Context) *cli.Command {
 						Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 							modules := cmd.Args().Slice()
 							if len(modules) == 0 {
-								return reply.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one module must be specified")))))
 							}
 
 							resp, err := actions.RemoveKernelModules(ctx, cmd.String("flavour"), modules, cmd.Bool("simulate"))
 							if err != nil {
-								return reply.CliResponse(ctx, newErrorResponseFromError(err))
+								return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 							}
-							return reply.CliResponse(ctx, reply.OK(resp))
+							return reporter.CliResponse(ctx, reply.OK(resp))
 						}),
 					},
 				},

@@ -17,16 +17,17 @@
 package dialog
 
 import (
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"

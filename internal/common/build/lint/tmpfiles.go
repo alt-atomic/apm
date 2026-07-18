@@ -1,8 +1,6 @@
 package lint
 
 import (
-	"apm/internal/common/build/etcfiles"
-	"apm/internal/common/reply"
 	"bufio"
 	"context"
 	"fmt"
@@ -12,6 +10,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 type tmpFilesEntry struct {
@@ -24,14 +25,15 @@ type tmpFilesEntry struct {
 }
 
 type tmpFilesAnalysis struct {
+	reporter    *reply.Reporter
 	Missing     []tmpFilesEntry
 	Unsupported []string
 	Existing    map[string]string
 }
 
 func (a *tmpFilesAnalysis) Analyze(ctx context.Context, rootfs string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintTmpfiles))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintTmpfiles))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintTmpfiles))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintTmpfiles))
 
 	existing, err := a.readEntries(rootfs)
 	if err != nil {
@@ -101,6 +103,10 @@ func (a *tmpFilesAnalysis) readEntries(rootfs string) (map[string]string, error)
 			if f.IsDir() || !strings.HasSuffix(f.Name(), ".conf") {
 				continue
 			}
+			// свой конфиг игнорируем
+			if f.Name() == confName {
+				continue
+			}
 			if err = a.parseFile(filepath.Join(dir, f.Name()), entries); err != nil {
 				return nil, err
 			}
@@ -127,39 +133,6 @@ func (a *tmpFilesAnalysis) parseFile(path string, entries map[string]string) err
 		}
 	}
 	return scanner.Err()
-}
-
-// skipContentDirs директории, для которых создаётся запись,
-// но содержимое не обходится (управляется другими механизмами).
-var skipContentDirs = []string{
-	"/var/home",
-	"/var/root",
-	"/var/cache/man",
-	"/var/cache/fontconfig",
-	"/var/cache/apt",
-	"/var/tmp",
-	"/etc/rc.d",
-	"/etc/tcb",
-	"/etc/alternatives/links",
-}
-
-// skipContentPrefixes пути, совпадающие по префиксу
-var skipContentPrefixes = []string{
-	"/etc/skel",
-}
-
-func skipContent(absPath string) bool {
-	for _, dir := range skipContentDirs {
-		if absPath == dir {
-			return true
-		}
-	}
-	for _, prefix := range skipContentPrefixes {
-		if strings.HasPrefix(absPath, prefix) {
-			return true
-		}
-	}
-	return false
 }
 
 func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
@@ -210,7 +183,7 @@ func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 
 		case ft.IsDir():
 			if !covered {
-				mode := fmt.Sprintf("%04o", info.Mode().Perm())
+				mode := formatMode(info.Mode())
 				user, group := lookupOwner(info)
 				escaped := escapePath(canonPath)
 				a.Missing = append(a.Missing, tmpFilesEntry{
@@ -222,7 +195,7 @@ func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 					Line:  fmt.Sprintf("d %s %s %s %s - -", escaped, mode, user, group),
 				})
 			}
-			if !skipContent(absPath) {
+			if policyFor(absPath) != policySkipContent {
 				if err = a.walk(rootfs, fullPath); err != nil {
 					return err
 				}
@@ -230,17 +203,33 @@ func (a *tmpFilesAnalysis) walk(rootfs, dir string) error {
 
 		case ft.IsRegular():
 			if !covered {
-				mode := fmt.Sprintf("%04o", info.Mode().Perm())
+				policy := policyFor(absPath)
+				if policy == policySkipFiles {
+					continue
+				}
+				mode := formatMode(info.Mode())
 				user, group := lookupOwner(info)
 				escaped := escapePath(canonPath)
-				a.Missing = append(a.Missing, tmpFilesEntry{
-					Type:  "z",
-					Path:  canonPath,
-					Mode:  mode,
-					User:  user,
-					Group: group,
-					Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
-				})
+				if policy == policyNoFactory {
+					a.Missing = append(a.Missing, tmpFilesEntry{
+						Type:  "z",
+						Path:  canonPath,
+						Mode:  mode,
+						User:  user,
+						Group: group,
+						Line:  fmt.Sprintf("z %s %s %s %s - -", escaped, mode, user, group),
+					})
+				} else {
+					// Восстановление из /usr/share/factory
+					a.Missing = append(a.Missing, tmpFilesEntry{
+						Type:  "C",
+						Path:  canonPath,
+						Mode:  mode,
+						User:  user,
+						Group: group,
+						Line:  fmt.Sprintf("C %s %s %s %s - -", escaped, mode, user, group),
+					})
+				}
 			}
 
 		default:

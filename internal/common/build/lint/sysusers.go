@@ -1,8 +1,6 @@
 package lint
 
 import (
-	"apm/internal/common/build/etcfiles"
-	"apm/internal/common/reply"
 	"bufio"
 	"context"
 	"fmt"
@@ -11,6 +9,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 type sysusersEntryType int
@@ -34,14 +35,15 @@ type sysusersEntry struct {
 }
 
 type sysusersAnalysis struct {
+	reporter      *reply.Reporter
 	MissingUsers  []etcfiles.PasswdEntry
 	MissingGroups []etcfiles.GroupEntry
 	Entries       []sysusersEntry
 }
 
 func (a *sysusersAnalysis) Analyze(ctx context.Context, rootfs string) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintSysusers))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintSysusers))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemLintSysusers))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemLintSysusers))
 	entries, err := a.readEntries(rootfs)
 	if err != nil {
 		return fmt.Errorf("reading sysusers.d: %w", err)
@@ -164,6 +166,10 @@ func (a *sysusersAnalysis) readEntries(rootfs string) ([]sysusersEntry, error) {
 
 	for _, f := range files {
 		if f.IsDir() || !strings.HasSuffix(f.Name(), ".conf") {
+			continue
+		}
+		// свой конфиг игнорируем
+		if f.Name() == confName {
 			continue
 		}
 		entries, err := a.parseFile(filepath.Join(dir, f.Name()))

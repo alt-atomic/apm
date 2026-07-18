@@ -17,17 +17,18 @@
 package _package
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 
 	"gorm.io/gorm/clause"
 
@@ -40,6 +41,7 @@ import (
 // PackageDBService предоставляет сервис для операций с базой данных пакетов.
 type PackageDBService struct {
 	dbManager app.DatabaseManager
+	reporter  *reply.Reporter
 	realDb    *gorm.DB
 }
 
@@ -85,9 +87,10 @@ func (s *PackageDBService) db() (*gorm.DB, error) {
 }
 
 // NewPackageDBService создаёт новый сервис для работы с базой данных пакетов.
-func NewPackageDBService(dbManager app.DatabaseManager) *PackageDBService {
+func NewPackageDBService(dbManager app.DatabaseManager, reporter *reply.Reporter) *PackageDBService {
 	return &PackageDBService{
 		dbManager: dbManager,
+		reporter:  reporter,
 	}
 }
 
@@ -194,8 +197,8 @@ func (s *PackageDBService) SavePackagesToDB(ctx context.Context, packages []Pack
 	syncDBMutex.Lock()
 	defer syncDBMutex.Unlock()
 
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSavePackagesToDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSavePackagesToDB))
+	s.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSavePackagesToDB))
+	defer s.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSavePackagesToDB))
 
 	db, err := s.db()
 	if err != nil {
@@ -450,7 +453,7 @@ func (s *PackageDBService) SearchPackagesMultiLimit(ctx context.Context, likePat
 // QueryHostImagePackages возвращает пакеты с возможностью фильтрации и сортировки
 func (s *PackageDBService) QueryHostImagePackages(
 	ctx context.Context,
-	filters []filter.Filter,
+	filters []filter.FilterGroup,
 	sortField, sortOrder string,
 	limit, offset int,
 ) ([]Package, error) {
@@ -462,7 +465,7 @@ func (s *PackageDBService) QueryHostImagePackages(
 	query := db.WithContext(ctx).Model(&DBPackage{})
 
 	// Применяем фильтры
-	query = SystemFilterApplier.Apply(query, filters)
+	query = SystemFilterApplier.ApplyGroups(query, filters)
 
 	if sortField != "" {
 		if err = SystemFilterConfig.ValidateSortField(sortField); err != nil {
@@ -497,14 +500,14 @@ func (s *PackageDBService) QueryHostImagePackages(
 }
 
 // CountHostImagePackages возвращает количество записей с учётом фильтров
-func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters []filter.Filter) (int64, error) {
+func (s *PackageDBService) CountHostImagePackages(ctx context.Context, filters []filter.FilterGroup) (int64, error) {
 	db, err := s.db()
 	if err != nil {
 		return 0, err
 	}
 
 	query := db.WithContext(ctx).Model(&DBPackage{})
-	query = SystemFilterApplier.Apply(query, filters)
+	query = SystemFilterApplier.ApplyGroups(query, filters)
 
 	var totalCount int64
 	if err = query.Count(&totalCount).Error; err != nil {

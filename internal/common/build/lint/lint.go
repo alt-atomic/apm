@@ -8,13 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 const confName = "apm-lint.conf"
 
-// Service предоставляет API для линтинга образов
+// Service предоставляет API для линтинга образов.
 type Service struct {
-	rootfs string
+	rootfs   string
+	reporter *reply.Reporter
 }
 
 // Result содержит результат линтинга
@@ -30,6 +33,7 @@ type Result struct {
 type TmpFilesResult struct {
 	Missing     []string
 	Unsupported []string
+	Factory     []string
 }
 
 // SysUsersResult результат анализа sysusers.d
@@ -42,16 +46,20 @@ type RunTmpResult struct {
 	Entries []string
 }
 
-// New создаёт новый Service для линтинга rootfs
-func New(rootfs string) *Service {
-	return &Service{rootfs: rootfs}
+// New создаёт новый Service для линтинга rootfs.
+func New(rootfs string, reporter *reply.Reporter) *Service {
+	return &Service{rootfs: rootfs, reporter: reporter}
 }
 
-// AnalyzeTmpFiles анализирует tmpfiles.d покрытие. При fix=true удаляет старый и записывает новый конфиг.
+// AnalyzeTmpFiles анализирует tmpfiles.d покрытие. При fix=true удаляет старый конфиг
+// с его factory-файлами и записывает новые.
 func (s *Service) AnalyzeTmpFiles(ctx context.Context, fix bool) (*TmpFilesResult, string, error) {
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: s.reporter}
 
 	if fix {
+		if err := a.CleanFactory(s.rootfs); err != nil {
+			return nil, "", fmt.Errorf("cleaning factory: %w", err)
+		}
 		if _, err := a.RemoveConf(s.rootfs); err != nil {
 			return nil, "", err
 		}
@@ -77,6 +85,12 @@ func (s *Service) AnalyzeTmpFiles(ctx context.Context, fix bool) (*TmpFilesResul
 			return nil, "", fmt.Errorf("writing tmpfiles.d: %w", err)
 		}
 		written = path
+
+		factory, err := a.WriteFactory(s.rootfs)
+		if err != nil {
+			return nil, "", fmt.Errorf("writing factory: %w", err)
+		}
+		result.Factory = factory
 	}
 
 	return result, written, nil
@@ -84,7 +98,7 @@ func (s *Service) AnalyzeTmpFiles(ctx context.Context, fix bool) (*TmpFilesResul
 
 // AnalyzeSysUsers анализирует sysusers.d покрытие. При fix=true удаляет старый и записывает новый конфиг.
 func (s *Service) AnalyzeSysUsers(ctx context.Context, fix bool) (*SysUsersResult, string, error) {
-	var a sysusersAnalysis
+	a := sysusersAnalysis{reporter: s.reporter}
 
 	if fix {
 		if _, err := a.RemoveConf(s.rootfs); err != nil {
@@ -115,7 +129,7 @@ func (s *Service) AnalyzeSysUsers(ctx context.Context, fix bool) (*SysUsersResul
 
 // AnalyzeRunTmp анализирует /run и /tmp на наличие неожиданных файлов.
 func (s *Service) AnalyzeRunTmp(ctx context.Context) (*RunTmpResult, error) {
-	var a runTmpAnalysis
+	a := runTmpAnalysis{reporter: s.reporter}
 
 	if err := a.Analyze(ctx, s.rootfs); err != nil {
 		return nil, err

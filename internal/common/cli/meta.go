@@ -1,0 +1,288 @@
+// Atomic Package Manager
+// Copyright (C) 2025 Дмитрий Удалов dmitry@udalov.online
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+package cli
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/urfave/cli/v3"
+)
+
+type CommandHooks struct {
+	OnNotFound   func(ctx context.Context, cmd *cli.Command, name string)
+	OnUsageError func(err error) error
+}
+
+// ApplyCommandSettings обходит дерево команд рекурсивно и применяет общие настройки.
+func ApplyCommandSettings(cmd *cli.Command, hooks CommandHooks) {
+	if hooks.OnNotFound != nil {
+		cmd.CommandNotFound = hooks.OnNotFound
+	}
+	cmd.HideHelpCommand = true
+	cmd.EnableShellCompletion = true
+	cmd.Suggest = true
+	if hooks.OnUsageError != nil {
+		cmd.OnUsageError = func(_ context.Context, _ *cli.Command, err error, _ bool) error {
+			return hooks.OnUsageError(err)
+		}
+	}
+	for _, sub := range cmd.Commands {
+		ApplyCommandSettings(sub, hooks)
+	}
+}
+
+// AppDescription возвращает описание приложения для корневой команды.
+func AppDescription() string {
+	return app.T_("Universal package manager for ALT Linux") + "\n" +
+		app.T_("Manages system packages via APT, distrobox containers, atomic images and kernels") + "\n" +
+		app.T_("Supports repository management") + "\n" +
+		app.T_("Works as CLI tool, D-Bus service (system/session) or HTTP API server") + "\n" +
+		app.T_("Output formats: text (default, types: tree/plain via -ft) and json (-f json)")
+}
+
+// SetupHelpTemplates задаёт общие шаблоны для help и переопределяет встроенные флаги.
+func SetupHelpTemplates() {
+	cli.HelpFlag = &cli.BoolFlag{
+		Name:        "help",
+		Aliases:     []string{"h"},
+		Usage:       app.T_("show help"),
+		HideDefault: true,
+		Local:       true,
+	}
+
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:        "version",
+		Usage:       app.T_("print the version"),
+		HideDefault: true,
+		Local:       true,
+	}
+
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#a2734c"))
+
+	cli.RootCommandHelpTemplate = fmt.Sprintf(`%s
+   {{template "helpNameTemplate" .}} {{if .Version}}{{if not .HideVersion}}{{.Version}}{{end}}{{end}}{{if .Description}}
+
+%s
+   {{if .UsageText}}{{wrap .UsageText 3}}{{else}}{{.FullName}} [command [command options]]{{end}}
+
+%s
+   {{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
+
+%s{{template "visibleCommandCategoryTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+
+%s{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+
+%s{{template "visibleFlagTemplate" .}}{{end}}
+`,
+		titleStyle.Render(app.T_("Module:")),
+		titleStyle.Render(app.T_("Usage:")),
+		titleStyle.Render(app.T_("Description:")),
+		titleStyle.Render(app.T_("Commands:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Options:")),
+	)
+
+	cli.CommandHelpTemplate = fmt.Sprintf(`%s
+   {{template "helpNameTemplate" .}}
+
+%s
+   {{template "usageTemplate" .}}{{if .Category}}
+
+%s
+   {{.Category}}{{end}}{{if .Description}}
+
+%s
+   {{template "descriptionTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+
+%s{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+
+%s{{template "visibleFlagTemplate" .}}{{end}}{{if .VisiblePersistentFlags}}
+
+%s{{template "visiblePersistentFlagTemplate" .}}{{end}}
+`,
+		titleStyle.Render(app.T_("Module:")),
+		titleStyle.Render(app.T_("Usage:")),
+		titleStyle.Render(app.T_("Category:")),
+		titleStyle.Render(app.T_("Description:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Global options:")),
+	)
+
+	cli.SubcommandHelpTemplate = fmt.Sprintf(`%s
+   {{template "helpNameTemplate" .}}
+
+%s
+   {{if .UsageText}}{{wrap .UsageText 3}}{{else}}{{.FullName}} [command [command options]]{{end}}{{if .Category}}
+
+%s
+   {{.Category}}{{end}}{{if .Description}}
+
+%s
+   {{template "descriptionTemplate" .}}{{end}}{{if .VisibleCommands}}
+
+%s{{template "visibleCommandCategoryTemplate" .}}{{end}}{{if .VisibleFlagCategories}}
+
+%s{{template "visibleFlagCategoryTemplate" .}}{{else if .VisibleFlags}}
+
+%s{{template "visibleFlagTemplate" .}}{{end}}{{if .VisiblePersistentFlags}}
+
+%s{{template "visiblePersistentFlagTemplate" .}}{{end}}
+`,
+		titleStyle.Render(app.T_("Module:")),
+		titleStyle.Render(app.T_("Usage:")),
+		titleStyle.Render(app.T_("Category:")),
+		titleStyle.Render(app.T_("Description:")),
+		titleStyle.Render(app.T_("Commands:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Options:")),
+		titleStyle.Render(app.T_("Global options:")),
+	)
+
+	cli.FlagStringer = func(fl cli.Flag) string {
+		df, ok := fl.(cli.DocGenerationFlag)
+		if !ok {
+			return ""
+		}
+
+		placeholder, usage := unquoteUsage(df.GetUsage())
+		needsPlaceholder := df.TakesValue()
+
+		if needsPlaceholder && placeholder == "" {
+			placeholder = ""
+		}
+
+		defaultValueString := ""
+		if rf, ok := fl.(cli.RequiredFlag); !ok || !rf.IsRequired() {
+			isVisible := df.IsDefaultVisible()
+			if s := df.GetDefaultText(); isVisible && s != "" {
+				defaultValueString = fmt.Sprintf(" (%s: %s)", app.T_("default"), s)
+			}
+		}
+
+		usageWithDefault := strings.TrimSpace(usage + defaultValueString)
+
+		var prefixed string
+		names := fl.Names()
+		for i, name := range names {
+			if name == "" {
+				continue
+			}
+
+			if len(name) == 1 {
+				prefixed += "-" + name
+			} else {
+				prefixed += "--" + name
+			}
+
+			if placeholder != "" {
+				prefixed += " " + placeholder
+			}
+			if i < len(names)-1 {
+				prefixed += ", "
+			}
+		}
+
+		if sliceFlag, ok := fl.(cli.DocGenerationMultiValueFlag); ok && sliceFlag.IsMultiValueFlag() {
+			prefixed = prefixed + " [ " + prefixed + " ]"
+		}
+
+		envVars := df.GetEnvVars()
+		envHint := ""
+		if len(envVars) > 0 {
+			envHint = fmt.Sprintf(" [%s]", strings.Join(envVars, ", "))
+		}
+
+		return fmt.Sprintf("   %s\t%s%s", prefixed, usageWithDefault, envHint)
+	}
+}
+
+// unquoteUsage извлекает placeholder из usage-строки флага.
+func unquoteUsage(usage string) (string, string) {
+	for i := 0; i < len(usage); i++ {
+		if usage[i] == '`' {
+			for j := i + 1; j < len(usage); j++ {
+				if usage[j] == '`' {
+					name := usage[i+1 : j]
+					usage = usage[:i] + name + usage[j+1:]
+					return name, usage
+				}
+			}
+			break
+		}
+	}
+	return "", usage
+}
+
+// TranslateUsageError переводит ошибки парсинга CLI (required flags, invalid value и т.д.).
+func TranslateUsageError(err error) error {
+	msg := err.Error()
+
+	if after, ok := strings.CutSuffix(msg, " not set"); ok {
+		if flags, ok := strings.CutPrefix(after, "Required flags "); ok {
+			return fmt.Errorf(app.T_("Required flags %s not set"), flags)
+		}
+		if flag, ok := strings.CutPrefix(after, "Required flag "); ok {
+			return fmt.Errorf(app.T_("Required flag %s not set"), flag)
+		}
+	}
+
+	if flag, ok := strings.CutPrefix(msg, "flag needs an argument: "); ok {
+		return fmt.Errorf(app.T_("flag needs an argument: %s"), flag)
+	}
+
+	if flag, ok := strings.CutPrefix(msg, "flag provided but not defined: "); ok {
+		return fmt.Errorf(app.T_("flag provided but not defined: %s"), flag)
+	}
+
+	if after, ok := strings.CutPrefix(msg, "invalid value "); ok {
+		if idx := strings.Index(after, " for flag "); idx != -1 {
+			value := after[:idx]
+			rest := after[idx+len(" for flag "):]
+			if errIdx := strings.Index(rest, ": "); errIdx != -1 {
+				flagName := rest[:errIdx]
+				reason := rest[errIdx+2:]
+				return fmt.Errorf(app.T_("invalid value %s for flag %s: %s"), value, flagName, reason)
+			}
+			return fmt.Errorf(app.T_("invalid value %s for flag %s"), value, rest)
+		}
+	}
+
+	if flag, ok := strings.CutPrefix(msg, "no such flag "); ok {
+		return fmt.Errorf(app.T_("no such flag %s"), flag)
+	}
+
+	if after, ok := strings.CutPrefix(msg, "could not parse "); ok {
+		if idx := strings.Index(after, " for flag "); idx != -1 {
+			valuePart := after[:idx]
+			rest := after[idx+len(" for flag "):]
+			if errIdx := strings.Index(rest, ": "); errIdx != -1 {
+				flagName := rest[:errIdx]
+				reason := rest[errIdx+2:]
+				return fmt.Errorf(app.T_("could not parse %s for flag %s: %s"), valuePart, flagName, reason)
+			}
+		}
+	}
+
+	return err
+}

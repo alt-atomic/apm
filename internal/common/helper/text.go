@@ -17,12 +17,13 @@
 package helper
 
 import (
-	"apm/internal/common/app"
 	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // ClearALRPackageName очищаем названия alr пакетов от постфиксов

@@ -17,41 +17,44 @@
 package kernel
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/binding/apt"
-	"apm/internal/common/command"
-	"apm/internal/common/reply"
-	"apm/internal/domain/kernel/service"
 	"context"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	"altlinux.space/alt-atomic/apm/pkg/apt"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	appConfig          *app.Config
+	reporter           *reply.Reporter
 	serviceAptActions  aptActionsService
 	serviceAptDatabase aptDatabaseService
 	kernelManager      kernelManagerService
 }
 
 // NewActions создаёт новый экземпляр Actions.
-func NewActions(appConfig *app.Config) *Actions {
-	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
+	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
 	aptActions := apt.NewActions()
-	aptPackageActions := _package.NewActions(hostPackageDBSvc, appConfig)
-	kernelManager := service.NewKernelManager(hostPackageDBSvc, aptActions, runner)
+	aptPackageActions := _package.NewActions(hostPackageDBSvc, appConfig, reporter)
+	kernelManager := service.NewKernelManager(hostPackageDBSvc, aptActions, runner, reporter)
 
 	return &Actions{
 		appConfig:          appConfig,
+		reporter:           reporter,
 		serviceAptDatabase: hostPackageDBSvc,
 		serviceAptActions:  aptPackageActions,
 		kernelManager:      kernelManager,
@@ -127,8 +130,8 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
-	if len(modules) == 0 {
-		currentKernel, _ := a.kernelManager.GetCurrentKernel(ctx)
+	currentKernel, _ := a.kernelManager.GetCurrentKernel(ctx)
+	if len(modules) == 0 && currentKernel != nil {
 		inheritedModules, _ := a.kernelManager.InheritModulesFromKernel(latest, currentKernel)
 		if len(inheritedModules) > 0 {
 			modules = inheritedModules
@@ -136,7 +139,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 	}
 
 	// Автоматическое добавление headers и модулей
-	additionalPackages, _ := a.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, includeHeaders)
+	additionalPackages, _ := a.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, currentKernel, includeHeaders)
 
 	// Добавляем дополнительные пакеты к модулям
 	for _, pkg := range additionalPackages {
@@ -641,8 +644,8 @@ func (a *Actions) RemoveKernelModules(ctx context.Context, flavour string,
 
 // formatKernelOutput форматирует вывод информации о ядрах
 func (a *Actions) formatKernelOutput(ctx context.Context, kernels []*service.Info) []service.FullKernelInfo {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelListModules))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelListModules))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelListModules))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelListModules))
 
 	var result []service.FullKernelInfo
 	for _, kernel := range kernels {
@@ -671,8 +674,8 @@ func (a *Actions) findKernelByVersion(version string, kernels []*service.Info) *
 
 // updateAllPackagesDB обновляет состояние всех пакетов в базе данных
 func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
 
 	installedPackages, err := a.serviceAptActions.GetInstalledPackages(ctx)
 	if err != nil {

@@ -1,11 +1,12 @@
 package testutil
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/version"
 	"errors"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/version"
 )
 
 // MockConfigManager реализует app.Manager для тестов.

@@ -17,39 +17,42 @@
 package appstream
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
 	"context"
 	"errors"
 	"fmt"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 )
 
 // Actions объединяет методы для управления AppStream данными.
 type Actions struct {
 	appConfig    *app.Config
+	reporter     *reply.Reporter
 	swCatService *swcat.Service
 	dbService    *swcat.DBService
 	pkgDBService *_package.PackageDBService
 }
 
 // NewActions создаёт новый экземпляр Actions.
-func NewActions(appConfig *app.Config) *Actions {
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
 	return &Actions{
 		appConfig:    appConfig,
-		swCatService: swcat.NewSwCatService("/usr/share/swcatalog/xml"),
-		dbService:    swcat.NewAppStreamDBService(appConfig.DatabaseManager),
-		pkgDBService: _package.NewPackageDBService(appConfig.DatabaseManager),
+		reporter:     reporter,
+		swCatService: swcat.NewSwCatService("/usr/share/swcatalog/xml", reporter),
+		dbService:    swcat.NewAppStreamDBService(appConfig.DatabaseManager, reporter),
+		pkgDBService: _package.NewPackageDBService(appConfig.DatabaseManager, reporter),
 	}
 }
 
 // Update загружает AppStream данные из XML и сохраняет в БД.
 func (a *Actions) Update(ctx context.Context) (*UpdateResponse, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationUpdate))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationUpdate))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationUpdate))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationUpdate))
 
 	pkgMap, err := a.swCatService.Load(ctx)
 	if err != nil {
@@ -74,7 +77,7 @@ func (a *Actions) Update(ctx context.Context) (*UpdateResponse, error) {
 func (a *Actions) validateDB(ctx context.Context) error {
 	if err := a.dbService.DatabaseExist(ctx); err != nil {
 		if syscall.Geteuid() != 0 {
-			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("applications database is empty. Run 'apm system appstream update' with elevated rights to create it")))
+			return apmerr.New(apmerr.ErrorTypePermission, errors.New(app.T_("applications database is empty. Run 'apm system application update' with elevated rights to create it")))
 		}
 		if _, updateErr := a.Update(ctx); updateErr != nil {
 			return updateErr

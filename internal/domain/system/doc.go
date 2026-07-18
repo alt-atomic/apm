@@ -17,11 +17,12 @@
 package system
 
 import (
-	"apm/internal/common/dbus_doc"
-	"apm/internal/common/http_server"
-	"apm/internal/domain/system/appstream"
 	"context"
 	_ "embed"
+
+	"altlinux.space/alt-atomic/apm/internal/common/dbus_doc"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
 )
 
 //go:embed dbus.go
@@ -56,5 +57,5 @@ func getDocConfig() dbus_doc.Config {
 // startDocServer запускает веб-сервер с D-Bus документацией
 func startDocServer(ctx context.Context) error {
 	gen := dbus_doc.NewGenerator(getDocConfig())
-	return http_server.ServeHTML(ctx, "127.0.0.1:8085", gen.GenerateDBusDocHTML)
+	return http_server.ServeHTMLOnFreePort(ctx, gen.GenerateDBusDocHTML)
 }

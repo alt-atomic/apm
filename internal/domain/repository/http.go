@@ -17,15 +17,26 @@
 package repository
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/http_server"
-	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"net/http"
 	"reflect"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
 )
+
+func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter) service.HTTPModule {
+	return service.HTTPModule{
+		Endpoints: func(ctx context.Context) []http_server.Endpoint {
+			actions := NewActions(appConfig, reporter)
+			return NewHTTPWrapper(actions, appConfig, reporter, ctx).GetEndpoints()
+		},
+	}
+}
 
 // HTTPWrapper предоставляет обёртку для действий с репозиториями через HTTP.
 type HTTPWrapper struct {
@@ -33,10 +44,10 @@ type HTTPWrapper struct {
 	actions *Actions
 }
 
-// NewHTTPWrapper создаёт новую обёртку над actions
-func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTTPWrapper {
+// NewHTTPWrapper создаёт новую обёртку над actions.
+func NewHTTPWrapper(a *Actions, appConfig *app.Config, reporter *reply.Reporter, ctx context.Context) *HTTPWrapper {
 	return &HTTPWrapper{
-		BaseHTTPWrapper: http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
+		BaseHTTPWrapper: http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig, Reporter: reporter},
 		actions:         a,
 	}
 }

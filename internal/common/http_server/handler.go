@@ -17,14 +17,15 @@
 package http_server
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 // backgroundTaskResponse структура ответа при запуске фоновой задачи
@@ -33,10 +34,11 @@ type backgroundTaskResponse struct {
 	Transaction string `json:"transaction"`
 }
 
-// BaseHTTPWrapper общая база для HTTP обёрток модулей
+// BaseHTTPWrapper общая база для HTTP обёрток модулей.
 type BaseHTTPWrapper struct {
 	Ctx       context.Context
 	AppConfig *app.Config
+	Reporter  *reply.Reporter
 }
 
 // CtxWithTransaction создает контекст с transaction из запроса
@@ -87,7 +89,7 @@ func (b *BaseHTTPWrapper) RunBackground(rw http.ResponseWriter, r *http.Request,
 	ctx, txID := b.CtxWithTransactionOrGenerate(r)
 	go func() {
 		resp, err := fn(ctx)
-		reply.SendTaskResult(ctx, event, resp, err)
+		b.Reporter.SendTaskResult(ctx, event, resp, err)
 	}()
 
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")

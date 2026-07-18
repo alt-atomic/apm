@@ -17,16 +17,16 @@
 package system
 
 import (
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build/altfiles"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/common/wrapper"
-	"apm/internal/domain/system/appstream"
 	"context"
 	"fmt"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
 
 	"github.com/urfave/cli/v3"
 )
@@ -37,9 +37,8 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Command) {
+func findPkgWithInstalled(appConfig *app.Config, reporter *reply.Reporter, installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
-		appConfig := app.GetAppConfig(ctx)
 		args := cmd.Args().Slice()
 
 		// Текущий токен — последний позиционный аргумент (если есть)
@@ -59,7 +58,7 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 		}
 
 		like := currentToken + "%"
-		svc := NewActions(appConfig).serviceAptDatabase
+		svc := NewActions(appConfig, reporter).serviceAptDatabase
 		if svc == nil {
 			return
 		}
@@ -76,19 +75,16 @@ func findPkgWithInstalled(installed bool) func(ctx context.Context, cmd *cli.Com
 }
 
 // findPkgInfoOnlyFirstArg выполняет поиск информации о пакете только для первого аргумента.
-func findPkgInfoOnlyFirstArg() func(ctx context.Context, cmd *cli.Command) {
+func findPkgInfoOnlyFirstArg(appConfig *app.Config, reporter *reply.Reporter) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
 		if cmd.NArg() >= 2 {
 			return
 		}
-		findPkgWithInstalled(false)(ctx, cmd)
+		findPkgWithInstalled(appConfig, reporter, false)(ctx, cmd)
 	}
 }
 
-var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-
-// applyAptOptions парсит -o флаги и применяет к actions
+// applyAptOptions парсит -o флаги и применяет к actions.
 func applyAptOptions(cmd *cli.Command, actions *Actions) {
 	opts := cmd.StringSlice("option")
 	if len(opts) == 0 {
@@ -111,7 +107,9 @@ var aptOptionFlag = func() cli.Flag {
 	}
 }
 
-func upgradeCommand(appConfig *app.Config) *cli.Command {
+func upgradeCommand(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
+
 	if appConfig.ConfigManager.GetConfig().IsAtomic {
 		return &cli.Command{
 			Name:  "upgrade",
@@ -126,9 +124,9 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageUpdate(ctx, !cmd.Bool("no-cache"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		}
 	}
@@ -156,32 +154,49 @@ func upgradeCommand(appConfig *app.Config) *cli.Command {
 			if cmd.Bool("simulate") {
 				resp, err := actions.CheckUpgrade(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}
 			resp, err := actions.Upgrade(ctx, cmd.Bool("download-only"))
 			if err != nil {
-				return reply.CliResponse(ctx, newErrorResponseFromError(err))
+				return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 			}
-			return reply.CliResponse(ctx, reply.OK(resp))
+			return reporter.CliResponse(ctx, reply.OK(resp))
 		}),
 	}
 }
 
-func CommandList(ctx context.Context) *cli.Command {
-	appConfig := app.GetAppConfig(ctx)
+func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
+	withGlobalWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.NoRootCheck, NewActions, newErrorResponseFromError)
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
 
 	imageCmds := []*cli.Command{
 		{
 			Name:  "build",
-			Usage: app.T_("Build image"),
+			Usage: app.T_("Apply declarative configuration to the running host"),
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "config",
+					Aliases: []string{"c"},
+					Usage:   app.T_("Path to image configuration file"),
+				},
+				&cli.StringFlag{
+					Name:    "workdir",
+					Aliases: []string{"w"},
+					Usage:   app.T_("Working directory for the build"),
+				},
+				&cli.BoolFlag{
+					Name:  "pretty",
+					Usage: app.T_("Show progress events instead of the raw build log"),
+				},
+			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				resp, err := actions.ImageBuild(ctx)
+				resp, err := actions.ImageBuild(ctx, cmd.String("config"), cmd.String("workdir"), cmd.Bool("pretty"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -202,10 +217,10 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.ImageLint(ctx, cmd.String("root"), cmd.Bool("fix"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 	}
@@ -216,7 +231,42 @@ func CommandList(ctx context.Context) *cli.Command {
 			[]*cli.Command{
 				{
 					Name:  "apply",
-					Usage: app.T_("Apply changes to the host"),
+					Usage: app.T_("Rebuild and deploy a new system image"),
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:  "pull",
+							Usage: app.T_("Always pull the base image from the registry"),
+							Value: false,
+						},
+						&cli.BoolFlag{
+							Name:  "no-cache",
+							Usage: app.T_("Disable APT package cache for image build"),
+							Value: false,
+						},
+						&cli.StringFlag{
+							Name:    "config",
+							Aliases: []string{"c"},
+							Usage:   app.T_("Path to image configuration file"),
+						},
+						&cli.StringFlag{
+							Name:    "workdir",
+							Aliases: []string{"w"},
+							Usage:   app.T_("Working directory for the build"),
+						},
+					},
+					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"), cmd.String("config"), cmd.String("workdir"))
+						if err != nil {
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
+						}
+
+						return reporter.CliResponse(ctx, reply.OK(resp))
+					}),
+				},
+				{
+					Name:      "switch",
+					Usage:     app.T_("Switch the system to another base image"),
+					ArgsUsage: "IMAGE",
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
 							Name:  "pull",
@@ -230,12 +280,12 @@ func CommandList(ctx context.Context) *cli.Command {
 						},
 					},
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"))
+						resp, err := actions.ImageSwitch(ctx, cmd.Args().First(), cmd.Bool("pull"), !cmd.Bool("no-cache"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -244,10 +294,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageStatus(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -263,10 +313,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageUpdate(ctx, !cmd.Bool("no-cache"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -291,10 +341,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageHistory(ctx, cmd.String("image"), cmd.Int("limit"), cmd.Int("offset"))
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
@@ -304,29 +354,22 @@ func CommandList(ctx context.Context) *cli.Command {
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 						resp, err := actions.ImageFixNss(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 				{
-					Name:      "sync-groups",
-					Usage:     app.T_("Sync user groups from config"),
-					ArgsUsage: "[config-dir]",
+					Name:  "sync-groups",
+					Usage: app.T_("Sync user groups from config"),
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						var dirs []string
-						if cmd.Args().Len() > 0 {
-							dirs = []string{cmd.Args().First()}
-						} else {
-							dirs = altfiles.DefaultSyncConfigDirs
-						}
-						resp, err := actions.ImageSyncGroups(ctx, dirs)
+						resp, err := actions.ImageSyncGroups(ctx)
 						if err != nil {
-							return reply.CliResponse(ctx, newErrorResponseFromError(err))
+							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
 
-						return reply.CliResponse(ctx, reply.OK(resp))
+						return reporter.CliResponse(ctx, reply.OK(resp))
 					}),
 				},
 			}...,
@@ -358,17 +401,17 @@ func CommandList(ctx context.Context) *cli.Command {
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckReinstall(ctx, cmd.Args().Slice())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}
 				resp, err := actions.Reinstall(ctx, cmd.Args().Slice(), cmd.Bool("yes"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(true),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, true),
 		},
 		{
 			Name:      "install",
@@ -393,6 +436,12 @@ func CommandList(ctx context.Context) *cli.Command {
 					Aliases: []string{"d"},
 					Value:   false,
 				},
+				&cli.BoolFlag{
+					Name:    "no-update",
+					Usage:   app.T_("Skip updating the package list from the repository"),
+					Aliases: []string{"nu"},
+					Value:   false,
+				},
 				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
@@ -400,17 +449,40 @@ func CommandList(ctx context.Context) *cli.Command {
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckInstall(ctx, cmd.Args().Slice())
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}
-				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"), cmd.Bool("download-only"))
+				resp, err := actions.Install(ctx, cmd.Args().Slice(), cmd.Bool("yes"), cmd.Bool("download-only"), cmd.Bool("no-update"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(false),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, false),
+		},
+		{
+			Name:      "source",
+			Usage:     app.T_("Download source packages (.src.rpm) and install them into the rpm build tree"),
+			ArgsUsage: "packages",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "download-only",
+					Usage:   app.T_("Download packages without installation"),
+					Aliases: []string{"d"},
+					Value:   false,
+				},
+				aptOptionFlag(),
+			},
+			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
+				applyAptOptions(cmd, actions)
+				resp, err := actions.Source(ctx, cmd.Args().Slice(), cmd.Bool("download-only"))
+				if err != nil {
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
+				}
+				return reporter.CliResponse(ctx, reply.OK(resp))
+			}),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, false),
 		},
 		{
 			Name:      "remove",
@@ -443,18 +515,18 @@ func CommandList(ctx context.Context) *cli.Command {
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckRemove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"))
 					if err != nil {
-						return reply.CliResponse(ctx, newErrorResponseFromError(err))
+						return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 					}
-					return reply.CliResponse(ctx, reply.OK(resp))
+					return reporter.CliResponse(ctx, reply.OK(resp))
 				}
 				resp, err := actions.Remove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"),
 					cmd.Bool("yes"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
-			ShellComplete: findPkgWithInstalled(true),
+			ShellComplete: findPkgWithInstalled(appConfig, reporter, true),
 		},
 		{
 			Name:  "update",
@@ -475,13 +547,13 @@ func CommandList(ctx context.Context) *cli.Command {
 				applyAptOptions(cmd, actions)
 				resp, err := actions.Update(ctx, cmd.Bool("no-lock"), cmd.Bool("only-db"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
-		upgradeCommand(appConfig),
+		upgradeCommand(appConfig, reporter),
 		{
 			Name:      "info",
 			Usage:     app.T_("Package information"),
@@ -496,15 +568,15 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Info(ctx, cmd.Args().First())
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 				full := cmd.Bool("full")
-				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+				return reporter.CliResponse(ctx, reply.OK(map[string]interface{}{
 					"message":     reply.MessageWithHint(resp.Message, full),
 					"packageInfo": actions.FormatPackageOutput(resp.PackageInfo, full),
 				}))
 			}),
-			ShellComplete: findPkgInfoOnlyFirstArg(),
+			ShellComplete: findPkgInfoOnlyFirstArg(appConfig, reporter),
 		},
 		{
 			Name:      "search",
@@ -526,10 +598,10 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Search(ctx, cmd.Args().First(), cmd.Bool("installed"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 				full := cmd.Bool("full")
-				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+				return reporter.CliResponse(ctx, reply.OK(map[string]interface{}{
 					"message":  reply.MessageWithHint(resp.Message, full),
 					"packages": actions.FormatPackageOutput(resp.Packages, full),
 				}))
@@ -541,16 +613,17 @@ func CommandList(ctx context.Context) *cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Sections(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
 			Name:  "list",
 			Usage: app.T_("Building a query to get a list of packages"),
 			Description: helper.FilterDescription(
-				"--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education",
+				"--filter name=zip --filter name[eq]=zip --filter size[gt]=1000 --filter section[eq]=games|education\n"+
+					"  --filter installed=true --or-filter name[like]=office --or-filter description[like]=office",
 				app.T_("Application fields are available with the \"app.\" prefix: app.name, app.categories, app.type, etc."),
 			),
 			Flags: []cli.Flag{
@@ -577,6 +650,10 @@ func CommandList(ctx context.Context) *cli.Command {
 					Name:  "filter",
 					Usage: app.T_("Filter in the format key[op]=value or key=value"),
 				},
+				&cli.StringSliceFlag{
+					Name:  "or-filter",
+					Usage: app.T_("Filter added to a single OR group, format is the same as --filter"),
+				},
 				&cli.BoolFlag{
 					Name:  "force-update",
 					Usage: app.T_("Force update all packages before query"),
@@ -589,9 +666,9 @@ func CommandList(ctx context.Context) *cli.Command {
 				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				filters, err := _package.SystemFilterConfig.Parse(cmd.StringSlice("filter"))
+				groups, err := _package.SystemFilterConfig.ParseGroups(cmd.StringSlice("filter"), cmd.StringSlice("or-filter"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				params := ListParams{
@@ -599,16 +676,16 @@ func CommandList(ctx context.Context) *cli.Command {
 					Order:       cmd.String("order"),
 					Offset:      cmd.Int("offset"),
 					Limit:       cmd.Int("limit"),
-					Filters:     filters,
+					Filters:     groups,
 					ForceUpdate: cmd.Bool("force-update"),
 				}
 
 				resp, err := actions.List(ctx, params)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 				full := cmd.Bool("full")
-				return reply.CliResponse(ctx, reply.OK(map[string]interface{}{
+				return reporter.CliResponse(ctx, reply.OK(map[string]interface{}{
 					"message":    reply.MessageWithHint(resp.Message, full),
 					"packages":   actions.FormatPackageOutput(resp.Packages, full),
 					"totalCount": resp.TotalCount,
@@ -619,7 +696,7 @@ func CommandList(ctx context.Context) *cli.Command {
 			Name:     "application",
 			Usage:    app.T_("Module for application information"),
 			Category: app.T_("Applications"),
-			Commands: appstream.CommandList(ctx),
+			Commands: appstream.CommandList(appConfig, reporter),
 		},
 		{
 			Name:     "image",

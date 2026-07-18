@@ -1,11 +1,12 @@
 package reply
 
 import (
-	"apm/internal/common/apmerr"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 )
 
 // WriteHTTPError записывает классифицированную ошибку в HTTP-ответ.

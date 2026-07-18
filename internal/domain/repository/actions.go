@@ -17,16 +17,18 @@
 package repository
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build"
-	"apm/internal/common/command"
-	"apm/internal/domain/repository/service"
 	"context"
 	"errors"
 	"fmt"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // ShortRepoResponse Сокращённое представление репозитория
@@ -40,7 +42,7 @@ type ShortRepoResponse struct {
 // Если full == true, возвращается полный вывод, иначе — сокращённый.
 func FormatRepoOutput(data interface{}, full bool) interface{} {
 	switch v := data.(type) {
-	case service.Repository:
+	case aptrepo.Repository:
 		if full {
 			return v
 		}
@@ -49,7 +51,7 @@ func FormatRepoOutput(data interface{}, full bool) interface{} {
 			URL:    v.URL,
 			Arch:   v.Arch,
 		}
-	case []service.Repository:
+	case []aptrepo.Repository:
 		if full {
 			return v
 		}
@@ -67,30 +69,38 @@ func FormatRepoOutput(data interface{}, full bool) interface{} {
 	}
 }
 
-// Actions объединяет методы для работы с репозиториями
+// Actions объединяет методы для работы с репозиториями.
 type Actions struct {
 	appConfig         *app.Config
+	reporter          *reply.Reporter
 	repoService       repoService
 	serviceAptActions aptActionsService
 	serviceHostImage  overlayService
 }
 
-// NewActions создаёт новый экземпляр Actions
-func NewActions(appConfig *app.Config) *Actions {
-	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
-	aptActions := _package.NewActions(packageDBSvc, appConfig)
+// NewActions создаёт новый экземпляр Actions.
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
+	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager, reporter)
+	aptActions := _package.NewActions(packageDBSvc, appConfig, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	hostImageSvc := build.NewHostImageService(
+	hostImageSvc := imagesvc.NewHostImageService(
 		cfg,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 		runner,
+		reporter,
 	)
+
+	hasPackage := func(ctx context.Context, name string) bool {
+		pkg, err := packageDBSvc.GetPackageByName(ctx, name)
+		return err == nil && pkg.Installed
+	}
 
 	return &Actions{
 		appConfig:         appConfig,
-		repoService:       service.NewRepoService(packageDBSvc, runner),
+		reporter:          reporter,
+		repoService:       aptrepo.NewRepoService(hasPackage, runner),
 		serviceAptActions: aptActions,
 		serviceHostImage:  hostImageSvc,
 	}
@@ -305,7 +315,7 @@ func (a *Actions) CheckClean(ctx context.Context) (*RepoSimulateResponse, error)
 		return nil, apmerr.New(apmerr.ErrorTypeRepository, err)
 	}
 
-	var willRemove []service.Repository
+	var willRemove []aptrepo.Repository
 	for _, repo := range repos {
 		isCdrom := strings.Contains(repo.URL, "cdrom:")
 		isTask := false

@@ -17,10 +17,12 @@
 package filter
 
 import (
-	"apm/internal/common/app"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // safeFieldName проверяет, что имя поля содержит только допустимые символы (защита от SQL-инъекции).
@@ -56,11 +58,47 @@ func isValidOp(op Op) bool {
 	return false
 }
 
-// Filter представляет один фильтр с полем, оператором и значением.
+// Filter представляет один фильтр: поле (или несколько через "|"), оператор и значение.
 type Filter struct {
 	Field string `json:"field"`
 	Op    Op     `json:"op"`
 	Value string `json:"value"`
+}
+
+// FilterGroup группа фильтров-OR; группы объединяются через AND.
+type FilterGroup []Filter
+
+// ListBody тело запроса списка: filters — AND-условия, orFilters — одна OR-скобка.
+type ListBody struct {
+	Filters   []Filter `json:"filters"`
+	OrFilters []Filter `json:"orFilters,omitempty"`
+}
+
+// ParseJSONBody разбирает JSON-объект фильтров в ListBody.
+func ParseJSONBody(raw string) (ListBody, error) {
+	var body ListBody
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return body, nil
+	}
+	return body, json.Unmarshal([]byte(raw), &body)
+}
+
+// MakeGroups собирает группы: filters — по одному в группе, orFilters — одной группой.
+func MakeGroups(filters, orFilters []Filter) []FilterGroup {
+	groups := make([]FilterGroup, 0, len(filters)+1)
+	for _, f := range filters {
+		groups = append(groups, FilterGroup{f})
+	}
+	if len(orFilters) > 0 {
+		groups = append(groups, FilterGroup(orFilters))
+	}
+	return groups
+}
+
+// AndGroups оборачивает плоский AND-список фильтров в группы.
+func AndGroups(filters []Filter) []FilterGroup {
+	return MakeGroups(filters, nil)
 }
 
 // FieldConfig описывает конфигурацию поля
@@ -172,31 +210,67 @@ func (c *Config) Validate(filters []Filter) ([]Filter, error) {
 		if f.Field == "" || f.Value == "" {
 			continue
 		}
-		if !IsSafeFieldName(f.Field) {
-			return nil, fmt.Errorf(app.T_("Invalid filter field name: %s"), f.Field)
-		}
-		if !c.IsAllowedField(f.Field) {
-			return nil, fmt.Errorf(app.T_("Invalid filter field: %s. Available fields: %s"),
-				f.Field, strings.Join(c.AllowedFields(), ", "))
-		}
+		fields := SplitOrValues(f.Field)
 		op := f.Op
 		if op == "" {
-			fc, _ := c.getFieldConfig(f.Field)
-			op = fc.DefaultOp
-			if op == "" {
-				op = OpEq
+			for i, fld := range fields {
+				fc, _ := c.getFieldConfig(fld)
+				fldOp := fc.DefaultOp
+				if fldOp == "" {
+					fldOp = OpEq
+				}
+				if i == 0 {
+					op = fldOp
+				} else if op != fldOp {
+					return nil, fmt.Errorf(app.T_("Operator must be set explicitly for multi-field filter: %s"), f.Field)
+				}
 			}
 		}
 		if !isValidOp(op) {
 			return nil, fmt.Errorf(app.T_("Invalid filter operator: %s. Available operators: %s"),
 				op, "eq, ne, like, gt, gte, lt, lte, contains")
 		}
-		if !c.isAllowedOp(f.Field, op) {
-			return nil, fmt.Errorf(app.T_("Operator %s is not allowed for field %s"), op, f.Field)
+		for _, fld := range fields {
+			if !IsSafeFieldName(fld) {
+				return nil, fmt.Errorf(app.T_("Invalid filter field name: %s"), fld)
+			}
+			if !c.IsAllowedField(fld) {
+				return nil, fmt.Errorf(app.T_("Invalid filter field: %s. Available fields: %s"),
+					fld, strings.Join(c.AllowedFields(), ", "))
+			}
+			if !c.isAllowedOp(fld, op) {
+				return nil, fmt.Errorf(app.T_("Operator %s is not allowed for field %s"), op, fld)
+			}
 		}
-		result = append(result, Filter{Field: f.Field, Op: op, Value: f.Value})
+		result = append(result, Filter{Field: strings.Join(fields, OrSeparator), Op: op, Value: f.Value})
 	}
 	return result, nil
+}
+
+// ValidateBody валидирует тело запроса и собирает группы фильтров.
+func (c *Config) ValidateBody(body ListBody) ([]FilterGroup, error) {
+	filters, err := c.Validate(body.Filters)
+	if err != nil {
+		return nil, err
+	}
+	orFilters, err := c.Validate(body.OrFilters)
+	if err != nil {
+		return nil, err
+	}
+	return MakeGroups(filters, orFilters), nil
+}
+
+// ParseGroups разбирает CLI-флаги: filterRaw — AND-условия, orFilterRaw — одна OR-скобка.
+func (c *Config) ParseGroups(filterRaw, orFilterRaw []string) ([]FilterGroup, error) {
+	filters, err := c.Parse(filterRaw)
+	if err != nil {
+		return nil, err
+	}
+	orFilters, err := c.Parse(orFilterRaw)
+	if err != nil {
+		return nil, err
+	}
+	return MakeGroups(filters, orFilters), nil
 }
 
 // Parse разбирает строки формата "field[op]=value" или "field=value" и валидирует результат.
@@ -255,7 +329,7 @@ func splitFilterString(s string) (field string, op Op, value string, err error) 
 
 	if bracketStart := strings.Index(key, "["); bracketStart >= 0 {
 		bracketEnd := strings.Index(key, "]")
-		if bracketEnd < 0 || bracketEnd < bracketStart {
+		if bracketEnd < 0 || bracketEnd < bracketStart || strings.TrimSpace(key[bracketEnd+1:]) != "" {
 			return "", "", "", fmt.Errorf(app.T_("Invalid filter operator format: %s"), s)
 		}
 		field = strings.TrimSpace(key[:bracketStart])
@@ -275,11 +349,19 @@ func splitFilterString(s string) (field string, op Op, value string, err error) 
 // ListEndpointDescription генерирует описание для списка с фильтрацией
 func ListEndpointDescription(subject, fieldsExample, exampleURL, exampleBody, filterFieldsURL string) string {
 	return fmt.Sprintf("%s с фильтрацией, сортировкой и пагинацией.\n\n"+
-		"**Фильтры** передаются в JSON body в массиве `filters`, каждый элемент содержит:\n"+
+		"**Фильтры** передаются в JSON body, каждый элемент содержит:\n"+
 		"- `field` — имя поля (например: %s)\n"+
 		"- `op` — оператор: eq, ne, like, gt, gte, lt, lte, contains (если не указан — используется оператор по умолчанию для поля)\n"+
 		"- `value` — значение для сравнения\n\n"+
-		"**OR-логика**: для поиска по нескольким значениям используйте `|` в value: `\"value\": \"Games|Education\"`\n\n"+
+		"**Поля body:**\n"+
+		"- `filters` — массив условий, объединяемых через AND\n"+
+		"- `orFilters` — массив условий, образующих одну OR-скобку; она добавляется к `filters` через AND\n\n"+
+		"**OR-логика внутри одного условия:**\n"+
+		"- несколько значений через `|` в value: `\"value\": \"Games|Education\"`\n"+
+		"- несколько полей через `|` в field: `\"field\": \"name|description\"`\n\n"+
+		"Пример: `{\"filters\":[{\"field\":\"installed\",\"value\":\"true\"}],"+
+		"\"orFilters\":[{\"field\":\"name\",\"op\":\"like\",\"value\":\"x\"},{\"field\":\"size\",\"op\":\"gt\",\"value\":\"1000\"}]}` "+
+		"→ `installed = true AND (name LIKE '%%x%%' OR size > 1000)`\n\n"+
 		"Остальные параметры передаются через query string.\n\n"+
 		"**Пример**:\n"+
 		"```\n"+

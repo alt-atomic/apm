@@ -17,13 +17,14 @@
 package appstream
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
-	"apm/internal/common/wrapper"
 	"context"
 	"errors"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 
 	"github.com/urfave/cli/v3"
 )
@@ -33,11 +34,11 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 	return reply.ErrorResponseFromError(err)
 }
 
-var withRootCheckWrapper = wrapper.WithOptions(wrapper.RequireRoot, NewActions, newErrorResponseFromError)
-var withGlobalWrapper = wrapper.WithOptions(wrapper.NoRootCheck, NewActions, newErrorResponseFromError)
-
 // CommandList возвращает список CLI-подкоманд для AppStream модуля.
-func CommandList(_ context.Context) []*cli.Command {
+func CommandList(appConfig *app.Config, reporter *reply.Reporter) []*cli.Command {
+	withRootCheckWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.RequireRoot, NewActions, newErrorResponseFromError)
+	withGlobalWrapper := apmcli.WithOptions(appConfig, reporter, apmcli.NoRootCheck, NewActions, newErrorResponseFromError)
+
 	return []*cli.Command{
 		{
 			Name:  "update",
@@ -45,9 +46,9 @@ func CommandList(_ context.Context) []*cli.Command {
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Update(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -56,13 +57,13 @@ func CommandList(_ context.Context) []*cli.Command {
 			ArgsUsage: "<package_name>",
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				if cmd.Args().Len() == 0 {
-					return reply.CliResponse(ctx, newErrorResponseFromError(errors.New(app.T_("Package name is required"))))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(errors.New(app.T_("Package name is required"))))
 				}
 				resp, err := actions.Info(ctx, cmd.Args().First())
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -71,9 +72,9 @@ func CommandList(_ context.Context) []*cli.Command {
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
 				resp, err := actions.Categories(ctx)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 		{
@@ -104,11 +105,15 @@ func CommandList(_ context.Context) []*cli.Command {
 					Name:  "filter",
 					Usage: app.T_("Filter in the format key[op]=value or key=value"),
 				},
+				&cli.StringSliceFlag{
+					Name:  "or-filter",
+					Usage: app.T_("Filter added to a single OR group, format is the same as --filter"),
+				},
 			},
 			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				filters, err := swcat.FilterConfig.Parse(cmd.StringSlice("filter"))
+				groups, err := swcat.FilterConfig.ParseGroups(cmd.StringSlice("filter"), cmd.StringSlice("or-filter"))
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
 
 				params := ListParams{
@@ -116,14 +121,14 @@ func CommandList(_ context.Context) []*cli.Command {
 					Order:   cmd.String("order"),
 					Offset:  cmd.Int("offset"),
 					Limit:   cmd.Int("limit"),
-					Filters: filters,
+					Filters: groups,
 				}
 
 				resp, err := actions.List(ctx, params)
 				if err != nil {
-					return reply.CliResponse(ctx, newErrorResponseFromError(err))
+					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 				}
-				return reply.CliResponse(ctx, reply.OK(resp))
+				return reporter.CliResponse(ctx, reply.OK(resp))
 			}),
 		},
 	}

@@ -1,17 +1,23 @@
 package lint
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/testutil"
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/testutil"
 )
 
 func testContext() context.Context {
-	cfg := testutil.DefaultAppConfig()
-	return context.WithValue(context.Background(), app.AppConfigKey, cfg)
+	return context.Background()
+}
+
+func testReporter() *reply.Reporter {
+	return reply.NewReporter(testutil.DefaultAppConfig())
 }
 
 func TestExtractPath(t *testing.T) {
@@ -91,7 +97,7 @@ func TestTmpfilesAnalyze(t *testing.T) {
 	os.MkdirAll(tmpDir, 0755)
 	os.WriteFile(filepath.Join(tmpDir, "base.conf"), []byte("d /var/lib 0755 root root - -\n"), 0644)
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -128,19 +134,106 @@ func TestTmpfilesAnalyzeRegularFile(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "var", "lib"), 0755)
 	os.WriteFile(filepath.Join(root, "var", "lib", "data.db"), []byte("data"), 0644)
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
 
 	found := false
 	for _, e := range a.Missing {
-		if e.Path == "/var/lib/data.db" && e.Type == "z" {
+		if e.Path == "/var/lib/data.db" && e.Type == "C" {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("expected /var/lib/data.db as z entry in missing, got %v", a.Missing)
+		t.Errorf("expected /var/lib/data.db as C entry in missing, got %v", a.Missing)
+	}
+}
+
+func TestTmpfilesFactorySkip(t *testing.T) {
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, "var", "log"), 0755)
+	os.WriteFile(filepath.Join(root, "var", "log", "lastlog"), []byte(""), 0644)
+	os.MkdirAll(filepath.Join(root, "var", "cache", "ldconfig"), 0755)
+	os.WriteFile(filepath.Join(root, "var", "cache", "ldconfig", "aux-cache"), []byte(""), 0600)
+	os.MkdirAll(filepath.Join(root, "var", "spool", "mail"), 0755)
+	os.WriteFile(filepath.Join(root, "var", "spool", "mail", "root"), []byte(""), 0600)
+	os.MkdirAll(filepath.Join(root, "etc"), 0755)
+	os.WriteFile(filepath.Join(root, "etc", "machine-id"), []byte(""), 0444)
+
+	a := tmpFilesAnalysis{reporter: testReporter()}
+	if err := a.Analyze(testContext(), root); err != nil {
+		t.Fatal(err)
+	}
+
+	skipped := []string{"/var/log/lastlog", "/var/cache/ldconfig/aux-cache", "/var/spool/mail/root", "/etc/machine-id"}
+	for _, e := range a.Missing {
+		if slices.Contains(skipped, e.Path) && e.Type != "z" {
+			t.Errorf("expected %s to stay z entry, got %s", e.Path, e.Type)
+		}
+	}
+}
+
+func TestTmpfilesSkipFilesKeepsSymlink(t *testing.T) {
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, "var", "lib"), 0755)
+	// rpm — симлинк (как в атомарном образе), apt — каталог с файлами кэша
+	os.Symlink("../../usr/var/lib/rpm", filepath.Join(root, "var", "lib", "rpm"))
+	os.MkdirAll(filepath.Join(root, "var", "lib", "apt", "lists", "partial"), 0755)
+	os.WriteFile(filepath.Join(root, "var", "lib", "apt", "lists", "pkglist.classic"), []byte("x"), 0644)
+
+	a := tmpFilesAnalysis{reporter: testReporter()}
+	if err := a.Analyze(testContext(), root); err != nil {
+		t.Fatal(err)
+	}
+
+	var foundLink, foundListsDir, foundPartialDir bool
+	for _, e := range a.Missing {
+		switch {
+		case e.Path == "/var/lib/rpm" && e.Type == "L":
+			foundLink = true
+		case e.Path == "/var/lib/apt/lists" && e.Type == "d":
+			foundListsDir = true
+		case e.Path == "/var/lib/apt/lists/partial" && e.Type == "d":
+			foundPartialDir = true
+		case e.Path == "/var/lib/apt/lists/pkglist.classic":
+			t.Errorf("unexpected entry for cache file: %s %s", e.Type, e.Path)
+		}
+	}
+	if !foundLink {
+		t.Error("expected L entry for /var/lib/rpm symlink despite skip-files policy")
+	}
+	if !foundListsDir || !foundPartialDir {
+		t.Error("expected d entries for apt lists structure")
+	}
+}
+
+func TestTmpfilesSkipContentNotInFactory(t *testing.T) {
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, "var", "cache", "apt", "archives"), 0755)
+	os.WriteFile(filepath.Join(root, "var", "cache", "apt", "cache.bin"), []byte("x"), 0644)
+	os.MkdirAll(filepath.Join(root, "etc", "skel"), 0755)
+	os.WriteFile(filepath.Join(root, "etc", "skel", ".bashrc"), []byte("x"), 0644)
+
+	a := tmpFilesAnalysis{reporter: testReporter()}
+	if err := a.Analyze(testContext(), root); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, e := range a.Missing {
+		if strings.HasPrefix(e.Path, "/var/cache/apt/") || strings.HasPrefix(e.Path, "/etc/skel/") {
+			t.Errorf("unexpected entry inside skip-content dir: %s (%s)", e.Path, e.Type)
+		}
+	}
+
+	written, err := a.WriteFactory(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range written {
+		if strings.HasPrefix(p, "/var/cache/apt/") || strings.HasPrefix(p, "/etc/skel/") {
+			t.Errorf("unexpected factory file from skip-content dir: %s", p)
+		}
 	}
 }
 
@@ -153,7 +246,7 @@ func TestTmpfilesAnalyzeEtcSymlink(t *testing.T) {
 	os.WriteFile(filepath.Join(etcDir, "hostname"), []byte("test"), 0644)
 	os.Symlink("/proc/mounts", filepath.Join(etcDir, "mtab"))
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +275,7 @@ func TestTmpfilesAnalyzeEtcRecursive(t *testing.T) {
 	os.WriteFile(filepath.Join(root, "etc", "pam.d", "login"), []byte("auth"), 0644)
 	os.Symlink("../hostname", filepath.Join(root, "etc", "pam.d", "link"))
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +306,7 @@ func TestTmpfilesAnalyzeEtcRecursive(t *testing.T) {
 func TestTmpfilesAnalyzeEmpty(t *testing.T) {
 	root := t.TempDir()
 
-	var a tmpFilesAnalysis
+	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
 		t.Fatal(err)
 	}

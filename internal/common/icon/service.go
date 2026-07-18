@@ -17,9 +17,6 @@
 package icon
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/command"
-	"apm/internal/common/sandbox"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -27,6 +24,11 @@ import (
 	"io"
 	"runtime"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // Service предоставляет сервис для работы с иконками.
@@ -37,8 +39,8 @@ type Service struct {
 }
 
 // NewIconService создаёт новый сервис для работы с иконками.
-func NewIconService(dbManager app.DatabaseManager, runner command.Runner) *Service {
-	distroAPISvc := sandbox.NewDistroAPIService(runner)
+func NewIconService(dbManager app.DatabaseManager, runner command.Runner, reporter *reply.Reporter) *Service {
+	distroAPISvc := sandbox.NewDistroAPIService(runner, reporter)
 	iconDB := NewIconDBService(dbManager)
 
 	return &Service{

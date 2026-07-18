@@ -17,13 +17,14 @@
 package helper
 
 import (
-	"apm/internal/common/app"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 // contextKey is a custom type for context keys to avoid collisions
@@ -76,22 +77,6 @@ func IsRunningInContainer() bool {
 	return false
 }
 
-// AppDescription возвращает описание приложения
-func AppDescription() string {
-	return app.T_("Universal package manager for ALT Linux") + "\n" +
-		app.T_("Manages system packages via APT, distrobox containers, atomic images and kernels") + "\n" +
-		app.T_("Supports repository management") + "\n" +
-		app.T_("Works as CLI tool, D-Bus service (system/session) or HTTP API server") + "\n" +
-		app.T_("Output formats: text (default, types: tree/plain via -ft) and json (-f json)")
-}
-
-func Abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
 // FilterDescription генерирует общее описание фильтра для команд.
 func FilterDescription(examples string, notes ...string) string {
 	result := app.T_("Filtering for the list method:") + "\n\n" +
@@ -105,7 +90,8 @@ func FilterDescription(examples string, notes ...string) string {
 		"  lt       - " + app.T_("less than (<)") + "\n" +
 		"  lte      - " + app.T_("less than or equal (<=)") + "\n" +
 		"  contains - " + app.T_("contains value (for JSON/array fields)") + "\n\n" +
-		app.T_("OR: use \"|\" to combine values: key[op]=value1|value2") + "\n\n" +
+		app.T_("OR: use \"|\" to combine values or fields: key[op]=value1|value2, key1|key2[op]=value") + "\n\n" +
+		app.T_("OR between different conditions: --or-filter builds one OR group, combined with --filter via AND") + "\n\n" +
 		app.T_("Examples:") + "\n" +
 		"  " + examples
 	for _, note := range notes {

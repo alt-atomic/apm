@@ -17,14 +17,15 @@
 package system
 
 import (
-	"apm/internal/domain/system"
-	"apm/tests/integration/common"
 	"context"
 	_ "embed"
 	"os"
 	"strings"
 	"syscall"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/domain/system"
+	"altlinux.space/alt-atomic/apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -48,14 +49,14 @@ func (s *SystemTestSuite) SetupSuite() {
 		s.T().Skip("This test suite requires root privileges. Run with sudo.")
 	}
 
-	appConfig, ctx := common.GetTestAppConfig(s.T())
-	s.actions = system.NewActions(appConfig)
+	appConfig, reporter, ctx := common.GetTestAppConfig(s.T())
+	s.actions = system.NewActions(appConfig, reporter)
 	s.ctx = ctx
 }
 
 // TestInstall тестирует установку пакетов
 func (s *SystemTestSuite) TestInstall() {
-	resp, err := s.actions.Install(s.ctx, []string{testPackage}, true, false)
+	resp, err := s.actions.Install(s.ctx, []string{testPackage}, true, false, false)
 	if err != nil {
 		s.T().Logf("Install error (may be expected if already installed): %v", err)
 
@@ -236,7 +237,7 @@ func (s *SystemTestSuite) TestInstallRpmFile() {
 		_, _ = s.actions.Remove(s.ctx, []string{rpmPath}, false, false, false)
 	}()
 
-	resp, err := s.actions.Install(s.ctx, []string{rpmPath}, false, false)
+	resp, err := s.actions.Install(s.ctx, []string{rpmPath}, false, false, false)
 	if err != nil {
 		s.T().Fatalf("install RPM file failed: %v", err)
 	}

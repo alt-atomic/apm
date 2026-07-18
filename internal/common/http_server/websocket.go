@@ -17,11 +17,12 @@
 package http_server
 
 import (
-	"apm/internal/common/app"
 	"encoding/json"
 	"net/http"
 	"sync"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"github.com/gorilla/websocket"
 )

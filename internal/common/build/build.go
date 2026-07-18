@@ -17,425 +17,114 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/apt"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build/common_types"
-	"apm/internal/common/build/core"
-	"apm/internal/common/command"
-	"apm/internal/common/filter"
-	"apm/internal/common/osutils"
-	"apm/internal/domain/kernel/service"
-	reposervice "apm/internal/domain/repository/service"
 	"context"
 	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/modules"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
+	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
+	_ "altlinux.space/alt-atomic/apm/pkg/build/modules"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
+// ConfigService адаптер, оборачивает Engine и добавляет доменные способности.
+var _ modules.DomainContext = (*ConfigService)(nil)
+
 type ConfigService struct {
+	*domainService
+
 	appConfig         *app.Config
-	serviceAptActions buildAptActionsService
-	serviceDBService  buildPackageDBService
-	kernelManager     *service.Manager
-	repoService       *reposervice.RepoService
+	reporter          *reply.Reporter
 	serviceHostConfig buildHostConfigService
 	runner            command.Runner
+
+	engine *pkgbuild.Engine
 }
 
-func NewConfigService(appConfig *app.Config, aptActions buildAptActionsService, dBService buildPackageDBService,
+func NewConfigService(appConfig *app.Config, reporter *reply.Reporter, aptActions buildAptActionsService, dBService buildPackageDBService,
 	kernelManager *service.Manager, repoService *reposervice.RepoService, hostConfig buildHostConfigService,
 	runner command.Runner) *ConfigService {
-	return &ConfigService{
+	svc := &ConfigService{
+		domainService: &domainService{
+			aptActions:    aptActions,
+			dbService:     dBService,
+			kernelManager: kernelManager,
+			repoService:   repoService,
+		},
 		appConfig:         appConfig,
-		serviceAptActions: aptActions,
-		serviceDBService:  dBService,
-		kernelManager:     kernelManager,
-		repoService:       repoService,
+		reporter:          reporter,
 		serviceHostConfig: hostConfig,
 		runner:            runner,
 	}
+
+	svc.engine = pkgbuild.NewEngine(appConfig.ConfigManager.GetParsedVersion().ToBuildVersion(), reply.EventSystemImageModule)
+
+	svc.engine.Hook(pkgbuild.PreModules, func(_ context.Context) error {
+		if !svc.IsAtomic() {
+			return nil
+		}
+		return svc.revertNssAltFiles()
+	})
+	svc.engine.Hook(pkgbuild.PostModules, func(ctx context.Context) error {
+		if !svc.IsAtomic() {
+			return nil
+		}
+		return svc.splitNssAltFiles(ctx)
+	})
+	svc.engine.Hook(pkgbuild.PostBuild, func(ctx context.Context) error {
+		if !svc.IsAtomic() {
+			return nil
+		}
+		return svc.fixTmpFiles(ctx)
+	})
+
+	return svc
+}
+
+// EmitEvent шлёт событие прогресса модуля через reporter.
+func (cfgService *ConfigService) EmitEvent(ctx context.Context, state, name, view string) {
+	opts := []reply.NotificationOption{reply.WithEventName(name)}
+	if view != "" {
+		opts = append(opts, reply.WithEventView(view))
+	}
+	cfgService.reporter.CreateEventNotification(ctx, state, opts...)
 }
 
 func (cfgService *ConfigService) IsAtomic() bool {
 	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomic
 }
 
-func (cfgService *ConfigService) SetAptConfigOverrides(overrides map[string]string) {
-	cfgService.serviceAptActions.SetAptConfigOverrides(overrides)
+func (cfgService *ConfigService) Runner() command.Runner {
+	return cfgService.runner
 }
 
+// CollectOutput копит вывод модулей для итогового ответа.
+func (cfgService *ConfigService) CollectOutput(text string) {
+	cfgService.engine.CollectOutput(text)
+}
+
+// CollectedOutput возвращает накопленный вывод модулей.
+func (cfgService *ConfigService) CollectedOutput() string {
+	return cfgService.engine.CollectedOutput()
+}
+
+func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) (map[string]*pkgbuild.MapModule, error) {
+	return cfgService.engine.ExecuteInclude(ctx, cfgService, target)
+}
+
+// ExecuteModule выполняет один модуль (используется тестами).
+func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module pkgbuild.Module, modulesMap map[string]*pkgbuild.MapModule) (*pkgbuild.MapModule, error) {
+	return cfgService.engine.ExecuteModule(ctx, cfgService, module, modulesMap)
+}
+
+// Build выполняет сборку по загруженному рецепту.
 func (cfgService *ConfigService) Build(ctx context.Context) error {
 	if cfgService.serviceHostConfig.GetConfig() == nil {
 		return errors.New(app.T_("Configuration not loaded. Load config first"))
 	}
 
-	if err := cfgService.UpdatePackages(ctx); err != nil {
-		return err
-	}
-
-	_, err := cfgService.executeModules(ctx, cfgService.serviceHostConfig.GetConfig().Modules)
-	if err != nil {
-		return err
-	}
-
-	if cfgService.IsAtomic() {
-		if err = cfgService.applyNssAltFiles(ctx); err != nil {
-			return err
-		}
-		if err = cfgService.fixTmpFiles(ctx); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (cfgService *ConfigService) ExecuteModule(ctx context.Context, module core.Module, modulesMap map[string]*common_types.MapModule) (*common_types.MapModule, error) {
-	if module.Name != "" {
-		app.Log.Info(fmt.Sprintf("-: %s", module.Name))
-	}
-
-	exprData := common_types.ExprData{
-		Modules: modulesMap,
-		Env:     osutils.GetEnvMap(),
-		Version: *cfgService.appConfig.ConfigManager.GetParsedVersion(),
-	}
-
-	moduleResolvedEnvMap, err := core.ResolveExprMap(module.Env, exprData)
-	if err != nil {
-		return nil, err
-	}
-
-	shouldExecute := true
-	if module.If != "" {
-		shouldExecute, err = core.ExtractExprResultBool(module.If, exprData)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	existedEnvMap := map[string]string{}
-	for key, value := range moduleResolvedEnvMap {
-		if currentValue, ok := os.LookupEnv(key); ok {
-			existedEnvMap[key] = currentValue
-		}
-
-		if err = os.Setenv(key, value); err != nil {
-			return nil, err
-		}
-	}
-
-	if !shouldExecute {
-		var outputModule *common_types.MapModule = nil
-
-		if module.Id != "" {
-			outputModule = &common_types.MapModule{
-				Name:   module.Name,
-				Type:   module.Type,
-				Id:     module.Id,
-				If:     false,
-				Output: map[string]string{},
-			}
-		}
-
-		return outputModule, nil
-	}
-
-	body := module.Body
-	if body == nil {
-		return nil, fmt.Errorf("module %s has no body", module.Type)
-	}
-
-	exprData.Env = osutils.GetEnvMap()
-
-	// Резолвим env переменные в структуре модуля через рефлексию
-	if err = core.ResolveStruct(body, exprData); err != nil {
-		return nil, fmt.Errorf("failed to resolve env variables: %w", err)
-	}
-
-	output := map[string]string{}
-
-	if out, err := body.Execute(ctx, cfgService); err != nil {
-		return nil, fmt.Errorf("module '%s': %w", module.GetLabel(), err)
-	} else {
-		if out == nil && len(module.Output) > 0 {
-			app.Log.Warn(fmt.Sprintf(app.T_("'%s' type doesn't support output"), module.Type))
-		} else if out != nil {
-			output, err = core.ResolveExprMap(module.Output, out)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	for key := range moduleResolvedEnvMap {
-		if oldValue, ok := existedEnvMap[key]; ok {
-			if err = os.Setenv(key, oldValue); err != nil {
-				return nil, err
-			}
-		} else {
-			if err = os.Unsetenv(key); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	var outputModule *common_types.MapModule = nil
-
-	if module.Id != "" {
-		outputModule = &common_types.MapModule{
-			Name:   module.Name,
-			Type:   module.Type,
-			Id:     module.Id,
-			If:     true,
-			Output: output,
-		}
-	}
-
-	return outputModule, nil
-}
-
-// ValidateDB проверяет, существует ли база данных пакетов, и автоматически запускает обновление если её нет.
-func (cfgService *ConfigService) ValidateDB(ctx context.Context) error {
-	if err := cfgService.serviceDBService.PackageDatabaseExist(ctx); err != nil {
-		app.Log.Info("Package database is empty, running update")
-		_, err = cfgService.serviceAptActions.Update(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to update package database: %w", err)
-		}
-	}
-	return nil
-}
-
-func (cfgService *ConfigService) QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error) {
-	return cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, sortField, sortOrder, limit, offset)
-}
-
-func (cfgService *ConfigService) GetPackageByName(ctx context.Context, packageName string) (*_package.Package, error) {
-	packageInfo, err := cfgService.serviceDBService.GetPackageByName(ctx, packageName)
-	if err != nil {
-		filters := []filter.Filter{
-			{Field: "provides", Op: filter.OpContains, Value: packageName},
-		}
-
-		alternativePackages, errFind := cfgService.serviceDBService.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
-		if errFind != nil {
-			return nil, errFind
-		}
-
-		if len(alternativePackages) == 0 {
-			errorFindPackage := fmt.Sprintf(app.T_("Failed to retrieve information about the package %s"), packageName)
-			return nil, errors.New(errorFindPackage)
-		} else if len(alternativePackages) == 1 {
-			return &alternativePackages[0], nil
-		}
-
-		var altNames []string
-		for _, altPkg := range alternativePackages {
-			altNames = append(altNames, altPkg.Name)
-		}
-
-		message := err.Error() + app.T_(". Maybe you were looking for: ")
-
-		errPackageNotFound := fmt.Errorf(message+"%s", strings.Join(altNames, " "))
-
-		return nil, errPackageNotFound
-	}
-
-	return &packageInfo, nil
-}
-
-func (cfgService *ConfigService) CombineInstallRemovePackages(ctx context.Context, packages []string, purge bool, depends bool, downloadOnly bool) error {
-	if err := cfgService.ValidateDB(ctx); err != nil {
-		return err
-	}
-
-	packagesInstall, packagesRemove, errPrepare := cfgService.serviceAptActions.PrepareInstallPackages(ctx, packages)
-	if errPrepare != nil {
-		return errPrepare
-	}
-
-	packagesInstall, packagesRemove, _, aptPackageChanges, errFind := cfgService.serviceAptActions.FindPackage(
-		ctx,
-		packagesInstall,
-		packagesRemove,
-		false,
-		false,
-		false,
-	)
-	if errFind != nil {
-		var matchedErr *apt.MatchedError
-		if errors.As(errFind, &matchedErr) && matchedErr.Entry.Code == apt.ErrPackagesAlreadyInstalled {
-			app.Log.Info("Skipping error:", errFind.Error())
-			return nil
-		}
-		return errFind
-	}
-
-	if aptPackageChanges != nil {
-		if len(aptPackageChanges.NewInstalledPackages) > 0 {
-			app.Log.Info(fmt.Sprintf("Install plan: %s", strings.Join(aptPackageChanges.NewInstalledPackages, ", ")))
-		}
-
-		if len(aptPackageChanges.RemovedPackages) > 0 {
-			app.Log.Info(fmt.Sprintf("Remove plan: %s", strings.Join(aptPackageChanges.RemovedPackages, ", ")))
-		}
-	}
-
-	errInstall := cfgService.serviceAptActions.CombineInstallRemovePackages(
-		ctx,
-		packagesInstall,
-		packagesRemove,
-		purge,
-		depends,
-		downloadOnly,
-	)
-	if errInstall != nil {
-		return errInstall
-	}
-
-	return nil
-}
-
-func (cfgService *ConfigService) InstallPackages(ctx context.Context, packages []string) error {
-	return cfgService.serviceAptActions.Install(ctx, packages, false)
-}
-
-func (cfgService *ConfigService) UpdatePackages(ctx context.Context) error {
-	_, err := cfgService.serviceAptActions.Update(ctx)
-	return err
-}
-
-func (cfgService *ConfigService) UpgradePackages(ctx context.Context) error {
-	err := cfgService.serviceAptActions.Upgrade(ctx, false)
-	return err
-}
-
-func (cfgService *ConfigService) KernelManager() *service.Manager {
-	return cfgService.kernelManager
-}
-
-func (cfgService *ConfigService) RepoService() *reposervice.RepoService {
-	return cfgService.repoService
-}
-
-func (cfgService *ConfigService) ResourcesDir() string {
-	return cfgService.appConfig.ConfigManager.GetResourcesDir()
-}
-
-func (cfgService *ConfigService) Runner() command.Runner {
-	return cfgService.runner
-}
-
-func (cfgService *ConfigService) ExecuteInclude(ctx context.Context, target string) (map[string]*common_types.MapModule, error) {
-	if osutils.IsURL(target) {
-		return cfgService.executeIncludeFile(ctx, target)
-	}
-
-	info, err := os.Stat(target)
-	if err != nil {
-		return nil, err
-	}
-
-	if info.IsDir() {
-		return nil, cfgService.executeIncludeDir(ctx, target)
-	}
-
-	return cfgService.executeIncludeFileWithCD(ctx, target)
-}
-
-// executeIncludeDir обрабатывает все файлы в директори
-func (cfgService *ConfigService) executeIncludeDir(ctx context.Context, dir string) error {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		path := filepath.Join(dir, file.Name())
-		if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
-			// Не учитываем директорию, так как ID у include'ов будут неочевидны в рамках обзора одного yml файла
-			if _, err = cfgService.executeIncludeFileWithCD(ctx, path); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// executeIncludeFileWithCD меняет директорию перед выполнением файла
-func (cfgService *ConfigService) executeIncludeFileWithCD(ctx context.Context, filePath string) (map[string]*common_types.MapModule, error) {
-	originalWd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	// Гарантированно возвращаемся в исходную директорию
-	defer func() {
-		if chErr := os.Chdir(originalWd); chErr != nil {
-			app.Log.Error(fmt.Sprintf("failed to restore working directory: %v", chErr))
-		}
-	}()
-
-	includeDir := filepath.Dir(filePath)
-	includeName := filepath.Base(filePath)
-
-	if includeDir != originalWd {
-		if err = os.Chdir(includeDir); err != nil {
-			return nil, fmt.Errorf("failed to change directory to %s: %w", includeDir, err)
-		}
-	}
-
-	return cfgService.executeIncludeFile(ctx, includeName)
-}
-
-// executeIncludeFile читает и выполняет файл с модулями (YAML или JSON)
-func (cfgService *ConfigService) executeIncludeFile(ctx context.Context, path string) (map[string]*common_types.MapModule, error) {
-	modules, err := core.ReadAndParseModules(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse modules from %s: %w", path, err)
-	}
-
-	return cfgService.executeModules(ctx, *modules)
-}
-
-func (cfgService *ConfigService) executeModules(ctx context.Context, modules []core.Module) (map[string]*common_types.MapModule, error) {
-	modulesMap := map[string]*common_types.MapModule{}
-
-	for _, module := range modules {
-		if output, err := cfgService.ExecuteModule(ctx, module, modulesMap); err != nil {
-			return nil, err
-		} else {
-			if output != nil {
-				if value, found := modulesMap[module.Id]; found {
-					oldLabel := value.GetLabel()
-					newLabel := module.GetLabel()
-
-					oldLabelText := ""
-					newLabelText := ""
-
-					if value.Name != "" {
-						oldLabelText = fmt.Sprintf(" (%s)", oldLabel)
-					}
-					if module.Name != "" {
-						newLabelText = fmt.Sprintf(" with %s", newLabel)
-					}
-
-					app.Log.Warn(fmt.Sprintf(app.T_("module with id='%s'%s will be overriding%s"), module.Id, oldLabelText, newLabelText))
-				}
-
-				modulesMap[module.Id] = output
-			}
-		}
-	}
-
-	return modulesMap, nil
+	return cfgService.engine.Build(ctx, cfgService, cfgService.serviceHostConfig.GetConfig().Modules)
 }

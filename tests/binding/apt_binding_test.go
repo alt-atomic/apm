@@ -17,15 +17,16 @@
 package binding
 
 import (
-	aptErrors "apm/internal/common/apt"
-	aptBinding "apm/internal/common/binding/apt"
-	aptlib "apm/internal/common/binding/apt/lib"
 	_ "embed"
 	"errors"
 	"os"
 	"strings"
 	"syscall"
 	"testing"
+
+	aptErrors "altlinux.space/alt-atomic/apm/internal/common/apt"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -146,7 +147,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	// First, try to install the test package (ignore if already newest version)
+	// First, try to install the test package (ignore if already the newest version)
 	err := actions.InstallPackages([]string{testPackage}, nil, false)
 	if err != nil {
 		if matchedErr := aptErrors.CheckError(err.Error()); matchedErr != nil {

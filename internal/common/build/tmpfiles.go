@@ -1,11 +1,12 @@
 package build
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/build/lint"
-	"apm/internal/common/helper"
 	"context"
 	"fmt"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build/lint"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
 )
 
 // fixTmpFiles выполняет анализ и фикс tmpfiles.d после сборки образа
@@ -17,7 +18,7 @@ func (cfgService *ConfigService) fixTmpFiles(ctx context.Context) error {
 
 	app.Log.Info("Fixing tmpfiles.d: analyzing /var and /etc coverage")
 
-	svc := lint.New("/")
+	svc := lint.New("/", cfgService.reporter)
 	result, written, err := svc.AnalyzeTmpFiles(ctx, true)
 	if err != nil {
 		return fmt.Errorf("tmpfiles.d fix: %w", err)
@@ -32,6 +33,7 @@ func (cfgService *ConfigService) fixTmpFiles(ctx context.Context) error {
 		app.Log.Warn(fmt.Sprintf("tmpfiles.d: %d unsupported paths (not regular files, dirs, or symlinks): %v", len(result.Unsupported), result.Unsupported))
 	}
 
-	app.Log.Info(fmt.Sprintf("tmpfiles.d: fixed %d missing entries, written %s", len(result.Missing), written))
+	app.Log.Info(fmt.Sprintf("tmpfiles.d: fixed %d missing entries (%d factory files), written %s",
+		len(result.Missing), len(result.Factory), written))
 	return nil
 }

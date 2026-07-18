@@ -17,19 +17,35 @@
 package distrobox
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/http_server"
-	"apm/internal/common/reply"
-	"apm/internal/common/sandbox"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"reflect"
 	"strconv"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
 )
+
+func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter) service.HTTPModule {
+	actions := NewActions(appConfig, reporter)
+	return service.HTTPModule{
+		Endpoints: func(ctx context.Context) []http_server.Endpoint {
+			return NewHTTPWrapper(actions, appConfig, reporter, ctx).GetEndpoints()
+		},
+		PostInit: func(ctx context.Context) {
+			if err := actions.GetIconService().ReloadIcons(ctx); err != nil {
+				app.Log.Error(err.Error())
+			}
+		},
+	}
+}
 
 // HTTPWrapper предоставляет обёртку для действий с контейнерами через HTTP.
 type HTTPWrapper struct {
@@ -37,10 +53,10 @@ type HTTPWrapper struct {
 	actions *Actions
 }
 
-// NewHTTPWrapper создаёт новую обёртку над actions
-func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTTPWrapper {
+// NewHTTPWrapper создаёт новую обёртку над actions.
+func NewHTTPWrapper(a *Actions, appConfig *app.Config, reporter *reply.Reporter, ctx context.Context) *HTTPWrapper {
 	return &HTTPWrapper{
-		BaseHTTPWrapper: http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
+		BaseHTTPWrapper: http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig, Reporter: reporter},
 		actions:         a,
 	}
 }
@@ -121,7 +137,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	validated, err := sandbox.DistroFilterConfig.Validate(body.Filters)
+	groups, err := sandbox.DistroFilterConfig.ValidateBody(body)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -147,7 +163,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		Order:       query.Get("order"),
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     validated,
+		Filters:     groups,
 		ForceUpdate: query.Get("forceUpdate") == "true",
 	}
 
@@ -366,7 +382,7 @@ func (w *HTTPWrapper) GetEndpoints() []http_server.Endpoint {
 				"Поиск пакетов в контейнере",
 				"name, section, installed",
 				"POST /api/v1/distrobox/packages/list?container=ubuntu&sort=name&limit=20",
-				`{"filters": [{"field": "name", "op": "like", "value": "hello"}]}`,
+				`{"filters": [{"field": "installed", "value": "true"}], "orFilters": [{"field": "name", "op": "like", "value": "hello"}, {"field": "description", "op": "like", "value": "hello"}]}`,
 				"/api/v1/distrobox/packages/filter-fields",
 			),
 			Tags: []string{"distrobox"},

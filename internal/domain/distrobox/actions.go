@@ -17,37 +17,42 @@
 package distrobox
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/command"
-	"apm/internal/common/filter"
-	"apm/internal/common/icon"
-	"apm/internal/common/reply"
-	"apm/internal/common/sandbox"
-	"apm/internal/domain/distrobox/dialog"
 	"context"
 	"errors"
 	"fmt"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/icon"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/internal/domain/distrobox/dialog"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 type Actions struct {
+	appConfig             *app.Config
+	reporter              *reply.Reporter
 	servicePackage        packageService
 	serviceDistroDatabase distroDBService
 	serviceDistroAPI      distroAPIService
 	iconService           IconServiceProvider
 }
 
-func NewActions(appConfig *app.Config) *Actions {
-	distroDBSvc := sandbox.NewDistroDBService(appConfig.DatabaseManager)
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
+	distroDBSvc := sandbox.NewDistroDBService(appConfig.DatabaseManager, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	distroPackageSvc := sandbox.NewPackageService(distroDBSvc, runner)
-	distroAPISvc := sandbox.NewDistroAPIService(runner)
-	iconSvc := icon.NewIconService(appConfig.DatabaseManager, runner)
+	distroPackageSvc := sandbox.NewPackageService(distroDBSvc, runner, reporter)
+	distroAPISvc := sandbox.NewDistroAPIService(runner, reporter)
+	iconSvc := icon.NewIconService(appConfig.DatabaseManager, runner, reporter)
 
 	return &Actions{
+		appConfig:             appConfig,
+		reporter:              reporter,
 		servicePackage:        distroPackageSvc,
 		serviceDistroDatabase: distroDBSvc,
 		serviceDistroAPI:      distroAPISvc,
@@ -143,13 +148,13 @@ func (a *Actions) Search(ctx context.Context, container string, packageName stri
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Container   string          `json:"container"`
-	Sort        string          `json:"sort"`
-	Order       string          `json:"order"`
-	Limit       int             `json:"limit"`
-	Offset      int             `json:"offset"`
-	Filters     []filter.Filter `json:"filters"`
-	ForceUpdate bool            `json:"forceUpdate"`
+	Container   string               `json:"container"`
+	Sort        string               `json:"sort"`
+	Order       string               `json:"order"`
+	Limit       int                  `json:"limit"`
+	Offset      int                  `json:"offset"`
+	Filters     []filter.FilterGroup `json:"filters"`
+	ForceUpdate bool                 `json:"forceUpdate"`
 }
 
 // List возвращает список пакетов согласно заданным параметрам.
@@ -352,8 +357,7 @@ func (a *Actions) validateDatabase(ctx context.Context) error {
 
 // selectContainerInteractive показывает интерактивный селектор контейнера в TTY-режиме.
 func (a *Actions) selectContainerInteractive(ctx context.Context) (string, error) {
-	appConfig := app.GetAppConfig(ctx)
-	if !reply.IsInteractive(appConfig) {
+	if !reply.IsInteractive(a.appConfig) {
 		return "", apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("Required flag %s not set"), "container"))
 	}
 
@@ -362,14 +366,14 @@ func (a *Actions) selectContainerInteractive(ctx context.Context) (string, error
 		return "", apmerr.New(apmerr.ErrorTypeContainer, err)
 	}
 
-	reply.StopSpinner(appConfig)
+	reply.StopSpinner(a.appConfig)
 
-	selected, err := dialog.SelectContainer(containers, appConfig.ConfigManager.GetColors())
+	selected, err := dialog.SelectContainer(containers, a.appConfig.ConfigManager.GetColors())
 	if err != nil {
 		return "", apmerr.New(apmerr.ErrorTypeValidation, err)
 	}
 
-	reply.CreateSpinner(appConfig)
+	reply.CreateSpinner(a.appConfig)
 
 	return selected, nil
 }

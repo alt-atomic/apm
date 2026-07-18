@@ -1,17 +1,18 @@
 package service
 
 import (
-	_package "apm/internal/common/apt/package"
-	apt "apm/internal/common/binding/apt"
-	libApt "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/command"
-	"apm/internal/common/filter"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/pkg/apt"
+	libApt "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // packageDBService определяет методы для запросов к базе данных пакетов.
 type packageDBService interface {
-	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
+	QueryHostImagePackages(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
 	SearchPackagesByNameLike(ctx context.Context, likePattern string, installed bool) ([]_package.Package, error)
 	GetPackageByName(ctx context.Context, packageName string) (_package.Package, error)
 }

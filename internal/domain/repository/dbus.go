@@ -17,14 +17,29 @@
 package repository
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
+
 	"github.com/godbus/dbus/v5"
 )
+
+const DBusInterface = "org.altlinux.APM.repo"
+
+func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) service.DBusModule {
+	return service.DBusModule{
+		Interface: DBusInterface,
+		Build: func(ctx context.Context, conn *dbus.Conn) (service.DBusExport, error) {
+			actions := NewActions(appConfig, reporter)
+			return service.DBusExport{Object: NewDBusWrapper(actions, conn, ctx)}, nil
+		},
+	}
+}
 
 // DBusWrapper предоставляет обёртку для действий с репозиториями через DBus.
 type DBusWrapper struct {

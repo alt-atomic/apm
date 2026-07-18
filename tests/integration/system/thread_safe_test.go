@@ -17,8 +17,6 @@
 package system
 
 import (
-	"apm/internal/domain/system"
-	"apm/tests/integration/common"
 	"context"
 	"runtime"
 	"sync"
@@ -26,6 +24,9 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/domain/system"
+	"altlinux.space/alt-atomic/apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,8 +48,8 @@ func (s *ThreadSafeTestSuite) SetupSuite() {
 		s.T().Skip("This test suite requires root privileges. Run with sudo.")
 	}
 
-	appConfig, ctx := common.GetTestAppConfig(s.T())
-	s.actions = system.NewActions(appConfig)
+	appConfig, reporter, ctx := common.GetTestAppConfig(s.T())
+	s.actions = system.NewActions(appConfig, reporter)
 	s.ctx = ctx
 }
 

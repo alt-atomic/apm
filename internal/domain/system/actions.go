@@ -17,33 +17,40 @@
 package system
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/apt"
-	_package "apm/internal/common/apt/package"
-	aptBinding "apm/internal/common/binding/apt"
-	"apm/internal/common/build"
-	"apm/internal/common/build/altfiles"
-	"apm/internal/common/build/lint"
-	"apm/internal/common/command"
-	"apm/internal/common/filter"
-	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
-	kservice "apm/internal/domain/kernel/service"
-	reposervice "apm/internal/domain/repository/service"
-	"apm/internal/domain/system/dialog"
-	"apm/internal/domain/system/service"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"syscall"
+	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/apt"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/build/altfiles"
+	"altlinux.space/alt-atomic/apm/internal/common/build/lint"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	kservice "altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/dialog"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
+
+// aptListsTTL максимальный возраст списков пакетов, при котором Install не делает повторный update
+const aptListsTTL = 4 * time.Hour
 
 // Actions объединяет методы для выполнения системных действий.
 type Actions struct {
 	appConfig              *app.Config
+	reporter               *reply.Reporter
 	serviceHostImage       hostImageService
 	serviceAptActions      aptActionsService
 	serviceAptDatabase     aptDatabaseService
@@ -54,31 +61,32 @@ type Actions struct {
 }
 
 // NewActions создаёт новый экземпляр Actions.
-func NewActions(appConfig *app.Config) *Actions {
-	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager)
-	hostDBSvc := build.NewHostDBService(appConfig.DatabaseManager)
+func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
+	hostPackageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager, reporter)
+	hostDBSvc := imagesvc.NewHostDBService(appConfig.DatabaseManager, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	hostImageSvc := build.NewHostImageService(
+	hostImageSvc := imagesvc.NewHostImageService(
 		cfg,
 		appConfig.ConfigManager.GetPathImageContainerFile(),
 		runner,
+		reporter,
 	)
-	hostConfigSvc := build.NewHostConfigService(
-		appConfig.ConfigManager.GetPathImageFile(),
+	hostConfigSvc := imagesvc.NewHostConfigService(
 		hostDBSvc,
 		hostImageSvc,
 	)
-	hostTemporarySvc := service.NewTemporaryConfigService(
+	hostTemporarySvc := temporary.NewManager(
 		appConfig.ConfigManager.GetTemporaryImageFile(),
 	)
-	hostAptSvc := _package.NewActions(hostPackageDBSvc, appConfig)
+	hostAptSvc := _package.NewActions(hostPackageDBSvc, appConfig, reporter)
 
-	appStreamDBSvc := swcat.NewAppStreamDBService(appConfig.DatabaseManager)
+	appStreamDBSvc := swcat.NewAppStreamDBService(appConfig.DatabaseManager, reporter)
 
 	return &Actions{
 		appConfig:              appConfig,
+		reporter:               reporter,
 		serviceHostImage:       hostImageSvc,
 		serviceAptActions:      hostAptSvc,
 		serviceAptDatabase:     hostPackageDBSvc,
@@ -105,9 +113,9 @@ func (a *Actions) GetAptConfigOverrides() (*AptConfigResponse, error) {
 }
 
 type ImageStatus struct {
-	Image  build.HostImage `json:"image"`
-	Status string          `json:"status"`
-	Config build.Config    `json:"config"`
+	Image  imagesvc.HostImage `json:"image"`
+	Status string             `json:"status"`
+	Config imagesvc.Config    `json:"config"`
 }
 
 // CheckRemove проверяем пакеты перед удалением
@@ -238,7 +246,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 }
 
 // Install осуществляет установку системного пакета.
-func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, downloadOnly bool) (*InstallRemoveResponse, error) {
+func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, downloadOnly bool, noUpdate bool) (*InstallRemoveResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -268,8 +276,8 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 			}
 		}
 	}
-	if !allLocalRpm {
-		err = a.serviceAptActions.AptUpdate(ctx)
+	if !allLocalRpm && !noUpdate {
+		err = a.serviceAptActions.AptUpdateIfStale(ctx, aptListsTTL)
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 		}
@@ -363,6 +371,41 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 		Message: messageAnswer,
 		Info:    *packageParse,
 	}, nil
+}
+
+// Source скачивает исходные пакеты .src.rpm и устанавливает их в сборочное дерево rpm
+func (a *Actions) Source(ctx context.Context, packages []string, downloadOnly bool) (*SourceResponse, error) {
+	if len(packages) == 0 {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify at least one package")))
+	}
+
+	sources, err := a.serviceAptActions.DownloadSource(ctx, packages, "")
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+	}
+
+	messageAnswer := app.T_("Source packages successfully downloaded")
+	if !downloadOnly {
+		files := make([]string, 0, len(sources))
+		for _, src := range sources {
+			files = append(files, src.File)
+		}
+		if errInstall := a.serviceAptActions.InstallSourcePackages(ctx, files); errInstall != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeApt, errInstall)
+		}
+		messageAnswer = app.T_("Source packages successfully downloaded and installed")
+	}
+
+	resp := &SourceResponse{Message: messageAnswer}
+	for _, src := range sources {
+		resp.Packages = append(resp.Packages, SourcePackageInfo{
+			Name:    src.Name,
+			Version: src.Version,
+			File:    src.File,
+		})
+	}
+
+	return resp, nil
 }
 
 // CheckReinstall проверяем пакеты перед переустановкой
@@ -519,9 +562,15 @@ func (a *Actions) Update(ctx context.Context, noLock bool, onlyDB bool) (*Update
 }
 
 // ImageBuild Update Сборка образа
-func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
-	a.appConfig.ConfigManager.EnableVerbose()
-	reply.StopSpinner(a.appConfig)
+func (a *Actions) ImageBuild(ctx context.Context, configPath, workdir string, pretty bool) (*ImageBuild, error) {
+	if !pretty {
+		a.appConfig.ConfigManager.EnableVerbose()
+		reply.StopSpinner(a.appConfig)
+	}
+
+	if err := a.serviceHostConfig.ApplyPathOverrides(configPath, workdir); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
 
 	if err := os.MkdirAll(a.appConfig.ConfigManager.GetResourcesDir(), 0755); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -550,19 +599,30 @@ func (a *Actions) ImageBuild(ctx context.Context) (*ImageBuild, error) {
 
 	cfg := a.appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
-	hostPackageDBSvc := _package.NewPackageDBService(a.appConfig.DatabaseManager)
+	hostPackageDBSvc := _package.NewPackageDBService(a.appConfig.DatabaseManager, a.reporter)
 	aptActions := aptBinding.NewActions()
-	kernelManager := kservice.NewKernelManager(hostPackageDBSvc, aptActions, runner)
-	repoService := reposervice.NewRepoService(hostPackageDBSvc, runner)
-	buildConfigSvc := build.NewConfigService(a.appConfig, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner)
+	kernelManager := kservice.NewKernelManager(hostPackageDBSvc, aptActions, runner, a.reporter)
+	hasPackage := func(ctx context.Context, name string) bool {
+		pkg, err := hostPackageDBSvc.GetPackageByName(ctx, name)
+		return err == nil && pkg.Installed
+	}
+	repoService := reposervice.NewRepoService(hasPackage, runner)
+	buildConfigSvc := build.NewConfigService(a.appConfig, a.reporter, a.serviceAptActions, hostPackageDBSvc, kernelManager, repoService, a.serviceHostConfig, runner)
 
 	err = buildConfigSvc.Build(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
+	message := app.T_("DONE")
+	if pretty {
+		if output := buildConfigSvc.CollectedOutput(); output != "" {
+			message = output
+		}
+	}
+
 	return &ImageBuild{
-		Message: app.T_("DONE"),
+		Message: message,
 	}, nil
 }
 
@@ -664,7 +724,7 @@ func (a *Actions) Info(ctx context.Context, packageName string) (*InfoResponse, 
 			{Field: "provides", Op: filter.OpContains, Value: packageName},
 		}
 
-		alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filters, "", "", 5, 0)
+		alternativePackages, errFind := a.serviceAptDatabase.QueryHostImagePackages(ctx, filter.AndGroups(filters), "", "", 5, 0)
 		if errFind != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeDatabase, errFind)
 		}
@@ -738,9 +798,9 @@ func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiI
 
 	var notFound []string
 	for _, name := range missing {
-		providesPackages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, []filter.Filter{
+		providesPackages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, filter.AndGroups([]filter.Filter{
 			{Field: "provides", Op: filter.OpContains, Value: name},
-		}, "", "", 1, 0)
+		}), "", "", 1, 0)
 		if err != nil || len(providesPackages) == 0 {
 			notFound = append(notFound, name)
 			continue
@@ -759,13 +819,13 @@ func (a *Actions) MultiInfo(ctx context.Context, packageNames []string) (*MultiI
 
 // ListParams задаёт параметры для запроса списка пакетов.
 type ListParams struct {
-	Sort        string          `json:"sort"`
-	Order       string          `json:"order"`
-	Limit       int             `json:"limit"`
-	Offset      int             `json:"offset"`
-	Filters     []filter.Filter `json:"filters"`
-	ForceUpdate bool            `json:"forceUpdate"`
-	Full        bool            `json:"full"`
+	Sort        string               `json:"sort"`
+	Order       string               `json:"order"`
+	Limit       int                  `json:"limit"`
+	Offset      int                  `json:"offset"`
+	Filters     []filter.FilterGroup `json:"filters"`
+	ForceUpdate bool                 `json:"forceUpdate"`
+	Full        bool                 `json:"full"`
 }
 
 // List возвращает список пакетов
@@ -903,9 +963,13 @@ func (a *Actions) ImageUpdate(ctx context.Context, hostCache bool) (*ImageUpdate
 }
 
 // ImageApply применить изменения к хосту
-func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool) (*ImageApplyResponse, error) {
+func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool, configPath, workdir string) (*ImageApplyResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err = a.serviceHostConfig.ApplyPathOverrides(configPath, workdir); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
@@ -952,11 +1016,6 @@ func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool
 		}
 	}
 
-	imageStatus, err := a.getImageStatus(ctx)
-	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
-	}
-
 	if len(a.serviceHostConfig.GetConfig().Modules) > 0 {
 		err = a.serviceHostConfig.GenerateDockerfile(hostCache)
 		if err != nil {
@@ -976,8 +1035,61 @@ func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool
 
 	_ = a.serviceTemporaryConfig.DeleteFile()
 
+	imageStatus, err := a.getImageStatus(ctx)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
 	return &ImageApplyResponse{
 		Message:     app.T_("Changes applied successfully. A reboot is required"),
+		BootedImage: imageStatus,
+	}, nil
+}
+
+// ImageSwitch переключает систему на другой базовый образ.
+func (a *Actions) ImageSwitch(ctx context.Context, image string, pullImage bool, hostCache bool) (*ImageSwitchResponse, error) {
+	image = strings.TrimSpace(image)
+	if image == "" {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify the target image")))
+	}
+
+	if err := a.serviceHostConfig.LoadConfig(); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	config := a.serviceHostConfig.GetConfig()
+	if config.Image == image {
+		return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("The system is already based on image %s"), image))
+	}
+
+	if err := a.serviceHostImage.VerifyRemoteImage(ctx, image); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if err := a.serviceHostConfig.SetImage(image); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	if len(config.Modules) > 0 {
+		if err := a.serviceHostConfig.GenerateDockerfile(hostCache); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		}
+		if err := a.serviceHostImage.BuildAndSwitch(ctx, pullImage, false, a.serviceHostConfig); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		}
+	} else {
+		if err := a.serviceHostImage.SwitchImage(ctx, image, false); err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		}
+	}
+
+	imageStatus, err := a.getImageStatus(ctx)
+	if err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+	}
+
+	return &ImageSwitchResponse{
+		Message:     app.T_("Image switched successfully. A reboot is required"),
 		BootedImage: imageStatus,
 	}, nil
 }
@@ -1005,7 +1117,7 @@ func (a *Actions) ImageHistory(ctx context.Context, imageName string, limit int,
 
 // ImageLint линтер файлов и пакетной базы
 func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*ImageLintResponse, error) {
-	svc := lint.New(rootfs)
+	svc := lint.New(rootfs, a.reporter)
 	result, err := svc.Analyze(ctx, fix)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -1017,6 +1129,7 @@ func (a *Actions) ImageLint(ctx context.Context, rootfs string, fix bool) (*Imag
 		resp.Tmpfiles = &ImageLintTmpfiles{
 			Missing:     result.TmpFiles.Missing,
 			Unsupported: result.TmpFiles.Unsupported,
+			Factory:     result.TmpFiles.Factory,
 		}
 	}
 
@@ -1043,7 +1156,7 @@ func (a *Actions) ImageGetConfig(_ context.Context) (*ImageConfigResponse, error
 }
 
 // ImageSaveConfig сохранить конфиг
-func (a *Actions) ImageSaveConfig(_ context.Context, config build.Config) (*ImageConfigResponse, error) {
+func (a *Actions) ImageSaveConfig(_ context.Context, config imagesvc.Config) (*ImageConfigResponse, error) {
 	err := a.serviceHostConfig.LoadConfig()
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -1083,14 +1196,14 @@ func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
 }
 
 // ImageSyncGroups синхронизирует группы пользователей из YAML-конфигов
-func (a *Actions) ImageSyncGroups(_ context.Context, configDirs []string) (*ImageSyncGroupsResponse, error) {
+func (a *Actions) ImageSyncGroups(_ context.Context) (*ImageSyncGroupsResponse, error) {
 	if !a.appConfig.ConfigManager.GetConfig().IsAtomic {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, errors.New(app.T_("This option is only available for an atomic system")))
 	}
 
 	svc := altfiles.NewDefault()
 
-	configs, err := svc.ReadSyncConfigsDirs(configDirs)
+	configs, err := svc.ReadSyncConfigsDirs(altfiles.DefaultSyncConfigDirs)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
@@ -1110,6 +1223,7 @@ func (a *Actions) ImageSyncGroups(_ context.Context, configDirs []string) (*Imag
 		Message: app.T_("Groups synced successfully"),
 		Added:   result.Added,
 		Fixed:   result.Fixed,
+		Removed: result.Removed,
 		Skipped: result.Skipped,
 	}, nil
 }
@@ -1176,8 +1290,8 @@ func (a *Actions) validateDB(ctx context.Context, noLock bool) error {
 
 // updateAllPackagesDB обновляет состояние всех пакетов в базе данных
 func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdateAllPackagesDB))
 
 	installedPackages, err := a.serviceAptActions.GetInstalledPackages(ctx)
 	if err != nil {

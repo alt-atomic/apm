@@ -17,13 +17,14 @@
 package distrobox_test
 
 import (
-	"apm/internal/domain/distrobox"
-	"apm/tests/integration/common"
 	"context"
 	"fmt"
 	"strings"
 	"syscall"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/domain/distrobox"
+	"altlinux.space/alt-atomic/apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -44,9 +45,9 @@ func (s *DistroboxTestSuite) SetupSuite() {
 		s.T().Skip("Distrobox tests should be run without root privileges")
 	}
 
-	appConfig, ctx := common.GetTestAppConfig(s.T())
+	appConfig, reporter, ctx := common.GetTestAppConfig(s.T())
 
-	s.actions = distrobox.NewActions(appConfig)
+	s.actions = distrobox.NewActions(appConfig, reporter)
 	s.ctx = ctx
 	s.containerName = "apm-test-suite"
 	s.image = "registry.altlinux.org/sisyphus/base:latest"

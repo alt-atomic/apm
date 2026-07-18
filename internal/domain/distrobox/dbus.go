@@ -17,17 +17,38 @@
 package distrobox
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/common/sandbox"
 	"context"
 	"encoding/json"
 
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
+
 	"github.com/godbus/dbus/v5"
 )
+
+const DBusInterface = "org.altlinux.APM.distrobox"
+
+func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) service.DBusModule {
+	return service.DBusModule{
+		Interface: DBusInterface,
+		Build: func(ctx context.Context, _ *dbus.Conn) (service.DBusExport, error) {
+			actions := NewActions(appConfig, reporter)
+			return service.DBusExport{
+				Object: NewDBusWrapper(actions, ctx),
+				PostExport: func(ctx context.Context) {
+					if err := actions.GetIconService().ReloadIcons(ctx); err != nil {
+						app.Log.Error(err.Error())
+					}
+				},
+			}, nil
+		},
+	}
+}
 
 // DBusWrapper предоставляет обёртку для действий с контейнерами через DBus.
 type DBusWrapper struct {
@@ -77,7 +98,7 @@ func (w *DBusWrapper) Update(container string, transaction string, background bo
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Update(ctx, container)
-			reply.SendTaskResult(ctx, reply.EventDistroUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventDistroUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -132,21 +153,19 @@ func (w *DBusWrapper) Search(container string, packageName string, transaction s
 	return string(data), nil
 }
 
-// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON - это JSON-строка вида [{"field":"name","op":"like","value":"fire"}]
+// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON — JSON-объект {"filters","orFilters"}.
 func (w *DBusWrapper) List(container string, sort string, order string, limit int, offset int, filtersJSON string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
 		limit = 50
 	}
 
-	var filters []filter.Filter
-	if filtersJSON != "" {
-		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
-			return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
-		}
+	body, err := filter.ParseJSONBody(filtersJSON)
+	if err != nil {
+		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
 
-	validated, err := sandbox.DistroFilterConfig.Validate(filters)
+	groups, err := sandbox.DistroFilterConfig.ValidateBody(body)
 	if err != nil {
 		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
@@ -157,7 +176,7 @@ func (w *DBusWrapper) List(container string, sort string, order string, limit in
 		Order:       order,
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     validated,
+		Filters:     groups,
 		ForceUpdate: forceUpdate,
 	}
 
@@ -224,7 +243,7 @@ func (w *DBusWrapper) ContainerAdd(image, name, additionalPackages, initHooks st
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ContainerAdd(ctx, image, name, additionalPackages, initHooks)
-			reply.SendTaskResult(ctx, reply.EventDistroContainerAdd, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventDistroContainerAdd, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{

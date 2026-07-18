@@ -1,16 +1,17 @@
 package kernel
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	aptlib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/testutil"
-	"apm/internal/domain/kernel/service"
 	"context"
 	"errors"
 	"syscall"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/testutil"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 type mockAptActions struct {
@@ -86,7 +87,7 @@ func (m *mockKernelManager) FindLatestKernel(_ context.Context, _ string) (*serv
 func (m *mockKernelManager) InheritModulesFromKernel(_ *service.Info, _ *service.Info) ([]string, error) {
 	return m.inheritModules, m.inheritModulesErr
 }
-func (m *mockKernelManager) AutoSelectHeadersAndFirmware(_ context.Context, _ *service.Info, _ bool) ([]string, error) {
+func (m *mockKernelManager) AutoSelectHeadersAndFirmware(_ context.Context, _ *service.Info, _ *service.Info, _ bool) ([]string, error) {
 	return m.autoSelectResult, m.autoSelectErr
 }
 func (m *mockKernelManager) SimulateUpgrade(_ *service.Info, _ []string, _ bool) (*service.UpgradePreview, error) {
@@ -152,8 +153,10 @@ func newTestActions(km *mockKernelManager, apt *mockAptActions, db *mockAptDatab
 	if db == nil {
 		db = &mockAptDatabase{}
 	}
+	cfg := testutil.DefaultAppConfig()
 	return &Actions{
-		appConfig:          testutil.DefaultAppConfig(),
+		appConfig:          cfg,
+		reporter:           reply.NewReporter(cfg),
 		kernelManager:      km,
 		serviceAptActions:  apt,
 		serviceAptDatabase: db,
@@ -161,8 +164,7 @@ func newTestActions(km *mockKernelManager, apt *mockAptActions, db *mockAptDatab
 }
 
 func testContext() context.Context {
-	cfg := testutil.DefaultAppConfig()
-	return context.WithValue(context.Background(), app.AppConfigKey, cfg)
+	return context.Background()
 }
 
 func testKernel(flavour, version, fullVersion string) *service.Info {
@@ -631,7 +633,7 @@ func TestListKernelModules(t *testing.T) {
 
 	t.Run("find modules error propagates", func(t *testing.T) {
 		km := &mockKernelManager{
-			findLatestResult: latest,
+			findLatestResult:    latest,
 			availableModulesErr: errors.New("db error"),
 		}
 		actions := newTestActions(km, nil, nil)

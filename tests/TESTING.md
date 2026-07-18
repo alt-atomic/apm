@@ -14,6 +14,9 @@ go test -tags distrobox ./tests/integration/distrobox/...
 # Запустить интеграционные тесты
 ./scripts/test-container.sh integration 
 
+# Запустить тесты сборки
+./scripts/test-container.sh build 
+
 # Запустить все тесты
 ./scripts/test-container.sh all
 ```

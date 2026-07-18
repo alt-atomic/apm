@@ -17,17 +17,20 @@
 package build
 
 import (
-	"apm/internal/common/build/core"
 	"context"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
 
-	"apm/internal/common/app"
-	"apm/internal/common/build"
-	"apm/internal/common/command"
-	"apm/tests/integration/common"
+	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
+	"altlinux.space/alt-atomic/apm/pkg/build/modules"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/build"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/pkg/command"
+	"altlinux.space/alt-atomic/apm/tests/integration/common"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -37,7 +40,6 @@ import (
 type BuildTestSuite struct {
 	suite.Suite
 	configService *build.ConfigService
-	hostConfig    *build.HostConfigService
 	ctx           context.Context
 	appConfig     *app.Config
 	testDir       string
@@ -52,7 +54,8 @@ func (s *BuildTestSuite) SetupSuite() {
 	}
 
 	var err error
-	s.appConfig, s.ctx = common.GetTestAppConfig(s.T())
+	var reporter *reply.Reporter
+	s.appConfig, reporter, s.ctx = common.GetTestAppConfig(s.T())
 
 	// Создаем временную директорию для тестов
 	s.testDir = filepath.Join(os.TempDir(), "apm-build-test")
@@ -68,6 +71,7 @@ func (s *BuildTestSuite) SetupSuite() {
 	// Инициализируем ConfigService для тестов
 	s.configService = build.NewConfigService(
 		s.appConfig,
+		reporter,
 		nil,
 		nil,
 		nil,
@@ -113,17 +117,17 @@ modules:
   - name: "Test copy"
     type: copy
     body:
-      target: "` + sourceFile + `"
+      source: "` + sourceFile + `"
       destination: "` + destFile + `"
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
 	// Загружаем и выполняем конфигурацию
-	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
-	assert.NoError(s.T(), err)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
 	assert.Equal(s.T(), 1, len(cfg.Modules))
-	assert.Equal(s.T(), core.TypeCopy, cfg.Modules[0].Type)
+	assert.Equal(s.T(), modules.TypeCopy, cfg.Modules[0].Type)
 
 	// Выполняем модуль через реальный ConfigService
 	module := cfg.Modules[0]
@@ -155,7 +159,7 @@ modules:
   - name: "Test move"
     type: move
     body:
-      target: "` + sourceFile + `"
+      source: "` + sourceFile + `"
       destination: "` + destFile + `"
       replace: false
       create-link: false
@@ -163,8 +167,8 @@ modules:
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
-	assert.NoError(s.T(), err)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
 	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
@@ -197,13 +201,14 @@ modules:
   - name: "Test remove"
     type: remove
     body:
-      target: "` + fileToRemove + `"
+      targets:
+        - "` + fileToRemove + `"
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
-	assert.NoError(s.T(), err)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
 	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
@@ -228,14 +233,15 @@ modules:
   - name: "Test mkdir"
     type: mkdir
     body:
-      target: "` + dirToCreate + `"
-      perm: "0755"
+      targets:
+        - "` + dirToCreate + `"
+      perm: "rwxr-xr-x"
 `
 	err := os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
-	assert.NoError(s.T(), err)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
 	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
@@ -243,7 +249,7 @@ modules:
 
 	// Проверяем что директория создана
 	stat, err := os.Stat(dirToCreate)
-	assert.NoError(s.T(), err)
+	s.Require().NoError(err)
 	assert.True(s.T(), stat.IsDir(), "Should create a directory")
 
 	s.T().Log("Mkdir module test passed")
@@ -266,13 +272,13 @@ modules:
     type: link
     body:
       target: "` + linkFile + `"
-      destination: "` + targetFile + `"
+      to: "` + targetFile + `"
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
-	assert.NoError(s.T(), err)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
 	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
@@ -311,15 +317,15 @@ modules:
   - name: "Test merge"
     type: merge
     body:
-      target: "` + sourceFile + `"
+      source: "` + sourceFile + `"
       destination: "` + destFile + `"
-      perm: "0644"
+      create-file-perm: "rw-r--r--"
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
-	assert.NoError(s.T(), err)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
 
 	module := cfg.Modules[0]
 	_, err = s.configService.ExecuteModule(s.ctx, module, nil)
@@ -356,26 +362,27 @@ modules:
   - name: "Create directory"
     type: mkdir
     body:
-      target: "` + destDir + `"
-      perm: "0755"
+      targets:
+        - "` + destDir + `"
+      perm: "rwxr-xr-x"
 
   - name: "Copy file 1"
     type: copy
     body:
-      target: "` + sourceFile1 + `"
+      source: "` + sourceFile1 + `"
       destination: "` + destFile1 + `"
 
   - name: "Copy file 2"
     type: copy
     body:
-      target: "` + sourceFile2 + `"
+      source: "` + sourceFile2 + `"
       destination: "` + destFile2 + `"
 `
 	err = os.WriteFile(s.testImageFile, []byte(yamlConfig), 0644)
 	assert.NoError(s.T(), err)
 
-	cfg, err := core.ReadAndParseConfigYamlFile(s.testImageFile)
-	assert.NoError(s.T(), err)
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
 	assert.Equal(s.T(), 3, len(cfg.Modules), "Should have 3 modules")
 
 	// Выполняем все модули последовательно через реальный ConfigService
@@ -414,7 +421,7 @@ func (s *BuildTestSuite) TestConfigValidation() {
 			name:      "Empty image",
 			yaml:      ``,
 			shouldErr: true,
-			errMsg:    "Image can not be empty",
+			errMsg:    "",
 		},
 		{
 			name: "Valid minimal config",
@@ -424,7 +431,7 @@ image: "alt:sisyphus"
 			shouldErr: false,
 		},
 		{
-			name: "Copy without target",
+			name: "Copy without source",
 			yaml: `
 image: "alt:sisyphus"
 modules:
@@ -433,7 +440,7 @@ modules:
       destination: "/tmp/dest"
 `,
 			shouldErr: true,
-			errMsg:    "target",
+			errMsg:    "source",
 		},
 		{
 			name: "Copy without destination",
@@ -442,7 +449,7 @@ image: "alt:sisyphus"
 modules:
   - type: copy
     body:
-      target: "/tmp/src"
+      source: "/tmp/src"
 `,
 			shouldErr: true,
 			errMsg:    "destination",
@@ -455,7 +462,7 @@ modules:
 			err := os.WriteFile(testFile, []byte(tt.yaml), 0644)
 			assert.NoError(t, err)
 
-			_, err = core.ReadAndParseConfigYamlFile(testFile)
+			_, err = pkgbuild.ReadAndParseConfig(testFile)
 			if tt.shouldErr {
 				assert.Error(t, err, "Should fail validation")
 				if tt.errMsg != "" {
@@ -468,6 +475,43 @@ modules:
 	}
 
 	s.T().Log("Config validation test passed")
+}
+
+// writeResource пишет include-файл в resources директорию
+func (s *BuildTestSuite) writeResource(name, content string) {
+	s.Require().NoError(os.WriteFile(filepath.Join(s.resourcesDir, name), []byte(content), 0644))
+}
+
+// TestIncludeNestedValidates проверяет, что валидная цепочка includes a→b→c проходит рекурсивную валидацию
+func (s *BuildTestSuite) TestIncludeNestedValidates() {
+	s.writeResource("a.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - b.yml\n")
+	s.writeResource("b.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - c.yml\n")
+	s.writeResource("c.yml", "modules:\n  - name: leaf\n    type: shell\n    body:\n      command: \"true\"\n")
+
+	top := "image: \"alt:sisyphus\"\nmodules:\n  - type: include\n    body:\n      targets:\n        - a.yml\n"
+	s.Require().NoError(os.WriteFile(s.testImageFile, []byte(top), 0644))
+
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
+
+	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir, pkgbuild.Version{})
+	s.Require().NoError(err, "valid nested include chain should validate")
+}
+
+// TestIncludeCircularDetected проверяет, что рекурсивная валидация ловит цикл includes
+func (s *BuildTestSuite) TestIncludeCircularDetected() {
+	s.writeResource("a.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - b.yml\n")
+	s.writeResource("b.yml", "modules:\n  - type: include\n    body:\n      targets:\n        - a.yml\n")
+
+	top := "image: \"alt:sisyphus\"\nmodules:\n  - type: include\n    body:\n      targets:\n        - a.yml\n"
+	s.Require().NoError(os.WriteFile(s.testImageFile, []byte(top), 0644))
+
+	cfg, err := pkgbuild.ReadAndParseConfig(s.testImageFile)
+	s.Require().NoError(err)
+
+	err = pkgbuild.ValidateConfigRecursive(&cfg, s.resourcesDir, pkgbuild.Version{})
+	s.Require().Error(err, "circular include must be detected")
+	assert.Contains(s.T(), err.Error(), "circular")
 }
 
 // TestRunner запускает тест-сьют

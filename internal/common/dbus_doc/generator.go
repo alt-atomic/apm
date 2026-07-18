@@ -17,7 +17,6 @@
 package dbus_doc
 
 import (
-	"apm/internal/common/reply"
 	"encoding/json"
 	"fmt"
 	"go/ast"
@@ -27,6 +26,8 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
 // DBusMethodInfo содержит информацию о DBus методе

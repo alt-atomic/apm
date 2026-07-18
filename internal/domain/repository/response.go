@@ -17,37 +17,37 @@
 package repository
 
 import (
-	aptlib "apm/internal/common/binding/apt/lib"
-	"apm/internal/domain/repository/service"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 )
 
 // RepoListResponse структура ответа для List метода
 type RepoListResponse struct {
 	Message      string               `json:"message"`
-	Repositories []service.Repository `json:"repositories"`
+	Repositories []aptrepo.Repository `json:"repositories"`
 	Count        int                  `json:"count"`
 }
 
 // RepoAddRemoveResponse структура ответа для Add/Remove методов
 type RepoAddRemoveResponse struct {
 	Message string               `json:"message"`
-	Added   []service.Repository `json:"added,omitempty"`
-	Removed []service.Repository `json:"removed,omitempty"`
+	Added   []aptrepo.Repository `json:"added,omitempty"`
+	Removed []aptrepo.Repository `json:"removed,omitempty"`
 }
 
 // RepoSetResponse структура ответа для Set метода
 type RepoSetResponse struct {
 	Message string               `json:"message"`
 	Branch  string               `json:"branch"`
-	Added   []service.Repository `json:"added,omitempty"`
-	Removed []service.Repository `json:"removed,omitempty"`
+	Added   []aptrepo.Repository `json:"added,omitempty"`
+	Removed []aptrepo.Repository `json:"removed,omitempty"`
 }
 
 // RepoSimulateResponse структура ответа для симуляции операций
 type RepoSimulateResponse struct {
 	Message    string               `json:"message"`
-	WillAdd    []service.Repository `json:"willAdd,omitempty"`
-	WillRemove []service.Repository `json:"willRemove,omitempty"`
+	WillAdd    []aptrepo.Repository `json:"willAdd,omitempty"`
+	WillRemove []aptrepo.Repository `json:"willRemove,omitempty"`
 }
 
 // BranchesResponse структура ответа для GetBranches метода

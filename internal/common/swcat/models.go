@@ -315,13 +315,13 @@ type Component struct {
 	PkgName string `xml:"pkgname" json:"pkgname"`
 
 	// fallback old fields
-	LegacyUpdateContact  string `xml:"updatecontact"    json:"-"`
-	LegacyXUpdateContact string `xml:"x-updatecontact"  json:"-"`
-	LegacyLicence        string `xml:"licence"          json:"-"`
-	LegacyLicense        string `xml:"license"          json:"-"`
-	LegacyMetaLicence    string `xml:"metadata_licence" json:"-"`
-	LegacyName           string `xml:"_name"            json:"-"`
-	LegacySummary        string `xml:"_summary"         json:"-"`
+	LegacyUpdateContact  string      `xml:"updatecontact"    json:"-"`
+	LegacyXUpdateContact string      `xml:"x-updatecontact"  json:"-"`
+	LegacyLicence        string      `xml:"licence"          json:"-"`
+	LegacyLicense        string      `xml:"license"          json:"-"`
+	LegacyMetaLicence    string      `xml:"metadata_licence" json:"-"`
+	LegacyName           string      `xml:"_name"            json:"-"`
+	LegacySummary        string      `xml:"_summary"         json:"-"`
 	LegacyLaunch         *Launchable `xml:"launch"       json:"-"`
 }
 

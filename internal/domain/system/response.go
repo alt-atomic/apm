@@ -17,10 +17,10 @@
 package system
 
 import (
-	_package "apm/internal/common/apt/package"
-	aptlib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+	aptlib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // CheckResponse структура ответа для Check* методов
@@ -61,10 +61,8 @@ type MultiInfoResponse struct {
 	NotFound []string           `json:"notFound,omitempty"`
 }
 
-// ListFiltersBody тело запроса для List — только фильтры.
-type ListFiltersBody struct {
-	Filters []filter.Filter `json:"filters"`
-}
+// ListFiltersBody тело запроса для List: filters — AND-условия, orFilters — одна OR-скобка.
+type ListFiltersBody = filter.ListBody
 
 // ListResponse структура ответа для List метода
 type ListResponse struct {
@@ -102,11 +100,17 @@ type ImageApplyResponse struct {
 	BootedImage ImageStatus `json:"bootedImage"`
 }
 
+// ImageSwitchResponse структура ответа для ImageSwitch метода
+type ImageSwitchResponse struct {
+	Message     string      `json:"message"`
+	BootedImage ImageStatus `json:"bootedImage"`
+}
+
 // ImageHistoryResponse структура ответа для ImageHistory метода
 type ImageHistoryResponse struct {
-	Message    string               `json:"message"`
-	History    []build.ImageHistory `json:"history"`
-	TotalCount int                  `json:"totalCount"`
+	Message    string                  `json:"message"`
+	History    []imagesvc.ImageHistory `json:"history"`
+	TotalCount int                     `json:"totalCount"`
 }
 
 type ImageLintResponse struct {
@@ -119,6 +123,7 @@ type ImageLintResponse struct {
 type ImageLintTmpfiles struct {
 	Missing     []string `json:"missing"`
 	Unsupported []string `json:"unsupported"`
+	Factory     []string `json:"factory,omitempty"`
 }
 
 type ImageLintSysusers struct {
@@ -131,7 +136,7 @@ type ImageLintRunTmp struct {
 
 // ImageConfigResponse структура ответа для ImageGetConfig/ImageSaveConfig методов
 type ImageConfigResponse struct {
-	Config build.Config `json:"config"`
+	Config imagesvc.Config `json:"config"`
 }
 
 // ImageFixNssResponse структура ответа для ImageFixNss метода
@@ -148,7 +153,21 @@ type ImageSyncGroupsResponse struct {
 	Message string `json:"message"`
 	Added   int    `json:"added"`
 	Fixed   int    `json:"fixed"`
+	Removed int    `json:"removed"`
 	Skipped int    `json:"skipped"`
+}
+
+// SourcePackageInfo описывает скачанный исходный пакет
+type SourcePackageInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	File    string `json:"file"`
+}
+
+// SourceResponse структура ответа для Source метода
+type SourceResponse struct {
+	Message  string              `json:"message"`
+	Packages []SourcePackageInfo `json:"packages"`
 }
 
 // SectionsResponse структура ответа для метода Sections.

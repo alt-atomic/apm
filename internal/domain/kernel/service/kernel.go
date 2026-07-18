@@ -17,13 +17,6 @@
 package service
 
 import (
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	libApt "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/command"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"fmt"
@@ -32,6 +25,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	libApt "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // Info KernelInfo представляет информацию о ядре
@@ -142,14 +143,16 @@ type Manager struct {
 	dbService  packageDBService
 	aptActions aptBindingActions
 	runner     commandRunner
+	reporter   *reply.Reporter
 }
 
-// NewKernelManager создает новый KernelManager
-func NewKernelManager(dbService packageDBService, aptActions aptBindingActions, runner commandRunner) *Manager {
+// NewKernelManager создает новый KernelManager.
+func NewKernelManager(dbService packageDBService, aptActions aptBindingActions, runner commandRunner, reporter *reply.Reporter) *Manager {
 	return &Manager{
 		dbService:  dbService,
 		aptActions: aptActions,
 		runner:     runner,
+		reporter:   reporter,
 	}
 }
 
@@ -191,8 +194,8 @@ func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 
 // GetCurrentKernel возвращает информацию о текущем запущенном ядре
 func (km *Manager) GetCurrentKernel(ctx context.Context) (*Info, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelCurrent))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelCurrent))
 
 	stdout, _, err := km.runner.Run(ctx, []string{"uname", "-r"}, command.WithQuiet())
 	if err != nil {
@@ -248,8 +251,8 @@ func (km *Manager) GetDefaultKernel() (*Info, error) {
 
 // ListKernels возвращает список доступных ядер для указанного flavour
 func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*Info, err error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelList))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelList))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelList))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelList))
 
 	nameValue := "kernel-image-"
 	if flavour != "" {
@@ -262,7 +265,7 @@ func (km *Manager) ListKernels(ctx context.Context, flavour string) (kernels []*
 	}
 
 	// Ищем в базе данных с сортировкой по версии
-	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to search kernel packages in database: %s"), err.Error())
 	}
@@ -401,8 +404,8 @@ func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeader
 
 // InstallKernel устанавливает ядро с модулями
 func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []string, includeHeaders bool, dryRun bool) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstall))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstall))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstall))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstall))
 
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
 
@@ -416,8 +419,8 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 
 // InstallModules устанавливает или симулирует установку пакетов модулей
 func (km *Manager) InstallModules(ctx context.Context, installPackages []string, dryRun bool) (*libApt.PackageChanges, error) {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstallMods))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstallMods))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstallMods))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstallMods))
 	if dryRun {
 		return km.aptActions.SimulateInstall(installPackages)
 	}
@@ -433,8 +436,8 @@ func (km *Manager) RemovePackages(ctx context.Context, removePackages []string, 
 		event = reply.EventKernelCheckRemove
 	}
 
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
+	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
+	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
 
 	if dryRun {
 		return km.aptActions.SimulateRemove(removePackages, false, false)
@@ -467,7 +470,7 @@ func (km *Manager) FindNextFlavours(minVersion string) (flavours []string, err e
 		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
 		{Field: "name", Op: filter.OpLike, Value: "kernel-image-"},
 	}
-	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to search kernels in database: %s"), err.Error())
 	}
@@ -565,35 +568,24 @@ func (km *Manager) InheritModulesFromKernel(targetKernel *Info, sourceKernel *In
 	return inheritedModules, nil
 }
 
-// AutoSelectHeadersAndFirmware автоматически добавляет headers и модули от текущего ядра
-func (km *Manager) AutoSelectHeadersAndFirmware(ctx context.Context, kernel *Info, includeHeaders bool) ([]string, error) {
+// AutoSelectHeadersAndFirmware автоматически добавляет headers и модули от переданного текущего ядра
+func (km *Manager) AutoSelectHeadersAndFirmware(_ context.Context, kernel *Info, currentKernel *Info, includeHeaders bool) ([]string, error) {
 	var additionalPackages []string
 
-	// Добавляем headers если запрошены или уже установлены
-	if includeHeaders {
+	if includeHeaders || km.areHeadersInstalled(kernel.Flavour) {
 		additionalPackages = append(additionalPackages,
 			fmt.Sprintf("kernel-headers-%s", kernel.Flavour),
 			fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour),
 		)
-	} else {
-		// Проверяем если headers уже установлены - добавляем автоматически
-		if km.areHeadersInstalled(kernel.Flavour) {
-			additionalPackages = append(additionalPackages,
-				fmt.Sprintf("kernel-headers-%s", kernel.Flavour),
-				fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour),
-			)
-		}
 	}
 
-	// Автоматически добавляем модули на основе установленных модулей текущего ядра (как в bash скрипте)
-	currentKernel, err := km.GetCurrentKernel(ctx)
-	if err == nil && currentKernel != nil {
+	if currentKernel != nil {
 		inheritedModules, err := km.InheritModulesFromKernel(kernel, currentKernel)
-		if err == nil && len(inheritedModules) > 0 {
-			for _, moduleName := range inheritedModules {
-				modulePackage := fmt.Sprintf("kernel-modules-%s-%s", moduleName, kernel.Flavour)
-				additionalPackages = append(additionalPackages, modulePackage)
-			}
+		if err != nil {
+			return additionalPackages, err
+		}
+		for _, moduleName := range inheritedModules {
+			additionalPackages = append(additionalPackages, fmt.Sprintf("kernel-modules-%s-%s", moduleName, kernel.Flavour))
 		}
 	}
 
@@ -608,7 +600,7 @@ func (km *Manager) enrichKernelInfoFromDB(kernel *Info) {
 		{Field: "typePackage", Op: filter.OpEq, Value: fmt.Sprintf("%d", int(_package.PackageTypeSystem))},
 		{Field: "name", Op: filter.OpLike, Value: fmt.Sprintf("kernel-image-%s", kernel.Flavour)},
 	}
-	packages, err := km.dbService.QueryHostImagePackages(ctx, filters, "version", "DESC", 0, 0)
+	packages, err := km.dbService.QueryHostImagePackages(ctx, filter.AndGroups(filters), "version", "DESC", 0, 0)
 	if err != nil {
 		return
 	}

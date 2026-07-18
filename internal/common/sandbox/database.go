@@ -17,10 +17,6 @@
 package sandbox
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"errors"
 	"fmt"
@@ -28,6 +24,11 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
@@ -48,6 +49,7 @@ type DBDistroPackage struct {
 
 type DistroDBService struct {
 	dbManager app.DatabaseManager
+	reporter  *reply.Reporter
 	realDb    *gorm.DB
 }
 
@@ -89,9 +91,10 @@ func (s *DistroDBService) db() (*gorm.DB, error) {
 }
 
 // NewDistroDBService создаёт новый сервис для работы с базой данных distrobox.
-func NewDistroDBService(dbManager app.DatabaseManager) *DistroDBService {
+func NewDistroDBService(dbManager app.DatabaseManager, reporter *reply.Reporter) *DistroDBService {
 	return &DistroDBService{
 		dbManager: dbManager,
+		reporter:  reporter,
 	}
 }
 
@@ -129,8 +132,8 @@ func (p PackageInfo) toDBModel() DBDistroPackage {
 // SavePackagesToDB сохраняет список пакетов (для конкретного containerName).
 // Сначала удаляет старые записи (WHERE container=...), затем добавляет новые.
 func (s *DistroDBService) SavePackagesToDB(ctx context.Context, containerName string, packages []PackageInfo) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroSavePackagesToDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroSavePackagesToDB))
+	s.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventDistroSavePackagesToDB))
+	defer s.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventDistroSavePackagesToDB))
 
 	if len(containerName) == 0 {
 		return errors.New(app.T_("The 'container' field cannot be empty when saving packages to the database"))
@@ -212,7 +215,7 @@ func (s *DistroDBService) ContainerDatabaseExist(ctx context.Context, containerN
 }
 
 // CountTotalPackages возвращает количество записей (COUNT(*)) c учётом фильтра containerName и других полей.
-func (s *DistroDBService) CountTotalPackages(containerName string, filters []filter.Filter) (int, error) {
+func (s *DistroDBService) CountTotalPackages(containerName string, filters []filter.FilterGroup) (int, error) {
 	gormDB, err := s.db()
 	if err != nil {
 		return 0, err
@@ -223,7 +226,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters []fil
 		db = db.Where("container = ?", containerName)
 	}
 
-	db = DistroFilterApplier.Apply(db, filters)
+	db = DistroFilterApplier.ApplyGroups(db, filters)
 
 	var total int64
 	if err = db.Count(&total).Error; err != nil {
@@ -233,7 +236,7 @@ func (s *DistroDBService) CountTotalPackages(containerName string, filters []fil
 }
 
 // QueryPackages возвращает записи с фильтрами, сортировкой, limit/offset.
-func (s *DistroDBService) QueryPackages(containerName string, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
+func (s *DistroDBService) QueryPackages(containerName string, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]PackageInfo, error) {
 	gormDB, err := s.db()
 	if err != nil {
 		return nil, err
@@ -245,7 +248,7 @@ func (s *DistroDBService) QueryPackages(containerName string, filters []filter.F
 		db = db.Where("container = ?", containerName)
 	}
 
-	db = DistroFilterApplier.Apply(db, filters)
+	db = DistroFilterApplier.ApplyGroups(db, filters)
 
 	if sortField != "" {
 		if err = DistroFilterConfig.ValidateSortField(sortField); err != nil {

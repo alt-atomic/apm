@@ -17,23 +17,24 @@
 package repository
 
 import (
-	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/domain/repository/service"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 )
 
 // repoService определяет методы для работы с репозиториями.
 type repoService interface {
-	GetRepositories(ctx context.Context, all bool) ([]service.Repository, error)
-	AddRepository(ctx context.Context, args []string, date string) ([]service.Repository, error)
-	RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]service.Repository, error)
-	SetBranch(ctx context.Context, branch, date string) (added []service.Repository, removed []service.Repository, err error)
-	CleanTemporary(ctx context.Context) ([]service.Repository, error)
+	GetRepositories(ctx context.Context, all bool) ([]aptrepo.Repository, error)
+	AddRepository(ctx context.Context, args []string, date string) ([]aptrepo.Repository, error)
+	RemoveRepository(ctx context.Context, args []string, date string, purge bool) ([]aptrepo.Repository, error)
+	SetBranch(ctx context.Context, branch, date string) (added []aptrepo.Repository, removed []aptrepo.Repository, err error)
+	CleanTemporary(ctx context.Context) ([]aptrepo.Repository, error)
 	GetBranches() []string
 	GetTaskPackages(ctx context.Context, taskNum string) ([]string, error)
-	SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]service.Repository, error)
-	SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]service.Repository, error)
+	SimulateAdd(ctx context.Context, args []string, date string, force bool) ([]aptrepo.Repository, error)
+	SimulateRemove(ctx context.Context, args []string, date string, purge bool) ([]aptrepo.Repository, error)
 }
 
 // overlayService определяет методы для работы с usr-overlay в атомарных системах.

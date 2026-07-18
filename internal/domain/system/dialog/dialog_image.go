@@ -17,12 +17,13 @@
 package dialog
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/reply"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

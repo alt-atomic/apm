@@ -17,21 +17,36 @@
 package system
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
-	"apm/internal/domain/system/appstream"
 	"context"
 	"encoding/json"
 	"fmt"
 
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
+
 	"github.com/godbus/dbus/v5"
 )
+
+const DBusInterface = "org.altlinux.APM.system"
+
+func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) service.DBusModule {
+	return service.DBusModule{
+		Interface: DBusInterface,
+		Build: func(ctx context.Context, conn *dbus.Conn) (service.DBusExport, error) {
+			actions := NewActions(appConfig, reporter)
+			return service.DBusExport{Object: NewDBusWrapper(actions, conn, ctx)}, nil
+		},
+	}
+}
 
 // DBusWrapper предоставляет обёртку для системных действий, предназначенную для экспорта через DBus.
 type DBusWrapper struct {
@@ -45,7 +60,7 @@ type DBusWrapper struct {
 func NewDBusWrapper(a *Actions, c *dbus.Conn, ctx context.Context) *DBusWrapper {
 	return &DBusWrapper{
 		actions:          a,
-		appstreamActions: appstream.NewActions(a.appConfig),
+		appstreamActions: appstream.NewActions(a.appConfig, a.reporter),
 		conn:             c,
 		ctx:              ctx,
 	}
@@ -72,8 +87,8 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, downloadOnl
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
-			reply.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
+			resp, err := w.actions.Install(ctx, packages, true, downloadOnly, false)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -89,7 +104,7 @@ func (w *DBusWrapper) Install(sender dbus.Sender, packages []string, downloadOnl
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
+	resp, err := w.actions.Install(ctx, packages, true, downloadOnly, false)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
@@ -114,7 +129,7 @@ func (w *DBusWrapper) Remove(sender dbus.Sender, packages []string, purge bool, 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
-			reply.SendTaskResult(ctx, reply.EventSystemRemove, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemRemove, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -171,7 +186,7 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Update(ctx, false, false)
-			reply.SendTaskResult(ctx, reply.EventSystemUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -198,21 +213,19 @@ func (w *DBusWrapper) Update(sender dbus.Sender, transaction string, background 
 	return string(data), nil
 }
 
-// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON - это JSON-строка вида [{"field":"name","op":"like","value":"fire"}]
+// List выполняет продвинутый поиск пакетов по фильтру. filtersJSON — JSON-объект {"filters","orFilters"}.
 func (w *DBusWrapper) List(sort string, order string, limit int, offset int, filtersJSON string, forceUpdate bool, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	var filters []filter.Filter
-	if filtersJSON != "" {
-		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
-			return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
-		}
+	body, err := filter.ParseJSONBody(filtersJSON)
+	if err != nil {
+		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
 
-	validated, err := _package.SystemFilterConfig.Validate(filters)
+	groups, err := _package.SystemFilterConfig.ValidateBody(body)
 	if err != nil {
 		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
@@ -222,7 +235,7 @@ func (w *DBusWrapper) List(sort string, order string, limit int, offset int, fil
 		Order:       order,
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     validated,
+		Filters:     groups,
 		ForceUpdate: forceUpdate,
 	}
 
@@ -279,7 +292,7 @@ func (w *DBusWrapper) CheckUpgrade(sender dbus.Sender, transaction string, backg
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckUpgrade(ctx)
-			reply.SendTaskResult(ctx, reply.EventSystemCheckUpgrade, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemCheckUpgrade, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -320,7 +333,7 @@ func (w *DBusWrapper) Upgrade(sender dbus.Sender, downloadOnly bool, transaction
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.Upgrade(ctx, downloadOnly)
-			reply.SendTaskResult(ctx, reply.EventSystemUpgrade, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemUpgrade, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -361,7 +374,7 @@ func (w *DBusWrapper) CheckInstall(sender dbus.Sender, packages []string, transa
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckInstall(ctx, packages)
-			reply.SendTaskResult(ctx, reply.EventSystemCheckInstall, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemCheckInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -402,7 +415,7 @@ func (w *DBusWrapper) CheckRemove(sender dbus.Sender, packages []string, depends
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CheckRemove(ctx, packages, false, depends)
-			reply.SendTaskResult(ctx, reply.EventSystemCheckRemove, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemCheckRemove, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -444,7 +457,7 @@ func (w *DBusWrapper) Search(packageName string, transaction string, installed b
 }
 
 // ImageApply декларативно применяет настройки image.yml к образу хост-системы.
-func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool, pullImage bool, noCache bool) (string, *dbus.Error) {
+func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, background bool, pullImage bool, noCache bool, configPath string, workdir string) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
 		return "", err
 	}
@@ -458,8 +471,8 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
-			reply.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
+			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -475,7 +488,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}
@@ -503,6 +516,48 @@ func (w *DBusWrapper) ImageHistory(sender dbus.Sender, transaction string, image
 	return string(data), nil
 }
 
+// ImageSwitch переключает систему на другой базовый образ.
+func (w *DBusWrapper) ImageSwitch(sender dbus.Sender, transaction string, background bool, image string, pullImage bool, noCache bool) (string, *dbus.Error) {
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
+	}
+
+	if transaction == "" {
+		transaction = helper.GenerateTransactionID()
+	}
+
+	hostCache := !noCache
+
+	if background {
+		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+		go func() {
+			resp, err := w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemImageSwitch, resp, err)
+		}()
+
+		bgResp := BackgroundTaskResponse{
+			Message:     app.T_("Task started in background"),
+			Transaction: transaction,
+		}
+		data, jerr := json.Marshal(reply.OK(bgResp))
+		if jerr != nil {
+			return "", dbus.MakeFailedError(jerr)
+		}
+		return string(data), nil
+	}
+
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // ImageUpdate обновляет образ системы.
 func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, background bool, noCache bool) (string, *dbus.Error) {
 	if err := w.checkManagePermission(sender); err != nil {
@@ -519,7 +574,7 @@ func (w *DBusWrapper) ImageUpdate(sender dbus.Sender, transaction string, backgr
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.ImageUpdate(ctx, hostCache)
-			reply.SendTaskResult(ctx, reply.EventSystemImageUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemImageUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -563,6 +618,23 @@ func (w *DBusWrapper) ImageStatus(sender dbus.Sender, transaction string) (strin
 	return string(data), nil
 }
 
+// ImageSyncGroups синхронизирует группы пользователей из конфигурации.
+func (w *DBusWrapper) ImageSyncGroups(sender dbus.Sender, transaction string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(sender); err != nil {
+		return "", err
+	}
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.ImageSyncGroups(ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
 // ImageGetConfig возвращает текущую конфигурацию image.yml.
 func (w *DBusWrapper) ImageGetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig(w.ctx)
@@ -590,7 +662,7 @@ func (w *DBusWrapper) ApplicationUpdate(sender dbus.Sender, transaction string, 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.appstreamActions.Update(ctx)
-			reply.SendTaskResult(ctx, reply.EventApplicationUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventApplicationUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -630,21 +702,19 @@ func (w *DBusWrapper) ApplicationInfo(pkgname, transaction string) (string, *dbu
 	return string(data), nil
 }
 
-// ApplicationList возвращает список приложений с фильтрами.
+// ApplicationList возвращает список приложений с фильтрами. filtersJSON — JSON-объект {"filters","orFilters"}.
 func (w *DBusWrapper) ApplicationList(sort, order string, limit, offset int, filtersJSON, transaction string) (string, *dbus.Error) {
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	var filters []filter.Filter
-	if filtersJSON != "" {
-		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
-			return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
-		}
+	body, err := filter.ParseJSONBody(filtersJSON)
+	if err != nil {
+		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
 
-	validated, err := swcat.FilterConfig.Validate(filters)
+	groups, err := swcat.FilterConfig.ValidateBody(body)
 	if err != nil {
 		return "", apmerr.DBusError(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
@@ -654,7 +724,7 @@ func (w *DBusWrapper) ApplicationList(sort, order string, limit, offset int, fil
 		Order:   order,
 		Limit:   limit,
 		Offset:  offset,
-		Filters: validated,
+		Filters: groups,
 	}
 
 	resp, err := w.appstreamActions.List(ctx, params)
@@ -745,7 +815,7 @@ func (w *DBusWrapper) ImageSaveConfig(sender dbus.Sender, config string) (string
 		return "", err
 	}
 
-	configObject := build.Config{}
+	configObject := imagesvc.Config{}
 	if err := json.Unmarshal([]byte(config), &configObject); err != nil {
 		return "", dbus.MakeFailedError(fmt.Errorf(app.T_("Failed to parse JSON: %w"), err))
 	}

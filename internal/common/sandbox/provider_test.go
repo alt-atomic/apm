@@ -17,9 +17,10 @@
 package sandbox
 
 import (
-	"apm/internal/common/command"
 	"strings"
 	"testing"
+
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // TestGetProvider проверяет логику выбора провайдера пакетов в зависимости от ОС контейнера

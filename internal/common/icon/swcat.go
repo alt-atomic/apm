@@ -17,8 +17,6 @@
 package icon
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/command"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -29,6 +27,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/pkg/command"
 )
 
 // SwCatIconService предоставляет сервис для работы с XML-файлами SWCatalog.

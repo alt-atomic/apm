@@ -17,12 +17,14 @@
 package app
 
 import (
-	"apm/internal/common/version"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/version"
+	"altlinux.space/alt-atomic/apm/pkg/render"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/ilyakaznacheev/cleanenv"
@@ -76,6 +78,15 @@ type Colors struct {
 	ProgressFilled string `yaml:"progressFilled"`
 }
 
+// RenderColors возвращает часть палитры для pkg/render
+func (c Colors) RenderColors() render.Colors {
+	return render.Colors{
+		Accent:      c.Accent,
+		TreeBranch:  c.TreeBranch,
+		ResultError: c.ResultError,
+	}
+}
+
 const defaultConfigPath = "/etc/apm/config.yml"
 
 // Константы форматов вывода
@@ -103,8 +114,8 @@ type Configuration struct {
 	FormatType      string `yaml:"formatType"`
 
 	PathContainerFile string `yaml:"-"`
-	PathImageFile     string `yaml:"-"`
-	PathResourcesDir  string `yaml:"-"`
+	PathImageFile     string `yaml:"pathImageFile"`
+	PathResourcesDir  string `yaml:"pathResourcesDir"`
 	Version           string `yaml:"-"`
 
 	ParsedVersion *version.Version `yaml:"-"`

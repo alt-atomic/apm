@@ -17,10 +17,11 @@
 package apt
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
 const (
@@ -421,6 +422,9 @@ var errorPatterns = []ErrorEntry{
 	{ErrRepositoryUpdateFailed, "Repository update failed: %s", func() string { return app.T_("Repository update failed: %s") }, 1},
 	{ErrPackageIndexUpdateFailed, "Package index update failed: %s", func() string { return app.T_("Package index update failed: %s") }, 1},
 	{ErrConflictingPackages, "Conflicting packages: %s and %s", func() string { return app.T_("Conflicting packages: %s and %s") }, 2},
+	{ErrPackagesCouldNotBeInstalled, "Some packages could not be installed. Broken: %s", func() string {
+		return app.T_("Some packages could not be installed. Broken dependencies: %s")
+	}, 1},
 	{ErrPackagesCouldNotBeInstalled, "Some packages could not be installed. This may mean that you have requested an impossible situation", func() string {
 		return app.T_("Some packages could not be installed. This may mean that you have requested an impossible situation")
 	}, 0},

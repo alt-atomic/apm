@@ -17,15 +17,29 @@
 package kernel
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	"apm/internal/common/helper"
-	"apm/internal/common/reply"
 	"context"
 	"encoding/json"
 
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
+
 	"github.com/godbus/dbus/v5"
 )
+
+const DBusInterface = "org.altlinux.APM.kernel"
+
+func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) service.DBusModule {
+	return service.DBusModule{
+		Interface: DBusInterface,
+		Build: func(ctx context.Context, conn *dbus.Conn) (service.DBusExport, error) {
+			actions := NewActions(appConfig, reporter)
+			return service.DBusExport{Object: NewDBusWrapper(actions, conn, ctx)}, nil
+		},
+	}
+}
 
 // DBusWrapper предоставляет обёртку для действий с ядрами через DBus.
 type DBusWrapper struct {
@@ -89,7 +103,7 @@ func (w *DBusWrapper) CheckInstallKernel(sender dbus.Sender, flavour string, mod
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernel(ctx, flavour, modules, includeHeaders, true)
-			reply.SendTaskResult(ctx, reply.EventKernelCheckInstall, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelCheckInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -129,7 +143,7 @@ func (w *DBusWrapper) InstallKernel(sender dbus.Sender, flavour string, modules 
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernel(ctx, flavour, modules, includeHeaders, false)
-			reply.SendTaskResult(ctx, reply.EventKernelInstall, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelInstall, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -169,7 +183,7 @@ func (w *DBusWrapper) CheckUpdateKernel(sender dbus.Sender, flavour string, modu
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.UpdateKernel(ctx, flavour, modules, includeHeaders, true)
-			reply.SendTaskResult(ctx, reply.EventKernelCheckUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelCheckUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -209,7 +223,7 @@ func (w *DBusWrapper) UpdateKernel(sender dbus.Sender, flavour string, modules [
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.UpdateKernel(ctx, flavour, modules, includeHeaders, false)
-			reply.SendTaskResult(ctx, reply.EventKernelUpdate, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelUpdate, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -249,7 +263,7 @@ func (w *DBusWrapper) CheckCleanOldKernels(sender dbus.Sender, noBackup bool, tr
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CleanOldKernels(ctx, noBackup, true)
-			reply.SendTaskResult(ctx, reply.EventKernelCheckClean, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelCheckClean, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -289,7 +303,7 @@ func (w *DBusWrapper) CleanOldKernels(sender dbus.Sender, noBackup bool, transac
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.CleanOldKernels(ctx, noBackup, false)
-			reply.SendTaskResult(ctx, reply.EventKernelClean, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelClean, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -343,7 +357,7 @@ func (w *DBusWrapper) CheckInstallKernelModules(sender dbus.Sender, flavour stri
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernelModules(ctx, flavour, modules, true)
-			reply.SendTaskResult(ctx, reply.EventKernelCheckInstallMods, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelCheckInstallMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -383,7 +397,7 @@ func (w *DBusWrapper) InstallKernelModules(sender dbus.Sender, flavour string, m
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.InstallKernelModules(ctx, flavour, modules, false)
-			reply.SendTaskResult(ctx, reply.EventKernelInstallMods, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelInstallMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -423,7 +437,7 @@ func (w *DBusWrapper) CheckRemoveKernelModules(sender dbus.Sender, flavour strin
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.RemoveKernelModules(ctx, flavour, modules, true)
-			reply.SendTaskResult(ctx, reply.EventKernelCheckRemoveMods, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelCheckRemoveMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{
@@ -463,7 +477,7 @@ func (w *DBusWrapper) RemoveKernelModules(sender dbus.Sender, flavour string, mo
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
 			resp, err := w.actions.RemoveKernelModules(ctx, flavour, modules, false)
-			reply.SendTaskResult(ctx, reply.EventKernelRemoveMods, resp, err)
+			w.actions.reporter.SendTaskResult(ctx, reply.EventKernelRemoveMods, resp, err)
 		}()
 
 		bgResp := BackgroundTaskResponse{

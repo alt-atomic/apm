@@ -17,8 +17,8 @@
 package distrobox
 
 import (
-	"apm/internal/common/filter"
-	"apm/internal/common/sandbox"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
 )
 
 // UpdateResponse структура ответа для Update метода
@@ -40,10 +40,8 @@ type SearchResponse struct {
 	Packages []sandbox.PackageInfo `json:"packages"`
 }
 
-// ListFiltersBody тело запроса для List — только фильтры.
-type ListFiltersBody struct {
-	Filters []filter.Filter `json:"filters"`
-}
+// ListFiltersBody тело запроса для List: filters — AND-условия, orFilters — одна OR-скобка.
+type ListFiltersBody = filter.ListBody
 
 // ListResponse структура ответа для List метода
 type ListResponse struct {

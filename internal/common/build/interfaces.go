@@ -1,10 +1,12 @@
 package build
 
 import (
-	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/filter"
 	"context"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 )
 
 // buildAptActionsService определяет методы APT операций для сборки образа.
@@ -20,18 +22,12 @@ type buildAptActionsService interface {
 
 // buildPackageDBService определяет методы для запросов к базе данных пакетов при сборке.
 type buildPackageDBService interface {
-	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
+	QueryHostImagePackages(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
 	GetPackageByName(ctx context.Context, packageName string) (_package.Package, error)
 	PackageDatabaseExist(ctx context.Context) error
 }
 
 // buildHostConfigService определяет методы для работы с конфигурацией хоста при сборке.
 type buildHostConfigService interface {
-	GetConfig() *Config
-}
-
-// SwitchableConfig определяет методы конфигурации для BuildAndSwitch.
-type SwitchableConfig interface {
-	ConfigIsChanged(ctx context.Context) (bool, error)
-	SaveConfigToDB(ctx context.Context) error
+	GetConfig() *pkgbuild.Config
 }

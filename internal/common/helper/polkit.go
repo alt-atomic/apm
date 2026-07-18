@@ -17,10 +17,11 @@
 package helper
 
 import (
-	"apm/internal/common/app"
 	"fmt"
 	"os"
 	"strconv"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 
 	"github.com/godbus/dbus/v5"
 )

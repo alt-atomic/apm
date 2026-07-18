@@ -17,69 +17,16 @@
 package reply
 
 import (
-	"apm/internal/common/app"
-	"fmt"
-	"os"
-	"strings"
 	"sync"
-	"time"
 
-	"github.com/charmbracelet/lipgloss"
-	"golang.org/x/sys/unix"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/pkg/progress"
 )
-
-const clearLine = "\r\033[K"
-
-var spinnerFrames = []string{"|", "/", "-", "\\"}
 
 var (
-	mu           sync.Mutex
-	activeSp     *simpleSpinner
-	savedTermios *unix.Termios
+	mu       sync.Mutex
+	activeSp *progress.Spinner
 )
-
-type task struct {
-	eventType        string
-	name             string
-	viewName         string
-	state            string
-	printed          bool
-	progressPercent  float64
-	progressDoneText string
-}
-
-type simpleSpinner struct {
-	mu          sync.Mutex
-	tasks       []task
-	frame       int
-	colors      app.Colors
-	activeLines int
-	stopCh      chan struct{}
-	doneCh      chan struct{}
-	filledStyle lipgloss.Style
-	emptyStyle  lipgloss.Style
-}
-
-func disableEcho() {
-	fd := int(os.Stdin.Fd())
-	termios, err := unix.IoctlGetTermios(fd, unix.TCGETS)
-	if err != nil {
-		return
-	}
-	saved := *termios
-	savedTermios = &saved
-	termios.Lflag &^= unix.ECHO
-	_ = unix.IoctlSetTermios(fd, unix.TCSETS, termios)
-}
-
-func restoreEcho() {
-	if savedTermios == nil {
-		return
-	}
-	fd := int(os.Stdin.Fd())
-	_ = unix.IoctlSetTermios(fd, unix.TCSETS, savedTermios)
-	savedTermios = nil
-}
 
 // CreateSpinner создание и запуск спиннера.
 func CreateSpinner(appConfig *app.Config) {
@@ -94,22 +41,16 @@ func CreateSpinner(appConfig *app.Config) {
 		return
 	}
 
-	disableEcho()
-	fmt.Print("\033[?25l") // скрыть курсор
-
 	colors := appConfig.ConfigManager.GetColors()
-	sp := &simpleSpinner{
-		colors:      colors,
-		stopCh:      make(chan struct{}),
-		doneCh:      make(chan struct{}),
-		filledStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressFilled)),
-		emptyStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color(colors.ProgressEmpty)),
-	}
+	sp := progress.New(progress.Colors{
+		Filled: colors.ProgressFilled,
+		Empty:  colors.ProgressEmpty,
+	})
+	sp.Start()
 	activeSp = sp
-
-	go sp.run()
 }
 
+// StopSpinner останавливает активный спиннер.
 func StopSpinner(appConfig *app.Config) {
 	if !IsInteractive(appConfig) {
 		return
@@ -122,197 +63,29 @@ func StopSpinner(appConfig *app.Config) {
 		return
 	}
 
-	close(activeSp.stopCh)
-	<-activeSp.doneCh
-
-	activeSp.mu.Lock()
-	al := activeSp.activeLines
-
-	// Возвращаем курсор к началу анимируемой области
-	if al > 1 {
-		fmt.Printf("\033[%dA", al-1)
-	}
-
-	// Печатаем завершённые задачи, которые не успел напечатать render
-	linesUsed := 0
-	for i := range activeSp.tasks {
-		t := &activeSp.tasks[i]
-		if t.state == StateAfter && !t.printed {
-			t.printed = true
-			fmt.Printf("%s[✓] %s\n", clearLine, t.viewName)
-			linesUsed++
-		}
-	}
-
-	// Очищаем оставшиеся строки анимации
-	if extra := al - linesUsed; extra > 0 {
-		for i := 0; i < extra; i++ {
-			fmt.Print(clearLine)
-			if i < extra-1 {
-				fmt.Print("\n")
-			}
-		}
-	}
-	activeSp.mu.Unlock()
-
-	fmt.Print(clearLine)
-	fmt.Print("\033[?25h") // показать курсор
+	activeSp.Stop()
 	activeSp = nil
-	restoreEcho()
 }
 
-// UpdateTask обновление задачи/прогресса.
-func UpdateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
+// updateTask обновление задачи/прогресса.
+func updateTask(appConfig *app.Config, eventType string, taskName string, viewName string, state string, progressValue float64, progressDone string) {
 	if !IsInteractive(appConfig) {
 		return
 	}
 
 	mu.Lock()
 	sp := activeSp
+	mu.Unlock()
 	if sp == nil {
-		mu.Unlock()
 		return
 	}
-	sp.mu.Lock()
-	mu.Unlock()
-	defer sp.mu.Unlock()
 
-	for i, t := range sp.tasks {
-		if t.name == taskName {
-			sp.tasks[i].state = state
-			sp.tasks[i].viewName = viewName
-			sp.tasks[i].eventType = eventType
-			if eventType == EventTypeProgress {
-				sp.tasks[i].progressPercent = progressValue
-				sp.tasks[i].progressDoneText = progressDone
-			}
-			return
-		}
-	}
-
-	sp.tasks = append(sp.tasks, task{
-		eventType:        eventType,
-		name:             taskName,
-		viewName:         viewName,
-		state:            state,
-		progressPercent:  progressValue,
-		progressDoneText: progressDone,
+	sp.Update(progress.TaskUpdate{
+		Name:       taskName,
+		View:       viewName,
+		IsProgress: eventType == EventTypeProgress,
+		Percent:    progressValue,
+		DoneText:   progressDone,
+		Done:       state == StateAfter,
 	})
-}
-
-func (sp *simpleSpinner) run() {
-	defer close(sp.doneCh)
-	ticker := time.NewTicker(120 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-sp.stopCh:
-			return
-		case <-ticker.C:
-			sp.render()
-		}
-	}
-}
-
-func (sp *simpleSpinner) render() {
-	sp.mu.Lock()
-
-	prevActiveLines := sp.activeLines
-
-	var completedLines []string
-	for i := range sp.tasks {
-		t := &sp.tasks[i]
-		if t.state == StateAfter && !t.printed {
-			t.printed = true
-			if t.eventType == EventTypeProgress && len(t.progressDoneText) > 0 {
-				completedLines = append(completedLines, fmt.Sprintf(app.T_("Progress: %s completed"), t.progressDoneText))
-			} else {
-				completedLines = append(completedLines, t.viewName)
-			}
-		}
-	}
-
-	n := 0
-	for i := range sp.tasks {
-		if !(sp.tasks[i].state == StateAfter && sp.tasks[i].printed) {
-			sp.tasks[n] = sp.tasks[i]
-			n++
-		}
-	}
-	sp.tasks = sp.tasks[:n]
-
-	var actives []task
-	for i := range sp.tasks {
-		if sp.tasks[i].state != StateAfter {
-			actives = append(actives, sp.tasks[i])
-		}
-	}
-
-	frame := spinnerFrames[sp.frame%len(spinnerFrames)]
-	sp.frame++
-	sp.activeLines = len(actives)
-
-	filledStyle := sp.filledStyle
-	emptyStyle := sp.emptyStyle
-
-	sp.mu.Unlock()
-
-	var buf strings.Builder
-
-	if prevActiveLines > 1 {
-		fmt.Fprintf(&buf, "\033[%dA", prevActiveLines-1)
-	}
-
-	for _, line := range completedLines {
-		buf.WriteString(clearLine)
-		buf.WriteString("[✓] ")
-		buf.WriteString(line)
-		buf.WriteByte('\n')
-	}
-
-	// Активные задачи со спиннером
-	if len(actives) > 0 {
-		for idx := range actives {
-			buf.WriteString(clearLine)
-			buf.WriteByte('[')
-			buf.WriteString(frame)
-			buf.WriteString("] ")
-			if actives[idx].eventType == EventTypeProgress {
-				buf.WriteString(renderProgressBar(actives[idx], filledStyle, emptyStyle))
-			} else {
-				buf.WriteString(actives[idx].viewName)
-			}
-			if idx < len(actives)-1 {
-				buf.WriteByte('\n')
-			}
-		}
-	}
-
-	if extra := prevActiveLines - len(actives); extra > 0 {
-		for i := 0; i < extra; i++ {
-			buf.WriteString("\n\033[K")
-		}
-		fmt.Fprintf(&buf, "\033[%dA", extra)
-	}
-
-	if len(actives) == 0 {
-		buf.WriteString(clearLine)
-	}
-
-	os.Stdout.WriteString(buf.String())
-}
-
-func renderProgressBar(t task, filledStyle, emptyStyle lipgloss.Style) string {
-	const width = 30
-	pct := t.progressPercent
-	if pct < 0 {
-		pct = 0
-	} else if pct > 100 {
-		pct = 100
-	}
-
-	filled := int(pct / 100 * float64(width))
-	bar := filledStyle.Render(strings.Repeat("█", filled)) + emptyStyle.Render(strings.Repeat("░", width-filled))
-	return fmt.Sprintf("[%s] %.0f%% %s", bar, pct, t.viewName)
 }

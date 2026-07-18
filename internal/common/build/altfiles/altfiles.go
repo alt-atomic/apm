@@ -1,9 +1,10 @@
 package altfiles
 
 import (
-	"apm/internal/common/build/etcfiles"
 	"fmt"
 	"os"
+
+	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
 )
 
 const (
@@ -87,6 +88,43 @@ func (s *Service) ApplyBuild() (*ApplyResult, error) {
 	}, nil
 }
 
+// ApplyJoin сливает /usr/lib/{passwd,group} в /etc и очищает /usr/lib.
+func (s *Service) ApplyJoin() (*ApplyResult, error) {
+	etcPasswd, err := s.joinPasswdFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to join passwd: %w", err)
+	}
+
+	etcGroup, err := s.joinGroupFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to join group: %w", err)
+	}
+
+	return &ApplyResult{
+		EtcPasswdCount: len(etcPasswd),
+		EtcGroupCount:  len(etcGroup),
+	}, nil
+}
+
+// IsSplit сообщает, находится ли система в split-режиме nss-altfiles:
+// /usr/lib/passwd существует и содержит записи.
+func (s *Service) IsSplit() (bool, error) {
+	data, err := os.ReadFile(s.cfg.LibPasswd)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	entries, err := etcfiles.ParsePasswd(data)
+	if err != nil {
+		return false, err
+	}
+
+	return len(entries) > 0, nil
+}
+
 // ApplyFix чистит /etc/passwd и /etc/group на живой системе,
 // удаляя записи которые уже есть в /usr/lib (иммутабельный образ)
 func (s *Service) ApplyFix() (*ApplyResult, error) {
@@ -124,12 +162,15 @@ func (s *Service) SyncGroups(configs []SyncConfig) (*SyncResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	etcEntries, removed := removeGIDConflicts(etcEntries, libMap)
+
 	etcMap := map[string]int{}
 	for i, e := range etcEntries {
 		etcMap[e.Name] = i
 	}
 
-	result := &SyncResult{}
+	result := &SyncResult{Removed: removed}
 
 	for _, cfg := range configs {
 		users, err := s.resolveUsers(cfg.Sync.Users)

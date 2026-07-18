@@ -17,13 +17,15 @@
 package system
 
 import (
-	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
-	"apm/internal/common/swcat"
-	"apm/internal/domain/system/service"
 	"context"
+	"time"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // aptActionsService определяет методы для APT операций с пакетами.
@@ -39,10 +41,13 @@ type aptActionsService interface {
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	UpdateDBOnly(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	AptUpdate(ctx context.Context, noLock ...bool) error
+	AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLock ...bool) error
 	GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error)
 	Upgrade(ctx context.Context, downloadOnly bool) error
 	ReinstallPackages(ctx context.Context, packages []string) error
 	Install(ctx context.Context, packages []string, downloadOnly bool) error
+	DownloadSource(ctx context.Context, packages []string, destDir string) ([]aptLib.SourcePackage, error)
+	InstallSourcePackages(ctx context.Context, files []string) error
 }
 
 // aptDatabaseService определяет методы для запросов к базе данных пакетов.
@@ -50,8 +55,8 @@ type aptDatabaseService interface {
 	PackageDatabaseExist(ctx context.Context) error
 	GetPackageByName(ctx context.Context, packageName string) (_package.Package, error)
 	GetPackagesByNames(ctx context.Context, names []string) ([]_package.Package, error)
-	QueryHostImagePackages(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
-	CountHostImagePackages(ctx context.Context, filters []filter.Filter) (int64, error)
+	QueryHostImagePackages(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit, offset int) ([]_package.Package, error)
+	CountHostImagePackages(ctx context.Context, filters []filter.FilterGroup) (int64, error)
 	SearchPackagesByNameLike(ctx context.Context, likePattern string, installed bool) ([]_package.Package, error)
 	SearchPackagesMultiLimit(ctx context.Context, likePattern string, limit int, installed bool) ([]_package.Package, error)
 	SyncPackageInstallationInfo(ctx context.Context, installedPackages map[string]string) error
@@ -61,17 +66,18 @@ type aptDatabaseService interface {
 
 // hostDatabaseService определяет методы для работы с базой данных образов.
 type hostDatabaseService interface {
-	GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int) ([]build.ImageHistory, error)
+	GetImageHistoriesFiltered(ctx context.Context, imageNameFilter string, limit, offset int) ([]imagesvc.ImageHistory, error)
 	CountImageHistoriesFiltered(ctx context.Context, imageNameFilter string) (int, error)
 }
 
 // hostImageService определяет методы для работы с образами хоста.
 type hostImageService interface {
 	EnableOverlay() error
-	GetHostImage() (build.HostImage, error)
-	CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config build.Config) error
+	GetHostImage() (imagesvc.HostImage, error)
+	CheckAndUpdateBaseImage(ctx context.Context, pullImage bool, hostCache bool, config imagesvc.Config) error
 	SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error
-	BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService build.SwitchableConfig) error
+	BuildAndSwitch(ctx context.Context, pullImage bool, checkSame bool, hostConfigService imagesvc.SwitchableConfig) error
+	VerifyRemoteImage(ctx context.Context, imageName string) error
 }
 
 // hostConfigService определяет методы для работы с конфигурацией хоста.
@@ -79,13 +85,15 @@ type hostConfigService interface {
 	LoadConfig() error
 	GetConfigEnvVars() (map[string]string, error)
 	SaveConfig() error
+	SetImage(image string) error
 	GenerateDockerfile(hostCache bool) error
 	AddInstallPackage(pkg string) error
 	AddRemovePackage(pkg string) error
-	GetConfig() *build.Config
-	SetConfig(config *build.Config)
+	GetConfig() *imagesvc.Config
+	SetConfig(config *imagesvc.Config)
 	ConfigIsChanged(ctx context.Context) (bool, error)
 	SaveConfigToDB(ctx context.Context) error
+	ApplyPathOverrides(configPath, workdir string) error
 }
 
 // temporaryConfigService определяет методы для работы с временной конфигурацией.
@@ -95,7 +103,7 @@ type temporaryConfigService interface {
 	AddInstallPackage(pkg string) error
 	AddRemovePackage(pkg string) error
 	DeleteFile() error
-	GetConfig() *service.TemporaryConfig
+	GetConfig() *temporary.Config
 }
 
 // appStreamService определяет методы для работы с AppStream данными.

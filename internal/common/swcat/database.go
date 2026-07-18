@@ -17,15 +17,16 @@
 package swcat
 
 import (
-	"apm/internal/common/app"
-	"apm/internal/common/filter"
-	"apm/internal/common/reply"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"sync"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -47,12 +48,13 @@ func (DBAppStream) TableName() string { return "host_appstream_components" }
 // DBService сервис для работы с таблицей AppStream.
 type DBService struct {
 	dbManager app.DatabaseManager
+	reporter  *reply.Reporter
 	realDb    *gorm.DB
 	mu        sync.Mutex
 }
 
-func NewAppStreamDBService(dbManager app.DatabaseManager) *DBService {
-	return &DBService{dbManager: dbManager}
+func NewAppStreamDBService(dbManager app.DatabaseManager, reporter *reply.Reporter) *DBService {
+	return &DBService{dbManager: dbManager, reporter: reporter}
 }
 
 func (s *DBService) db() (*gorm.DB, error) {
@@ -87,8 +89,8 @@ func (s *DBService) db() (*gorm.DB, error) {
 
 // SaveComponentsToDB полностью перезаписывает таблицу AppStream компонентов.
 func (s *DBService) SaveComponentsToDB(ctx context.Context, pkgMap map[string][]Component) error {
-	reply.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationSaveToDB))
-	defer reply.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationSaveToDB))
+	s.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventApplicationSaveToDB))
+	defer s.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventApplicationSaveToDB))
 
 	db, err := s.db()
 	if err != nil {
@@ -168,7 +170,7 @@ func (s *DBService) GetByPkgNames(ctx context.Context, names []string) (map[stri
 }
 
 // QueryComponents запрашивает компоненты с фильтрами, сортировкой и пагинацией.
-func (s *DBService) QueryComponents(ctx context.Context, filters []filter.Filter, sortField, sortOrder string, limit,
+func (s *DBService) QueryComponents(ctx context.Context, filters []filter.FilterGroup, sortField, sortOrder string, limit,
 	offset int) ([]DBAppStream, error) {
 	db, err := s.db()
 	if err != nil {
@@ -176,7 +178,7 @@ func (s *DBService) QueryComponents(ctx context.Context, filters []filter.Filter
 	}
 
 	query := db.WithContext(ctx).Model(&DBAppStream{})
-	query = FilterApplier.Apply(query, filters)
+	query = FilterApplier.ApplyGroups(query, filters)
 
 	if sortField != "" {
 		if err = FilterConfig.ValidateSortField(sortField); err != nil {
@@ -204,14 +206,14 @@ func (s *DBService) QueryComponents(ctx context.Context, filters []filter.Filter
 }
 
 // CountComponents возвращает количество записей с учётом фильтров.
-func (s *DBService) CountComponents(ctx context.Context, filters []filter.Filter) (int64, error) {
+func (s *DBService) CountComponents(ctx context.Context, filters []filter.FilterGroup) (int64, error) {
 	db, err := s.db()
 	if err != nil {
 		return 0, err
 	}
 
 	query := db.WithContext(ctx).Model(&DBAppStream{})
-	query = FilterApplier.Apply(query, filters)
+	query = FilterApplier.ApplyGroups(query, filters)
 
 	var count int64
 	if err = query.Count(&count).Error; err != nil {

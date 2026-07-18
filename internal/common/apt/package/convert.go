@@ -17,10 +17,11 @@
 package _package
 
 import (
-	aptParser "apm/internal/common/apt"
-	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/helper"
 	"strings"
+
+	aptParser "altlinux.space/alt-atomic/apm/internal/common/apt"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // convertAptPackage преобразует aptLib.PackageInfo в Package

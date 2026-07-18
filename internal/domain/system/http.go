@@ -17,24 +17,37 @@
 package system
 
 import (
-	"apm/internal/common/apmerr"
-	"apm/internal/common/app"
-	_package "apm/internal/common/apt/package"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
-	"apm/internal/common/http_server"
-	"apm/internal/common/reply"
-	"apm/internal/common/swcat"
-	"apm/internal/domain/system/appstream"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+
 	"net/http"
 	"reflect"
 	"strconv"
+
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/http_server"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/internal/common/service"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
 )
+
+func HTTPFactory(appConfig *app.Config, reporter *reply.Reporter, isAtomic bool) service.HTTPModule {
+	return service.HTTPModule{
+		Endpoints: func(ctx context.Context) []http_server.Endpoint {
+			actions := NewActions(appConfig, reporter)
+			return NewHTTPWrapper(actions, appConfig, reporter, ctx).GetEndpoints(isAtomic)
+		},
+	}
+}
 
 // HTTPWrapper предоставляет обёртку для системных действий через HTTP.
 type HTTPWrapper struct {
@@ -43,12 +56,12 @@ type HTTPWrapper struct {
 	appstreamActions *appstream.Actions
 }
 
-// NewHTTPWrapper создаёт новую обёртку над actions
-func NewHTTPWrapper(a *Actions, appConfig *app.Config, ctx context.Context) *HTTPWrapper {
+// NewHTTPWrapper создаёт новую обёртку над actions.
+func NewHTTPWrapper(a *Actions, appConfig *app.Config, reporter *reply.Reporter, ctx context.Context) *HTTPWrapper {
 	return &HTTPWrapper{
-		BaseHTTPWrapper:  http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig},
+		BaseHTTPWrapper:  http_server.BaseHTTPWrapper{Ctx: ctx, AppConfig: appConfig, Reporter: reporter},
 		actions:          a,
-		appstreamActions: appstream.NewActions(appConfig),
+		appstreamActions: appstream.NewActions(appConfig, reporter),
 	}
 }
 
@@ -197,13 +210,13 @@ func (w *HTTPWrapper) Install(rw http.ResponseWriter, r *http.Request) {
 	downloadOnly := r.URL.Query().Get("download_only") == "true"
 
 	if w.RunBackground(rw, r, reply.EventSystemInstall, func(ctx context.Context) (interface{}, error) {
-		return w.actions.Install(ctx, packages, true, downloadOnly)
+		return w.actions.Install(ctx, packages, true, downloadOnly, false)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.Install(ctx, packages, true, downloadOnly)
+	resp, err := w.actions.Install(ctx, packages, true, downloadOnly, false)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -268,7 +281,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	validated, err := _package.SystemFilterConfig.Validate(body.Filters)
+	groups, err := _package.SystemFilterConfig.ValidateBody(body)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -293,7 +306,7 @@ func (w *HTTPWrapper) List(rw http.ResponseWriter, r *http.Request) {
 		Order:       query.Get("order"),
 		Limit:       limit,
 		Offset:      offset,
-		Filters:     validated,
+		Filters:     groups,
 		ForceUpdate: query.Get("forceUpdate") == "true",
 		Full:        query.Get("full") != "false",
 	}
@@ -415,15 +428,38 @@ func (w *HTTPWrapper) ImageUpdate(rw http.ResponseWriter, r *http.Request) {
 func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 	pullImage := r.URL.Query().Get("pull") == "true"
 	hostCache := r.URL.Query().Get("no_cache") != "true"
+	configPath := r.URL.Query().Get("config")
+	workdir := r.URL.Query().Get("workdir")
 
 	if w.RunBackground(rw, r, reply.EventSystemImageApply, func(ctx context.Context) (interface{}, error) {
-		return w.actions.ImageApply(ctx, pullImage, hostCache)
+		return w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
+// ImageSwitch переключает систему на другой базовый образ.
+func (w *HTTPWrapper) ImageSwitch(rw http.ResponseWriter, r *http.Request) {
+	image := r.URL.Query().Get("image")
+	pullImage := r.URL.Query().Get("pull") == "true"
+	hostCache := r.URL.Query().Get("no_cache") != "true"
+
+	if w.RunBackground(rw, r, reply.EventSystemImageSwitch, func(ctx context.Context) (interface{}, error) {
+		return w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
+	}) {
+		return
+	}
+
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.actions.ImageSwitch(ctx, image, pullImage, hostCache)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -459,6 +495,17 @@ func (w *HTTPWrapper) ImageHistory(rw http.ResponseWriter, r *http.Request) {
 	w.WriteJSON(rw, reply.OK(resp))
 }
 
+// ImageSyncGroups синхронизирует группы пользователей из конфигурации.
+func (w *HTTPWrapper) ImageSyncGroups(rw http.ResponseWriter, r *http.Request) {
+	ctx := w.CtxWithTransaction(r)
+	resp, err := w.actions.ImageSyncGroups(ctx)
+	if err != nil {
+		reply.WriteHTTPError(rw, err)
+		return
+	}
+	w.WriteJSON(rw, reply.OK(resp))
+}
+
 // ImageGetConfig возвращает конфигурацию образа.
 func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 	ctx := w.CtxWithTransaction(r)
@@ -472,7 +519,7 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 
 // ImageSaveConfig сохраняет конфигурацию образа.
 func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
-	var config build.Config
+	var config imagesvc.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 		if errors.Is(err, io.EOF) {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
@@ -547,9 +594,7 @@ func (w *HTTPWrapper) ApplicationInfo(rw http.ResponseWriter, r *http.Request) {
 
 // ApplicationList возвращает список приложений.
 func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Filters []filter.Filter `json:"filters"`
-	}
+	var body filter.ListBody
 	if r.Body != nil && r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && err.Error() != "EOF" {
 			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
@@ -557,7 +602,7 @@ func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	validated, err := swcat.FilterConfig.Validate(body.Filters)
+	groups, err := swcat.FilterConfig.ValidateBody(body)
 	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, err))
 		return
@@ -582,7 +627,7 @@ func (w *HTTPWrapper) ApplicationList(rw http.ResponseWriter, r *http.Request) {
 		Order:   query.Get("order"),
 		Limit:   limit,
 		Offset:  offset,
-		Filters: validated,
+		Filters: groups,
 	}
 
 	ctx := w.CtxWithTransaction(r)
@@ -751,7 +796,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				"Поиск пакетов",
 				"name, section, installed, app.categories",
 				"POST /api/v1/packages/list?sort=name&limit=20",
-				`{"filters": [{"field": "name", "op": "like", "value": "hello"}]}`,
+				`{"filters": [{"field": "installed", "value": "true"}], "orFilters": [{"field": "name", "op": "like", "value": "office"}, {"field": "description", "op": "like", "value": "office"}]}`,
 				"/api/v1/packages/filter-fields",
 			),
 			Tags: []string{"packages"},
@@ -881,7 +926,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				"Поиск приложений",
 				"pkgname, components.name, components.categories",
 				"POST /api/v1/applications/list?sort=pkgname&limit=20",
-				`{"filters": [{"field": "components.categories", "op": "eq", "value": "Game"}]}`,
+				`{"filters": [{"field": "components.categories", "op": "eq", "value": "Game"}], "orFilters": [{"field": "components.name", "op": "like", "value": "chess"}, {"field": "components.summary", "op": "like", "value": "chess"}]}`,
 				"/api/v1/applications/filter-fields",
 			),
 			Tags: []string{"applications"},
@@ -949,6 +994,23 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
 					{Name: "pull", Type: "boolean", Required: false, Description: "Всегда загружать базовый образ из реестра"},
 					{Name: "no_cache", Type: "boolean", Required: false, Description: "Отключить кэш APT-пакетов при сборке образа"},
+					{Name: "config", Type: "string", Required: false, Description: "Путь к файлу конфигурации образа"},
+					{Name: "workdir", Type: "string", Required: false, Description: "Рабочая директория сборки"},
+				},
+			},
+			http_server.Endpoint{
+				Handler:      w.ImageSwitch,
+				HTTPMethod:   "POST",
+				HTTPPath:     "/api/v1/image/switch",
+				ResponseType: reflect.TypeOf(ImageSwitchResponse{}),
+				Permission:   http_server.PermManage,
+				Summary:      "Переключить систему на другой базовый образ",
+				Tags:         []string{"image"},
+				QueryParams: []http_server.QueryParam{
+					{Name: "image", Type: "string", Required: true, Description: "Целевой базовый образ"},
+					{Name: "background", Type: "boolean", Required: false, Description: "Выполнить в фоне (результат придёт через WebSocket)"},
+					{Name: "pull", Type: "boolean", Required: false, Description: "Всегда загружать базовый образ из реестра"},
+					{Name: "no_cache", Type: "boolean", Required: false, Description: "Отключить кэш APT-пакетов при сборке образа"},
 				},
 			},
 			http_server.Endpoint{
@@ -966,6 +1028,15 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				},
 			},
 			http_server.Endpoint{
+				Handler:      w.ImageSyncGroups,
+				HTTPMethod:   "POST",
+				HTTPPath:     "/api/v1/image/sync-groups",
+				ResponseType: reflect.TypeOf(ImageSyncGroupsResponse{}),
+				Permission:   http_server.PermManage,
+				Summary:      "Синхронизировать группы пользователей из конфигурации",
+				Tags:         []string{"image"},
+			},
+			http_server.Endpoint{
 				Handler:      w.ImageGetConfig,
 				HTTPMethod:   "GET",
 				HTTPPath:     "/api/v1/image/config",
@@ -978,7 +1049,7 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				Handler:      w.ImageSaveConfig,
 				HTTPMethod:   "PUT",
 				HTTPPath:     "/api/v1/image/config",
-				RequestType:  reflect.TypeOf(build.Config{}),
+				RequestType:  reflect.TypeOf(imagesvc.Config{}),
 				ResponseType: reflect.TypeOf(ImageConfigResponse{}),
 				Permission:   http_server.PermManage,
 				Summary:      "Сохранить конфигурацию образа",

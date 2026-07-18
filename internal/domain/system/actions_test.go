@@ -1,18 +1,20 @@
 package system
 
 import (
-	"apm/internal/common/apmerr"
-	_package "apm/internal/common/apt/package"
-	aptLib "apm/internal/common/binding/apt/lib"
-	"apm/internal/common/build"
-	"apm/internal/common/filter"
-	"apm/internal/common/swcat"
-	"apm/internal/common/testutil"
-	"apm/internal/domain/system/service"
 	"context"
 	"errors"
 	"syscall"
 	"testing"
+	"time"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+	"altlinux.space/alt-atomic/apm/internal/common/swcat"
+	"altlinux.space/alt-atomic/apm/internal/common/testutil"
+	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 type mockAptActions struct {
@@ -54,12 +56,19 @@ func (m *mockAptActions) UpdateDBOnly(_ context.Context, _ ...bool) ([]_package.
 	return nil, nil
 }
 func (m *mockAptActions) AptUpdate(_ context.Context, _ ...bool) error { return nil }
+func (m *mockAptActions) AptUpdateIfStale(_ context.Context, _ time.Duration, _ ...bool) error {
+	return nil
+}
 func (m *mockAptActions) GetInstalledPackages(_ context.Context, _ ...bool) (map[string]string, error) {
 	return nil, nil
 }
 func (m *mockAptActions) Upgrade(_ context.Context, _ bool) error               { return nil }
 func (m *mockAptActions) ReinstallPackages(_ context.Context, _ []string) error { return nil }
 func (m *mockAptActions) Install(_ context.Context, _ []string, _ bool) error   { return nil }
+func (m *mockAptActions) DownloadSource(_ context.Context, _ []string, _ string) ([]aptLib.SourcePackage, error) {
+	return nil, nil
+}
+func (m *mockAptActions) InstallSourcePackages(_ context.Context, _ []string) error { return nil }
 
 type mockAptDB struct {
 	dbExistErr       error
@@ -84,10 +93,10 @@ func (m *mockAptDB) GetPackageByName(_ context.Context, _ string) (_package.Pack
 func (m *mockAptDB) GetPackagesByNames(_ context.Context, _ []string) ([]_package.Package, error) {
 	return m.getByNamesResult, m.getByNamesErr
 }
-func (m *mockAptDB) QueryHostImagePackages(_ context.Context, _ []filter.Filter, _ string, _ string, _ int, _ int) ([]_package.Package, error) {
+func (m *mockAptDB) QueryHostImagePackages(_ context.Context, _ []filter.FilterGroup, _ string, _ string, _ int, _ int) ([]_package.Package, error) {
 	return m.queryResult, m.queryErr
 }
-func (m *mockAptDB) CountHostImagePackages(_ context.Context, _ []filter.Filter) (int64, error) {
+func (m *mockAptDB) CountHostImagePackages(_ context.Context, _ []filter.FilterGroup) (int64, error) {
 	return m.countResult, m.countErr
 }
 func (m *mockAptDB) SearchPackagesByNameLike(_ context.Context, _ string, _ bool) ([]_package.Package, error) {
@@ -105,13 +114,13 @@ func (m *mockAptDB) GetSections(_ context.Context) ([]string, error) {
 }
 
 type mockHostDB struct {
-	historyResult []build.ImageHistory
+	historyResult []imagesvc.ImageHistory
 	historyErr    error
 	countResult   int
 	countErr      error
 }
 
-func (m *mockHostDB) GetImageHistoriesFiltered(_ context.Context, _ string, _ int, _ int) ([]build.ImageHistory, error) {
+func (m *mockHostDB) GetImageHistoriesFiltered(_ context.Context, _ string, _ int, _ int) ([]imagesvc.ImageHistory, error) {
 	return m.historyResult, m.historyErr
 }
 func (m *mockHostDB) CountImageHistoriesFiltered(_ context.Context, _ string) (int, error) {
@@ -121,44 +130,50 @@ func (m *mockHostDB) CountImageHistoriesFiltered(_ context.Context, _ string) (i
 type mockHostImage struct{}
 
 func (m *mockHostImage) EnableOverlay() error { return nil }
-func (m *mockHostImage) GetHostImage() (build.HostImage, error) {
-	return build.HostImage{}, nil
+func (m *mockHostImage) GetHostImage() (imagesvc.HostImage, error) {
+	return imagesvc.HostImage{}, nil
 }
-func (m *mockHostImage) CheckAndUpdateBaseImage(_ context.Context, _ bool, _ bool, _ build.Config) error {
+func (m *mockHostImage) CheckAndUpdateBaseImage(_ context.Context, _ bool, _ bool, _ imagesvc.Config) error {
 	return nil
 }
 func (m *mockHostImage) SwitchImage(_ context.Context, _ string, _ bool) error { return nil }
-func (m *mockHostImage) BuildAndSwitch(_ context.Context, _ bool, _ bool, _ build.SwitchableConfig) error {
+func (m *mockHostImage) BuildAndSwitch(_ context.Context, _ bool, _ bool, _ imagesvc.SwitchableConfig) error {
 	return nil
 }
+func (m *mockHostImage) VerifyRemoteImage(_ context.Context, _ string) error { return nil }
 
 type mockHostConfig struct {
-	config  *build.Config
+	config  *imagesvc.Config
 	loadErr error
 	saveErr error
 }
 
-func (m *mockHostConfig) LoadConfig() error                               { return m.loadErr }
-func (m *mockHostConfig) GetConfigEnvVars() (map[string]string, error)    { return nil, nil }
-func (m *mockHostConfig) SaveConfig() error                               { return m.saveErr }
+func (m *mockHostConfig) LoadConfig() error                            { return m.loadErr }
+func (m *mockHostConfig) GetConfigEnvVars() (map[string]string, error) { return nil, nil }
+func (m *mockHostConfig) SaveConfig() error                            { return m.saveErr }
+func (m *mockHostConfig) SetImage(image string) error {
+	m.config.Image = image
+	return m.saveErr
+}
 func (m *mockHostConfig) GenerateDockerfile(_ bool) error                 { return nil }
 func (m *mockHostConfig) AddInstallPackage(_ string) error                { return nil }
 func (m *mockHostConfig) AddRemovePackage(_ string) error                 { return nil }
-func (m *mockHostConfig) GetConfig() *build.Config                        { return m.config }
-func (m *mockHostConfig) SetConfig(c *build.Config)                       { m.config = c }
+func (m *mockHostConfig) GetConfig() *imagesvc.Config                     { return m.config }
+func (m *mockHostConfig) SetConfig(c *imagesvc.Config)                    { m.config = c }
 func (m *mockHostConfig) ConfigIsChanged(_ context.Context) (bool, error) { return false, nil }
 func (m *mockHostConfig) SaveConfigToDB(_ context.Context) error          { return nil }
+func (m *mockHostConfig) ApplyPathOverrides(_, _ string) error            { return nil }
 
 type mockTempConfig struct {
-	config *service.TemporaryConfig
+	config *temporary.Config
 }
 
-func (m *mockTempConfig) LoadConfig() error                   { return nil }
-func (m *mockTempConfig) SaveConfig() error                   { return nil }
-func (m *mockTempConfig) AddInstallPackage(_ string) error    { return nil }
-func (m *mockTempConfig) AddRemovePackage(_ string) error     { return nil }
-func (m *mockTempConfig) DeleteFile() error                   { return nil }
-func (m *mockTempConfig) GetConfig() *service.TemporaryConfig { return m.config }
+func (m *mockTempConfig) LoadConfig() error                { return nil }
+func (m *mockTempConfig) SaveConfig() error                { return nil }
+func (m *mockTempConfig) AddInstallPackage(_ string) error { return nil }
+func (m *mockTempConfig) AddRemovePackage(_ string) error  { return nil }
+func (m *mockTempConfig) DeleteFile() error                { return nil }
+func (m *mockTempConfig) GetConfig() *temporary.Config     { return m.config }
 
 type mockAppStream struct {
 	result map[string][]swcat.Component
@@ -190,7 +205,6 @@ func newTestActions(aptAct *mockAptActions, aptDB *mockAptDB, hostDB *mockHostDB
 		serviceAppStreamDB:     &mockAppStream{},
 	}
 }
-
 
 func TestInfo(t *testing.T) {
 	vim := _package.Package{Name: "vim", Version: "9.0", Summary: "Text editor"}
@@ -623,7 +637,7 @@ func TestCheckReinstall(t *testing.T) {
 }
 
 func TestImageHistory(t *testing.T) {
-	history := []build.ImageHistory{
+	history := []imagesvc.ImageHistory{
 		{ImageName: "alt:p11"},
 		{ImageName: "alt:p11"},
 	}
@@ -663,7 +677,7 @@ func TestImageHistory(t *testing.T) {
 
 func TestImageGetConfig(t *testing.T) {
 	t.Run("returns loaded config", func(t *testing.T) {
-		cfg := &build.Config{Image: "alt:p11"}
+		cfg := &imagesvc.Config{Image: "alt:p11"}
 		actions := newTestActions(nil, &mockAptDB{}, nil)
 		actions.serviceHostConfig = &mockHostConfig{config: cfg}
 
@@ -687,11 +701,11 @@ func TestImageGetConfig(t *testing.T) {
 
 func TestImageSaveConfig(t *testing.T) {
 	t.Run("replaces config and saves", func(t *testing.T) {
-		hcfg := &mockHostConfig{config: &build.Config{Image: "old"}}
+		hcfg := &mockHostConfig{config: &imagesvc.Config{Image: "old"}}
 		actions := newTestActions(nil, &mockAptDB{}, nil)
 		actions.serviceHostConfig = hcfg
 
-		newCfg := build.Config{Image: "alt:p12"}
+		newCfg := imagesvc.Config{Image: "alt:p12"}
 		resp, err := actions.ImageSaveConfig(context.Background(), newCfg)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -707,11 +721,11 @@ func TestImageSaveConfig(t *testing.T) {
 	t.Run("save error propagates as image error", func(t *testing.T) {
 		actions := newTestActions(nil, &mockAptDB{}, nil)
 		actions.serviceHostConfig = &mockHostConfig{
-			config:  &build.Config{},
+			config:  &imagesvc.Config{},
 			saveErr: errors.New("disk full"),
 		}
 
-		_, err := actions.ImageSaveConfig(context.Background(), build.Config{Image: "new"})
+		_, err := actions.ImageSaveConfig(context.Background(), imagesvc.Config{Image: "new"})
 		testutil.AssertAPMError(t, err, apmerr.ErrorTypeImage)
 	})
 }

@@ -1,0 +1,154 @@
+// Atomic Package Manager
+// Copyright (C) 2025 Дмитрий Удалов dmitry@udalov.online
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+package aptrepo
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// parseSourceArgs turns command arguments into source lines
+func (s *RepoService) parseSourceArgs(ctx context.Context, args []string, date string) ([]string, error) {
+	if len(args) == 0 {
+		return nil, errors.New(T_("Repository source must be specified"))
+	}
+
+	date = strings.TrimSpace(date)
+	source := strings.TrimSpace(args[0])
+
+	if len(args) == 1 {
+		return s.parseSource(ctx, source, date)
+	}
+
+	if strings.HasPrefix(source, "rpm") {
+		return s.buildRepoFromArgs(args), nil
+	}
+
+	if isURL(source) {
+		return s.buildURLReposFromArgs(args), nil
+	}
+
+	combined := strings.Join(args, " ")
+	return s.parseSource(ctx, combined, date)
+}
+
+// parseSource turns a single source spec into source lines
+func (s *RepoService) parseSource(ctx context.Context, source, date string) ([]string, error) {
+	source = strings.TrimSpace(source)
+	date = strings.TrimSpace(date)
+
+	if branch, ok := s.lookupBranch(source); ok {
+		if date != "" {
+			formattedDate, err := s.parseArchiveDate(branch.Name, date)
+			if err != nil {
+				return nil, err
+			}
+			return s.buildBranchURLsWithArchive(ctx, branch, formattedDate), nil
+		}
+		return s.buildBranchURLs(ctx, branch), nil
+	}
+
+	if isDigits(source) {
+		return s.buildTaskURLs(ctx, source)
+	}
+
+	if taskNum, ok := strings.CutPrefix(source, "task "); ok {
+		taskNum = strings.TrimSpace(taskNum)
+		if isDigits(taskNum) {
+			return s.buildTaskURLs(ctx, taskNum)
+		}
+	}
+
+	if isURL(source) {
+		return s.buildURLRepos(source), nil
+	}
+
+	if strings.HasPrefix(source, "/") {
+		return []string{fmt.Sprintf("rpm file://%s %s hasher", source, s.arch)}, nil
+	}
+
+	if strings.HasPrefix(source, "rpm") {
+		// Substitute _arch_ with the current architecture
+		source = strings.ReplaceAll(source, "_arch_", s.arch)
+		return []string{source}, nil
+	}
+
+	return nil, fmt.Errorf(T_("Unknown repository format: %s"), source)
+}
+
+// buildRepoFromArgs builds a source line from [type, url, arch, components...] arguments
+func (s *RepoService) buildRepoFromArgs(args []string) []string {
+	var processed []string
+	for _, arg := range args {
+		if arg == "_arch_" {
+			processed = append(processed, s.arch)
+		} else {
+			processed = append(processed, arg)
+		}
+	}
+	return []string{strings.Join(processed, " ")}
+}
+
+// buildURLReposFromArgs builds source lines from [url, arch, components...] arguments
+func (s *RepoService) buildURLReposFromArgs(args []string) []string {
+	if len(args) < 2 {
+		return s.buildURLRepos(args[0])
+	}
+
+	url := args[0]
+	archArg := args[1]
+	components := args[2:]
+
+	if archArg == "_arch_" {
+		archArg = s.arch
+	}
+
+	if len(components) == 0 {
+		components = []string{"classic"}
+	}
+
+	return []string{fmt.Sprintf("rpm %s %s %s", url, archArg, strings.Join(components, " "))}
+}
+
+// buildURLRepos builds source lines for a plain URL
+func (s *RepoService) buildURLRepos(url string) []string {
+	var urls []string
+
+	urls = append(urls, fmt.Sprintf("rpm %s %s classic", url, s.arch))
+	urls = append(urls, fmt.Sprintf("rpm %s noarch classic", url))
+
+	if s.useArepo && s.arch == "x86_64" && strings.HasPrefix(url, "file://") {
+		path := strings.TrimPrefix(url, "file://")
+		arepoPath := filepath.Join(path, "x86_64-i586")
+		if _, err := os.Stat(arepoPath); err == nil {
+			urls = append(urls, fmt.Sprintf("rpm %s x86_64-i586 classic", url))
+		}
+	}
+
+	return urls
+}
+
+// isURL reports whether the string is an APT source URL.
+func isURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") ||
+		strings.HasPrefix(s, "ftp://") || strings.HasPrefix(s, "rsync://") ||
+		strings.HasPrefix(s, "file://") || strings.HasPrefix(s, "cdrom:")
+}

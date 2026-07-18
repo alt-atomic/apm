@@ -1,13 +1,30 @@
 package lint
 
 import (
-	"apm/internal/common/app"
+	"fmt"
 	"io/fs"
 	"os/user"
 	"strconv"
 	"sync"
 	"syscall"
+
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
+
+// formatMode возвращает права в восьмеричном виде для tmpfiles.d, включая спецбиты setuid/setgid/sticky.
+func formatMode(m fs.FileMode) string {
+	mode := uint32(m.Perm())
+	if m&fs.ModeSetuid != 0 {
+		mode |= 0o4000
+	}
+	if m&fs.ModeSetgid != 0 {
+		mode |= 0o2000
+	}
+	if m&fs.ModeSticky != 0 {
+		mode |= 0o1000
+	}
+	return fmt.Sprintf("%04o", mode)
+}
 
 var ownerCache = struct {
 	sync.RWMutex
@@ -24,6 +41,15 @@ func lookupOwner(info fs.FileInfo) (string, string) {
 		app.Log.Fatal("unexpected: Stat_t unavailable")
 	}
 	return cachedUser(stat.Uid), cachedGroup(stat.Gid)
+}
+
+// ownerIDs возвращает числовые uid/gid файла
+func ownerIDs(info fs.FileInfo) (int, int) {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		app.Log.Fatal("unexpected: Stat_t unavailable")
+	}
+	return int(stat.Uid), int(stat.Gid)
 }
 
 func cachedUser(uid uint32) string {
