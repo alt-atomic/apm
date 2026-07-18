@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: apm\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-17 04:59+0600\n"
+"POT-Creation-Date: 2026-07-19 00:59+0600\n"
 "PO-Revision-Date: 2026-01-24 15:33+0600\n"
 "Last-Translator: Dmitry Udalov <dmitry@udalov.online>\n"
 "Language-Team: ru_RU\n"
@@ -843,12 +843,12 @@ msgstr "Не удалось извлечь информацию о пакете 
 msgid ". Maybe you were looking for: "
 msgstr ". Возможно, вы искали: "
 
-#: internal/common/build/modules/kernel.go:81
+#: internal/common/build/modules/kernel.go:85
 #, c-format
 msgid "unknown initrd method %s"
 msgstr "неизвестный метод initrd %s"
 
-#: internal/common/build/modules/kernel.go:364
+#: internal/common/build/modules/kernel.go:372
 msgid "failed to parse kernel package from database"
 msgstr "не удалось проанализировать пакет ядра из базы данных"
 
@@ -1052,47 +1052,47 @@ msgstr "Недопустимое имя поля сортировки: %s"
 msgid "Invalid sort field: %s. Available fields: %s"
 msgstr "Некорректное поле сортировки: %s. Доступные поля: %s"
 
-#: internal/common/filter/filter.go:226
+#: internal/common/filter/filter.go:225
 #, c-format
 msgid "Operator must be set explicitly for multi-field filter: %s"
 msgstr "Для фильтра по нескольким полям оператор должен быть указан явно: %s"
 
-#: internal/common/filter/filter.go:231
+#: internal/common/filter/filter.go:230
 #, c-format
 msgid "Invalid filter operator: %s. Available operators: %s"
 msgstr "Недопустимый оператор фильтра: %s. Доступные операторы: %s"
 
-#: internal/common/filter/filter.go:236
+#: internal/common/filter/filter.go:235
 #, c-format
 msgid "Invalid filter field name: %s"
 msgstr "Недопустимое имя поля фильтра: %s"
 
-#: internal/common/filter/filter.go:239
+#: internal/common/filter/filter.go:238
 #, c-format
 msgid "Invalid filter field: %s. Available fields: %s"
 msgstr "Некорректное поле фильтра: %s. Доступные поля: %s"
 
-#: internal/common/filter/filter.go:243
+#: internal/common/filter/filter.go:242
 #, c-format
 msgid "Operator %s is not allowed for field %s"
 msgstr "Оператор %s не допускается для поля %s"
 
-#: internal/common/filter/filter.go:321
+#: internal/common/filter/filter.go:320
 #, c-format
 msgid "Filter must contain '=': %s"
 msgstr "Фильтр должен содержать '=': %s"
 
-#: internal/common/filter/filter.go:328
+#: internal/common/filter/filter.go:327
 #, c-format
 msgid "Empty filter value: %s"
 msgstr "Пустое значение фильтра: %s"
 
-#: internal/common/filter/filter.go:334
+#: internal/common/filter/filter.go:333
 #, c-format
 msgid "Invalid filter operator format: %s"
 msgstr "Недопустимый формат оператора фильтра: %s"
 
-#: internal/common/filter/filter.go:344
+#: internal/common/filter/filter.go:343
 #, c-format
 msgid "Empty filter field: %s"
 msgstr "Пустое поле фильтра: %s"
@@ -1148,8 +1148,8 @@ msgid ""
 "OR: use \"|\" to combine values or fields: key[op]=value1|value2, key1|"
 "key2[op]=value"
 msgstr ""
-"ИЛИ: используйте \"|\" для объединения значений или полей: "
-"key[op]=value1|value2, key1|key2[op]=value"
+"ИЛИ: используйте \"|\" для объединения значений или полей: key[op]=value1|"
+"value2, key1|key2[op]=value"
 
 #: internal/common/helper/cmd.go:94
 msgid ""
@@ -2400,6 +2400,14 @@ msgstr "Не удалось выполнить apt search: %v, ошибка: %s"
 msgid "Failed to retrieve installed packages: "
 msgstr "Не удалось извлечь установленные пакеты: "
 
+#: internal/common/service/http.go:70
+msgid ""
+"API token is required for the system HTTP server: set --api-token '<read|"
+"manage>:<token>' or the APM_API_TOKEN environment variable"
+msgstr ""
+"Для системного HTTP-сервера требуется API-токен: задайте --api-token "
+"'<read|manage>:<токен>' или переменную окружения APM_API_TOKEN"
+
 #: internal/common/swcat/database.go:301
 msgid "Component type"
 msgstr "Тип компонента"
@@ -2878,7 +2886,7 @@ msgstr[0] "%d модуль успешно удален из ядра %s"
 msgstr[1] "%d модуля успешно удалено из ядра %s"
 msgstr[2] "%d модулей успешно удалено из ядра %s"
 
-#: internal/domain/kernel/actions.go:697 internal/domain/system/actions.go:1278
+#: internal/domain/kernel/actions.go:697 internal/domain/system/actions.go:1279
 msgid ""
 "package database is empty. Run 'apm system update' with elevated rights to "
 "create it"
@@ -3034,12 +3042,12 @@ msgstr "не удалось получить доступные модули и�
 msgid "failed to get available modules for target kernel: %s"
 msgstr "не удалось получить доступные модули для целевого ядра: %s"
 
-#: internal/domain/kernel/service/kernel.go:852 pkg/apt/rpm.go:96
+#: internal/domain/kernel/service/kernel.go:841 pkg/apt/rpm.go:96
 #, c-format
 msgid "failed to query installed kernels: %s"
 msgstr "не удалось запросить установленные ядра: %s"
 
-#: internal/domain/kernel/service/kernel.go:954
+#: internal/domain/kernel/service/kernel.go:943
 #, c-format
 msgid "failed to get reboot history: %s"
 msgstr "не удалось получить историю перезагрузок: %s"
@@ -3403,29 +3411,29 @@ msgstr "Система уже основана на образе %s"
 msgid "Image switched successfully. A reboot is required"
 msgstr "Образ успешно переключён. Необходима перезагрузка"
 
-#: internal/domain/system/actions.go:1179
-#: internal/domain/system/actions.go:1200
-#: internal/domain/system/actions.go:1245
+#: internal/domain/system/actions.go:1180
+#: internal/domain/system/actions.go:1201
+#: internal/domain/system/actions.go:1246
 msgid "This option is only available for an atomic system"
 msgstr "Эта опция доступна только на атомарной системе"
 
-#: internal/domain/system/actions.go:1189
+#: internal/domain/system/actions.go:1190
 msgid "nss-altfiles configuration applied successfully"
 msgstr "Конфигурация nss-altfiles успешно применена"
 
-#: internal/domain/system/actions.go:1212
+#: internal/domain/system/actions.go:1213
 msgid "No configs found"
 msgstr "Конфигурации не найдены"
 
-#: internal/domain/system/actions.go:1222
+#: internal/domain/system/actions.go:1223
 msgid "Groups synced successfully"
 msgstr "Группы успешно синхронизированы"
 
-#: internal/domain/system/actions.go:1349
+#: internal/domain/system/actions.go:1350
 msgid "Modified image. Configuration file: "
 msgstr "Образ изменён. Конфигурационный файл: "
 
-#: internal/domain/system/actions.go:1356
+#: internal/domain/system/actions.go:1357
 msgid "Cloud image without changes"
 msgstr "Облачный образ без изменений"
 

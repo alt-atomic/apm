@@ -40,6 +40,7 @@ internal/common/sandbox/database.go
 internal/common/sandbox/distrobox.go
 internal/common/sandbox/provider.go
 internal/common/sandbox/ubuntu.go
+internal/common/service/http.go
 internal/common/swcat/database.go
 internal/common/swcat/swcat.go
 internal/domain/distrobox/actions.go

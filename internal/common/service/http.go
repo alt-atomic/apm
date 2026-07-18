@@ -18,6 +18,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -63,7 +64,12 @@ func RunHTTP(
 	if listen := cmd.String("listen"); listen != "" {
 		httpCfg.ListenAddr = listen
 	}
-	if token := cmd.String("api-token"); token != "" {
+
+	token := cmd.String("api-token")
+	if cfg.Mode == apmcli.RequireRoot && token == "" {
+		return errors.New(app.T_("API token is required for the system HTTP server: set --api-token '<read|manage>:<token>' or the APM_API_TOKEN environment variable"))
+	}
+	if token != "" {
 		httpCfg.APIToken = token
 	}
 
