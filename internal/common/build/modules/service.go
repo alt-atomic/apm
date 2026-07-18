@@ -40,8 +40,7 @@ type RepoManager interface {
 // KernelManager управления ядром.
 type KernelManager interface {
 	FindLatestKernel(ctx context.Context, flavour string) (*service.Info, error)
-	InheritModulesFromKernel(target, source *service.Info) ([]string, error)
-	AutoSelectHeadersAndFirmware(ctx context.Context, kernel *service.Info, includeHeaders bool) ([]string, error)
+	AutoSelectHeadersAndFirmware(ctx context.Context, kernel *service.Info, currentKernel *service.Info, includeHeaders bool) ([]string, error)
 	RemoveKernel(kernel *service.Info, purge bool) error
 	InstallKernel(ctx context.Context, kernel *service.Info, modules []string, includeHeaders, dryRun bool) error
 	ParseKernelPackageFromDB(pkg _package.Package) *service.Info

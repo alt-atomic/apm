@@ -568,35 +568,24 @@ func (km *Manager) InheritModulesFromKernel(targetKernel *Info, sourceKernel *In
 	return inheritedModules, nil
 }
 
-// AutoSelectHeadersAndFirmware автоматически добавляет headers и модули от текущего ядра
-func (km *Manager) AutoSelectHeadersAndFirmware(ctx context.Context, kernel *Info, includeHeaders bool) ([]string, error) {
+// AutoSelectHeadersAndFirmware автоматически добавляет headers и модули от переданного текущего ядра
+func (km *Manager) AutoSelectHeadersAndFirmware(_ context.Context, kernel *Info, currentKernel *Info, includeHeaders bool) ([]string, error) {
 	var additionalPackages []string
 
-	// Добавляем headers если запрошены или уже установлены
-	if includeHeaders {
+	if includeHeaders || km.areHeadersInstalled(kernel.Flavour) {
 		additionalPackages = append(additionalPackages,
 			fmt.Sprintf("kernel-headers-%s", kernel.Flavour),
 			fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour),
 		)
-	} else {
-		// Проверяем если headers уже установлены - добавляем автоматически
-		if km.areHeadersInstalled(kernel.Flavour) {
-			additionalPackages = append(additionalPackages,
-				fmt.Sprintf("kernel-headers-%s", kernel.Flavour),
-				fmt.Sprintf("kernel-headers-modules-%s", kernel.Flavour),
-			)
-		}
 	}
 
-	// Автоматически добавляем модули на основе установленных модулей текущего ядра (как в bash скрипте)
-	currentKernel, err := km.GetCurrentKernel(ctx)
-	if err == nil && currentKernel != nil {
+	if currentKernel != nil {
 		inheritedModules, err := km.InheritModulesFromKernel(kernel, currentKernel)
-		if err == nil && len(inheritedModules) > 0 {
-			for _, moduleName := range inheritedModules {
-				modulePackage := fmt.Sprintf("kernel-modules-%s-%s", moduleName, kernel.Flavour)
-				additionalPackages = append(additionalPackages, modulePackage)
-			}
+		if err != nil {
+			return additionalPackages, err
+		}
+		for _, moduleName := range inheritedModules {
+			additionalPackages = append(additionalPackages, fmt.Sprintf("kernel-modules-%s-%s", moduleName, kernel.Flavour))
 		}
 	}
 

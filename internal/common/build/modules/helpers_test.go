@@ -133,10 +133,13 @@ func (m *fakeRepoManager) CleanTemporary(context.Context) ([]reposervice.Reposit
 
 // fakeKernelManager implements KernelManager with canned results and call capture.
 type fakeKernelManager struct {
-	latest    *service.Info
-	latestErr error
-	autoPkgs  []string
+	latest      *service.Info
+	latestErr   error
+	autoPkgs    []string
+	autoErr     error
+	parseResult *service.Info
 
+	autoGotCurrent *service.Info
 	installCalled  bool
 	installedInfo  *service.Info
 	installModules []string
@@ -152,12 +155,9 @@ func (m *fakeKernelManager) FindLatestKernel(_ context.Context, flavour string) 
 	return &service.Info{Flavour: flavour}, nil
 }
 
-func (m *fakeKernelManager) InheritModulesFromKernel(_, _ *service.Info) ([]string, error) {
-	return nil, nil
-}
-
-func (m *fakeKernelManager) AutoSelectHeadersAndFirmware(context.Context, *service.Info, bool) ([]string, error) {
-	return m.autoPkgs, nil
+func (m *fakeKernelManager) AutoSelectHeadersAndFirmware(_ context.Context, _ *service.Info, currentKernel *service.Info, _ bool) ([]string, error) {
+	m.autoGotCurrent = currentKernel
+	return m.autoPkgs, m.autoErr
 }
 
 func (m *fakeKernelManager) RemoveKernel(*service.Info, bool) error { return nil }
@@ -169,7 +169,9 @@ func (m *fakeKernelManager) InstallKernel(_ context.Context, kernel *service.Inf
 	return nil
 }
 
-func (m *fakeKernelManager) ParseKernelPackageFromDB(_package.Package) *service.Info { return nil }
+func (m *fakeKernelManager) ParseKernelPackageFromDB(_package.Package) *service.Info {
+	return m.parseResult
+}
 
 // fakeRunner records every Run invocation and returns a preset error.
 type fakeRunner struct {

@@ -43,7 +43,7 @@ type kernelManagerService interface {
 	GetCurrentKernel(ctx context.Context) (*service.Info, error)
 	FindLatestKernel(ctx context.Context, flavour string) (*service.Info, error)
 	InheritModulesFromKernel(targetKernel *service.Info, sourceKernel *service.Info) ([]string, error)
-	AutoSelectHeadersAndFirmware(ctx context.Context, kernel *service.Info, includeHeaders bool) ([]string, error)
+	AutoSelectHeadersAndFirmware(ctx context.Context, kernel *service.Info, currentKernel *service.Info, includeHeaders bool) ([]string, error)
 	SimulateUpgrade(kernel *service.Info, modules []string, includeHeaders bool) (*service.UpgradePreview, error)
 	InstallKernel(ctx context.Context, kernel *service.Info, modules []string, includeHeaders bool, dryRun bool) error
 	FindNextFlavours(minVersion string) ([]string, error)

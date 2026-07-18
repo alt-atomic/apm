@@ -130,8 +130,8 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 		return nil, apmerr.New(apmerr.ErrorTypeKernel, err)
 	}
 
-	if len(modules) == 0 {
-		currentKernel, _ := a.kernelManager.GetCurrentKernel(ctx)
+	currentKernel, _ := a.kernelManager.GetCurrentKernel(ctx)
+	if len(modules) == 0 && currentKernel != nil {
 		inheritedModules, _ := a.kernelManager.InheritModulesFromKernel(latest, currentKernel)
 		if len(inheritedModules) > 0 {
 			modules = inheritedModules
@@ -139,7 +139,7 @@ func (a *Actions) InstallKernel(ctx context.Context, flavour string, modules []s
 	}
 
 	// Автоматическое добавление headers и модулей
-	additionalPackages, _ := a.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, includeHeaders)
+	additionalPackages, _ := a.kernelManager.AutoSelectHeadersAndFirmware(ctx, latest, currentKernel, includeHeaders)
 
 	// Добавляем дополнительные пакеты к модулям
 	for _, pkg := range additionalPackages {

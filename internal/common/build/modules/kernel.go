@@ -33,7 +33,6 @@ var goodInitrdMethods = []string{
 const (
 	defaultDracutPath      = "/usr/bin/dracut"
 	defaultMakeInitrdPath  = "/usr/sbin/make-initrd"
-	kernelDir              = "/usr/lib/modules"
 	bootVmlinuzTemplate    = "/boot/vmlinuz-%s"
 	plymouthThemesDir      = "/usr/share/plymouth/themes"
 	plymouthConfigFile     = "/etc/plymouth/plymouthd.conf"
@@ -41,12 +40,17 @@ const (
 	plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
 )
 
+var kernelDir = "/usr/lib/modules"
+
 type KernelInfo struct {
 	// Версия ядра
 	Flavour string `yaml:"flavour,omitempty" json:"flavour,omitempty"`
 
 	// Модули ядра
 	Modules []string `yaml:"modules,omitempty" json:"modules,omitempty"`
+
+	// Не наследовать установленные модули текущего ядра
+	NoInheritModules bool `yaml:"no-inherit-modules,omitempty" json:"no-inherit-modules,omitempty"`
 
 	// Включать хедеры
 	IncludeHeaders bool `yaml:"include-headers,omitempty" json:"include-headers,omitempty"`
@@ -121,15 +125,19 @@ func (b *KernelBody) run(ctx context.Context, svc DomainContext) (any, error) {
 			toInstall = latestKernelInfo
 		} else if currentKernel != nil {
 			toInstall = currentKernel
-			inheritedModules, _ := mgr.InheritModulesFromKernel(toInstall, currentKernel)
-			if len(inheritedModules) > 0 {
-				modules = append(modules, inheritedModules...)
-			}
 		} else {
 			return nil, errors.New("kernel must be specified")
 		}
 
-		additionalPackages, _ := mgr.AutoSelectHeadersAndFirmware(ctx, toInstall, b.KernelInfo.IncludeHeaders)
+		// Наследование модулей текущего ядра отключается флагом no-inherit-modules
+		inheritSource := currentKernel
+		if b.KernelInfo.NoInheritModules {
+			inheritSource = nil
+		}
+		additionalPackages, err := mgr.AutoSelectHeadersAndFirmware(ctx, toInstall, inheritSource, b.KernelInfo.IncludeHeaders)
+		if err != nil {
+			return nil, fmt.Errorf("failed to select kernel packages: %w", err)
+		}
 		for _, pkg := range additionalPackages {
 			if strings.HasPrefix(pkg, "kernel-modules-") && strings.HasSuffix(pkg, fmt.Sprintf("-%s", toInstall.Flavour)) {
 				moduleName := strings.TrimPrefix(pkg, "kernel-modules-")

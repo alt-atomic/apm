@@ -2,8 +2,12 @@ package modules
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
+
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
 )
 
 func TestKernelInfoIsEmpty(t *testing.T) {
@@ -63,6 +67,82 @@ func TestKernelBody_InitrdNoneIsNoop(t *testing.T) {
 	b := &KernelBody{Initrd: Initrd{Method: "none"}}
 	if _, err := b.Execute(context.Background(), d); err != nil {
 		t.Fatalf("Execute() = %v", err)
+	}
+}
+
+// withTestKernelDir подменяет kernelDir на временный каталог
+func withTestKernelDir(t *testing.T) {
+	t.Helper()
+	orig := kernelDir
+	kernelDir = t.TempDir()
+	t.Cleanup(func() { kernelDir = orig })
+}
+
+func TestKernelBody_InheritsModulesFromImageKernel(t *testing.T) {
+	withTestKernelDir(t)
+	imageKernel := &service.Info{Flavour: "un-def"}
+	km := &fakeKernelManager{
+		parseResult: imageKernel,
+		autoPkgs:    []string{"kernel-headers-un-def", "kernel-modules-drm-un-def"},
+	}
+	d := &fakeDomain{
+		kernelMgr:   km,
+		queryResult: []_package.Package{{Name: "kernel-image-un-def", Installed: true}},
+	}
+	b := &KernelBody{
+		KernelInfo: KernelInfo{Flavour: "un-def"},
+		Initrd:     Initrd{Method: "none"},
+	}
+
+	if _, err := b.Execute(context.Background(), d); err != nil {
+		t.Fatalf("Execute() = %v", err)
+	}
+	// image kernel from DB is the inheritance source
+	if km.autoGotCurrent != imageKernel {
+		t.Errorf("AutoSelect got current = %v, want image kernel", km.autoGotCurrent)
+	}
+	// module packages are parsed back to names, headers are not modules
+	if !slices.Contains(km.installModules, "drm") {
+		t.Errorf("install modules = %v, want to contain drm", km.installModules)
+	}
+	if slices.Contains(km.installModules, "kernel-headers-un-def") {
+		t.Errorf("install modules = %v, headers must not leak in", km.installModules)
+	}
+}
+
+func TestKernelBody_NoInheritModulesFlag(t *testing.T) {
+	withTestKernelDir(t)
+	km := &fakeKernelManager{parseResult: &service.Info{Flavour: "un-def"}}
+	d := &fakeDomain{
+		kernelMgr:   km,
+		queryResult: []_package.Package{{Name: "kernel-image-un-def", Installed: true}},
+	}
+	b := &KernelBody{
+		KernelInfo: KernelInfo{Flavour: "un-def", NoInheritModules: true},
+		Initrd:     Initrd{Method: "none"},
+	}
+
+	if _, err := b.Execute(context.Background(), d); err != nil {
+		t.Fatalf("Execute() = %v", err)
+	}
+	if km.autoGotCurrent != nil {
+		t.Errorf("AutoSelect got current = %v, want nil with no-inherit-modules", km.autoGotCurrent)
+	}
+}
+
+func TestKernelBody_AutoSelectErrorFailsBuild(t *testing.T) {
+	km := &fakeKernelManager{autoErr: errors.New("db broken")}
+	d := &fakeDomain{kernelMgr: km}
+	b := &KernelBody{
+		KernelInfo: KernelInfo{Flavour: "un-def"},
+		Initrd:     Initrd{Method: "none"},
+	}
+
+	if _, err := b.Execute(context.Background(), d); err == nil {
+		t.Fatal("expected error from AutoSelectHeadersAndFirmware")
+	}
+	if km.installCalled {
+		t.Error("InstallKernel must not be called after AutoSelect error")
 	}
 }
 

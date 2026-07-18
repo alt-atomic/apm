@@ -87,7 +87,7 @@ func (m *mockKernelManager) FindLatestKernel(_ context.Context, _ string) (*serv
 func (m *mockKernelManager) InheritModulesFromKernel(_ *service.Info, _ *service.Info) ([]string, error) {
 	return m.inheritModules, m.inheritModulesErr
 }
-func (m *mockKernelManager) AutoSelectHeadersAndFirmware(_ context.Context, _ *service.Info, _ bool) ([]string, error) {
+func (m *mockKernelManager) AutoSelectHeadersAndFirmware(_ context.Context, _ *service.Info, _ *service.Info, _ bool) ([]string, error) {
 	return m.autoSelectResult, m.autoSelectErr
 }
 func (m *mockKernelManager) SimulateUpgrade(_ *service.Info, _ []string, _ bool) (*service.UpgradePreview, error) {
