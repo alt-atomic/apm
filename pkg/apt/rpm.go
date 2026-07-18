@@ -48,8 +48,8 @@ func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix str
 	skipLock := len(noLock) > 0 && noLock[0]
 
 	err := a.runOperation(OperationOptions{SkipLock: skipLock}, func(_ *lib.System) error {
-		command := fmt.Sprintf("%s rpm -qia", commandPrefix)
-		cmd := exec.CommandContext(ctx, "sh", "-c", command)
+		argv := rpmArgv(commandPrefix, "rpm", "-qia")
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 		cmd.Env = []string{"LC_ALL=C"}
 
 		output, cmdErr := cmd.CombinedOutput()
@@ -69,8 +69,8 @@ func (a *Actions) RpmGetInstalledPackages(ctx context.Context, commandPrefix str
 func (a *Actions) RpmInstallSourcePackages(ctx context.Context, commandPrefix string, files []string) error {
 	return a.runOperation(OperationOptions{SkipLock: true}, func(_ *lib.System) error {
 		for _, file := range files {
-			command := fmt.Sprintf("%s rpm -ivh %q", commandPrefix, file)
-			cmd := exec.CommandContext(ctx, "sh", "-c", command)
+			argv := rpmArgv(commandPrefix, "rpm", "-ivh", file)
+			cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 			cmd.Env = []string{"LC_ALL=C"}
 
 			if output, cmdErr := cmd.CombinedOutput(); cmdErr != nil {
@@ -276,4 +276,12 @@ func parseKernelRpmOutput(output string) ([]KernelRPMInfo, error) {
 	}
 
 	return kernels, nil
+}
+
+func rpmArgv(commandPrefix string, args ...string) []string {
+	var argv []string
+	if commandPrefix != "" {
+		argv = append(argv, strings.Fields(commandPrefix)...)
+	}
+	return append(argv, args...)
 }
