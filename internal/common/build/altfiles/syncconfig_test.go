@@ -45,6 +45,7 @@ func TestParseSyncConfigSelectors(t *testing.T) {
         max: 10005
     - uid_range:
         min: 2000
+    - uid_range: {}
 `)
 	cfg, err := ParseSyncConfig(input)
 	if err != nil {
@@ -52,8 +53,16 @@ func TestParseSyncConfigSelectors(t *testing.T) {
 	}
 
 	users := cfg.Sync.Users
-	if len(users) != 5 {
-		t.Fatalf("expected 5 selectors, got %d", len(users))
+	if len(users) != 6 {
+		t.Fatalf("expected 6 selectors, got %d", len(users))
+	}
+
+	empty := users[5]
+	if empty.UIDRange == nil {
+		t.Fatalf("selector 5: expected uid_range, got %+v", empty)
+	}
+	if lo, hi, err := empty.UIDRange.Bounds(); err != nil || lo != 1000 || hi != 60000 {
+		t.Errorf("selector 5: expected default bounds 1000-60000, got %d-%d (%v)", lo, hi, err)
 	}
 
 	if users[0].Name != "dm" {
@@ -106,6 +115,11 @@ func TestParseSyncConfigSelectorErrors(t *testing.T) {
   groups: [docker]
   users:
     - ""
+`,
+		"null uid_range": `sync:
+  groups: [docker]
+  users:
+    - uid_range:
 `,
 	}
 
