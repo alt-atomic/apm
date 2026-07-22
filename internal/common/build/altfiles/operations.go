@@ -254,28 +254,58 @@ func (s *Service) patchNsswitchFile() error {
 	return os.WriteFile(s.cfg.EtcNsswitch, patched, info.Mode().Perm())
 }
 
-// resolveUsers возвращает валидированный список пользователей для синхронизации.
-func (s *Service) resolveUsers(users []string) ([]string, error) {
-	if len(users) > 0 {
-		return s.validateUsers(users)
+// resolveUsers возвращает список пользователей для синхронизации по селекторам.
+func (s *Service) resolveUsers(selectors []UserSelector) ([]string, error) {
+	if len(selectors) > 0 {
+		return s.selectUsers(selectors)
 	}
 	return s.defaultWheelUsers()
 }
 
-// validateUsers оставляет из списка только реально существующих пользователей.
-func (s *Service) validateUsers(users []string) ([]string, error) {
-	existing, err := s.existingUserNames()
+// selectUsers резолвит селекторы в имена реально существующих пользователей.
+func (s *Service) selectUsers(selectors []UserSelector) ([]string, error) {
+	entries, err := s.existingUsers()
 	if err != nil {
 		return nil, err
 	}
 
-	validated := make([]string, 0, len(users))
-	for _, u := range users {
-		if _, ok := existing[u]; ok {
-			validated = append(validated, u)
+	seen := make(map[string]struct{})
+	var result []string
+	add := func(name string) {
+		if _, ok := seen[name]; !ok {
+			seen[name] = struct{}{}
+			result = append(result, name)
 		}
 	}
-	return validated, nil
+
+	for _, sel := range selectors {
+		switch {
+		case sel.Name != "":
+			for _, e := range entries {
+				if e.Name == sel.Name {
+					add(e.Name)
+					break
+				}
+			}
+		case sel.UID != nil:
+			for _, e := range entries {
+				if e.UID == *sel.UID {
+					add(e.Name)
+				}
+			}
+		case sel.UIDRange != nil:
+			lo, hi, err := sel.UIDRange.Bounds()
+			if err != nil {
+				return nil, err
+			}
+			for _, e := range entries {
+				if e.UID >= lo && e.UID <= hi {
+					add(e.Name)
+				}
+			}
+		}
+	}
+	return result, nil
 }
 
 // defaultWheelUsers возвращает членов wheel, являющихся обычными
@@ -300,8 +330,9 @@ func (s *Service) defaultWheelUsers() ([]string, error) {
 	return result, nil
 }
 
-// existingUserNames собирает имена из /etc/passwd и /usr/lib/passwd.
-func (s *Service) existingUserNames() (map[string]struct{}, error) {
+// existingUsers собирает записи из /etc/passwd и /usr/lib/passwd,
+// при совпадении имён приоритет у /etc.
+func (s *Service) existingUsers() ([]etcfiles.PasswdEntry, error) {
 	etcEntries, err := s.readPasswd(s.cfg.EtcPasswd)
 	if err != nil {
 		return nil, err
@@ -312,12 +343,15 @@ func (s *Service) existingUserNames() (map[string]struct{}, error) {
 		names[e.Name] = struct{}{}
 	}
 
+	all := etcEntries
 	if libEntries, errLib := s.readPasswd(s.cfg.LibPasswd); errLib == nil {
 		for _, e := range libEntries {
-			names[e.Name] = struct{}{}
+			if _, ok := names[e.Name]; !ok {
+				all = append(all, e)
+			}
 		}
 	}
-	return names, nil
+	return all, nil
 }
 
 // regularUserNames собирает обычных пользователей (UID 1000-60000) из /etc/passwd.

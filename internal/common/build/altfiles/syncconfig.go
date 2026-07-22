@@ -13,10 +13,80 @@ type SyncConfig struct {
 	Sync SyncBody `yaml:"sync"`
 }
 
-// SyncBody содержит списки групп и пользователей
+// SyncBody содержит списки групп и селекторы пользователей
 type SyncBody struct {
-	Groups []string `yaml:"groups"`
-	Users  []string `yaml:"users,omitempty"`
+	Groups []string       `yaml:"groups"`
+	Users  []UserSelector `yaml:"users,omitempty"`
+}
+
+// UserSelector выбирает пользователей: по имени, точному UID или диапазону UID.
+type UserSelector struct {
+	Name     string
+	UID      *int
+	UIDRange *UIDRange
+}
+
+const (
+	defaultUIDRangeMin = 1000
+	defaultUIDRangeMax = 60000
+)
+
+type UIDRange struct {
+	Min int `yaml:"min"`
+	Max int `yaml:"max"`
+}
+
+// Bounds возвращает границы диапазона с подстановкой дефолтов
+func (r UIDRange) Bounds() (int, int, error) {
+	lo, hi := r.Min, r.Max
+	if lo == 0 {
+		lo = defaultUIDRangeMin
+	}
+	if hi == 0 {
+		hi = defaultUIDRangeMax
+	}
+	if lo > hi {
+		return 0, 0, fmt.Errorf("invalid uid_range: min %d greater than max %d", lo, hi)
+	}
+	return lo, hi, nil
+}
+
+// UnmarshalYAML принимает строку (сокращение для name) или объект с name/uid/uid_range
+func (u *UserSelector) UnmarshalYAML(unmarshal func(any) error) error {
+	var name string
+	if err := unmarshal(&name); err == nil {
+		if name == "" {
+			return fmt.Errorf("user selector: empty name")
+		}
+		*u = UserSelector{Name: name}
+		return nil
+	}
+
+	var body struct {
+		Name     string    `yaml:"name"`
+		UID      *int      `yaml:"uid"`
+		UIDRange *UIDRange `yaml:"uid_range"`
+	}
+	if err := unmarshal(&body); err != nil {
+		return fmt.Errorf("user selector must be a name or an object with one of name, uid, uid_range: %w", err)
+	}
+
+	set := 0
+	if body.Name != "" {
+		set++
+	}
+	if body.UID != nil {
+		set++
+	}
+	if body.UIDRange != nil {
+		set++
+	}
+	if set != 1 {
+		return fmt.Errorf("user selector must specify exactly one of: name, uid, uid_range")
+	}
+
+	*u = UserSelector{Name: body.Name, UID: body.UID, UIDRange: body.UIDRange}
+	return nil
 }
 
 // SyncResult статистика выполнения sync-groups

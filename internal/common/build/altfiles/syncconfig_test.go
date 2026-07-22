@@ -32,6 +32,104 @@ func TestParseSyncConfig(t *testing.T) {
 	}
 }
 
+func TestParseSyncConfigSelectors(t *testing.T) {
+	input := []byte(`sync:
+  groups:
+    - docker
+  users:
+    - dm
+    - name: bob
+    - uid: 1001
+    - uid_range:
+        min: 1001
+        max: 10005
+    - uid_range:
+        min: 2000
+`)
+	cfg, err := ParseSyncConfig(input)
+	if err != nil {
+		t.Fatalf("ParseSyncConfig: %v", err)
+	}
+
+	users := cfg.Sync.Users
+	if len(users) != 5 {
+		t.Fatalf("expected 5 selectors, got %d", len(users))
+	}
+
+	if users[0].Name != "dm" {
+		t.Errorf("selector 0: expected name dm, got %+v", users[0])
+	}
+	if users[1].Name != "bob" {
+		t.Errorf("selector 1: expected name bob, got %+v", users[1])
+	}
+	users = users[1:]
+	if users[1].UID == nil || *users[1].UID != 1001 {
+		t.Errorf("selector 1: expected uid 1001, got %+v", users[1])
+	}
+	if users[2].UIDRange == nil || users[2].UIDRange.Min != 1001 || users[2].UIDRange.Max != 10005 {
+		t.Errorf("selector 2: expected uid_range 1001-10005, got %+v", users[2])
+	}
+
+	if users[3].UIDRange == nil {
+		t.Fatalf("selector 3: expected uid_range, got %+v", users[3])
+	}
+	lo, hi, err := users[3].UIDRange.Bounds()
+	if err != nil {
+		t.Fatalf("Bounds: %v", err)
+	}
+	if lo != 2000 || hi != 60000 {
+		t.Errorf("selector 3: expected bounds 2000-60000, got %d-%d", lo, hi)
+	}
+}
+
+func TestParseSyncConfigSelectorErrors(t *testing.T) {
+	cases := map[string]string{
+		"uid and uid_range together": `sync:
+  groups: [docker]
+  users:
+    - uid: 1001
+      uid_range:
+        min: 1000
+`,
+		"empty object": `sync:
+  groups: [docker]
+  users:
+    - {}
+`,
+		"name and uid together": `sync:
+  groups: [docker]
+  users:
+    - name: dm
+      uid: 1000
+`,
+		"empty name": `sync:
+  groups: [docker]
+  users:
+    - ""
+`,
+	}
+
+	for name, input := range cases {
+		if _, err := ParseSyncConfig([]byte(input)); err == nil {
+			t.Errorf("%s: expected error, got nil", name)
+		}
+	}
+}
+
+func TestUIDRangeBounds(t *testing.T) {
+	lo, hi, err := UIDRange{}.Bounds()
+	if err != nil {
+		t.Fatalf("Bounds: %v", err)
+	}
+	if lo != 1000 || hi != 60000 {
+		t.Errorf("expected default bounds 1000-60000, got %d-%d", lo, hi)
+	}
+
+	if _, _, err = (UIDRange{Min: 5000, Max: 1000}).Bounds(); err == nil {
+		t.Error("expected error for min > max, got nil")
+	}
+}
+
 func TestParseSyncConfigNoUsers(t *testing.T) {
 	input := []byte(`sync:
   groups:

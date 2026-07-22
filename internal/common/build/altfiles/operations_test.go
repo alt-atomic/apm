@@ -19,7 +19,7 @@ func TestSyncGroupsAddNew(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker", "audio"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -63,7 +63,7 @@ func TestSyncGroupsFixGID(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -102,7 +102,7 @@ func TestSyncGroupsAlreadyMember(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -130,7 +130,7 @@ func TestSyncGroupsNonexistent(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"nonexistent"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -155,7 +155,7 @@ func TestSyncGroupsNonexistentUser(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm", "fakeuser"},
+			Users:  []UserSelector{{Name: "dm"}, {Name: "fakeuser"}},
 		},
 	}}
 
@@ -180,6 +180,74 @@ func TestSyncGroupsNonexistentUser(t *testing.T) {
 	}
 }
 
+// Селекторы uid и uid_range резолвятся по объединённому passwd,
+// дубликаты между селекторами схлопываются.
+func TestSyncGroupsUIDSelectors(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+		"root:x:0:0:root:/root:/bin/bash\n"+
+			"sysd:x:500:500:System:/var/empty:/sbin/nologin\n"+
+			"dm:x:1000:1000::/home/dm:/bin/bash\n"+
+			"alice:x:1001:1001::/home/alice:/bin/bash\n"+
+			"bob:x:70000:70000::/home/bob:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("svc:x:2000:2000:Svc:/var/lib/svc:/sbin/nologin\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\n"), 0644)
+
+	uid := 1001
+	configs := []SyncConfig{{
+		Sync: SyncBody{
+			Groups: []string{"docker"},
+			Users: []UserSelector{
+				{UID: &uid},
+				{UIDRange: &UIDRange{}}, // дефолт 1000-60000: dm, alice, svc; без sysd и bob
+			},
+		},
+	}}
+
+	result, err := svc.SyncGroups(configs)
+	if err != nil {
+		t.Fatalf("SyncGroups: %v", err)
+	}
+
+	if result.Added != 1 {
+		t.Errorf("expected 1 added, got %d", result.Added)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcGroup)
+	entries, _ := etcfiles.ParseGroup(data)
+
+	for _, e := range entries {
+		if e.Name == "docker" {
+			if !slices.Equal(e.Members, []string{"alice", "dm", "svc"}) {
+				t.Errorf("docker members: got %v, want [alice dm svc]", e.Members)
+			}
+		}
+	}
+}
+
+// Невалидный uid_range должен возвращать ошибку из SyncGroups.
+func TestSyncGroupsInvalidUIDRange(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("dm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("wheel:x:10:dm\n"), 0644)
+
+	configs := []SyncConfig{{
+		Sync: SyncBody{
+			Groups: []string{"wheel"},
+			Users:  []UserSelector{{UIDRange: &UIDRange{Min: 5000, Max: 1000}}},
+		},
+	}}
+
+	if _, err := svc.SyncGroups(configs); err == nil {
+		t.Fatal("expected error for min > max, got nil")
+	}
+}
+
 // Системный юзер из /usr/lib/passwd должен синкаться в системную группу из
 // /usr/lib/group: в /etc/group появляется overlay-строка.
 func TestSyncGroupsSystemUserFromLibPasswd(t *testing.T) {
@@ -194,7 +262,7 @@ func TestSyncGroupsSystemUserFromLibPasswd(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"appgrp"},
-			Users:  []string{"appsvc"},
+			Users:  []UserSelector{{Name: "appsvc"}},
 		},
 	}}
 
@@ -238,7 +306,7 @@ func TestSyncGroupsIdempotent(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker", "audio"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -275,7 +343,7 @@ func TestSyncGroupsRemovesGIDConflict(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
