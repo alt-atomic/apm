@@ -181,8 +181,12 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 // SwitchImage переключение образа
 func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error {
-	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSwitchImage))
-	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSwitchImage))
+	event := reply.EventSystemSwitchRemoteImage
+	if isLocal {
+		event = reply.EventSystemSwitchImage
+	}
+	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
+	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
 
 	var args []string
 	if isLocal {

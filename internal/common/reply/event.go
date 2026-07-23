@@ -100,6 +100,7 @@ const (
 	EventSystemBuildImage           = "system.BuildImage"
 	EventSystemImageModule          = "system.imageModule"
 	EventSystemSwitchImage          = "system.SwitchImage"
+	EventSystemSwitchRemoteImage    = "system.SwitchRemoteImage"
 	EventSystemCheckUpdateBaseImage = "system.CheckAndUpdateBaseImage"
 	EventSystemBootcUpgrade         = "system.bootcUpgrade"
 	EventSystemPruneOldImages       = "system.pruneOldImages"
@@ -345,6 +346,8 @@ func getTaskText(task string) string {
 		return app.T_("Building local image")
 	case EventSystemSwitchImage:
 		return app.T_("Switching to local image")
+	case EventSystemSwitchRemoteImage:
+		return app.T_("Switching to registry image")
 	case EventSystemCheckUpdateBaseImage:
 		return app.T_("General Image Update Process")
 	case EventSystemBootcUpgrade:
