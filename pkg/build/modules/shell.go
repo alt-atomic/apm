@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"altlinux.space/alt-atomic/apm/pkg/build"
 
@@ -34,8 +35,11 @@ func (b *ShellBody) Execute(ctx context.Context, svc build.RuntimeContext) (any,
 	var envOutput string
 	opts = append(opts, command.WithOutputCommand("env", &envOutput))
 
-	stdout, _, err := svc.Runner().Run(ctx, []string{b.Command}, opts...)
+	stdout, stderr, err := svc.Runner().Run(ctx, []string{b.Command}, opts...)
 	if err != nil {
+		if stderr = strings.TrimSpace(stderr); stderr != "" {
+			return nil, fmt.Errorf("%w\n%s", err, stderr)
+		}
 		return nil, err
 	}
 

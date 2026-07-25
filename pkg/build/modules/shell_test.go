@@ -52,3 +52,21 @@ func TestShellBody_RunnerError(t *testing.T) {
 		t.Fatal("expected runner error to propagate")
 	}
 }
+
+func TestShellBody_RunnerErrorIncludesStderr(t *testing.T) {
+	base := errors.New("exit status 1")
+	runner := &fakeRunner{stderr: "script.sh: line 3: no such file\n", err: base}
+	rt := &fakeRuntime{runner: runner}
+
+	b := &ShellBody{Command: "false"}
+	_, err := b.Execute(context.Background(), rt)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, base) {
+		t.Errorf("err = %v, want wrapping %v", err, base)
+	}
+	if want := "exit status 1\nscript.sh: line 3: no such file"; err.Error() != want {
+		t.Errorf("err = %q, want %q", err.Error(), want)
+	}
+}
