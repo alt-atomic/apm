@@ -141,11 +141,13 @@ type ImageConfigResponse struct {
 
 // ImageFixNssResponse структура ответа для ImageFixNss метода
 type ImageFixNssResponse struct {
-	Message        string `json:"message"`
-	EtcPasswdCount int    `json:"etcPasswdCount"`
-	LibPasswdCount int    `json:"libPasswdCount"`
-	EtcGroupCount  int    `json:"etcGroupCount"`
-	LibGroupCount  int    `json:"libGroupCount"`
+	Message             string `json:"message"`
+	EtcPasswdCount      int    `json:"etcPasswdCount"`
+	LibPasswdCount      int    `json:"libPasswdCount"`
+	EtcGroupCount       int    `json:"etcGroupCount"`
+	LibGroupCount       int    `json:"libGroupCount"`
+	RemovedUIDConflicts int    `json:"removedUidConflicts"`
+	RemovedGIDConflicts int    `json:"removedGidConflicts"`
 }
 
 // ImageSyncGroupsResponse структура ответа для ImageSyncGroups метода

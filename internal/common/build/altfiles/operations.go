@@ -9,14 +9,14 @@ import (
 )
 
 // cleanEtcPasswd удаляет из /etc/passwd записи, которые уже есть в /usr/lib/passwd
-func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, err error) {
+func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, removed int, err error) {
 	libData, err := os.ReadFile(s.cfg.LibPasswd)
 	if err != nil {
-		return 0, 0, fmt.Errorf("%s not found, build the image first", s.cfg.LibPasswd)
+		return 0, 0, 0, fmt.Errorf("%s not found, build the image first", s.cfg.LibPasswd)
 	}
 	libEntries, err := etcfiles.ParsePasswd(libData)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	libNames := make(map[string]struct{}, len(libEntries))
@@ -26,11 +26,11 @@ func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, err error) {
 
 	etcData, err := os.ReadFile(s.cfg.EtcPasswd)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	etcEntries, err := etcfiles.ParsePasswd(etcData)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	var cleaned []etcfiles.PasswdEntry
@@ -40,24 +40,26 @@ func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, err error) {
 		}
 	}
 
+	cleaned, removed = removeUIDConflicts(cleaned, libEntries)
+
 	info, err := os.Stat(s.cfg.EtcPasswd)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
-	return len(cleaned), len(libEntries), os.WriteFile(s.cfg.EtcPasswd, etcfiles.FormatPasswd(cleaned), info.Mode().Perm())
+	return len(cleaned), len(libEntries), removed, os.WriteFile(s.cfg.EtcPasswd, etcfiles.FormatPasswd(cleaned), info.Mode().Perm())
 }
 
 // cleanEtcGroup удаляет из /etc/group записи, которые уже есть в /usr/lib/group.
 // Сохраняет записи у которых есть member-оверлейды (пользователи, отсутствующие в /usr/lib)
-func (s *Service) cleanEtcGroup() (etcCount int, libCount int, err error) {
+func (s *Service) cleanEtcGroup() (etcCount int, libCount int, removed int, err error) {
 	libData, err := os.ReadFile(s.cfg.LibGroup)
 	if err != nil {
-		return 0, 0, fmt.Errorf("%s not found, build the image first", s.cfg.LibGroup)
+		return 0, 0, 0, fmt.Errorf("%s not found, build the image first", s.cfg.LibGroup)
 	}
 	libEntries, err := etcfiles.ParseGroup(libData)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	libMap := make(map[string]etcfiles.GroupEntry, len(libEntries))
@@ -67,11 +69,11 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, err error) {
 
 	etcData, err := os.ReadFile(s.cfg.EtcGroup)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	etcEntries, err := etcfiles.ParseGroup(etcData)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	var cleaned []etcfiles.GroupEntry
@@ -89,14 +91,14 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, err error) {
 		}
 	}
 
-	cleaned, _ = removeGIDConflicts(cleaned, libMap)
+	cleaned, removed = removeGIDConflicts(cleaned, libMap)
 
 	info, err := os.Stat(s.cfg.EtcGroup)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
-	return len(cleaned), len(libEntries), os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(cleaned), info.Mode().Perm())
+	return len(cleaned), len(libEntries), removed, os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(cleaned), info.Mode().Perm())
 }
 
 // splitPasswdFiles для сборки: мержит /etc и /usr/lib, сплитит, пишет оба файла
@@ -420,6 +422,25 @@ func hasUniqueMembers(etcMembers, libMembers []string) bool {
 		}
 	}
 	return false
+}
+
+// removeUIDConflicts удаляет локальных системных пользователей, чей UID занят
+// в /usr/lib/passwd пользователем с другим именем: приоритет у пользователей образа.
+func removeUIDConflicts(entries []etcfiles.PasswdEntry, libEntries []etcfiles.PasswdEntry) (kept []etcfiles.PasswdEntry, removed int) {
+	libUIDs := make(map[int]struct{}, len(libEntries))
+	for _, e := range libEntries {
+		libUIDs[e.UID] = struct{}{}
+	}
+
+	for _, e := range entries {
+		_, uidTaken := libUIDs[e.UID]
+		if uidTaken && !etcfiles.IsRegularUser(e.UID) {
+			removed++
+			continue
+		}
+		kept = append(kept, e)
+	}
+	return kept, removed
 }
 
 // removeGIDConflicts удаляет локальные системные группы, чей GID занят

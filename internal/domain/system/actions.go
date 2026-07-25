@@ -1195,11 +1195,13 @@ func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
 	}
 
 	return &ImageFixNssResponse{
-		Message:        app.T_("nss-altfiles configuration applied successfully"),
-		EtcPasswdCount: result.EtcPasswdCount,
-		LibPasswdCount: result.LibPasswdCount,
-		EtcGroupCount:  result.EtcGroupCount,
-		LibGroupCount:  result.LibGroupCount,
+		Message:             app.T_("nss-altfiles configuration applied successfully"),
+		EtcPasswdCount:      result.EtcPasswdCount,
+		LibPasswdCount:      result.LibPasswdCount,
+		EtcGroupCount:       result.EtcGroupCount,
+		LibGroupCount:       result.LibGroupCount,
+		RemovedUIDConflicts: result.RemovedUIDConflicts,
+		RemovedGIDConflicts: result.RemovedGIDConflicts,
 	}, nil
 }
 

@@ -422,6 +422,100 @@ func TestFixNssRemovesGIDConflict(t *testing.T) {
 	}
 }
 
+func TestFixNssRemovesUIDConflict(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+		"root:x:0:0:root:/root:/bin/bash\n"+
+			"dm:x:1000:1000::/home/dm:/bin/bash\n"+
+			"stapler-builder:x:975:952::/var/cache/stplr:/sbin/nologin\n"+
+			"tcpdump:x:974:945::/dev/null:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte(
+		"bin:x:1:1:bin:/:/dev/null\n"+
+			"sshd:x:975:947::/var/empty:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("sshd:x:947:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	result, err := svc.ApplyFix()
+	if err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+	if result.RemovedUIDConflicts != 1 {
+		t.Errorf("RemovedUIDConflicts: got %d, want 1", result.RemovedUIDConflicts)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcPasswd)
+	entries, _ := etcfiles.ParsePasswd(data)
+	byName := map[string]etcfiles.PasswdEntry{}
+	for _, e := range entries {
+		byName[e.Name] = e
+	}
+
+	if _, ok := byName["stapler-builder"]; ok {
+		t.Error("stapler-builder must be removed: UID 975 belongs to sshd in /usr/lib/passwd")
+	}
+	if _, ok := byName["tcpdump"]; !ok {
+		t.Error("tcpdump must be preserved: UID 974 is free in /usr/lib/passwd")
+	}
+	if _, ok := byName["root"]; !ok {
+		t.Error("root must be preserved")
+	}
+	if _, ok := byName["dm"]; !ok {
+		t.Error("dm must be preserved")
+	}
+}
+
+func TestFixNssKeepsProtectedOnUIDConflict(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	// root и обычный пользователь не удаляются даже при совпадении UID с lib
+	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+		"root:x:0:0:root:/root:/bin/bash\n"+
+			"dm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte(
+		"weird0:x:0:0::/:/dev/null\n"+
+			"weird1000:x:1000:1000::/:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("bin:x:1:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	result, err := svc.ApplyFix()
+	if err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+	if result.RemovedUIDConflicts != 0 {
+		t.Errorf("RemovedUIDConflicts: got %d, want 0", result.RemovedUIDConflicts)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcPasswd)
+	entries, _ := etcfiles.ParsePasswd(data)
+	if len(entries) != 2 {
+		t.Errorf("expected root and dm preserved, got %d entries", len(entries))
+	}
+}
+
+func TestFixNssReportsRemovedGIDConflicts(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nusershares:x:946:dm\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("hashman:x:946:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	result, err := svc.ApplyFix()
+	if err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+	if result.RemovedGIDConflicts != 1 {
+		t.Errorf("RemovedGIDConflicts: got %d, want 1", result.RemovedGIDConflicts)
+	}
+}
+
 func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
