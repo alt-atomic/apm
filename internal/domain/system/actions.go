@@ -1059,16 +1059,20 @@ func (a *Actions) ImageSwitch(ctx context.Context, image string, pullImage bool,
 
 	config := a.serviceHostConfig.GetConfig()
 	if config.Image == image {
-		return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("The system is already based on image %s"), image))
+		active, err := a.serviceHostImage.IsImageActive(image, len(config.Modules) > 0)
+		if err != nil {
+			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
+		}
+		if active {
+			return nil, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf(app.T_("The system is already based on image %s"), image))
+		}
 	}
 
 	if err := a.serviceHostImage.VerifyRemoteImage(ctx, image); err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
-	if err := a.serviceHostConfig.SetImage(image); err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
-	}
+	a.serviceHostConfig.SetImage(image)
 
 	if len(config.Modules) > 0 {
 		if err := a.serviceHostConfig.GenerateDockerfile(hostCache); err != nil {
@@ -1081,6 +1085,10 @@ func (a *Actions) ImageSwitch(ctx context.Context, image string, pullImage bool,
 		if err := a.serviceHostImage.SwitchImage(ctx, image, false); err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}
+	}
+
+	if err := a.serviceHostConfig.SaveConfig(); err != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 	}
 
 	imageStatus, err := a.getImageStatus(ctx)

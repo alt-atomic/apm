@@ -295,6 +295,27 @@ func (h *HostImageService) VerifyRemoteImage(ctx context.Context, imageName stri
 	return err
 }
 
+// IsImageActive проверяет по статусу bootc.
+func (h *HostImageService) IsImageActive(imageName string, hasModules bool) (bool, error) {
+	host, err := h.GetHostImage()
+	if err != nil {
+		return false, err
+	}
+
+	if hasModules {
+		return strings.HasPrefix(host.Spec.Image.Transport, "containers-storage"), nil
+	}
+
+	if host.Spec.Image.Image == imageName {
+		return true, nil
+	}
+	if host.Status.Staged != nil && host.Status.Staged.Image.Image.Image == imageName {
+		return true, nil
+	}
+
+	return host.Status.Booted.Image.Image.Image == imageName, nil
+}
+
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {
 	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemBootcUpgrade))
 	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemBootcUpgrade))
