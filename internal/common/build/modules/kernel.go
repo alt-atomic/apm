@@ -31,13 +31,15 @@ var goodInitrdMethods = []string{
 }
 
 const (
+	bootVmlinuzTemplate    = "/boot/vmlinuz-%s"
 	defaultDracutPath      = "/usr/bin/dracut"
 	defaultMakeInitrdPath  = "/usr/sbin/make-initrd"
-	bootVmlinuzTemplate    = "/boot/vmlinuz-%s"
-	plymouthThemesDir      = "/usr/share/plymouth/themes"
+	dtbBootDirTemplate     = "/boot/devicetree/%s"
+	dtbDir                 = "/usr/lib/dtb"
 	plymouthConfigFile     = "/etc/plymouth/plymouthd.conf"
-	plymouthKargsPath      = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
 	plymouthDracutConfPath = "/usr/lib/dracut/dracut.conf.d/00-plymouth.conf"
+	plymouthKargsPath      = "/usr/lib/bootc/kargs.d/00-plymouth.toml"
+	plymouthThemesDir      = "/usr/share/plymouth/themes"
 )
 
 var kernelDir = "/usr/lib/modules"
@@ -190,6 +192,17 @@ func (b *KernelBody) run(ctx context.Context, svc DomainContext) (any, error) {
 			)
 			if err != nil {
 				return nil, err
+			}
+
+			var dtbBootDor = fmt.Sprintf(dtbBootDirTemplate, latestInstalledKernelVersion)
+
+			if _, err := os.Stat(dtbDir); err == nil {
+				app.Log.Info("Clear old dtb")
+				os.RemoveAll(dtbDir)
+			}
+			if _, err := os.Stat(dtbBootDor); err == nil {
+				app.Log.Info(fmt.Sprintf("Copying dtb from %s to %s", dtbBootDor, dtbDir))
+				osutils.Copy(dtbBootDor, dtbDir, false)
 			}
 		}
 	}
