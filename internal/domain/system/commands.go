@@ -39,22 +39,16 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 
 func findPkgWithInstalled(appConfig *app.Config, reporter *reply.Reporter, installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
-		args := cmd.Args().Slice()
-
-		// Текущий токен — последний позиционный аргумент (если есть)
-		var currentToken string
-		if len(args) > 0 {
-			currentToken = args[len(args)-1]
-		}
-		currentToken = strings.TrimSpace(currentToken)
+		currentToken := strings.TrimSpace(apmcli.CompletionPrefix())
 		if currentToken == "" {
 			// Пользователь ещё ничего не ввёл — не предлагаем варианты
 			return
 		}
 
+		args := cmd.Args().Slice()
 		exclude := make(map[string]struct{}, len(args))
-		for i := 0; i < len(args)-1; i++ {
-			exclude[strings.TrimRight(strings.TrimSpace(args[i]), "+-")] = struct{}{}
+		for _, arg := range args {
+			exclude[strings.TrimRight(strings.TrimSpace(arg), "+-")] = struct{}{}
 		}
 
 		like := currentToken + "%"
@@ -77,7 +71,7 @@ func findPkgWithInstalled(appConfig *app.Config, reporter *reply.Reporter, insta
 // findPkgInfoOnlyFirstArg выполняет поиск информации о пакете только для первого аргумента.
 func findPkgInfoOnlyFirstArg(appConfig *app.Config, reporter *reply.Reporter) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
-		if cmd.NArg() >= 2 {
+		if cmd.NArg() >= 1 {
 			return
 		}
 		findPkgWithInstalled(appConfig, reporter, false)(ctx, cmd)
