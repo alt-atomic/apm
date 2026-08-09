@@ -132,9 +132,7 @@ static AptResult plan_dist_upgrade(const AptCache *cache, AptPackageChanges *cha
             for (pkgCache::PkgIterator it = cache->dep_cache->PkgBegin(); !it.end(); ++it) {
                 pkgDepCache::StateCache &st = (*cache->dep_cache)[it];
                 if (st.InstBroken() || st.NowBroken()) {
-                    const std::string out = std::string(
-                                          "Some broken packages were found while trying to process build-dependencies for ")
-                                      + it.Name();
+                    const std::string out = std::string(APT_MSG_BROKEN_DEPS) + ": " + it.Name();
                     return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
                 }
             }

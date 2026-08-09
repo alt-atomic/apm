@@ -7,17 +7,6 @@
 #include <apt-pkg/error.h>
 #include <apt-pkg/sourcelist.h>
 
-// Returns the name of the first broken package, or nullptr.
-static const char *find_first_broken_pkg(pkgDepCache *dep) {
-    if (dep == nullptr) return nullptr;
-    for (pkgCache::PkgIterator it = dep->PkgBegin(); !it.end(); ++it) {
-        if (pkgDepCache::StateCache &st = (*dep)[it]; st.InstBroken() || st.NowBroken()) {
-            return it.Name();
-        }
-    }
-    return nullptr;
-}
-
 // Opens the cache, optionally acquires the system lock, and checks deps.
 AptResult apt_cache_open(const AptSystem *system, AptCache **cache, bool with_lock) {
     if (!system || !cache) return make_result(APT_ERROR_INIT_FAILED, APT_MSG_CACHE_INVALID_ARGS);
@@ -39,18 +28,12 @@ AptResult apt_cache_open(const AptSystem *system, AptCache **cache, bool with_lo
             return make_result(APT_ERROR_CACHE_OPEN_FAILED, err.c_str());
         }
 
-        if (!(*cache)->cache_file->CheckDeps()) {
-            const char *broken = find_first_broken_pkg((*cache)->cache_file->operator->());
-            std::string out;
-            if (broken && *broken) {
-                out = std::string("Some broken packages were found while trying to process build-dependencies for ") +
-                      broken;
-            } else {
-                out = APT_MSG_BROKEN_DEPS;
-            }
+        if (!(*cache)->cache_file->CheckDeps(true)) {
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = APT_MSG_BROKEN_DEPS;
             delete *cache;
             *cache = nullptr;
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, err.c_str());
         }
 
         (*cache)->dep_cache = (*cache)->cache_file->operator->();
@@ -99,14 +82,10 @@ AptResult apt_cache_refresh(AptCache *cache) {
             return make_result(APT_ERROR_CACHE_REFRESH_FAILED, err.c_str());
         }
 
-        if (!cache->cache_file->CheckDeps()) {
-            if (const char *broken = find_first_broken_pkg(cache->cache_file->operator->()); broken && *broken) {
-                const std::string out = std::string(
-                                      "Some broken packages were found while trying to process build-dependencies for ")
-                                  + broken + ".";
-                return make_result(APT_ERROR_DEPENDENCY_BROKEN, out.c_str());
-            }
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN, APT_MSG_BROKEN_DEPS);
+        if (!cache->cache_file->CheckDeps(true)) {
+            std::string err = collect_pending_errors();
+            if (err.empty()) err = APT_MSG_BROKEN_DEPS;
+            return make_result(APT_ERROR_DEPENDENCY_BROKEN, err.c_str());
         }
 
         cache->dep_cache = cache->cache_file->operator->();

@@ -155,6 +155,7 @@ const (
 	ErrTransactionSetCheckFailed
 	ErrSomeErrorsRunningTransaction
 	ErrArchiveDirectoryMissing
+	ErrBrokenDependenciesFor
 )
 
 // MatchedError представляет найденную ошибку с извлечёнными параметрами.
@@ -415,6 +416,7 @@ var errorPatterns = []ErrorEntry{
 	{ErrCannotRemoveNotInstalledShort, "cannot remove %s not installed", func() string { return app.T_("Cannot remove %s not installed") }, 1},
 	{ErrCannotRemoveEssential, "Cannot remove essential package %s", func() string { return app.T_("Cannot remove essential package %s") }, 1},
 	{ErrCannotRemoveTryTogether, "Cannot remove %s. Try removing together: %s", func() string { return app.T_("Cannot remove %s. Try removing together: %s") }, 2},
+	{ErrBrokenDependenciesFor, "Broken dependencies: %s", func() string { return app.T_("Broken dependencies: %s") }, 1},
 	{ErrSomeBrokenDependencies, "Broken dependencies", func() string { return app.T_("Broken dependencies") }, 0},
 	{ErrMultiInstallProvidersSelect, "Virtual package %s is provided by:", func() string {
 		return app.T_("Virtual package %s is provided by:")

@@ -127,8 +127,6 @@ AptResult finalize_dependency_resolution(const AptCache *cache, const std::set<s
         pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(name);
         if (pkg.end()) continue;
 
-        if (pkgDepCache::StateCache &pkg_state = (*cache->dep_cache)[pkg]; !pkg_state.Install()) continue;
-
         Fix.Clear(pkg);
         Fix.Protect(pkg);
     }
