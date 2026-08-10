@@ -19,7 +19,6 @@ package system
 import (
 	"context"
 	"slices"
-	"strings"
 	"syscall"
 	"testing"
 
@@ -47,37 +46,25 @@ func (s *ProviderSelectionTestSuite) SetupSuite() {
 }
 
 // simulateNewInstalls возвращает набор новых пакетов из симуляции установки.
-func (s *ProviderSelectionTestSuite) simulateNewInstalls(pkgs []string) (map[string]struct{}, string) {
+// Любая ошибка (в т.ч. пропавший из репозитория пакет) валит тест — среда
+// теста контролируемая, и молчаливый пропуск скрыл бы регрессию.
+func (s *ProviderSelectionTestSuite) simulateNewInstalls(pkgs []string) map[string]struct{} {
 	resp, err := s.actions.CheckInstall(s.ctx, pkgs)
-	if err != nil {
-		msg := err.Error()
-		if strings.Contains(msg, "not found") ||
-			strings.Contains(msg, "no installation candidate") ||
-			strings.Contains(msg, "Package database is empty") {
-			return nil, msg
-		}
-		s.T().Fatalf("unexpected CheckInstall error for %v: %v", pkgs, msg)
-	}
+	s.Require().NoErrorf(err, "CheckInstall failed for %v", pkgs)
 
 	set := make(map[string]struct{}, len(resp.Info.NewInstalledPackages))
 	for _, p := range resp.Info.NewInstalledPackages {
 		set[p] = struct{}{}
 	}
-	return set, ""
+	return set
 }
 
 // TestExplicitProviderWinsRegardlessOfOrder: gdm тянет виртуальный
 // x-terminal-emulator, при явном ptyxis в списке xterm не должен попадать в план установки
 // вне зависимости от позиции при установке.
 func (s *ProviderSelectionTestSuite) TestExplicitProviderWinsRegardlessOfOrder() {
-	consumerFirst, skip := s.simulateNewInstalls([]string{"gdm", "ptyxis"})
-	if skip != "" {
-		s.T().Skipf("packages unavailable in test env: %s", skip)
-	}
-	providerFirst, skip := s.simulateNewInstalls([]string{"ptyxis", "gdm"})
-	if skip != "" {
-		s.T().Skipf("packages unavailable in test env: %s", skip)
-	}
+	consumerFirst := s.simulateNewInstalls([]string{"gdm", "ptyxis"})
+	providerFirst := s.simulateNewInstalls([]string{"ptyxis", "gdm"})
 
 	_, xtermConsumerFirst := consumerFirst["xterm"]
 	_, xtermProviderFirst := providerFirst["xterm"]
@@ -91,6 +78,17 @@ func (s *ProviderSelectionTestSuite) TestExplicitProviderWinsRegardlessOfOrder()
 	providerList := setToSortedSlice(providerFirst)
 	assert.True(s.T(), slices.Equal(consumerList, providerList),
 		"install plan must be identical regardless of package order")
+}
+
+// TestConflictingProviderKeepsRequestedPackage: podman-compose тянет
+// podman-docker, который Conflicts docker-engine. Явно запрошенный docker-engine
+// не должен выпадать из плана и возвращаться shallow-broken
+func (s *ProviderSelectionTestSuite) TestConflictingProviderKeepsRequestedPackage() {
+	pkgs := []string{"docker-compose", "docker-engine", "podman-compose"}
+
+	resp, err := s.actions.CheckInstall(s.ctx, pkgs)
+	s.Require().NoErrorf(err, "conflicting-provider trio must resolve without dropping docker-engine")
+	s.NotNil(resp)
 }
 
 func setToSortedSlice(set map[string]struct{}) []string {
