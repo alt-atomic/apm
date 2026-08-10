@@ -247,9 +247,15 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 							Aliases: []string{"w"},
 							Usage:   app.T_("Working directory for the build"),
 						},
+						&cli.BoolFlag{
+							Name:    "force",
+							Aliases: []string{"f"},
+							Usage:   app.T_("Rebuild without change checks and dialogs"),
+							Value:   false,
+						},
 					},
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"), cmd.String("config"), cmd.String("workdir"))
+						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"), cmd.Bool("force"), cmd.String("config"), cmd.String("workdir"))
 						if err != nil {
 							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}

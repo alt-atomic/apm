@@ -432,13 +432,13 @@ func (w *HTTPWrapper) ImageApply(rw http.ResponseWriter, r *http.Request) {
 	workdir := r.URL.Query().Get("workdir")
 
 	if w.RunBackground(rw, r, reply.EventSystemImageApply, func(ctx context.Context) (interface{}, error) {
-		return w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
+		return w.actions.ImageApply(ctx, pullImage, hostCache, true, configPath, workdir)
 	}) {
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
-	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, true, configPath, workdir)
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return

@@ -963,7 +963,7 @@ func (a *Actions) ImageUpdate(ctx context.Context, hostCache bool) (*ImageUpdate
 }
 
 // ImageApply применить изменения к хосту
-func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool, configPath, workdir string) (*ImageApplyResponse, error) {
+func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool, force bool, configPath, workdir string) (*ImageApplyResponse, error) {
 	err := a.checkOverlay(ctx)
 	if err != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeImage, err)
@@ -986,31 +986,33 @@ func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool
 	}
 
 	if len(a.serviceTemporaryConfig.GetConfig().Packages.Install) > 0 || len(a.serviceTemporaryConfig.GetConfig().Packages.Remove) > 0 {
-		reply.StopSpinner(a.appConfig)
-		// Показываем диалог выбора пакетов
-		result, errDialog := dialog.NewPackageSelectionDialog(
-			a.appConfig,
-			a.serviceTemporaryConfig.GetConfig().Packages.Install,
-			a.serviceTemporaryConfig.GetConfig().Packages.Remove,
-		)
-		if errDialog != nil {
-			return nil, errDialog
+		installPkgs := a.serviceTemporaryConfig.GetConfig().Packages.Install
+		removePkgs := a.serviceTemporaryConfig.GetConfig().Packages.Remove
+
+		// force применяет все временные пакеты без диалога
+		if !force {
+			reply.StopSpinner(a.appConfig)
+			result, errDialog := dialog.NewPackageSelectionDialog(a.appConfig, installPkgs, removePkgs)
+			if errDialog != nil {
+				return nil, errDialog
+			}
+
+			if result.Canceled {
+				return nil, apmerr.New(apmerr.ErrorTypeCanceled, errors.New(app.T_("Cancel dialog")))
+			}
+
+			reply.CreateSpinner(a.appConfig)
+			installPkgs = result.InstallPackages
+			removePkgs = result.RemovePackages
 		}
 
-		if result.Canceled {
-			return nil, apmerr.New(apmerr.ErrorTypeCanceled, errors.New(app.T_("Cancel dialog")))
-		}
-
-		reply.CreateSpinner(a.appConfig)
-		for _, pkg := range result.InstallPackages {
-			err = a.serviceHostConfig.AddInstallPackage(pkg)
-			if err != nil {
+		for _, pkg := range installPkgs {
+			if err = a.serviceHostConfig.AddInstallPackage(pkg); err != nil {
 				return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 			}
 		}
-		for _, pkg := range result.RemovePackages {
-			err = a.serviceHostConfig.AddRemovePackage(pkg)
-			if err != nil {
+		for _, pkg := range removePkgs {
+			if err = a.serviceHostConfig.AddRemovePackage(pkg); err != nil {
 				return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 			}
 		}
@@ -1022,7 +1024,7 @@ func (a *Actions) ImageApply(ctx context.Context, pullImage bool, hostCache bool
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}
 
-		err = a.serviceHostImage.BuildAndSwitch(ctx, pullImage, true, a.serviceHostConfig)
+		err = a.serviceHostImage.BuildAndSwitch(ctx, pullImage, !force, a.serviceHostConfig)
 		if err != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, err)
 		}
