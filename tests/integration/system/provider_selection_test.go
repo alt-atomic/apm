@@ -86,6 +86,8 @@ func (s *ProviderSelectionTestSuite) TestExplicitProviderWinsRegardlessOfOrder()
 func (s *ProviderSelectionTestSuite) TestConflictingProviderKeepsRequestedPackage() {
 	pkgs := []string{"docker-compose", "docker-engine", "podman-compose"}
 
+	_, _ = s.actions.Remove(s.ctx, pkgs, false, false, true)
+
 	resp, err := s.actions.CheckInstall(s.ctx, pkgs)
 	s.Require().NoErrorf(err, "conflicting-provider trio must resolve without dropping docker-engine")
 	s.NotNil(resp)
