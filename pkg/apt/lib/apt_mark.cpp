@@ -52,11 +52,12 @@ AptResult process_package_installs(const AptCache *cache,
 
         requested_install.insert(pkg.Name());
 
-        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
+        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::DontChange, false);
         marked.push_back(pkg);
     }
 
     for (pkgCache::PkgIterator &pkg: marked) {
+        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
         if (pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg]; State.InstBroken()) {
             cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::DontChange, true);
         }
