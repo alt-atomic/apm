@@ -38,9 +38,26 @@ jobs:
       - name: Build
         run: meson compile -C _build
 
+  get-release:
+    name: Get release for RPM package
+    runs-on: als-tiny
+    if: github.event_name != 'pull_request'
+
+    outputs:
+      release: ${{ steps.get_release.outputs.release }}
+    steps:
+      - name: Get release
+        id: get_release
+        run: |
+          echo "release=$(date +%s)" >> $FORGEJO_OUTPUT
+
   rpm-build:
     name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
     runs-on: ${{ matrix.runner }}
+
+    needs:
+      - build
+      - get-release
 
     container:
       image: altlinux.space/alt-gnome/hasherc:latest
@@ -59,9 +76,6 @@ jobs:
           - arch: arm64
             runner: self-hosted-arm64-huge
 
-    needs:
-      - build
-
     steps:
       - name: Install utils
         run: |
@@ -73,7 +87,7 @@ jobs:
 
       - name: Prepare RPM build
         run: |
-          ./build-aux/altlinux/prepare
+          ./build-aux/altlinux/prepare ${{ needs.get-release.outputs.release }}
           git add .
 
       - uses: actions/build-rpm-action@main

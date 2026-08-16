@@ -15,6 +15,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/testutil"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
+	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 )
 
 type mockAptActions struct {
@@ -127,7 +128,15 @@ func (m *mockHostDB) CountImageHistoriesFiltered(_ context.Context, _ string) (i
 	return m.countResult, m.countErr
 }
 
-type mockHostImage struct{}
+type mockHostImage struct {
+	isActive    bool
+	isActiveErr error
+	verifyErr   error
+	switchErr   error
+	buildErr    error
+	switchCalls int
+	buildCalls  int
+}
 
 func (m *mockHostImage) EnableOverlay() error { return nil }
 func (m *mockHostImage) GetHostImage() (imagesvc.HostImage, error) {
@@ -136,25 +145,33 @@ func (m *mockHostImage) GetHostImage() (imagesvc.HostImage, error) {
 func (m *mockHostImage) CheckAndUpdateBaseImage(_ context.Context, _ bool, _ bool, _ imagesvc.Config) error {
 	return nil
 }
-func (m *mockHostImage) SwitchImage(_ context.Context, _ string, _ bool) error { return nil }
-func (m *mockHostImage) BuildAndSwitch(_ context.Context, _ bool, _ bool, _ imagesvc.SwitchableConfig) error {
-	return nil
+func (m *mockHostImage) SwitchImage(_ context.Context, _ string, _ bool) error {
+	m.switchCalls++
+	return m.switchErr
 }
-func (m *mockHostImage) VerifyRemoteImage(_ context.Context, _ string) error { return nil }
+func (m *mockHostImage) BuildAndSwitch(_ context.Context, _ bool, _ bool, _ imagesvc.SwitchableConfig) error {
+	m.buildCalls++
+	return m.buildErr
+}
+func (m *mockHostImage) VerifyRemoteImage(_ context.Context, _ string) error { return m.verifyErr }
+func (m *mockHostImage) IsImageActive(_ string, _ bool) (bool, error) {
+	return m.isActive, m.isActiveErr
+}
 
 type mockHostConfig struct {
-	config  *imagesvc.Config
-	loadErr error
-	saveErr error
+	config    *imagesvc.Config
+	loadErr   error
+	saveErr   error
+	saveCalls int
 }
 
 func (m *mockHostConfig) LoadConfig() error                            { return m.loadErr }
 func (m *mockHostConfig) GetConfigEnvVars() (map[string]string, error) { return nil, nil }
-func (m *mockHostConfig) SaveConfig() error                            { return m.saveErr }
-func (m *mockHostConfig) SetImage(image string) error {
-	m.config.Image = image
+func (m *mockHostConfig) SaveConfig() error {
+	m.saveCalls++
 	return m.saveErr
 }
+func (m *mockHostConfig) SetImage(image string)                           { m.config.Image = image }
 func (m *mockHostConfig) GenerateDockerfile(_ bool) error                 { return nil }
 func (m *mockHostConfig) AddInstallPackage(_ string) error                { return nil }
 func (m *mockHostConfig) AddRemovePackage(_ string) error                 { return nil }
@@ -727,6 +744,86 @@ func TestImageSaveConfig(t *testing.T) {
 
 		_, err := actions.ImageSaveConfig(context.Background(), imagesvc.Config{Image: "new"})
 		testutil.AssertAPMError(t, err, apmerr.ErrorTypeImage)
+	})
+}
+
+func TestImageSwitch(t *testing.T) {
+	t.Run("empty image returns validation error", func(t *testing.T) {
+		actions := newTestActions(nil, &mockAptDB{}, nil)
+
+		_, err := actions.ImageSwitch(context.Background(), "  ", false, true)
+		testutil.AssertAPMError(t, err, apmerr.ErrorTypeValidation)
+	})
+
+	t.Run("same image still active returns validation error", func(t *testing.T) {
+		himg := &mockHostImage{isActive: true}
+		actions := newTestActions(nil, &mockAptDB{}, nil)
+		actions.serviceHostImage = himg
+		actions.serviceHostConfig = &mockHostConfig{config: &imagesvc.Config{Image: "alt:p11"}}
+
+		_, err := actions.ImageSwitch(context.Background(), "alt:p11", false, true)
+		testutil.AssertAPMError(t, err, apmerr.ErrorTypeValidation)
+		if himg.switchCalls != 0 || himg.buildCalls != 0 {
+			t.Error("switch should not run when image is already active")
+		}
+	})
+
+	t.Run("same image after failed switch retries", func(t *testing.T) {
+		himg := &mockHostImage{isActive: false}
+		hcfg := &mockHostConfig{config: &imagesvc.Config{Image: "alt:p11"}}
+		actions := newTestActions(nil, &mockAptDB{}, nil)
+		actions.serviceHostImage = himg
+		actions.serviceHostConfig = hcfg
+
+		_, err := actions.ImageSwitch(context.Background(), "alt:p11", false, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if himg.switchCalls != 1 {
+			t.Error("expected switch to run again")
+		}
+		if hcfg.saveCalls != 1 {
+			t.Error("expected config to be saved after switch")
+		}
+	})
+
+	t.Run("switch failure does not save config", func(t *testing.T) {
+		himg := &mockHostImage{switchErr: errors.New("blob unknown")}
+		hcfg := &mockHostConfig{config: &imagesvc.Config{Image: "alt:p11"}}
+		actions := newTestActions(nil, &mockAptDB{}, nil)
+		actions.serviceHostImage = himg
+		actions.serviceHostConfig = hcfg
+
+		_, err := actions.ImageSwitch(context.Background(), "alt:p12", false, true)
+		testutil.AssertAPMError(t, err, apmerr.ErrorTypeImage)
+		if hcfg.saveCalls != 0 {
+			t.Error("config should not be saved after failed switch")
+		}
+	})
+
+	t.Run("modules trigger rebuild and save after success", func(t *testing.T) {
+		himg := &mockHostImage{}
+		hcfg := &mockHostConfig{config: &imagesvc.Config{
+			Image:   "alt:p11",
+			Modules: []pkgbuild.Module{{Name: "pkgs"}},
+		}}
+		actions := newTestActions(nil, &mockAptDB{}, nil)
+		actions.serviceHostImage = himg
+		actions.serviceHostConfig = hcfg
+
+		_, err := actions.ImageSwitch(context.Background(), "alt:p12", false, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if himg.buildCalls != 1 || himg.switchCalls != 0 {
+			t.Error("expected local rebuild instead of direct switch")
+		}
+		if hcfg.config.Image != "alt:p12" {
+			t.Errorf("expected config image alt:p12, got %s", hcfg.config.Image)
+		}
+		if hcfg.saveCalls != 1 {
+			t.Error("expected config to be saved after switch")
+		}
 	})
 }
 

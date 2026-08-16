@@ -16,6 +16,9 @@ AptResult process_package_installs(const AptCache *cache,
         return make_result(APT_SUCCESS, nullptr);
     }
 
+    std::vector<pkgCache::PkgIterator> marked;
+    marked.reserve(install_count);
+
     for (size_t i = 0; i < install_count; i++) {
         if (!install_names[i]) continue;
 
@@ -49,9 +52,12 @@ AptResult process_package_installs(const AptCache *cache,
 
         requested_install.insert(pkg.Name());
 
-        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
+        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::DontChange, false);
+        marked.push_back(pkg);
+    }
 
-        // Install it with autoinstalling enabled if broken
+    for (pkgCache::PkgIterator &pkg: marked) {
+        cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::Manual, false);
         if (pkgDepCache::StateCache &State = (*cache->dep_cache)[pkg]; State.InstBroken()) {
             cache->dep_cache->MarkInstall(pkg, pkgDepCache::AutoMarkFlag::DontChange, true);
         }

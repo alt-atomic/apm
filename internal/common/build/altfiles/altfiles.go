@@ -58,10 +58,12 @@ func NewDefault() *Service {
 
 // ApplyResult содержит статистику выполнения
 type ApplyResult struct {
-	EtcPasswdCount int
-	LibPasswdCount int
-	EtcGroupCount  int
-	LibGroupCount  int
+	EtcPasswdCount      int
+	LibPasswdCount      int
+	EtcGroupCount       int
+	LibGroupCount       int
+	RemovedUIDConflicts int
+	RemovedGIDConflicts int
 }
 
 // ApplyBuild разделяет passwd/group и патчит nsswitch.conf (для сборки в контейнере)
@@ -128,12 +130,12 @@ func (s *Service) IsSplit() (bool, error) {
 // ApplyFix чистит /etc/passwd и /etc/group на живой системе,
 // удаляя записи которые уже есть в /usr/lib (иммутабельный образ)
 func (s *Service) ApplyFix() (*ApplyResult, error) {
-	etcPasswdCount, libPasswdCount, err := s.cleanEtcPasswd()
+	etcPasswdCount, libPasswdCount, removedUIDConflicts, err := s.cleanEtcPasswd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean /etc/passwd: %w", err)
 	}
 
-	etcGroupCount, libGroupCount, err := s.cleanEtcGroup()
+	etcGroupCount, libGroupCount, removedGIDConflicts, err := s.cleanEtcGroup()
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean /etc/group: %w", err)
 	}
@@ -143,10 +145,12 @@ func (s *Service) ApplyFix() (*ApplyResult, error) {
 	}
 
 	return &ApplyResult{
-		EtcPasswdCount: etcPasswdCount,
-		LibPasswdCount: libPasswdCount,
-		EtcGroupCount:  etcGroupCount,
-		LibGroupCount:  libGroupCount,
+		EtcPasswdCount:      etcPasswdCount,
+		LibPasswdCount:      libPasswdCount,
+		EtcGroupCount:       etcGroupCount,
+		LibGroupCount:       libGroupCount,
+		RemovedUIDConflicts: removedUIDConflicts,
+		RemovedGIDConflicts: removedGIDConflicts,
 	}, nil
 }
 

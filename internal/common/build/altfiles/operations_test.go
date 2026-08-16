@@ -19,7 +19,7 @@ func TestSyncGroupsAddNew(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker", "audio"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -63,7 +63,7 @@ func TestSyncGroupsFixGID(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -102,7 +102,7 @@ func TestSyncGroupsAlreadyMember(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -130,7 +130,7 @@ func TestSyncGroupsNonexistent(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"nonexistent"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -155,7 +155,7 @@ func TestSyncGroupsNonexistentUser(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm", "fakeuser"},
+			Users:  []UserSelector{{Name: "dm"}, {Name: "fakeuser"}},
 		},
 	}}
 
@@ -180,6 +180,74 @@ func TestSyncGroupsNonexistentUser(t *testing.T) {
 	}
 }
 
+// Селекторы uid и uid_range резолвятся по объединённому passwd,
+// дубликаты между селекторами схлопываются.
+func TestSyncGroupsUIDSelectors(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+		"root:x:0:0:root:/root:/bin/bash\n"+
+			"sysd:x:500:500:System:/var/empty:/sbin/nologin\n"+
+			"dm:x:1000:1000::/home/dm:/bin/bash\n"+
+			"alice:x:1001:1001::/home/alice:/bin/bash\n"+
+			"bob:x:70000:70000::/home/bob:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("svc:x:2000:2000:Svc:/var/lib/svc:/sbin/nologin\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\n"), 0644)
+
+	uid := 1001
+	configs := []SyncConfig{{
+		Sync: SyncBody{
+			Groups: []string{"docker"},
+			Users: []UserSelector{
+				{UID: &uid},
+				{UIDRange: &UIDRange{}}, // дефолт 1000-60000: dm, alice, svc; без sysd и bob
+			},
+		},
+	}}
+
+	result, err := svc.SyncGroups(configs)
+	if err != nil {
+		t.Fatalf("SyncGroups: %v", err)
+	}
+
+	if result.Added != 1 {
+		t.Errorf("expected 1 added, got %d", result.Added)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcGroup)
+	entries, _ := etcfiles.ParseGroup(data)
+
+	for _, e := range entries {
+		if e.Name == "docker" {
+			if !slices.Equal(e.Members, []string{"alice", "dm", "svc"}) {
+				t.Errorf("docker members: got %v, want [alice dm svc]", e.Members)
+			}
+		}
+	}
+}
+
+// Невалидный uid_range должен возвращать ошибку из SyncGroups.
+func TestSyncGroupsInvalidUIDRange(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("dm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("wheel:x:10:dm\n"), 0644)
+
+	configs := []SyncConfig{{
+		Sync: SyncBody{
+			Groups: []string{"wheel"},
+			Users:  []UserSelector{{UIDRange: &UIDRange{Min: 5000, Max: 1000}}},
+		},
+	}}
+
+	if _, err := svc.SyncGroups(configs); err == nil {
+		t.Fatal("expected error for min > max, got nil")
+	}
+}
+
 // Системный юзер из /usr/lib/passwd должен синкаться в системную группу из
 // /usr/lib/group: в /etc/group появляется overlay-строка.
 func TestSyncGroupsSystemUserFromLibPasswd(t *testing.T) {
@@ -194,7 +262,7 @@ func TestSyncGroupsSystemUserFromLibPasswd(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"appgrp"},
-			Users:  []string{"appsvc"},
+			Users:  []UserSelector{{Name: "appsvc"}},
 		},
 	}}
 
@@ -238,7 +306,7 @@ func TestSyncGroupsIdempotent(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker", "audio"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -275,7 +343,7 @@ func TestSyncGroupsRemovesGIDConflict(t *testing.T) {
 	configs := []SyncConfig{{
 		Sync: SyncBody{
 			Groups: []string{"docker"},
-			Users:  []string{"dm"},
+			Users:  []UserSelector{{Name: "dm"}},
 		},
 	}}
 
@@ -351,6 +419,100 @@ func TestFixNssRemovesGIDConflict(t *testing.T) {
 	}
 	if _, ok := grpMap["wheel"]; !ok {
 		t.Error("wheel must be preserved")
+	}
+}
+
+func TestFixNssRemovesUIDConflict(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+		"root:x:0:0:root:/root:/bin/bash\n"+
+			"dm:x:1000:1000::/home/dm:/bin/bash\n"+
+			"stapler-builder:x:975:952::/var/cache/stplr:/sbin/nologin\n"+
+			"tcpdump:x:974:945::/dev/null:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte(
+		"bin:x:1:1:bin:/:/dev/null\n"+
+			"sshd:x:975:947::/var/empty:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("sshd:x:947:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	result, err := svc.ApplyFix()
+	if err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+	if result.RemovedUIDConflicts != 1 {
+		t.Errorf("RemovedUIDConflicts: got %d, want 1", result.RemovedUIDConflicts)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcPasswd)
+	entries, _ := etcfiles.ParsePasswd(data)
+	byName := map[string]etcfiles.PasswdEntry{}
+	for _, e := range entries {
+		byName[e.Name] = e
+	}
+
+	if _, ok := byName["stapler-builder"]; ok {
+		t.Error("stapler-builder must be removed: UID 975 belongs to sshd in /usr/lib/passwd")
+	}
+	if _, ok := byName["tcpdump"]; !ok {
+		t.Error("tcpdump must be preserved: UID 974 is free in /usr/lib/passwd")
+	}
+	if _, ok := byName["root"]; !ok {
+		t.Error("root must be preserved")
+	}
+	if _, ok := byName["dm"]; !ok {
+		t.Error("dm must be preserved")
+	}
+}
+
+func TestFixNssKeepsProtectedOnUIDConflict(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	// root и обычный пользователь не удаляются даже при совпадении UID с lib
+	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+		"root:x:0:0:root:/root:/bin/bash\n"+
+			"dm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte(
+		"weird0:x:0:0::/:/dev/null\n"+
+			"weird1000:x:1000:1000::/:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("bin:x:1:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	result, err := svc.ApplyFix()
+	if err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+	if result.RemovedUIDConflicts != 0 {
+		t.Errorf("RemovedUIDConflicts: got %d, want 0", result.RemovedUIDConflicts)
+	}
+
+	data, _ := os.ReadFile(svc.cfg.EtcPasswd)
+	entries, _ := etcfiles.ParsePasswd(data)
+	if len(entries) != 2 {
+		t.Errorf("expected root and dm preserved, got %d entries", len(entries))
+	}
+}
+
+func TestFixNssReportsRemovedGIDConflicts(t *testing.T) {
+	dir := t.TempDir()
+	svc := newTestService(dir)
+
+	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nusershares:x:946:dm\n"), 0644)
+	os.WriteFile(svc.cfg.LibGroup, []byte("hashman:x:946:\n"), 0644)
+	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0644)
+	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
+	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+
+	result, err := svc.ApplyFix()
+	if err != nil {
+		t.Fatalf("ApplyFix: %v", err)
+	}
+	if result.RemovedGIDConflicts != 1 {
+		t.Errorf("RemovedGIDConflicts: got %d, want 1", result.RemovedGIDConflicts)
 	}
 }
 

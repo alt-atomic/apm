@@ -471,7 +471,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 	if background {
 		ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
 		go func() {
-			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
+			resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, true, configPath, workdir)
 			w.actions.reporter.SendTaskResult(ctx, reply.EventSystemImageApply, resp, err)
 		}()
 
@@ -488,7 +488,7 @@ func (w *DBusWrapper) ImageApply(sender dbus.Sender, transaction string, backgro
 
 	// Синхронное выполнение
 	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
-	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, configPath, workdir)
+	resp, err := w.actions.ImageApply(ctx, pullImage, hostCache, true, configPath, workdir)
 	if err != nil {
 		return "", apmerr.DBusError(err)
 	}

@@ -181,8 +181,12 @@ func (h *HostImageService) BuildImage(ctx context.Context, pullImage bool) (stri
 
 // SwitchImage переключение образа
 func (h *HostImageService) SwitchImage(ctx context.Context, podmanImageID string, isLocal bool) error {
-	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemSwitchImage))
-	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemSwitchImage))
+	event := reply.EventSystemSwitchRemoteImage
+	if isLocal {
+		event = reply.EventSystemSwitchImage
+	}
+	h.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
+	defer h.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
 
 	var args []string
 	if isLocal {
@@ -289,6 +293,27 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 func (h *HostImageService) VerifyRemoteImage(ctx context.Context, imageName string) error {
 	_, err := h.getRemoteImageInfo(ctx, imageName, false)
 	return err
+}
+
+// IsImageActive проверяет по статусу bootc.
+func (h *HostImageService) IsImageActive(imageName string, hasModules bool) (bool, error) {
+	host, err := h.GetHostImage()
+	if err != nil {
+		return false, err
+	}
+
+	if hasModules {
+		return strings.HasPrefix(host.Spec.Image.Transport, "containers-storage"), nil
+	}
+
+	if host.Spec.Image.Image == imageName {
+		return true, nil
+	}
+	if host.Status.Staged != nil && host.Status.Staged.Image.Image.Image == imageName {
+		return true, nil
+	}
+
+	return host.Status.Booted.Image.Image.Image == imageName, nil
 }
 
 func (h *HostImageService) bootcUpgrade(ctx context.Context) error {

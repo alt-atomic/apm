@@ -39,22 +39,16 @@ func newErrorResponseFromError(err error) reply.APIResponse {
 
 func findPkgWithInstalled(appConfig *app.Config, reporter *reply.Reporter, installed bool) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
-		args := cmd.Args().Slice()
-
-		// Текущий токен — последний позиционный аргумент (если есть)
-		var currentToken string
-		if len(args) > 0 {
-			currentToken = args[len(args)-1]
-		}
-		currentToken = strings.TrimSpace(currentToken)
+		currentToken := strings.TrimSpace(apmcli.CompletionPrefix())
 		if currentToken == "" {
 			// Пользователь ещё ничего не ввёл — не предлагаем варианты
 			return
 		}
 
+		args := cmd.Args().Slice()
 		exclude := make(map[string]struct{}, len(args))
-		for i := 0; i < len(args)-1; i++ {
-			exclude[strings.TrimRight(strings.TrimSpace(args[i]), "+-")] = struct{}{}
+		for _, arg := range args {
+			exclude[strings.TrimRight(strings.TrimSpace(arg), "+-")] = struct{}{}
 		}
 
 		like := currentToken + "%"
@@ -77,7 +71,7 @@ func findPkgWithInstalled(appConfig *app.Config, reporter *reply.Reporter, insta
 // findPkgInfoOnlyFirstArg выполняет поиск информации о пакете только для первого аргумента.
 func findPkgInfoOnlyFirstArg(appConfig *app.Config, reporter *reply.Reporter) func(ctx context.Context, cmd *cli.Command) {
 	return func(ctx context.Context, cmd *cli.Command) {
-		if cmd.NArg() >= 2 {
+		if cmd.NArg() >= 1 {
 			return
 		}
 		findPkgWithInstalled(appConfig, reporter, false)(ctx, cmd)
@@ -253,9 +247,15 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 							Aliases: []string{"w"},
 							Usage:   app.T_("Working directory for the build"),
 						},
+						&cli.BoolFlag{
+							Name:    "force",
+							Aliases: []string{"f"},
+							Usage:   app.T_("Rebuild without change checks and dialogs"),
+							Value:   false,
+						},
 					},
 					Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"), cmd.String("config"), cmd.String("workdir"))
+						resp, err := actions.ImageApply(ctx, cmd.Bool("pull"), !cmd.Bool("no-cache"), cmd.Bool("force"), cmd.String("config"), cmd.String("workdir"))
 						if err != nil {
 							return reporter.CliResponse(ctx, newErrorResponseFromError(err))
 						}
