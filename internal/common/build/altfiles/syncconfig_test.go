@@ -1,7 +1,6 @@
 package altfiles
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -166,21 +165,21 @@ func TestParseSyncConfigNoUsers(t *testing.T) {
 func TestReadSyncConfigs(t *testing.T) {
 	dir := t.TempDir()
 
-	os.WriteFile(filepath.Join(dir, "desktop.yaml"), []byte(`sync:
+	writeFile(t, filepath.Join(dir, "desktop.yaml"), `sync:
   groups:
     - docker
     - audio
   users:
     - dm
-`), 0644)
+`)
 
-	os.WriteFile(filepath.Join(dir, "extra.yml"), []byte(`sync:
+	writeFile(t, filepath.Join(dir, "extra.yml"), `sync:
   groups:
     - libvirt
-`), 0644)
+`)
 
 	// Не yaml — должен быть проигнорирован
-	os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("not a config"), 0644)
+	writeFile(t, filepath.Join(dir, "readme.txt"), "not a config")
 
 	svc := newTestService(dir)
 	configs, err := svc.ReadSyncConfigs(dir)
@@ -198,18 +197,18 @@ func TestReadSyncConfigsDirs(t *testing.T) {
 	dir2 := t.TempDir()
 	dirMissing := filepath.Join(t.TempDir(), "nonexistent")
 
-	os.WriteFile(filepath.Join(dir1, "desktop.yaml"), []byte(`sync:
+	writeFile(t, filepath.Join(dir1, "desktop.yaml"), `sync:
   groups:
     - docker
     - audio
   users:
     - dm
-`), 0644)
+`)
 
-	os.WriteFile(filepath.Join(dir2, "extra.yaml"), []byte(`sync:
+	writeFile(t, filepath.Join(dir2, "extra.yaml"), `sync:
   groups:
     - libvirt
-`), 0644)
+`)
 
 	svc := newTestService(t.TempDir())
 

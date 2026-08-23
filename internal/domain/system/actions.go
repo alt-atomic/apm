@@ -1204,6 +1204,8 @@ func (a *Actions) ImageFixNss(_ context.Context) (*ImageFixNssResponse, error) {
 		LibGroupCount:       result.LibGroupCount,
 		RemovedUIDConflicts: result.RemovedUIDConflicts,
 		RemovedGIDConflicts: result.RemovedGIDConflicts,
+		NormalizedGids:      len(result.NormalizedGroups),
+		NormalizedGroups:    result.NormalizedGroups,
 	}, nil
 }
 

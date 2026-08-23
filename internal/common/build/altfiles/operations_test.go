@@ -12,9 +12,9 @@ func TestSyncGroupsAddNew(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\naudio:x:81:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n")
+	writeFile(t, svc.cfg.LibGroup, "docker:x:948:\naudio:x:81:\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -56,9 +56,9 @@ func TestSyncGroupsFixGID(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\ndocker:x:999:dm\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\ndocker:x:999:dm\n")
+	writeFile(t, svc.cfg.LibGroup, "docker:x:948:\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -95,9 +95,9 @@ func TestSyncGroupsAlreadyMember(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\ndocker:x:948:dm\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\ndocker:x:948:dm\n")
+	writeFile(t, svc.cfg.LibGroup, "docker:x:948:\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -123,9 +123,9 @@ func TestSyncGroupsNonexistent(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\n")
+	writeFile(t, svc.cfg.LibGroup, "docker:x:948:\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -148,9 +148,9 @@ func TestSyncGroupsNonexistentUser(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n")
+	writeFile(t, svc.cfg.LibGroup, "docker:x:948:\n")
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -186,15 +186,15 @@ func TestSyncGroupsUIDSelectors(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+	writeFile(t, svc.cfg.EtcPasswd,
 		"root:x:0:0:root:/root:/bin/bash\n"+
 			"sysd:x:500:500:System:/var/empty:/sbin/nologin\n"+
 			"dm:x:1000:1000::/home/dm:/bin/bash\n"+
 			"alice:x:1001:1001::/home/alice:/bin/bash\n"+
-			"bob:x:70000:70000::/home/bob:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("svc:x:2000:2000:Svc:/var/lib/svc:/sbin/nologin\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\n"), 0644)
+			"bob:x:70000:70000::/home/bob:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "svc:x:2000:2000:Svc:/var/lib/svc:/sbin/nologin\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\n")
+	writeFile(t, svc.cfg.LibGroup, "docker:x:948:\n")
 
 	uid := 1001
 	configs := []SyncConfig{{
@@ -233,8 +233,8 @@ func TestSyncGroupsInvalidUIDRange(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("dm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("wheel:x:10:dm\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "dm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "wheel:x:10:dm\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -254,10 +254,10 @@ func TestSyncGroupsSystemUserFromLibPasswd(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App Service:/var/lib/appsvc:/sbin/nologin\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "appsvc:x:497:497:App Service:/var/lib/appsvc:/sbin/nologin\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n")
+	writeFile(t, svc.cfg.LibGroup, "appgrp:x:190:\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -299,9 +299,9 @@ func TestSyncGroupsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("docker:x:948:\naudio:x:81:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n")
+	writeFile(t, svc.cfg.LibGroup, "docker:x:948:\naudio:x:81:\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -336,9 +336,9 @@ func TestSyncGroupsRemovesGIDConflict(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\nusershares:x:946:dm\ntcpdump:x:945:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("hashman:x:946:\ndocker:x:948:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\nusershares:x:946:dm\ntcpdump:x:945:\n")
+	writeFile(t, svc.cfg.LibGroup, "hashman:x:946:\ndocker:x:948:\n")
 
 	configs := []SyncConfig{{
 		Sync: SyncBody{
@@ -377,10 +377,10 @@ func TestSyncGroupsKeepsProtectedOnGIDConflict(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n")
 	// Кривой образ занял GID wheel и обычного пользователя
-	os.WriteFile(svc.cfg.LibGroup, []byte("badgrp:x:10:\nbadusr:x:1000:\n"), 0644)
+	writeFile(t, svc.cfg.LibGroup, "badgrp:x:10:\nbadusr:x:1000:\n")
 
 	result, err := svc.SyncGroups(nil)
 	if err != nil {
@@ -403,11 +403,11 @@ func TestFixNssRemovesGIDConflict(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\nusershares:x:946:dm\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("hashman:x:946:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\nusershares:x:946:dm\n")
+	writeFile(t, svc.cfg.LibGroup, "hashman:x:946:\n")
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "bin:x:1:1:bin:/:/dev/null\n")
+	writeFile(t, svc.cfg.EtcNsswitch, "passwd: files\ngroup: files\n")
 
 	if _, err := svc.ApplyFix(); err != nil {
 		t.Fatalf("ApplyFix: %v", err)
@@ -426,17 +426,17 @@ func TestFixNssRemovesUIDConflict(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+	writeFile(t, svc.cfg.EtcPasswd,
 		"root:x:0:0:root:/root:/bin/bash\n"+
 			"dm:x:1000:1000::/home/dm:/bin/bash\n"+
 			"stapler-builder:x:975:952::/var/cache/stplr:/sbin/nologin\n"+
-			"tcpdump:x:974:945::/dev/null:/dev/null\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte(
+			"tcpdump:x:974:945::/dev/null:/dev/null\n")
+	writeFile(t, svc.cfg.LibPasswd,
 		"bin:x:1:1:bin:/:/dev/null\n"+
-			"sshd:x:975:947::/var/empty:/dev/null\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("sshd:x:947:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+			"sshd:x:975:947::/var/empty:/dev/null\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\n")
+	writeFile(t, svc.cfg.LibGroup, "sshd:x:947:\n")
+	writeFile(t, svc.cfg.EtcNsswitch, "passwd: files\ngroup: files\n")
 
 	result, err := svc.ApplyFix()
 	if err != nil {
@@ -472,15 +472,15 @@ func TestFixNssKeepsProtectedOnUIDConflict(t *testing.T) {
 	svc := newTestService(dir)
 
 	// root и обычный пользователь не удаляются даже при совпадении UID с lib
-	os.WriteFile(svc.cfg.EtcPasswd, []byte(
+	writeFile(t, svc.cfg.EtcPasswd,
 		"root:x:0:0:root:/root:/bin/bash\n"+
-			"dm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte(
+			"dm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd,
 		"weird0:x:0:0::/:/dev/null\n"+
-			"weird1000:x:1000:1000::/:/dev/null\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("bin:x:1:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+			"weird1000:x:1000:1000::/:/dev/null\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\n")
+	writeFile(t, svc.cfg.LibGroup, "bin:x:1:\n")
+	writeFile(t, svc.cfg.EtcNsswitch, "passwd: files\ngroup: files\n")
 
 	result, err := svc.ApplyFix()
 	if err != nil {
@@ -501,11 +501,11 @@ func TestFixNssReportsRemovedGIDConflicts(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nusershares:x:946:dm\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("hashman:x:946:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nusershares:x:946:dm\n")
+	writeFile(t, svc.cfg.LibGroup, "hashman:x:946:\n")
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "bin:x:1:1:bin:/:/dev/null\n")
+	writeFile(t, svc.cfg.EtcNsswitch, "passwd: files\ngroup: files\n")
 
 	result, err := svc.ApplyFix()
 	if err != nil {
@@ -520,15 +520,18 @@ func TestFixNssPreservesOverlayAndFixesGID(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\naudio:x:82:dm\nvideo:x:990:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("audio:x:81:\nvideo:x:990:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("bin:x:1:1:bin:/:/dev/null\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\naudio:x:82:dm\nvideo:x:990:\n")
+	writeFile(t, svc.cfg.LibGroup, "audio:x:81:\nvideo:x:990:\n")
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "bin:x:1:1:bin:/:/dev/null\n")
+	writeFile(t, svc.cfg.EtcNsswitch, "passwd: files\ngroup: files\n")
 
-	_, err := svc.ApplyFix()
+	result, err := svc.ApplyFix()
 	if err != nil {
 		t.Fatalf("ApplyFix: %v", err)
+	}
+	if !slices.Equal(result.NormalizedGroups, []string{"audio:82->81"}) {
+		t.Errorf("NormalizedGroups: got %v, want [audio:82->81]", result.NormalizedGroups)
 	}
 
 	data, _ := os.ReadFile(svc.cfg.EtcGroup)
@@ -604,11 +607,11 @@ func TestApplyJoinRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\ndm:x:1000:1000::/home/dm:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:dm\ndm:x:1000:\n")
+	writeFile(t, svc.cfg.LibGroup, "appgrp:x:190:\n")
+	writeFile(t, svc.cfg.EtcNsswitch, "passwd: files\ngroup: files\n")
 
 	if _, err := svc.ApplyJoin(); err != nil {
 		t.Fatalf("ApplyJoin: %v", err)
@@ -649,10 +652,10 @@ func TestApplyJoinEmptiesLib(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\n")
+	writeFile(t, svc.cfg.LibGroup, "appgrp:x:190:\n")
 
 	if _, err := svc.ApplyJoin(); err != nil {
 		t.Fatalf("ApplyJoin: %v", err)
@@ -671,11 +674,11 @@ func TestApplyJoinPreservesMemberOnReSplit(t *testing.T) {
 	dir := t.TempDir()
 	svc := newTestService(dir)
 
-	os.WriteFile(svc.cfg.EtcPasswd, []byte("root:x:0:0:root:/root:/bin/bash\n"), 0644)
-	os.WriteFile(svc.cfg.LibPasswd, []byte("appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n"), 0644)
-	os.WriteFile(svc.cfg.EtcGroup, []byte("root:x:0:\nwheel:x:10:\n"), 0644)
-	os.WriteFile(svc.cfg.LibGroup, []byte("appgrp:x:190:\n"), 0644)
-	os.WriteFile(svc.cfg.EtcNsswitch, []byte("passwd: files\ngroup: files\n"), 0644)
+	writeFile(t, svc.cfg.EtcPasswd, "root:x:0:0:root:/root:/bin/bash\n")
+	writeFile(t, svc.cfg.LibPasswd, "appsvc:x:497:497:App:/var/lib/appsvc:/sbin/nologin\n")
+	writeFile(t, svc.cfg.EtcGroup, "root:x:0:\nwheel:x:10:\n")
+	writeFile(t, svc.cfg.LibGroup, "appgrp:x:190:\n")
+	writeFile(t, svc.cfg.EtcNsswitch, "passwd: files\ngroup: files\n")
 
 	if _, err := svc.ApplyJoin(); err != nil {
 		t.Fatalf("ApplyJoin: %v", err)
@@ -688,7 +691,7 @@ func TestApplyJoinPreservesMemberOnReSplit(t *testing.T) {
 			entries[i].Members = append(entries[i].Members, "appsvc")
 		}
 	}
-	os.WriteFile(svc.cfg.EtcGroup, etcfiles.FormatGroup(entries), 0644)
+	writeFile(t, svc.cfg.EtcGroup, string(etcfiles.FormatGroup(entries)))
 
 	if _, err := svc.ApplyBuild(); err != nil {
 		t.Fatalf("ApplyBuild: %v", err)

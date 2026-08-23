@@ -51,15 +51,16 @@ func (s *Service) cleanEtcPasswd() (etcCount int, libCount int, removed int, err
 }
 
 // cleanEtcGroup удаляет из /etc/group записи, которые уже есть в /usr/lib/group.
-// Сохраняет записи у которых есть member-оверлейды (пользователи, отсутствующие в /usr/lib)
-func (s *Service) cleanEtcGroup() (etcCount int, libCount int, removed int, err error) {
+// Сохраняет записи у которых есть member-оверлейды (пользователи, отсутствующие в /usr/lib),
+// подтягивая их GID под /usr/lib; каждая такая правка попадает в normalized как "name:old->new"
+func (s *Service) cleanEtcGroup() (etcCount int, libCount int, removed int, normalized []string, err error) {
 	libData, err := os.ReadFile(s.cfg.LibGroup)
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("%s not found, build the image first", s.cfg.LibGroup)
+		return 0, 0, 0, nil, fmt.Errorf("%s not found, build the image first", s.cfg.LibGroup)
 	}
 	libEntries, err := etcfiles.ParseGroup(libData)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, nil, err
 	}
 
 	libMap := make(map[string]etcfiles.GroupEntry, len(libEntries))
@@ -69,11 +70,11 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, removed int, err 
 
 	etcData, err := os.ReadFile(s.cfg.EtcGroup)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, nil, err
 	}
 	etcEntries, err := etcfiles.ParseGroup(etcData)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, nil, err
 	}
 
 	var cleaned []etcfiles.GroupEntry
@@ -85,6 +86,7 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, removed int, err 
 		}
 		if hasUniqueMembers(e.Members, libEntry.Members) {
 			if e.GID != libEntry.GID {
+				normalized = append(normalized, fmt.Sprintf("%s:%d->%d", e.Name, e.GID, libEntry.GID))
 				e.GID = libEntry.GID
 			}
 			cleaned = append(cleaned, e)
@@ -95,10 +97,10 @@ func (s *Service) cleanEtcGroup() (etcCount int, libCount int, removed int, err 
 
 	info, err := os.Stat(s.cfg.EtcGroup)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, nil, err
 	}
 
-	return len(cleaned), len(libEntries), removed, os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(cleaned), info.Mode().Perm())
+	return len(cleaned), len(libEntries), removed, normalized, os.WriteFile(s.cfg.EtcGroup, etcfiles.FormatGroup(cleaned), info.Mode().Perm())
 }
 
 // splitPasswdFiles для сборки: мержит /etc и /usr/lib, сплитит, пишет оба файла

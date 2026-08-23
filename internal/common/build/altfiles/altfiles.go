@@ -64,6 +64,7 @@ type ApplyResult struct {
 	LibGroupCount       int
 	RemovedUIDConflicts int
 	RemovedGIDConflicts int
+	NormalizedGroups    []string
 }
 
 // ApplyBuild разделяет passwd/group и патчит nsswitch.conf (для сборки в контейнере)
@@ -135,7 +136,7 @@ func (s *Service) ApplyFix() (*ApplyResult, error) {
 		return nil, fmt.Errorf("failed to clean /etc/passwd: %w", err)
 	}
 
-	etcGroupCount, libGroupCount, removedGIDConflicts, err := s.cleanEtcGroup()
+	etcGroupCount, libGroupCount, removedGIDConflicts, normalizedGroups, err := s.cleanEtcGroup()
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean /etc/group: %w", err)
 	}
@@ -151,6 +152,7 @@ func (s *Service) ApplyFix() (*ApplyResult, error) {
 		LibGroupCount:       libGroupCount,
 		RemovedUIDConflicts: removedUIDConflicts,
 		RemovedGIDConflicts: removedGIDConflicts,
+		NormalizedGroups:    normalizedGroups,
 	}, nil
 }
 

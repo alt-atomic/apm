@@ -233,6 +233,26 @@ func TranslateKey(key string) string {
 		return app.T_("Essential packages")
 	case "reason":
 		return app.T_("Reason")
+	case "fixed":
+		return app.T_("Fixed")
+	case "skipped":
+		return app.T_("Skipped")
+	case "etcPasswdCount":
+		return app.T_("Entries in /etc/passwd")
+	case "libPasswdCount":
+		return app.T_("Entries in /usr/lib/passwd")
+	case "etcGroupCount":
+		return app.T_("Entries in /etc/group")
+	case "libGroupCount":
+		return app.T_("Entries in /usr/lib/group")
+	case "removedUidConflicts":
+		return app.T_("Removed UID conflicts")
+	case "removedGidConflicts":
+		return app.T_("Removed GID conflicts")
+	case "normalizedGids":
+		return app.T_("Normalized GIDs")
+	case "normalizedGroups":
+		return app.T_("Normalized groups")
 	default:
 		return app.T_(key)
 	}
