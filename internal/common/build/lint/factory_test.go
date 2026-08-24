@@ -9,8 +9,8 @@ import (
 
 func TestWriteAndCleanFactory(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "var", "lib", "myapp"), 0755)
-	os.WriteFile(filepath.Join(root, "var", "lib", "myapp", "state.db"), []byte("payload"), 0640)
+	must(t, os.MkdirAll(filepath.Join(root, "var", "lib", "myapp"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "var", "lib", "myapp", "state.db"), []byte("payload"), 0640))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -42,8 +42,8 @@ func TestWriteAndCleanFactory(t *testing.T) {
 
 	// чужой заводской файл — не из нашего конфига, чистка не должна его тронуть
 	foreign := filepath.Join(root, "usr", "share", "factory", "etc", "nsswitch.conf")
-	os.MkdirAll(filepath.Dir(foreign), 0755)
-	os.WriteFile(foreign, []byte("systemd factory"), 0644)
+	must(t, os.MkdirAll(filepath.Dir(foreign), 0755))
+	must(t, os.WriteFile(foreign, []byte("systemd factory"), 0644))
 
 	// повторный цикл: CleanFactory убирает только свои файлы и опустевшие каталоги
 	b := tmpFilesAnalysis{reporter: testReporter()}
@@ -63,9 +63,9 @@ func TestWriteAndCleanFactory(t *testing.T) {
 
 func TestFactoryKeepsSpecialBits(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "var", "bin"), 0755)
+	must(t, os.MkdirAll(filepath.Join(root, "var", "bin"), 0755))
 	tool := filepath.Join(root, "var", "bin", "tool")
-	os.WriteFile(tool, []byte("#!/bin/sh"), 0644)
+	must(t, os.WriteFile(tool, []byte("#!/bin/sh"), 0644))
 	if err := os.Chmod(tool, 0o711|os.ModeSetuid); err != nil {
 		t.Fatal(err)
 	}
