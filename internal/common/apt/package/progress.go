@@ -59,7 +59,7 @@ func (pt *progressThrottler) RecordUpdate(percent int) {
 	pt.lastUpdate = time.Now()
 }
 
-func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
+func (a *Packages) getHandler(ctx context.Context, packageCount ...int) func(pkg string, event aptLib.ProgressType, cur, total, speed uint64) {
 	pkgCount := 0
 	if len(packageCount) > 0 {
 		pkgCount = packageCount[0]
@@ -186,7 +186,7 @@ func (a *Actions) getHandler(ctx context.Context, packageCount ...int) func(pkg 
 	}
 }
 
-func (a *Actions) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
+func (a *Packages) getUpdateHandler(ctx context.Context) aptLib.ProgressHandler {
 	type itemState struct {
 		progressThrottler
 		id int

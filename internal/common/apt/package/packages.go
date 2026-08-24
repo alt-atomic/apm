@@ -35,15 +35,15 @@ import (
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
-type Actions struct {
+type Packages struct {
 	appConfig          *app.Config
 	reporter           *reply.Reporter
 	serviceAptDatabase *PackageDBService
 	serviceAptBinding  *aptBinding.Actions
 }
 
-func NewActions(serviceAptDatabase *PackageDBService, appConfig *app.Config, reporter *reply.Reporter) *Actions {
-	return &Actions{
+func New(serviceAptDatabase *PackageDBService, appConfig *app.Config, reporter *reply.Reporter) *Packages {
+	return &Packages{
 		appConfig:          appConfig,
 		reporter:           reporter,
 		serviceAptDatabase: serviceAptDatabase,
@@ -52,17 +52,17 @@ func NewActions(serviceAptDatabase *PackageDBService, appConfig *app.Config, rep
 }
 
 // SetAptConfigOverrides устанавливает переопределения конфигурации APT
-func (a *Actions) SetAptConfigOverrides(overrides map[string]string) {
+func (a *Packages) SetAptConfigOverrides(overrides map[string]string) {
 	a.serviceAptBinding.SetConfigOverrides(overrides)
 }
 
 // GetAptConfigOverrides возвращает текущие переопределения конфигурации APT
-func (a *Actions) GetAptConfigOverrides() map[string]string {
+func (a *Packages) GetAptConfigOverrides() map[string]string {
 	return a.serviceAptBinding.GetConfigOverrides()
 }
 
 // PrepareInstallPackages разбирает список пакетов с суффиксами +/- и возвращает два списка
-func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string) (install []string, remove []string, err error) {
+func (a *Packages) PrepareInstallPackages(ctx context.Context, packages []string) (install []string, remove []string, err error) {
 	for _, pkg := range packages {
 		pkg = strings.TrimSpace(pkg)
 		if pkg == "" {
@@ -97,12 +97,12 @@ func (a *Actions) PrepareInstallPackages(ctx context.Context, packages []string)
 }
 
 // checkPackageExists проверяет существует ли пакет в базе данных
-func (a *Actions) checkPackageExists(ctx context.Context, packageName string) bool {
+func (a *Packages) checkPackageExists(ctx context.Context, packageName string) bool {
 	_, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
 	return err == nil
 }
 
-func (a *Actions) FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
+func (a *Packages) FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
@@ -131,7 +131,7 @@ func (a *Actions) FindPackage(ctx context.Context, installed []string, removed [
 }
 
 // expandPackageLists обрабатывает wildcard-пакеты и RPM-файлы, возвращая расширенные списки.
-func (a *Actions) expandPackageLists(ctx context.Context, installed, removed []string) (
+func (a *Packages) expandPackageLists(ctx context.Context, installed, removed []string) (
 	expandedInstall, expandedRemove, rpmFiles []string, packagesInfo []Package, seenInfo map[string]bool, err error,
 ) {
 	seenInfo = make(map[string]bool)
@@ -182,7 +182,7 @@ func (a *Actions) expandPackageLists(ctx context.Context, installed, removed []s
 }
 
 // simulateChanges выполняет симуляцию изменений через APT binding.
-func (a *Actions) simulateChanges(ctx context.Context, expandedInstall, expandedRemove, rpmFiles []string,
+func (a *Packages) simulateChanges(ctx context.Context, expandedInstall, expandedRemove, rpmFiles []string,
 	purge, depends, reinstall bool,
 ) (*aptLib.PackageChanges, error) {
 	if reinstall {
@@ -206,7 +206,7 @@ func (a *Actions) simulateChanges(ctx context.Context, expandedInstall, expanded
 }
 
 // enrichPackagesInfo добавляет информацию о пакетах из packageChanges.
-func (a *Actions) enrichPackagesInfo(ctx context.Context, packagesInfo []Package, seenInfo map[string]bool,
+func (a *Packages) enrichPackagesInfo(ctx context.Context, packagesInfo []Package, seenInfo map[string]bool,
 	packageChanges *aptLib.PackageChanges,
 ) ([]Package, error) {
 	if packageChanges == nil {
@@ -243,7 +243,7 @@ func (a *Actions) enrichPackagesInfo(ctx context.Context, packagesInfo []Package
 	return packagesInfo, nil
 }
 
-func (a *Actions) Install(ctx context.Context, packages []string, downloadOnly bool) error {
+func (a *Packages) Install(ctx context.Context, packages []string, downloadOnly bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
@@ -255,7 +255,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, downloadOnly b
 	return nil
 }
 
-func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string,
+func (a *Packages) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string,
 	packagesRemove []string, purge bool, depends bool, downloadOnly bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
@@ -275,7 +275,7 @@ func (a *Actions) CombineInstallRemovePackages(ctx context.Context, packagesInst
 	return nil
 }
 
-func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, depends bool) error {
+func (a *Packages) Remove(ctx context.Context, packages []string, purge bool, depends bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
@@ -287,7 +287,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 	return nil
 }
 
-func (a *Actions) Upgrade(ctx context.Context, downloadOnly bool) error {
+func (a *Packages) Upgrade(ctx context.Context, downloadOnly bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpgrade))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpgrade))
 
@@ -300,7 +300,7 @@ func (a *Actions) Upgrade(ctx context.Context, downloadOnly bool) error {
 }
 
 // DownloadSource скачивает .src.rpm пакеты в директорию destDir
-func (a *Actions) DownloadSource(ctx context.Context, packages []string, destDir string) ([]aptLib.SourcePackage, error) {
+func (a *Packages) DownloadSource(ctx context.Context, packages []string, destDir string) ([]aptLib.SourcePackage, error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
@@ -308,12 +308,12 @@ func (a *Actions) DownloadSource(ctx context.Context, packages []string, destDir
 }
 
 // InstallSourcePackages устанавливает .src.rpm файлы в сборочное дерево rpm
-func (a *Actions) InstallSourcePackages(ctx context.Context, files []string) error {
+func (a *Packages) InstallSourcePackages(ctx context.Context, files []string) error {
 	prefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
 	return a.serviceAptBinding.RpmInstallSourcePackages(ctx, prefix, files)
 }
 
-func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
+func (a *Packages) CheckInstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
@@ -321,7 +321,7 @@ func (a *Actions) CheckInstall(ctx context.Context, packageName []string) (packa
 	return
 }
 
-func (a *Actions) CheckReinstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
+func (a *Packages) CheckReinstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
@@ -329,7 +329,7 @@ func (a *Actions) CheckReinstall(ctx context.Context, packageName []string) (pac
 	return
 }
 
-func (a *Actions) ReinstallPackages(ctx context.Context, packages []string) error {
+func (a *Packages) ReinstallPackages(ctx context.Context, packages []string) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
@@ -341,7 +341,7 @@ func (a *Actions) ReinstallPackages(ctx context.Context, packages []string) erro
 	return nil
 }
 
-func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge bool, depends bool) (packageChanges *aptLib.PackageChanges, err error) {
+func (a *Packages) CheckRemove(ctx context.Context, packageName []string, purge bool, depends bool) (packageChanges *aptLib.PackageChanges, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
@@ -349,7 +349,7 @@ func (a *Actions) CheckRemove(ctx context.Context, packageName []string, purge b
 	return
 }
 
-func (a *Actions) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
+func (a *Packages) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
@@ -357,7 +357,7 @@ func (a *Actions) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.P
 	return
 }
 
-func (a *Actions) GetInfo(ctx context.Context, packageName string) (packageChanges *aptLib.PackageInfo, err error) {
+func (a *Packages) GetInfo(ctx context.Context, packageName string) (packageChanges *aptLib.PackageInfo, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
@@ -365,7 +365,7 @@ func (a *Actions) GetInfo(ctx context.Context, packageName string) (packageChang
 	return
 }
 
-func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
+func (a *Packages) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
@@ -373,7 +373,7 @@ func (a *Actions) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.Pack
 	return
 }
 
-func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error) {
+func (a *Packages) Update(ctx context.Context, noLock ...bool) ([]Package, error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpdate))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpdate))
 
@@ -417,7 +417,7 @@ func (a *Actions) Update(ctx context.Context, noLock ...bool) ([]Package, error)
 }
 
 // UpdateDBOnly обновляет статус установленных пакетов в БД без обновления репозиториев.
-func (a *Actions) UpdateDBOnly(ctx context.Context, noLock ...bool) ([]Package, error) {
+func (a *Packages) UpdateDBOnly(ctx context.Context, noLock ...bool) ([]Package, error) {
 	packages, err := a.serviceAptDatabase.QueryHostImagePackages(ctx, nil, "", "", 0, 0)
 	if err != nil {
 		return nil, err
@@ -437,7 +437,7 @@ func (a *Actions) UpdateDBOnly(ctx context.Context, noLock ...bool) ([]Package, 
 }
 
 // updateInstalledInfo обновляет срез пакетов, устанавливая поля Installed и InstalledVersion, если пакет найден в системе.
-func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package, noLock ...bool) ([]Package, error) {
+func (a *Packages) updateInstalledInfo(ctx context.Context, packages []Package, noLock ...bool) ([]Package, error) {
 	installed, err := a.GetInstalledPackages(ctx, noLock...)
 	if err != nil {
 		return nil, err
@@ -454,12 +454,12 @@ func (a *Actions) updateInstalledInfo(ctx context.Context, packages []Package, n
 }
 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
-func (a *Actions) GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error) {
+func (a *Packages) GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error) {
 	commandPrefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
 	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
 }
 
-func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
+func (a *Packages) AptUpdate(ctx context.Context, noLock ...bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemAptUpdate))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))
 
@@ -471,7 +471,7 @@ func (a *Actions) AptUpdate(ctx context.Context, noLock ...bool) error {
 }
 
 // AptUpdateIfStale обновляет списки пакетов, только если последний успешный update был раньше, чем ttl назад
-func (a *Actions) AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLock ...bool) error {
+func (a *Packages) AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLock ...bool) error {
 	if ttl > 0 {
 		if info, err := os.Stat(a.listsStampPath()); err == nil && time.Since(info.ModTime()) < ttl {
 			app.Log.Debugf("Skipping package list update, last update was %s ago", time.Since(info.ModTime()).Round(time.Second))
@@ -483,19 +483,19 @@ func (a *Actions) AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLoc
 }
 
 // listsStampPath путь к файлу-отметке последнего успешного apt update
-func (a *Actions) listsStampPath() string {
+func (a *Packages) listsStampPath() string {
 	return filepath.Join(filepath.Dir(a.appConfig.ConfigManager.GetConfig().PathDBSQLSystem), "lists-update.stamp")
 }
 
 // touchListsStamp обновляет отметку времени последнего успешного apt update
-func (a *Actions) touchListsStamp() {
+func (a *Packages) touchListsStamp() {
 	if err := os.WriteFile(a.listsStampPath(), nil, 0644); err != nil {
 		app.Log.Debugf("Failed to write lists update stamp: %v", err)
 	}
 }
 
 // saveRpmInfoToDatabase сохраняет PackageInfo в базу данных
-func (a *Actions) saveRpmInfoToDatabase(ctx context.Context, ap *aptLib.PackageInfo) error {
+func (a *Packages) saveRpmInfoToDatabase(ctx context.Context, ap *aptLib.PackageInfo) error {
 	_, errFind := a.serviceAptDatabase.GetPackageByName(ctx, ap.Name)
 	if errFind == nil {
 		return nil

@@ -81,7 +81,7 @@ type Actions struct {
 // NewActions создаёт новый экземпляр Actions.
 func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
 	packageDBSvc := _package.NewPackageDBService(appConfig.DatabaseManager, reporter)
-	aptActions := _package.NewActions(packageDBSvc, appConfig, reporter)
+	aptActions := _package.New(packageDBSvc, appConfig, reporter)
 
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
