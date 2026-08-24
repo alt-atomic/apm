@@ -35,11 +35,14 @@ import (
 
 // DBusV2Modules интерфейсы v2 домена system: Packages, Image, Applications.
 func DBusV2Modules(appConfig *app.Config, reporter *reply.Reporter) []dbusv2.Module {
-	return []dbusv2.Module{
+	modules := []dbusv2.Module{
 		packagesModuleV2(appConfig, reporter),
-		imageModuleV2(appConfig, reporter),
 		applicationsModuleV2(appConfig, reporter),
 	}
+	if appConfig.ConfigManager.GetConfig().IsAtomic {
+		modules = append(modules, imageModuleV2(appConfig, reporter))
+	}
+	return modules
 }
 
 // packagesModuleV2 модуль интерфейса org.altlinux.APM2.Packages.
