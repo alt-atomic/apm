@@ -19,18 +19,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
-	"altlinux.space/alt-atomic/apm/internal/common/dbus_doc"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 
-	"github.com/godbus/dbus/v5"
-	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
 )
-
-const DBusObjectPath = "/org/altlinux/APM"
 
 type BusType int
 
@@ -39,22 +34,14 @@ const (
 	BusSession
 )
 
-type DBusExport struct {
-	Object     any
-	PostExport func(context.Context)
-}
-
-type DBusModule struct {
-	Interface string
-	Build     func(ctx context.Context, conn *dbus.Conn) (DBusExport, error)
-}
-
 type DBusRunConfig struct {
-	Bus     BusType
-	Mode    apmcli.RootCheckMode
-	Modules []DBusModule
+	Bus  BusType
+	Mode apmcli.RootCheckMode
+	// API конфигурация интерфейсов на /org/altlinux/APM2.
+	API dbusv2.Setup
 }
 
+// RunDBus поднимает DBus-демон: соединение, экспорт API, ожидание останова.
 func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBusRunConfig) error {
 	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 	appConfig.ConfigManager.EnableVerbose()
@@ -65,43 +52,12 @@ func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBu
 	if err := connectBus(appConfig, cfg.Bus); err != nil {
 		return fmt.Errorf("connect dbus: %w", err)
 	}
-	conn := appConfig.DBusManager.GetConnection()
 
-	interfaces := make(map[string]any, len(cfg.Modules))
-	var postHooks []func(context.Context)
-	for _, mod := range cfg.Modules {
-		exp, err := mod.Build(ctx, conn)
-		if err != nil {
-			return fmt.Errorf("build %s: %w", mod.Interface, err)
-		}
-		if err = conn.Export(exp.Object, DBusObjectPath, mod.Interface); err != nil {
-			return fmt.Errorf("export %s: %w", mod.Interface, err)
-		}
-		interfaces[mod.Interface] = exp.Object
-		if exp.PostExport != nil {
-			postHooks = append(postHooks, exp.PostExport)
-		}
-	}
-
-	if err := conn.Export(
-		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
-		DBusObjectPath,
-		"org.freedesktop.DBus.Introspectable",
-	); err != nil {
-		return fmt.Errorf("export introspectable: %w", err)
-	}
-
-	var wg sync.WaitGroup
-	for _, hook := range postHooks {
-		wg.Add(1)
-		go func(h func(context.Context)) {
-			defer wg.Done()
-			h(ctx)
-		}(hook)
+	if err := dbusv2.Export(ctx, appConfig.DBusManager.GetConnection(), cfg.API); err != nil {
+		return fmt.Errorf("export dbus api: %w", err)
 	}
 
 	<-ctx.Done()
-	wg.Wait()
 	return nil
 }
 

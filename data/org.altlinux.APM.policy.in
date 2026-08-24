@@ -1,11 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-   <action id="@SERVICE_ID@.manage">
-     <description>Full management of APM</description>
-     <message>Authentication is required</message>
-     <defaults>
-       <allow_any>no</allow_any>
-       <allow_inactive>no</allow_inactive>
-       <allow_active>auth_admin</allow_active>
-     </defaults>
-   </action>
+  <vendor>APM</vendor>
+  <vendor_url>https://altlinux.space/alt-atomic/apm</vendor_url>
+
+  <action id="org.altlinux.apm2.packages.manage">
+    <description>Manage system packages</description>
+    <description xml:lang="ru">Управление системными пакетами</description>
+    <message>Authentication is required to install, update or remove system packages</message>
+    <message xml:lang="ru">Для установки, обновления или удаления системных пакетов требуется аутентификация</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+  </action>
+
+  <action id="org.altlinux.apm2.image.manage">
+    <description>Manage the host system image</description>
+    <description xml:lang="ru">Управление образом системы</description>
+    <message>Authentication is required to manage the system image</message>
+    <message xml:lang="ru">Для управления образом системы требуется аутентификация</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+  </action>
+
+  <action id="org.altlinux.apm2.applications.manage">
+    <description>Update the application catalog</description>
+    <description xml:lang="ru">Обновление каталога приложений</description>
+    <message>Authentication is required to update the application catalog</message>
+    <message xml:lang="ru">Для обновления каталога приложений требуется аутентификация</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+  </action>
+
+  <action id="org.altlinux.apm2.kernel.manage">
+    <description>Manage system kernels</description>
+    <description xml:lang="ru">Управление ядрами системы</description>
+    <message>Authentication is required to manage system kernels</message>
+    <message xml:lang="ru">Для управления ядрами системы требуется аутентификация</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+  </action>
+
+  <action id="org.altlinux.apm2.repo.manage">
+    <description>Manage package repositories</description>
+    <description xml:lang="ru">Управление репозиториями пакетов</description>
+    <message>Authentication is required to manage package repositories</message>
+    <message xml:lang="ru">Для управления репозиториями пакетов требуется аутентификация</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+  </action>
 </policyconfig>

@@ -19,6 +19,7 @@ package reply
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
@@ -29,6 +30,8 @@ import (
 type Reporter struct {
 	appConfig *app.Config
 	renderer  *responseRenderer
+	sinksMu   sync.RWMutex
+	sinks     []Sink
 }
 
 // NewReporter создаёт Reporter поверх appConfig.
@@ -78,12 +81,11 @@ func (r *Reporter) dispatchEvent(ctx context.Context, eventData *EventData) {
 		updateTask(r.appConfig, eventData.Type, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
 	}
 
-	switch config.Format {
-	case app.FormatDBus:
-		sendNotificationResponse(eventData, r.appConfig.DBusManager.GetConnection())
-	case app.FormatHTTP:
+	if config.Format == app.FormatHTTP {
 		sendWebSocketNotification(eventData)
 	}
+
+	r.notifySinks(ctx, eventData)
 }
 
 // SendTaskResult отправляет результат фоновой задачи через DBus или WebSocket.
@@ -107,10 +109,9 @@ func (r *Reporter) SendTaskResult(ctx context.Context, taskName string, data int
 		event.Data = nil
 	}
 
-	switch r.appConfig.ConfigManager.GetConfig().Format {
-	case app.FormatDBus:
-		sendTaskResultDBus(&event, r.appConfig.DBusManager.GetConnection())
-	case app.FormatHTTP:
+	if r.appConfig.ConfigManager.GetConfig().Format == app.FormatHTTP {
 		sendTaskResultWebSocket(&event)
 	}
+
+	r.taskResultSinks(ctx, taskName, data, taskErr)
 }

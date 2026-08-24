@@ -81,9 +81,3 @@ type ContainerRemoveResponse struct {
 
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода
 type GetFilterFieldsResponse []filter.FieldInfo
-
-// BackgroundTaskResponse структура ответа при запуске фоновой задачи
-type BackgroundTaskResponse struct {
-	Message     string `json:"message"`
-	Transaction string `json:"transaction"`
-}
