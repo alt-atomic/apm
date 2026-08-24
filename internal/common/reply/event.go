@@ -17,13 +17,10 @@
 package reply
 
 import (
-	"encoding/json"
 	"fmt"
 	"sync"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
-
-	"github.com/godbus/dbus/v5"
 )
 
 // WebSocketBroadcaster интерфейс для отправки событий через WebSocket
@@ -187,27 +184,6 @@ func WithProgressDoneText(text string) NotificationOption {
 	}
 }
 
-// sendNotificationResponse отправляет ответы через DBus.
-func sendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
-	message, err := json.Marshal(eventData)
-	if err != nil {
-		app.Log.Debug(err.Error())
-	}
-
-	if dbusConn == nil {
-		app.Log.Error(app.T_("DBus connection is not initialized"))
-		return
-	}
-
-	objPath := dbus.ObjectPath("/org/altlinux/APM")
-	signalName := "org.altlinux.APM.Notification"
-
-	err = dbusConn.Emit(objPath, signalName, string(message))
-	if err != nil {
-		app.Log.Error(app.T_("Error sending notification: %v"), err)
-	}
-}
-
 // sendWebSocketNotification отправляет событие через WebSocket.
 func sendWebSocketNotification(eventData *EventData) {
 	if wsHub == nil {
@@ -224,28 +200,6 @@ func sendTaskResultWebSocket(event *TaskResultEvent) {
 		return
 	}
 	wsHub.BroadcastEvent(event)
-}
-
-// sendTaskResultDBus отправляет результат задачи через D-Bus сигнал.
-func sendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
-	message, err := json.Marshal(event)
-	if err != nil {
-		app.Log.Debug(err.Error())
-		return
-	}
-
-	if dbusConn == nil {
-		app.Log.Error(app.T_("DBus connection is not initialized"))
-		return
-	}
-
-	objPath := dbus.ObjectPath("/org/altlinux/APM")
-	signalName := "org.altlinux.APM.Notification"
-
-	err = dbusConn.Emit(objPath, signalName, string(message))
-	if err != nil {
-		app.Log.Error(app.T_("Error sending task result: %v"), err)
-	}
 }
 
 var (

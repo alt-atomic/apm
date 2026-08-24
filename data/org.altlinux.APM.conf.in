@@ -6,9 +6,13 @@
   </policy>
 
   <policy context="default">
-    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.system"/>
-    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.kernel"/>
-    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.repo"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Packages"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Image"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Applications"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Kernel"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Repo"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Jobs"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="org.freedesktop.DBus.Properties"/>
     <allow send_destination="@SERVICE_ID@" send_interface="org.freedesktop.DBus.Introspectable"/>
   </policy>
 </busconfig>
