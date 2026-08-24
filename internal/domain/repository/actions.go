@@ -384,11 +384,6 @@ func (a *Actions) checkOverlay(_ context.Context) error {
 	return nil
 }
 
-// GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
-func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
-	return startDocServer(ctx)
-}
-
 // TestTask тестирует пакеты из задачи
 func (a *Actions) TestTask(ctx context.Context, taskNum string) (*TestTaskResponse, error) {
 	if err := a.checkOverlay(ctx); err != nil {

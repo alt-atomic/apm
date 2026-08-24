@@ -187,9 +187,3 @@ type GetFilterFieldsResponse []filter.FieldInfo
 type AptConfigResponse struct {
 	Options map[string]string `json:"options"`
 }
-
-// BackgroundTaskResponse структура ответа при запуске фоновой задачи
-type BackgroundTaskResponse struct {
-	Message     string `json:"message"`
-	Transaction string `json:"transaction"`
-}

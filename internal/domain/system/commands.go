@@ -705,15 +705,6 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 			Category: app.T_("Image"),
 			Commands: imageCmds,
 		},
-		{
-			Name:     "dbus-doc",
-			Usage:    app.T_("Show dbus online documentation"),
-			Category: app.T_("Documentation"),
-			Action: withGlobalWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				reply.StopSpinner(appConfig)
-				return actions.GenerateOnlineDoc(ctx)
-			}),
-		},
 	}
 
 	return &cli.Command{

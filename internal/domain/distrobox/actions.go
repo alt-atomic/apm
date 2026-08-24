@@ -413,8 +413,3 @@ func (a *Actions) validateContainer(ctx context.Context, container string, autoU
 
 	return osInfo, nil
 }
-
-// GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
-func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
-	return startDocServer(ctx)
-}
