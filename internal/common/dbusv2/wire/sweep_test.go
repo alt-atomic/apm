@@ -10,6 +10,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
+	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	"altlinux.space/alt-atomic/apm/internal/domain/distrobox"
 	"altlinux.space/alt-atomic/apm/internal/domain/kernel"
@@ -143,5 +144,29 @@ func fillValue(rv reflect.Value, depth int) {
 			fillValue(rv.Field(i), depth-1)
 		}
 	default:
+	}
+}
+
+// TestStructDictFilterFields прогоняет реальные конфиги фильтров: их Extra
+// содержит карты с нестроковыми ключами, которые ломали FilterFields на шине.
+func TestStructDictFilterFields(t *testing.T) {
+	configs := map[string]*filter.Config{
+		"packages":     _package.SystemFilterConfig,
+		"applications": swcat.FilterConfig,
+		"distrobox":    sandbox.DistroFilterConfig,
+	}
+	for name, cfg := range configs {
+		t.Run(name, func(t *testing.T) {
+			rows, err := wire.StructDicts(cfg.FieldsInfo())
+			if err != nil {
+				t.Fatalf("StructDicts: %v", err)
+			}
+			if len(rows) == 0 {
+				t.Fatal("no filter fields")
+			}
+			if sig := dbus.MakeVariant(rows).Signature().String(); sig != "aa{sv}" {
+				t.Fatalf("signature = %s", sig)
+			}
+		})
 	}
 }
