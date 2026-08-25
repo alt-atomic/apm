@@ -17,5 +17,6 @@
     <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Jobs"/>
     <allow send_destination="@SERVICE_ID@" send_interface="org.freedesktop.DBus.Properties"/>
     <allow send_destination="@SERVICE_ID@" send_interface="org.freedesktop.DBus.Introspectable"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="org.freedesktop.DBus.Peer"/>
   </policy>
 </busconfig>
