@@ -20,6 +20,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/authz"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -41,8 +42,8 @@ func (j *JobsAPI) Get(job uint32) (wire.Dict, *dbus.Error) {
 }
 
 // Cancel отменяет задачу: владелец — свободно, остальные — через polkit.
-func (j *JobsAPI) Cancel(sender dbus.Sender, job uint32) *dbus.Error {
-	return wire.Error(j.reg.Cancel(job, string(sender), func(action string) error {
-		return j.az.Authorize(sender, action)
+func (j *JobsAPI) Cancel(msg dbus.Message, job uint32) *dbus.Error {
+	return wire.Error(j.reg.Cancel(job, polkit.Sender(msg), func(action string) error {
+		return j.az.Authorize(msg, action)
 	}))
 }

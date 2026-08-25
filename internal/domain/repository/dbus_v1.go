@@ -1,0 +1,232 @@
+// Atomic Package Manager
+// Copyright (C) 2025 Дмитрий Удалов dmitry@udalov.online
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+package repository
+
+import (
+	"context"
+	"encoding/json"
+
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
+	"altlinux.space/alt-atomic/apm/internal/common/app"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv1"
+	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
+	"altlinux.space/alt-atomic/apm/internal/common/reply"
+
+	"github.com/godbus/dbus/v5"
+)
+
+const DBusInterface = "org.altlinux.APM.repo"
+
+func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) dbusv1.Module {
+	return dbusv1.Module{
+		Interface: DBusInterface,
+		Build: func(ctx context.Context, conn *dbus.Conn) (dbusv1.Object, error) {
+			actions := NewActions(appConfig, reporter)
+			return dbusv1.Object{Value: NewDBusWrapper(actions, conn, ctx)}, nil
+		},
+	}
+}
+
+// DBusWrapper предоставляет обёртку для действий с репозиториями через DBus.
+type DBusWrapper struct {
+	conn    *dbus.Conn
+	actions *Actions
+	ctx     context.Context
+}
+
+// NewDBusWrapper создаёт новую обёртку над actions
+func NewDBusWrapper(a *Actions, c *dbus.Conn, ctx context.Context) *DBusWrapper {
+	return &DBusWrapper{actions: a, conn: c, ctx: ctx}
+}
+
+// checkManagePermission проверяет права org.altlinux.APM.manage
+func (w *DBusWrapper) checkManagePermission(msg dbus.Message) *dbus.Error {
+	if err := polkit.Check(w.conn, msg, "org.altlinux.APM.manage"); err != nil {
+		return dbus.MakeFailedError(err)
+	}
+	return nil
+}
+
+// List возвращает список репозиториев.
+func (w *DBusWrapper) List(all bool, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.List(ctx, all)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// Add добавляет репозиторий.
+func (w *DBusWrapper) Add(msg dbus.Message, source, date, transaction string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(msg); err != nil {
+		return "", err
+	}
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.Add(ctx, []string{source}, date)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// Remove удаляет репозиторий.
+func (w *DBusWrapper) Remove(msg dbus.Message, source, date, transaction string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(msg); err != nil {
+		return "", err
+	}
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.Remove(ctx, []string{source}, date)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// Set устанавливает ветку репозитория.
+func (w *DBusWrapper) Set(msg dbus.Message, branch, date, transaction string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(msg); err != nil {
+		return "", err
+	}
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.Set(ctx, branch, date)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// Clean удаляет cdrom-источники из репозиториев.
+func (w *DBusWrapper) Clean(msg dbus.Message, transaction string) (string, *dbus.Error) {
+	if err := w.checkManagePermission(msg); err != nil {
+		return "", err
+	}
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.Clean(ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// GetBranches возвращает список доступных веток.
+func (w *DBusWrapper) GetBranches() (string, *dbus.Error) {
+	resp, err := w.actions.GetBranches(w.ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// GetTaskPackages возвращает список пакетов задачи.
+func (w *DBusWrapper) GetTaskPackages(taskNum string, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.GetTaskPackages(ctx, taskNum)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckAdd симулирует добавление репозитория.
+func (w *DBusWrapper) CheckAdd(source, date, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.CheckAdd(ctx, []string{source}, date)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckRemove симулирует удаление репозитория.
+func (w *DBusWrapper) CheckRemove(source, date, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	// Для DBus source - это одна строка (формат sources.list или имя ветки/задачи)
+	resp, err := w.actions.CheckRemove(ctx, []string{source}, date)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckSet симулирует установку ветки репозитория.
+func (w *DBusWrapper) CheckSet(branch, date, transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.CheckSet(ctx, branch, date)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}
+
+// CheckClean симулирует очистку cdrom-источников.
+func (w *DBusWrapper) CheckClean(transaction string) (string, *dbus.Error) {
+	ctx := context.WithValue(w.ctx, helper.TransactionKey, transaction)
+	resp, err := w.actions.CheckClean(ctx)
+	if err != nil {
+		return "", apmerr.DBusError(err)
+	}
+	data, jerr := json.Marshal(reply.OK(resp))
+	if jerr != nil {
+		return "", dbus.MakeFailedError(jerr)
+	}
+	return string(data), nil
+}

@@ -19,30 +19,30 @@ package authz
 
 import (
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
-	"altlinux.space/alt-atomic/apm/internal/common/helper"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 
 	"github.com/godbus/dbus/v5"
 )
 
 // Authorizer проверяет право отправителя на действие.
 type Authorizer interface {
-	Authorize(sender dbus.Sender, action string) error
+	Authorize(msg dbus.Message, action string) error
 }
 
 // Func адаптирует функцию к Authorizer.
-type Func func(sender dbus.Sender, action string) error
+type Func func(msg dbus.Message, action string) error
 
-func (f Func) Authorize(sender dbus.Sender, action string) error {
-	return f(sender, action)
+func (f Func) Authorize(msg dbus.Message, action string) error {
+	return f(msg, action)
 }
 
 // AllowAll пропускает всех: для сессионной шины.
-var AllowAll Authorizer = Func(func(dbus.Sender, string) error { return nil })
+var AllowAll Authorizer = Func(func(dbus.Message, string) error { return nil })
 
 // Polkit возвращает Authorizer поверх polkit для системной шины.
 func Polkit(conn *dbus.Conn) Authorizer {
-	return Func(func(sender dbus.Sender, action string) error {
-		if err := helper.PolkitCheck(conn, sender, action); err != nil {
+	return Func(func(msg dbus.Message, action string) error {
+		if err := polkit.Check(conn, msg, action); err != nil {
 			return apmerr.New(apmerr.ErrorTypePermission, err)
 		}
 		return nil
@@ -50,16 +50,16 @@ func Polkit(conn *dbus.Conn) Authorizer {
 }
 
 // Guard выполняет fn только после успешной авторизации.
-func Guard(a Authorizer, sender dbus.Sender, action string, fn func() error) error {
-	if err := a.Authorize(sender, action); err != nil {
+func Guard(a Authorizer, msg dbus.Message, action string, fn func() error) error {
+	if err := a.Authorize(msg, action); err != nil {
 		return err
 	}
 	return fn()
 }
 
 // Authorized выполняет fn с результатом только после успешной авторизации.
-func Authorized[T any](a Authorizer, sender dbus.Sender, action string, fn func() (T, error)) (T, error) {
-	if err := a.Authorize(sender, action); err != nil {
+func Authorized[T any](a Authorizer, msg dbus.Message, action string, fn func() (T, error)) (T, error) {
+	if err := a.Authorize(msg, action); err != nil {
 		var zero T
 		return zero, err
 	}
