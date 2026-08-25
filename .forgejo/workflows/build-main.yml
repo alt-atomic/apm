@@ -7,13 +7,50 @@ on:
     branches:
       - 'main'
 
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
-    name: Build and test
+  tests:
+    name: Tests
     runs-on: als-huge
 
     steps:
-      - name: Install deps
+      - name: Install test dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            golang \
+            gcc-c++ \
+            libapt-devel \
+            podman \
+            rsync
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Unit tests
+        run: go test ./internal/... ./pkg/...
+
+      - name: Build test container image
+        run: podman build -f Dockerfile.test -t apm-test:latest .
+
+      - name: Containerized integration tests
+        run: bash ./scripts/test-container.sh integration
+
+      - name: D-Bus v2 E2E tests
+        run: bash ./scripts/test-dbus-e2e.sh
+
+  build:
+    name: Build
+    runs-on: als-huge
+
+    steps:
+      - name: Install build dependencies
         run: |
           apt-get update
           apt-get install -y \
@@ -25,12 +62,6 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Go vet
-        run: go vet ./...
-
-      - name: Unit tests
-        run: go test ./internal/... ./pkg/...
 
       - name: Setup
         run: meson setup _build
@@ -58,6 +89,7 @@ jobs:
     needs:
       - build
       - get-release
+      - tests
 
     container:
       image: altlinux.space/alt-gnome/hasherc:latest
