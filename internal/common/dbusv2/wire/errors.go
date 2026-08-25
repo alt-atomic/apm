@@ -20,41 +20,20 @@ import (
 	"errors"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
-	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 
 	"github.com/godbus/dbus/v5"
 )
 
-// errorNames маппинг типов apmerr на имена DBus-ошибок v2.
-// PERMISSION намеренно отдаётся стандартным именем AccessDenied.
-var errorNames = map[string]string{
-	apmerr.ErrorTypeDatabase:    protocol.ErrorPrefix + "Database",
-	apmerr.ErrorTypeRepository:  protocol.ErrorPrefix + "Repository",
-	apmerr.ErrorTypeApt:         protocol.ErrorPrefix + "Apt",
-	apmerr.ErrorTypeValidation:  protocol.ErrorPrefix + "Validation",
-	apmerr.ErrorTypePermission:  "org.freedesktop.DBus.Error.AccessDenied",
-	apmerr.ErrorTypeCanceled:    protocol.ErrorPrefix + "Canceled",
-	apmerr.ErrorTypeImage:       protocol.ErrorPrefix + "Image",
-	apmerr.ErrorTypeKernel:      protocol.ErrorPrefix + "Kernel",
-	apmerr.ErrorTypeContainer:   protocol.ErrorPrefix + "Container",
-	apmerr.ErrorTypeNoOperation: protocol.ErrorPrefix + "NoOperation",
-	apmerr.ErrorTypeNotFound:    protocol.ErrorPrefix + "NotFound",
-}
+// accessDeniedError стандартное имя отказа в доступе.
+const accessDeniedError = "org.freedesktop.DBus.Error.AccessDenied"
 
 // Error конвертирует ошибку приложения в именованную DBus-ошибку.
 func Error(err error) *dbus.Error {
 	if err == nil {
 		return nil
 	}
-	if apmErr, ok := errors.AsType[apmerr.APMError](err); ok {
-		if name, ok := errorNames[apmErr.Type]; ok {
-			return &dbus.Error{Name: name, Body: []any{err.Error()}}
-		}
+	if apmErr, ok := errors.AsType[apmerr.APMError](err); ok && apmErr.Type == apmerr.ErrorTypePermission {
+		return &dbus.Error{Name: accessDeniedError, Body: []any{err.Error()}}
 	}
-	return &dbus.Error{Name: protocol.ErrorPrefix + "Failed", Body: []any{err.Error()}}
-}
-
-// Reply адаптирует пару (результат, ошибка) к возврату DBus-метода.
-func Reply[T any](v T, err error) (T, *dbus.Error) {
-	return v, Error(err)
+	return apmerr.DBusError(err)
 }

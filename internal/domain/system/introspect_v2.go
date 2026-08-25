@@ -28,12 +28,12 @@ var packagesIntrospectionV2 = introspect.Interface{
 	Methods: []introspect.Method{
 		{Name: "Install", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Remove", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Reinstall", Args: []introspect.Arg{
@@ -41,56 +41,53 @@ var packagesIntrospectionV2 = introspect.Interface{
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Upgrade", Args: []introspect.Arg{
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Update", Args: []introspect.Arg{
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "CheckInstall", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
-			protocol.Out("changes", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "CheckRemove", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
-			protocol.In("options", "a{sv}"),
-			protocol.Out("changes", "a{sv}"),
+			protocol.In("options_json", "s"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "CheckUpgrade", Args: []introspect.Arg{
-			protocol.Out("changes", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "List", Args: []introspect.Arg{
-			protocol.In("query", "a{sv}"),
-			protocol.In("filters", "aa(sss)"),
-			protocol.Out("total", "u"),
-			protocol.Out("packages", "aa{sv}"),
+			protocol.In("request_json", "s"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Info", Args: []introspect.Arg{
 			protocol.In("name", "s"),
-			protocol.Out("package", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "MultiInfo", Args: []introspect.Arg{
 			protocol.In("names", "as"),
-			protocol.Out("packages", "aa{sv}"),
-			protocol.Out("not_found", "as"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Search", Args: []introspect.Arg{
 			protocol.In("text", "s"),
 			protocol.In("installed", "b"),
-			protocol.Out("packages", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Sections", Args: []introspect.Arg{
 			protocol.Out("sections", "as"),
 		}},
 		{Name: "FilterFields", Args: []introspect.Arg{
-			protocol.Out("fields", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "AptConfig", Args: []introspect.Arg{
-			protocol.Out("options", "a{ss}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "SetAptConfig", Args: []introspect.Arg{
-			protocol.In("options", "a{ss}"),
+			protocol.In("options_json", "s"),
 		}},
 	},
 	Properties: []introspect.Property{
@@ -105,27 +102,25 @@ var imageIntrospectionV2 = introspect.Interface{
 	Name: protocol.ImageIface,
 	Methods: []introspect.Method{
 		{Name: "Status", Args: []introspect.Arg{
-			protocol.Out("status", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Update", Args: []introspect.Arg{
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Apply", Args: []introspect.Arg{
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Switch", Args: []introspect.Arg{
 			protocol.In("image", "s"),
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "History", Args: []introspect.Arg{
 			protocol.In("image", "s"),
-			protocol.In("limit", "u"),
-			protocol.In("offset", "u"),
-			protocol.Out("total", "u"),
-			protocol.Out("history", "aa{sv}"),
+			protocol.In("request_json", "s"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "GetConfig", Args: []introspect.Arg{
 			protocol.Out("yaml", "s"),
@@ -134,10 +129,10 @@ var imageIntrospectionV2 = introspect.Interface{
 			protocol.In("yaml", "s"),
 		}},
 		{Name: "SyncGroups", Args: []introspect.Arg{
-			protocol.Out("result", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "FixNss", Args: []introspect.Arg{
-			protocol.Out("result", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 	},
 }
@@ -151,19 +146,17 @@ var applicationsIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "Info", Args: []introspect.Arg{
 			protocol.In("name", "s"),
-			protocol.Out("info", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "List", Args: []introspect.Arg{
-			protocol.In("query", "a{sv}"),
-			protocol.In("filters", "aa(sss)"),
-			protocol.Out("total", "u"),
-			protocol.Out("applications", "aa{sv}"),
+			protocol.In("request_json", "s"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Categories", Args: []introspect.Arg{
 			protocol.Out("categories", "as"),
 		}},
 		{Name: "FilterFields", Args: []introspect.Arg{
-			protocol.Out("fields", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 	},
 }

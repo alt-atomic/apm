@@ -28,7 +28,7 @@ var repoIntrospectionV2 = introspect.Interface{
 	Methods: []introspect.Method{
 		{Name: "List", Args: []introspect.Arg{
 			protocol.In("all", "b"),
-			protocol.Out("repositories", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Branches", Args: []introspect.Arg{
 			protocol.Out("branches", "as"),
@@ -44,38 +44,38 @@ var repoIntrospectionV2 = introspect.Interface{
 		{Name: "Add", Args: []introspect.Arg{
 			protocol.In("sources", "as"),
 			protocol.In("date", "s"),
-			protocol.Out("result", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Remove", Args: []introspect.Arg{
 			protocol.In("sources", "as"),
 			protocol.In("date", "s"),
-			protocol.Out("result", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "SetBranch", Args: []introspect.Arg{
 			protocol.In("branch", "s"),
 			protocol.In("date", "s"),
-			protocol.Out("result", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Clean", Args: []introspect.Arg{
-			protocol.Out("result", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "CheckAdd", Args: []introspect.Arg{
 			protocol.In("sources", "as"),
 			protocol.In("date", "s"),
-			protocol.Out("changes", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "CheckRemove", Args: []introspect.Arg{
 			protocol.In("sources", "as"),
 			protocol.In("date", "s"),
-			protocol.Out("changes", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "CheckSetBranch", Args: []introspect.Arg{
 			protocol.In("branch", "s"),
 			protocol.In("date", "s"),
-			protocol.Out("changes", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "CheckClean", Args: []introspect.Arg{
-			protocol.Out("changes", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 	},
 }

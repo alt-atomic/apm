@@ -30,12 +30,23 @@ type APMError struct {
 // New создание новой классифицированной ошибки
 func New(errorType string, err error) APMError {
 	if errorType == ErrorTypeApt {
-		var nf interface{ IsNotFound() bool }
-		if errors.As(err, &nf) && nf.IsNotFound() {
-			errorType = ErrorTypeNotFound
-		}
+		errorType = refineApt(err)
 	}
 	return APMError{Type: errorType, Err: err}
+}
+
+// refineApt уточняет тип ошибки APT: «не найдено» и «нечего делать»
+// получают свои типы, иначе транспорты отдают их как сбой.
+func refineApt(err error) string {
+	var nf interface{ IsNotFound() bool }
+	if errors.As(err, &nf) && nf.IsNotFound() {
+		return ErrorTypeNotFound
+	}
+	var noop interface{ IsNoOperation() bool }
+	if errors.As(err, &noop) && noop.IsNoOperation() {
+		return ErrorTypeNoOperation
+	}
+	return ErrorTypeApt
 }
 
 func (e APMError) Error() string {

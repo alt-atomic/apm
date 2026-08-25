@@ -64,165 +64,113 @@ type DBusV2 struct {
 }
 
 // startJob регистрирует фоновую задачу; отмена — только владельцем.
-func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
+func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) (uint32, *dbus.Error) {
 	return w.jobs.Start("distrobox", kind, polkit.Sender(msg), "", fn), nil
 }
 
 // startTransaction регистрирует неотменяемую пакетную транзакцию.
-func (w *DBusV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
+func (w *DBusV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) (uint32, *dbus.Error) {
 	return w.jobs.StartNoCancel("distrobox", kind, polkit.Sender(msg), fn), nil
 }
 
 // ContainerList возвращает список контейнеров.
-func (w *DBusV2) ContainerList() ([]wire.Dict, *dbus.Error) {
+func (w *DBusV2) ContainerList() (string, *dbus.Error) {
 	resp, err := w.actions.ContainerList(w.ctx)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDicts(resp.Containers))
+	return wire.JSONReply(resp, err)
 }
 
 // ContainerAdd создаёт контейнер фоновой задачей.
-func (w *DBusV2) ContainerAdd(msg dbus.Message, image string, name string, options wire.Dict) (uint32, *dbus.Error) {
-	var packages, initHooks string
-	if err := wire.ParseOptions(options, map[string]any{
-		"packages":   &packages,
-		"init_hooks": &initHooks,
-	}); err != nil {
+func (w *DBusV2) ContainerAdd(msg dbus.Message, image string, name string, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		AdditionalPackages string `json:"additionalPackages"`
+		InitHooks          string `json:"initHooks"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(msg, "ContainerAdd", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.ContainerAdd(ctx, image, name, packages, initHooks)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startJob(msg, "ContainerAdd", wire.JSONTask(func(ctx context.Context) (*ContainerAddResponse, error) {
+		return w.actions.ContainerAdd(ctx, image, name, options.AdditionalPackages, options.InitHooks)
+	}))
 }
 
 // ContainerRemove удаляет контейнер фоновой задачей.
 func (w *DBusV2) ContainerRemove(msg dbus.Message, name string) (uint32, *dbus.Error) {
-	return w.startJob(msg, "ContainerRemove", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.ContainerRemove(ctx, name)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startJob(msg, "ContainerRemove", wire.JSONTask(func(ctx context.Context) (*ContainerRemoveResponse, error) {
+		return w.actions.ContainerRemove(ctx, name)
+	}))
 }
 
 // Update обновляет пакетную базу контейнера фоновой задачей.
 func (w *DBusV2) Update(msg dbus.Message, container string) (uint32, *dbus.Error) {
-	return w.startJob(msg, "Update", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Update(ctx, container)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startJob(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
+		return w.actions.Update(ctx, container)
+	}))
 }
 
 // Install ставит пакет в контейнер фоновой задачей.
-func (w *DBusV2) Install(msg dbus.Message, container string, name string, options wire.Dict) (uint32, *dbus.Error) {
-	var export bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"export": &export,
-	}); err != nil {
+func (w *DBusV2) Install(msg dbus.Message, container string, name string, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		Export bool `json:"export"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(msg, "Install", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Install(ctx, container, name, export)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startTransaction(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallResponse, error) {
+		return w.actions.Install(ctx, container, name, options.Export)
+	}))
 }
 
 // Remove удаляет пакет из контейнера фоновой задачей.
-func (w *DBusV2) Remove(msg dbus.Message, container string, name string, options wire.Dict) (uint32, *dbus.Error) {
-	var onlyExport bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"only_export": &onlyExport,
-	}); err != nil {
+func (w *DBusV2) Remove(msg dbus.Message, container string, name string, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		OnlyExport bool `json:"onlyExport"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(msg, "Remove", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Remove(ctx, container, name, onlyExport)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startTransaction(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*RemoveResponse, error) {
+		return w.actions.Remove(ctx, container, name, options.OnlyExport)
+	}))
 }
 
 // Info возвращает информацию о пакете контейнера.
-func (w *DBusV2) Info(container string, name string) (wire.Dict, *dbus.Error) {
+func (w *DBusV2) Info(container string, name string) (string, *dbus.Error) {
 	resp, err := w.actions.Info(w.ctx, container, name)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDict(resp.PackageInfo))
+	return wire.JSONReply(resp, err)
 }
 
 // Search ищет пакеты в контейнере.
-func (w *DBusV2) Search(container string, text string) ([]wire.Dict, *dbus.Error) {
+func (w *DBusV2) Search(container string, text string) (string, *dbus.Error) {
 	resp, err := w.actions.Search(w.ctx, container, text)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDicts(resp.Packages))
+	return wire.JSONReply(resp, err)
 }
 
 // List возвращает страницу пакетов контейнера по запросу и фильтрам.
-func (w *DBusV2) List(container string, query wire.Dict, filters [][]wire.FilterRule) (uint32, []wire.Dict, *dbus.Error) {
-	var sort, order string
-	var limit, offset uint32
-	var forceUpdate bool
-	if err := wire.ParseOptions(query, map[string]any{
-		"sort":         &sort,
-		"order":        &order,
-		"limit":        &limit,
-		"offset":       &offset,
-		"force_update": &forceUpdate,
-	}); err != nil {
-		return 0, nil, wire.Error(err)
+func (w *DBusV2) List(container string, requestJSON string) (string, *dbus.Error) {
+	var request wire.ListRequest
+	if err := wire.DecodeJSON(requestJSON, &request); err != nil {
+		return "", wire.Error(err)
 	}
 
-	pageSize, err := wire.PageLimit(limit)
+	page, err := request.Validate(sandbox.DistroFilterConfig)
 	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-
-	groups, err := wire.FilterGroups(filters, sandbox.DistroFilterConfig)
-	if err != nil {
-		return 0, nil, wire.Error(err)
+		return "", wire.Error(err)
 	}
 
 	resp, err := w.actions.List(w.ctx, ListParams{
 		Container:   container,
-		Sort:        sort,
-		Order:       order,
-		Limit:       pageSize,
-		Offset:      int(offset),
-		Filters:     groups,
-		ForceUpdate: forceUpdate,
+		Sort:        request.Sort,
+		Order:       request.Order,
+		Limit:       page.Limit,
+		Offset:      page.Offset,
+		Filters:     page.Filters,
+		ForceUpdate: request.ForceUpdate,
 	})
-	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-	rows, err := wire.StructDicts(resp.Packages)
-	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-	return uint32(max(resp.TotalCount, 0)), rows, nil
+	return wire.JSONReply(resp, err)
 }
 
 // FilterFields возвращает описание полей фильтрации.
-func (w *DBusV2) FilterFields() ([]wire.Dict, *dbus.Error) {
+func (w *DBusV2) FilterFields() (string, *dbus.Error) {
 	resp, err := w.actions.GetFilterFields(w.ctx)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDicts(resp))
+	return wire.JSONReply(resp, err)
 }

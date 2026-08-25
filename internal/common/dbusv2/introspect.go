@@ -27,11 +27,11 @@ var jobsIntrospection = introspect.Interface{
 	Name: protocol.JobsIface,
 	Methods: []introspect.Method{
 		{Name: "List", Args: []introspect.Arg{
-			protocol.Out("jobs", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Get", Args: []introspect.Arg{
 			protocol.In("job", "u"),
-			protocol.Out("state", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Cancel", Args: []introspect.Arg{
 			protocol.In("job", "u"),
@@ -55,7 +55,7 @@ var jobsIntrospection = introspect.Interface{
 			protocol.SignalArg("job", "u"),
 			protocol.SignalArg("status", "s"),
 			protocol.SignalArg("message", "s"),
-			protocol.SignalArg("result", "a{sv}"),
+			protocol.SignalArg("json", "s"),
 		}},
 	},
 }

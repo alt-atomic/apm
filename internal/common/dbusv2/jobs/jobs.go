@@ -22,13 +22,13 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
-	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
 )
 
 // Состояния задачи в сигнале JobFinished; в реестре задача всегда running.
@@ -64,6 +64,16 @@ type Job struct {
 	cancel       context.CancelFunc
 }
 
+// State — JSON-представление работающей задачи.
+type State struct {
+	ID          uint32 `json:"id"`
+	Domain      string `json:"domain"`
+	Kind        string `json:"kind"`
+	State       string `json:"state"`
+	Cancellable bool   `json:"cancellable"`
+	Created     int64  `json:"created"`
+}
+
 // Emitter шлёт сигнал Jobs-интерфейса.
 type Emitter func(member string, values ...any)
 
@@ -82,17 +92,17 @@ func NewRegistry(ctx context.Context, emit Emitter) *Registry {
 }
 
 // Start регистрирует отменяемую задачу и запускает fn в фоне; возвращает id.
-func (r *Registry) Start(domain, kind, owner, cancelAction string, fn func(ctx context.Context) (wire.Dict, error)) uint32 {
+func (r *Registry) Start(domain, kind, owner, cancelAction string, fn func(ctx context.Context) (string, error)) uint32 {
 	return r.start(domain, kind, owner, cancelAction, true, fn)
 }
 
 // StartNoCancel регистрирует неотменяемую задачу: rpm/apt-транзакции
 // прерывать нельзя — Cancel для них возвращает ошибку.
-func (r *Registry) StartNoCancel(domain, kind, owner string, fn func(ctx context.Context) (wire.Dict, error)) uint32 {
+func (r *Registry) StartNoCancel(domain, kind, owner string, fn func(ctx context.Context) (string, error)) uint32 {
 	return r.start(domain, kind, owner, "", false, fn)
 }
 
-func (r *Registry) start(domain, kind, owner, cancelAction string, cancellable bool, fn func(ctx context.Context) (wire.Dict, error)) uint32 {
+func (r *Registry) start(domain, kind, owner, cancelAction string, cancellable bool, fn func(ctx context.Context) (string, error)) uint32 {
 	jctx, cancel := context.WithCancel(r.ctx)
 
 	r.mu.Lock()
@@ -116,14 +126,7 @@ func (r *Registry) start(domain, kind, owner, cancelAction string, cancellable b
 		result, err := fn(WithJob(jctx, id))
 		cancel()
 		state, message := finalState(err)
-		if result == nil {
-			result = wire.Dict{}
-		}
-		if err != nil {
-			if apmErr, ok := errors.AsType[apmerr.APMError](err); ok {
-				result["error_type"] = wire.V(apmErr.Type)
-			}
-		}
+		result = finalResult(result, err)
 
 		r.mu.Lock()
 		delete(r.jobs, id)
@@ -133,6 +136,20 @@ func (r *Registry) start(domain, kind, owner, cancelAction string, cancellable b
 	}()
 
 	return id
+}
+
+// finalResult добавляет машиночитаемый тип классифицированной ошибки.
+func finalResult(result string, err error) string {
+	if apmErr, ok := errors.AsType[apmerr.APMError](err); ok {
+		encoded, _ := json.Marshal(struct {
+			ErrorType string `json:"errorType"`
+		}{ErrorType: apmErr.Type})
+		return string(encoded)
+	}
+	if result == "" {
+		return "{}"
+	}
+	return result
 }
 
 // finalState выводит состояние задачи из её ошибки.
@@ -148,25 +165,25 @@ func finalState(err error) (state, message string) {
 }
 
 // List возвращает снимки работающих задач.
-func (r *Registry) List() []wire.Dict {
+func (r *Registry) List() []State {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	out := make([]wire.Dict, 0, len(r.jobs))
+	out := make([]State, 0, len(r.jobs))
 	for _, job := range r.jobs {
-		out = append(out, job.dict())
+		out = append(out, job.snapshot())
 	}
 	return out
 }
 
 // Get возвращает снимок работающей задачи по id.
-func (r *Registry) Get(id uint32) (wire.Dict, error) {
+func (r *Registry) Get(id uint32) (State, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	job, ok := r.jobs[id]
 	if !ok {
-		return nil, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf("job %d is not running", id))
+		return State{}, apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf("job %d is not running", id))
 	}
-	return job.dict(), nil
+	return job.snapshot(), nil
 }
 
 // Cancel отменяет задачу: владелец — свободно, остальные — по authorize.
@@ -193,14 +210,14 @@ func (r *Registry) Cancel(id uint32, sender string, authorize func(action string
 	return nil
 }
 
-// dict снимок задачи в a{sv}; вызывается под мьютексом реестра.
-func (j *Job) dict() wire.Dict {
-	return wire.Dict{
-		"id":          wire.V(j.id),
-		"domain":      wire.V(j.domain),
-		"kind":        wire.V(j.kind),
-		"state":       wire.V(StateRunning),
-		"cancellable": wire.V(j.cancellable),
-		"created":     wire.V(uint64(j.created.Unix())),
+// snapshot возвращает снимок работающей задачи; вызывается под mutex реестра.
+func (j *Job) snapshot() State {
+	return State{
+		ID:          j.id,
+		Domain:      j.domain,
+		Kind:        j.kind,
+		State:       StateRunning,
+		Cancellable: j.cancellable,
+		Created:     j.created.Unix(),
 	}
 }
