@@ -113,7 +113,7 @@ colors:
 
 ## D-Bus API
 
-APM exports two D-Bus services named `org.altlinux.APM`. Full documentation: [DBUS_API](docs/DBUS_API.md)
+APM exports D-Bus services named `org.altlinux.APM`. Full documentation: [DBUS_API_V2](docs/DBUS_API_V2.md), compatibility layer: [DBUS_API v1](docs/DBUS_API.md)
 
 ### User session
 When running in a user session, the service registers on the session D-Bus, which does not require additional privileges.
