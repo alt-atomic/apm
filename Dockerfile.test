@@ -23,6 +23,9 @@ RUN apt-get update && \
         cmake \
         zsh \
         pkg-config \
+        dbus \
+        polkit \
+        systemd \
         systemd-devel \
         # Go language
         golang \
