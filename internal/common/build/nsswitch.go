@@ -11,25 +11,19 @@ import (
 
 const altFilesPkg = "libnss-altfiles"
 
-// altFilesManaged: true, если в контейнере и altfiles есть по БД пакетов либо по файлу модуля.
-func (cfgService *ConfigService) altFilesManaged(ctx context.Context, svc *altfiles.Service) bool {
+// altFilesManaged: true, если в контейнере и установлен libnss-altfiles.
+func (cfgService *ConfigService) altFilesManaged(ctx context.Context) bool {
 	if !helper.IsRunningInContainer() {
 		app.Log.Info("Not running in container, skipping nss-altfiles setup")
 		return false
 	}
 
 	pkg, err := cfgService.GetPackageByName(ctx, altFilesPkg)
-	if err == nil && pkg != nil && pkg.Installed {
-		return true
+	if err != nil || pkg == nil || !pkg.Installed {
+		app.Log.Info(fmt.Sprintf("Package %s is not installed, skipping nss-altfiles setup", altFilesPkg))
+		return false
 	}
-
-	// БД пакетов может быть пустой или устаревшей, проверяем сам NSS-модуль
-	if svc.ModuleInstalled() {
-		return true
-	}
-
-	app.Log.Info(fmt.Sprintf("Neither package %s nor its NSS module found, skipping nss-altfiles setup", altFilesPkg))
-	return false
+	return true
 }
 
 // revertNssAltFiles сливает /usr/lib в /etc, если система в split-режиме.
@@ -61,14 +55,13 @@ func (cfgService *ConfigService) revertNssAltFiles() error {
 
 // splitNssAltFiles формирует altfiles, если установлен libnss-altfiles.
 func (cfgService *ConfigService) splitNssAltFiles(ctx context.Context) error {
-	svc := altfiles.NewDefault()
-	if !cfgService.altFilesManaged(ctx, svc) {
+	if !cfgService.altFilesManaged(ctx) {
 		return nil
 	}
 
 	app.Log.Info("Configuring nss-altfiles: splitting passwd/group for atomic system")
 
-	result, err := svc.ApplyBuild()
+	result, err := altfiles.NewDefault().ApplyBuild()
 	if err != nil {
 		return err
 	}
