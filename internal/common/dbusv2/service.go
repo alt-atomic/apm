@@ -52,8 +52,8 @@ type Setup struct {
 	Modules []Module
 }
 
-// Export экспортирует API v2 на существующем соединении рядом с v1.
-func Export(ctx context.Context, conn *dbus.Conn, s Setup) error {
+// Export экспортирует интерфейсы API, свойства и introspection на соединении демона.
+func (s Setup) Export(ctx context.Context, conn *dbus.Conn) error {
 	emit := func(member string, values ...any) {
 		if err := conn.Emit(protocol.Path, protocol.JobsIface+"."+member, values...); err != nil {
 			app.Log.Error("dbusv2 emit failed: ", err)

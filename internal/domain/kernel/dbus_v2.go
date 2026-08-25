@@ -25,6 +25,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/godbus/dbus/v5"
@@ -56,11 +57,11 @@ type DBusV2 struct {
 
 // startJob авторизует отправителя и регистрирует фоновую задачу.
 // Все мутирующие операции ядра — rpm-транзакции, отмена запрещена.
-func (w *DBusV2) startJob(sender dbus.Sender, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(sender, protocol.ActionKernelManage); err != nil {
+func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
+	if err := w.az.Authorize(msg, protocol.ActionKernelManage); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.jobs.StartNoCancel("kernel", kind, string(sender), fn), nil
+	return w.jobs.StartNoCancel("kernel", kind, polkit.Sender(msg), fn), nil
 }
 
 // ListKernels возвращает список ядер флейвора.
@@ -82,14 +83,14 @@ func (w *DBusV2) Current() (wire.Dict, *dbus.Error) {
 }
 
 // Install ставит ядро фоновой задачей.
-func (w *DBusV2) Install(sender dbus.Sender, flavour string, modules []string, options wire.Dict) (uint32, *dbus.Error) {
+func (w *DBusV2) Install(msg dbus.Message, flavour string, modules []string, options wire.Dict) (uint32, *dbus.Error) {
 	var headers bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"headers": &headers,
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(sender, "Install", func(ctx context.Context) (wire.Dict, error) {
+	return w.startJob(msg, "Install", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.InstallKernel(ctx, flavour, modules, headers, false)
 		if err != nil {
 			return nil, err
@@ -99,14 +100,14 @@ func (w *DBusV2) Install(sender dbus.Sender, flavour string, modules []string, o
 }
 
 // Update обновляет ядро фоновой задачей.
-func (w *DBusV2) Update(sender dbus.Sender, flavour string, modules []string, options wire.Dict) (uint32, *dbus.Error) {
+func (w *DBusV2) Update(msg dbus.Message, flavour string, modules []string, options wire.Dict) (uint32, *dbus.Error) {
 	var headers bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"headers": &headers,
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(sender, "Update", func(ctx context.Context) (wire.Dict, error) {
+	return w.startJob(msg, "Update", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.UpdateKernel(ctx, flavour, modules, headers, false)
 		if err != nil {
 			return nil, err
@@ -116,14 +117,14 @@ func (w *DBusV2) Update(sender dbus.Sender, flavour string, modules []string, op
 }
 
 // CheckInstall симулирует установку ядра.
-func (w *DBusV2) CheckInstall(sender dbus.Sender, flavour string, modules []string, options wire.Dict) (wire.Dict, *dbus.Error) {
+func (w *DBusV2) CheckInstall(msg dbus.Message, flavour string, modules []string, options wire.Dict) (wire.Dict, *dbus.Error) {
 	var headers bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"headers": &headers,
 	}); err != nil {
 		return nil, wire.Error(err)
 	}
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionKernelManage, func() (wire.Dict, error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionKernelManage, func() (wire.Dict, error) {
 		resp, err := w.actions.InstallKernel(w.ctx, flavour, modules, headers, true)
 		if err != nil {
 			return nil, err
@@ -133,14 +134,14 @@ func (w *DBusV2) CheckInstall(sender dbus.Sender, flavour string, modules []stri
 }
 
 // CheckUpdate симулирует обновление ядра.
-func (w *DBusV2) CheckUpdate(sender dbus.Sender, flavour string, modules []string, options wire.Dict) (wire.Dict, *dbus.Error) {
+func (w *DBusV2) CheckUpdate(msg dbus.Message, flavour string, modules []string, options wire.Dict) (wire.Dict, *dbus.Error) {
 	var headers bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"headers": &headers,
 	}); err != nil {
 		return nil, wire.Error(err)
 	}
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionKernelManage, func() (wire.Dict, error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionKernelManage, func() (wire.Dict, error) {
 		resp, err := w.actions.UpdateKernel(w.ctx, flavour, modules, headers, true)
 		if err != nil {
 			return nil, err
@@ -150,14 +151,14 @@ func (w *DBusV2) CheckUpdate(sender dbus.Sender, flavour string, modules []strin
 }
 
 // CleanOld удаляет старые ядра фоновой задачей.
-func (w *DBusV2) CleanOld(sender dbus.Sender, options wire.Dict) (uint32, *dbus.Error) {
+func (w *DBusV2) CleanOld(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
 	var noBackup bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"no_backup": &noBackup,
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(sender, "CleanOld", func(ctx context.Context) (wire.Dict, error) {
+	return w.startJob(msg, "CleanOld", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.CleanOldKernels(ctx, noBackup, false)
 		if err != nil {
 			return nil, err
@@ -167,14 +168,14 @@ func (w *DBusV2) CleanOld(sender dbus.Sender, options wire.Dict) (uint32, *dbus.
 }
 
 // CheckCleanOld симулирует удаление старых ядер.
-func (w *DBusV2) CheckCleanOld(sender dbus.Sender, options wire.Dict) (wire.Dict, *dbus.Error) {
+func (w *DBusV2) CheckCleanOld(msg dbus.Message, options wire.Dict) (wire.Dict, *dbus.Error) {
 	var noBackup bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"no_backup": &noBackup,
 	}); err != nil {
 		return nil, wire.Error(err)
 	}
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionKernelManage, func() (wire.Dict, error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionKernelManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CleanOldKernels(w.ctx, noBackup, true)
 		if err != nil {
 			return nil, err
@@ -193,8 +194,8 @@ func (w *DBusV2) ListModules(flavour string) (wire.Dict, *dbus.Error) {
 }
 
 // InstallModules ставит модули ядра фоновой задачей.
-func (w *DBusV2) InstallModules(sender dbus.Sender, flavour string, modules []string) (uint32, *dbus.Error) {
-	return w.startJob(sender, "InstallModules", func(ctx context.Context) (wire.Dict, error) {
+func (w *DBusV2) InstallModules(msg dbus.Message, flavour string, modules []string) (uint32, *dbus.Error) {
+	return w.startJob(msg, "InstallModules", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.InstallKernelModules(ctx, flavour, modules, false)
 		if err != nil {
 			return nil, err
@@ -204,8 +205,8 @@ func (w *DBusV2) InstallModules(sender dbus.Sender, flavour string, modules []st
 }
 
 // CheckInstallModules симулирует установку модулей ядра.
-func (w *DBusV2) CheckInstallModules(sender dbus.Sender, flavour string, modules []string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionKernelManage, func() (wire.Dict, error) {
+func (w *DBusV2) CheckInstallModules(msg dbus.Message, flavour string, modules []string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionKernelManage, func() (wire.Dict, error) {
 		resp, err := w.actions.InstallKernelModules(w.ctx, flavour, modules, true)
 		if err != nil {
 			return nil, err
@@ -215,8 +216,8 @@ func (w *DBusV2) CheckInstallModules(sender dbus.Sender, flavour string, modules
 }
 
 // RemoveModules удаляет модули ядра фоновой задачей.
-func (w *DBusV2) RemoveModules(sender dbus.Sender, flavour string, modules []string) (uint32, *dbus.Error) {
-	return w.startJob(sender, "RemoveModules", func(ctx context.Context) (wire.Dict, error) {
+func (w *DBusV2) RemoveModules(msg dbus.Message, flavour string, modules []string) (uint32, *dbus.Error) {
+	return w.startJob(msg, "RemoveModules", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.RemoveKernelModules(ctx, flavour, modules, false)
 		if err != nil {
 			return nil, err
@@ -226,8 +227,8 @@ func (w *DBusV2) RemoveModules(sender dbus.Sender, flavour string, modules []str
 }
 
 // CheckRemoveModules симулирует удаление модулей ядра.
-func (w *DBusV2) CheckRemoveModules(sender dbus.Sender, flavour string, modules []string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionKernelManage, func() (wire.Dict, error) {
+func (w *DBusV2) CheckRemoveModules(msg dbus.Message, flavour string, modules []string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionKernelManage, func() (wire.Dict, error) {
 		resp, err := w.actions.RemoveKernelModules(w.ctx, flavour, modules, true)
 		if err != nil {
 			return nil, err

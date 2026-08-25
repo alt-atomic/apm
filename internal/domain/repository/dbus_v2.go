@@ -25,6 +25,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/godbus/dbus/v5"
@@ -74,8 +75,8 @@ func (w *DBusV2) Branches() ([]string, *dbus.Error) {
 
 // TaskPackages запрашивает пакеты задачи сборочницы фоновой задачей:
 // поход в сеть медленный. Чтение — без polkit, отмена чужим — через repo.manage.
-func (w *DBusV2) TaskPackages(sender dbus.Sender, task string) (uint32, *dbus.Error) {
-	return w.jobs.Start("repo", "TaskPackages", string(sender), protocol.ActionRepoManage,
+func (w *DBusV2) TaskPackages(msg dbus.Message, task string) (uint32, *dbus.Error) {
+	return w.jobs.Start("repo", "TaskPackages", polkit.Sender(msg), protocol.ActionRepoManage,
 		func(ctx context.Context) (wire.Dict, error) {
 			resp, err := w.actions.GetTaskPackages(ctx, task)
 			if err != nil {
@@ -87,11 +88,11 @@ func (w *DBusV2) TaskPackages(sender dbus.Sender, task string) (uint32, *dbus.Er
 
 // TestTask симулирует установку задачи сборочницы фоновой задачей:
 // временно подключает репозиторий задачи, обновляет индексы и считает изменения.
-func (w *DBusV2) TestTask(sender dbus.Sender, task string) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(sender, protocol.ActionRepoManage); err != nil {
+func (w *DBusV2) TestTask(msg dbus.Message, task string) (uint32, *dbus.Error) {
+	if err := w.az.Authorize(msg, protocol.ActionRepoManage); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.jobs.StartNoCancel("repo", "TestTask", string(sender),
+	return w.jobs.StartNoCancel("repo", "TestTask", polkit.Sender(msg),
 		func(ctx context.Context) (wire.Dict, error) {
 			resp, err := w.actions.TestTask(ctx, task)
 			if err != nil {
@@ -102,8 +103,8 @@ func (w *DBusV2) TestTask(sender dbus.Sender, task string) (uint32, *dbus.Error)
 }
 
 // Add подключает источники.
-func (w *DBusV2) Add(sender dbus.Sender, sources []string, date string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) Add(msg dbus.Message, sources []string, date string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.Add(w.ctx, sources, date)
 		if err != nil {
 			return nil, err
@@ -113,8 +114,8 @@ func (w *DBusV2) Add(sender dbus.Sender, sources []string, date string) (wire.Di
 }
 
 // Remove отключает источники.
-func (w *DBusV2) Remove(sender dbus.Sender, sources []string, date string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) Remove(msg dbus.Message, sources []string, date string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.Remove(w.ctx, sources, date)
 		if err != nil {
 			return nil, err
@@ -124,8 +125,8 @@ func (w *DBusV2) Remove(sender dbus.Sender, sources []string, date string) (wire
 }
 
 // SetBranch переключает ветку репозитория.
-func (w *DBusV2) SetBranch(sender dbus.Sender, branch string, date string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) SetBranch(msg dbus.Message, branch string, date string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.Set(w.ctx, branch, date)
 		if err != nil {
 			return nil, err
@@ -135,8 +136,8 @@ func (w *DBusV2) SetBranch(sender dbus.Sender, branch string, date string) (wire
 }
 
 // Clean удаляет все подключённые источники.
-func (w *DBusV2) Clean(sender dbus.Sender) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) Clean(msg dbus.Message) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.Clean(w.ctx)
 		if err != nil {
 			return nil, err
@@ -146,8 +147,8 @@ func (w *DBusV2) Clean(sender dbus.Sender) (wire.Dict, *dbus.Error) {
 }
 
 // CheckAdd симулирует подключение источников.
-func (w *DBusV2) CheckAdd(sender dbus.Sender, sources []string, date string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) CheckAdd(msg dbus.Message, sources []string, date string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CheckAdd(w.ctx, sources, date)
 		if err != nil {
 			return nil, err
@@ -157,8 +158,8 @@ func (w *DBusV2) CheckAdd(sender dbus.Sender, sources []string, date string) (wi
 }
 
 // CheckRemove симулирует отключение источников.
-func (w *DBusV2) CheckRemove(sender dbus.Sender, sources []string, date string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) CheckRemove(msg dbus.Message, sources []string, date string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CheckRemove(w.ctx, sources, date)
 		if err != nil {
 			return nil, err
@@ -168,8 +169,8 @@ func (w *DBusV2) CheckRemove(sender dbus.Sender, sources []string, date string) 
 }
 
 // CheckSetBranch симулирует переключение ветки.
-func (w *DBusV2) CheckSetBranch(sender dbus.Sender, branch string, date string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) CheckSetBranch(msg dbus.Message, branch string, date string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CheckSet(w.ctx, branch, date)
 		if err != nil {
 			return nil, err
@@ -179,8 +180,8 @@ func (w *DBusV2) CheckSetBranch(sender dbus.Sender, branch string, date string) 
 }
 
 // CheckClean симулирует удаление всех источников.
-func (w *DBusV2) CheckClean(sender dbus.Sender) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionRepoManage, func() (wire.Dict, error) {
+func (w *DBusV2) CheckClean(msg dbus.Message) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionRepoManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CheckClean(w.ctx)
 		if err != nil {
 			return nil, err

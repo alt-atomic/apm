@@ -22,8 +22,8 @@ import (
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
-	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/urfave/cli/v3"
 )
 
@@ -34,11 +34,14 @@ const (
 	BusSession
 )
 
+type DBusAPI interface {
+	Export(ctx context.Context, conn *dbus.Conn) error
+}
+
 type DBusRunConfig struct {
 	Bus  BusType
 	Mode apmcli.RootCheckMode
-	// API конфигурация интерфейсов на /org/altlinux/APM2.
-	API dbusv2.Setup
+	APIs []DBusAPI
 }
 
 // RunDBus поднимает DBus-демон: соединение, экспорт API, ожидание останова.
@@ -52,9 +55,12 @@ func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBu
 	if err := connectBus(appConfig, cfg.Bus); err != nil {
 		return fmt.Errorf("connect dbus: %w", err)
 	}
+	conn := appConfig.DBusManager.GetConnection()
 
-	if err := dbusv2.Export(ctx, appConfig.DBusManager.GetConnection(), cfg.API); err != nil {
-		return fmt.Errorf("export dbus api: %w", err)
+	for _, api := range cfg.APIs {
+		if err := api.Export(ctx, conn); err != nil {
+			return fmt.Errorf("export dbus api: %w", err)
+		}
 	}
 
 	<-ctx.Done()

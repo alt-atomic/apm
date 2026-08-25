@@ -26,6 +26,7 @@ import (
 
 var (
 	senderType    = reflect.TypeOf(dbus.Sender(""))
+	messageType   = reflect.TypeOf(dbus.Message{})
 	dbusErrorType = reflect.TypeOf((*dbus.Error)(nil))
 )
 
@@ -59,7 +60,7 @@ func VerifyIntrospection(iface introspect.Interface, impl any) error {
 func verifyMethod(m introspect.Method, mt reflect.Type) error {
 	var in, out []string
 	for i := 1; i < mt.NumIn(); i++ {
-		if t := mt.In(i); t != senderType {
+		if t := mt.In(i); t != senderType && t != messageType {
 			in = append(in, dbus.SignatureOfType(t).String())
 		}
 	}

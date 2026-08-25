@@ -25,6 +25,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
@@ -57,11 +58,11 @@ type ApplicationsV2 struct {
 }
 
 // Update обновляет каталог приложений фоновой задачей.
-func (w *ApplicationsV2) Update(sender dbus.Sender) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(sender, protocol.ActionApplicationsManage); err != nil {
+func (w *ApplicationsV2) Update(msg dbus.Message) (uint32, *dbus.Error) {
+	if err := w.az.Authorize(msg, protocol.ActionApplicationsManage); err != nil {
 		return 0, wire.Error(err)
 	}
-	job := w.jobs.Start("applications", "Update", string(sender), protocol.ActionApplicationsManage,
+	job := w.jobs.Start("applications", "Update", polkit.Sender(msg), protocol.ActionApplicationsManage,
 		func(ctx context.Context) (wire.Dict, error) {
 			resp, err := w.actions.Update(ctx)
 			if err != nil {

@@ -100,8 +100,7 @@ func (r *Reporter) SendTaskResult(ctx context.Context, taskName string, data int
 	}
 
 	if taskErr != nil {
-		var apmErr apmerr.APMError
-		if errors.As(taskErr, &apmErr) {
+		if apmErr, ok := errors.AsType[apmerr.APMError](taskErr); ok {
 			event.Error = &APIError{ErrorCode: apmErr.Type, Message: taskErr.Error()}
 		} else {
 			event.Error = &APIError{Message: taskErr.Error()}
