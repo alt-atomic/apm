@@ -3,6 +3,7 @@ package altfiles
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"altlinux.space/alt-atomic/apm/internal/common/build/etcfiles"
 )
@@ -13,7 +14,11 @@ const (
 	defaultEtcNsswitch = "/etc/nsswitch.conf"
 	defaultLibPasswd   = "/usr/lib/passwd"
 	defaultLibGroup    = "/usr/lib/group"
+
+	nssModuleName = "libnss_altfiles.so.2"
 )
+
+var defaultNSSDirs = []string{"/usr/lib64", "/usr/lib", "/lib64", "/lib"}
 
 // DefaultSyncConfigDirs директории конфигов sync-groups по умолчанию
 var DefaultSyncConfigDirs = []string{
@@ -28,6 +33,7 @@ type Config struct {
 	EtcNsswitch string
 	LibPasswd   string
 	LibGroup    string
+	NSSDirs     []string
 }
 
 // DefaultConfig возвращает конфигурацию с путями по умолчанию
@@ -38,6 +44,7 @@ func DefaultConfig() Config {
 		EtcNsswitch: defaultEtcNsswitch,
 		LibPasswd:   defaultLibPasswd,
 		LibGroup:    defaultLibGroup,
+		NSSDirs:     defaultNSSDirs,
 	}
 }
 
@@ -54,6 +61,16 @@ func New(cfg Config) *Service {
 // NewDefault создаёт Service с путями по умолчанию
 func NewDefault() *Service {
 	return New(DefaultConfig())
+}
+
+// ModuleInstalled сообщает, лежит ли на диске NSS-модуль altfiles.
+func (s *Service) ModuleInstalled() bool {
+	for _, dir := range s.cfg.NSSDirs {
+		if _, err := os.Stat(filepath.Join(dir, nssModuleName)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // ApplyResult содержит статистику выполнения
