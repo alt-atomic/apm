@@ -45,6 +45,22 @@ func TestParseOptionsEmpty(t *testing.T) {
 	}
 }
 
+func TestParseOptionsRejectsInvalidDestination(t *testing.T) {
+	tests := map[string]any{
+		"nil interface": nil,
+		"non-pointer":   false,
+		"nil pointer":   (*bool)(nil),
+		"unsupported":   new(chan int),
+	}
+	for name, dst := range tests {
+		t.Run(name, func(t *testing.T) {
+			if err := ParseOptions(Dict{"flag": V(true)}, map[string]any{"flag": dst}); err == nil {
+				t.Fatal("expected invalid destination error")
+			}
+		})
+	}
+}
+
 func assertValidation(t *testing.T, err error, substr string) {
 	t.Helper()
 	if apmErr, ok := errors.AsType[apmerr.APMError](err); !ok || apmErr.Type != apmerr.ErrorTypeValidation {

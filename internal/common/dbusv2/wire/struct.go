@@ -28,9 +28,9 @@ import (
 
 var textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 
-// StructDict сериализует DTO-структуру в Dict по json-тегам, без JSON-раунда:
+// StructDict сериализует DTO-структуру в Dict по json-тегам, без полного JSON-раунда:
 // строки — s, целые — x/t, float — d, вложенные структуры — a{sv}.
-// DTO ответа и есть проводной контракт — тот же, что у HTTP-транспорта.
+// Nil-поля опускаются: D-Bus не имеет nullable/maybe-типа.
 func StructDict(v any) (Dict, error) {
 	rv := reflect.ValueOf(v)
 	for rv.Kind() == reflect.Pointer {
@@ -54,7 +54,7 @@ func StructDicts[T any](items []T) ([]Dict, error) {
 	for i := range items {
 		d, err := StructDict(items[i])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("item %d: %w", i, err)
 		}
 		out = append(out, d)
 	}
@@ -63,6 +63,11 @@ func StructDicts[T any](items []T) ([]Dict, error) {
 
 // structDict собирает словарь из экспортируемых полей структуры.
 func structDict(rv reflect.Value) (Dict, error) {
+	if !rv.CanAddr() {
+		addr := reflect.New(rv.Type())
+		addr.Elem().Set(rv)
+		rv = addr.Elem()
+	}
 	d := Dict{}
 	if err := appendFields(d, rv); err != nil {
 		return nil, err
@@ -85,11 +90,17 @@ func appendFields(d Dict, rv reflect.Value) error {
 		}
 		value := rv.Field(i)
 
-		if field.Anonymous && field.Type.Kind() == reflect.Struct && !hasJSONName(field) {
-			if err := appendFields(d, value); err != nil {
-				return err
+		if field.Anonymous && !hasJSONName(field) {
+			embedded, present := indirectValue(value)
+			if present && embedded.Kind() == reflect.Struct {
+				if err := appendFields(d, embedded); err != nil {
+					return err
+				}
+				continue
 			}
-			continue
+			if !present {
+				continue
+			}
 		}
 		if omitEmpty && isEmptyValue(value) {
 			continue
@@ -106,16 +117,29 @@ func appendFields(d Dict, rv reflect.Value) error {
 	return nil
 }
 
-// isEmptyValue повторяет семантику omitempty из encoding/json:
-// пустые срезы/карты/строки опускаются независимо от nil.
+func indirectValue(rv reflect.Value) (reflect.Value, bool) {
+	for rv.IsValid() && (rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface) {
+		if rv.IsNil() {
+			return reflect.Value{}, false
+		}
+		rv = rv.Elem()
+	}
+	return rv, rv.IsValid()
+}
+
+// isEmptyValue повторяет семантику omitempty из encoding/json.
 func isEmptyValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0
-	case reflect.Pointer, reflect.Interface:
-		return v.IsNil()
-	default:
+	case reflect.Bool,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64,
+		reflect.Pointer, reflect.Interface:
 		return v.IsZero()
+	default:
+		return false
 	}
 }
 
@@ -145,11 +169,21 @@ func hasJSONName(field reflect.StructField) bool {
 	return name != "" && name != "-"
 }
 
-// fieldVariant конвертирует значение поля в Variant; present=false — поле опускается.
+// fieldVariant конвертирует значение поля в Variant; present=false — nil-поле опускается.
 func fieldVariant(rv reflect.Value) (dbus.Variant, bool, error) {
-	if m, ok := asJSONMarshaler(rv); ok {
-		return jsonVariant(m)
+	for {
+		if m, ok := asJSONMarshaler(rv); ok {
+			return jsonVariant(m)
+		}
+		if rv.Kind() != reflect.Pointer && rv.Kind() != reflect.Interface {
+			break
+		}
+		if rv.IsNil() {
+			return dbus.Variant{}, false, nil
+		}
+		rv = rv.Elem()
 	}
+
 	switch rv.Kind() {
 	case reflect.String:
 		return dbus.MakeVariant(rv.String()), true, nil
@@ -157,7 +191,7 @@ func fieldVariant(rv reflect.Value) (dbus.Variant, bool, error) {
 		return dbus.MakeVariant(rv.Bool()), true, nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return dbus.MakeVariant(rv.Int()), true, nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return dbus.MakeVariant(rv.Uint()), true, nil
 	case reflect.Float32, reflect.Float64:
 		return dbus.MakeVariant(rv.Float()), true, nil
@@ -167,11 +201,6 @@ func fieldVariant(rv reflect.Value) (dbus.Variant, bool, error) {
 			return dbus.Variant{}, false, err
 		}
 		return dbus.MakeVariant(d), true, nil
-	case reflect.Pointer, reflect.Interface:
-		if rv.IsNil() {
-			return dbus.Variant{}, false, nil
-		}
-		return fieldVariant(rv.Elem())
 	case reflect.Slice, reflect.Array:
 		return sliceVariant(rv)
 	case reflect.Map:
@@ -181,49 +210,78 @@ func fieldVariant(rv reflect.Value) (dbus.Variant, bool, error) {
 	}
 }
 
-// sliceVariant конвертирует срез в типизированный DBus-массив.
+// sliceVariant конвертирует срез в однородный DBus-массив.
 func sliceVariant(rv reflect.Value) (dbus.Variant, bool, error) {
-	switch rv.Type().Elem().Kind() {
+	elemType := rv.Type().Elem()
+	if elemType.Kind() == reflect.Uint8 {
+		items := make([]byte, rv.Len())
+		for i := range items {
+			items[i] = byte(rv.Index(i).Uint())
+		}
+		return dbus.MakeVariant(items), true, nil
+	}
+	switch elemType.Kind() {
 	case reflect.String:
 		return scalarSlice(rv, reflect.Value.String), true, nil
 	case reflect.Bool:
 		return scalarSlice(rv, reflect.Value.Bool), true, nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return scalarSlice(rv, reflect.Value.Int), true, nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return scalarSlice(rv, reflect.Value.Uint), true, nil
 	case reflect.Float32, reflect.Float64:
 		return scalarSlice(rv, reflect.Value.Float), true, nil
 	case reflect.Struct, reflect.Pointer:
-		items := make([]Dict, 0, rv.Len())
-		for i := 0; i < rv.Len(); i++ {
-			el := rv.Index(i)
-			for el.Kind() == reflect.Pointer && !el.IsNil() {
-				el = el.Elem()
-			}
-			if el.Kind() != reflect.Struct {
-				continue
-			}
-			d, err := structDict(el)
-			if err != nil {
-				return dbus.Variant{}, false, err
-			}
-			items = append(items, d)
-		}
-		return dbus.MakeVariant(items), true, nil
+		return structSliceVariant(rv)
 	default:
-		items := make([]dbus.Variant, 0, rv.Len())
-		for i := 0; i < rv.Len(); i++ {
-			v, present, err := fieldVariant(rv.Index(i))
-			if err != nil {
-				return dbus.Variant{}, false, err
-			}
-			if present {
-				items = append(items, v)
-			}
-		}
-		return dbus.MakeVariant(items), true, nil
+		return variantSlice(rv)
 	}
+}
+
+// structSliceVariant кодирует только структуры как aa{sv}; тип элемента не меняется от данных.
+func structSliceVariant(rv reflect.Value) (dbus.Variant, bool, error) {
+	elemType := rv.Type().Elem()
+	if typeHasJSONMarshaler(elemType) {
+		return dbus.Variant{}, false,
+			fmt.Errorf("array element type %s has a custom JSON representation", elemType)
+	}
+	baseType := elemType
+	for baseType.Kind() == reflect.Pointer {
+		baseType = baseType.Elem()
+	}
+	if baseType.Kind() != reflect.Struct {
+		return dbus.Variant{}, false, fmt.Errorf("array element type %s is not a struct", elemType)
+	}
+
+	items := make([]Dict, 0, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		item, present := indirectValue(rv.Index(i))
+		if !present {
+			return dbus.Variant{}, false, fmt.Errorf("array item %d is nil; D-Bus has no nullable array elements", i)
+		}
+		dict, err := structDict(item)
+		if err != nil {
+			return dbus.Variant{}, false, fmt.Errorf("array item %d: %w", i, err)
+		}
+		items = append(items, dict)
+	}
+	return dbus.MakeVariant(items), true, nil
+}
+
+// variantSlice кодирует составные или интерфейсные элементы как av.
+func variantSlice(rv reflect.Value) (dbus.Variant, bool, error) {
+	items := make([]dbus.Variant, 0, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		variant, present, err := fieldVariant(rv.Index(i))
+		if err != nil {
+			return dbus.Variant{}, false, fmt.Errorf("array item %d: %w", i, err)
+		}
+		if !present {
+			return dbus.Variant{}, false, fmt.Errorf("array item %d is nil; D-Bus has no nullable array elements", i)
+		}
+		items = append(items, variant)
+	}
+	return dbus.MakeVariant(items), true, nil
 }
 
 // scalarSlice собирает типизированный срез скаляров из reflect-значений.
@@ -292,7 +350,7 @@ func mapKeyFunc(t reflect.Type) (func(reflect.Value) (string, error), error) {
 		return func(v reflect.Value) (string, error) { return v.String(), nil }, nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(v reflect.Value) (string, error) { return strconv.FormatInt(v.Int(), 10), nil }, nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return func(v reflect.Value) (string, error) { return strconv.FormatUint(v.Uint(), 10), nil }, nil
 	default:
 		return nil, fmt.Errorf("unsupported map key %s", t)
