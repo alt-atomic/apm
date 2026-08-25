@@ -123,10 +123,10 @@ var imageIntrospectionV2 = introspect.Interface{
 			protocol.Out("json", "s"),
 		}},
 		{Name: "GetConfig", Args: []introspect.Arg{
-			protocol.Out("yaml", "s"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "SaveConfig", Args: []introspect.Arg{
-			protocol.In("yaml", "s"),
+			protocol.In("config_json", "s"),
 		}},
 		{Name: "SyncGroups", Args: []introspect.Arg{
 			protocol.Out("json", "s"),
