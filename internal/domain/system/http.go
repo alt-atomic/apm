@@ -17,6 +17,7 @@
 package system
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -519,12 +520,17 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 
 // ImageSaveConfig сохраняет конфигурацию образа.
 func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
-	var config imagesvc.Config
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		if errors.Is(err, io.EOF) {
-			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
-			return
-		}
+	document, err := io.ReadAll(r.Body)
+	if err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("read request body: %w", err)))
+		return
+	}
+	if len(bytes.TrimSpace(document)) == 0 {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
+		return
+	}
+	config, err := imagesvc.ParseJsonConfigData(document)
+	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("invalid JSON: %w", err)))
 		return
 	}
