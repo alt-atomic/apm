@@ -26,9 +26,9 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
+	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
-	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -135,25 +135,18 @@ func (w *ImageV2) History(image string, requestJSON string) (string, *dbus.Error
 	return wire.JSONReply(resp, err)
 }
 
-// GetConfig возвращает конфигурацию образа как YAML-документ.
+// GetConfig возвращает конфигурацию образа.
 func (w *ImageV2) GetConfig() (string, *dbus.Error) {
 	resp, err := w.actions.ImageGetConfig(w.ctx)
-	if err != nil {
-		return "", wire.Error(err)
-	}
-	data, err := resp.Config.MarshalYaml()
-	if err != nil {
-		return "", wire.Error(apmerr.New(apmerr.ErrorTypeImage, err))
-	}
-	return string(data), nil
+	return wire.JSONReply(resp, err)
 }
 
-// SaveConfig сохраняет конфигурацию образа из YAML-документа.
-func (w *ImageV2) SaveConfig(msg dbus.Message, yaml string) *dbus.Error {
+// SaveConfig сохраняет конфигурацию образа из JSON-документа.
+func (w *ImageV2) SaveConfig(msg dbus.Message, configJSON string) *dbus.Error {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return dbusErr
 	}
-	config, err := pkgbuild.ParseYamlConfigData([]byte(yaml))
+	config, err := imagesvc.ParseJsonConfigData([]byte(configJSON))
 	if err != nil {
 		return wire.Error(apmerr.New(apmerr.ErrorTypeValidation, err))
 	}
