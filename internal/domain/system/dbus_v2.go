@@ -18,9 +18,7 @@ package system
 
 import (
 	"context"
-	"errors"
 
-	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
@@ -70,229 +68,154 @@ type PackagesV2 struct {
 	az      authz.Authorizer
 }
 
-// filterRuleV2 одно условие фильтра в aa(sss).
-type filterRuleV2 = wire.FilterRule
+// guard проверяет единое право на управление пакетами.
+func (w *PackagesV2) guard(msg dbus.Message) *dbus.Error {
+	return wire.Error(w.az.Authorize(msg, protocol.ActionPackagesManage))
+}
 
 // startTransaction регистрирует неотменяемую rpm/apt-транзакцию.
-func (w *PackagesV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(msg, protocol.ActionPackagesManage); err != nil {
-		return 0, wire.Error(err)
+func (w *PackagesV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) (uint32, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return 0, dbusErr
 	}
 	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), fn), nil
 }
 
 // Install ставит пакеты фоновой задачей.
-func (w *PackagesV2) Install(msg dbus.Message, packages []string, options wire.Dict) (uint32, *dbus.Error) {
-	var downloadOnly, noUpdate bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"download_only": &downloadOnly,
-		"no_update":     &noUpdate,
-	}); err != nil {
+func (w *PackagesV2) Install(msg dbus.Message, packages []string, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		DownloadOnly bool `json:"downloadOnly"`
+		NoUpdate     bool `json:"noUpdate"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(msg, "Install", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Install(ctx, packages, true, downloadOnly, noUpdate)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startTransaction(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+		return w.actions.Install(ctx, packages, true, options.DownloadOnly, options.NoUpdate)
+	}))
 }
 
 // Remove удаляет пакеты фоновой задачей.
-func (w *PackagesV2) Remove(msg dbus.Message, packages []string, options wire.Dict) (uint32, *dbus.Error) {
-	var purge, depends bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"purge":   &purge,
-		"depends": &depends,
-	}); err != nil {
+func (w *PackagesV2) Remove(msg dbus.Message, packages []string, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		Purge   bool `json:"purge"`
+		Depends bool `json:"depends"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(msg, "Remove", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startTransaction(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+		return w.actions.Remove(ctx, packages, options.Purge, options.Depends, true)
+	}))
 }
 
 // Reinstall переустанавливает пакеты фоновой задачей.
 func (w *PackagesV2) Reinstall(msg dbus.Message, packages []string) (uint32, *dbus.Error) {
-	return w.startTransaction(msg, "Reinstall", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Reinstall(ctx, packages, true)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startTransaction(msg, "Reinstall", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+		return w.actions.Reinstall(ctx, packages, true)
+	}))
 }
 
 // Upgrade обновляет систему фоновой задачей.
-func (w *PackagesV2) Upgrade(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
-	var downloadOnly bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"download_only": &downloadOnly,
-	}); err != nil {
+func (w *PackagesV2) Upgrade(msg dbus.Message, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		DownloadOnly bool `json:"downloadOnly"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(msg, "Upgrade", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Upgrade(ctx, downloadOnly)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startTransaction(msg, "Upgrade", wire.JSONTask(func(ctx context.Context) (*UpgradeResponse, error) {
+		return w.actions.Upgrade(ctx, options.DownloadOnly)
+	}))
 }
 
 // Update обновляет список пакетов фоновой задачей.
-func (w *PackagesV2) Update(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
-	var onlyDB bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"only_db": &onlyDB,
-	}); err != nil {
+func (w *PackagesV2) Update(msg dbus.Message, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		OnlyDB bool `json:"onlyDB"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(msg, "Update", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.Update(ctx, false, onlyDB)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startTransaction(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
+		return w.actions.Update(ctx, false, options.OnlyDB)
+	}))
 }
 
 // CheckInstall симулирует установку.
-func (w *PackagesV2) CheckInstall(msg dbus.Message, packages []string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionPackagesManage, func() (wire.Dict, error) {
-		resp, err := w.actions.CheckInstall(w.ctx, packages)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	}))
+func (w *PackagesV2) CheckInstall(msg dbus.Message, packages []string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
+	resp, err := w.actions.CheckInstall(w.ctx, packages)
+	return wire.JSONReply(resp, err)
 }
 
 // CheckRemove симулирует удаление.
-func (w *PackagesV2) CheckRemove(msg dbus.Message, packages []string, options wire.Dict) (wire.Dict, *dbus.Error) {
-	var purge, depends bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"purge":   &purge,
-		"depends": &depends,
-	}); err != nil {
-		return nil, wire.Error(err)
+func (w *PackagesV2) CheckRemove(msg dbus.Message, packages []string, optionsJSON string) (string, *dbus.Error) {
+	var options struct {
+		Purge   bool `json:"purge"`
+		Depends bool `json:"depends"`
 	}
-	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionPackagesManage, func() (wire.Dict, error) {
-		resp, err := w.actions.CheckRemove(w.ctx, packages, purge, depends)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	}))
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
+		return "", wire.Error(err)
+	}
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
+	resp, err := w.actions.CheckRemove(w.ctx, packages, options.Purge, options.Depends)
+	return wire.JSONReply(resp, err)
 }
 
 // CheckUpgrade симулирует обновление системы.
-func (w *PackagesV2) CheckUpgrade(msg dbus.Message) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionPackagesManage, func() (wire.Dict, error) {
-		resp, err := w.actions.CheckUpgrade(w.ctx)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	}))
+func (w *PackagesV2) CheckUpgrade(msg dbus.Message) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
+	resp, err := w.actions.CheckUpgrade(w.ctx)
+	return wire.JSONReply(resp, err)
 }
 
-// List возвращает страницу пакетов по запросу и фильтрам.
-// Строки короткие; full=true добавляет файлы, зависимости и описания.
-func (w *PackagesV2) List(query wire.Dict, filters [][]filterRuleV2) (uint32, []wire.Dict, *dbus.Error) {
-	var sort, order string
-	var limit, offset uint32
-	var forceUpdate, full bool
-	if err := wire.ParseOptions(query, map[string]any{
-		"sort":         &sort,
-		"order":        &order,
-		"limit":        &limit,
-		"offset":       &offset,
-		"force_update": &forceUpdate,
-		"full":         &full,
-	}); err != nil {
-		return 0, nil, wire.Error(err)
+// List возвращает JSON существующего ListResponse.
+func (w *PackagesV2) List(requestJSON string) (string, *dbus.Error) {
+	var request wire.ListRequest
+	if err := wire.DecodeJSON(requestJSON, &request); err != nil {
+		return "", wire.Error(err)
 	}
 
-	pageSize, err := wire.PageLimit(limit)
+	page, err := request.Validate(_package.SystemFilterConfig)
 	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-
-	groups, err := wire.FilterGroups(filters, _package.SystemFilterConfig)
-	if err != nil {
-		return 0, nil, wire.Error(err)
+		return "", wire.Error(err)
 	}
 
 	resp, err := w.actions.List(w.ctx, ListParams{
-		Sort:        sort,
-		Order:       order,
-		Limit:       pageSize,
-		Offset:      int(offset),
-		Filters:     groups,
-		ForceUpdate: forceUpdate,
-		Full:        full,
+		Sort:        request.Sort,
+		Order:       request.Order,
+		Limit:       page.Limit,
+		Offset:      page.Offset,
+		Filters:     page.Filters,
+		ForceUpdate: request.ForceUpdate,
+		Full:        true,
 	})
-	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-	packages, err := packageRowsV2(w.actions, resp.Packages, full)
-	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-	return uint32(max(resp.TotalCount, 0)), packages, nil
-}
-
-// packageRowsV2 сериализует пакеты: короткое или полное представление.
-func packageRowsV2(actions *Actions, packages []_package.Package, full bool) ([]wire.Dict, error) {
-	if full {
-		return wire.StructDicts(packages)
-	}
-	short, ok := actions.FormatPackageOutput(packages, false).([]ShortPackageResponse)
-	if !ok {
-		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New("unexpected short package format"))
-	}
-	return wire.StructDicts(short)
+	return wire.JSONReply(resp, err)
 }
 
 // Info возвращает информацию о пакете.
-func (w *PackagesV2) Info(name string) (wire.Dict, *dbus.Error) {
+func (w *PackagesV2) Info(name string) (string, *dbus.Error) {
 	resp, err := w.actions.Info(w.ctx, name)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDict(resp.PackageInfo))
+	return wire.JSONReply(resp, err)
 }
 
 // MultiInfo возвращает информацию о нескольких пакетах.
-func (w *PackagesV2) MultiInfo(names []string) ([]wire.Dict, []string, *dbus.Error) {
+func (w *PackagesV2) MultiInfo(names []string) (string, *dbus.Error) {
 	resp, err := w.actions.MultiInfo(w.ctx, names)
-	if err != nil {
-		return nil, nil, wire.Error(err)
-	}
-	notFound := resp.NotFound
-	if notFound == nil {
-		notFound = []string{}
-	}
-	packages, err := wire.StructDicts(resp.Packages)
-	if err != nil {
-		return nil, nil, wire.Error(err)
-	}
-	return packages, notFound, nil
+	return wire.JSONReply(resp, err)
 }
 
 // Search ищет пакеты по подстроке имени; строки короткие — детали через Info.
-func (w *PackagesV2) Search(text string, installed bool) ([]wire.Dict, *dbus.Error) {
+func (w *PackagesV2) Search(text string, installed bool) (string, *dbus.Error) {
 	resp, err := w.actions.Search(w.ctx, text, installed)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(packageRowsV2(w.actions, resp.Packages, false))
+	return wire.JSONReply(resp, err)
 }
 
 // Sections возвращает список секций пакетов.
@@ -305,27 +228,26 @@ func (w *PackagesV2) Sections() ([]string, *dbus.Error) {
 }
 
 // FilterFields возвращает описание полей фильтрации.
-func (w *PackagesV2) FilterFields() ([]wire.Dict, *dbus.Error) {
+func (w *PackagesV2) FilterFields() (string, *dbus.Error) {
 	resp, err := w.actions.GetFilterFields(w.ctx)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDicts(resp))
+	return wire.JSONReply(resp, err)
 }
 
 // AptConfig возвращает переопределения конфигурации APT.
-func (w *PackagesV2) AptConfig() (map[string]string, *dbus.Error) {
+func (w *PackagesV2) AptConfig() (string, *dbus.Error) {
 	resp, err := w.actions.GetAptConfigOverrides()
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return resp.Options, nil
+	return wire.JSONReply(resp, err)
 }
 
 // SetAptConfig устанавливает переопределения конфигурации APT.
-func (w *PackagesV2) SetAptConfig(msg dbus.Message, options map[string]string) *dbus.Error {
-	return wire.Error(authz.Guard(w.az, msg, protocol.ActionPackagesManage, func() error {
-		_, err := w.actions.SetAptConfigOverrides(options)
-		return err
-	}))
+func (w *PackagesV2) SetAptConfig(msg dbus.Message, optionsJSON string) *dbus.Error {
+	var options map[string]string
+	if err := wire.DecodeJSON(optionsJSON, &options); err != nil {
+		return wire.Error(err)
+	}
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return dbusErr
+	}
+	_, err := w.actions.SetAptConfigOverrides(options)
+	return wire.Error(err)
 }

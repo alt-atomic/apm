@@ -32,13 +32,14 @@ type JobsAPI struct {
 }
 
 // List возвращает снимки всех задач.
-func (j *JobsAPI) List() ([]wire.Dict, *dbus.Error) {
-	return j.reg.List(), nil
+func (j *JobsAPI) List() (string, *dbus.Error) {
+	return wire.JSONReply(j.reg.List(), nil)
 }
 
 // Get возвращает снимок задачи.
-func (j *JobsAPI) Get(job uint32) (wire.Dict, *dbus.Error) {
-	return wire.Reply(j.reg.Get(job))
+func (j *JobsAPI) Get(job uint32) (string, *dbus.Error) {
+	state, err := j.reg.Get(job)
+	return wire.JSONReply(state, err)
 }
 
 // Cancel отменяет задачу: владелец — свободно, остальные — через polkit.

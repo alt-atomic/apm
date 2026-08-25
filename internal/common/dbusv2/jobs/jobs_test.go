@@ -2,13 +2,13 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
-	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
 )
 
 // finishedSignal аргументы пойманного JobFinished.
@@ -16,7 +16,7 @@ type finishedSignal struct {
 	id      uint32
 	status  string
 	message string
-	result  wire.Dict
+	result  string
 }
 
 // signalCollector потокобезопасно копит эмитированные сигналы.
@@ -39,7 +39,7 @@ func (c *signalCollector) emit(member string, values ...any) {
 			id:      values[0].(uint32),
 			status:  values[1].(string),
 			message: values[2].(string),
-			result:  values[3].(wire.Dict),
+			result:  values[3].(string),
 		}
 	}
 }
@@ -67,18 +67,18 @@ func TestJobLifecycleOK(t *testing.T) {
 	col := newCollector()
 	reg := NewRegistry(context.Background(), col.emit)
 
-	id := reg.Start("system", "Install", ":1.7", "action", func(ctx context.Context) (wire.Dict, error) {
+	id := reg.Start("system", "Install", ":1.7", "action", func(ctx context.Context) (string, error) {
 		if _, ok := FromContext(ctx); !ok {
 			t.Error("job id missing from context")
 		}
-		return wire.Dict{"message": wire.V("done")}, nil
+		return `{"message":"done"}`, nil
 	})
 
 	sig := col.waitFinished(t)
 	if sig.id != id || sig.status != StateOK {
 		t.Errorf("JobFinished = %+v", sig)
 	}
-	if sig.result["message"].Value().(string) != "done" {
+	if sig.result != `{"message":"done"}` {
 		t.Errorf("result = %v", sig.result)
 	}
 
@@ -95,16 +95,22 @@ func TestJobLifecycleError(t *testing.T) {
 	col := newCollector()
 	reg := NewRegistry(context.Background(), col.emit)
 
-	reg.Start("system", "Install", ":1.7", "action", func(context.Context) (wire.Dict, error) {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errors.New("boom"))
+	reg.Start("system", "Install", ":1.7", "action", func(context.Context) (string, error) {
+		return "", apmerr.New(apmerr.ErrorTypeApt, errors.New("boom"))
 	})
 
 	sig := col.waitFinished(t)
 	if sig.status != StateError || sig.message != "boom" {
 		t.Errorf("JobFinished = %+v", sig)
 	}
-	if et := sig.result["error_type"].Value().(string); et != apmerr.ErrorTypeApt {
-		t.Errorf("error_type = %s, want %s", et, apmerr.ErrorTypeApt)
+	var result struct {
+		ErrorType string `json:"errorType"`
+	}
+	if err := json.Unmarshal([]byte(sig.result), &result); err != nil {
+		t.Fatalf("decode result %q: %v", sig.result, err)
+	}
+	if result.ErrorType != apmerr.ErrorTypeApt {
+		t.Errorf("errorType = %q, want %q", result.ErrorType, apmerr.ErrorTypeApt)
 	}
 }
 
@@ -113,10 +119,10 @@ func TestRunningJobVisible(t *testing.T) {
 	reg := NewRegistry(context.Background(), col.emit)
 
 	started := make(chan struct{})
-	id := reg.Start("packages", "Install", ":1.7", "action", func(ctx context.Context) (wire.Dict, error) {
+	id := reg.Start("packages", "Install", ":1.7", "action", func(ctx context.Context) (string, error) {
 		close(started)
 		<-ctx.Done()
-		return nil, ctx.Err()
+		return "", ctx.Err()
 	})
 	<-started
 
@@ -124,7 +130,7 @@ func TestRunningJobVisible(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d["state"].Value().(string) != StateRunning || d["domain"].Value().(string) != "packages" {
+	if d.State != StateRunning || d.Domain != "packages" {
 		t.Errorf("snapshot = %v", d)
 	}
 	if got := len(reg.List()); got != 1 {
@@ -144,10 +150,10 @@ func TestJobCancelForeignRequiresAuth(t *testing.T) {
 	reg := NewRegistry(context.Background(), col.emit)
 
 	started := make(chan struct{})
-	id := reg.Start("system", "Install", ":1.7", "action", func(ctx context.Context) (wire.Dict, error) {
+	id := reg.Start("system", "Install", ":1.7", "action", func(ctx context.Context) (string, error) {
 		close(started)
 		<-ctx.Done()
-		return nil, ctx.Err()
+		return "", ctx.Err()
 	})
 	<-started
 
@@ -172,8 +178,8 @@ func TestCancelUnknownJobIsNotFound(t *testing.T) {
 	col := newCollector()
 	reg := NewRegistry(context.Background(), col.emit)
 
-	reg.Start("system", "Install", ":1.7", "action", func(context.Context) (wire.Dict, error) {
-		return wire.Dict{}, nil
+	reg.Start("system", "Install", ":1.7", "action", func(context.Context) (string, error) {
+		return "{}", nil
 	})
 	col.waitFinished(t)
 
@@ -188,10 +194,10 @@ func TestNoCancelJobRejectsCancel(t *testing.T) {
 
 	started := make(chan struct{})
 	release := make(chan struct{})
-	id := reg.StartNoCancel("packages", "Install", ":1.7", func(context.Context) (wire.Dict, error) {
+	id := reg.StartNoCancel("packages", "Install", ":1.7", func(context.Context) (string, error) {
 		close(started)
 		<-release
-		return wire.Dict{}, nil
+		return "{}", nil
 	})
 	<-started
 
@@ -202,7 +208,7 @@ func TestNoCancelJobRejectsCancel(t *testing.T) {
 	}
 
 	d, _ := reg.Get(id)
-	if d["cancellable"].Value().(bool) {
+	if d.Cancellable {
 		t.Error("transaction must not be cancellable")
 	}
 

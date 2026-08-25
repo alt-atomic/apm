@@ -14,11 +14,11 @@ func TestErrorMapping(t *testing.T) {
 		dbusErr string
 	}{
 		{"nil", nil, ""},
-		{"apt", apmerr.New(apmerr.ErrorTypeApt, errors.New("x")), "org.altlinux.APM2.Error.Apt"},
-		{"no operation", apmerr.New(apmerr.ErrorTypeNoOperation, errors.New("x")), "org.altlinux.APM2.Error.NoOperation"},
+		{"apt", apmerr.New(apmerr.ErrorTypeApt, errors.New("x")), "org.altlinux.APM.Error.Apt"},
+		{"no operation", apmerr.New(apmerr.ErrorTypeNoOperation, errors.New("x")), "org.altlinux.APM.Error.NoOperation"},
 		{"permission is standard AccessDenied", apmerr.New(apmerr.ErrorTypePermission, errors.New("x")), "org.freedesktop.DBus.Error.AccessDenied"},
-		{"plain error", errors.New("x"), "org.altlinux.APM2.Error.Failed"},
-		{"wrapped apm error", errors.Join(errors.New("ctx"), apmerr.New(apmerr.ErrorTypeNotFound, errors.New("x"))), "org.altlinux.APM2.Error.NotFound"},
+		{"plain error", errors.New("x"), "org.freedesktop.DBus.Error.Failed"},
+		{"wrapped apm error", errors.Join(errors.New("ctx"), apmerr.New(apmerr.ErrorTypeNotFound, errors.New("x"))), "org.altlinux.APM.Error.NotFound"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

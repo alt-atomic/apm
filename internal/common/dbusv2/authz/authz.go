@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// Package authz — авторизация вызовов API v2 через polkit.
 package authz
 
 import (
@@ -47,21 +46,4 @@ func Polkit(conn *dbus.Conn) Authorizer {
 		}
 		return nil
 	})
-}
-
-// Guard выполняет fn только после успешной авторизации.
-func Guard(a Authorizer, msg dbus.Message, action string, fn func() error) error {
-	if err := a.Authorize(msg, action); err != nil {
-		return err
-	}
-	return fn()
-}
-
-// Authorized выполняет fn с результатом только после успешной авторизации.
-func Authorized[T any](a Authorizer, msg dbus.Message, action string, fn func() (T, error)) (T, error) {
-	if err := a.Authorize(msg, action); err != nil {
-		var zero T
-		return zero, err
-	}
-	return fn()
 }

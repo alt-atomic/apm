@@ -62,6 +62,9 @@ func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBu
 			return fmt.Errorf("export dbus api: %w", err)
 		}
 	}
+	if err := appConfig.DBusManager.RequestName(); err != nil {
+		return fmt.Errorf("request dbus service name: %w", err)
+	}
 
 	<-ctx.Done()
 	return nil
