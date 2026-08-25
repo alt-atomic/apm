@@ -17,12 +17,16 @@
 package wire
 
 import (
+	"encoding"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/godbus/dbus/v5"
 )
+
+var textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 
 // StructDict сериализует DTO-структуру в Dict по json-тегам, без JSON-раунда:
 // строки — s, целые — x/t, float — d, вложенные структуры — a{sv}.
@@ -231,17 +235,22 @@ func scalarSlice[T any](rv reflect.Value, get func(reflect.Value) T) dbus.Varian
 	return dbus.MakeVariant(items)
 }
 
-// mapVariant конвертирует map со строковым ключом в a{ss} или a{sv}.
+// mapVariant конвертирует map в a{ss} или a{sv}; ключи приводятся к строке.
 func mapVariant(rv reflect.Value) (dbus.Variant, bool, error) {
-	if rv.Type().Key().Kind() != reflect.String {
-		return dbus.Variant{}, false, fmt.Errorf("unsupported map key %s", rv.Type().Key())
+	key, err := mapKeyFunc(rv.Type().Key())
+	if err != nil {
+		return dbus.Variant{}, false, err
 	}
 
 	if rv.Type().Elem().Kind() == reflect.String {
 		items := make(map[string]string, rv.Len())
 		iter := rv.MapRange()
 		for iter.Next() {
-			items[iter.Key().String()] = iter.Value().String()
+			name, err := key(iter.Key())
+			if err != nil {
+				return dbus.Variant{}, false, err
+			}
+			items[name] = iter.Value().String()
 		}
 		return dbus.MakeVariant(items), true, nil
 	}
@@ -249,13 +258,43 @@ func mapVariant(rv reflect.Value) (dbus.Variant, bool, error) {
 	items := make(Dict, rv.Len())
 	iter := rv.MapRange()
 	for iter.Next() {
+		name, err := key(iter.Key())
+		if err != nil {
+			return dbus.Variant{}, false, err
+		}
 		v, present, err := fieldVariant(iter.Value())
 		if err != nil {
-			return dbus.Variant{}, false, fmt.Errorf("map key %q: %w", iter.Key().String(), err)
+			return dbus.Variant{}, false, fmt.Errorf("map key %q: %w", name, err)
 		}
 		if present {
-			items[iter.Key().String()] = v
+			items[name] = v
 		}
 	}
 	return dbus.MakeVariant(items), true, nil
+}
+
+// mapKeyFunc возвращает конвертер ключа карты в строку.
+func mapKeyFunc(t reflect.Type) (func(reflect.Value) (string, error), error) {
+	if t.Implements(textMarshalerType) || reflect.PointerTo(t).Implements(textMarshalerType) {
+		return func(v reflect.Value) (string, error) {
+			if !v.Type().Implements(textMarshalerType) {
+				addr := reflect.New(v.Type())
+				addr.Elem().Set(v)
+				v = addr
+			}
+			text, err := v.Interface().(encoding.TextMarshaler).MarshalText()
+			return string(text), err
+		}, nil
+	}
+
+	switch t.Kind() {
+	case reflect.String:
+		return func(v reflect.Value) (string, error) { return v.String(), nil }, nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return func(v reflect.Value) (string, error) { return strconv.FormatInt(v.Int(), 10), nil }, nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return func(v reflect.Value) (string, error) { return strconv.FormatUint(v.Uint(), 10), nil }, nil
+	default:
+		return nil, fmt.Errorf("unsupported map key %s", t)
+	}
 }

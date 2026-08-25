@@ -145,6 +145,37 @@ func TestStructDicts(t *testing.T) {
 	}
 }
 
+// enumKey повторяет форму ключа-перечисления из фильтров (map[PackageType]string).
+type enumKey uint8
+
+func TestStructDictNonStringMapKeys(t *testing.T) {
+	type dto struct {
+		Enum  map[enumKey]string `json:"enum"`
+		Ints  map[int]int        `json:"ints"`
+		Extra map[string]any     `json:"extra"`
+	}
+	d, err := StructDict(dto{
+		Enum:  map[enumKey]string{0: "System package"},
+		Ints:  map[int]int{-7: 1},
+		Extra: map[string]any{"info": map[enumKey]string{1: "Stplr package"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := d["enum"].Value().(map[string]string); got["0"] != "System package" {
+		t.Errorf("enum = %v, want key \"0\"", got)
+	}
+	if got := d["ints"].Value().(Dict); got["-7"].Value().(int64) != 1 {
+		t.Errorf("ints = %v, want key \"-7\"", got)
+	}
+	// вложенная карта внутри any: тот же кейс, что ломал FilterFields
+	nested := d["extra"].Value().(Dict)["info"].Value().(map[string]string)
+	if nested["1"] != "Stplr package" {
+		t.Errorf("extra.info = %v", nested)
+	}
+}
+
 func TestStructDictRejectsNonStruct(t *testing.T) {
 	if _, err := StructDict("plain"); err == nil {
 		t.Error("expected error for non-struct")
