@@ -27,6 +27,20 @@ func TestNew_AptNotFound_ConvertsToNotFound(t *testing.T) {
 	}
 }
 
+func TestNew_AptNoOperation_ConvertsToNoOperation(t *testing.T) {
+	err := New(ErrorTypeApt, &noOperationError{msg: "packages are already installed: tmux"})
+
+	if err.Type != ErrorTypeNoOperation {
+		t.Errorf("APT no-op should be reclassified to NO_OPERATION, got %s", err.Type)
+	}
+	if got := err.HTTPStatus(); got != http.StatusConflict {
+		t.Errorf("HTTPStatus() = %d, want %d", got, http.StatusConflict)
+	}
+	if got := err.DBusErrorName(); got != "org.altlinux.APM.Error.NoOperation" {
+		t.Errorf("DBusErrorName() = %s", got)
+	}
+}
+
 func TestNew_AptRegularError_StaysApt(t *testing.T) {
 	err := New(ErrorTypeApt, fmt.Errorf("broken dependency"))
 
@@ -112,3 +126,10 @@ type notFoundError struct {
 
 func (e *notFoundError) Error() string    { return e.msg }
 func (e *notFoundError) IsNotFound() bool { return true }
+
+type noOperationError struct {
+	msg string
+}
+
+func (e *noOperationError) Error() string       { return e.msg }
+func (e *noOperationError) IsNoOperation() bool { return true }

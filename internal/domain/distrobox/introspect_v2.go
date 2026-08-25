@@ -27,12 +27,12 @@ var distroboxIntrospectionV2 = introspect.Interface{
 	Name: protocol.DistroboxIface,
 	Methods: []introspect.Method{
 		{Name: "ContainerList", Args: []introspect.Arg{
-			protocol.Out("containers", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "ContainerAdd", Args: []introspect.Arg{
 			protocol.In("image", "s"),
 			protocol.In("name", "s"),
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "ContainerRemove", Args: []introspect.Arg{
@@ -46,34 +46,32 @@ var distroboxIntrospectionV2 = introspect.Interface{
 		{Name: "Install", Args: []introspect.Arg{
 			protocol.In("container", "s"),
 			protocol.In("name", "s"),
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Remove", Args: []introspect.Arg{
 			protocol.In("container", "s"),
 			protocol.In("name", "s"),
-			protocol.In("options", "a{sv}"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "u"),
 		}},
 		{Name: "Info", Args: []introspect.Arg{
 			protocol.In("container", "s"),
 			protocol.In("name", "s"),
-			protocol.Out("package", "a{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "Search", Args: []introspect.Arg{
 			protocol.In("container", "s"),
 			protocol.In("text", "s"),
-			protocol.Out("packages", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "List", Args: []introspect.Arg{
 			protocol.In("container", "s"),
-			protocol.In("query", "a{sv}"),
-			protocol.In("filters", "aa(sss)"),
-			protocol.Out("total", "u"),
-			protocol.Out("packages", "aa{sv}"),
+			protocol.In("request_json", "s"),
+			protocol.Out("json", "s"),
 		}},
 		{Name: "FilterFields", Args: []introspect.Arg{
-			protocol.Out("fields", "aa{sv}"),
+			protocol.Out("json", "s"),
 		}},
 	},
 }

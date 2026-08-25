@@ -557,6 +557,17 @@ func (e *MatchedError) IsNotFound() bool {
 	}
 }
 
+// IsNoOperation сообщает, что запрошенное состояние уже достигнуто
+// и операция не является сбоем.
+func (e *MatchedError) IsNoOperation() bool {
+	switch e.Entry.Code {
+	case ErrPackagesAlreadyInstalled:
+		return true
+	default:
+		return false
+	}
+}
+
 func (e *MatchedError) NeedUpdate() bool {
 	switch e.Entry.Code {
 	case ErrFailedToFetchArchives:

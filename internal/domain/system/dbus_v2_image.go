@@ -57,94 +57,82 @@ type ImageV2 struct {
 	az      authz.Authorizer
 }
 
+// guard проверяет единое право на управление образом.
+func (w *ImageV2) guard(msg dbus.Message) *dbus.Error {
+	return wire.Error(w.az.Authorize(msg, protocol.ActionImageManage))
+}
+
 // startJob авторизует отправителя и регистрирует фоновую задачу образа.
-func (w *ImageV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(msg, protocol.ActionImageManage); err != nil {
-		return 0, wire.Error(err)
+func (w *ImageV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) (uint32, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return 0, dbusErr
 	}
 	return w.jobs.Start("image", kind, polkit.Sender(msg), protocol.ActionImageManage, fn), nil
 }
 
 // Status возвращает статус загруженного образа.
-func (w *ImageV2) Status() (wire.Dict, *dbus.Error) {
+func (w *ImageV2) Status() (string, *dbus.Error) {
 	resp, err := w.actions.ImageStatus(w.ctx)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDict(resp))
+	return wire.JSONReply(resp, err)
 }
 
 // Update обновляет базовый образ фоновой задачей.
-func (w *ImageV2) Update(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
-	var noCache bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"no_cache": &noCache,
-	}); err != nil {
+func (w *ImageV2) Update(msg dbus.Message, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		NoCache bool `json:"noCache"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(msg, "Update", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.ImageUpdate(ctx, !noCache)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startJob(msg, "Update", wire.JSONTask(func(ctx context.Context) (*ImageUpdateResponse, error) {
+		return w.actions.ImageUpdate(ctx, !options.NoCache)
+	}))
 }
 
 // Apply применяет изменения к образу хоста фоновой задачей.
-func (w *ImageV2) Apply(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
-	var pull, noCache bool
-	var configPath, workdir string
-	if err := wire.ParseOptions(options, map[string]any{
-		"pull":        &pull,
-		"no_cache":    &noCache,
-		"config_path": &configPath,
-		"workdir":     &workdir,
-	}); err != nil {
+func (w *ImageV2) Apply(msg dbus.Message, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		Pull       bool   `json:"pull"`
+		NoCache    bool   `json:"noCache"`
+		ConfigPath string `json:"configPath"`
+		Workdir    string `json:"workdir"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(msg, "Apply", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.ImageApply(ctx, pull, !noCache, true, configPath, workdir)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startJob(msg, "Apply", wire.JSONTask(func(ctx context.Context) (*ImageApplyResponse, error) {
+		return w.actions.ImageApply(ctx, options.Pull, !options.NoCache, true, options.ConfigPath, options.Workdir)
+	}))
 }
 
 // Switch переключает систему на другой базовый образ фоновой задачей.
-func (w *ImageV2) Switch(msg dbus.Message, image string, options wire.Dict) (uint32, *dbus.Error) {
-	var pull, noCache bool
-	if err := wire.ParseOptions(options, map[string]any{
-		"pull":     &pull,
-		"no_cache": &noCache,
-	}); err != nil {
+func (w *ImageV2) Switch(msg dbus.Message, image string, optionsJSON string) (uint32, *dbus.Error) {
+	var options struct {
+		Pull    bool `json:"pull"`
+		NoCache bool `json:"noCache"`
+	}
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(msg, "Switch", func(ctx context.Context) (wire.Dict, error) {
-		resp, err := w.actions.ImageSwitch(ctx, image, pull, !noCache)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	})
+	return w.startJob(msg, "Switch", wire.JSONTask(func(ctx context.Context) (*ImageSwitchResponse, error) {
+		return w.actions.ImageSwitch(ctx, image, options.Pull, !options.NoCache)
+	}))
 }
 
 // History возвращает страницу истории изменений образа.
-func (w *ImageV2) History(image string, limit uint32, offset uint32) (uint32, []wire.Dict, *dbus.Error) {
-	pageSize, err := wire.PageLimit(limit)
-	if err != nil {
-		return 0, nil, wire.Error(err)
+func (w *ImageV2) History(image string, requestJSON string) (string, *dbus.Error) {
+	var request wire.PageRequest
+	if err := wire.DecodeJSON(requestJSON, &request); err != nil {
+		return "", wire.Error(err)
 	}
-	resp, err := w.actions.ImageHistory(w.ctx, image, pageSize, int(offset))
+
+	page, err := request.Validate()
 	if err != nil {
-		return 0, nil, wire.Error(err)
+		return "", wire.Error(err)
 	}
-	history, err := wire.StructDicts(resp.History)
-	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-	return uint32(max(resp.TotalCount, 0)), history, nil
+
+	resp, err := w.actions.ImageHistory(w.ctx, image, page.Limit, page.Offset)
+	return wire.JSONReply(resp, err)
 }
 
 // GetConfig возвращает конфигурацию образа как YAML-документ.
@@ -162,34 +150,31 @@ func (w *ImageV2) GetConfig() (string, *dbus.Error) {
 
 // SaveConfig сохраняет конфигурацию образа из YAML-документа.
 func (w *ImageV2) SaveConfig(msg dbus.Message, yaml string) *dbus.Error {
-	return wire.Error(authz.Guard(w.az, msg, protocol.ActionImageManage, func() error {
-		config, err := pkgbuild.ParseYamlConfigData([]byte(yaml))
-		if err != nil {
-			return apmerr.New(apmerr.ErrorTypeValidation, err)
-		}
-		_, err = w.actions.ImageSaveConfig(w.ctx, config)
-		return err
-	}))
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return dbusErr
+	}
+	config, err := pkgbuild.ParseYamlConfigData([]byte(yaml))
+	if err != nil {
+		return wire.Error(apmerr.New(apmerr.ErrorTypeValidation, err))
+	}
+	_, err = w.actions.ImageSaveConfig(w.ctx, config)
+	return wire.Error(err)
 }
 
 // SyncGroups синхронизирует группы пользователей из YAML-конфигов.
-func (w *ImageV2) SyncGroups(msg dbus.Message) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionImageManage, func() (wire.Dict, error) {
-		resp, err := w.actions.ImageSyncGroups(w.ctx)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	}))
+func (w *ImageV2) SyncGroups(msg dbus.Message) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
+	resp, err := w.actions.ImageSyncGroups(w.ctx)
+	return wire.JSONReply(resp, err)
 }
 
 // FixNss исправляет /etc/passwd и /etc/group на атомарной системе.
-func (w *ImageV2) FixNss(msg dbus.Message) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionImageManage, func() (wire.Dict, error) {
-		resp, err := w.actions.ImageFixNss(w.ctx)
-		if err != nil {
-			return nil, err
-		}
-		return wire.StructDict(resp)
-	}))
+func (w *ImageV2) FixNss(msg dbus.Message) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
+	resp, err := w.actions.ImageFixNss(w.ctx)
+	return wire.JSONReply(resp, err)
 }

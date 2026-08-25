@@ -34,8 +34,6 @@ const (
 	DistroboxIface    = Prefix + ".Distrobox"
 	IconsIface        = Prefix + ".Icons"
 	JobsIface         = Prefix + ".Jobs"
-
-	ErrorPrefix = Prefix + ".Error."
 )
 
 // Path объектный путь API v2, один на все интерфейсы.

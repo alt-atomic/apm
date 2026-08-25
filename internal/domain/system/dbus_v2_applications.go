@@ -18,7 +18,9 @@ package system
 
 import (
 	"context"
+	"fmt"
 
+	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/authz"
@@ -57,70 +59,54 @@ type ApplicationsV2 struct {
 	az      authz.Authorizer
 }
 
+// guard проверяет единое право на управление каталогом приложений.
+func (w *ApplicationsV2) guard(msg dbus.Message) *dbus.Error {
+	return wire.Error(w.az.Authorize(msg, protocol.ActionApplicationsManage))
+}
+
 // Update обновляет каталог приложений фоновой задачей.
 func (w *ApplicationsV2) Update(msg dbus.Message) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(msg, protocol.ActionApplicationsManage); err != nil {
-		return 0, wire.Error(err)
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return 0, dbusErr
 	}
 	job := w.jobs.Start("applications", "Update", polkit.Sender(msg), protocol.ActionApplicationsManage,
-		func(ctx context.Context) (wire.Dict, error) {
-			resp, err := w.actions.Update(ctx)
-			if err != nil {
-				return nil, err
-			}
-			return wire.StructDict(resp)
-		})
+		wire.JSONTask(func(ctx context.Context) (*appstream.UpdateResponse, error) {
+			return w.actions.Update(ctx)
+		}))
 	return job, nil
 }
 
 // Info возвращает AppStream-компоненты пакета.
-func (w *ApplicationsV2) Info(name string) (wire.Dict, *dbus.Error) {
+func (w *ApplicationsV2) Info(name string) (string, *dbus.Error) {
 	resp, err := w.actions.Info(w.ctx, name)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDict(resp))
+	return wire.JSONReply(resp, err)
 }
 
 // List возвращает страницу AppStream-компонентов по запросу и фильтрам.
-func (w *ApplicationsV2) List(query wire.Dict, filters [][]filterRuleV2) (uint32, []wire.Dict, *dbus.Error) {
-	var sort, order string
-	var limit, offset uint32
-	if err := wire.ParseOptions(query, map[string]any{
-		"sort":   &sort,
-		"order":  &order,
-		"limit":  &limit,
-		"offset": &offset,
-	}); err != nil {
-		return 0, nil, wire.Error(err)
+func (w *ApplicationsV2) List(requestJSON string) (string, *dbus.Error) {
+	var request wire.ListRequest
+	if err := wire.DecodeJSON(requestJSON, &request); err != nil {
+		return "", wire.Error(err)
 	}
 
-	pageSize, err := wire.PageLimit(limit)
-	if err != nil {
-		return 0, nil, wire.Error(err)
+	if request.ForceUpdate {
+		return "", wire.Error(apmerr.New(apmerr.ErrorTypeValidation,
+			fmt.Errorf("forceUpdate is not supported by Applications.List")))
 	}
 
-	groups, err := wire.FilterGroups(filters, swcat.FilterConfig)
+	page, err := request.Validate(swcat.FilterConfig)
 	if err != nil {
-		return 0, nil, wire.Error(err)
+		return "", wire.Error(err)
 	}
 
 	resp, err := w.actions.List(w.ctx, appstream.ListParams{
-		Sort:    sort,
-		Order:   order,
-		Limit:   pageSize,
-		Offset:  int(offset),
-		Filters: groups,
+		Sort:    request.Sort,
+		Order:   request.Order,
+		Limit:   page.Limit,
+		Offset:  page.Offset,
+		Filters: page.Filters,
 	})
-	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-
-	rows, err := wire.StructDicts(resp.Components)
-	if err != nil {
-		return 0, nil, wire.Error(err)
-	}
-	return uint32(max(resp.TotalCount, 0)), rows, nil
+	return wire.JSONReply(resp, err)
 }
 
 // Categories возвращает список категорий приложений.
@@ -133,10 +119,7 @@ func (w *ApplicationsV2) Categories() ([]string, *dbus.Error) {
 }
 
 // FilterFields возвращает описание полей фильтрации каталога.
-func (w *ApplicationsV2) FilterFields() ([]wire.Dict, *dbus.Error) {
+func (w *ApplicationsV2) FilterFields() (string, *dbus.Error) {
 	resp, err := w.actions.GetFilterFields(w.ctx)
-	if err != nil {
-		return nil, wire.Error(err)
-	}
-	return wire.Reply(wire.StructDicts(resp))
+	return wire.JSONReply(resp, err)
 }
