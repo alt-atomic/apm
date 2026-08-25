@@ -459,6 +459,11 @@ func (a *Packages) GetInstalledPackages(ctx context.Context, noLock ...bool) (ma
 	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
 }
 
+// RpmIsPackageInstalled проверяет установку пакета напрямую через rpm.
+func (a *Packages) RpmIsPackageInstalled(packageName string) (bool, error) {
+	return a.serviceAptBinding.RpmIsPackageInstalled(packageName)
+}
+
 func (a *Packages) AptUpdate(ctx context.Context, noLock ...bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemAptUpdate))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))

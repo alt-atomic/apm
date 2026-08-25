@@ -18,6 +18,7 @@ type buildAptActionsService interface {
 	Install(ctx context.Context, packages []string, downloadOnly bool) error
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	Upgrade(ctx context.Context, downloadOnly bool) error
+	RpmIsPackageInstalled(packageName string) (bool, error)
 }
 
 // buildPackageDBService определяет методы для запросов к базе данных пакетов при сборке.

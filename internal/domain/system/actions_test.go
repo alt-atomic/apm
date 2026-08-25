@@ -61,6 +61,7 @@ func (m *mockAptActions) AptUpdateIfStale(_ context.Context, _ time.Duration, _ 
 func (m *mockAptActions) GetInstalledPackages(_ context.Context, _ ...bool) (map[string]string, error) {
 	return nil, nil
 }
+func (m *mockAptActions) RpmIsPackageInstalled(_ string) (bool, error)          { return false, nil }
 func (m *mockAptActions) Upgrade(_ context.Context, _ bool) error               { return nil }
 func (m *mockAptActions) ReinstallPackages(_ context.Context, _ []string) error { return nil }
 func (m *mockAptActions) Install(_ context.Context, _ []string, _ bool) error   { return nil }

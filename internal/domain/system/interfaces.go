@@ -43,6 +43,7 @@ type aptActionsService interface {
 	AptUpdate(ctx context.Context, noLock ...bool) error
 	AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLock ...bool) error
 	GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error)
+	RpmIsPackageInstalled(packageName string) (bool, error)
 	Upgrade(ctx context.Context, downloadOnly bool) error
 	ReinstallPackages(ctx context.Context, packages []string) error
 	Install(ctx context.Context, packages []string, downloadOnly bool) error
