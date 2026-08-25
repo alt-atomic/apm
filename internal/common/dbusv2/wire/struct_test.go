@@ -2,12 +2,25 @@ package wire
 
 import (
 	"testing"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 )
 
 type testNested struct {
 	Reason string `json:"reason"`
+}
+
+type testJSONNumbers struct{}
+
+func (testJSONNumbers) MarshalJSON() ([]byte, error) {
+	return []byte(`{"integer":9007199254740993,"fraction":1.5}`), nil
+}
+
+type testJSONArrayWithNull struct{}
+
+func (testJSONArrayWithNull) MarshalJSON() ([]byte, error) {
+	return []byte(`[1,null,2]`), nil
 }
 
 type testDTO struct {
@@ -29,7 +42,6 @@ type testDTO struct {
 }
 
 func TestStructDict(t *testing.T) {
-	res := "done"
 	d, err := StructDict(testDTO{
 		Name:      "vim",
 		Hidden:    "secret",
@@ -37,7 +49,7 @@ func TestStructDict(t *testing.T) {
 		Size:      12345,
 		Ratio:     0.5,
 		Installed: true,
-		Result:    &res,
+		Result:    new("done"),
 		Items:     []string{"a", "b"},
 		Nested:    testNested{Reason: "essential"},
 		Children:  []testNested{{Reason: "x"}, {Reason: "y"}},
@@ -179,5 +191,96 @@ func TestStructDictNonStringMapKeys(t *testing.T) {
 func TestStructDictRejectsNonStruct(t *testing.T) {
 	if _, err := StructDict("plain"); err == nil {
 		t.Error("expected error for non-struct")
+	}
+}
+
+func TestStructDictKeepsZeroStructWithOmitEmpty(t *testing.T) {
+	type dto struct {
+		Nested testNested `json:"nested,omitempty"`
+	}
+
+	d, err := StructDict(dto{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := d["nested"]; !ok {
+		t.Error("zero struct must not be omitted by omitempty")
+	}
+}
+
+func TestStructDictByteSliceUsesDBusByteArray(t *testing.T) {
+	type dto struct {
+		Data []byte `json:"data"`
+	}
+
+	d, err := StructDict(dto{Data: []byte{1, 2, 3}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sig := d["data"].Signature().String(); sig != "ay" {
+		t.Fatalf("signature = %s, want ay", sig)
+	}
+	if got := d["data"].Value().([]byte); len(got) != 3 || got[2] != 3 {
+		t.Errorf("data = %v", got)
+	}
+}
+
+func TestStructDictRejectsPointerScalarSlice(t *testing.T) {
+	type dto struct {
+		Values []*string `json:"values"`
+	}
+	if _, err := StructDict(dto{Values: []*string{new("one"), new("two")}}); err == nil {
+		t.Fatal("expected error for pointer scalar array")
+	}
+}
+
+func TestStructDictRejectsNilSliceElement(t *testing.T) {
+	type dto struct {
+		Values []*string `json:"values"`
+	}
+	if _, err := StructDict(dto{Values: []*string{new("one"), nil}}); err == nil {
+		t.Fatal("expected error for nil array element")
+	}
+}
+
+func TestStructDictRejectsNonObjectElementJSONMarshaler(t *testing.T) {
+	type dto struct {
+		Times []time.Time `json:"times"`
+	}
+	value := time.Date(2026, time.August, 25, 12, 30, 0, 0, time.UTC)
+
+	if _, err := StructDict(dto{Times: []time.Time{value}}); err == nil {
+		t.Fatal("expected error for array element marshaled as string")
+	}
+	if _, err := StructDict(dto{Times: []time.Time{}}); err == nil {
+		t.Fatal("expected the same error for an empty array")
+	}
+}
+
+func TestStructDictPreservesJSONInteger(t *testing.T) {
+	type dto struct {
+		Numbers testJSONNumbers `json:"numbers"`
+	}
+
+	d, err := StructDict(dto{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	numbers := d["numbers"].Value().(Dict)
+	if got := numbers["integer"].Value().(int64); got != 9007199254740993 {
+		t.Errorf("integer = %d", got)
+	}
+	if got := numbers["fraction"].Value().(float64); got != 1.5 {
+		t.Errorf("fraction = %v", got)
+	}
+}
+
+func TestStructDictRejectsJSONNullArrayElement(t *testing.T) {
+	type dto struct {
+		Values testJSONArrayWithNull `json:"values"`
+	}
+
+	if _, err := StructDict(dto{}); err == nil {
+		t.Fatal("expected error for JSON null array element")
 	}
 }

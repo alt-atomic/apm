@@ -17,17 +17,32 @@
 package wire
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
 )
 
 var jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
 
+func typeHasJSONMarshaler(t reflect.Type) bool {
+	if t.Implements(jsonMarshalerType) {
+		return true
+	}
+	return t.Kind() != reflect.Pointer && reflect.PointerTo(t).Implements(jsonMarshalerType)
+}
+
 // asJSONMarshaler возвращает json.Marshaler значения, если тип объявил собственную JSON-форму.
 func asJSONMarshaler(rv reflect.Value) (json.Marshaler, bool) {
+	if !typeHasJSONMarshaler(rv.Type()) {
+		return nil, false
+	}
 	if rv.Type().Implements(jsonMarshalerType) {
 		if (rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface) && rv.IsNil() {
 			return nil, false
@@ -46,11 +61,28 @@ func jsonVariant(m json.Marshaler) (dbus.Variant, bool, error) {
 	if err != nil {
 		return dbus.Variant{}, false, err
 	}
-	var v any
-	if err = json.Unmarshal(data, &v); err != nil {
+	v, err := decodeJSONValue(data)
+	if err != nil {
 		return dbus.Variant{}, false, err
 	}
 	return jsonAnyVariant(v)
+}
+
+func decodeJSONValue(data []byte) (any, error) {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var value any
+	if err := decoder.Decode(&value); err != nil {
+		return nil, err
+	}
+	var extra any
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return nil, fmt.Errorf("multiple JSON values")
+		}
+		return nil, err
+	}
+	return value, nil
 }
 
 // jsonAnyVariant конвертирует распакованный JSON-узел в Variant.
@@ -60,6 +92,8 @@ func jsonAnyVariant(v any) (dbus.Variant, bool, error) {
 		return dbus.Variant{}, false, nil
 	case string, bool, float64:
 		return dbus.MakeVariant(t), true, nil
+	case json.Number:
+		return jsonNumberVariant(t)
 	case map[string]any:
 		d := make(Dict, len(t))
 		for key, value := range t {
@@ -79,6 +113,23 @@ func jsonAnyVariant(v any) (dbus.Variant, bool, error) {
 	}
 }
 
+func jsonNumberVariant(number json.Number) (dbus.Variant, bool, error) {
+	raw := number.String()
+	if !strings.ContainsAny(raw, ".eE") {
+		if value, err := strconv.ParseInt(raw, 10, 64); err == nil {
+			return dbus.MakeVariant(value), true, nil
+		}
+		if value, err := strconv.ParseUint(raw, 10, 64); err == nil {
+			return dbus.MakeVariant(value), true, nil
+		}
+	}
+	value, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return dbus.Variant{}, false, fmt.Errorf("invalid JSON number %q: %w", raw, err)
+	}
+	return dbus.MakeVariant(value), true, nil
+}
+
 // jsonArrayVariant отдаёт однородный строковый массив как as, остальное — av.
 func jsonArrayVariant(items []any) (dbus.Variant, bool, error) {
 	strs := make([]string, 0, len(items))
@@ -92,14 +143,15 @@ func jsonArrayVariant(items []any) (dbus.Variant, bool, error) {
 	}
 
 	variants := make([]dbus.Variant, 0, len(items))
-	for _, item := range items {
+	for i, item := range items {
 		v, present, err := jsonAnyVariant(item)
 		if err != nil {
-			return dbus.Variant{}, false, err
+			return dbus.Variant{}, false, fmt.Errorf("array item %d: %w", i, err)
 		}
-		if present {
-			variants = append(variants, v)
+		if !present {
+			return dbus.Variant{}, false, fmt.Errorf("array item %d is null; D-Bus has no nullable array elements", i)
 		}
+		variants = append(variants, v)
 	}
 	return dbus.MakeVariant(variants), true, nil
 }

@@ -42,11 +42,38 @@ func ParseOptions(opts Dict, spec map[string]any) error {
 		if !ok {
 			return apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("unknown option %q", key))
 		}
+		dstType, err := optionDestinationType(key, dst)
+		if err != nil {
+			return err
+		}
 		if err := value.Store(dst); err != nil {
-			want := dbus.SignatureOfType(reflect.TypeOf(dst).Elem())
+			want, sigErr := optionSignature(dstType)
+			if sigErr != nil {
+				return sigErr
+			}
 			return apmerr.New(apmerr.ErrorTypeValidation,
 				fmt.Errorf("option %q: got %s, want %s", key, value.Signature(), want))
 		}
 	}
 	return nil
+}
+
+func optionDestinationType(key string, dst any) (reflect.Type, error) {
+	if dst == nil {
+		return nil, fmt.Errorf("wire: option %q destination is nil", key)
+	}
+	rv := reflect.ValueOf(dst)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
+		return nil, fmt.Errorf("wire: option %q destination must be a non-nil pointer, got %T", key, dst)
+	}
+	return rv.Type().Elem(), nil
+}
+
+func optionSignature(t reflect.Type) (sig dbus.Signature, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("wire: unsupported option destination type %s: %v", t, recovered)
+		}
+	}()
+	return dbus.SignatureOfType(t), nil
 }

@@ -3,6 +3,8 @@
 package wire_test
 
 import (
+	"encoding/binary"
+	"io"
 	"testing"
 
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
@@ -174,6 +176,70 @@ func TestStructDictComponent(t *testing.T) {
 	}
 	if _, ok := d["XMLName"]; ok {
 		t.Error("xml.Name must be skipped via json tag")
+	}
+}
+
+// TestStructDictDBAppStreamSignatures фиксирует форму Applications.List на примере реального ответа.
+func TestStructDictDBAppStreamSignatures(t *testing.T) {
+	row := swcat.DBAppStream{
+		ID:      41653,
+		PkgName: "qsstv",
+		Components: []swcat.Component{{
+			Type:  "desktop",
+			ID:    "qsstv.desktop",
+			Name:  swcat.LocalizedMap{{Value: "QSSTV"}},
+			Icons: []swcat.Icon{{Type: "cached", Width: 64, Height: 64, Value: "qsstv.png"}},
+			Releases: []swcat.Release{{
+				Version:   "9.5.11",
+				Timestamp: 1767041340,
+			}},
+		}},
+	}
+
+	d, err := wire.StructDict(row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertSignature := func(key, want string) {
+		t.Helper()
+		if got := d[key].Signature().String(); got != want {
+			t.Errorf("%s signature = %s, want %s", key, got, want)
+		}
+	}
+	assertSignature("id", "t")
+	assertSignature("pkgname", "s")
+	assertSignature("components", "aa{sv}")
+
+	reply := &dbus.Message{
+		Type: dbus.TypeMethodReply,
+		Headers: map[dbus.HeaderField]dbus.Variant{
+			dbus.FieldReplySerial: dbus.MakeVariant(uint32(1)),
+			dbus.FieldSignature:   dbus.MakeVariant(dbus.SignatureOf([]wire.Dict{})),
+		},
+		Body: []any{[]wire.Dict{d}},
+	}
+	if err := reply.EncodeTo(io.Discard, binary.LittleEndian); err != nil {
+		t.Fatalf("encode D-Bus reply: %v", err)
+	}
+
+	component := d["components"].Value().([]wire.Dict)[0]
+	if got := component["name"].Signature().String(); got != "a{sv}" {
+		t.Errorf("name signature = %s, want a{sv}", got)
+	}
+	if got := component["icons"].Signature().String(); got != "aa{sv}" {
+		t.Errorf("icons signature = %s, want aa{sv}", got)
+	}
+	if got := component["releases"].Signature().String(); got != "aa{sv}" {
+		t.Errorf("releases signature = %s, want aa{sv}", got)
+	}
+
+	icon := component["icons"].Value().([]wire.Dict)[0]
+	if got := icon["width"].Signature().String(); got != "x" {
+		t.Errorf("icon.width signature = %s, want x", got)
+	}
+	release := component["releases"].Value().([]wire.Dict)[0]
+	if got := release["timestamp"].Signature().String(); got != "x" {
+		t.Errorf("release.timestamp signature = %s, want x", got)
 	}
 }
 
