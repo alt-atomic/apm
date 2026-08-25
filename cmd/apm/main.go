@@ -26,6 +26,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	aptWrapper "altlinux.space/alt-atomic/apm/internal/common/apt"
 	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv1"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
@@ -139,9 +140,15 @@ func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
 		Bus:  service.BusSession,
 		Mode: apmcli.ForbidRoot,
-		API: dbusv2.Setup{
-			Reporter: rt.reporter,
-			Modules:  distrobox.DBusV2Modules(rt.config, rt.reporter),
+		APIs: []service.DBusAPI{
+			dbusv2.Setup{
+				Reporter: rt.reporter,
+				Modules:  distrobox.DBusV2Modules(rt.config, rt.reporter),
+			},
+			dbusv1.Setup{
+				Reporter: rt.reporter,
+				Modules:  []dbusv1.Module{distrobox.DBusFactory(rt.config, rt.reporter)},
+			},
 		},
 	}))
 }
@@ -150,23 +157,34 @@ func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
 	cfg := rt.config.ConfigManager.GetConfig()
 	modules := system.DBusV2Modules(rt.config, rt.reporter)
 	modules = append(modules, repository.DBusV2Module(rt.config, rt.reporter))
+	legacyModules := []dbusv1.Module{
+		system.DBusFactory(rt.config, rt.reporter),
+		repository.DBusFactory(rt.config, rt.reporter),
+	}
 	if !cfg.IsAtomic {
 		modules = append(modules, kernel.DBusV2Module(rt.config, rt.reporter))
+		legacyModules = append(legacyModules, kernel.DBusFactory(rt.config, rt.reporter))
 	}
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
 		Bus:  service.BusSystem,
 		Mode: apmcli.RequireRoot,
-		API: dbusv2.Setup{
-			Reporter:  rt.reporter,
-			UsePolkit: true,
-			Props: map[string]map[string]any{
-				protocol.PackagesIface: {
-					"Version":         rt.config.ConfigManager.GetParsedVersion().Value,
-					"IsAtomic":        cfg.IsAtomic,
-					"KernelSupported": !cfg.IsAtomic,
+		APIs: []service.DBusAPI{
+			dbusv2.Setup{
+				Reporter:  rt.reporter,
+				UsePolkit: true,
+				Props: map[string]map[string]any{
+					protocol.PackagesIface: {
+						"Version":         rt.config.ConfigManager.GetParsedVersion().Value,
+						"IsAtomic":        cfg.IsAtomic,
+						"KernelSupported": !cfg.IsAtomic,
+					},
 				},
+				Modules: modules,
 			},
-			Modules: modules,
+			dbusv1.Setup{
+				Reporter: rt.reporter,
+				Modules:  legacyModules,
+			},
 		},
 	}))
 }

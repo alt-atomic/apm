@@ -6,6 +6,9 @@
   </policy>
 
   <policy context="default">
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.system"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.kernel"/>
+    <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@.repo"/>
     <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Packages"/>
     <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Image"/>
     <allow send_destination="@SERVICE_ID@" send_interface="@SERVICE_ID@2.Applications"/>

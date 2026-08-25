@@ -26,6 +26,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 
@@ -57,11 +58,11 @@ type ImageV2 struct {
 }
 
 // startJob авторизует отправителя и регистрирует фоновую задачу образа.
-func (w *ImageV2) startJob(sender dbus.Sender, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(sender, protocol.ActionImageManage); err != nil {
+func (w *ImageV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
+	if err := w.az.Authorize(msg, protocol.ActionImageManage); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.jobs.Start("image", kind, string(sender), protocol.ActionImageManage, fn), nil
+	return w.jobs.Start("image", kind, polkit.Sender(msg), protocol.ActionImageManage, fn), nil
 }
 
 // Status возвращает статус загруженного образа.
@@ -74,14 +75,14 @@ func (w *ImageV2) Status() (wire.Dict, *dbus.Error) {
 }
 
 // Update обновляет базовый образ фоновой задачей.
-func (w *ImageV2) Update(sender dbus.Sender, options wire.Dict) (uint32, *dbus.Error) {
+func (w *ImageV2) Update(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
 	var noCache bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"no_cache": &noCache,
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(sender, "Update", func(ctx context.Context) (wire.Dict, error) {
+	return w.startJob(msg, "Update", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.ImageUpdate(ctx, !noCache)
 		if err != nil {
 			return nil, err
@@ -91,7 +92,7 @@ func (w *ImageV2) Update(sender dbus.Sender, options wire.Dict) (uint32, *dbus.E
 }
 
 // Apply применяет изменения к образу хоста фоновой задачей.
-func (w *ImageV2) Apply(sender dbus.Sender, options wire.Dict) (uint32, *dbus.Error) {
+func (w *ImageV2) Apply(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
 	var pull, noCache bool
 	var configPath, workdir string
 	if err := wire.ParseOptions(options, map[string]any{
@@ -102,7 +103,7 @@ func (w *ImageV2) Apply(sender dbus.Sender, options wire.Dict) (uint32, *dbus.Er
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(sender, "Apply", func(ctx context.Context) (wire.Dict, error) {
+	return w.startJob(msg, "Apply", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.ImageApply(ctx, pull, !noCache, true, configPath, workdir)
 		if err != nil {
 			return nil, err
@@ -112,7 +113,7 @@ func (w *ImageV2) Apply(sender dbus.Sender, options wire.Dict) (uint32, *dbus.Er
 }
 
 // Switch переключает систему на другой базовый образ фоновой задачей.
-func (w *ImageV2) Switch(sender dbus.Sender, image string, options wire.Dict) (uint32, *dbus.Error) {
+func (w *ImageV2) Switch(msg dbus.Message, image string, options wire.Dict) (uint32, *dbus.Error) {
 	var pull, noCache bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"pull":     &pull,
@@ -120,7 +121,7 @@ func (w *ImageV2) Switch(sender dbus.Sender, image string, options wire.Dict) (u
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startJob(sender, "Switch", func(ctx context.Context) (wire.Dict, error) {
+	return w.startJob(msg, "Switch", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.ImageSwitch(ctx, image, pull, !noCache)
 		if err != nil {
 			return nil, err
@@ -160,8 +161,8 @@ func (w *ImageV2) GetConfig() (string, *dbus.Error) {
 }
 
 // SaveConfig сохраняет конфигурацию образа из YAML-документа.
-func (w *ImageV2) SaveConfig(sender dbus.Sender, yaml string) *dbus.Error {
-	return wire.Error(authz.Guard(w.az, sender, protocol.ActionImageManage, func() error {
+func (w *ImageV2) SaveConfig(msg dbus.Message, yaml string) *dbus.Error {
+	return wire.Error(authz.Guard(w.az, msg, protocol.ActionImageManage, func() error {
 		config, err := pkgbuild.ParseYamlConfigData([]byte(yaml))
 		if err != nil {
 			return apmerr.New(apmerr.ErrorTypeValidation, err)
@@ -172,8 +173,8 @@ func (w *ImageV2) SaveConfig(sender dbus.Sender, yaml string) *dbus.Error {
 }
 
 // SyncGroups синхронизирует группы пользователей из YAML-конфигов.
-func (w *ImageV2) SyncGroups(sender dbus.Sender) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionImageManage, func() (wire.Dict, error) {
+func (w *ImageV2) SyncGroups(msg dbus.Message) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionImageManage, func() (wire.Dict, error) {
 		resp, err := w.actions.ImageSyncGroups(w.ctx)
 		if err != nil {
 			return nil, err
@@ -183,8 +184,8 @@ func (w *ImageV2) SyncGroups(sender dbus.Sender) (wire.Dict, *dbus.Error) {
 }
 
 // FixNss исправляет /etc/passwd и /etc/group на атомарной системе.
-func (w *ImageV2) FixNss(sender dbus.Sender) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionImageManage, func() (wire.Dict, error) {
+func (w *ImageV2) FixNss(msg dbus.Message) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionImageManage, func() (wire.Dict, error) {
 		resp, err := w.actions.ImageFixNss(w.ctx)
 		if err != nil {
 			return nil, err

@@ -28,6 +28,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
+	"altlinux.space/alt-atomic/apm/internal/common/polkit"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/godbus/dbus/v5"
@@ -73,15 +74,15 @@ type PackagesV2 struct {
 type filterRuleV2 = wire.FilterRule
 
 // startTransaction регистрирует неотменяемую rpm/apt-транзакцию.
-func (w *PackagesV2) startTransaction(sender dbus.Sender, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
-	if err := w.az.Authorize(sender, protocol.ActionPackagesManage); err != nil {
+func (w *PackagesV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (wire.Dict, error)) (uint32, *dbus.Error) {
+	if err := w.az.Authorize(msg, protocol.ActionPackagesManage); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.jobs.StartNoCancel("packages", kind, string(sender), fn), nil
+	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), fn), nil
 }
 
 // Install ставит пакеты фоновой задачей.
-func (w *PackagesV2) Install(sender dbus.Sender, packages []string, options wire.Dict) (uint32, *dbus.Error) {
+func (w *PackagesV2) Install(msg dbus.Message, packages []string, options wire.Dict) (uint32, *dbus.Error) {
 	var downloadOnly, noUpdate bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"download_only": &downloadOnly,
@@ -89,7 +90,7 @@ func (w *PackagesV2) Install(sender dbus.Sender, packages []string, options wire
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(sender, "Install", func(ctx context.Context) (wire.Dict, error) {
+	return w.startTransaction(msg, "Install", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.Install(ctx, packages, true, downloadOnly, noUpdate)
 		if err != nil {
 			return nil, err
@@ -99,7 +100,7 @@ func (w *PackagesV2) Install(sender dbus.Sender, packages []string, options wire
 }
 
 // Remove удаляет пакеты фоновой задачей.
-func (w *PackagesV2) Remove(sender dbus.Sender, packages []string, options wire.Dict) (uint32, *dbus.Error) {
+func (w *PackagesV2) Remove(msg dbus.Message, packages []string, options wire.Dict) (uint32, *dbus.Error) {
 	var purge, depends bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"purge":   &purge,
@@ -107,7 +108,7 @@ func (w *PackagesV2) Remove(sender dbus.Sender, packages []string, options wire.
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(sender, "Remove", func(ctx context.Context) (wire.Dict, error) {
+	return w.startTransaction(msg, "Remove", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.Remove(ctx, packages, purge, depends, true)
 		if err != nil {
 			return nil, err
@@ -117,8 +118,8 @@ func (w *PackagesV2) Remove(sender dbus.Sender, packages []string, options wire.
 }
 
 // Reinstall переустанавливает пакеты фоновой задачей.
-func (w *PackagesV2) Reinstall(sender dbus.Sender, packages []string) (uint32, *dbus.Error) {
-	return w.startTransaction(sender, "Reinstall", func(ctx context.Context) (wire.Dict, error) {
+func (w *PackagesV2) Reinstall(msg dbus.Message, packages []string) (uint32, *dbus.Error) {
+	return w.startTransaction(msg, "Reinstall", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.Reinstall(ctx, packages, true)
 		if err != nil {
 			return nil, err
@@ -128,14 +129,14 @@ func (w *PackagesV2) Reinstall(sender dbus.Sender, packages []string) (uint32, *
 }
 
 // Upgrade обновляет систему фоновой задачей.
-func (w *PackagesV2) Upgrade(sender dbus.Sender, options wire.Dict) (uint32, *dbus.Error) {
+func (w *PackagesV2) Upgrade(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
 	var downloadOnly bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"download_only": &downloadOnly,
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(sender, "Upgrade", func(ctx context.Context) (wire.Dict, error) {
+	return w.startTransaction(msg, "Upgrade", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.Upgrade(ctx, downloadOnly)
 		if err != nil {
 			return nil, err
@@ -145,14 +146,14 @@ func (w *PackagesV2) Upgrade(sender dbus.Sender, options wire.Dict) (uint32, *db
 }
 
 // Update обновляет список пакетов фоновой задачей.
-func (w *PackagesV2) Update(sender dbus.Sender, options wire.Dict) (uint32, *dbus.Error) {
+func (w *PackagesV2) Update(msg dbus.Message, options wire.Dict) (uint32, *dbus.Error) {
 	var onlyDB bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"only_db": &onlyDB,
 	}); err != nil {
 		return 0, wire.Error(err)
 	}
-	return w.startTransaction(sender, "Update", func(ctx context.Context) (wire.Dict, error) {
+	return w.startTransaction(msg, "Update", func(ctx context.Context) (wire.Dict, error) {
 		resp, err := w.actions.Update(ctx, false, onlyDB)
 		if err != nil {
 			return nil, err
@@ -162,8 +163,8 @@ func (w *PackagesV2) Update(sender dbus.Sender, options wire.Dict) (uint32, *dbu
 }
 
 // CheckInstall симулирует установку.
-func (w *PackagesV2) CheckInstall(sender dbus.Sender, packages []string) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionPackagesManage, func() (wire.Dict, error) {
+func (w *PackagesV2) CheckInstall(msg dbus.Message, packages []string) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionPackagesManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CheckInstall(w.ctx, packages)
 		if err != nil {
 			return nil, err
@@ -173,7 +174,7 @@ func (w *PackagesV2) CheckInstall(sender dbus.Sender, packages []string) (wire.D
 }
 
 // CheckRemove симулирует удаление.
-func (w *PackagesV2) CheckRemove(sender dbus.Sender, packages []string, options wire.Dict) (wire.Dict, *dbus.Error) {
+func (w *PackagesV2) CheckRemove(msg dbus.Message, packages []string, options wire.Dict) (wire.Dict, *dbus.Error) {
 	var purge, depends bool
 	if err := wire.ParseOptions(options, map[string]any{
 		"purge":   &purge,
@@ -181,7 +182,7 @@ func (w *PackagesV2) CheckRemove(sender dbus.Sender, packages []string, options 
 	}); err != nil {
 		return nil, wire.Error(err)
 	}
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionPackagesManage, func() (wire.Dict, error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionPackagesManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CheckRemove(w.ctx, packages, purge, depends)
 		if err != nil {
 			return nil, err
@@ -191,8 +192,8 @@ func (w *PackagesV2) CheckRemove(sender dbus.Sender, packages []string, options 
 }
 
 // CheckUpgrade симулирует обновление системы.
-func (w *PackagesV2) CheckUpgrade(sender dbus.Sender) (wire.Dict, *dbus.Error) {
-	return wire.Reply(authz.Authorized(w.az, sender, protocol.ActionPackagesManage, func() (wire.Dict, error) {
+func (w *PackagesV2) CheckUpgrade(msg dbus.Message) (wire.Dict, *dbus.Error) {
+	return wire.Reply(authz.Authorized(w.az, msg, protocol.ActionPackagesManage, func() (wire.Dict, error) {
 		resp, err := w.actions.CheckUpgrade(w.ctx)
 		if err != nil {
 			return nil, err
@@ -322,8 +323,8 @@ func (w *PackagesV2) AptConfig() (map[string]string, *dbus.Error) {
 }
 
 // SetAptConfig устанавливает переопределения конфигурации APT.
-func (w *PackagesV2) SetAptConfig(sender dbus.Sender, options map[string]string) *dbus.Error {
-	return wire.Error(authz.Guard(w.az, sender, protocol.ActionPackagesManage, func() error {
+func (w *PackagesV2) SetAptConfig(msg dbus.Message, options map[string]string) *dbus.Error {
+	return wire.Error(authz.Guard(w.az, msg, protocol.ActionPackagesManage, func() error {
 		_, err := w.actions.SetAptConfigOverrides(options)
 		return err
 	}))

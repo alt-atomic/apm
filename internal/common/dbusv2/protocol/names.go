@@ -43,11 +43,11 @@ const Path = dbus.ObjectPath("/org/altlinux/APM2")
 
 // Polkit-действия v2, гранулярные по доменам.
 const (
-	ActionPackagesManage     = "org.altlinux.apm2.packages.manage"
-	ActionImageManage        = "org.altlinux.apm2.image.manage"
-	ActionApplicationsManage = "org.altlinux.apm2.applications.manage"
-	ActionKernelManage       = "org.altlinux.apm2.kernel.manage"
-	ActionRepoManage         = "org.altlinux.apm2.repo.manage"
+	ActionPackagesManage     = Prefix + ".packages.manage"
+	ActionImageManage        = Prefix + ".image.manage"
+	ActionApplicationsManage = Prefix + ".applications.manage"
+	ActionKernelManage       = Prefix + ".kernel.manage"
+	ActionRepoManage         = Prefix + ".repo.manage"
 )
 
 // In описывает входной аргумент метода.
