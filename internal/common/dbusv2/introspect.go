@@ -30,30 +30,32 @@ var jobsIntrospection = introspect.Interface{
 			protocol.Out("json", "s"),
 		}},
 		{Name: "Get", Args: []introspect.Arg{
-			protocol.In("job", "u"),
+			protocol.In("job", "s"),
 			protocol.Out("json", "s"),
 		}},
 		{Name: "Cancel", Args: []introspect.Arg{
-			protocol.In("job", "u"),
+			protocol.In("job", "s"),
 		}},
 	},
 	Signals: []introspect.Signal{
 		{Name: "JobStarted", Args: []introspect.Arg{
-			protocol.SignalArg("job", "u"),
+			protocol.SignalArg("job", "s"),
 			protocol.SignalArg("domain", "s"),
 			protocol.SignalArg("kind", "s"),
 		}},
 		{Name: "JobProgress", Args: []introspect.Arg{
-			protocol.SignalArg("job", "u"),
+			protocol.SignalArg("job", "s"),
 			protocol.SignalArg("event", "s"),
 			protocol.SignalArg("type", "s"),
 			protocol.SignalArg("state", "s"),
+			protocol.SignalArg("message", "s"),
 			protocol.SignalArg("progress", "d"),
 			protocol.SignalArg("progress_done", "s"),
 		}},
 		{Name: "JobFinished", Args: []introspect.Arg{
-			protocol.SignalArg("job", "u"),
+			protocol.SignalArg("job", "s"),
 			protocol.SignalArg("status", "s"),
+			protocol.SignalArg("error_type", "s"),
 			protocol.SignalArg("message", "s"),
 			protocol.SignalArg("json", "s"),
 		}},

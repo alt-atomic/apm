@@ -33,27 +33,27 @@ var distroboxIntrospectionV2 = introspect.Interface{
 			protocol.In("image", "s"),
 			protocol.In("name", "s"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "ContainerRemove", Args: []introspect.Arg{
 			protocol.In("name", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Update", Args: []introspect.Arg{
 			protocol.In("container", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Install", Args: []introspect.Arg{
 			protocol.In("container", "s"),
 			protocol.In("name", "s"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Remove", Args: []introspect.Arg{
 			protocol.In("container", "s"),
 			protocol.In("name", "s"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Info", Args: []introspect.Arg{
 			protocol.In("container", "s"),

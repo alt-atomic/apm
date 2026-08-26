@@ -35,8 +35,11 @@ busctl call org.altlinux.APM /org/altlinux/APM2 \
 
 ## Фоновые задачи
 
-Методы, возвращающие `job: u`, ставят задачу в очередь и немедленно отдают её id.
+Методы, возвращающие `job: s`, ставят задачу в очередь и немедленно отдают её id.
 Результат приходит **только** сигналом, поэтому подписываться нужно до вызова.
+
+Id задачи — строка вида `:1.42-3`: уникальное имя демона на шине и счётчик,
+так что id не повторяются и после перезапуска сервиса.
 
 Реестр хранит лишь работающие задачи: запись удаляется в момент завершения, и
 `Jobs.Get` для завершённой вернёт `NotFound`.
@@ -101,11 +104,11 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 
 | Метод          | Аргументы                         | Ответ          |
 |----------------|-----------------------------------|----------------|
-| `Install`      | `packages: as`, `options_json: s` | `job: u`       |
-| `Remove`       | `packages: as`, `options_json: s` | `job: u`       |
-| `Reinstall`    | `packages: as`                    | `job: u`       |
-| `Upgrade`      | `options_json: s`                 | `job: u`       |
-| `Update`       | `options_json: s`                 | `job: u`       |
+| `Install`      | `packages: as`, `options_json: s` | `job: s`       |
+| `Remove`       | `packages: as`, `options_json: s` | `job: s`       |
+| `Reinstall`    | `packages: as`                    | `job: s`       |
+| `Upgrade`      | `options_json: s`                 | `job: s`       |
+| `Update`       | `options_json: s`                 | `job: s`       |
 | `CheckInstall` | `packages: as`                    | `json: s`      |
 | `CheckRemove`  | `packages: as`, `options_json: s` | `json: s`      |
 | `CheckUpgrade` | —                                 | `json: s`      |
@@ -135,9 +138,9 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 | Метод        | Аргументы                     | Ответ     |
 |--------------|-------------------------------|-----------|
 | `Status`     | —                             | `json: s` |
-| `Update`     | `options_json: s`             | `job: u`  |
-| `Apply`      | `options_json: s`             | `job: u`  |
-| `Switch`     | `image: s`, `options_json: s` | `job: u`  |
+| `Update`     | `options_json: s`             | `job: s`  |
+| `Apply`      | `options_json: s`             | `job: s`  |
+| `Switch`     | `image: s`, `options_json: s` | `job: s`  |
 | `History`    | `image: s`, `request_json: s` | `json: s` |
 | `GetConfig`  | —                             | `json: s` |
 | `SaveConfig` | `config_json: s`              | —         |
@@ -152,7 +155,7 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 
 | Метод          | Аргументы         | Ответ            |
 |----------------|-------------------|------------------|
-| `Update`       | —                 | `job: u`         |
+| `Update`       | —                 | `job: s`         |
 | `Info`         | `name: s`         | `json: s`        |
 | `List`         | `request_json: s` | `json: s`        |
 | `Categories`   | —                 | `categories: as` |
@@ -168,16 +171,16 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 |-----------------------|------------------------------------------------|-----------|
 | `ListKernels`         | `flavour: s`, `installed_only: b`              | `json: s` |
 | `Current`             | —                                              | `json: s` |
-| `Install`             | `flavour: s`, `modules: as`, `options_json: s` | `job: u`  |
-| `Update`              | `flavour: s`, `modules: as`, `options_json: s` | `job: u`  |
+| `Install`             | `flavour: s`, `modules: as`, `options_json: s` | `job: s`  |
+| `Update`              | `flavour: s`, `modules: as`, `options_json: s` | `job: s`  |
 | `CheckInstall`        | `flavour: s`, `modules: as`, `options_json: s` | `json: s` |
 | `CheckUpdate`         | `flavour: s`, `modules: as`, `options_json: s` | `json: s` |
-| `CleanOld`            | `options_json: s`                              | `job: u`  |
+| `CleanOld`            | `options_json: s`                              | `job: s`  |
 | `CheckCleanOld`       | `options_json: s`                              | `json: s` |
 | `ListModules`         | `flavour: s`                                   | `json: s` |
-| `InstallModules`      | `flavour: s`, `modules: as`                    | `job: u`  |
+| `InstallModules`      | `flavour: s`, `modules: as`                    | `job: s`  |
 | `CheckInstallModules` | `flavour: s`, `modules: as`                    | `json: s` |
-| `RemoveModules`       | `flavour: s`, `modules: as`                    | `job: u`  |
+| `RemoveModules`       | `flavour: s`, `modules: as`                    | `job: s`  |
 | `CheckRemoveModules`  | `flavour: s`, `modules: as`                    | `json: s` |
 
 ## Репозитории
@@ -190,8 +193,8 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 |------------------|--------------------------|----------------|
 | `List`           | `all: b`                 | `json: s`      |
 | `Branches`       | —                        | `branches: as` |
-| `TaskPackages`   | `task: s`                | `job: u`       |
-| `TestTask`       | `task: s`                | `job: u`       |
+| `TaskPackages`   | `task: s`                | `job: s`       |
+| `TestTask`       | `task: s`                | `job: s`       |
 | `Add`            | `sources: as`, `date: s` | `json: s`      |
 | `Remove`         | `sources: as`, `date: s` | `json: s`      |
 | `SetBranch`      | `branch: s`, `date: s`   | `json: s`      |
@@ -210,11 +213,11 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 | Метод             | Аргументы                                    | Ответ     |
 |-------------------|----------------------------------------------|-----------|
 | `ContainerList`   | —                                            | `json: s` |
-| `ContainerAdd`    | `image: s`, `name: s`, `options_json: s`     | `job: u`  |
-| `ContainerRemove` | `name: s`                                    | `job: u`  |
-| `Update`          | `container: s`                               | `job: u`  |
-| `Install`         | `container: s`, `name: s`, `options_json: s` | `job: u`  |
-| `Remove`          | `container: s`, `name: s`, `options_json: s` | `job: u`  |
+| `ContainerAdd`    | `image: s`, `name: s`, `options_json: s`     | `job: s`  |
+| `ContainerRemove` | `name: s`                                    | `job: s`  |
+| `Update`          | `container: s`                               | `job: s`  |
+| `Install`         | `container: s`, `name: s`, `options_json: s` | `job: s`  |
+| `Remove`          | `container: s`, `name: s`, `options_json: s` | `job: s`  |
 | `Info`            | `container: s`, `name: s`                    | `json: s` |
 | `Search`          | `container: s`, `text: s`                    | `json: s` |
 | `List`            | `container: s`, `request_json: s`            | `json: s` |
@@ -235,13 +238,13 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 | Метод    | Аргументы | Ответ     |
 |----------|-----------|-----------|
 | `List`   | —         | `json: s` |
-| `Get`    | `job: u`  | `json: s` |
-| `Cancel` | `job: u`  | —         |
+| `Get`    | `job: s`  | `json: s` |
+| `Cancel` | `job: s`  | —         |
 
 **Сигналы**
 
-| Сигнал        | Аргументы                                                                      |
-|---------------|--------------------------------------------------------------------------------|
-| `JobStarted`  | `job: u`, `domain: s`, `kind: s`                                               |
-| `JobProgress` | `job: u`, `event: s`, `type: s`, `state: s`, `progress: d`, `progress_done: s` |
-| `JobFinished` | `job: u`, `status: s`, `message: s`, `json: s`                                 |
+| Сигнал        | Аргументы                                                                                    |
+|---------------|----------------------------------------------------------------------------------------------|
+| `JobStarted`  | `job: s`, `domain: s`, `kind: s`                                                             |
+| `JobProgress` | `job: s`, `event: s`, `type: s`, `state: s`, `message: s`, `progress: d`, `progress_done: s` |
+| `JobFinished` | `job: s`, `status: s`, `error_type: s`, `message: s`, `json: s`                              |

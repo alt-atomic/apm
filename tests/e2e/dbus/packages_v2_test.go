@@ -5,6 +5,7 @@
 package dbus_test
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -28,11 +29,11 @@ const (
 // packagesV2Contract намеренно дублирует introspection как независимый golden
 // публичного API, который проверяется через реально запущенную D-Bus-службу.
 var packagesV2Contract = dbustest.InterfaceContract{
-	"Install":      "in packages:as, in options_json:s, out job:u",
-	"Remove":       "in packages:as, in options_json:s, out job:u",
-	"Reinstall":    "in packages:as, out job:u",
-	"Upgrade":      "in options_json:s, out job:u",
-	"Update":       "in options_json:s, out job:u",
+	"Install":      "in packages:as, in options_json:s, out job:s",
+	"Remove":       "in packages:as, in options_json:s, out job:s",
+	"Reinstall":    "in packages:as, out job:s",
+	"Upgrade":      "in options_json:s, out job:s",
+	"Update":       "in options_json:s, out job:s",
 	"CheckInstall": "in packages:as, out json:s",
 	"CheckRemove":  "in packages:as, in options_json:s, out json:s",
 	"CheckUpgrade": "out json:s",
@@ -98,6 +99,7 @@ func TestPackagesV2InstallRemove(t *testing.T) {
 			Args([]string{testPackage}, options).
 			WaitJob(t, jobsIface)
 		assertSuccessfulPackageJob(t, job, true, testPackage)
+		assertJobStillAvailable(t, client, job)
 		assertRPMInstalled(t, testPackage, true)
 		callPackageInfo(t, client, testPackage, true)
 	}) {
@@ -136,13 +138,32 @@ func assertSuccessfulPackageJob(t *testing.T, job dbustest.JobResult, install bo
 	t.Helper()
 
 	if job.Status != "ok" {
-		t.Fatalf("job %d status = %q, want ok; message=%q json=%s", job.ID, job.Status, job.Message, job.JSON)
+		t.Fatalf("job %s status = %q, want ok; error=%q message=%q json=%s", job.ID, job.Status, job.ErrorType, job.Message, job.JSON)
 	}
-	if job.Message != "" {
-		t.Fatalf("successful job %d returned error message %q", job.ID, job.Message)
+	if job.Message != "" || job.ErrorType != "" {
+		t.Fatalf("successful job %s reported error %q/%q", job.ID, job.ErrorType, job.Message)
 	}
 	response := dbustest.DecodeJob[system.InstallRemoveResponse](t, job)
 	assertPackageChange(t, response.Info, response.Message, install, packageName)
+}
+
+// assertJobStillAvailable проверяет, что завершённая задача остаётся в реестре:
+// клиент мог узнать id уже после JobFinished и обязан забрать результат.
+func assertJobStillAvailable(t *testing.T, client *dbustest.Client, job dbustest.JobResult) {
+	t.Helper()
+
+	state := dbustest.CallJSON[struct {
+		ID     string          `json:"id"`
+		State  string          `json:"state"`
+		Result json.RawMessage `json:"result"`
+	}](t, client.Request(jobsIface, "Get").Args(job.ID))
+
+	if state.ID != job.ID || state.State != "ok" {
+		t.Fatalf("Jobs.Get(%s) = %+v, want finished job", job.ID, state)
+	}
+	if string(state.Result) != job.JSON {
+		t.Fatalf("Jobs.Get(%s) result = %s, want %s", job.ID, state.Result, job.JSON)
+	}
 }
 
 func assertPackageChange(t *testing.T, changes aptlib.PackageChanges, message string, install bool, packageName string) {

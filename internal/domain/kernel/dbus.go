@@ -14,32 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package jobs
+package kernel
 
 import (
-	"context"
-
+	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 )
 
-// Sink транслирует события Reporter в сигналы JobProgress.
-type Sink struct {
-	reg *Registry
+// DBusServices общие сервисы домена для обеих версий D-Bus API:
+// один Actions на демон, чтобы v1 и v2 работали над одним состоянием.
+type DBusServices struct {
+	actions *Actions
 }
 
-// NewSink создаёт приёмник событий для реестра.
-func NewSink(reg *Registry) *Sink {
-	return &Sink{reg: reg}
+// NewDBusServices собирает сервисы домена для экспорта в D-Bus.
+func NewDBusServices(appConfig *app.Config, reporter *reply.Reporter) *DBusServices {
+	return &DBusServices{actions: NewActions(appConfig, reporter)}
 }
-
-// Notify шлёт JobProgress, если событие принадлежит задаче.
-func (s *Sink) Notify(ctx context.Context, ev *reply.EventData) {
-	id, ok := FromContext(ctx)
-	if !ok {
-		return
-	}
-	s.reg.emit("JobProgress", id, ev.Name, ev.Type, ev.State, ev.View, ev.ProgressPercent, ev.ProgressDone)
-}
-
-// TaskResult не используется: финал задачи шлёт сам Registry.
-func (s *Sink) TaskResult(context.Context, string, interface{}, error) {}

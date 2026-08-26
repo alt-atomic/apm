@@ -19,27 +19,25 @@ package repository
 import (
 	"context"
 
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/authz"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
 	"altlinux.space/alt-atomic/apm/internal/common/polkit"
-	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusV2Module модуль интерфейса org.altlinux.APM2.Repo.
-func DBusV2Module(appConfig *app.Config, reporter *reply.Reporter) dbusv2.Module {
+// V2Module модуль интерфейса org.altlinux.APM2.Repo.
+func (s *DBusServices) V2Module() dbusv2.Module {
 	return dbusv2.Module{
 		Iface:         protocol.RepoIface,
 		Introspection: repoIntrospectionV2,
 		Build: func(ctx context.Context, reg *jobs.Registry, az authz.Authorizer) any {
 			return &DBusV2{
 				ctx:     ctx,
-				actions: NewActions(appConfig, reporter),
+				actions: s.actions,
 				jobs:    reg,
 				az:      az,
 			}
@@ -75,9 +73,11 @@ func (w *DBusV2) Branches() ([]string, *dbus.Error) {
 	return resp.Branches, nil
 }
 
-// TaskPackages запрашивает пакеты задачи сборочницы фоновой задачей:
-// поход в сеть медленный. Чтение — без polkit, отмена чужим — через repo.manage.
-func (w *DBusV2) TaskPackages(msg dbus.Message, task string) (uint32, *dbus.Error) {
+// TaskPackages запрашивает пакеты задачи сборочницы.
+func (w *DBusV2) TaskPackages(msg dbus.Message, task string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
 	return w.jobs.Start("repo", "TaskPackages", polkit.Sender(msg), protocol.ActionRepoManage,
 		wire.JSONTask(func(ctx context.Context) (*TaskPackagesResponse, error) {
 			return w.actions.GetTaskPackages(ctx, task)
@@ -86,9 +86,9 @@ func (w *DBusV2) TaskPackages(msg dbus.Message, task string) (uint32, *dbus.Erro
 
 // TestTask симулирует установку задачи сборочницы фоновой задачей:
 // временно подключает репозиторий задачи, обновляет индексы и считает изменения.
-func (w *DBusV2) TestTask(msg dbus.Message, task string) (uint32, *dbus.Error) {
+func (w *DBusV2) TestTask(msg dbus.Message, task string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
-		return 0, dbusErr
+		return "", dbusErr
 	}
 	return w.jobs.StartNoCancel("repo", "TestTask", polkit.Sender(msg),
 		wire.JSONTask(func(ctx context.Context) (*TestTaskResponse, error) {
