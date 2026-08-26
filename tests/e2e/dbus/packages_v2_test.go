@@ -34,9 +34,9 @@ var packagesV2Contract = dbustest.InterfaceContract{
 	"Reinstall":    "in packages:as, out job:s",
 	"Upgrade":      "in options_json:s, out job:s",
 	"Update":       "in options_json:s, out job:s",
-	"CheckInstall": "in packages:as, out json:s",
-	"CheckRemove":  "in packages:as, in options_json:s, out json:s",
-	"CheckUpgrade": "out json:s",
+	"CheckInstall": "in packages:as, out job:s",
+	"CheckRemove":  "in packages:as, in options_json:s, out job:s",
+	"CheckUpgrade": "out job:s",
 	"List":         "in request_json:s, out json:s",
 	"Info":         "in name:s, out json:s",
 	"MultiInfo":    "in names:as, out json:s",
@@ -86,7 +86,7 @@ func TestPackagesV2InstallRemove(t *testing.T) {
 	}
 
 	if !t.Run("CheckInstall", func(t *testing.T) {
-		response := callPackagesResult(t, client, "CheckInstall", []string{testPackage})
+		response := callPackagesCheck(t, client, "CheckInstall", []string{testPackage})
 		assertPackageChange(t, response.Info, response.Message, true, testPackage)
 		assertRPMInstalled(t, testPackage, false)
 	}) {
@@ -107,7 +107,7 @@ func TestPackagesV2InstallRemove(t *testing.T) {
 	}
 
 	if !t.Run("CheckRemove", func(t *testing.T) {
-		response := callPackagesResult(t, client, "CheckRemove", []string{testPackage}, "{}")
+		response := callPackagesCheck(t, client, "CheckRemove", []string{testPackage}, "{}")
 		assertPackageChange(t, response.Info, response.Message, false, testPackage)
 		assertRPMInstalled(t, testPackage, true)
 	}) {
@@ -126,10 +126,16 @@ func TestPackagesV2InstallRemove(t *testing.T) {
 	}
 }
 
-func callPackagesResult(t *testing.T, client *dbustest.Client, method string, args ...any) system.CheckResponse {
+// callPackagesCheck прогоняет симуляцию.
+func callPackagesCheck(t *testing.T, client *dbustest.Client, method string, args ...any) system.CheckResponse {
 	t.Helper()
 
-	response := dbustest.CallJSON[system.CheckResponse](t, client.Request(packagesIface, method).Args(args...))
+	job := client.Request(packagesIface, method).Args(args...).WaitJob(t, jobsIface)
+	if job.Status != "ok" {
+		t.Fatalf("%s job %s status = %q, want ok; error=%q message=%q", method, job.ID, job.Status, job.ErrorType, job.Message)
+	}
+
+	response := dbustest.DecodeJob[system.CheckResponse](t, job)
 	assertResponseMessage(t, response.Message, method)
 	return response
 }

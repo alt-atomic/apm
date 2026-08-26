@@ -71,8 +71,9 @@ func (w *PackagesV2) guard(msg dbus.Message) *dbus.Error {
 	return wire.Error(w.az.Authorize(msg, protocol.ActionPackagesManage))
 }
 
-// startTransaction регистрирует неотменяемую rpm/apt-транзакцию.
-func (w *PackagesV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
+// startJob регистрирует фоновую задачу домена.
+// Отмена запрещена всем: вызов apt не прерывается на полпути.
+func (w *PackagesV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
 	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), fn)
 }
 
@@ -88,7 +89,7 @@ func (w *PackagesV2) Install(msg dbus.Message, packages []string, optionsJSON st
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startTransaction(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+	return w.startJob(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Install(ctx, packages, true, options.DownloadOnly, options.NoUpdate)
 	})), nil
 }
@@ -105,7 +106,7 @@ func (w *PackagesV2) Remove(msg dbus.Message, packages []string, optionsJSON str
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startTransaction(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+	return w.startJob(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Remove(ctx, packages, options.Purge, options.Depends, true)
 	})), nil
 }
@@ -115,7 +116,7 @@ func (w *PackagesV2) Reinstall(msg dbus.Message, packages []string) (string, *db
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	return w.startTransaction(msg, "Reinstall", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+	return w.startJob(msg, "Reinstall", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Reinstall(ctx, packages, true)
 	})), nil
 }
@@ -131,7 +132,7 @@ func (w *PackagesV2) Upgrade(msg dbus.Message, optionsJSON string) (string, *dbu
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startTransaction(msg, "Upgrade", wire.JSONTask(func(ctx context.Context) (*UpgradeResponse, error) {
+	return w.startJob(msg, "Upgrade", wire.JSONTask(func(ctx context.Context) (*UpgradeResponse, error) {
 		return w.actions.Upgrade(ctx, options.DownloadOnly)
 	})), nil
 }
@@ -147,21 +148,22 @@ func (w *PackagesV2) Update(msg dbus.Message, optionsJSON string) (string, *dbus
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startTransaction(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
+	return w.startJob(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
 		return w.actions.Update(ctx, false, options.OnlyDB)
 	})), nil
 }
 
-// CheckInstall симулирует установку.
+// CheckInstall симулирует установку фоновой задачей.
 func (w *PackagesV2) CheckInstall(msg dbus.Message, packages []string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	resp, err := w.actions.CheckInstall(w.ctx, packages)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckInstall", wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
+		return w.actions.CheckInstall(ctx, packages)
+	})), nil
 }
 
-// CheckRemove симулирует удаление.
+// CheckRemove симулирует удаление фоновой задачей.
 func (w *PackagesV2) CheckRemove(msg dbus.Message, packages []string, optionsJSON string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
@@ -173,17 +175,19 @@ func (w *PackagesV2) CheckRemove(msg dbus.Message, packages []string, optionsJSO
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	resp, err := w.actions.CheckRemove(w.ctx, packages, options.Purge, options.Depends)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckRemove", wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
+		return w.actions.CheckRemove(ctx, packages, options.Purge, options.Depends)
+	})), nil
 }
 
-// CheckUpgrade симулирует обновление системы.
+// CheckUpgrade симулирует обновление системы фоновой задачей.
 func (w *PackagesV2) CheckUpgrade(msg dbus.Message) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	resp, err := w.actions.CheckUpgrade(w.ctx)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckUpgrade", wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
+		return w.actions.CheckUpgrade(ctx)
+	})), nil
 }
 
 // List возвращает JSON существующего ListResponse.

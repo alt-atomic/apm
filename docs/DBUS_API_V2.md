@@ -109,9 +109,9 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 | `Reinstall`    | `packages: as`                    | `job: s`       |
 | `Upgrade`      | `options_json: s`                 | `job: s`       |
 | `Update`       | `options_json: s`                 | `job: s`       |
-| `CheckInstall` | `packages: as`                    | `json: s`      |
-| `CheckRemove`  | `packages: as`, `options_json: s` | `json: s`      |
-| `CheckUpgrade` | —                                 | `json: s`      |
+| `CheckInstall` | `packages: as`                    | `job: s`       |
+| `CheckRemove`  | `packages: as`, `options_json: s` | `job: s`       |
+| `CheckUpgrade` | —                                 | `job: s`       |
 | `List`         | `request_json: s`                 | `json: s`      |
 | `Info`         | `name: s`                         | `json: s`      |
 | `MultiInfo`    | `names: as`                       | `json: s`      |
@@ -173,15 +173,15 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 | `Current`             | —                                              | `json: s` |
 | `Install`             | `flavour: s`, `modules: as`, `options_json: s` | `job: s`  |
 | `Update`              | `flavour: s`, `modules: as`, `options_json: s` | `job: s`  |
-| `CheckInstall`        | `flavour: s`, `modules: as`, `options_json: s` | `json: s` |
-| `CheckUpdate`         | `flavour: s`, `modules: as`, `options_json: s` | `json: s` |
+| `CheckInstall`        | `flavour: s`, `modules: as`, `options_json: s` | `job: s`  |
+| `CheckUpdate`         | `flavour: s`, `modules: as`, `options_json: s` | `job: s`  |
 | `CleanOld`            | `options_json: s`                              | `job: s`  |
-| `CheckCleanOld`       | `options_json: s`                              | `json: s` |
+| `CheckCleanOld`       | `options_json: s`                              | `job: s`  |
 | `ListModules`         | `flavour: s`                                   | `json: s` |
 | `InstallModules`      | `flavour: s`, `modules: as`                    | `job: s`  |
-| `CheckInstallModules` | `flavour: s`, `modules: as`                    | `json: s` |
+| `CheckInstallModules` | `flavour: s`, `modules: as`                    | `job: s`  |
 | `RemoveModules`       | `flavour: s`, `modules: as`                    | `job: s`  |
-| `CheckRemoveModules`  | `flavour: s`, `modules: as`                    | `json: s` |
+| `CheckRemoveModules`  | `flavour: s`, `modules: as`                    | `job: s`  |
 
 ## Репозитории
 

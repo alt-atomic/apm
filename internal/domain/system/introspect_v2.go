@@ -50,15 +50,15 @@ var packagesIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "CheckInstall", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
-			protocol.Out("json", "s"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckRemove", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
 			protocol.In("options_json", "s"),
-			protocol.Out("json", "s"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckUpgrade", Args: []introspect.Arg{
-			protocol.Out("json", "s"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "List", Args: []introspect.Arg{
 			protocol.In("request_json", "s"),

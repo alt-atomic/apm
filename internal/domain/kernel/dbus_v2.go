@@ -58,8 +58,8 @@ func (w *DBusV2) guard(msg dbus.Message) *dbus.Error {
 	return wire.Error(w.az.Authorize(msg, protocol.ActionKernelManage))
 }
 
-// startJob регистрирует фоновую задачу ядра.
-// Все мутирующие операции ядра — rpm-транзакции, отмена запрещена.
+// startJob регистрирует фоновую задачу домена.
+// Отмена запрещена всем: вызов apt не прерывается на полпути.
 func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
 	return w.jobs.StartNoCancel("kernel", kind, polkit.Sender(msg), fn)
 }
@@ -108,7 +108,7 @@ func (w *DBusV2) Update(msg dbus.Message, flavour string, modules []string, opti
 	})), nil
 }
 
-// CheckInstall симулирует установку ядра.
+// CheckInstall симулирует установку ядра фоновой задачей.
 func (w *DBusV2) CheckInstall(msg dbus.Message, flavour string, modules []string, optionsJSON string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
@@ -119,11 +119,12 @@ func (w *DBusV2) CheckInstall(msg dbus.Message, flavour string, modules []string
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	resp, err := w.actions.InstallKernel(w.ctx, flavour, modules, options.Headers, true)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckInstall", wire.JSONTask(func(ctx context.Context) (*InstallUpdateKernelResponse, error) {
+		return w.actions.InstallKernel(ctx, flavour, modules, options.Headers, true)
+	})), nil
 }
 
-// CheckUpdate симулирует обновление ядра.
+// CheckUpdate симулирует обновление ядра фоновой задачей.
 func (w *DBusV2) CheckUpdate(msg dbus.Message, flavour string, modules []string, optionsJSON string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
@@ -134,8 +135,9 @@ func (w *DBusV2) CheckUpdate(msg dbus.Message, flavour string, modules []string,
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	resp, err := w.actions.UpdateKernel(w.ctx, flavour, modules, options.Headers, true)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckUpdate", wire.JSONTask(func(ctx context.Context) (*InstallUpdateKernelResponse, error) {
+		return w.actions.UpdateKernel(ctx, flavour, modules, options.Headers, true)
+	})), nil
 }
 
 // CleanOld удаляет старые ядра фоновой задачей.
@@ -154,7 +156,7 @@ func (w *DBusV2) CleanOld(msg dbus.Message, optionsJSON string) (string, *dbus.E
 	})), nil
 }
 
-// CheckCleanOld симулирует удаление старых ядер.
+// CheckCleanOld симулирует удаление старых ядер фоновой задачей.
 func (w *DBusV2) CheckCleanOld(msg dbus.Message, optionsJSON string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
@@ -165,8 +167,9 @@ func (w *DBusV2) CheckCleanOld(msg dbus.Message, optionsJSON string) (string, *d
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	resp, err := w.actions.CleanOldKernels(w.ctx, options.NoBackup, true)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckCleanOld", wire.JSONTask(func(ctx context.Context) (*CleanOldKernelsResponse, error) {
+		return w.actions.CleanOldKernels(ctx, options.NoBackup, true)
+	})), nil
 }
 
 // ListModules возвращает ядро и его доступные модули.
@@ -185,13 +188,14 @@ func (w *DBusV2) InstallModules(msg dbus.Message, flavour string, modules []stri
 	})), nil
 }
 
-// CheckInstallModules симулирует установку модулей ядра.
+// CheckInstallModules симулирует установку модулей ядра фоновой задачей.
 func (w *DBusV2) CheckInstallModules(msg dbus.Message, flavour string, modules []string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	resp, err := w.actions.InstallKernelModules(w.ctx, flavour, modules, true)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckInstallModules", wire.JSONTask(func(ctx context.Context) (*InstallKernelModulesResponse, error) {
+		return w.actions.InstallKernelModules(ctx, flavour, modules, true)
+	})), nil
 }
 
 // RemoveModules удаляет модули ядра фоновой задачей.
@@ -204,11 +208,12 @@ func (w *DBusV2) RemoveModules(msg dbus.Message, flavour string, modules []strin
 	})), nil
 }
 
-// CheckRemoveModules симулирует удаление модулей ядра.
+// CheckRemoveModules симулирует удаление модулей ядра фоновой задачей.
 func (w *DBusV2) CheckRemoveModules(msg dbus.Message, flavour string, modules []string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	resp, err := w.actions.RemoveKernelModules(w.ctx, flavour, modules, true)
-	return wire.JSONReply(resp, err)
+	return w.startJob(msg, "CheckRemoveModules", wire.JSONTask(func(ctx context.Context) (*RemoveKernelModulesResponse, error) {
+		return w.actions.RemoveKernelModules(ctx, flavour, modules, true)
+	})), nil
 }
