@@ -33,8 +33,8 @@ const (
 var repoV2Contract = dbustest.InterfaceContract{
 	"List":           "in all:b, out json:s",
 	"Branches":       "out branches:as",
-	"TaskPackages":   "in task:s, out job:u",
-	"TestTask":       "in task:s, out job:u",
+	"TaskPackages":   "in task:s, out job:s",
+	"TestTask":       "in task:s, out job:s",
 	"Add":            "in sources:as, in date:s, out json:s",
 	"Remove":         "in sources:as, in date:s, out json:s",
 	"SetBranch":      "in branch:s, in date:s, out json:s",
@@ -102,6 +102,10 @@ func TestRepoV2PolkitDenied(t *testing.T) {
 
 	client := dbustest.NewSystemClient(t, serviceName, objectPath)
 	err := client.Request(repoIface, "CheckClean").Call().Err
+	dbustest.AssertError(t, err, "org.freedesktop.DBus.Error.AccessDenied", "org.altlinux.APM2.repo.manage")
+
+	// фоновая задача тоже под polkit: иначе любой мог бы плодить походы в сеть
+	err = client.Request(repoIface, "TaskPackages").Args("400000").Call().Err
 	dbustest.AssertError(t, err, "org.freedesktop.DBus.Error.AccessDenied", "org.altlinux.APM2.repo.manage")
 }
 

@@ -52,6 +52,15 @@ type Setup struct {
 	Modules []Module
 }
 
+// jobPrefix уникальное имя соединения на шине.
+func jobPrefix(conn *dbus.Conn) string {
+	names := conn.Names()
+	if len(names) == 0 {
+		return ""
+	}
+	return names[0]
+}
+
 // Export экспортирует интерфейсы API, свойства и introspection на соединении демона.
 func (s Setup) Export(ctx context.Context, conn *dbus.Conn) error {
 	emit := func(member string, values ...any) {
@@ -59,7 +68,7 @@ func (s Setup) Export(ctx context.Context, conn *dbus.Conn) error {
 			app.Log.Error("dbusv2 emit failed: ", err)
 		}
 	}
-	reg := jobs.NewRegistry(ctx, emit)
+	reg := jobs.NewRegistry(ctx, jobPrefix(conn), emit)
 	s.Reporter.AddSink(jobs.NewSink(reg))
 
 	az := authz.AllowAll

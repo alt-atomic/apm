@@ -38,13 +38,13 @@ var kernelIntrospectionV2 = introspect.Interface{
 			protocol.In("flavour", "s"),
 			protocol.In("modules", "as"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Update", Args: []introspect.Arg{
 			protocol.In("flavour", "s"),
 			protocol.In("modules", "as"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckInstall", Args: []introspect.Arg{
 			protocol.In("flavour", "s"),
@@ -60,7 +60,7 @@ var kernelIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "CleanOld", Args: []introspect.Arg{
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckCleanOld", Args: []introspect.Arg{
 			protocol.In("options_json", "s"),
@@ -73,7 +73,7 @@ var kernelIntrospectionV2 = introspect.Interface{
 		{Name: "InstallModules", Args: []introspect.Arg{
 			protocol.In("flavour", "s"),
 			protocol.In("modules", "as"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckInstallModules", Args: []introspect.Arg{
 			protocol.In("flavour", "s"),
@@ -83,7 +83,7 @@ var kernelIntrospectionV2 = introspect.Interface{
 		{Name: "RemoveModules", Args: []introspect.Arg{
 			protocol.In("flavour", "s"),
 			protocol.In("modules", "as"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckRemoveModules", Args: []introspect.Arg{
 			protocol.In("flavour", "s"),

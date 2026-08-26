@@ -37,13 +37,13 @@ func (j *JobsAPI) List() (string, *dbus.Error) {
 }
 
 // Get возвращает снимок задачи.
-func (j *JobsAPI) Get(job uint32) (string, *dbus.Error) {
+func (j *JobsAPI) Get(job string) (string, *dbus.Error) {
 	state, err := j.reg.Get(job)
 	return wire.JSONReply(state, err)
 }
 
 // Cancel отменяет задачу: владелец — свободно, остальные — через polkit.
-func (j *JobsAPI) Cancel(msg dbus.Message, job uint32) *dbus.Error {
+func (j *JobsAPI) Cancel(msg dbus.Message, job string) *dbus.Error {
 	return wire.Error(j.reg.Cancel(job, polkit.Sender(msg), func(action string) error {
 		return j.az.Authorize(msg, action)
 	}))

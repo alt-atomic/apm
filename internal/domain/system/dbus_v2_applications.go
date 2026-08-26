@@ -21,14 +21,12 @@ import (
 	"fmt"
 
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/authz"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
 	"altlinux.space/alt-atomic/apm/internal/common/polkit"
-	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/appstream"
 
@@ -36,14 +34,14 @@ import (
 )
 
 // applicationsModuleV2 модуль интерфейса org.altlinux.APM2.Applications.
-func applicationsModuleV2(appConfig *app.Config, reporter *reply.Reporter) dbusv2.Module {
+func applicationsModuleV2(actions *appstream.Actions) dbusv2.Module {
 	return dbusv2.Module{
 		Iface:         protocol.ApplicationsIface,
 		Introspection: applicationsIntrospectionV2,
 		Build: func(ctx context.Context, reg *jobs.Registry, az authz.Authorizer) any {
 			return &ApplicationsV2{
 				ctx:     ctx,
-				actions: appstream.NewActions(appConfig, reporter),
+				actions: actions,
 				jobs:    reg,
 				az:      az,
 			}
@@ -65,9 +63,9 @@ func (w *ApplicationsV2) guard(msg dbus.Message) *dbus.Error {
 }
 
 // Update обновляет каталог приложений фоновой задачей.
-func (w *ApplicationsV2) Update(msg dbus.Message) (uint32, *dbus.Error) {
+func (w *ApplicationsV2) Update(msg dbus.Message) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
-		return 0, dbusErr
+		return "", dbusErr
 	}
 	job := w.jobs.Start("applications", "Update", polkit.Sender(msg), protocol.ActionApplicationsManage,
 		wire.JSONTask(func(ctx context.Context) (*appstream.UpdateResponse, error) {

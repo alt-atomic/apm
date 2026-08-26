@@ -38,7 +38,7 @@ func (s *Sink) Notify(ctx context.Context, ev *reply.EventData) {
 	if !ok {
 		return
 	}
-	s.reg.emit("JobProgress", id, ev.Name, ev.Type, ev.State, ev.ProgressPercent, ev.ProgressDone)
+	s.reg.emit("JobProgress", id, ev.Name, ev.Type, ev.State, ev.View, ev.ProgressPercent, ev.ProgressDone)
 }
 
 // TaskResult не используется: финал задачи шлёт сам Registry.

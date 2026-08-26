@@ -33,13 +33,13 @@ import (
 
 const DBusInterface = "org.altlinux.APM.distrobox"
 
-func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) dbusv1.Module {
+// V1Module интерфейс совместимости org.altlinux.APM.distrobox.
+func (s *DBusServices) V1Module() dbusv1.Module {
 	return dbusv1.Module{
 		Interface: DBusInterface,
 		Build: func(ctx context.Context, _ *dbus.Conn) (dbusv1.Object, error) {
-			actions := NewActions(appConfig, reporter)
 			// Кэш иконок прогревает v2 Icons-модуль того же session daemon.
-			return dbusv1.Object{Value: NewDBusWrapper(actions, ctx)}, nil
+			return dbusv1.Object{Value: NewDBusWrapper(s.actions, ctx)}, nil
 		},
 	}
 }

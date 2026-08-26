@@ -19,7 +19,6 @@ package system
 import (
 	"context"
 
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/authz"
@@ -27,32 +26,31 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
 	"altlinux.space/alt-atomic/apm/internal/common/polkit"
-	"altlinux.space/alt-atomic/apm/internal/common/reply"
 
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusV2Modules интерфейсы v2 домена system: Packages, Image, Applications.
-func DBusV2Modules(appConfig *app.Config, reporter *reply.Reporter) []dbusv2.Module {
+// V2Modules интерфейсы v2 домена system: Packages, Image, Applications.
+func (s *DBusServices) V2Modules() []dbusv2.Module {
 	modules := []dbusv2.Module{
-		packagesModuleV2(appConfig, reporter),
-		applicationsModuleV2(appConfig, reporter),
+		packagesModuleV2(s.actions),
+		applicationsModuleV2(s.appstreamActions),
 	}
-	if appConfig.ConfigManager.GetConfig().IsAtomic {
-		modules = append(modules, imageModuleV2(appConfig, reporter))
+	if s.appConfig.ConfigManager.GetConfig().IsAtomic {
+		modules = append(modules, imageModuleV2(s.actions))
 	}
 	return modules
 }
 
 // packagesModuleV2 модуль интерфейса org.altlinux.APM2.Packages.
-func packagesModuleV2(appConfig *app.Config, reporter *reply.Reporter) dbusv2.Module {
+func packagesModuleV2(actions *Actions) dbusv2.Module {
 	return dbusv2.Module{
 		Iface:         protocol.PackagesIface,
 		Introspection: packagesIntrospectionV2,
 		Build: func(ctx context.Context, reg *jobs.Registry, az authz.Authorizer) any {
 			return &PackagesV2{
 				ctx:     ctx,
-				actions: NewActions(appConfig, reporter),
+				actions: actions,
 				jobs:    reg,
 				az:      az,
 			}
@@ -74,72 +72,84 @@ func (w *PackagesV2) guard(msg dbus.Message) *dbus.Error {
 }
 
 // startTransaction регистрирует неотменяемую rpm/apt-транзакцию.
-func (w *PackagesV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) (uint32, *dbus.Error) {
-	if dbusErr := w.guard(msg); dbusErr != nil {
-		return 0, dbusErr
-	}
-	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), fn), nil
+func (w *PackagesV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
+	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), fn)
 }
 
 // Install ставит пакеты фоновой задачей.
-func (w *PackagesV2) Install(msg dbus.Message, packages []string, optionsJSON string) (uint32, *dbus.Error) {
+func (w *PackagesV2) Install(msg dbus.Message, packages []string, optionsJSON string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
 	var options struct {
 		DownloadOnly bool `json:"downloadOnly"`
 		NoUpdate     bool `json:"noUpdate"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
-		return 0, wire.Error(err)
+		return "", wire.Error(err)
 	}
 	return w.startTransaction(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Install(ctx, packages, true, options.DownloadOnly, options.NoUpdate)
-	}))
+	})), nil
 }
 
 // Remove удаляет пакеты фоновой задачей.
-func (w *PackagesV2) Remove(msg dbus.Message, packages []string, optionsJSON string) (uint32, *dbus.Error) {
+func (w *PackagesV2) Remove(msg dbus.Message, packages []string, optionsJSON string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
 	var options struct {
 		Purge   bool `json:"purge"`
 		Depends bool `json:"depends"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
-		return 0, wire.Error(err)
+		return "", wire.Error(err)
 	}
 	return w.startTransaction(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Remove(ctx, packages, options.Purge, options.Depends, true)
-	}))
+	})), nil
 }
 
 // Reinstall переустанавливает пакеты фоновой задачей.
-func (w *PackagesV2) Reinstall(msg dbus.Message, packages []string) (uint32, *dbus.Error) {
+func (w *PackagesV2) Reinstall(msg dbus.Message, packages []string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
 	return w.startTransaction(msg, "Reinstall", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Reinstall(ctx, packages, true)
-	}))
+	})), nil
 }
 
 // Upgrade обновляет систему фоновой задачей.
-func (w *PackagesV2) Upgrade(msg dbus.Message, optionsJSON string) (uint32, *dbus.Error) {
+func (w *PackagesV2) Upgrade(msg dbus.Message, optionsJSON string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
 	var options struct {
 		DownloadOnly bool `json:"downloadOnly"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
-		return 0, wire.Error(err)
+		return "", wire.Error(err)
 	}
 	return w.startTransaction(msg, "Upgrade", wire.JSONTask(func(ctx context.Context) (*UpgradeResponse, error) {
 		return w.actions.Upgrade(ctx, options.DownloadOnly)
-	}))
+	})), nil
 }
 
 // Update обновляет список пакетов фоновой задачей.
-func (w *PackagesV2) Update(msg dbus.Message, optionsJSON string) (uint32, *dbus.Error) {
+func (w *PackagesV2) Update(msg dbus.Message, optionsJSON string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
 	var options struct {
 		OnlyDB bool `json:"onlyDB"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
-		return 0, wire.Error(err)
+		return "", wire.Error(err)
 	}
 	return w.startTransaction(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
 		return w.actions.Update(ctx, false, options.OnlyDB)
-	}))
+	})), nil
 }
 
 // CheckInstall симулирует установку.
@@ -153,15 +163,15 @@ func (w *PackagesV2) CheckInstall(msg dbus.Message, packages []string) (string, 
 
 // CheckRemove симулирует удаление.
 func (w *PackagesV2) CheckRemove(msg dbus.Message, packages []string, optionsJSON string) (string, *dbus.Error) {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return "", dbusErr
+	}
 	var options struct {
 		Purge   bool `json:"purge"`
 		Depends bool `json:"depends"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
-	}
-	if dbusErr := w.guard(msg); dbusErr != nil {
-		return "", dbusErr
 	}
 	resp, err := w.actions.CheckRemove(w.ctx, packages, options.Purge, options.Depends)
 	return wire.JSONReply(resp, err)
@@ -241,12 +251,12 @@ func (w *PackagesV2) AptConfig() (string, *dbus.Error) {
 
 // SetAptConfig устанавливает переопределения конфигурации APT.
 func (w *PackagesV2) SetAptConfig(msg dbus.Message, optionsJSON string) *dbus.Error {
+	if dbusErr := w.guard(msg); dbusErr != nil {
+		return dbusErr
+	}
 	var options map[string]string
 	if err := wire.DecodeJSON(optionsJSON, &options); err != nil {
 		return wire.Error(err)
-	}
-	if dbusErr := w.guard(msg); dbusErr != nil {
-		return dbusErr
 	}
 	_, err := w.actions.SetAptConfigOverrides(options)
 	return wire.Error(err)
