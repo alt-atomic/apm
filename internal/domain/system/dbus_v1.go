@@ -39,12 +39,12 @@ import (
 
 const DBusInterface = "org.altlinux.APM.system"
 
-func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) dbusv1.Module {
+// V1Module интерфейс совместимости org.altlinux.APM.system.
+func (s *DBusServices) V1Module() dbusv1.Module {
 	return dbusv1.Module{
 		Interface: DBusInterface,
 		Build: func(ctx context.Context, conn *dbus.Conn) (dbusv1.Object, error) {
-			actions := NewActions(appConfig, reporter)
-			return dbusv1.Object{Value: NewDBusWrapper(actions, conn, ctx)}, nil
+			return dbusv1.Object{Value: NewDBusWrapper(s.actions, s.appstreamActions, conn, ctx)}, nil
 		},
 	}
 }
@@ -58,10 +58,10 @@ type DBusWrapper struct {
 }
 
 // NewDBusWrapper создаёт новую обёртку над actions
-func NewDBusWrapper(a *Actions, c *dbus.Conn, ctx context.Context) *DBusWrapper {
+func NewDBusWrapper(a *Actions, appActions *appstream.Actions, c *dbus.Conn, ctx context.Context) *DBusWrapper {
 	return &DBusWrapper{
 		actions:          a,
-		appstreamActions: appstream.NewActions(a.appConfig, a.reporter),
+		appstreamActions: appActions,
 		conn:             c,
 		ctx:              ctx,
 	}

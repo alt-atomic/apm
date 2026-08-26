@@ -32,12 +32,12 @@ import (
 
 const DBusInterface = "org.altlinux.APM.kernel"
 
-func DBusFactory(appConfig *app.Config, reporter *reply.Reporter) dbusv1.Module {
+// V1Module интерфейс совместимости org.altlinux.APM.kernel.
+func (s *DBusServices) V1Module() dbusv1.Module {
 	return dbusv1.Module{
 		Interface: DBusInterface,
 		Build: func(ctx context.Context, conn *dbus.Conn) (dbusv1.Object, error) {
-			actions := NewActions(appConfig, reporter)
-			return dbusv1.Object{Value: NewDBusWrapper(actions, conn, ctx)}, nil
+			return dbusv1.Object{Value: NewDBusWrapper(s.actions, conn, ctx)}, nil
 		},
 	}
 }

@@ -19,25 +19,22 @@ package distrobox
 import (
 	"context"
 
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/authz"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/jobs"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/wire"
 	"altlinux.space/alt-atomic/apm/internal/common/polkit"
-	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/sandbox"
 
 	"github.com/godbus/dbus/v5"
 )
 
-// DBusV2Modules интерфейсы v2 сессионной шины: Distrobox и Icons.
-func DBusV2Modules(appConfig *app.Config, reporter *reply.Reporter) []dbusv2.Module {
-	actions := NewActions(appConfig, reporter)
+// V2Modules интерфейсы v2 сессионной шины: Distrobox и Icons.
+func (s *DBusServices) V2Modules() []dbusv2.Module {
 	return []dbusv2.Module{
-		distroboxModuleV2(actions),
-		iconsModuleV2(actions),
+		distroboxModuleV2(s.actions),
+		iconsModuleV2(s.actions),
 	}
 }
 
@@ -64,13 +61,13 @@ type DBusV2 struct {
 }
 
 // startJob регистрирует фоновую задачу; отмена — только владельцем.
-func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) (uint32, *dbus.Error) {
-	return w.jobs.Start("distrobox", kind, polkit.Sender(msg), "", fn), nil
+func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
+	return w.jobs.Start("distrobox", kind, polkit.Sender(msg), "", fn)
 }
 
 // startTransaction регистрирует неотменяемую пакетную транзакцию.
-func (w *DBusV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) (uint32, *dbus.Error) {
-	return w.jobs.StartNoCancel("distrobox", kind, polkit.Sender(msg), fn), nil
+func (w *DBusV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
+	return w.jobs.StartNoCancel("distrobox", kind, polkit.Sender(msg), fn)
 }
 
 // ContainerList возвращает список контейнеров.
@@ -80,57 +77,57 @@ func (w *DBusV2) ContainerList() (string, *dbus.Error) {
 }
 
 // ContainerAdd создаёт контейнер фоновой задачей.
-func (w *DBusV2) ContainerAdd(msg dbus.Message, image string, name string, optionsJSON string) (uint32, *dbus.Error) {
+func (w *DBusV2) ContainerAdd(msg dbus.Message, image string, name string, optionsJSON string) (string, *dbus.Error) {
 	var options struct {
 		AdditionalPackages string `json:"additionalPackages"`
 		InitHooks          string `json:"initHooks"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
-		return 0, wire.Error(err)
+		return "", wire.Error(err)
 	}
 	return w.startJob(msg, "ContainerAdd", wire.JSONTask(func(ctx context.Context) (*ContainerAddResponse, error) {
 		return w.actions.ContainerAdd(ctx, image, name, options.AdditionalPackages, options.InitHooks)
-	}))
+	})), nil
 }
 
 // ContainerRemove удаляет контейнер фоновой задачей.
-func (w *DBusV2) ContainerRemove(msg dbus.Message, name string) (uint32, *dbus.Error) {
+func (w *DBusV2) ContainerRemove(msg dbus.Message, name string) (string, *dbus.Error) {
 	return w.startJob(msg, "ContainerRemove", wire.JSONTask(func(ctx context.Context) (*ContainerRemoveResponse, error) {
 		return w.actions.ContainerRemove(ctx, name)
-	}))
+	})), nil
 }
 
 // Update обновляет пакетную базу контейнера фоновой задачей.
-func (w *DBusV2) Update(msg dbus.Message, container string) (uint32, *dbus.Error) {
+func (w *DBusV2) Update(msg dbus.Message, container string) (string, *dbus.Error) {
 	return w.startJob(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
 		return w.actions.Update(ctx, container)
-	}))
+	})), nil
 }
 
 // Install ставит пакет в контейнер фоновой задачей.
-func (w *DBusV2) Install(msg dbus.Message, container string, name string, optionsJSON string) (uint32, *dbus.Error) {
+func (w *DBusV2) Install(msg dbus.Message, container string, name string, optionsJSON string) (string, *dbus.Error) {
 	var options struct {
 		Export bool `json:"export"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
-		return 0, wire.Error(err)
+		return "", wire.Error(err)
 	}
 	return w.startTransaction(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallResponse, error) {
 		return w.actions.Install(ctx, container, name, options.Export)
-	}))
+	})), nil
 }
 
 // Remove удаляет пакет из контейнера фоновой задачей.
-func (w *DBusV2) Remove(msg dbus.Message, container string, name string, optionsJSON string) (uint32, *dbus.Error) {
+func (w *DBusV2) Remove(msg dbus.Message, container string, name string, optionsJSON string) (string, *dbus.Error) {
 	var options struct {
 		OnlyExport bool `json:"onlyExport"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
-		return 0, wire.Error(err)
+		return "", wire.Error(err)
 	}
 	return w.startTransaction(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*RemoveResponse, error) {
 		return w.actions.Remove(ctx, container, name, options.OnlyExport)
-	}))
+	})), nil
 }
 
 // Info возвращает информацию о пакете контейнера.

@@ -10,10 +10,11 @@ import (
 )
 
 type JobResult struct {
-	ID      uint32
-	Status  string
-	Message string
-	JSON    string
+	ID        string
+	Status    string
+	ErrorType string
+	Message   string
+	JSON      string
 }
 
 // DecodeJob decodes the JSON result carried by JobFinished
@@ -47,7 +48,7 @@ func (r *Request) WaitJob(t testing.TB, jobsInterface string) JobResult {
 		}
 	}()
 
-	var jobID uint32
+	var jobID string
 	r.Store(t, &jobID)
 
 	for {
@@ -58,7 +59,7 @@ func (r *Request) WaitJob(t testing.TB, jobsInterface string) JobResult {
 				return finished
 			}
 		case <-ctx.Done():
-			t.Fatalf("wait for job %d: %v", jobID, ctx.Err())
+			t.Fatalf("wait for job %s: %v", jobID, ctx.Err())
 			return JobResult{}
 		}
 	}
@@ -70,24 +71,28 @@ func decodeJobFinished(t testing.TB, signal *dbus.Signal) JobResult {
 	if signal == nil {
 		t.Fatal("JobFinished signal channel was closed")
 	}
-	if len(signal.Body) != 4 {
-		t.Fatalf("JobFinished has %d body fields, want 4: %#v", len(signal.Body), signal.Body)
+	if len(signal.Body) != 5 {
+		t.Fatalf("JobFinished has %d body fields, want 5: %#v", len(signal.Body), signal.Body)
 	}
-	id, ok := signal.Body[0].(uint32)
+	id, ok := signal.Body[0].(string)
 	if !ok {
-		t.Fatalf("JobFinished job has type %T, want uint32", signal.Body[0])
+		t.Fatalf("JobFinished job has type %T, want string", signal.Body[0])
 	}
 	status, ok := signal.Body[1].(string)
 	if !ok {
 		t.Fatalf("JobFinished status has type %T, want string", signal.Body[1])
 	}
-	message, ok := signal.Body[2].(string)
+	errorType, ok := signal.Body[2].(string)
 	if !ok {
-		t.Fatalf("JobFinished message has type %T, want string", signal.Body[2])
+		t.Fatalf("JobFinished error_type has type %T, want string", signal.Body[2])
 	}
-	result, ok := signal.Body[3].(string)
+	message, ok := signal.Body[3].(string)
 	if !ok {
-		t.Fatalf("JobFinished result has type %T, want string", signal.Body[3])
+		t.Fatalf("JobFinished message has type %T, want string", signal.Body[3])
 	}
-	return JobResult{ID: id, Status: status, Message: message, JSON: result}
+	result, ok := signal.Body[4].(string)
+	if !ok {
+		t.Fatalf("JobFinished result has type %T, want string", signal.Body[4])
+	}
+	return JobResult{ID: id, Status: status, ErrorType: errorType, Message: message, JSON: result}
 }

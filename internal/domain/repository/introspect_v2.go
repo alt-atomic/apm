@@ -35,11 +35,11 @@ var repoIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "TaskPackages", Args: []introspect.Arg{
 			protocol.In("task", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "TestTask", Args: []introspect.Arg{
 			protocol.In("task", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Add", Args: []introspect.Arg{
 			protocol.In("sources", "as"),

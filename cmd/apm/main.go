@@ -137,17 +137,18 @@ func (rt *appRuntime) buildCommands() []*cli.Command {
 }
 
 func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	distroboxBus := distrobox.NewDBusServices(rt.config, rt.reporter)
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
 		Bus:  service.BusSession,
 		Mode: apmcli.ForbidRoot,
 		APIs: []service.DBusAPI{
 			dbusv2.Setup{
 				Reporter: rt.reporter,
-				Modules:  distrobox.DBusV2Modules(rt.config, rt.reporter),
+				Modules:  distroboxBus.V2Modules(),
 			},
 			dbusv1.Setup{
 				Reporter: rt.reporter,
-				Modules:  []dbusv1.Module{distrobox.DBusFactory(rt.config, rt.reporter)},
+				Modules:  []dbusv1.Module{distroboxBus.V1Module()},
 			},
 		},
 	}))
@@ -155,15 +156,19 @@ func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
 
 func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
 	cfg := rt.config.ConfigManager.GetConfig()
-	modules := system.DBusV2Modules(rt.config, rt.reporter)
-	modules = append(modules, repository.DBusV2Module(rt.config, rt.reporter))
+	systemBus := system.NewDBusServices(rt.config, rt.reporter)
+	repoBus := repository.NewDBusServices(rt.config, rt.reporter)
+
+	modules := systemBus.V2Modules()
+	modules = append(modules, repoBus.V2Module())
 	legacyModules := []dbusv1.Module{
-		system.DBusFactory(rt.config, rt.reporter),
-		repository.DBusFactory(rt.config, rt.reporter),
+		systemBus.V1Module(),
+		repoBus.V1Module(),
 	}
 	if !cfg.IsAtomic {
-		modules = append(modules, kernel.DBusV2Module(rt.config, rt.reporter))
-		legacyModules = append(legacyModules, kernel.DBusFactory(rt.config, rt.reporter))
+		kernelBus := kernel.NewDBusServices(rt.config, rt.reporter)
+		modules = append(modules, kernelBus.V2Module())
+		legacyModules = append(legacyModules, kernelBus.V1Module())
 	}
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
 		Bus:  service.BusSystem,

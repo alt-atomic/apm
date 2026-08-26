@@ -44,7 +44,9 @@ func NewSink(conn *dbus.Conn) *Sink {
 
 // Notify шлёт уведомление или прогресс.
 func (s *Sink) Notify(_ context.Context, ev *reply.EventData) {
-	s.emit(ev, "Error sending notification: %v")
+	if err := s.emit(ev); err != nil {
+		app.Log.Error(app.T_("Error sending notification: %v"), err)
+	}
 }
 
 // TaskResult шлёт результат фоновой задачи.
@@ -64,21 +66,19 @@ func (s *Sink) TaskResult(ctx context.Context, name string, data interface{}, ta
 		}
 		event.Data = nil
 	}
-	s.emit(event, "Error sending task result: %v")
+	if err := s.emit(event); err != nil {
+		app.Log.Error(app.T_("Error sending task result: %v"), err)
+	}
 }
 
 // emit сериализует событие в JSON и шлёт сигналом Notification.
-func (s *Sink) emit(event any, errFormat string) {
+func (s *Sink) emit(event any) error {
 	message, err := json.Marshal(event)
 	if err != nil {
-		app.Log.Debug(err.Error())
-		return
+		return err
 	}
 	if s.conn == nil {
-		app.Log.Error(app.T_("DBus connection is not initialized"))
-		return
+		return errors.New(app.T_("DBus connection is not initialized"))
 	}
-	if err = s.conn.Emit(Path, signalName, string(message)); err != nil {
-		app.Log.Error(app.T_(errFormat), err)
-	}
+	return s.conn.Emit(Path, signalName, string(message))
 }

@@ -29,24 +29,24 @@ var packagesIntrospectionV2 = introspect.Interface{
 		{Name: "Install", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Remove", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Reinstall", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Upgrade", Args: []introspect.Arg{
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Update", Args: []introspect.Arg{
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckInstall", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
@@ -106,16 +106,16 @@ var imageIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "Update", Args: []introspect.Arg{
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Apply", Args: []introspect.Arg{
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Switch", Args: []introspect.Arg{
 			protocol.In("image", "s"),
 			protocol.In("options_json", "s"),
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "History", Args: []introspect.Arg{
 			protocol.In("image", "s"),
@@ -142,7 +142,7 @@ var applicationsIntrospectionV2 = introspect.Interface{
 	Name: protocol.ApplicationsIface,
 	Methods: []introspect.Method{
 		{Name: "Update", Args: []introspect.Arg{
-			protocol.Out("job", "u"),
+			protocol.Out("job", "s"),
 		}},
 		{Name: "Info", Args: []introspect.Arg{
 			protocol.In("name", "s"),
