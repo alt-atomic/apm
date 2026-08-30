@@ -133,15 +133,26 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 				}
 			}
 			if value, ok := vars["ID"]; ok {
-				// Package was not installed, but installed now
+				// Standard ALT branding
 				if value == "altlinux" {
-					vars["ID_LIKE"] = value
-				}
-				if !strings.HasSuffix(value, fmt.Sprintf("-%s", bType)) {
+					vars["ID"] = fmt.Sprintf("alt-atomic-%s", bType)
+				} else if !strings.HasSuffix(value, fmt.Sprintf("-%s", bType)) {
 					vars["ID"] = fmt.Sprintf("%s-%s", value, bType)
 				}
 			} else {
-				vars["ID"] = "linux"
+				vars["ID"] = "alt-atomic"
+			}
+			if value, ok := vars["ID_LIKE"]; ok {
+				var ids = strings.Split(value, " ")
+				if !slices.Contains(ids, "alt-atomic") {
+					ids = append(ids, "alt-atomic")
+				}
+				if !slices.Contains(ids, "altlinux") {
+					ids = append(ids, "altlinux")
+				}
+				vars["ID_LIKE"] = strings.Join(ids, " ")
+			} else {
+				vars["ID_LIKE"] = "alt-atomic altlinux"
 			}
 			vars["RELEASE_TYPE"] = releaseType
 			vars["VERSION"] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
