@@ -138,7 +138,7 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 					vars["ID_LIKE"] = value
 				}
 				if !strings.HasSuffix(value, fmt.Sprintf("-%s", bType)) {
-					vars["ID"] = fmt.Sprintf("%s-%s", value, bType)
+					vars["ID"] = value
 				}
 			} else {
 				vars["ID"] = "linux"
