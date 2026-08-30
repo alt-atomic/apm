@@ -113,7 +113,7 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 			prettyType := ""
 			prettyNameSuffix := ""
 			releaseType := ""
-			versionId := fmt.Sprintf("%s-%s", curVer, bType)
+			versionId := curVer
 
 			prettyType = osutils.Capitalize(bType)
 
@@ -138,7 +138,7 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 					vars["ID_LIKE"] = value
 				}
 				if !strings.HasSuffix(value, fmt.Sprintf("-%s", bType)) {
-					vars["ID"] = value
+					vars["ID"] = fmt.Sprintf("%s-%s", value, bType)
 				}
 			} else {
 				vars["ID"] = "linux"
