@@ -1,2 +1,3 @@
 internal/common/build/.* @rirusha
+pkg/build/.* @rirusha
 .* @dmitry
