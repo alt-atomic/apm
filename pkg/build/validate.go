@@ -56,6 +56,8 @@ func (v *ValidationService) validateInclude(module *Module, basePath string) err
 		return nil
 	}
 
+	conditional := module.If != ""
+
 	for _, target := range body.IncludeTargets() {
 		resolved, err := ResolveExpr(target, v.exprData)
 		if err != nil {
@@ -63,6 +65,13 @@ func (v *ValidationService) validateInclude(module *Module, basePath string) err
 		}
 
 		resolvedPath := v.resolvePath(resolved, basePath)
+
+		// Conditional include may point to a file that exists only on some hosts.
+		if conditional && !osutils.IsURL(resolvedPath) {
+			if _, err := os.Stat(resolvedPath); err != nil {
+				continue
+			}
+		}
 
 		if v.inStack(resolvedPath) {
 			return v.wrapError(fmt.Errorf(T_("circular include detected: %s"), resolvedPath))
