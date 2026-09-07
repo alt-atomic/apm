@@ -494,7 +494,12 @@ func (a *Packages) listsStampPath() string {
 
 // touchListsStamp обновляет отметку времени последнего успешного apt update
 func (a *Packages) touchListsStamp() {
-	if err := os.WriteFile(a.listsStampPath(), nil, 0644); err != nil {
+	stamp := a.listsStampPath()
+	if err := app.EnsureDir(filepath.Dir(stamp)); err != nil {
+		app.Log.Debugf("Failed to create lists stamp dir: %v", err)
+		return
+	}
+	if err := os.WriteFile(stamp, nil, 0644); err != nil {
 		app.Log.Debugf("Failed to write lists update stamp: %v", err)
 	}
 }

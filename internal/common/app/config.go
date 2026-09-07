@@ -241,22 +241,12 @@ func (cm *configManagerImpl) expandPaths() {
 	cm.config.PathDBSQLSystem = filepath.Clean(expandUser(cm.config.PathDBSQLSystem))
 }
 
-// ensureDirectories создает необходимые директории
+// ensureDirectories создает каталог ресурсов; файлы БД создаются лениво в DatabaseManager
 func (cm *configManagerImpl) ensureDirectories() error {
 	if syscall.Geteuid() != 0 {
-		if err := EnsurePath(cm.config.PathDBSQLUser); err != nil {
-			return err
-		}
-	} else {
-		if err := EnsurePath(cm.config.PathDBSQLSystem); err != nil {
-			return err
-		}
-		if err := EnsureDir(cm.config.PathResourcesDir); err != nil {
-			return err
-		}
+		return nil
 	}
-
-	return nil
+	return EnsureDir(cm.config.PathResourcesDir)
 }
 
 // detectSystemCapabilities определяет доступные системные утилиты
