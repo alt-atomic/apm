@@ -8,3 +8,11 @@ option(
   value: 'dev',
   description: 'Working profile'
 )
+
+
+option(
+  'introspection',
+  type: 'boolean',
+  value: true,
+  description: 'Whether to build introspection files'
+)

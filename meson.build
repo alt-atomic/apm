@@ -1,4 +1,4 @@
-project('apm', 'cpp',
+project('apm', ['c', 'cpp', 'vala'],
   version: '0.6.3',
   meson_version: '>= 1.0.0',
   default_options: [
@@ -8,6 +8,9 @@ project('apm', 'cpp',
   ],
 )
 
+soversion = '0.6'
+
+pkgconfig = import('pkgconfig')
 i18n = import('i18n')
 
 go_root = run_command('printenv', 'GOROOT', check: false)
@@ -58,6 +61,8 @@ endforeach
 
 subdir('po')
 subdir('data')
+subdir('lib')
+subdir('tests')
 
 install_emptydir(grpconfdir)
 install_emptydir(confapmdir / 'grpconf.d')
@@ -75,10 +80,11 @@ custom_target(
   install_dir: get_option('bindir'),
   command: [
     go_bin,
+    '-C', meson.current_source_dir(),
     'build', '-v',
     '-ldflags', ' '.join(ldflags),
-    '-o', '@OUTPUT@',
-    meson.current_source_dir() / 'cmd' / 'apm'
+    '-o', meson.current_build_dir() / '@OUTPUT@',
+    './cmd/apm'
   ],
   env: [
     'CGO_ENABLED=1',
