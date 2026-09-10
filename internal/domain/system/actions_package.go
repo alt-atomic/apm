@@ -29,6 +29,8 @@ import (
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/dialog"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 // aptListsTTL максимальный возраст списков пакетов, при котором Install не делает повторный update
@@ -36,7 +38,7 @@ const aptListsTTL = 4 * time.Hour
 
 // CheckRemove проверяем пакеты перед удалением
 func (a *Actions) CheckRemove(ctx context.Context, packages []string, purge bool, depends bool) (*CheckResponse, error) {
-	packageParse, aptError := a.serviceAptActions.CheckRemove(ctx, packages, purge, depends)
+	packageParse, aptError := a.serviceAptActions.Plan(ctx, aptBinding.TransactionSpec{Remove: packages, Purge: purge, RemoveDepends: depends})
 	if aptError != nil {
 		return nil, apmerr.New(apmerr.ErrorTypeApt, aptError)
 	}
@@ -71,27 +73,54 @@ func (a *Actions) CheckInstall(ctx context.Context, packages []string) (*CheckRe
 		return nil, err
 	}
 
-	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
-	if errPrepare != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errPrepare)
-	}
-
-	_, _, _, packageParse, errFind := a.serviceAptActions.FindPackage(
-		ctx,
-		packagesInstall,
-		packagesRemove,
-		false,
-		false,
-		false,
-	)
-	if errFind != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
+	packageParse, errPlan := a.serviceAptActions.Plan(ctx, aptBinding.TransactionSpec{AptGetArgs: packages})
+	if errPlan != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeApt, errPlan)
 	}
 
 	return &CheckResponse{
 		Message: app.T_("Inspection information"),
 		Info:    *packageParse,
 	}, nil
+}
+
+// confirmChanges строит колбэк транзакции: проверка плана, диалог для интерактивного режима
+func (a *Actions) confirmChanges(ctx context.Context, confirmed bool, check func(*aptLib.PackageChanges) error, action func(*aptLib.PackageChanges) dialog.Action) aptBinding.Confirm {
+	return func(changes *aptLib.PackageChanges) (bool, error) {
+		if err := check(changes); err != nil {
+			return false, err
+		}
+		if confirmed {
+			return true, nil
+		}
+
+		packagesInfo, err := a.serviceAptActions.DescribeChanges(ctx, changes)
+		if err != nil {
+			return false, apmerr.New(apmerr.ErrorTypeDatabase, err)
+		}
+		if len(packagesInfo) == 0 {
+			return true, nil
+		}
+
+		reply.StopSpinner(a.appConfig)
+		dialogStatus, errDialog := dialog.NewDialog(a.appConfig, packagesInfo, *changes, action(changes))
+		if errDialog != nil {
+			return false, apmerr.New(apmerr.ErrorTypeCanceled, errDialog)
+		}
+		if !dialogStatus {
+			return false, apmerr.New(apmerr.ErrorTypeCanceled, errors.New(app.T_("Cancel dialog")))
+		}
+		reply.CreateSpinner(a.appConfig)
+		return true, nil
+	}
+}
+
+// wrapAptError оставляет ошибки apm как есть, остальное считает ошибкой apt
+func wrapAptError(err error) error {
+	if apmErr, ok := errors.AsType[apmerr.APMError](err); ok {
+		return apmErr
+	}
+	return apmerr.New(apmerr.ErrorTypeApt, err)
 }
 
 // Remove удаляет системный пакет.
@@ -110,33 +139,17 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("At least one package must be specified")))
 	}
 
-	_, packageNames, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(ctx,
-		[]string{}, packages, purge, depends, false)
-	if errFind != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
-	}
-
-	if packageParse.RemovedCount == 0 {
-		return nil, apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("No candidates for removal found")))
-	}
-
-	if !confirm {
-		reply.StopSpinner(a.appConfig)
-		dialogStatus, err := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionRemove)
-		if err != nil {
-			return nil, err
+	hasRemovals := func(changes *aptLib.PackageChanges) error {
+		if changes.RemovedCount == 0 {
+			return apmerr.New(apmerr.ErrorTypeNotFound, errors.New(app.T_("No candidates for removal found")))
 		}
-
-		if !dialogStatus {
-			return nil, apmerr.New(apmerr.ErrorTypeCanceled, errors.New(app.T_("Cancel dialog")))
-		}
-
-		reply.CreateSpinner(a.appConfig)
+		return nil
 	}
-
-	err = a.serviceAptActions.Remove(ctx, packageNames, purge, depends)
+	spec := aptBinding.TransactionSpec{Remove: packages, Purge: purge, RemoveDepends: depends}
+	packageParse, err := a.serviceAptActions.Apply(ctx, spec,
+		a.confirmChanges(ctx, confirm, hasRemovals, func(*aptLib.PackageChanges) dialog.Action { return dialog.ActionRemove }))
 	if err != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
+		return nil, wrapAptError(err)
 	}
 
 	removePackageNames := strings.Join(packageParse.RemovedPackages, ", ")
@@ -149,7 +162,7 @@ func (a *Actions) Remove(ctx context.Context, packages []string, purge bool, dep
 
 	if a.appConfig.ConfigManager.GetConfig().IsAtomic {
 		messageAnswer += app.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
-		errSave := a.saveChange(ctx, []string{}, packageNames)
+		errSave := a.saveChange(ctx, []string{}, packageParse.RequestedRemove)
 		if errSave != nil {
 			return nil, apmerr.New(apmerr.ErrorTypeImage, errSave)
 		}
@@ -177,19 +190,12 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify at least one package")))
 	}
 
-	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
-	if errPrepare != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errPrepare)
-	}
-
-	// Обновляем индексы ДО симуляции
-	allLocalRpm := len(packagesInstall) > 0 && len(packagesRemove) == 0
-	if allLocalRpm {
-		for _, pkg := range packagesInstall {
-			if !apt.IsRegularFileAndIsPackage(pkg) {
-				allLocalRpm = false
-				break
-			}
+	// Обновляем индексы ДО симуляции, кроме установки только локальных rpm
+	allLocalRpm := true
+	for _, pkg := range packages {
+		if strings.HasSuffix(pkg, "-") || !apt.IsRegularFileAndIsPackage(strings.TrimSuffix(pkg, "+")) {
+			allLocalRpm = false
+			break
 		}
 	}
 	if !allLocalRpm && !noUpdate {
@@ -199,47 +205,24 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 		}
 	}
 
-	packagesInstall, packagesRemove, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(
-		ctx,
-		packagesInstall,
-		packagesRemove,
-		false,
-		false,
-		false,
-	)
-	if errFind != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
-	}
-
-	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 && packageParse.RemovedCount == 0 {
-		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
-	}
-
-	if len(packagesInfo) > 0 && !confirm {
-		reply.StopSpinner(a.appConfig)
-
-		var action dialog.Action
-		if downloadOnly {
-			action = dialog.ActionDownload
-		} else if packageParse.RemovedCount > 0 {
-			action = dialog.ActionMultiInstall
-		} else {
-			action = dialog.ActionInstall
+	hasChanges := func(changes *aptLib.PackageChanges) error {
+		if changes.NewInstalledCount == 0 && changes.UpgradedCount == 0 && changes.RemovedCount == 0 {
+			return apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
 		}
-
-		dialogStatus, errDialog := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, action)
-		if errDialog != nil {
-			return nil, errDialog
-		}
-
-		if !dialogStatus {
-			return nil, apmerr.New(apmerr.ErrorTypeCanceled, errors.New(app.T_("Cancel dialog")))
-		}
-
-		reply.CreateSpinner(a.appConfig)
+		return nil
 	}
-
-	errInstall := a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false, downloadOnly)
+	installAction := func(changes *aptLib.PackageChanges) dialog.Action {
+		switch {
+		case downloadOnly:
+			return dialog.ActionDownload
+		case changes.RemovedCount > 0:
+			return dialog.ActionMultiInstall
+		default:
+			return dialog.ActionInstall
+		}
+	}
+	spec := aptBinding.TransactionSpec{AptGetArgs: packages, DownloadOnly: downloadOnly}
+	packageParse, errInstall := a.serviceAptActions.Apply(ctx, spec, a.confirmChanges(ctx, confirm, hasChanges, installAction))
 	if errInstall != nil {
 		if matchedErr, ok := errors.AsType[*apt.MatchedError](errInstall); ok && matchedErr.NeedUpdate() {
 			_, err = a.serviceAptActions.Update(ctx)
@@ -250,7 +233,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 			return nil, apmerr.New(apmerr.ErrorTypeRepository, errors.New(app.T_("A repository connection error occurred. The package list has been updated, please try running the command again")))
 		}
 
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errInstall)
+		return nil, wrapAptError(errInstall)
 	}
 
 	var messageAnswer string
@@ -275,7 +258,7 @@ func (a *Actions) Install(ctx context.Context, packages []string, confirm bool, 
 
 		if a.appConfig.ConfigManager.GetConfig().IsAtomic {
 			messageAnswer += app.T_(". The system image has not been changed. To apply the changes, run: apm s image apply")
-			errSave := a.saveChange(ctx, packagesInstall, packagesRemove)
+			errSave := a.saveChange(ctx, packageParse.RequestedInstall, packageParse.RequestedRemove)
 			if errSave != nil {
 				return nil, apmerr.New(apmerr.ErrorTypeImage, errSave)
 			}
@@ -329,21 +312,9 @@ func (a *Actions) CheckReinstall(ctx context.Context, packages []string) (*Check
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify at least one package")))
 	}
 
-	packagesInstall, packagesRemove, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
-	if errPrepare != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errPrepare)
-	}
-
-	_, _, _, packageParse, errFind := a.serviceAptActions.FindPackage(
-		ctx,
-		packagesInstall,
-		packagesRemove,
-		false,
-		false,
-		true,
-	)
-	if errFind != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
+	packageParse, errPlan := a.serviceAptActions.Plan(ctx, aptBinding.TransactionSpec{Reinstall: packages})
+	if errPlan != nil {
+		return nil, apmerr.New(apmerr.ErrorTypeApt, errPlan)
 	}
 
 	return &CheckResponse{
@@ -368,43 +339,15 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 		return nil, apmerr.New(apmerr.ErrorTypeValidation, errors.New(app.T_("You must specify at least one package")))
 	}
 
-	packagesInstall, _, errPrepare := a.serviceAptActions.PrepareInstallPackages(ctx, packages)
-	if errPrepare != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errPrepare)
-	}
-
-	packagesInstall, _, packagesInfo, packageParse, errFind := a.serviceAptActions.FindPackage(
-		ctx,
-		packagesInstall,
-		nil,
-		false,
-		false,
-		true,
-	)
-	if errFind != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
-	}
-
-	if packageParse.NewInstalledCount == 0 {
-		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
-	}
-
-	if !confirm {
-		reply.StopSpinner(a.appConfig)
-
-		dialogStatus, errDialog := dialog.NewDialog(a.appConfig, packagesInfo, *packageParse, dialog.ActionInstall)
-		if errDialog != nil {
-			return nil, errDialog
+	hasReinstalls := func(changes *aptLib.PackageChanges) error {
+		if changes.NewInstalledCount == 0 {
+			return apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
 		}
-
-		if !dialogStatus {
-			return nil, apmerr.New(apmerr.ErrorTypeCanceled, errors.New(app.T_("Cancel dialog")))
-		}
-
-		reply.CreateSpinner(a.appConfig)
+		return nil
 	}
-
-	errReinstall := a.serviceAptActions.ReinstallPackages(ctx, packagesInstall)
+	spec := aptBinding.TransactionSpec{Reinstall: packages}
+	packageParse, errReinstall := a.serviceAptActions.Apply(ctx, spec,
+		a.confirmChanges(ctx, confirm, hasReinstalls, func(*aptLib.PackageChanges) dialog.Action { return dialog.ActionInstall }))
 	if errReinstall != nil {
 		if matchedErr, ok := errors.AsType[*apt.MatchedError](errReinstall); ok && matchedErr.NeedUpdate() {
 			_, err = a.serviceAptActions.Update(ctx)
@@ -415,7 +358,7 @@ func (a *Actions) Reinstall(ctx context.Context, packages []string, confirm bool
 			return nil, apmerr.New(apmerr.ErrorTypeRepository, errors.New(app.T_("A repository connection error occurred. The package list has been updated, please try running the command again")))
 		}
 
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errReinstall)
+		return nil, wrapAptError(errReinstall)
 	}
 
 	err = a.updateAllPackagesDB(ctx)

@@ -23,11 +23,12 @@ import (
 	"strings"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
-	"altlinux.space/alt-atomic/apm/internal/common/apt"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/build/modules"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	"altlinux.space/alt-atomic/apm/internal/domain/kernel/service"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 	reposervice "altlinux.space/alt-atomic/apm/pkg/aptrepo"
 )
 
@@ -96,55 +97,40 @@ func (d *domainService) CombineInstallRemovePackages(ctx context.Context, packag
 		return err
 	}
 
-	packagesInstall, packagesRemove, errPrepare := d.aptActions.PrepareInstallPackages(ctx, packages)
-	if errPrepare != nil {
-		return errPrepare
+	spec := aptBinding.TransactionSpec{
+		AptGetArgs:    packages,
+		Purge:         purge,
+		RemoveDepends: depends,
+		DownloadOnly:  downloadOnly,
+		Idempotent:    true,
 	}
+	_, err := d.aptActions.Apply(ctx, spec, logPlan)
+	return err
+}
 
-	packagesInstall, packagesRemove, _, aptPackageChanges, errFind := d.aptActions.FindPackage(
-		ctx,
-		packagesInstall,
-		packagesRemove,
-		false,
-		false,
-		false,
-	)
-	if errFind != nil {
-		var matchedErr *apt.MatchedError
-		if errors.As(errFind, &matchedErr) && matchedErr.Entry.Code == apt.ErrPackagesAlreadyInstalled {
-			app.Log.Info("Skipping error:", errFind.Error())
-			return nil
-		}
-		return errFind
+// logPlan reports skipped packages and the plan before it is applied
+func logPlan(changes *aptLib.PackageChanges) (bool, error) {
+	for _, name := range changes.SkippedPackages {
+		app.Log.Warn(fmt.Sprintf("Package %s is not installed, skipping removal", name))
 	}
-
-	if aptPackageChanges != nil {
-		if len(aptPackageChanges.NewInstalledPackages) > 0 {
-			app.Log.Info(fmt.Sprintf("Install plan: %s", strings.Join(aptPackageChanges.NewInstalledPackages, ", ")))
-		}
-
-		if len(aptPackageChanges.RemovedPackages) > 0 {
-			app.Log.Info(fmt.Sprintf("Remove plan: %s", strings.Join(aptPackageChanges.RemovedPackages, ", ")))
-		}
+	if len(changes.NewInstalledPackages) > 0 {
+		app.Log.Info(fmt.Sprintf("Install plan: %s", strings.Join(changes.NewInstalledPackages, ", ")))
 	}
-
-	errInstall := d.aptActions.CombineInstallRemovePackages(
-		ctx,
-		packagesInstall,
-		packagesRemove,
-		purge,
-		depends,
-		downloadOnly,
-	)
-	if errInstall != nil {
-		return errInstall
+	if len(changes.UpgradedPackages) > 0 {
+		app.Log.Info(fmt.Sprintf("Upgrade plan: %s", strings.Join(changes.UpgradedPackages, ", ")))
 	}
-
-	return nil
+	if len(changes.RemovedPackages) > 0 {
+		app.Log.Info(fmt.Sprintf("Remove plan: %s", strings.Join(changes.RemovedPackages, ", ")))
+	}
+	if len(changes.NewInstalledPackages)+len(changes.UpgradedPackages)+len(changes.RemovedPackages) == 0 {
+		app.Log.Info("Nothing to change, all packages are already in the requested state")
+		return false, nil
+	}
+	return true, nil
 }
 
 func (d *domainService) InstallPackages(ctx context.Context, packages []string) error {
-	return d.aptActions.Install(ctx, packages, false)
+	return d.CombineInstallRemovePackages(ctx, packages, false, false, false)
 }
 
 func (d *domainService) UpdatePackages(ctx context.Context) error {

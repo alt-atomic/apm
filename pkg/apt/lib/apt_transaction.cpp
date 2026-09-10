@@ -2,6 +2,7 @@
 #include "planner.h"
 #include "executor.h"
 #include "changes.h"
+#include "ext_rpm.h"
 
 #include <apt-pkg/algorithms.h>
 #include <apt-pkg/depcache.h>
@@ -14,17 +15,6 @@
 #include <cstring>
 
 // Accumulates package names and flags for a single transaction.
-struct AptTransaction {
-    AptCache *cache{};
-    std::vector<std::string> install_names;
-    std::vector<std::string> remove_names;
-    std::vector<std::string> reinstall_names;
-    bool purge = false;
-    bool remove_depends = false;
-    bool is_dist_upgrade = false;
-    bool is_autoremove = false;
-};
-
 // Allocates a new transaction bound to the given cache.
 AptResult apt_transaction_new(AptCache *cache, AptTransaction **tx) {
     if (!cache || !tx) {
@@ -45,6 +35,36 @@ void apt_transaction_free(const AptTransaction *tx) {
     delete tx;
 }
 
+// Classifies like apt-get DoInstall: a full name known to the cache wins over a trailing +/-
+AptResult apt_transaction_add_apt_get_args(AptTransaction *tx, const char **args, const size_t count) {
+    if (!tx) return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_NULL_TRANSACTION);
+    if (!args || count == 0) return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_NO_PACKAGE_NAMES);
+
+    for (size_t i = 0; i < count; i++) {
+        if (!args[i] || !*args[i]) continue;
+        std::string arg(args[i]);
+
+        if (is_rpm_file(arg) || !tx->cache->dep_cache->FindPkg(arg).end()) {
+            tx->install_names.push_back(arg);
+            continue;
+        }
+
+        const char suffix = arg.back();
+        if (suffix == '-' || suffix == '+') arg.pop_back();
+        if (arg.empty()) continue;
+
+        (suffix == '-' ? tx->remove_names : tx->install_names).push_back(arg);
+    }
+    return make_result(APT_SUCCESS, nullptr);
+}
+
+void apt_transaction_set_options(AptTransaction *tx, const bool purge, const bool remove_depends, const bool idempotent) {
+    if (!tx) return;
+    tx->purge = purge;
+    tx->remove_depends = remove_depends;
+    tx->idempotent = idempotent;
+}
+
 // Appends package names to the installation list.
 AptResult apt_transaction_install(AptTransaction *tx, const char **names, const size_t count) {
     if (!tx) return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_NULL_TRANSACTION);
@@ -58,9 +78,8 @@ AptResult apt_transaction_install(AptTransaction *tx, const char **names, const 
     return make_result(APT_SUCCESS, nullptr);
 }
 
-// Appends package names to the remove list with purge/depends on flags.
-AptResult apt_transaction_remove(AptTransaction *tx, const char **names, const size_t count,
-                                  const bool purge, const bool remove_depends) {
+// Appends package names to the remove list; flags come from apt_transaction_set_options.
+AptResult apt_transaction_remove(AptTransaction *tx, const char **names, const size_t count) {
     if (!tx) return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_NULL_TRANSACTION);
     if (!names || count == 0) return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_NO_PACKAGE_NAMES);
 
@@ -69,8 +88,6 @@ AptResult apt_transaction_remove(AptTransaction *tx, const char **names, const s
             tx->remove_names.emplace_back(names[i]);
         }
     }
-    tx->purge = purge;
-    tx->remove_depends = remove_depends;
     return make_result(APT_SUCCESS, nullptr);
 }
 
@@ -102,14 +119,6 @@ AptResult apt_transaction_autoremove(AptTransaction *tx) {
 }
 
 // Converts a vector of strings to a vector of C string pointers.
-static std::vector<const char *> to_cstr_array(const std::vector<std::string> &v) {
-    std::vector<const char *> result(v.size());
-    for (size_t i = 0; i < v.size(); i++) {
-        result[i] = v[i].c_str();
-    }
-    return result;
-}
-
 // Simulates a distribution upgrade and collects the resulting changes.
 static AptResult plan_dist_upgrade(const AptCache *cache, AptPackageChanges *changes) {
     if (!cache->cache_file) {
@@ -143,21 +152,9 @@ static AptResult plan_dist_upgrade(const AptCache *cache, AptPackageChanges *cha
             return make_result(APT_ERROR_DEPENDENCY_BROKEN);
         }
 
-        const std::set<std::string> empty_set;
-        std::vector<std::string> extra_installed, upgraded, new_installed, removed, kept_back;
-        uint64_t download_size = 0;
-        int64_t install_size = 0;
-
-        collect_package_changes(cache, empty_set,
-                                extra_installed, upgraded,
-                                new_installed, removed, kept_back, download_size, install_size);
-        extra_installed.clear();
-
-        std::vector<std::pair<std::string, std::string>> essential_list;
-        collect_essential_packages(cache, essential_list);
-
-        populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed,
-                                   kept_back, kept_back.size(), essential_list, download_size, install_size);
+        PlanChanges plan = collect_plan_changes(cache, {});
+        plan.extra_installed.clear();
+        populate_changes(changes, plan, {}, {}, {}, true);
 
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
@@ -210,24 +207,9 @@ static AptResult plan_autoremove(const AptCache *cache, AptPackageChanges *chang
             return make_result(APT_ERROR_DEPENDENCY_BROKEN);
         }
 
-        const std::set<std::string> empty_set;
-        std::vector<std::string> extra_installed, upgraded, new_installed, removed, kept_back;
-        uint64_t download_size = 0;
-        int64_t install_size = 0;
-
-        collect_package_changes(cache, empty_set,
-                                extra_installed, upgraded,
-                                new_installed, removed, kept_back, download_size, install_size);
-
-        extra_installed.clear();
-        const size_t total_not_upgraded = kept_back.size();
-        kept_back.clear();
-
-        std::vector<std::pair<std::string, std::string>> essential_list;
-        collect_essential_packages(cache, essential_list);
-
-        populate_changes_structure(changes, extra_installed, upgraded, new_installed, removed,
-                                   kept_back, total_not_upgraded, essential_list, download_size, install_size);
+        PlanChanges plan = collect_plan_changes(cache, {});
+        plan.extra_installed.clear();
+        populate_changes(changes, plan, {}, {}, {}, false);
 
         return make_result(APT_SUCCESS, nullptr);
     } catch (const std::exception &e) {
@@ -247,18 +229,7 @@ AptResult apt_transaction_plan(const AptTransaction *tx, AptPackageChanges *chan
         return plan_autoremove(tx->cache, changes);
     }
 
-    auto inst = to_cstr_array(tx->install_names);
-    auto rem = to_cstr_array(tx->remove_names);
-    auto reinst = to_cstr_array(tx->reinstall_names);
-
-    return plan_change_internal(
-        tx->cache,
-        inst.empty() ? nullptr : inst.data(), inst.size(),
-        rem.empty() ? nullptr : rem.data(), rem.size(),
-        reinst.empty() ? nullptr : reinst.data(), reinst.size(),
-        tx->purge, tx->remove_depends,
-        false,
-        changes);
+    return plan_change_internal(tx->cache, *tx, false, changes);
 }
 
 // Plans changes in apply mode, then downloads and installs packages.
@@ -283,19 +254,8 @@ AptResult apt_transaction_execute(const AptTransaction *tx,
         return execute_transaction(tx->cache, nullptr, callback, user_data, download_only, false);
     }
 
-    auto inst = to_cstr_array(tx->install_names);
-    auto rem = to_cstr_array(tx->remove_names);
-    auto reinst = to_cstr_array(tx->reinstall_names);
-
     AptPackageChanges dummy{};
-    const AptResult r = plan_change_internal(
-        tx->cache,
-        inst.empty() ? nullptr : inst.data(), inst.size(),
-        rem.empty() ? nullptr : rem.data(), rem.size(),
-        reinst.empty() ? nullptr : reinst.data(), reinst.size(),
-        tx->purge, tx->remove_depends,
-        true,
-        &dummy);
+    const AptResult r = plan_change_internal(tx->cache, *tx, true, &dummy);
     apt_free_package_changes(&dummy);
 
     if (r.code != APT_SUCCESS) {

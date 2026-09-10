@@ -117,13 +117,15 @@ void collect_essential_packages(const AptCache *cache,
     }
 }
 
-// Allocates and fills the C AptPackageChanges struct from C++ vectors.
 void populate_changes_structure(AptPackageChanges *changes,
                                 const std::vector<std::string> &extra_installed,
                                 const std::vector<std::string> &upgraded,
                                 const std::vector<std::string> &new_installed,
                                 const std::vector<std::string> &removed,
                                 const std::vector<std::string> &kept_back,
+                                const std::vector<std::string> &skipped,
+                                const std::vector<std::string> &requested_install,
+                                const std::vector<std::string> &requested_remove,
                                 const size_t not_upgraded_count,
                                 const std::vector<std::pair<std::string, std::string>> &essential_list,
                                 const uint64_t download_size,
@@ -133,35 +135,21 @@ void populate_changes_structure(AptPackageChanges *changes,
     changes->new_installed_count = new_installed.size();
     changes->removed_count = removed.size();
     changes->kept_back_count = kept_back.size();
+    changes->skipped_count = skipped.size();
+    changes->requested_install_count = requested_install.size();
+    changes->requested_remove_count = requested_remove.size();
     changes->not_upgraded_count = not_upgraded_count;
     changes->download_size = download_size;
     changes->install_size = install_size;
 
-    if (changes->extra_installed_count > 0) {
-        changes->extra_installed = static_cast<char **>(malloc(changes->extra_installed_count * sizeof(char *)));
-        for (size_t i = 0; i < changes->extra_installed_count; ++i)
-            changes->extra_installed[i] = safe_strdup(extra_installed[i]);
-    }
-    if (changes->removed_count > 0) {
-        changes->removed_packages = static_cast<char **>(malloc(changes->removed_count * sizeof(char *)));
-        for (size_t i = 0; i < changes->removed_count; ++i)
-            changes->removed_packages[i] = safe_strdup(removed[i]);
-    }
-    if (changes->upgraded_count > 0) {
-        changes->upgraded_packages = static_cast<char **>(malloc(changes->upgraded_count * sizeof(char *)));
-        for (size_t i = 0; i < changes->upgraded_count; ++i)
-            changes->upgraded_packages[i] = safe_strdup(upgraded[i]);
-    }
-    if (changes->new_installed_count > 0) {
-        changes->new_installed_packages = static_cast<char **>(malloc(changes->new_installed_count * sizeof(char *)));
-        for (size_t i = 0; i < changes->new_installed_count; ++i)
-            changes->new_installed_packages[i] = safe_strdup(new_installed[i]);
-    }
-    if (changes->kept_back_count > 0) {
-        changes->kept_back_packages = static_cast<char **>(malloc(changes->kept_back_count * sizeof(char *)));
-        for (size_t i = 0; i < changes->kept_back_count; ++i)
-            changes->kept_back_packages[i] = safe_strdup(kept_back[i]);
-    }
+    changes->extra_installed = dup_string_list(extra_installed);
+    changes->removed_packages = dup_string_list(removed);
+    changes->upgraded_packages = dup_string_list(upgraded);
+    changes->new_installed_packages = dup_string_list(new_installed);
+    changes->kept_back_packages = dup_string_list(kept_back);
+    changes->skipped_packages = dup_string_list(skipped);
+    changes->requested_install = dup_string_list(requested_install);
+    changes->requested_remove = dup_string_list(requested_remove);
 
     changes->essential_packages_count = essential_list.size();
     if (changes->essential_packages_count > 0) {
@@ -174,44 +162,38 @@ void populate_changes_structure(AptPackageChanges *changes,
     }
 }
 
+PlanChanges collect_plan_changes(const AptCache *cache, const std::set<std::string> &requested_install) {
+    PlanChanges plan;
+    collect_package_changes(cache, requested_install,
+                            plan.extra_installed, plan.upgraded, plan.new_installed, plan.removed, plan.kept_back,
+                            plan.download_size, plan.install_size);
+    collect_essential_packages(cache, plan.essential);
+    return plan;
+}
+
+void populate_changes(AptPackageChanges *changes, const PlanChanges &plan,
+                      const std::vector<std::string> &skipped,
+                      const std::vector<std::string> &requested_install,
+                      const std::vector<std::string> &requested_remove,
+                      const bool keep_kept_back) {
+    const std::vector<std::string> empty;
+    populate_changes_structure(changes, plan.extra_installed, plan.upgraded, plan.new_installed, plan.removed,
+                               keep_kept_back ? plan.kept_back : empty, skipped, requested_install, requested_remove,
+                               plan.kept_back.size(), plan.essential, plan.download_size, plan.install_size);
+}
+
 // Frees all string arrays and essential entries, then zeroes the struct.
 void apt_free_package_changes(AptPackageChanges *changes) {
     if (!changes) return;
 
-    if (changes->extra_installed) {
-        for (size_t i = 0; i < changes->extra_installed_count; i++) {
-            free(changes->extra_installed[i]);
-        }
-        free(changes->extra_installed);
-    }
-
-    if (changes->upgraded_packages) {
-        for (size_t i = 0; i < changes->upgraded_count; i++) {
-            free(changes->upgraded_packages[i]);
-        }
-        free(changes->upgraded_packages);
-    }
-
-    if (changes->new_installed_packages) {
-        for (size_t i = 0; i < changes->new_installed_count; i++) {
-            free(changes->new_installed_packages[i]);
-        }
-        free(changes->new_installed_packages);
-    }
-
-    if (changes->removed_packages) {
-        for (size_t i = 0; i < changes->removed_count; i++) {
-            free(changes->removed_packages[i]);
-        }
-        free(changes->removed_packages);
-    }
-
-    if (changes->kept_back_packages) {
-        for (size_t i = 0; i < changes->kept_back_count; i++) {
-            free(changes->kept_back_packages[i]);
-        }
-        free(changes->kept_back_packages);
-    }
+    free_string_list(changes->extra_installed, changes->extra_installed_count);
+    free_string_list(changes->upgraded_packages, changes->upgraded_count);
+    free_string_list(changes->new_installed_packages, changes->new_installed_count);
+    free_string_list(changes->removed_packages, changes->removed_count);
+    free_string_list(changes->kept_back_packages, changes->kept_back_count);
+    free_string_list(changes->skipped_packages, changes->skipped_count);
+    free_string_list(changes->requested_install, changes->requested_install_count);
+    free_string_list(changes->requested_remove, changes->requested_remove_count);
 
     if (changes->essential_packages) {
         for (size_t i = 0; i < changes->essential_packages_count; i++) {

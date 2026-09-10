@@ -4,27 +4,41 @@
 
 #include <cstring>
 
-// Resolves each name (incl. file paths, version specs), marks for install.
+// Expands globs in place; a glob with no matches stays as is so the resolver reports it
+static std::vector<std::string> expand_globs(const AptCache *cache, const std::vector<std::string> &names, const bool installed_only) {
+    std::vector<std::string> expanded;
+    expanded.reserve(names.size());
+    for (const auto &name : names) {
+        if (!is_glob(name)) {
+            expanded.push_back(name);
+            continue;
+        }
+        const size_t before = expanded.size();
+        expand_glob(cache, name, installed_only, expanded);
+        if (expanded.size() == before) expanded.push_back(name);
+    }
+    return expanded;
+}
+
+// Resolves each name (incl. file paths, version specs, globs), marks for install.
 AptResult process_package_installs(const AptCache *cache,
-                                   const char **install_names,
-                                   const size_t install_count,
+                                   const std::vector<std::string> &install_names,
                                    std::set<std::string> &requested_install) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_INVALID_CACHE);
     }
-    if (!install_names || install_count == 0) {
+    if (install_names.empty()) {
         return make_result(APT_SUCCESS, nullptr);
     }
 
+    const std::vector<std::string> names = expand_globs(cache, install_names, false);
     std::vector<pkgCache::PkgIterator> marked;
-    marked.reserve(install_count);
+    marked.reserve(names.size());
 
-    for (size_t i = 0; i < install_count; i++) {
-        if (!install_names[i]) continue;
+    for (const auto &name : names) {
+        std::string raw(name);
 
-        std::string raw(install_names[i]);
-
-        //  try the path as a file only when no package (incl. virtual) has this name
+        // try the path as a file only when no package (incl. virtual) has this name
         if (!raw.empty() && raw[0] == '/' && !is_rpm_file(raw) && cache->dep_cache->FindPkg(raw).end()) {
             const AptResult result = resolve_file_to_package(cache, raw);
             free(result.message);
@@ -68,42 +82,24 @@ AptResult process_package_installs(const AptCache *cache,
 
 // Validates packages are installed and downloadable, then marks for reinstall.
 AptResult process_package_reinstalls(const AptCache *cache,
-                                     const char **reinstall_names,
-                                     const size_t reinstall_count,
+                                     const std::vector<std::string> &reinstall_names,
                                      std::set<std::string> &requested_reinstall) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_INVALID_CACHE);
     }
-    if (!reinstall_names || reinstall_count == 0) {
+    if (reinstall_names.empty()) {
         return make_result(APT_SUCCESS, nullptr);
     }
 
-    for (size_t i = 0; i < reinstall_count; i++) {
-        if (!reinstall_names[i]) continue;
-
-        std::string raw(reinstall_names[i]);
+    for (const auto &name : expand_globs(cache, reinstall_names, true)) {
+        std::string raw(name);
         RequirementSpec req = parse_requirement(raw);
 
         pkgCache::PkgIterator pkg;
 
         if (is_rpm_file(raw)) {
             std::string pkg_name;
-            bool found = false;
-
-            for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-                for (pkgCache::VerIterator ver = iter.VersionList(); !ver.end(); ++ver) {
-                    for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
-                        if (pkgCache::PkgFileIterator file = vf.File(); file.FileName() && raw.find(file.FileName()) != std::string::npos) {
-                            pkg_name = iter.Name();
-                            found = true;
-                            goto found_reinstall_pkg;
-                        }
-                    }
-                }
-            }
-        found_reinstall_pkg:
-
-            if (!found) {
+            if (!find_package_by_rpm_file(cache, raw, pkg_name)) {
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
                                    (std::string("Unable to find package from RPM file: ") + raw).c_str());
             }
@@ -141,42 +137,44 @@ AptResult process_package_reinstalls(const AptCache *cache,
     return make_result(APT_SUCCESS, nullptr);
 }
 
-// Resolves each name (incl. virtual packages), marks for deletion.
+// Resolves each name (incl. virtual packages and globs), marks for deletion.
 AptResult process_package_removals(const AptCache *cache,
-                                   const char **remove_names,
-                                   const size_t remove_count,
+                                   const std::vector<std::string> &remove_names,
                                    const bool purge,
+                                   const bool idempotent,
                                    std::set<std::string> &requested_remove,
-                                   std::vector<std::pair<std::string, pkgCache::PkgIterator> > &remove_targets) {
+                                   std::vector<std::string> &skipped) {
     if (!cache || !cache->dep_cache) {
         return make_result(APT_ERROR_INVALID_PARAMETERS, APT_MSG_INVALID_CACHE);
     }
-    if (!remove_names || remove_count == 0) {
+    if (remove_names.empty()) {
         return make_result(APT_SUCCESS, nullptr);
     }
 
-    for (size_t i = 0; i < remove_count; i++) {
-        if (!remove_names[i]) continue;
-
-        std::string raw(remove_names[i]);
+    for (const auto &raw : expand_globs(cache, remove_names, true)) {
         RequirementSpec req = parse_requirement(raw);
 
         pkgCache::PkgIterator pkg;
         AptResult result = find_remove_package(cache, req, pkg);
-        if (result.code != APT_SUCCESS) {
-            return result;
+        if (result.code == APT_SUCCESS) {
+            result = resolve_virtual_remove_package(cache, req, pkg);
         }
 
-        result = resolve_virtual_remove_package(cache, req, pkg);
+        // a known package that is not installed is not an error, an unknown name is
+        if (result.code == APT_ERROR_PACKAGE_NOT_FOUND && idempotent) {
+            free(result.message);
+            if (!is_glob(raw) && cache->dep_cache->FindPkg(req.name).end()) {
+                return make_result(APT_ERROR_PACKAGE_NOT_FOUND, (std::string("Couldn't find package ") + req.name).c_str());
+            }
+            skipped.push_back(raw);
+            continue;
+        }
         if (result.code != APT_SUCCESS) {
             return result;
         }
 
         requested_remove.insert(pkg.Name());
-
         cache->dep_cache->MarkDelete(pkg, purge);
-        remove_targets.emplace_back(pkg.Name(), pkg);
-
     }
 
     return make_result(APT_SUCCESS, nullptr);

@@ -11,6 +11,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <vector>
 
 // RAII guard that saves the current locale, sets LC_ALL to "", and restores
 // the original locale on destruction.
@@ -50,6 +51,18 @@ struct AptCache {
 };
 
 // Owns the package manager used to execute transactions.
+struct AptTransaction {
+    AptCache *cache{};
+    std::vector<std::string> install_names;
+    std::vector<std::string> remove_names;
+    std::vector<std::string> reinstall_names;
+    bool purge = false;
+    bool remove_depends = false;
+    bool idempotent = false;
+    bool is_dist_upgrade = false;
+    bool is_autoremove = false;
+};
+
 struct AptPackageManager {
     std::unique_ptr<pkgPackageManager> pm;
     AptCache *cache;
@@ -85,4 +98,19 @@ inline char *safe_strdup(const std::string &s) {
     if (s.empty()) return nullptr;
     char *p = strdup(s.c_str());
     return p;
+}
+
+// Copies names into a malloc'ed char* array, nullptr for an empty list
+inline char **dup_string_list(const std::vector<std::string> &names) {
+    if (names.empty()) return nullptr;
+    auto **list = static_cast<char **>(malloc(names.size() * sizeof(char *)));
+    for (size_t i = 0; i < names.size(); ++i) list[i] = safe_strdup(names[i]);
+    return list;
+}
+
+// Frees a char* array of `count` strings
+inline void free_string_list(char **list, const size_t count) {
+    if (!list) return;
+    for (size_t i = 0; i < count; i++) free(list[i]);
+    free(list);
 }

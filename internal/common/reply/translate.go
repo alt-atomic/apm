@@ -231,6 +231,12 @@ func TranslateKey(key string) string {
 		return app.T_("WillRemove")
 	case "essentialPackages":
 		return app.T_("Essential packages")
+	case "skippedPackages":
+		return app.T_("Skipped packages")
+	case "requestedInstall":
+		return app.T_("Requested to install")
+	case "requestedRemove":
+		return app.T_("Requested to remove")
 	case "reason":
 		return app.T_("Reason")
 	case "fixed":

@@ -24,10 +24,8 @@ type commandRunner interface {
 
 // aptBindingActions определяет методы для низкоуровневых APT операций.
 type aptBindingActions interface {
-	SimulateRemove(packageNames []string, purge bool, depends bool) (*libApt.PackageChanges, error)
-	RemovePackages(packageNames []string, purge bool, depends bool, handler libApt.ProgressHandler) error
-	SimulateInstall(packageNames []string) (*libApt.PackageChanges, error)
-	InstallPackages(packageNames []string, handler libApt.ProgressHandler, downloadOnly bool) error
+	Plan(spec apt.TransactionSpec) (*libApt.PackageChanges, error)
+	Apply(spec apt.TransactionSpec, confirm apt.Confirm, handler libApt.ProgressHandler) (*libApt.PackageChanges, error)
 	RpmQueryKernelPackages(ctx context.Context) ([]apt.KernelRPMInfo, error)
 	RpmIsPackageInstalled(packageName string) (bool, error)
 	RpmIsAnyPackageInstalled(possibleNames []string) (bool, error)

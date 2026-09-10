@@ -56,12 +56,12 @@ func TestAptDownloadOnly(t *testing.T) {
 	defer aptBinding.Close()
 
 	if info, err := actions.GetInfo(testPackage); err == nil && info != nil && info.State == aptlib.PackageStateInstalled {
-		if err = actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
+		if _, err = actions.Apply(removeSpec(testPackage), nil, nil); err != nil {
 			t.Fatalf("pre-cleanup remove failed: %v", err)
 		}
 	}
 
-	err := actions.InstallPackages([]string{testPackage}, nil, true)
+	_, err := actions.Apply(aptBinding.TransactionSpec{Install: []string{testPackage}, DownloadOnly: true}, nil, nil)
 	if err != nil {
 		t.Fatalf("download-only failed: %v", err)
 	}
@@ -130,9 +130,9 @@ func TestAptSimulateInstall(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	changes, err := actions.SimulateInstall([]string{testPackage})
+	changes, err := actions.Plan(installSpec(testPackage))
 	if err != nil {
-		t.Fatalf("SimulateInstall failed: %v", err)
+		t.Fatalf("Plan failed: %v", err)
 	}
 	assert.NotNil(t, changes)
 }
@@ -146,7 +146,7 @@ func TestAptSimulateRemove(t *testing.T) {
 	defer aptBinding.Close()
 
 	// First, try to install the test package (ignore if already the newest version)
-	err := actions.InstallPackages([]string{testPackage}, nil, false)
+	_, err := actions.Apply(installSpec(testPackage), nil, nil)
 	if err != nil {
 		if matchedErr := aptErrors.CheckError(err.Error()); matchedErr != nil {
 			if matchedErr.Entry.Code == aptErrors.ErrPackageIsAlreadyNewest {
@@ -160,9 +160,9 @@ func TestAptSimulateRemove(t *testing.T) {
 	}
 
 	// Now simulate removing the package (should work since we ensured it's installed)
-	changes, err := actions.SimulateRemove([]string{testPackage}, true, true)
+	changes, err := actions.Plan(aptBinding.TransactionSpec{Remove: []string{testPackage}, Purge: true, RemoveDepends: true})
 	if err != nil {
-		t.Fatalf("SimulateRemove failed: %v", err)
+		t.Fatalf("Plan failed: %v", err)
 	}
 	assert.NotNil(t, changes)
 }
@@ -197,17 +197,17 @@ func TestAptInstallRemoveHelloRoot(t *testing.T) {
 	}
 
 	if installedFirst {
-		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
+		if _, err := actions.Apply(removeSpec(testPackage), nil, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
-		if err := actions.InstallPackages([]string{testPackage}, nil, false); err != nil {
+		if _, err := actions.Apply(installSpec(testPackage), nil, nil); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
 	} else {
-		if err := actions.InstallPackages([]string{testPackage}, nil, false); err != nil {
+		if _, err := actions.Apply(installSpec(testPackage), nil, nil); err != nil {
 			t.Fatalf("install hello failed: %v", err)
 		}
-		if err := actions.RemovePackages([]string{testPackage}, false, false, nil); err != nil {
+		if _, err := actions.Apply(removeSpec(testPackage), nil, nil); err != nil {
 			t.Fatalf("remove hello failed: %v", err)
 		}
 	}
@@ -218,20 +218,16 @@ func TestAptInvalidParameters(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	if err := actions.InstallPackages([]string{}, nil, false); err == nil {
-		t.Fatalf("expected error for empty package list in InstallPackages")
+	if _, err := actions.Apply(aptBinding.TransactionSpec{}, nil, nil); err == nil {
+		t.Fatalf("expected error for empty transaction in Apply")
 	}
 
-	if _, err := actions.SimulateInstall([]string{}); err == nil {
-		t.Fatalf("expected error for empty package list in SimulateInstall")
+	if _, err := actions.Plan(aptBinding.TransactionSpec{AptGetArgs: []string{"", "  "}}); err == nil {
+		t.Fatalf("expected error for blank names in Plan")
 	}
 
-	if _, err := actions.SimulateRemove([]string{}, true, true); err == nil {
-		t.Fatalf("expected error for empty package list in SimulateRemove")
-	}
-
-	if _, err := actions.SimulateChange(nil, nil, false, true); err == nil {
-		t.Fatalf("expected error for empty lists in SimulateChange")
+	if _, err := actions.Plan(aptBinding.TransactionSpec{}); err == nil {
+		t.Fatalf("expected error for empty transaction in Plan")
 	} else if ae, ok := err.(*aptlib.AptError); ok {
 		if ae.Code != aptlib.AptErrorInvalidParameters {
 			t.Fatalf("unexpected error code: %d (%v)", ae.Code, ae)
@@ -248,15 +244,15 @@ func TestAptSimulateReinstall(t *testing.T) {
 	defer aptBinding.Close()
 
 	// bash is usually installed, so reinstall should work
-	changes, err := actions.SimulateReinstall([]string{"bash"})
+	changes, err := actions.Plan(aptBinding.TransactionSpec{Reinstall: []string{"bash"}})
 	if err != nil {
-		t.Logf("SimulateReinstall failed: %v", err)
+		t.Logf("Plan reinstall failed: %v", err)
 		if ae, ok := errors.AsType[*aptlib.AptError](err); ok {
 			t.Logf("Got AptError with code: %d", ae.Code)
 		}
 	} else {
 		assert.NotNil(t, changes)
-		t.Logf("SimulateReinstall succeeded: new_installed=%d", changes.NewInstalledCount)
+		t.Logf("Plan reinstall succeeded: new_installed=%d", changes.NewInstalledCount)
 	}
 }
 
@@ -284,12 +280,7 @@ func TestAptSimulateChangeCombined(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	changes, err := actions.SimulateChange(
-		[]string{testPackage},
-		[]string{"nano"},
-		false,
-		false,
-	)
+	changes, err := actions.Plan(aptBinding.TransactionSpec{Install: []string{testPackage}, Remove: []string{"nano"}})
 	if err != nil {
 		t.Logf("SimulateChange combined failed (may be expected): %v", err)
 	} else {
@@ -309,7 +300,7 @@ func TestAptMultiplePackageInstall(t *testing.T) {
 
 	packages := []string{"tree", "htop", "ncdu"}
 
-	changes, err := actions.SimulateInstall(packages)
+	changes, err := actions.Plan(installSpec(packages...))
 	if err != nil {
 		t.Logf("Multiple package install simulation failed: %v", err)
 	} else {
@@ -341,12 +332,12 @@ func TestAptInstallRemoveRpmFile(t *testing.T) {
 	const testPkg = "test-apm-example"
 
 	if info, e := actions.GetInfo(testPkg); e == nil && info != nil && info.State == aptlib.PackageStateInstalled {
-		if err = actions.RemovePackages([]string{testPkg}, false, false, nil); err != nil {
+		if _, err = actions.Apply(removeSpec(testPkg), nil, nil); err != nil {
 			t.Fatalf("pre-cleanup remove failed: %v", err)
 		}
 	}
 
-	if err = actions.InstallPackages([]string{rpmPath}, nil, false); err != nil {
+	if _, err = actions.Apply(installSpec(rpmPath), nil, nil); err != nil {
 		t.Fatalf("install RPM file failed: %v", err)
 	}
 
@@ -357,13 +348,45 @@ func TestAptInstallRemoveRpmFile(t *testing.T) {
 	}
 	assert.Equal(t, "hello", strings.TrimSpace(string(content)))
 
-	if err = actions.RemovePackages([]string{"test-apm-example"}, false, false, nil); err != nil {
+	if _, err = actions.Apply(removeSpec("test-apm-example"), nil, nil); err != nil {
 		t.Fatalf("remove test-apm-example failed: %v", err)
 	}
 
 	if _, err = os.Stat(installedFile); !os.IsNotExist(err) {
 		t.Errorf("expected %s to be removed after package removal", installedFile)
 	}
+}
+
+// TestAptReinstallRpmFile plans a reinstall from a local RPM file
+func TestAptReinstallRpmFile(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root")
+	}
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test-apm-example-*.rpm")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	if _, err = tmpFile.Write(testRpmData); err != nil {
+		t.Fatalf("failed to write RPM data: %v", err)
+	}
+	tmpFile.Close()
+	rpmPath := tmpFile.Name()
+
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	const testPkg = "test-apm-example"
+	if _, err = actions.Apply(installSpec(rpmPath), nil, nil); err != nil {
+		t.Fatalf("install RPM file failed: %v", err)
+	}
+	defer func() { _, _ = actions.Apply(removeSpec(testPkg), nil, nil) }()
+
+	changes, err := actions.Plan(aptBinding.TransactionSpec{Reinstall: []string{rpmPath}})
+	if err != nil {
+		t.Fatalf("Plan reinstall from RPM failed: %v", err)
+	}
+	assert.Contains(t, changes.NewInstalledPackages, testPkg)
 }
 
 // TestAptInstallConflictingRpms installs two RPM files that conflict on the same file path.
@@ -397,17 +420,17 @@ func TestAptInstallConflictingRpms(t *testing.T) {
 
 	rpmPaths := []string{tmpFile1.Name(), tmpFile2.Name()}
 	for _, rpm := range rpmPaths {
-		_ = actions.RemovePackages([]string{rpm}, false, false, nil)
+		_, _ = actions.Apply(removeSpec(rpm), nil, nil)
 	}
 
 	defer func() {
 		for _, rpm := range rpmPaths {
-			_ = actions.RemovePackages([]string{rpm}, false, false, nil)
+			_, _ = actions.Apply(removeSpec(rpm), nil, nil)
 		}
 	}()
 
 	for i, rpm := range rpmPaths {
-		err = actions.InstallPackages([]string{rpm}, nil, false)
+		_, err = actions.Apply(installSpec(rpm), nil, nil)
 		if i == 0 {
 			if err != nil {
 				t.Fatalf("install first RPM failed: %v", err)
@@ -430,9 +453,9 @@ func TestAptInstallSizeCalculation(t *testing.T) {
 	actions := aptBinding.NewActions()
 	defer aptBinding.Close()
 
-	changes, err := actions.SimulateInstall([]string{testPackage})
+	changes, err := actions.Plan(installSpec(testPackage))
 	if err != nil {
-		t.Skipf("SimulateInstall failed, skipping size check: %v", err)
+		t.Skipf("Plan failed, skipping size check: %v", err)
 	}
 
 	t.Logf("Install sizes: download=%d bytes, install=%d bytes",
@@ -455,7 +478,7 @@ func TestAptSimulateInstallByPath(t *testing.T) {
 	defer aptBinding.Close()
 
 	t.Run("file path resolves to owner package", func(t *testing.T) {
-		changes, err := actions.SimulateInstall([]string{"/bin/bash"})
+		changes, err := actions.Plan(installSpec("/bin/bash"))
 		if err == nil {
 			assert.Contains(t, changes.UpgradedPackages, "bash")
 			return
@@ -470,7 +493,7 @@ func TestAptSimulateInstallByPath(t *testing.T) {
 
 	t.Run("virtual path with multiple providers lists them", func(t *testing.T) {
 		const virtualPath = "/usr/bin/x-www-browser"
-		_, err := actions.SimulateInstall([]string{virtualPath})
+		_, err := actions.Plan(installSpec(virtualPath))
 		if err == nil {
 			t.Fatalf("expected provider selection error for %s", virtualPath)
 		}
@@ -486,7 +509,7 @@ func TestAptSimulateInstallByPath(t *testing.T) {
 
 	t.Run("unknown path is not found", func(t *testing.T) {
 		const unknownPath = "/nonexistent/apm-tests/path"
-		_, err := actions.SimulateInstall([]string{unknownPath})
+		_, err := actions.Plan(installSpec(unknownPath))
 		if err == nil {
 			t.Fatalf("expected error for %s", unknownPath)
 		}
@@ -501,4 +524,106 @@ func TestAptSimulateInstallByPath(t *testing.T) {
 		}
 		t.Fatalf("unexpected error type: %T %v", err, err)
 	})
+}
+
+// TestAptPlanIdempotent skips missing removes instead of failing
+func TestAptPlanIdempotent(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	if info, err := actions.GetInfo(testPackage); err == nil && info.State == aptlib.PackageStateInstalled {
+		if _, err = actions.Apply(removeSpec(testPackage), nil, nil); err != nil {
+			t.Fatalf("pre-cleanup remove failed: %v", err)
+		}
+	}
+
+	// known but not installed package and an unmatched glob are skipped
+	spec := aptBinding.TransactionSpec{AptGetArgs: []string{"bash+", testPackage + "-", "__apm_none_*-"}, Idempotent: true}
+	changes, err := actions.Plan(spec)
+	if err != nil {
+		t.Fatalf("Plan failed: %v", err)
+	}
+	assert.ElementsMatch(t, []string{testPackage, "__apm_none_*"}, changes.SkippedPackages)
+
+	// unknown name stays an error even in idempotent mode
+	const unknown = "__nonexistent_package_for_apm_tests__"
+	_, err = actions.Plan(aptBinding.TransactionSpec{Remove: []string{unknown}, Idempotent: true})
+	var me *aptErrors.MatchedError
+	if !errors.As(err, &me) {
+		t.Fatalf("expected MatchedError for unknown package, got %T %v", err, err)
+	}
+	assert.Equal(t, aptErrors.ErrPackageNotFound, me.Entry.Code)
+
+	// without idempotent a not installed package is an error
+	spec.Idempotent = false
+	_, err = actions.Plan(spec)
+	if !errors.As(err, &me) {
+		t.Fatalf("expected MatchedError without idempotent, got %T %v", err, err)
+	}
+	assert.Equal(t, aptErrors.ErrPackageNotInstalled, me.Entry.Code)
+}
+
+// TestAptPlanGlob expands install globs against the cache
+func TestAptPlanGlob(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	changes, err := actions.Plan(aptBinding.TransactionSpec{Install: []string{"hell?"}, Idempotent: true})
+	if err != nil {
+		t.Fatalf("Plan failed: %v", err)
+	}
+	if info, errInfo := actions.GetInfo(testPackage); errInfo == nil && info.State != aptlib.PackageStateInstalled {
+		assert.Contains(t, changes.NewInstalledPackages, testPackage)
+	}
+
+	_, err = actions.Plan(aptBinding.TransactionSpec{Install: []string{"__apm_none_*"}})
+	var me *aptErrors.MatchedError
+	if !errors.As(err, &me) {
+		t.Fatalf("expected MatchedError for unmatched glob, got %T %v", err, err)
+	}
+	assert.Equal(t, aptErrors.ErrPackageNotFound, me.Entry.Code)
+}
+
+// TestAptApplyDeclined plans on the same cache and does not execute when confirm says no
+func TestAptApplyDeclined(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	if info, err := actions.GetInfo(testPackage); err == nil && info.State == aptlib.PackageStateInstalled {
+		t.Skipf("%s is already installed", testPackage)
+	}
+
+	var planned *aptlib.PackageChanges
+	changes, err := actions.Apply(aptBinding.TransactionSpec{Install: []string{testPackage}}, func(c *aptlib.PackageChanges) (bool, error) {
+		planned = c
+		return false, nil
+	}, nil)
+	if err != nil {
+		t.Fatalf("Apply failed: %v", err)
+	}
+	assert.Same(t, planned, changes)
+	assert.Contains(t, changes.NewInstalledPackages, testPackage)
+
+	info, err := actions.GetInfo(testPackage)
+	if err != nil {
+		t.Fatalf("GetInfo failed: %v", err)
+	}
+	assert.NotEqual(t, aptlib.PackageStateInstalled, info.State, "declined transaction must not install")
+}
+
+func installSpec(names ...string) aptBinding.TransactionSpec {
+	return aptBinding.TransactionSpec{Install: names}
+}
+
+func removeSpec(names ...string) aptBinding.TransactionSpec {
+	return aptBinding.TransactionSpec{Remove: names}
 }

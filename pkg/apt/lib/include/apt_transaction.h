@@ -12,16 +12,20 @@ AptResult apt_transaction_new(AptCache *cache, AptTransaction **tx);
 // Frees the transaction.
 void apt_transaction_free(const AptTransaction *tx);
 
-// Marks `names` (array of `count` strings) for installation.
+// Sets transaction flags; idempotent reports missing removes in `skipped_packages` and tolerates installed packages.
+void apt_transaction_set_options(AptTransaction *tx, bool purge, bool remove_depends, bool idempotent);
+
+// Marks `names` for installation: name, name>=1.0, glob*, /path, file.rpm; +/- suffixes are not interpreted.
 AptResult apt_transaction_install(AptTransaction *tx, const char **names, size_t count);
 
-// Marks `names` for removal. If `purge` is true, removes config files too.
-// If `remove_depends` is true, also removes reverse dependencies.
-AptResult apt_transaction_remove(AptTransaction *tx, const char **names, size_t count,
-                                  bool purge, bool remove_depends);
+// Marks `names` for removal; flags come from apt_transaction_set_options.
+AptResult apt_transaction_remove(AptTransaction *tx, const char **names, size_t count);
 
 // Marks `names` for reinstallation.
 AptResult apt_transaction_reinstall(AptTransaction *tx, const char **names, size_t count);
+
+// Adds command line arguments as apt-get does: name installs, name- removes, name+ installs.
+AptResult apt_transaction_add_apt_get_args(AptTransaction *tx, const char **args, size_t count);
 
 // Marks all upgradable packages for a distribution upgrade.
 AptResult apt_transaction_dist_upgrade(AptTransaction *tx);

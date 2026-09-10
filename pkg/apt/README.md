@@ -64,7 +64,7 @@ void      apt_packages_free(AptPackageList *list);
 
 5. Наполняем транзакцию:
    - apt_transaction_install(tx, names, count)
-   - apt_transaction_remove(tx, names, count, purge, depends)
+   - apt_transaction_remove(tx, names, count)
    - apt_transaction_reinstall(tx, names, count)
    - apt_transaction_dist_upgrade(tx)
    - apt_transaction_autoremove(tx)
@@ -108,11 +108,16 @@ AptResult apt_cache_update(AptCache *cache);    // скачать свежие �
 AptResult apt_transaction_new(AptCache *cache, AptTransaction **tx);
 void      apt_transaction_free(const AptTransaction *tx);
 
-// Наполнение
+// Флаги
+void      apt_transaction_set_options(AptTransaction *tx, bool purge, bool remove_depends, bool idempotent);
+
+// Явные селекторы: имя, name>=1.0, glob*, путь, файл.rpm; хвостовые +/- не трактуются
 AptResult apt_transaction_install(AptTransaction *tx, const char **names, size_t count);
-AptResult apt_transaction_remove(AptTransaction *tx, const char **names, size_t count,
-                                  bool purge, bool remove_depends);
+AptResult apt_transaction_remove(AptTransaction *tx, const char **names, size_t count);
 AptResult apt_transaction_reinstall(AptTransaction *tx, const char **names, size_t count);
+
+// Аргументы командной строки как у apt-get: имя ставится, имя- удаляется, имя+ ставится
+AptResult apt_transaction_add_apt_get_args(AptTransaction *tx, const char **args, size_t count);
 AptResult apt_transaction_dist_upgrade(AptTransaction *tx);
 AptResult apt_transaction_autoremove(AptTransaction *tx);
 
@@ -126,7 +131,11 @@ AptResult apt_transaction_execute(const AptTransaction *tx,
 ```
 
 Транзакцию можно наполнять несколькими вызовами (install + remove в одной транзакции).
-После `plan()` или `execute()` транзакция отработана — для новой операции нужна новая транзакция
+После `plan()` состояние кеша откатывается, так что на той же транзакции можно вызвать `execute()` — это основной сценарий «показать план, спросить, применить» на одном открытии кеша. После `execute()` нужна новая транзакция
+
+**apt_transaction_add_apt_get_args** — аргументы в стиле apt-get: `name`, `name+`, `name-`, `lib*`, `/usr/bin/foo`, `./pkg.rpm`. Как и apt-get, сначала пробует имя целиком по кешу и только потом срезает `+`/`-`
+
+**idempotent** — remove неустановленного и glob без совпадений уходят в `skipped_packages`, install установленного не ошибка. Неизвестное имя остаётся ошибкой
 
 ### Информация о пакетах (apt_package.h)
 

@@ -14,39 +14,29 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	"altlinux.space/alt-atomic/apm/internal/common/testutil"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
 type mockAptActions struct {
 	overrides       map[string]string
-	checkRemoveRes  *aptLib.PackageChanges
-	checkRemoveErr  error
 	checkUpgradeRes *aptLib.PackageChanges
 	checkUpgradeErr error
-	prepareInstall  []string
-	prepareErr      error
-	findChanges     *aptLib.PackageChanges
-	findErr         error
+	planChanges     *aptLib.PackageChanges
+	planErr         error
 	updateErr       error
 }
 
 func (m *mockAptActions) SetAptConfigOverrides(o map[string]string) { m.overrides = o }
 func (m *mockAptActions) GetAptConfigOverrides() map[string]string  { return m.overrides }
-func (m *mockAptActions) CheckRemove(_ context.Context, _ []string, _ bool, _ bool) (*aptLib.PackageChanges, error) {
-	return m.checkRemoveRes, m.checkRemoveErr
-}
 func (m *mockAptActions) CheckUpgrade(_ context.Context) (*aptLib.PackageChanges, error) {
 	return m.checkUpgradeRes, m.checkUpgradeErr
 }
-func (m *mockAptActions) PrepareInstallPackages(_ context.Context, _ []string) ([]string, []string, error) {
-	return m.prepareInstall, nil, m.prepareErr
+func (m *mockAptActions) Plan(_ context.Context, _ aptBinding.TransactionSpec) (*aptLib.PackageChanges, error) {
+	return m.planChanges, m.planErr
 }
-func (m *mockAptActions) FindPackage(_ context.Context, _ []string, _ []string, _ bool, _ bool, _ bool) ([]string, []string, []_package.Package, *aptLib.PackageChanges, error) {
-	return nil, nil, nil, m.findChanges, m.findErr
-}
-func (m *mockAptActions) Remove(_ context.Context, _ []string, _ bool, _ bool) error { return nil }
-func (m *mockAptActions) CombineInstallRemovePackages(_ context.Context, _ []string, _ []string, _ bool, _ bool, _ bool) error {
-	return nil
+func (m *mockAptActions) DescribeChanges(_ context.Context, _ *aptLib.PackageChanges) ([]_package.Package, error) {
+	return nil, nil
 }
 func (m *mockAptActions) Update(_ context.Context, _ ...bool) ([]_package.Package, error) {
 	return nil, m.updateErr
@@ -61,10 +51,19 @@ func (m *mockAptActions) AptUpdateIfStale(_ context.Context, _ time.Duration, _ 
 func (m *mockAptActions) GetInstalledPackages(_ context.Context, _ ...bool) (map[string]string, error) {
 	return nil, nil
 }
-func (m *mockAptActions) RpmIsPackageInstalled(_ string) (bool, error)          { return false, nil }
-func (m *mockAptActions) Upgrade(_ context.Context, _ bool) error               { return nil }
-func (m *mockAptActions) ReinstallPackages(_ context.Context, _ []string) error { return nil }
-func (m *mockAptActions) Install(_ context.Context, _ []string, _ bool) error   { return nil }
+func (m *mockAptActions) RpmIsPackageInstalled(_ string) (bool, error) { return false, nil }
+func (m *mockAptActions) Apply(_ context.Context, _ aptBinding.TransactionSpec, confirm aptBinding.Confirm) (*aptLib.PackageChanges, error) {
+	if m.planErr != nil {
+		return nil, m.planErr
+	}
+	if confirm != nil {
+		if ok, err := confirm(m.planChanges); err != nil || !ok {
+			return m.planChanges, err
+		}
+	}
+	return m.planChanges, nil
+}
+func (m *mockAptActions) Upgrade(_ context.Context, _ bool) error { return nil }
 func (m *mockAptActions) DownloadSource(_ context.Context, _ []string, _ string) ([]aptLib.SourcePackage, error) {
 	return nil, nil
 }

@@ -18,11 +18,11 @@ package _package
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -61,232 +61,6 @@ func (a *Packages) GetAptConfigOverrides() map[string]string {
 	return a.serviceAptBinding.GetConfigOverrides()
 }
 
-// PrepareInstallPackages разбирает список пакетов с суффиксами +/- и возвращает два списка
-func (a *Packages) PrepareInstallPackages(ctx context.Context, packages []string) (install []string, remove []string, err error) {
-	for _, pkg := range packages {
-		pkg = strings.TrimSpace(pkg)
-		if pkg == "" {
-			continue
-		}
-
-		// Сначала проверяем, существует ли пакет с таким именем как есть
-		existsAsIs := a.checkPackageExists(ctx, pkg)
-
-		// Пакет существует с таким именем - добавляем на установку
-		if existsAsIs {
-			install = append(install, pkg)
-			continue
-		}
-
-		if strings.HasSuffix(pkg, "+") {
-			baseName := strings.TrimSuffix(pkg, "+")
-			if baseName != "" {
-				install = append(install, baseName)
-			}
-		} else if strings.HasSuffix(pkg, "-") {
-			baseName := strings.TrimSuffix(pkg, "-")
-			if baseName != "" {
-				remove = append(remove, baseName)
-			}
-		} else {
-			install = append(install, pkg)
-		}
-	}
-
-	return install, remove, nil
-}
-
-// checkPackageExists проверяет существует ли пакет в базе данных
-func (a *Packages) checkPackageExists(ctx context.Context, packageName string) bool {
-	_, err := a.serviceAptDatabase.GetPackageByName(ctx, packageName)
-	return err == nil
-}
-
-func (a *Packages) FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []Package, *aptLib.PackageChanges, error) {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
-
-	expandedInstall, expandedRemove, rpmFiles, packagesInfo, seenInfo, err := a.expandPackageLists(ctx, installed, removed)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	if len(expandedInstall) == 0 && len(expandedRemove) == 0 {
-		if len(installed) > 0 || len(removed) > 0 {
-			return nil, nil, nil, nil, errors.New(app.T_("No packages found matching the specified patterns"))
-		}
-	}
-
-	packageChanges, err := a.simulateChanges(ctx, expandedInstall, expandedRemove, rpmFiles, purge, depends, reinstall)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	packagesInfo, err = a.enrichPackagesInfo(ctx, packagesInfo, seenInfo, packageChanges)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	return expandedInstall, expandedRemove, packagesInfo, packageChanges, nil
-}
-
-// expandPackageLists обрабатывает wildcard-пакеты и RPM-файлы, возвращая расширенные списки.
-func (a *Packages) expandPackageLists(ctx context.Context, installed, removed []string) (
-	expandedInstall, expandedRemove, rpmFiles []string, packagesInfo []Package, seenInfo map[string]bool, err error,
-) {
-	seenInfo = make(map[string]bool)
-	seenNames := make(map[string]bool)
-
-	processPackageList := func(packages []string, targetList *[]string, onlyInstalled bool) error {
-		for _, original := range packages {
-			if strings.Contains(original, "*") {
-				like := strings.ReplaceAll(original, "*", "%")
-				if strings.TrimSpace(like) != "" {
-					matched, errSearch := a.serviceAptDatabase.SearchPackagesByNameLike(ctx, like, onlyInstalled)
-					if errSearch != nil {
-						return errSearch
-					}
-					for _, mp := range matched {
-						if !seenInfo[mp.Name] {
-							seenInfo[mp.Name] = true
-							packagesInfo = append(packagesInfo, mp)
-						}
-						if !seenNames[mp.Name] {
-							seenNames[mp.Name] = true
-							*targetList = append(*targetList, mp.Name)
-						}
-					}
-				}
-			} else {
-				if aptParser.IsRegularFileAndIsPackage(original) {
-					rpmFiles = append(rpmFiles, original)
-				}
-				seenNames[original] = true
-				*targetList = append(*targetList, original)
-			}
-		}
-		return nil
-	}
-
-	// Обрабатываем пакеты на установку (ищем среди всех доступных)
-	if err = processPackageList(installed, &expandedInstall, false); err != nil {
-		return
-	}
-
-	// Обрабатываем пакеты на удаление (ищем только среди установленных)
-	if err = processPackageList(removed, &expandedRemove, true); err != nil {
-		return
-	}
-
-	return
-}
-
-// simulateChanges выполняет симуляцию изменений через APT binding.
-func (a *Packages) simulateChanges(ctx context.Context, expandedInstall, expandedRemove, rpmFiles []string,
-	purge, depends, reinstall bool,
-) (*aptLib.PackageChanges, error) {
-	if reinstall {
-		return a.CheckReinstall(ctx, expandedInstall)
-	}
-
-	if len(rpmFiles) > 0 {
-		packageChanges, rpmInfos, aptError := a.serviceAptBinding.SimulateChangeWithRpmInfo(expandedInstall, expandedRemove, purge, depends, rpmFiles)
-		if aptError != nil {
-			return nil, aptError
-		}
-		for _, rpmInfo := range rpmInfos {
-			if err := a.saveRpmInfoToDatabase(ctx, rpmInfo); err != nil {
-				return nil, err
-			}
-		}
-		return packageChanges, nil
-	}
-
-	return a.serviceAptBinding.SimulateChange(expandedInstall, expandedRemove, purge, depends)
-}
-
-// enrichPackagesInfo добавляет информацию о пакетах из packageChanges.
-func (a *Packages) enrichPackagesInfo(ctx context.Context, packagesInfo []Package, seenInfo map[string]bool,
-	packageChanges *aptLib.PackageChanges,
-) ([]Package, error) {
-	if packageChanges == nil {
-		return packagesInfo, nil
-	}
-
-	var namesToFetch []string
-	for _, list := range [][]string{
-		packageChanges.ExtraInstalled,
-		packageChanges.UpgradedPackages,
-		packageChanges.NewInstalledPackages,
-		packageChanges.RemovedPackages,
-	} {
-		for _, pkgName := range list {
-			cleanName := helper.CleanPackageName(strings.TrimSpace(pkgName))
-			if cleanName == "" {
-				continue
-			}
-			if !seenInfo[cleanName] {
-				seenInfo[cleanName] = true
-				namesToFetch = append(namesToFetch, cleanName)
-			}
-		}
-	}
-
-	if len(namesToFetch) > 0 {
-		batchInfo, err := a.serviceAptDatabase.GetPackagesByNames(ctx, namesToFetch)
-		if err != nil {
-			return nil, err
-		}
-		packagesInfo = append(packagesInfo, batchInfo...)
-	}
-
-	return packagesInfo, nil
-}
-
-func (a *Packages) Install(ctx context.Context, packages []string, downloadOnly bool) error {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
-
-	err := a.serviceAptBinding.InstallPackages(packages, a.getHandler(ctx, len(packages)), downloadOnly)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (a *Packages) CombineInstallRemovePackages(ctx context.Context, packagesInstall []string,
-	packagesRemove []string, purge bool, depends bool, downloadOnly bool) error {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
-
-	err := a.serviceAptBinding.CombineInstallRemovePackages(
-		packagesInstall,
-		packagesRemove,
-		a.getHandler(ctx, len(packagesInstall)+len(packagesRemove)),
-		purge,
-		depends,
-		downloadOnly,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (a *Packages) Remove(ctx context.Context, packages []string, purge bool, depends bool) error {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
-
-	err := a.serviceAptBinding.RemovePackages(packages, purge, depends, a.getHandler(ctx, len(packages)))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (a *Packages) Upgrade(ctx context.Context, downloadOnly bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpgrade))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpgrade))
@@ -311,42 +85,6 @@ func (a *Packages) DownloadSource(ctx context.Context, packages []string, destDi
 func (a *Packages) InstallSourcePackages(ctx context.Context, files []string) error {
 	prefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
 	return a.serviceAptBinding.RpmInstallSourcePackages(ctx, prefix, files)
-}
-
-func (a *Packages) CheckInstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
-
-	packageChanges, err = a.serviceAptBinding.SimulateInstall(packageName)
-	return
-}
-
-func (a *Packages) CheckReinstall(ctx context.Context, packageName []string) (packageChanges *aptLib.PackageChanges, err error) {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
-
-	packageChanges, err = a.serviceAptBinding.SimulateReinstall(packageName)
-	return
-}
-
-func (a *Packages) ReinstallPackages(ctx context.Context, packages []string) error {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
-
-	err := a.serviceAptBinding.ReinstallPackages(packages, a.getHandler(ctx, len(packages)))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (a *Packages) CheckRemove(ctx context.Context, packageName []string, purge bool, depends bool) (packageChanges *aptLib.PackageChanges, err error) {
-	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
-	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
-
-	packageChanges, err = a.serviceAptBinding.SimulateRemove(packageName, purge, depends)
-	return
 }
 
 func (a *Packages) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
@@ -459,6 +197,106 @@ func (a *Packages) GetInstalledPackages(ctx context.Context, noLock ...bool) (ma
 	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
 }
 
+// Plan симулирует транзакцию, система не меняется
+func (a *Packages) Plan(ctx context.Context, spec aptBinding.TransactionSpec) (*aptLib.PackageChanges, error) {
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
+
+	spec.Inspect = rpmFiles(spec)
+	changes, err := a.serviceAptBinding.Plan(spec)
+	if err != nil {
+		return nil, err
+	}
+	return changes, a.saveInspected(ctx, changes)
+}
+
+// Apply выполняет транзакцию: план, подтверждение через confirm, применение на одном открытии кеша.
+func (a *Packages) Apply(ctx context.Context, spec aptBinding.TransactionSpec, confirm aptBinding.Confirm) (*aptLib.PackageChanges, error) {
+	spec.Inspect = rpmFiles(spec)
+
+	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
+	checking, working := true, false
+	defer func() {
+		if checking {
+			a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
+		}
+		if working {
+			a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
+		}
+	}()
+
+	planned := func(changes *aptLib.PackageChanges) (bool, error) {
+		checking = false
+		a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
+
+		if err := a.saveInspected(ctx, changes); err != nil {
+			return false, err
+		}
+		if confirm != nil {
+			if ok, err := confirm(changes); err != nil || !ok {
+				return ok, err
+			}
+		}
+
+		working = true
+		a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
+		return true, nil
+	}
+
+	total := len(spec.AptGetArgs) + len(spec.Install) + len(spec.Remove) + len(spec.Reinstall)
+	return a.serviceAptBinding.Apply(spec, planned, a.getHandler(ctx, total))
+}
+
+// DescribeChanges собирает карточки пакетов из базы по именам из плана
+func (a *Packages) DescribeChanges(ctx context.Context, changes *aptLib.PackageChanges) ([]Package, error) {
+	if changes == nil {
+		return nil, nil
+	}
+
+	seen := make(map[string]bool)
+	var names []string
+	for _, list := range [][]string{
+		changes.ExtraInstalled,
+		changes.UpgradedPackages,
+		changes.NewInstalledPackages,
+		changes.RemovedPackages,
+	} {
+		for _, pkgName := range list {
+			cleanName := helper.CleanPackageName(strings.TrimSpace(pkgName))
+			if cleanName == "" || seen[cleanName] {
+				continue
+			}
+			seen[cleanName] = true
+			names = append(names, cleanName)
+		}
+	}
+	if len(names) == 0 {
+		return nil, nil
+	}
+	return a.serviceAptDatabase.GetPackagesByNames(ctx, names)
+}
+
+// rpmFiles возвращает пути локальных .rpm из запроса, их карточки читаются из кеша после плана
+func rpmFiles(spec aptBinding.TransactionSpec) []string {
+	var files []string
+	for _, arg := range slices.Concat(spec.AptGetArgs, spec.Install, spec.Reinstall) {
+		if path := strings.TrimSuffix(arg, "+"); aptParser.IsRegularFileAndIsPackage(path) {
+			files = append(files, path)
+		}
+	}
+	return files
+}
+
+// saveInspected кладёт в базу карточки локальных .rpm, иначе их нечем показать
+func (a *Packages) saveInspected(ctx context.Context, changes *aptLib.PackageChanges) error {
+	for _, info := range changes.Inspected {
+		if err := a.saveRpmInfoToDatabase(ctx, info); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // RpmIsPackageInstalled проверяет установку пакета напрямую через rpm.
 func (a *Packages) RpmIsPackageInstalled(packageName string) (bool, error) {
 	return a.serviceAptBinding.RpmIsPackageInstalled(packageName)
@@ -514,21 +352,8 @@ func (a *Packages) saveRpmInfoToDatabase(ctx context.Context, ap *aptLib.Package
 	p := convertAptPackage(ap)
 	p.Changelog = extractLastMessage(p.Changelog)
 
-	// Создаем слайс с одним пакетом
-	packages := []Package{p}
-
-	// Обновляем информацию об установке
-	var err error
-	packages, err = a.updateInstalledInfo(ctx, packages)
-	if err != nil {
-		return fmt.Errorf("error updating installed info: %w", err)
-	}
-
-	// Сохраняем один пакет в базу данных (не очищая остальные)
-	err = a.serviceAptDatabase.SaveSinglePackage(ctx, packages[0])
-	if err != nil {
+	if err := a.serviceAptDatabase.SaveSinglePackage(ctx, p); err != nil {
 		return fmt.Errorf("error saving package to database: %w", err)
 	}
-
 	return nil
 }

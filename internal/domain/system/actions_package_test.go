@@ -16,10 +16,7 @@ func TestCheckInstall(t *testing.T) {
 			NewInstalledCount:    1,
 			NewInstalledPackages: []string{"vim"},
 		}
-		apt := &mockAptActions{
-			prepareInstall: []string{"vim"},
-			findChanges:    changes,
-		}
+		apt := &mockAptActions{planChanges: changes}
 		actions := newTestActions(apt, &mockAptDB{}, nil)
 
 		resp, err := actions.CheckInstall(context.Background(), []string{"vim"})
@@ -37,19 +34,8 @@ func TestCheckInstall(t *testing.T) {
 		testutil.AssertAPMError(t, err, apmerr.ErrorTypeValidation)
 	})
 
-	t.Run("prepare error returns apt error", func(t *testing.T) {
-		apt := &mockAptActions{prepareErr: errors.New("bad package spec")}
-		actions := newTestActions(apt, &mockAptDB{}, nil)
-
-		_, err := actions.CheckInstall(context.Background(), []string{"bad+"})
-		testutil.AssertAPMError(t, err, apmerr.ErrorTypeApt)
-	})
-
-	t.Run("find error returns apt error", func(t *testing.T) {
-		apt := &mockAptActions{
-			prepareInstall: []string{"vim"},
-			findErr:        errors.New("dependency conflict"),
-		}
+	t.Run("plan error returns apt error", func(t *testing.T) {
+		apt := &mockAptActions{planErr: errors.New("dependency conflict")}
 		actions := newTestActions(apt, &mockAptDB{}, nil)
 
 		_, err := actions.CheckInstall(context.Background(), []string{"vim"})
@@ -63,7 +49,7 @@ func TestCheckRemove(t *testing.T) {
 			RemovedCount:    2,
 			RemovedPackages: []string{"vim", "vim-common"},
 		}
-		apt := &mockAptActions{checkRemoveRes: changes}
+		apt := &mockAptActions{planChanges: changes}
 		actions := newTestActions(apt, &mockAptDB{}, nil)
 
 		resp, err := actions.CheckRemove(context.Background(), []string{"vim"}, false, false)
@@ -76,7 +62,7 @@ func TestCheckRemove(t *testing.T) {
 	})
 
 	t.Run("apt error propagates", func(t *testing.T) {
-		apt := &mockAptActions{checkRemoveErr: errors.New("cannot remove essential")}
+		apt := &mockAptActions{planErr: errors.New("cannot remove essential")}
 		actions := newTestActions(apt, &mockAptDB{}, nil)
 
 		_, err := actions.CheckRemove(context.Background(), []string{"glibc"}, false, false)
@@ -117,10 +103,7 @@ func TestCheckReinstall(t *testing.T) {
 
 	t.Run("success returns reinstall changes", func(t *testing.T) {
 		changes := &aptLib.PackageChanges{NewInstalledCount: 1}
-		apt := &mockAptActions{
-			prepareInstall: []string{"bash"},
-			findChanges:    changes,
-		}
+		apt := &mockAptActions{planChanges: changes}
 		actions := newTestActions(apt, &mockAptDB{}, nil)
 
 		resp, err := actions.CheckReinstall(context.Background(), []string{"bash"})

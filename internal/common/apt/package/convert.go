@@ -51,6 +51,14 @@ func convertAptPackage(ap *aptLib.PackageInfo) Package {
 		formattedVersion = v
 	}
 
+	installedVersion := ""
+	if ap.State == aptLib.PackageStateInstalled {
+		installedVersion = ap.InstalledVersion
+		if v, err := helper.GetVersionFromAptCache(installedVersion); err == nil && v != "" {
+			installedVersion = v
+		}
+	}
+
 	description := strings.TrimSpace(ap.Description)
 	summary := strings.TrimSpace(ap.ShortDescription)
 	if description == "" && summary != "" {
@@ -65,7 +73,7 @@ func convertAptPackage(ap *aptLib.PackageInfo) Package {
 		Maintainer:       ap.Maintainer,
 		Version:          formattedVersion,
 		VersionRaw:       ap.Version,
-		VersionInstalled: "",
+		VersionInstalled: installedVersion,
 		Depends:          cleanList(ap.Depends),
 		Aliases:          ap.Aliases,
 		Provides:         cleanList(ap.Provides),
@@ -74,7 +82,7 @@ func convertAptPackage(ap *aptLib.PackageInfo) Package {
 		Summary:          summary,
 		Description:      description,
 		Changelog:        ap.Changelog,
-		Installed:        false,
+		Installed:        installedVersion != "",
 		TypePackage:      int(PackageTypeSystem),
 		Files:            ap.Files,
 	}

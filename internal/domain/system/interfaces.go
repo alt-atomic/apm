@@ -25,6 +25,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	"altlinux.space/alt-atomic/apm/internal/common/swcat"
 	"altlinux.space/alt-atomic/apm/internal/domain/system/temporary"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 )
 
@@ -32,21 +33,17 @@ import (
 type aptActionsService interface {
 	SetAptConfigOverrides(overrides map[string]string)
 	GetAptConfigOverrides() map[string]string
-	CheckRemove(ctx context.Context, packages []string, purge bool, depends bool) (*aptLib.PackageChanges, error)
 	CheckUpgrade(ctx context.Context) (*aptLib.PackageChanges, error)
-	PrepareInstallPackages(ctx context.Context, packages []string) ([]string, []string, error)
-	FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []_package.Package, *aptLib.PackageChanges, error)
-	Remove(ctx context.Context, packages []string, purge bool, depends bool) error
-	CombineInstallRemovePackages(ctx context.Context, install []string, remove []string, purge bool, depends bool, downloadOnly bool) error
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	UpdateDBOnly(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	AptUpdate(ctx context.Context, noLock ...bool) error
 	AptUpdateIfStale(ctx context.Context, ttl time.Duration, noLock ...bool) error
 	GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error)
 	RpmIsPackageInstalled(packageName string) (bool, error)
+	Plan(ctx context.Context, spec aptBinding.TransactionSpec) (*aptLib.PackageChanges, error)
+	Apply(ctx context.Context, spec aptBinding.TransactionSpec, confirm aptBinding.Confirm) (*aptLib.PackageChanges, error)
+	DescribeChanges(ctx context.Context, changes *aptLib.PackageChanges) ([]_package.Package, error)
 	Upgrade(ctx context.Context, downloadOnly bool) error
-	ReinstallPackages(ctx context.Context, packages []string) error
-	Install(ctx context.Context, packages []string, downloadOnly bool) error
 	DownloadSource(ctx context.Context, packages []string, destDir string) ([]aptLib.SourcePackage, error)
 	InstallSourcePackages(ctx context.Context, files []string) error
 }
