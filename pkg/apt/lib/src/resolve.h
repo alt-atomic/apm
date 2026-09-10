@@ -34,9 +34,6 @@ AptResult resolve_virtual_package(const AptCache *cache, const RequirementSpec &
 // Resolves a file path to its owning package name (modifies `name` in place).
 AptResult resolve_file_to_package(const AptCache *cache, std::string &name);
 
-// Finds the package whose index file name is part of `rpm_path` (a local .rpm registered in APT::Arguments)
-bool find_package_by_rpm_file(const AptCache *cache, const std::string &rpm_path, std::string &name);
-
 // Finds an installed package for removal.
 AptResult find_remove_package(const AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &result_pkg);
 

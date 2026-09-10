@@ -35,10 +35,18 @@ AptResult apt_package_get(AptCache *cache, const char *package_name, AptPackageI
                 }
             }
 
-            if (!find_package_by_rpm_file(cache, input, requested)) {
+            // a local rpm provides its own path
+            pkgCache::PkgIterator rpm_pkg = cache->dep_cache->FindPkg(input);
+            if (rpm_pkg.end()) {
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
                                    (std::string("Unable to find package from RPM file: ") + input).c_str());
             }
+            RequirementSpec req;
+            req.name = input;
+            if (const AptResult result = resolve_virtual_package(cache, req, rpm_pkg); result.code != APT_SUCCESS) {
+                return result;
+            }
+            requested = rpm_pkg.Name();
         } else {
             requested = input;
             if (!requested.empty() && requested.size() > 7 && requested.rfind(".32bit") == requested.size() - 7) {

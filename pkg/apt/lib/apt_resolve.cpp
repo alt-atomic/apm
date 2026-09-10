@@ -286,20 +286,6 @@ AptResult resolve_file_to_package(const AptCache *cache, std::string &name) {
         (std::string("Package not found: ") + name).c_str());
 }
 
-bool find_package_by_rpm_file(const AptCache *cache, const std::string &rpm_path, std::string &name) {
-    for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-        for (pkgCache::VerIterator ver = iter.VersionList(); !ver.end(); ++ver) {
-            for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
-                if (pkgCache::PkgFileIterator file = vf.File(); file.FileName() && rpm_path.find(file.FileName()) != std::string::npos) {
-                    name = iter.Name();
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
 // Finds the single installed provider of req among current versions; errors when none or several
 static AptResult find_installed_provider(const AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &pkg) {
     std::vector<pkgCache::PkgIterator> providers;

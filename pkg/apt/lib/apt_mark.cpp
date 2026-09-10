@@ -93,27 +93,22 @@ AptResult process_package_reinstalls(const AptCache *cache,
 
     for (const auto &name : expand_globs(cache, reinstall_names, true)) {
         std::string raw(name);
-        RequirementSpec req = parse_requirement(raw);
+
+        // a local rpm provides its own path and resolves like a virtual package
+        RequirementSpec req;
+        if (is_rpm_file(raw)) {
+            req.name = raw;
+        } else {
+            req = parse_requirement(raw);
+        }
 
         pkgCache::PkgIterator pkg;
-
-        if (is_rpm_file(raw)) {
-            std::string pkg_name;
-            if (!find_package_by_rpm_file(cache, raw, pkg_name)) {
-                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                                   (std::string("Unable to find package from RPM file: ") + raw).c_str());
-            }
-
-            pkg = cache->dep_cache->FindPkg(pkg_name);
-            if (pkg.end()) {
-                return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                                   (std::string("Package ") + pkg_name + " is not installed, so cannot be reinstalled").
-                                   c_str());
-            }
-        } else {
-            if (const AptResult result = find_install_package(cache, req, pkg); result.code != APT_SUCCESS) {
-                return result;
-            }
+        AptResult result = find_install_package(cache, req, pkg);
+        if (result.code == APT_SUCCESS) {
+            result = resolve_virtual_package(cache, req, pkg);
+        }
+        if (result.code != APT_SUCCESS) {
+            return result;
         }
 
         if (pkg->CurrentVer == 0) {
