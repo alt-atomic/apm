@@ -50,7 +50,7 @@ struct AptCache {
     }
 };
 
-// Owns the package manager used to execute transactions.
+// Accumulates package names and flags for a single transaction.
 struct AptTransaction {
     AptCache *cache{};
     std::vector<std::string> install_names;
@@ -63,6 +63,7 @@ struct AptTransaction {
     bool is_autoremove = false;
 };
 
+// Owns the package manager used to execute transactions.
 struct AptPackageManager {
     std::unique_ptr<pkgPackageManager> pm;
     AptCache *cache;

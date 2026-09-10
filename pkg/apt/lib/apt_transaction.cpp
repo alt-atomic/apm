@@ -14,7 +14,6 @@
 #include <string>
 #include <cstring>
 
-// Accumulates package names and flags for a single transaction.
 // Allocates a new transaction bound to the given cache.
 AptResult apt_transaction_new(AptCache *cache, AptTransaction **tx) {
     if (!cache || !tx) {
@@ -118,7 +117,6 @@ AptResult apt_transaction_autoremove(AptTransaction *tx) {
     return make_result(APT_SUCCESS, nullptr);
 }
 
-// Converts a vector of strings to a vector of C string pointers.
 // Simulates a distribution upgrade and collects the resulting changes.
 static AptResult plan_dist_upgrade(const AptCache *cache, AptPackageChanges *changes) {
     if (!cache->cache_file) {

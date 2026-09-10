@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <cstring>
 
-// Detects RPM files in arguments, adds them to APT::Arguments, refreshes cache.
+// True when any name is a local .rpm file.
 static bool has_rpm_file(const std::vector<std::string> &names) {
     for (const auto &name : names) {
         if (is_rpm_file(name)) return true;
