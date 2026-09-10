@@ -111,13 +111,11 @@ func TestAptGetInfo_NotFound(t *testing.T) {
 	if err == nil {
 		t.Skip("GetInfo returned nil error for nonexistent package; skipping strict assertion")
 	}
-	var ae *aptlib.AptError
-	if errors.As(err, &ae) {
+	if ae, ok := errors.AsType[*aptlib.AptError](err); ok {
 		assert.Equal(t, aptlib.AptErrorPackageNotFound, ae.Code)
 		return
 	}
-	var me *aptErrors.MatchedError
-	if errors.As(err, &me) {
+	if me, ok := errors.AsType[*aptErrors.MatchedError](err); ok {
 		assert.Equal(t, aptErrors.ErrPackageNotFound, me.Entry.Code)
 		return
 	}
@@ -253,8 +251,7 @@ func TestAptSimulateReinstall(t *testing.T) {
 	changes, err := actions.SimulateReinstall([]string{"bash"})
 	if err != nil {
 		t.Logf("SimulateReinstall failed: %v", err)
-		var ae *aptlib.AptError
-		if errors.As(err, &ae) {
+		if ae, ok := errors.AsType[*aptlib.AptError](err); ok {
 			t.Logf("Got AptError with code: %d", ae.Code)
 		}
 	} else {
@@ -447,4 +444,61 @@ func TestAptInstallSizeCalculation(t *testing.T) {
 		assert.True(t, changes.InstallSize >= 0,
 			"Install size for new packages should be non-negative, got %d", changes.InstallSize)
 	}
+}
+
+// TestAptSimulateInstallByPath resolves path arguments like apt-get: file owner, virtual providers, not found
+func TestAptSimulateInstallByPath(t *testing.T) {
+	if syscall.Geteuid() != 0 {
+		t.Skip("requires root for APT cache write/lock")
+	}
+	actions := aptBinding.NewActions()
+	defer aptBinding.Close()
+
+	t.Run("file path resolves to owner package", func(t *testing.T) {
+		changes, err := actions.SimulateInstall([]string{"/bin/bash"})
+		if err == nil {
+			assert.Contains(t, changes.UpgradedPackages, "bash")
+			return
+		}
+		var me *aptErrors.MatchedError
+		if !errors.As(err, &me) {
+			t.Fatalf("unexpected error type: %T %v", err, err)
+		}
+		assert.Equal(t, aptErrors.ErrPackagesAlreadyInstalled, me.Entry.Code)
+		assert.Contains(t, me.Params, "bash")
+	})
+
+	t.Run("virtual path with multiple providers lists them", func(t *testing.T) {
+		const virtualPath = "/usr/bin/x-www-browser"
+		_, err := actions.SimulateInstall([]string{virtualPath})
+		if err == nil {
+			t.Fatalf("expected provider selection error for %s", virtualPath)
+		}
+		var me *aptErrors.MatchedError
+		if !errors.As(err, &me) {
+			t.Fatalf("unexpected error type: %T %v", err, err)
+		}
+		assert.NotEqual(t, aptErrors.ErrPackageNotFound, me.Entry.Code, "virtual path must not be treated as missing file")
+		assert.Equal(t, aptErrors.ErrMultiInstallProvidersSelect, me.Entry.Code)
+		assert.Contains(t, me.Params, virtualPath)
+		assert.NotEmpty(t, me.Details, "providers list expected in details")
+	})
+
+	t.Run("unknown path is not found", func(t *testing.T) {
+		const unknownPath = "/nonexistent/apm-tests/path"
+		_, err := actions.SimulateInstall([]string{unknownPath})
+		if err == nil {
+			t.Fatalf("expected error for %s", unknownPath)
+		}
+		if me, ok := errors.AsType[*aptErrors.MatchedError](err); ok {
+			assert.Equal(t, aptErrors.ErrPackageNotFound, me.Entry.Code)
+			assert.Contains(t, me.Params, unknownPath)
+			return
+		}
+		if ae, ok := errors.AsType[*aptlib.AptError](err); ok {
+			assert.Equal(t, aptlib.AptErrorPackageNotFound, ae.Code)
+			return
+		}
+		t.Fatalf("unexpected error type: %T %v", err, err)
+	})
 }

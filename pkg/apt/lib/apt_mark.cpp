@@ -24,10 +24,10 @@ AptResult process_package_installs(const AptCache *cache,
 
         std::string raw(install_names[i]);
 
-        if (!raw.empty() && raw[0] == '/' && !is_rpm_file(raw)) {
-            if (const AptResult result = resolve_file_to_package(cache, raw); result.code != APT_SUCCESS) {
-                return result;
-            }
+        //  try the path as a file only when no package (incl. virtual) has this name
+        if (!raw.empty() && raw[0] == '/' && !is_rpm_file(raw) && cache->dep_cache->FindPkg(raw).end()) {
+            const AptResult result = resolve_file_to_package(cache, raw);
+            free(result.message);
         }
 
         RequirementSpec req = parse_requirement(raw);
