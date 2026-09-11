@@ -60,6 +60,9 @@ typedef struct {
     char **new_installed_packages;
     char **removed_packages;
     char **kept_back_packages;
+    char **skipped_packages;
+    char **requested_install;
+    char **requested_remove;
 
     size_t extra_installed_count;
     size_t upgraded_count;
@@ -67,6 +70,9 @@ typedef struct {
     size_t removed_count;
     size_t kept_back_count;
     size_t not_upgraded_count;
+    size_t skipped_count;
+    size_t requested_install_count;
+    size_t requested_remove_count;
 
     uint64_t download_size;
     int64_t install_size;

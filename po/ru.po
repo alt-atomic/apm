@@ -2198,6 +2198,15 @@ msgstr "Исправлено"
 msgid "Skipped"
 msgstr "Пропущено"
 
+msgid "Skipped packages"
+msgstr "Пропущенные пакеты"
+
+msgid "Requested to install"
+msgstr "Запрошено к установке"
+
+msgid "Requested to remove"
+msgstr "Запрошено к удалению"
+
 #: internal/common/reply/translate.go:241
 msgid "Entries in /etc/passwd"
 msgstr "Записей в /etc/passwd"

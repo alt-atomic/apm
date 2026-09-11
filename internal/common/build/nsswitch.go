@@ -1,7 +1,6 @@
 package build
 
 import (
-	"context"
 	"fmt"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
@@ -11,15 +10,18 @@ import (
 
 const altFilesPkg = "libnss-altfiles"
 
-// altFilesManaged: true, если в контейнере и установлен libnss-altfiles.
-func (cfgService *ConfigService) altFilesManaged(ctx context.Context) bool {
+// altFilesManaged: true, если в контейнере и rpm знает об установленном libnss-altfiles.
+func (cfgService *ConfigService) altFilesManaged() bool {
 	if !helper.IsRunningInContainer() {
 		app.Log.Info("Not running in container, skipping nss-altfiles setup")
 		return false
 	}
 
-	pkg, err := cfgService.GetPackageByName(ctx, altFilesPkg)
-	if err != nil || pkg == nil || !pkg.Installed {
+	installed, err := cfgService.aptActions.RpmIsPackageInstalled(altFilesPkg)
+	if err != nil {
+		app.Log.Warn(fmt.Sprintf("Failed to query rpm for %s: %v", altFilesPkg, err))
+	}
+	if !installed {
 		app.Log.Info(fmt.Sprintf("Package %s is not installed, skipping nss-altfiles setup", altFilesPkg))
 		return false
 	}
@@ -54,8 +56,8 @@ func (cfgService *ConfigService) revertNssAltFiles() error {
 }
 
 // splitNssAltFiles формирует altfiles, если установлен libnss-altfiles.
-func (cfgService *ConfigService) splitNssAltFiles(ctx context.Context) error {
-	if !cfgService.altFilesManaged(ctx) {
+func (cfgService *ConfigService) splitNssAltFiles() error {
+	if !cfgService.altFilesManaged() {
 		return nil
 	}
 

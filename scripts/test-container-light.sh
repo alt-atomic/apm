@@ -82,7 +82,7 @@ print_success "Container started: ${CONTAINER_NAME}"
 print_info "Compiling APM..."
 
 if [ ! -d "$PROJECT_ROOT/_build" ]; then
-    meson setup -C _build --prefix=/usr -Dprofile=dev
+    meson setup _build --prefix=/usr -Dprofile=dev
 fi
 
 meson install --destdir "$TMPDIR" -C "$PROJECT_ROOT/_build"

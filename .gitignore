@@ -31,3 +31,5 @@ go.work.sum
 
 # Po
 po/apm.pot
+
+/.vscode/settings.json

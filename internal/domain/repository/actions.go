@@ -27,6 +27,8 @@ import (
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/imagesvc"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
+	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 )
@@ -421,24 +423,17 @@ func (a *Actions) TestTask(ctx context.Context, taskNum string) (*TestTaskRespon
 		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}
 
-	packagesInstall, packagesRemove, _, packageParse, errFind := a.serviceAptActions.FindPackage(
-		ctx,
-		packagesToInstall,
-		nil,
-		false,
-		false,
-		false,
-	)
-	if errFind != nil {
-		return nil, apmerr.New(apmerr.ErrorTypeApt, errFind)
+	hasChanges := func(changes *aptLib.PackageChanges) (bool, error) {
+		if changes.NewInstalledCount == 0 && changes.UpgradedCount == 0 {
+			return false, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
+		}
+		return true, nil
 	}
-
-	if packageParse.NewInstalledCount == 0 && packageParse.UpgradedCount == 0 {
-		return nil, apmerr.New(apmerr.ErrorTypeNoOperation, errors.New(app.T_("The operation will not make any changes")))
-	}
-
-	err = a.serviceAptActions.CombineInstallRemovePackages(ctx, packagesInstall, packagesRemove, false, false, false)
+	packageParse, err := a.serviceAptActions.Apply(ctx, aptBinding.TransactionSpec{Install: packagesToInstall}, hasChanges)
 	if err != nil {
+		if apmErr, ok := errors.AsType[apmerr.APMError](err); ok {
+			return nil, apmErr
+		}
 		return nil, apmerr.New(apmerr.ErrorTypeApt, err)
 	}
 

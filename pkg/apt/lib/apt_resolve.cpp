@@ -9,6 +9,7 @@
 #include <cctype>
 #include <cstring>
 #include <list>
+#include <regex.h>
 #include <sys/stat.h>
 
 // Splits "name>=version" into name, operator, and version components.
@@ -38,6 +39,37 @@ RequirementSpec parse_requirement(const std::string &raw) {
     r.has_version = !r.version.empty();
     r.op = op;
     return r;
+}
+
+bool is_glob(const std::string &name) {
+    return name.find_first_of("*?[") != std::string::npos;
+}
+
+static std::string glob_to_regex(const std::string &glob) {
+    std::string re = "^";
+    for (const char c : glob) {
+        switch (c) {
+            case '*': re += ".*"; break;
+            case '?': re += '.'; break;
+            case '[': case ']': re += c; break;
+            default:
+                if (std::strchr(".+(){}|^$\\", c) != nullptr) re += '\\';
+                re += c;
+        }
+    }
+    return re + "$";
+}
+
+void expand_glob(const AptCache *cache, const std::string &glob, const bool installed_only, std::vector<std::string> &names) {
+    regex_t re{};
+    if (regcomp(&re, glob_to_regex(glob).c_str(), REG_EXTENDED | REG_ICASE | REG_NOSUB) != 0) return;
+
+    for (pkgCache::PkgIterator pkg = cache->dep_cache->PkgBegin(); !pkg.end(); ++pkg) {
+        if (pkg->VersionList == 0) continue;
+        if (installed_only ? pkg->CurrentVer == 0 : (*cache->dep_cache)[pkg].CandidateVer == nullptr) continue;
+        if (regexec(&re, pkg.Name(), 0, nullptr, 0) == 0) names.emplace_back(pkg.Name());
+    }
+    regfree(&re);
 }
 
 // Comparator that sorts versions by version number, then by problem resolver score.
@@ -254,82 +286,62 @@ AptResult resolve_file_to_package(const AptCache *cache, std::string &name) {
         (std::string("Package not found: ") + name).c_str());
 }
 
+// Finds the single installed provider of req among current versions; errors when none or several
+static AptResult find_installed_provider(const AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &pkg) {
+    std::vector<pkgCache::PkgIterator> providers;
+    for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
+        pkgCache::VerIterator current = iter.CurrentVer();
+        if (current.end()) continue;
+        for (pkgCache::PrvIterator prv = current.ProvidesList(); !prv.end(); ++prv) {
+            if (strcmp(prv.Name(), req.name.c_str()) != 0) continue;
+            if (req.has_version) {
+                const char *pv = prv.ProvideVersion();
+                if (pv == nullptr) continue;
+                if (cache->dep_cache->VS().CheckDep(pv, req.op, req.version.c_str()) == false) continue;
+            }
+            providers.push_back(iter);
+            break;
+        }
+    }
+
+    if (providers.empty()) {
+        return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
+                           (std::string("Package ") + req.name + " is not installed, so not removed").c_str());
+    }
+    if (providers.size() > 1) {
+        std::string providersList;
+        for (const auto &provider: providers) {
+            if (!providersList.empty()) providersList += ", ";
+            providersList += provider.Name();
+        }
+        return make_result(APT_ERROR_DEPENDENCY_BROKEN,
+                           (std::string("Virtual package ") + req.name +
+                            " has multiple installed providers: " + providersList +
+                            ". Please remove specific package.").c_str());
+    }
+
+    pkg = providers.front();
+    return make_result(APT_SUCCESS, nullptr);
+}
+
 // Finds an installed package by name; falls back to installed Provides.
 AptResult find_remove_package(const AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &result_pkg) {
     pkgCache::PkgIterator pkg = cache->dep_cache->FindPkg(req.name);
 
     if (pkg.end()) {
-        std::vector<pkgCache::PkgIterator> candidate_providers;
-        for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-            pkgCache::VerIterator current = iter.CurrentVer();
-            if (current.end()) continue;
-            for (pkgCache::PrvIterator prv = current.ProvidesList(); !prv.end(); ++prv) {
-                if (strcmp(prv.Name(), req.name.c_str()) == 0) {
-                    if (req.has_version) {
-                        const char *pv = prv.ProvideVersion();
-                        if (pv == nullptr) continue;
-                        if (cache->dep_cache->VS().CheckDep(pv, req.op, req.version.c_str()) == false) continue;
-                    }
-                    candidate_providers.push_back(iter);
-                    break;
-                }
-            }
+        if (const AptResult result = find_installed_provider(cache, req, pkg); result.code != APT_SUCCESS) {
+            return result;
         }
-        if (candidate_providers.empty()) {
-            return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                               (std::string("Package ") + req.name + " is not installed, so not removed").c_str());
-        }
-        if (candidate_providers.size() > 1) {
-            std::string providersList;
-            for (const auto &provider: candidate_providers) {
-                if (!providersList.empty()) providersList += ", ";
-                providersList += provider.Name();
-            }
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN,
-                               (std::string("Virtual package ") + req.name +
-                                " has multiple installed providers: " + providersList +
-                                ". Please remove specific package.").c_str());
-        }
-        pkg = candidate_providers[0];
     }
 
     result_pkg = pkg;
     return make_result(APT_SUCCESS, nullptr);
 }
 
-// If `pkg` is not installed, searches for a single installed provider.
 AptResult
 resolve_virtual_remove_package(const AptCache *cache, const RequirementSpec &req, pkgCache::PkgIterator &pkg) {
     if (pkg.CurrentVer().end()) {
-        std::vector<pkgCache::PkgIterator> installed_providers;
-        std::string providersList;
-        for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-            pkgCache::VerIterator current = iter.CurrentVer();
-            if (current.end()) continue;
-            for (pkgCache::PrvIterator prv = current.ProvidesList(); !prv.end(); ++prv) {
-                if (strcmp(prv.Name(), req.name.c_str()) != 0) continue;
-                if (req.has_version) {
-                    const char *pv = prv.ProvideVersion();
-                    if (pv == nullptr) continue;
-                    if (cache->dep_cache->VS().CheckDep(pv, req.op, req.version.c_str()) == false) continue;
-                }
-                installed_providers.push_back(iter);
-                if (!providersList.empty()) providersList += ", ";
-                providersList += iter.Name();
-                break;
-            }
-        }
-        if (installed_providers.empty()) {
-            return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
-                               (std::string("Package ") + req.name + " is not installed, so not removed").c_str());
-        }
-        if (installed_providers.size() > 1) {
-            return make_result(APT_ERROR_DEPENDENCY_BROKEN,
-                               (std::string("Virtual package ") + req.name +
-                                " has multiple installed providers: " + providersList +
-                                ". Please remove specific package.").c_str());
-        }
-        pkg = installed_providers.front();
+        return find_installed_provider(cache, req, pkg);
     }
     return make_result(APT_SUCCESS, nullptr);
 }

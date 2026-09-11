@@ -5,6 +5,7 @@ import (
 
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 )
@@ -12,12 +13,10 @@ import (
 // buildAptActionsService определяет методы APT операций для сборки образа.
 type buildAptActionsService interface {
 	SetAptConfigOverrides(overrides map[string]string)
-	PrepareInstallPackages(ctx context.Context, packages []string) ([]string, []string, error)
-	FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []_package.Package, *aptLib.PackageChanges, error)
-	CombineInstallRemovePackages(ctx context.Context, install []string, remove []string, purge bool, depends bool, downloadOnly bool) error
-	Install(ctx context.Context, packages []string, downloadOnly bool) error
+	Apply(ctx context.Context, spec aptBinding.TransactionSpec, confirm aptBinding.Confirm) (*aptLib.PackageChanges, error)
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	Upgrade(ctx context.Context, downloadOnly bool) error
+	RpmIsPackageInstalled(packageName string) (bool, error)
 }
 
 // buildPackageDBService определяет методы для запросов к базе данных пакетов при сборке.

@@ -30,7 +30,9 @@ import (
 
 // Transaction encapsulates the lifecycle of a package operation
 type Transaction struct {
-	ptr *C.AptTransaction
+	ptr     *C.AptTransaction
+	cache   *Cache
+	cleanup runtime.Cleanup
 }
 
 // NewTransaction creates a new transaction for the cache
@@ -41,8 +43,8 @@ func (c *Cache) NewTransaction() (*Transaction, error) {
 		if res := C.apt_transaction_new(c.Ptr, &ptr); res.code != C.APT_SUCCESS || ptr == nil {
 			return ErrorFromResult(res)
 		}
-		tx = &Transaction{ptr: ptr}
-		runtime.SetFinalizer(tx, (*Transaction).Close)
+		tx = &Transaction{ptr: ptr, cache: c}
+		tx.cleanup = runtime.AddCleanup(tx, func(p *C.AptTransaction) { C.apt_transaction_free(p) }, ptr)
 		return nil
 	})
 	return tx, err
@@ -51,13 +53,37 @@ func (c *Cache) NewTransaction() (*Transaction, error) {
 // Close releases transaction resources
 func (tx *Transaction) Close() {
 	if tx.ptr != nil {
+		tx.cleanup.Stop()
 		C.apt_transaction_free(tx.ptr)
 		tx.ptr = nil
-		runtime.SetFinalizer(tx, nil)
 	}
+	tx.cache = nil
 }
 
-// Install adds packages to install
+// AddAptGetArgs takes mixed apt-get syntax: name, name+, name-, glob*, /path, file.rpm
+func (tx *Transaction) AddAptGetArgs(args []string) error {
+	if len(args) == 0 {
+		return CustomError(AptErrorInvalidParameters, "No package names")
+	}
+	return withMutex(func() error {
+		cArgs := makeCStringArray(args)
+		defer freeCStringArray(cArgs)
+		res := C.apt_transaction_add_apt_get_args(tx.ptr, (**C.char)(unsafe.Pointer(&cArgs[0])), C.size_t(len(args)))
+		if res.code != C.APT_SUCCESS {
+			return ErrorFromResult(res)
+		}
+		return nil
+	})
+}
+
+// SetOptions sets transaction flags; idempotent skips missing removes and tolerates installed packages
+func (tx *Transaction) SetOptions(purge, removeDepends, idempotent bool) {
+	_ = withMutex(func() error {
+		C.apt_transaction_set_options(tx.ptr, C.bool(purge), C.bool(removeDepends), C.bool(idempotent))
+		return nil
+	})
+}
+
 func (tx *Transaction) Install(names []string) error {
 	if len(names) == 0 {
 		return CustomError(AptErrorInvalidParameters, "No package names")
@@ -73,16 +99,15 @@ func (tx *Transaction) Install(names []string) error {
 	})
 }
 
-// Remove adds packages to remove
-func (tx *Transaction) Remove(names []string, purge, depends bool) error {
+// Remove appends explicit selectors; flags come from SetOptions
+func (tx *Transaction) Remove(names []string) error {
 	if len(names) == 0 {
 		return CustomError(AptErrorInvalidParameters, "No package names")
 	}
 	return withMutex(func() error {
 		cNames := makeCStringArray(names)
 		defer freeCStringArray(cNames)
-		res := C.apt_transaction_remove(tx.ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(names)),
-			C.bool(purge), C.bool(depends))
+		res := C.apt_transaction_remove(tx.ptr, (**C.char)(unsafe.Pointer(&cNames[0])), C.size_t(len(names)))
 		if res.code != C.APT_SUCCESS {
 			return ErrorFromResult(res)
 		}

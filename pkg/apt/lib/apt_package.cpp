@@ -5,6 +5,7 @@
 #include "error.h"
 #include "package_fill.h"
 #include "ext_rpm.h"
+#include "resolve.h"
 
 #include <cstring>
 
@@ -34,24 +35,18 @@ AptResult apt_package_get(AptCache *cache, const char *package_name, AptPackageI
                 }
             }
 
-            bool found_package = false;
-            for (pkgCache::PkgIterator iter = cache->dep_cache->PkgBegin(); !iter.end(); ++iter) {
-                for (pkgCache::VerIterator ver = iter.VersionList(); !ver.end(); ++ver) {
-                    for (pkgCache::VerFileIterator vf = ver.FileList(); !vf.end(); ++vf) {
-                        if (pkgCache::PkgFileIterator file = vf.File(); file.FileName() && input.find(file.FileName()) != std::string::npos) {
-                            requested = iter.Name();
-                            found_package = true;
-                            goto found_rpm_package;
-                        }
-                    }
-                }
-            }
-        found_rpm_package:
-
-            if (!found_package) {
+            // a local rpm provides its own path
+            pkgCache::PkgIterator rpm_pkg = cache->dep_cache->FindPkg(input);
+            if (rpm_pkg.end()) {
                 return make_result(APT_ERROR_PACKAGE_NOT_FOUND,
                                    (std::string("Unable to find package from RPM file: ") + input).c_str());
             }
+            RequirementSpec req;
+            req.name = input;
+            if (const AptResult result = resolve_virtual_package(cache, req, rpm_pkg); result.code != APT_SUCCESS) {
+                return result;
+            }
+            requested = rpm_pkg.Name();
         } else {
             requested = input;
             if (!requested.empty() && requested.size() > 7 && requested.rfind(".32bit") == requested.size() - 7) {
@@ -107,6 +102,7 @@ void apt_package_free(AptPackageInfo *info) {
 
     free(info->name);
     free(info->version);
+    free(info->installed_version);
     free(info->description);
     free(info->short_description);
     free(info->section);
@@ -125,18 +121,8 @@ void apt_package_free(AptPackageInfo *info) {
     free(info->obsoletes);
     free(info->recommends);
     free(info->suggests);
-    if (info->aliases) {
-        for (size_t i = 0; i < info->alias_count; ++i) {
-            free(info->aliases[i]);
-        }
-        free(info->aliases);
-    }
-    if (info->files) {
-        for (size_t i = 0; i < info->file_count; ++i) {
-            free(info->files[i]);
-        }
-        free(info->files);
-    }
+    free_string_list(info->aliases, info->alias_count);
+    free_string_list(info->files, info->file_count);
 
     memset(info, 0, sizeof(AptPackageInfo));
 }
