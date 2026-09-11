@@ -31,6 +31,7 @@ import (
 // Transaction encapsulates the lifecycle of a package operation
 type Transaction struct {
 	ptr     *C.AptTransaction
+	cache   *Cache
 	cleanup runtime.Cleanup
 }
 
@@ -42,7 +43,7 @@ func (c *Cache) NewTransaction() (*Transaction, error) {
 		if res := C.apt_transaction_new(c.Ptr, &ptr); res.code != C.APT_SUCCESS || ptr == nil {
 			return ErrorFromResult(res)
 		}
-		tx = &Transaction{ptr: ptr}
+		tx = &Transaction{ptr: ptr, cache: c}
 		tx.cleanup = runtime.AddCleanup(tx, func(p *C.AptTransaction) { C.apt_transaction_free(p) }, ptr)
 		return nil
 	})
@@ -56,6 +57,7 @@ func (tx *Transaction) Close() {
 		C.apt_transaction_free(tx.ptr)
 		tx.ptr = nil
 	}
+	tx.cache = nil
 }
 
 // AddAptGetArgs takes mixed apt-get syntax: name, name+, name-, glob*, /path, file.rpm
