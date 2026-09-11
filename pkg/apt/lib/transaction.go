@@ -76,7 +76,10 @@ func (tx *Transaction) AddAptGetArgs(args []string) error {
 
 // SetOptions sets transaction flags; idempotent skips missing removes and tolerates installed packages
 func (tx *Transaction) SetOptions(purge, removeDepends, idempotent bool) {
-	C.apt_transaction_set_options(tx.ptr, C.bool(purge), C.bool(removeDepends), C.bool(idempotent))
+	_ = withMutex(func() error {
+		C.apt_transaction_set_options(tx.ptr, C.bool(purge), C.bool(removeDepends), C.bool(idempotent))
+		return nil
+	})
 }
 
 func (tx *Transaction) Install(names []string) error {
