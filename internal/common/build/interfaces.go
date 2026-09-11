@@ -12,7 +12,6 @@ import (
 
 // buildAptActionsService определяет методы APT операций для сборки образа.
 type buildAptActionsService interface {
-	SetAptConfigOverrides(overrides map[string]string)
 	Apply(ctx context.Context, spec aptBinding.TransactionSpec, confirm aptBinding.Confirm) (*aptLib.PackageChanges, error)
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	Upgrade(ctx context.Context, downloadOnly bool) error

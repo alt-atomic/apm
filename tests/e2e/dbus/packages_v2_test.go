@@ -31,20 +31,18 @@ const (
 var packagesV2Contract = dbustest.InterfaceContract{
 	"Install":      "in packages:as, in options_json:s, out job:s",
 	"Remove":       "in packages:as, in options_json:s, out job:s",
-	"Reinstall":    "in packages:as, out job:s",
+	"Reinstall":    "in packages:as, in options_json:s, out job:s",
 	"Upgrade":      "in options_json:s, out job:s",
 	"Update":       "in options_json:s, out job:s",
-	"CheckInstall": "in packages:as, out job:s",
+	"CheckInstall": "in packages:as, in options_json:s, out job:s",
 	"CheckRemove":  "in packages:as, in options_json:s, out job:s",
-	"CheckUpgrade": "out job:s",
+	"CheckUpgrade": "in options_json:s, out job:s",
 	"List":         "in request_json:s, out json:s",
 	"Info":         "in name:s, out json:s",
 	"MultiInfo":    "in names:as, out json:s",
 	"Search":       "in text:s, in installed:b, out json:s",
 	"Sections":     "out sections:as",
 	"FilterFields": "out json:s",
-	"AptConfig":    "out json:s",
-	"SetAptConfig": "in options_json:s",
 }
 
 func TestPackagesV2PolkitDenied(t *testing.T) {
@@ -53,7 +51,7 @@ func TestPackagesV2PolkitDenied(t *testing.T) {
 	}
 
 	client := dbustest.NewSystemClient(t, serviceName, objectPath)
-	err := client.Request(packagesIface, "CheckInstall").Args([]string{testPackage}).Call().Err
+	err := client.Request(packagesIface, "CheckInstall").Args([]string{testPackage}, "{}").Call().Err
 	dbustest.AssertError(t, err, "org.freedesktop.DBus.Error.AccessDenied", "org.altlinux.APM2.packages.manage")
 }
 
@@ -86,7 +84,7 @@ func TestPackagesV2InstallRemove(t *testing.T) {
 	}
 
 	if !t.Run("CheckInstall", func(t *testing.T) {
-		response := callPackagesCheck(t, client, "CheckInstall", []string{testPackage})
+		response := callPackagesCheck(t, client, "CheckInstall", []string{testPackage}, "{}")
 		assertPackageChange(t, response.Info, response.Message, true, testPackage)
 		assertRPMInstalled(t, testPackage, false)
 	}) {
