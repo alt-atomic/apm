@@ -43,13 +43,17 @@ type PageRequest struct {
 }
 
 // ListRequest — общий JSON-запрос списковых методов.
-// ForceUpdate читают не все домены: каталог AppStream его игнорирует.
 type ListRequest struct {
-	Sort        string `json:"sort"`
-	Order       string `json:"order"`
-	ForceUpdate bool   `json:"forceUpdate"`
+	Sort  string `json:"sort"`
+	Order string `json:"order"`
 	PageRequest
 	filter.ListBody
+}
+
+// ForceUpdateListRequest добавляет принудительное обновление к запросу списка.
+type ForceUpdateListRequest struct {
+	ListRequest
+	ForceUpdate bool `json:"forceUpdate"`
 }
 
 // Page — проверенные параметры страницы.

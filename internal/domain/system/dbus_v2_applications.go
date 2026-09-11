@@ -82,7 +82,7 @@ func (w *ApplicationsV2) Info(name string) (string, *dbus.Error) {
 
 // List возвращает страницу AppStream-компонентов по запросу и фильтрам.
 func (w *ApplicationsV2) List(requestJSON string) (string, *dbus.Error) {
-	var request wire.ListRequest
+	var request wire.ForceUpdateListRequest
 	if err := wire.DecodeJSON(requestJSON, &request); err != nil {
 		return "", wire.Error(err)
 	}
