@@ -38,6 +38,7 @@ var packagesIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "Reinstall", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "s"),
 		}},
 		{Name: "Upgrade", Args: []introspect.Arg{
@@ -50,6 +51,7 @@ var packagesIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "CheckInstall", Args: []introspect.Arg{
 			protocol.In("packages", "as"),
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckRemove", Args: []introspect.Arg{
@@ -58,6 +60,7 @@ var packagesIntrospectionV2 = introspect.Interface{
 			protocol.Out("job", "s"),
 		}},
 		{Name: "CheckUpgrade", Args: []introspect.Arg{
+			protocol.In("options_json", "s"),
 			protocol.Out("job", "s"),
 		}},
 		{Name: "List", Args: []introspect.Arg{
@@ -82,12 +85,6 @@ var packagesIntrospectionV2 = introspect.Interface{
 		}},
 		{Name: "FilterFields", Args: []introspect.Arg{
 			protocol.Out("json", "s"),
-		}},
-		{Name: "AptConfig", Args: []introspect.Arg{
-			protocol.Out("json", "s"),
-		}},
-		{Name: "SetAptConfig", Args: []introspect.Arg{
-			protocol.In("options_json", "s"),
 		}},
 	},
 	Properties: []introspect.Property{

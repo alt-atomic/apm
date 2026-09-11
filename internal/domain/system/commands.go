@@ -78,11 +78,11 @@ func findPkgInfoOnlyFirstArg(appConfig *app.Config, reporter *reply.Reporter) fu
 	}
 }
 
-// applyAptOptions парсит -o флаги и применяет к actions.
-func applyAptOptions(cmd *cli.Command, actions *Actions) {
+// applyAptOptions adds command-scoped APT configuration to the context.
+func applyAptOptions(ctx context.Context, cmd *cli.Command) context.Context {
 	opts := cmd.StringSlice("option")
 	if len(opts) == 0 {
-		return
+		return ctx
 	}
 	overrides := make(map[string]string, len(opts))
 	for _, opt := range opts {
@@ -90,14 +90,15 @@ func applyAptOptions(cmd *cli.Command, actions *Actions) {
 			overrides[strings.TrimSpace(k)] = strings.TrimSpace(v)
 		}
 	}
-	_, _ = actions.SetAptConfigOverrides(overrides)
+	return _package.WithAptConfigOverrides(ctx, overrides)
 }
 
 // aptOptionFlag общий флаг для всех команд работы с пакетами
 var aptOptionFlag = func() cli.Flag {
 	return &cli.StringSliceFlag{
-		Name:  "option",
-		Usage: app.T_("Override APT config option, e.g. Dir::Cache::Archives=/tmp"),
+		Name:    "option",
+		Aliases: []string{"o"},
+		Usage:   app.T_("Override APT config option, e.g. Dir::Cache::Archives=/tmp"),
 	}
 }
 
@@ -144,7 +145,7 @@ func upgradeCommand(appConfig *app.Config, reporter *reply.Reporter) *cli.Comman
 			aptOptionFlag(),
 		},
 		Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-			applyAptOptions(cmd, actions)
+			ctx = applyAptOptions(ctx, cmd)
 			if cmd.Bool("simulate") {
 				resp, err := actions.CheckUpgrade(ctx)
 				if err != nil {
@@ -397,7 +398,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				applyAptOptions(cmd, actions)
+				ctx = applyAptOptions(ctx, cmd)
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckReinstall(ctx, cmd.Args().Slice())
 					if err != nil {
@@ -445,7 +446,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				applyAptOptions(cmd, actions)
+				ctx = applyAptOptions(ctx, cmd)
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckInstall(ctx, cmd.Args().Slice())
 					if err != nil {
@@ -475,7 +476,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				applyAptOptions(cmd, actions)
+				ctx = applyAptOptions(ctx, cmd)
 				resp, err := actions.Source(ctx, cmd.Args().Slice(), cmd.Bool("download-only"))
 				if err != nil {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))
@@ -511,7 +512,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				applyAptOptions(cmd, actions)
+				ctx = applyAptOptions(ctx, cmd)
 				if cmd.Bool("simulate") {
 					resp, err := actions.CheckRemove(ctx, cmd.Args().Slice(), false, cmd.Bool("depends"))
 					if err != nil {
@@ -544,7 +545,7 @@ func CommandList(appConfig *app.Config, reporter *reply.Reporter) *cli.Command {
 				aptOptionFlag(),
 			},
 			Action: withRootCheckWrapper(func(ctx context.Context, cmd *cli.Command, actions *Actions) error {
-				applyAptOptions(cmd, actions)
+				ctx = applyAptOptions(ctx, cmd)
 				resp, err := actions.Update(ctx, cmd.Bool("no-lock"), cmd.Bool("only-db"))
 				if err != nil {
 					return reporter.CliResponse(ctx, newErrorResponseFromError(err))

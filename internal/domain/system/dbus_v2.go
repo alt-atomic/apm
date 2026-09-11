@@ -18,6 +18,7 @@ package system
 
 import (
 	"context"
+	"maps"
 
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
@@ -66,6 +67,10 @@ type PackagesV2 struct {
 	az      authz.Authorizer
 }
 
+type aptOperationOptions struct {
+	AptConfig map[string]string `json:"aptConfig"`
+}
+
 // guard проверяет единое право на управление пакетами.
 func (w *PackagesV2) guard(msg dbus.Message) *dbus.Error {
 	return wire.Error(w.az.Authorize(msg, protocol.ActionPackagesManage))
@@ -73,8 +78,11 @@ func (w *PackagesV2) guard(msg dbus.Message) *dbus.Error {
 
 // startJob регистрирует фоновую задачу домена.
 // Отмена запрещена всем: вызов apt не прерывается на полпути.
-func (w *PackagesV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
-	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), fn)
+func (w *PackagesV2) startJob(msg dbus.Message, kind string, aptConfig map[string]string, fn func(ctx context.Context) (string, error)) string {
+	configSnapshot := maps.Clone(aptConfig)
+	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), func(ctx context.Context) (string, error) {
+		return fn(_package.WithAptConfigOverrides(ctx, configSnapshot))
+	})
 }
 
 // Install ставит пакеты фоновой задачей.
@@ -83,13 +91,14 @@ func (w *PackagesV2) Install(msg dbus.Message, packages []string, optionsJSON st
 		return "", dbusErr
 	}
 	var options struct {
+		aptOperationOptions
 		DownloadOnly bool `json:"downloadOnly"`
 		NoUpdate     bool `json:"noUpdate"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startJob(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+	return w.startJob(msg, "Install", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Install(ctx, packages, true, options.DownloadOnly, options.NoUpdate)
 	})), nil
 }
@@ -100,23 +109,28 @@ func (w *PackagesV2) Remove(msg dbus.Message, packages []string, optionsJSON str
 		return "", dbusErr
 	}
 	var options struct {
+		aptOperationOptions
 		Purge   bool `json:"purge"`
 		Depends bool `json:"depends"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startJob(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+	return w.startJob(msg, "Remove", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Remove(ctx, packages, options.Purge, options.Depends, true)
 	})), nil
 }
 
 // Reinstall переустанавливает пакеты фоновой задачей.
-func (w *PackagesV2) Reinstall(msg dbus.Message, packages []string) (string, *dbus.Error) {
+func (w *PackagesV2) Reinstall(msg dbus.Message, packages []string, optionsJSON string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	return w.startJob(msg, "Reinstall", wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
+	var options aptOperationOptions
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
+		return "", wire.Error(err)
+	}
+	return w.startJob(msg, "Reinstall", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*InstallRemoveResponse, error) {
 		return w.actions.Reinstall(ctx, packages, true)
 	})), nil
 }
@@ -127,12 +141,13 @@ func (w *PackagesV2) Upgrade(msg dbus.Message, optionsJSON string) (string, *dbu
 		return "", dbusErr
 	}
 	var options struct {
+		aptOperationOptions
 		DownloadOnly bool `json:"downloadOnly"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startJob(msg, "Upgrade", wire.JSONTask(func(ctx context.Context) (*UpgradeResponse, error) {
+	return w.startJob(msg, "Upgrade", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*UpgradeResponse, error) {
 		return w.actions.Upgrade(ctx, options.DownloadOnly)
 	})), nil
 }
@@ -143,22 +158,27 @@ func (w *PackagesV2) Update(msg dbus.Message, optionsJSON string) (string, *dbus
 		return "", dbusErr
 	}
 	var options struct {
+		aptOperationOptions
 		OnlyDB bool `json:"onlyDB"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startJob(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
+	return w.startJob(msg, "Update", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
 		return w.actions.Update(ctx, false, options.OnlyDB)
 	})), nil
 }
 
 // CheckInstall симулирует установку фоновой задачей.
-func (w *PackagesV2) CheckInstall(msg dbus.Message, packages []string) (string, *dbus.Error) {
+func (w *PackagesV2) CheckInstall(msg dbus.Message, packages []string, optionsJSON string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	return w.startJob(msg, "CheckInstall", wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
+	var options aptOperationOptions
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
+		return "", wire.Error(err)
+	}
+	return w.startJob(msg, "CheckInstall", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
 		return w.actions.CheckInstall(ctx, packages)
 	})), nil
 }
@@ -169,23 +189,28 @@ func (w *PackagesV2) CheckRemove(msg dbus.Message, packages []string, optionsJSO
 		return "", dbusErr
 	}
 	var options struct {
+		aptOperationOptions
 		Purge   bool `json:"purge"`
 		Depends bool `json:"depends"`
 	}
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startJob(msg, "CheckRemove", wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
+	return w.startJob(msg, "CheckRemove", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
 		return w.actions.CheckRemove(ctx, packages, options.Purge, options.Depends)
 	})), nil
 }
 
 // CheckUpgrade симулирует обновление системы фоновой задачей.
-func (w *PackagesV2) CheckUpgrade(msg dbus.Message) (string, *dbus.Error) {
+func (w *PackagesV2) CheckUpgrade(msg dbus.Message, optionsJSON string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	return w.startJob(msg, "CheckUpgrade", wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
+	var options aptOperationOptions
+	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
+		return "", wire.Error(err)
+	}
+	return w.startJob(msg, "CheckUpgrade", options.AptConfig, wire.JSONTask(func(ctx context.Context) (*CheckResponse, error) {
 		return w.actions.CheckUpgrade(ctx)
 	})), nil
 }
@@ -244,23 +269,4 @@ func (w *PackagesV2) Sections() ([]string, *dbus.Error) {
 func (w *PackagesV2) FilterFields() (string, *dbus.Error) {
 	resp, err := w.actions.GetFilterFields(w.ctx)
 	return wire.JSONReply(resp, err)
-}
-
-// AptConfig возвращает переопределения конфигурации APT.
-func (w *PackagesV2) AptConfig() (string, *dbus.Error) {
-	resp, err := w.actions.GetAptConfigOverrides()
-	return wire.JSONReply(resp, err)
-}
-
-// SetAptConfig устанавливает переопределения конфигурации APT.
-func (w *PackagesV2) SetAptConfig(msg dbus.Message, optionsJSON string) *dbus.Error {
-	if dbusErr := w.guard(msg); dbusErr != nil {
-		return dbusErr
-	}
-	var options map[string]string
-	if err := wire.DecodeJSON(optionsJSON, &options); err != nil {
-		return wire.Error(err)
-	}
-	_, err := w.actions.SetAptConfigOverrides(options)
-	return wire.Error(err)
 }

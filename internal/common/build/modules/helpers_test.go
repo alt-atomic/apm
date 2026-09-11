@@ -27,7 +27,7 @@ type fakeDomain struct {
 	upgradeCalled  bool
 	updateErr      error
 	upgradeErr     error
-	overrideCalls  []map[string]string
+	combineConfig  map[string]string
 	collected      []string
 
 	installCalls [][]string
@@ -49,15 +49,12 @@ func (f *fakeDomain) ExecuteInclude(context.Context, string) (map[string]*pkgbui
 
 func (f *fakeDomain) IsAtomic() bool { return false }
 
-func (f *fakeDomain) SetAptConfigOverrides(overrides map[string]string) {
-	f.overrideCalls = append(f.overrideCalls, overrides)
-}
-
 func (f *fakeDomain) ValidateDB(context.Context) error { return nil }
 
-func (f *fakeDomain) CombineInstallRemovePackages(_ context.Context, packages []string, _, depends, _ bool) error {
+func (f *fakeDomain) CombineInstallRemovePackages(ctx context.Context, packages []string, _, depends, _ bool) error {
 	f.combineCalls = append(f.combineCalls, packages)
 	f.combineDepends = depends
+	f.combineConfig, _ = _package.AptConfigOverridesFromContext(ctx)
 	return f.combineErr
 }
 

@@ -182,8 +182,3 @@ type SectionsResponse struct {
 
 // GetFilterFieldsResponse структура ответа для GetFilterFields метода
 type GetFilterFieldsResponse []filter.FieldInfo
-
-// AptConfigResponse структура ответа для APT конфигурации
-type AptConfigResponse struct {
-	Options map[string]string `json:"options"`
-}

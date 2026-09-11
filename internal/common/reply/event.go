@@ -217,7 +217,7 @@ func logVerboseEvent(eventData *EventData) {
 	if eventData.State == StateBefore {
 		app.Log.Info("[RUN] ", eventData.View)
 	} else if eventData.State == StateAfter {
-		app.Log.Info("[OK] ", eventData.View)
+		app.Log.Info("[DONE] ", eventData.View)
 	}
 }
 

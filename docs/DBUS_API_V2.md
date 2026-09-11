@@ -108,20 +108,44 @@ gdbus monitor --system --dest org.altlinux.APM --object-path /org/altlinux/APM2
 |----------------|-----------------------------------|----------------|
 | `Install`      | `packages: as`, `options_json: s` | `job: s`       |
 | `Remove`       | `packages: as`, `options_json: s` | `job: s`       |
-| `Reinstall`    | `packages: as`                    | `job: s`       |
+| `Reinstall`    | `packages: as`, `options_json: s` | `job: s`       |
 | `Upgrade`      | `options_json: s`                 | `job: s`       |
 | `Update`       | `options_json: s`                 | `job: s`       |
-| `CheckInstall` | `packages: as`                    | `job: s`       |
+| `CheckInstall` | `packages: as`, `options_json: s` | `job: s`       |
 | `CheckRemove`  | `packages: as`, `options_json: s` | `job: s`       |
-| `CheckUpgrade` | —                                 | `job: s`       |
+| `CheckUpgrade` | `options_json: s`                 | `job: s`       |
 | `List`         | `request_json: s`                 | `json: s`      |
 | `Info`         | `name: s`                         | `json: s`      |
 | `MultiInfo`    | `names: as`                       | `json: s`      |
 | `Search`       | `text: s`, `installed: b`         | `json: s`      |
 | `Sections`     | —                                 | `sections: as` |
 | `FilterFields` | —                                 | `json: s`      |
-| `AptConfig`    | —                                 | `json: s`      |
-| `SetAptConfig` | `options_json: s`                 | —              |
+
+`options_json` у пакетных операций принимает поле `aptConfig` — объект строковых
+переопределений APT. Конфигурация принадлежит только созданной задаче, фиксируется
+при вызове метода и не влияет на другие запросы.
+
+| Метод          | Дополнительные поля `options_json` |
+|----------------|------------------------------------|
+| `Install`      | `downloadOnly`, `noUpdate`         |
+| `Remove`       | `purge`, `depends`                 |
+| `Reinstall`    | —                                  |
+| `Upgrade`      | `downloadOnly`                     |
+| `Update`       | `onlyDB`                           |
+| `CheckInstall` | —                                  |
+| `CheckRemove`  | `purge`, `depends`                 |
+| `CheckUpgrade` | —                                  |
+
+Пример:
+
+```json
+{
+  "aptConfig": {
+    "Acquire::http::Proxy": "http://proxy.example:8080"
+  },
+  "noUpdate": true
+}
+```
 
 **Свойства**
 
