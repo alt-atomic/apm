@@ -83,6 +83,7 @@ podman run -d \
     /sbin/init
 
 systemd_ready=0
+systemd_state="unknown"
 for _ in $(seq 1 30); do
     if [ "$(podman inspect --format '{{.State.Running}}' "${CONTAINER_NAME}" 2>/dev/null)" != "true" ]; then
         echo "container ${CONTAINER_NAME} stopped before systemd became ready" >&2
@@ -94,17 +95,11 @@ for _ in $(seq 1 30); do
             systemd_ready=1
             break
             ;;
-        initializing|starting)
-            ;;
-        *)
-            echo "systemd entered unexpected state: ${systemd_state:-unknown}" >&2
-            exit 1
-            ;;
     esac
     sleep 1
 done
 if [ "${systemd_ready}" -ne 1 ]; then
-    echo "systemd did not become ready" >&2
+    echo "systemd did not become ready; last state: ${systemd_state:-unknown}" >&2
     exit 1
 fi
 
