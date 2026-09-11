@@ -18,6 +18,7 @@ package apt
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"sync"
 
@@ -37,17 +38,12 @@ type Actions struct {
 }
 
 func NewActions() *Actions {
-	return &Actions{}
+	return NewActionsWithConfigOverrides(nil)
 }
 
-// SetConfigOverrides sets APT configuration overrides
-func (a *Actions) SetConfigOverrides(overrides map[string]string) {
-	a.configOverrides = overrides
-}
-
-// GetConfigOverrides returns current APT configuration overrides
-func (a *Actions) GetConfigOverrides() map[string]string {
-	return a.configOverrides
+// NewActionsWithConfigOverrides creates an APT client with immutable per-request overrides.
+func NewActionsWithConfigOverrides(overrides map[string]string) *Actions {
+	return &Actions{configOverrides: maps.Clone(overrides)}
 }
 
 func getSystem() (*lib.System, error) {

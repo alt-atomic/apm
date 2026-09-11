@@ -16,7 +16,6 @@ import (
 type DomainContext interface {
 	pkgbuild.RuntimeContext
 	IsAtomic() bool
-	SetAptConfigOverrides(overrides map[string]string)
 	ValidateDB(ctx context.Context) error
 	CombineInstallRemovePackages(ctx context.Context, packages []string, purge, depends, downloadOnly bool) error
 	InstallPackages(ctx context.Context, packages []string) error
