@@ -203,13 +203,12 @@ func (w *PackagesV2) List(requestJSON string) (string, *dbus.Error) {
 	}
 
 	resp, err := w.actions.List(w.ctx, ListParams{
-		Sort:        request.Sort,
-		Order:       request.Order,
-		Limit:       page.Limit,
-		Offset:      page.Offset,
-		Filters:     page.Filters,
-		ForceUpdate: request.ForceUpdate,
-		Full:        true,
+		Sort:    request.Sort,
+		Order:   request.Order,
+		Limit:   page.Limit,
+		Offset:  page.Offset,
+		Filters: page.Filters,
+		Full:    true,
 	})
 	return wire.JSONReply(resp, err)
 }
