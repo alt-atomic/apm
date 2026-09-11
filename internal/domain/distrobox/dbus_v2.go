@@ -144,7 +144,7 @@ func (w *DBusV2) Search(container string, text string) (string, *dbus.Error) {
 
 // List возвращает страницу пакетов контейнера по запросу и фильтрам.
 func (w *DBusV2) List(container string, requestJSON string) (string, *dbus.Error) {
-	var request wire.ListRequest
+	var request wire.ForceUpdateListRequest
 	if err := wire.DecodeJSON(requestJSON, &request); err != nil {
 		return "", wire.Error(err)
 	}
