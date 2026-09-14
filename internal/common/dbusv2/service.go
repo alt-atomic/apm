@@ -50,6 +50,8 @@ type Setup struct {
 	// Props константные свойства: интерфейс → имя → значение.
 	Props   map[string]map[string]any
 	Modules []Module
+
+	registry *jobs.Registry
 }
 
 // jobPrefix уникальное имя соединения на шине.
@@ -62,13 +64,14 @@ func jobPrefix(conn *dbus.Conn) string {
 }
 
 // Export экспортирует интерфейсы API, свойства и introspection на соединении демона.
-func (s Setup) Export(ctx context.Context, conn *dbus.Conn) error {
+func (s *Setup) Export(ctx context.Context, conn *dbus.Conn) error {
 	emit := func(member string, values ...any) {
 		if err := conn.Emit(protocol.Path, protocol.JobsIface+"."+member, values...); err != nil {
 			app.Log.Error("dbusv2 emit failed: ", err)
 		}
 	}
 	reg := jobs.NewRegistry(ctx, jobPrefix(conn), emit)
+	s.registry = reg
 	s.Reporter.AddSink(jobs.NewSink(reg))
 
 	az := authz.AllowAll
@@ -115,4 +118,11 @@ func (s Setup) Export(ctx context.Context, conn *dbus.Conn) error {
 	}
 
 	return nil
+}
+
+// Shutdown завершает реестр фоновых задач перед закрытием соединения и БД.
+func (s *Setup) Shutdown() {
+	if s.registry != nil {
+		s.registry.Shutdown()
+	}
 }

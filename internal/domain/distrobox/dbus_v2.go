@@ -60,14 +60,16 @@ type DBusV2 struct {
 	jobs    *jobs.Registry
 }
 
-// startJob регистрирует фоновую задачу; отмена — только владельцем.
-func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
-	return w.jobs.Start("distrobox", kind, polkit.Sender(msg), "", fn)
+// startJob регистрирует фоновую задачу контейнера; отмена — только владельцем.
+func (w *DBusV2) startJob(msg dbus.Message, kind, container string, fn func(ctx context.Context) (string, error)) string {
+	resource := jobs.ResourceKey("distrobox", container)
+	return w.jobs.Start(resource, "distrobox", kind, polkit.Sender(msg), "", fn)
 }
 
 // startTransaction регистрирует неотменяемую пакетную транзакцию.
-func (w *DBusV2) startTransaction(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
-	return w.jobs.StartNoCancel("distrobox", kind, polkit.Sender(msg), fn)
+func (w *DBusV2) startTransaction(msg dbus.Message, kind, container string, fn func(ctx context.Context) (string, error)) string {
+	resource := jobs.ResourceKey("distrobox", container)
+	return w.jobs.StartNoCancel(resource, "distrobox", kind, polkit.Sender(msg), fn)
 }
 
 // ContainerList возвращает список контейнеров.
@@ -85,21 +87,21 @@ func (w *DBusV2) ContainerAdd(msg dbus.Message, image string, name string, optio
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startJob(msg, "ContainerAdd", wire.JSONTask(func(ctx context.Context) (*ContainerAddResponse, error) {
+	return w.startJob(msg, "ContainerAdd", name, wire.JSONTask(func(ctx context.Context) (*ContainerAddResponse, error) {
 		return w.actions.ContainerAdd(ctx, image, name, options.AdditionalPackages, options.InitHooks)
 	})), nil
 }
 
 // ContainerRemove удаляет контейнер фоновой задачей.
 func (w *DBusV2) ContainerRemove(msg dbus.Message, name string) (string, *dbus.Error) {
-	return w.startJob(msg, "ContainerRemove", wire.JSONTask(func(ctx context.Context) (*ContainerRemoveResponse, error) {
+	return w.startJob(msg, "ContainerRemove", name, wire.JSONTask(func(ctx context.Context) (*ContainerRemoveResponse, error) {
 		return w.actions.ContainerRemove(ctx, name)
 	})), nil
 }
 
 // Update обновляет пакетную базу контейнера фоновой задачей.
 func (w *DBusV2) Update(msg dbus.Message, container string) (string, *dbus.Error) {
-	return w.startJob(msg, "Update", wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
+	return w.startJob(msg, "Update", container, wire.JSONTask(func(ctx context.Context) (*UpdateResponse, error) {
 		return w.actions.Update(ctx, container)
 	})), nil
 }
@@ -112,7 +114,7 @@ func (w *DBusV2) Install(msg dbus.Message, container string, name string, option
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startTransaction(msg, "Install", wire.JSONTask(func(ctx context.Context) (*InstallResponse, error) {
+	return w.startTransaction(msg, "Install", container, wire.JSONTask(func(ctx context.Context) (*InstallResponse, error) {
 		return w.actions.Install(ctx, container, name, options.Export)
 	})), nil
 }
@@ -125,7 +127,7 @@ func (w *DBusV2) Remove(msg dbus.Message, container string, name string, options
 	if err := wire.DecodeOptions(optionsJSON, &options); err != nil {
 		return "", wire.Error(err)
 	}
-	return w.startTransaction(msg, "Remove", wire.JSONTask(func(ctx context.Context) (*RemoveResponse, error) {
+	return w.startTransaction(msg, "Remove", container, wire.JSONTask(func(ctx context.Context) (*RemoveResponse, error) {
 		return w.actions.Remove(ctx, container, name, options.OnlyExport)
 	})), nil
 }

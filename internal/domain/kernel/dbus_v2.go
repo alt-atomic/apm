@@ -61,7 +61,7 @@ func (w *DBusV2) guard(msg dbus.Message) *dbus.Error {
 // startJob регистрирует фоновую задачу домена.
 // Отмена запрещена всем: вызов apt не прерывается на полпути.
 func (w *DBusV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
-	return w.jobs.StartNoCancel("kernel", kind, polkit.Sender(msg), fn)
+	return w.jobs.StartNoCancel(jobs.ResourceHost, "kernel", kind, polkit.Sender(msg), fn)
 }
 
 // ListKernels возвращает список ядер флейвора.

@@ -80,7 +80,7 @@ func (w *PackagesV2) guard(msg dbus.Message) *dbus.Error {
 // Отмена запрещена всем: вызов apt не прерывается на полпути.
 func (w *PackagesV2) startJob(msg dbus.Message, kind string, aptConfig map[string]string, fn func(ctx context.Context) (string, error)) string {
 	configSnapshot := maps.Clone(aptConfig)
-	return w.jobs.StartNoCancel("packages", kind, polkit.Sender(msg), func(ctx context.Context) (string, error) {
+	return w.jobs.StartNoCancel(jobs.ResourceHost, "packages", kind, polkit.Sender(msg), func(ctx context.Context) (string, error) {
 		return fn(_package.WithAptConfigOverrides(ctx, configSnapshot))
 	})
 }

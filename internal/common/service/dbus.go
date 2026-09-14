@@ -38,6 +38,10 @@ type DBusAPI interface {
 	Export(ctx context.Context, conn *dbus.Conn) error
 }
 
+type dbusShutdown interface {
+	Shutdown()
+}
+
 type DBusRunConfig struct {
 	Bus  BusType
 	Mode apmcli.RootCheckMode
@@ -67,6 +71,11 @@ func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBu
 	}
 
 	<-ctx.Done()
+	for _, api := range cfg.APIs {
+		if shutdown, ok := api.(dbusShutdown); ok {
+			shutdown.Shutdown()
+		}
+	}
 	return nil
 }
 

@@ -67,7 +67,7 @@ func (w *ApplicationsV2) Update(msg dbus.Message) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	job := w.jobs.Start("applications", "Update", polkit.Sender(msg), protocol.ActionApplicationsManage,
+	job := w.jobs.Start(jobs.ResourceHost, "applications", "Update", polkit.Sender(msg), protocol.ActionApplicationsManage,
 		wire.JSONTask(func(ctx context.Context) (*appstream.UpdateResponse, error) {
 			return w.actions.Update(ctx)
 		}))

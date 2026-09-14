@@ -64,16 +64,14 @@ func newTestRegistry(emit Emitter) *Registry {
 
 func assertNotFound(t *testing.T, err error) {
 	t.Helper()
-	var apmErr apmerr.APMError
-	if !errors.As(err, &apmErr) || apmErr.Type != apmerr.ErrorTypeNotFound {
+	if apmErr, ok := errors.AsType[apmerr.APMError](err); !ok || apmErr.Type != apmerr.ErrorTypeNotFound {
 		t.Fatalf("err = %v, want NOT_FOUND", err)
 	}
 }
 
 func assertValidation(t *testing.T, err error) {
 	t.Helper()
-	var apmErr apmerr.APMError
-	if !errors.As(err, &apmErr) || apmErr.Type != apmerr.ErrorTypeValidation {
+	if apmErr, ok := errors.AsType[apmerr.APMError](err); !ok || apmErr.Type != apmerr.ErrorTypeValidation {
 		t.Fatalf("err = %v, want VALIDATION", err)
 	}
 }
@@ -82,7 +80,7 @@ func TestJobLifecycleOK(t *testing.T) {
 	col := newCollector()
 	reg := newTestRegistry(col.emit)
 
-	id := reg.Start("system", "Install", ":1.9", "action", func(ctx context.Context) (string, error) {
+	id := reg.Start(ResourceNone, "system", "Install", ":1.9", "action", func(ctx context.Context) (string, error) {
 		if _, ok := FromContext(ctx); !ok {
 			t.Error("job id missing from context")
 		}
@@ -117,7 +115,7 @@ func TestJobLifecycleError(t *testing.T) {
 	col := newCollector()
 	reg := newTestRegistry(col.emit)
 
-	id := reg.Start("system", "Install", ":1.9", "action", func(context.Context) (string, error) {
+	id := reg.Start(ResourceNone, "system", "Install", ":1.9", "action", func(context.Context) (string, error) {
 		return "", apmerr.New(apmerr.ErrorTypeApt, errors.New("boom"))
 	})
 
@@ -136,7 +134,7 @@ func TestJobLifecycleError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after finish: %v", err)
 	}
-	if state.ErrorType != apmerr.ErrorTypeApt || state.Message != "boom" || state.Result != nil {
+	if state.ErrorType != apmerr.ErrorTypeApt || state.Message != "boom" || string(state.Result) != "{}" {
 		t.Errorf("state = %+v", state)
 	}
 }
@@ -145,7 +143,7 @@ func TestJobPanicBecomesError(t *testing.T) {
 	col := newCollector()
 	reg := newTestRegistry(col.emit)
 
-	reg.StartNoCancel("system", "Install", ":1.9", func(context.Context) (string, error) {
+	reg.StartNoCancel(ResourceNone, "system", "Install", ":1.9", func(context.Context) (string, error) {
 		panic("boom")
 	})
 
@@ -163,7 +161,7 @@ func TestRunningJobVisible(t *testing.T) {
 	reg := newTestRegistry(col.emit)
 
 	started := make(chan struct{})
-	id := reg.Start("packages", "Install", ":1.9", "action", func(ctx context.Context) (string, error) {
+	id := reg.Start(ResourceNone, "packages", "Install", ":1.9", "action", func(ctx context.Context) (string, error) {
 		close(started)
 		<-ctx.Done()
 		return "", ctx.Err()
@@ -195,7 +193,7 @@ func TestJobCancelForeignRequiresAuth(t *testing.T) {
 	reg := newTestRegistry(col.emit)
 
 	started := make(chan struct{})
-	id := reg.Start("system", "Install", ":1.9", "action", func(ctx context.Context) (string, error) {
+	id := reg.Start(ResourceNone, "system", "Install", ":1.9", "action", func(ctx context.Context) (string, error) {
 		close(started)
 		<-ctx.Done()
 		return "", ctx.Err()
@@ -223,7 +221,7 @@ func TestCancelFinishedAndUnknownJobs(t *testing.T) {
 	col := newCollector()
 	reg := newTestRegistry(col.emit)
 
-	id := reg.Start("system", "Install", ":1.9", "action", func(context.Context) (string, error) {
+	id := reg.Start(ResourceNone, "system", "Install", ":1.9", "action", func(context.Context) (string, error) {
 		return "{}", nil
 	})
 	col.waitFinished(t)
@@ -242,7 +240,7 @@ func TestNoCancelJobRejectsCancel(t *testing.T) {
 
 	started := make(chan struct{})
 	release := make(chan struct{})
-	id := reg.StartNoCancel("packages", "Install", ":1.9", func(context.Context) (string, error) {
+	id := reg.StartNoCancel(ResourceNone, "packages", "Install", ":1.9", func(context.Context) (string, error) {
 		close(started)
 		<-release
 		return "{}", nil
@@ -265,7 +263,7 @@ func TestFinishedJobsExpire(t *testing.T) {
 	reg := newTestRegistry(col.emit)
 	reg.retention = 0
 
-	id := reg.Start("system", "Update", ":1.9", "action", func(context.Context) (string, error) {
+	id := reg.Start(ResourceNone, "system", "Update", ":1.9", "action", func(context.Context) (string, error) {
 		return "{}", nil
 	})
 	col.waitFinished(t)
@@ -285,7 +283,7 @@ func TestJobIDsAreUniqueAndOrdered(t *testing.T) {
 	seen := make(map[string]bool, 16)
 	var ids []string
 	for range 16 {
-		id := reg.StartNoCancel("packages", "Update", ":1.9", func(context.Context) (string, error) {
+		id := reg.StartNoCancel(ResourceNone, "packages", "Update", ":1.9", func(context.Context) (string, error) {
 			return "{}", nil
 		})
 		if seen[id] {
@@ -303,6 +301,192 @@ func TestJobIDsAreUniqueAndOrdered(t *testing.T) {
 		if state.ID != ids[i] {
 			t.Fatalf("List()[%d] = %s, want %s", i, state.ID, ids[i])
 		}
+	}
+}
+
+func TestJobsWithSameResourceRunInFIFOOrder(t *testing.T) {
+	col := newCollector()
+	reg := newTestRegistry(col.emit)
+	resource := ResourceKey("distrobox", "dev")
+	started := make(chan int, 3)
+	release := []chan struct{}{make(chan struct{}), make(chan struct{}), make(chan struct{})}
+
+	ids := make([]string, 0, 3)
+	for index := range 3 {
+		ids = append(ids, reg.StartNoCancel(resource, "distrobox", "Install", ":1.9", func(context.Context) (string, error) {
+			started <- index
+			<-release[index]
+			return "{}", nil
+		}))
+	}
+
+	if got := <-started; got != 0 {
+		t.Fatalf("first started job = %d, want 0", got)
+	}
+	for _, id := range ids[1:] {
+		state, err := reg.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if state.State != StateQueued {
+			t.Fatalf("job %s state = %s, want queued", id, state.State)
+		}
+	}
+	select {
+	case got := <-started:
+		t.Fatalf("job %d started while the resource was occupied", got)
+	default:
+	}
+
+	for index := range 3 {
+		close(release[index])
+		if sig := col.waitFinished(t); sig.id != ids[index] {
+			t.Fatalf("finished job = %s, want %s", sig.id, ids[index])
+		}
+		if index+1 < len(ids) {
+			select {
+			case got := <-started:
+				if got != index+1 {
+					t.Fatalf("next started job = %d, want %d", got, index+1)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("next queued job did not start")
+			}
+		}
+	}
+	reg.Shutdown()
+	if n := reg.queue.Len(); n != 0 {
+		t.Fatalf("resource queues left after completion: %d", n)
+	}
+}
+
+func TestJobsWithDifferentResourcesRunConcurrently(t *testing.T) {
+	col := newCollector()
+	reg := newTestRegistry(col.emit)
+	started := make(chan string, 2)
+	release := make(chan struct{})
+
+	for _, container := range []string{"dev", "build"} {
+		reg.StartNoCancel(ResourceKey("distrobox", container), "distrobox", "Install", ":1.9", func(context.Context) (string, error) {
+			started <- container
+			<-release
+			return "{}", nil
+		})
+	}
+
+	seen := make(map[string]bool, 2)
+	for range 2 {
+		select {
+		case container := <-started:
+			seen[container] = true
+		case <-time.After(5 * time.Second):
+			t.Fatal("jobs on different resources did not run concurrently")
+		}
+	}
+	if !seen["dev"] || !seen["build"] {
+		t.Fatalf("started containers = %v", seen)
+	}
+
+	close(release)
+	col.waitFinished(t)
+	col.waitFinished(t)
+}
+
+func TestQueuedJobCanBeCanceledWithoutRunning(t *testing.T) {
+	col := newCollector()
+	reg := newTestRegistry(col.emit)
+	resource := ResourceHost
+	firstStarted := make(chan struct{})
+	releaseFirst := make(chan struct{})
+
+	reg.StartNoCancel(resource, "packages", "Install", ":1.9", func(context.Context) (string, error) {
+		close(firstStarted)
+		<-releaseFirst
+		return "{}", nil
+	})
+	<-firstStarted
+
+	invoked := make(chan struct{})
+	id := reg.Start(resource, "image", "Apply", ":1.9", "action", func(context.Context) (string, error) {
+		close(invoked)
+		return "{}", nil
+	})
+	state, err := reg.Get(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.State != StateQueued {
+		t.Fatalf("state = %s, want queued", state.State)
+	}
+
+	if err := reg.Cancel(id, ":1.9", nil); err != nil {
+		t.Fatalf("Cancel queued job: %v", err)
+	}
+	if sig := col.waitFinished(t); sig.id != id || sig.status != StateCanceled {
+		t.Fatalf("JobFinished = %+v, want canceled job %s", sig, id)
+	}
+	select {
+	case <-invoked:
+		t.Fatal("canceled queued job was invoked")
+	default:
+	}
+
+	close(releaseFirst)
+	col.waitFinished(t)
+}
+
+func TestShutdownCancelsQueuedAndWaitsForRunningNoCancel(t *testing.T) {
+	col := newCollector()
+	reg := newTestRegistry(col.emit)
+	runningContext := make(chan context.Context, 1)
+	releaseRunning := make(chan struct{})
+
+	firstID := reg.StartNoCancel(ResourceHost, "packages", "Install", ":1.9", func(ctx context.Context) (string, error) {
+		runningContext <- ctx
+		<-releaseRunning
+		return "{}", nil
+	})
+	ctx := <-runningContext
+
+	queuedInvoked := make(chan struct{})
+	secondID := reg.StartNoCancel(ResourceHost, "packages", "Remove", ":1.9", func(context.Context) (string, error) {
+		close(queuedInvoked)
+		return "{}", nil
+	})
+
+	shutdownDone := make(chan struct{})
+	go func() {
+		reg.Shutdown()
+		close(shutdownDone)
+	}()
+
+	if sig := col.waitFinished(t); sig.id != secondID || sig.status != StateCanceled {
+		t.Fatalf("queued JobFinished = %+v, want canceled job %s", sig, secondID)
+	}
+	select {
+	case <-queuedInvoked:
+		t.Fatal("queued non-cancellable job ran during shutdown")
+	default:
+	}
+	select {
+	case <-ctx.Done():
+		t.Fatal("running non-cancellable job context was canceled")
+	default:
+	}
+	select {
+	case <-shutdownDone:
+		t.Fatal("Shutdown returned before running non-cancellable job finished")
+	default:
+	}
+
+	close(releaseRunning)
+	if sig := col.waitFinished(t); sig.id != firstID || sig.status != StateOK {
+		t.Fatalf("running JobFinished = %+v, want successful job %s", sig, firstID)
+	}
+	select {
+	case <-shutdownDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Shutdown did not return")
 	}
 }
 
