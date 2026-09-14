@@ -35,8 +35,8 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
-// Состояния задачи: running до завершения, дальше одно из терминальных.
 const (
+	StateQueued   = "queued"
 	StateRunning  = "running"
 	StateOK       = "ok"
 	StateError    = "error"
@@ -61,7 +61,7 @@ func FromContext(ctx context.Context) (string, bool) {
 	return id, ok
 }
 
-// Job фоновая задача демона: работающая или недавно завершённая.
+// Job фоновая задача демона: ожидающая, работающая или недавно завершённая.
 type Job struct {
 	id           string
 	seq          uint64
@@ -101,9 +101,12 @@ type Emitter func(member string, values ...any)
 type Registry struct {
 	mu        sync.Mutex
 	ctx       context.Context
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
 	prefix    string
 	seq       uint64
 	jobs      map[string]*Job
+	queue     *queue
 	emit      Emitter
 	retention time.Duration
 }
@@ -114,28 +117,35 @@ func NewRegistry(ctx context.Context, prefix string, emit Emitter) *Registry {
 	if prefix == "" {
 		prefix = "job"
 	}
+	registryCtx, cancel := context.WithCancel(ctx)
 	return &Registry{
-		ctx:       ctx,
+		ctx:       registryCtx,
+		cancel:    cancel,
 		prefix:    prefix,
 		jobs:      make(map[string]*Job),
+		queue:     newQueue(),
 		emit:      emit,
 		retention: retention,
 	}
 }
 
-// Start регистрирует отменяемую задачу и запускает fn в фоне; возвращает id.
-func (r *Registry) Start(domain, kind, owner, cancelAction string, fn func(ctx context.Context) (string, error)) string {
-	return r.start(domain, kind, owner, cancelAction, true, fn)
+// Start регистрирует отменяемую задачу и ставит fn на фоновое выполнение.
+func (r *Registry) Start(resource Resource, domain, kind, owner, cancelAction string, fn func(ctx context.Context) (string, error)) string {
+	return r.start(resource, domain, kind, owner, cancelAction, true, fn)
 }
 
-// StartNoCancel регистрирует неотменяемую задачу: rpm/apt-транзакции
-// прерывать нельзя — Cancel для них возвращает ошибку.
-func (r *Registry) StartNoCancel(domain, kind, owner string, fn func(ctx context.Context) (string, error)) string {
-	return r.start(domain, kind, owner, "", false, fn)
+// StartNoCancel регистрирует неотменяемую задачу: пакетную транзакцию
+// прерывать нельзя — Cancel для неё возвращает ошибку.
+func (r *Registry) StartNoCancel(resource Resource, domain, kind, owner string, fn func(ctx context.Context) (string, error)) string {
+	return r.start(resource, domain, kind, owner, "", false, fn)
 }
 
-func (r *Registry) start(domain, kind, owner, cancelAction string, cancellable bool, fn func(ctx context.Context) (string, error)) string {
+func (r *Registry) start(resource Resource, domain, kind, owner, cancelAction string, cancellable bool, fn func(ctx context.Context) (string, error)) string {
 	jctx, cancel := context.WithCancel(r.ctx)
+	state := StateRunning
+	if resource != ResourceNone {
+		state = StateQueued
+	}
 
 	r.mu.Lock()
 	r.prune(time.Now())
@@ -150,27 +160,81 @@ func (r *Registry) start(domain, kind, owner, cancelAction string, cancellable b
 		created:      time.Now(),
 		cancelAction: cancelAction,
 		cancel:       cancel,
-		state:        StateRunning,
+		state:        state,
 	}
 	r.jobs[job.id] = job
+	if err := r.ctx.Err(); err != nil {
+		r.mu.Unlock()
+		r.complete(job, "", err)
+		return job.id
+	}
+	r.wg.Add(1)
+	ticket := r.queue.Enter(resource)
 	r.mu.Unlock()
 
-	r.emit("JobStarted", job.id, domain, kind)
-
 	go func() {
-		result, err := run(jctx, job.id, fn)
-		cancel()
-
-		state, errorType, message := finalState(err)
-		r.finish(job, state, errorType, message, result)
-
-		if result == "" {
-			result = emptyResult
+		defer r.wg.Done()
+		defer r.queue.Leave(ticket)
+		if err := r.queue.Wait(jctx, ticket); err != nil {
+			r.complete(job, "", err)
+			return
 		}
-		r.emit("JobFinished", job.id, state, errorType, message, result)
+		r.markRunning(job)
+		r.emit("JobStarted", job.id, domain, kind)
+
+		runCtx := jctx
+		if !cancellable {
+			runCtx = context.WithoutCancel(jctx)
+		}
+		result, err := run(runCtx, job.id, fn)
+		r.complete(job, result, err)
 	}()
 
 	return job.id
+}
+
+// Shutdown перестаёт принимать задачи, отменяет ожидающие и отменяемые задачи
+// и ждёт завершения уже запущенных неотменяемых операций. Таймаута нет, rpm-транзакцию прерывать нельзя.
+func (r *Registry) Shutdown() {
+	r.mu.Lock()
+	r.cancel()
+	queued, running := r.activeLocked()
+	r.mu.Unlock()
+
+	app.Log.Debugf("jobs shutdown: %d queued canceled, waiting for %d running", queued, running)
+	r.wg.Wait()
+	app.Log.Debug("jobs shutdown: all jobs finished")
+}
+
+// activeLocked считает незавершённые задачи; вызывается под mutex реестра.
+func (r *Registry) activeLocked() (queued, running int) {
+	for _, job := range r.jobs {
+		switch job.state {
+		case StateQueued:
+			queued++
+		case StateRunning:
+			running++
+		}
+	}
+	return queued, running
+}
+
+// markRunning переводит получившую ресурс задачу из очереди в выполнение.
+func (r *Registry) markRunning(job *Job) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	job.state = StateRunning
+}
+
+// complete фиксирует результат и отправляет терминальный сигнал.
+func (r *Registry) complete(job *Job, result string, err error) {
+	job.cancel()
+	state, errorType, message := finalState(err)
+	if result == "" {
+		result = emptyResult
+	}
+	r.finish(job, state, errorType, message, result)
+	r.emit("JobFinished", job.id, state, errorType, message, result)
 }
 
 // run выполняет задачу, превращая панику в ошибку: упавший модуль не должен
@@ -254,7 +318,7 @@ func (r *Registry) Cancel(id string, sender string, authorize func(action string
 		r.mu.Unlock()
 		return apmerr.New(apmerr.ErrorTypeNotFound, fmt.Errorf("job %s is unknown", id))
 	}
-	if job.state != StateRunning {
+	if !job.active() {
 		r.mu.Unlock()
 		return apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("job %s is already finished", id))
 	}
@@ -277,10 +341,15 @@ func (r *Registry) Cancel(id string, sender string, authorize func(action string
 // prune удаляет завершённые задачи старше retention.
 func (r *Registry) prune(now time.Time) {
 	for id, job := range r.jobs {
-		if job.state != StateRunning && now.Sub(job.finished) > r.retention {
+		if !job.active() && now.Sub(job.finished) > r.retention {
 			delete(r.jobs, id)
 		}
 	}
+}
+
+// active — задача ещё не завершена: ждёт ресурс или выполняется.
+func (j *Job) active() bool {
+	return j.state == StateQueued || j.state == StateRunning
 }
 
 // snapshot возвращает снимок задачи; вызывается под mutex реестра.
@@ -293,7 +362,7 @@ func (j *Job) snapshot() State {
 		Cancellable: j.cancellable,
 		Created:     j.created.Unix(),
 	}
-	if j.state == StateRunning {
+	if j.active() {
 		return state
 	}
 

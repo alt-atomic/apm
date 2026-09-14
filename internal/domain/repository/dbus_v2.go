@@ -78,7 +78,7 @@ func (w *DBusV2) TaskPackages(msg dbus.Message, task string) (string, *dbus.Erro
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	return w.jobs.Start("repo", "TaskPackages", polkit.Sender(msg), protocol.ActionRepoManage,
+	return w.jobs.Start(jobs.ResourceNone, "repo", "TaskPackages", polkit.Sender(msg), protocol.ActionRepoManage,
 		wire.JSONTask(func(ctx context.Context) (*TaskPackagesResponse, error) {
 			return w.actions.GetTaskPackages(ctx, task)
 		})), nil
@@ -90,7 +90,7 @@ func (w *DBusV2) TestTask(msg dbus.Message, task string) (string, *dbus.Error) {
 	if dbusErr := w.guard(msg); dbusErr != nil {
 		return "", dbusErr
 	}
-	return w.jobs.StartNoCancel("repo", "TestTask", polkit.Sender(msg),
+	return w.jobs.StartNoCancel(jobs.ResourceHost, "repo", "TestTask", polkit.Sender(msg),
 		wire.JSONTask(func(ctx context.Context) (*TestTaskResponse, error) {
 			return w.actions.TestTask(ctx, task)
 		})), nil

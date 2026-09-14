@@ -75,12 +75,7 @@ func (d *DistroAPIService) GetContainerList(ctx context.Context, getFullInfo boo
 
 	var containerNames []string
 	for _, line := range lines[1:] {
-		parts := strings.Split(line, "|")
-		if len(parts) < 2 {
-			continue
-		}
-		name := strings.TrimSpace(parts[1])
-		if name != "" {
+		if name, ok := parseContainerRow(line); ok {
 			containerNames = append(containerNames, name)
 		}
 	}
@@ -182,6 +177,21 @@ func (d *DistroAPIService) ExportingApp(ctx context.Context, containerInfo Conta
 	}
 
 	return nil
+}
+
+// containerIDRegex короткий id контейнера в выводе `distrobox ls`.
+var containerIDRegex = regexp.MustCompile(`^[0-9a-f]{12}$`)
+
+func parseContainerRow(line string) (string, bool) {
+	parts := strings.Split(line, "|")
+	if len(parts) != 4 {
+		return "", false
+	}
+	id, name := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+	if !containerIDRegex.MatchString(id) || validateContainerName(name) != nil {
+		return "", false
+	}
+	return name, true
 }
 
 // fetchOsInfo выполняет команду для получения информации об ОС контейнера
