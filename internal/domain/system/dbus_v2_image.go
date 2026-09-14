@@ -62,7 +62,7 @@ func (w *ImageV2) guard(msg dbus.Message) *dbus.Error {
 
 // startJob регистрирует фоновую задачу образа; отправитель уже авторизован.
 func (w *ImageV2) startJob(msg dbus.Message, kind string, fn func(ctx context.Context) (string, error)) string {
-	return w.jobs.Start("image", kind, polkit.Sender(msg), protocol.ActionImageManage, fn)
+	return w.jobs.Start(jobs.ResourceImage, "image", kind, polkit.Sender(msg), protocol.ActionImageManage, fn)
 }
 
 // Status возвращает статус загруженного образа.

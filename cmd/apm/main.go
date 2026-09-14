@@ -142,7 +142,7 @@ func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
 		Bus:  service.BusSession,
 		Mode: apmcli.ForbidRoot,
 		APIs: []service.DBusAPI{
-			dbusv2.Setup{
+			&dbusv2.Setup{
 				Reporter: rt.reporter,
 				Modules:  distroboxBus.V2Modules(),
 			},
@@ -174,7 +174,7 @@ func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
 		Bus:  service.BusSystem,
 		Mode: apmcli.RequireRoot,
 		APIs: []service.DBusAPI{
-			dbusv2.Setup{
+			&dbusv2.Setup{
 				Reporter:  rt.reporter,
 				UsePolkit: true,
 				Props: map[string]map[string]any{
