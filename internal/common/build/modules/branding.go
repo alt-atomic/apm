@@ -144,7 +144,7 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 				vars["ID"] = "linux"
 			}
 			vars["RELEASE_TYPE"] = releaseType
-			vars["VERSION"] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
+			vars["VERSION"] = prettyCurVer
 			vars["VERSION_ID"] = versionId
 			vars["CPE_NAME"] = fmt.Sprintf("cpe:/o:%s:%s", strings.ReplaceAll(vars["ID"], "-", ":"), curVer)
 			vars["IMAGE_ID"] = vars["ID"]
