@@ -134,9 +134,7 @@ AptResult execute_transaction(AptCache *cache,
         if (acquire_result != pkgAcquire::Continue || incomplete) {
             std::string err = failed_items;
             if (const std::string pending = collect_pending_errors(); !pending.empty()) err += pending + "\n";
-            err += failed_items.empty()
-                       ? APT_MSG_DOWNLOAD_FAILED
-                       : "Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?";
+            err += APT_MSG_DOWNLOAD_FAILED;
             return make_result(APT_ERROR_DOWNLOAD_FAILED, err.c_str());
         }
 
