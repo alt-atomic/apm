@@ -3,7 +3,11 @@
 #include "internal.h"
 #include "error.h"
 
-// Plans (and optionally applies) a combined install/remove/reinstall operation.
-// When `apply` is false, simulates changes and fills `changes` without modifying
-// the system. When `apply` is true, marks packages but does not execute.
-AptResult plan_change_internal(AptCache *cache, const AptTransaction &tx, bool apply, AptPackageChanges *changes);
+// Registers local .rpm files of `tx` as an APT source; may reopen the cache,
+// so it must run before a CacheStateGuard is taken.
+AptResult prepare_transaction(AptCache *cache, const AptTransaction &tx);
+
+// Marks `tx` (install/remove/reinstall, dist-upgrade or autoremove) in the dep cache
+// and fills `changes`. Plan and execute share it; rollback is up to the caller.
+// `changes` must be zeroed by the caller.
+AptResult apply_transaction_marks(const AptCache *cache, const AptTransaction &tx, AptPackageChanges *changes);

@@ -1,5 +1,6 @@
 #include "executor.h"
 
+#include <apt-pkg/acquire-item.h>
 #include <apt-pkg/error.h>
 #include <apt-pkg/pkgrecords.h>
 #include <apt-pkg/sourcelist.h>
@@ -122,8 +123,21 @@ AptResult execute_transaction(AptCache *cache,
             global_callback("", APT_CALLBACK_DOWNLOAD_STOP, 100, 100, 0, global_user_data);
         }
 
-        if (acquire_result != pkgAcquire::Continue) {
-            return make_result(APT_ERROR_INSTALL_FAILED, APT_MSG_DOWNLOAD_FAILED);
+        std::string failed_items;
+        bool incomplete = false;
+        for (auto I = acquire.ItemsBegin(); I != acquire.ItemsEnd(); ++I) {
+            if ((*I)->Status == pkgAcquire::Item::StatDone && (*I)->Complete) continue;
+            incomplete = true;
+            if ((*I)->Status == pkgAcquire::Item::StatIdle) continue;
+            failed_items += "Failed to fetch " + (*I)->DescURI() + "  " + (*I)->ErrorText + "\n";
+        }
+        if (acquire_result != pkgAcquire::Continue || incomplete) {
+            std::string err = failed_items;
+            if (const std::string pending = collect_pending_errors(); !pending.empty()) err += pending + "\n";
+            err += failed_items.empty()
+                       ? APT_MSG_DOWNLOAD_FAILED
+                       : "Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?";
+            return make_result(APT_ERROR_DOWNLOAD_FAILED, err.c_str());
         }
 
         if (download_only) {

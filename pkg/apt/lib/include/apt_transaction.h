@@ -36,7 +36,8 @@ AptResult apt_transaction_autoremove(AptTransaction *tx);
 // Simulates the transaction and fills `changes` with the planned result.
 AptResult apt_transaction_plan(const AptTransaction *tx, AptPackageChanges *changes);
 
-// Executes the transaction. If `download_only` is true, only downloads packages.
+// Executes the transaction exactly as planned; marks are rolled back on failure.
+// If `download_only` is true, only downloads packages.
 AptResult apt_transaction_execute(const AptTransaction *tx,
                                    AptProgressCallback callback, uintptr_t user_data,
                                    bool download_only);
