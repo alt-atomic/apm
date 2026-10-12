@@ -16,3 +16,10 @@ option(
   value: true,
   description: 'Whether to build introspection files'
 )
+
+option(
+  'documentation',
+  type: 'boolean',
+  value: false,
+  description: 'Whether to build API documentation'
+)
