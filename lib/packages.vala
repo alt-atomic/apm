@@ -22,7 +22,7 @@
  *
  * Operations backed by APM2 jobs return only after the job reaches a terminal
  * state. Package jobs cannot be cancelled by the server, so these methods do
- * not accept a {@link Cancellable}.
+ * not accept a {@link GLib.Cancellable}.
  */
 public sealed class Apm.Packages : Module {
 
