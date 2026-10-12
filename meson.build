@@ -64,6 +64,10 @@ subdir('data')
 subdir('lib')
 subdir('tests')
 
+if get_option('documentation')
+  subdir('doc')
+endif
+
 install_emptydir(grpconfdir)
 install_emptydir(confapmdir / 'grpconf.d')
 install_emptydir(varapmdir)

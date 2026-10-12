@@ -55,19 +55,29 @@ jobs:
           apt-get update
           apt-get install -y \
             golang \
+            graphviz \
             meson \
             gcc-c++ \
             libapt-devel \
+            libserialize-devel \
+            vala \
+            valadoc \
             'pkgconfig(systemd)'
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup
-        run: meson setup _build
+        run: meson setup _build -Ddocumentation=true
 
       - name: Build
         run: meson compile -C _build
+
+      - name: Deploy pages
+        if: github.event_name != 'pull_request'
+        uses: actions/deploy-pages@v1
+        with:
+          directory: ./_build/doc/apm
 
   get-release:
     name: Get release for RPM package
