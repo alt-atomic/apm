@@ -22,7 +22,7 @@
  *
  * Operations backed by APM2 jobs return only after completion. Kernel jobs
  * cannot be cancelled by the server, so these methods do not accept a
- * {@link Cancellable}.
+ * {@link GLib.Cancellable}.
  */
 public sealed class Apm.Kernel : Module {
 
