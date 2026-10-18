@@ -1942,7 +1942,7 @@ msgstr "Загружено"
 
 #: internal/common/reply/translate.go:121
 msgid "Staged"
-msgstr "Зафиксированно"
+msgstr "Подготовлено"
 
 #: internal/common/reply/translate.go:123
 #: internal/domain/system/dialog/dialog.go:427
