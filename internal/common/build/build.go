@@ -94,7 +94,7 @@ func (cfgService *ConfigService) EmitEvent(ctx context.Context, state, name, vie
 }
 
 func (cfgService *ConfigService) IsAtomic() bool {
-	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomic
+	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomicImage
 }
 
 func (cfgService *ConfigService) Runner() command.Runner {
