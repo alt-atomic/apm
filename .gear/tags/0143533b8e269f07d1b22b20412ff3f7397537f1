@@ -1,0 +1,9 @@
+object 799cd30ff7e435d9320f59d07cb6a48b2b7632a6
+type commit
+tag v0.7.1
+tagger Gitea <gitea@fake.local> 1792881790 +0300
+
+Release 0.7.1
+
+- Fixed release file normalization in `branding` `build` type.
+- Fixed `BuildType` condition.
