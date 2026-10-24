@@ -129,7 +129,7 @@ func TestNormalizeAtomicOsRelease(t *testing.T) {
 				"VERSION_ID":    "20261016-nvidia",
 				"RELEASE_TYPE":  "stable",
 				"PRETTY_NAME":   "ALT Atomic Onyx (NVIDIA)",
-				"CPE_NAME":      "cpe:/o:alt-atomic:onyx:20261016:stable:nvidia",
+				"CPE_NAME":      "cpe:/o:alt-atomic:onyx:20261016-nvidia:stable:nvidia",
 				"IMAGE_ID":      "alt-atomic-onyx-nvidia",
 				"IMAGE_VERSION": "20261016-nvidia",
 			},
@@ -146,7 +146,7 @@ func TestNormalizeAtomicOsRelease(t *testing.T) {
 				"VERSION_ID":    "20261016-nvidia",
 				"RELEASE_TYPE":  "development",
 				"PRETTY_NAME":   "ALT Atomic Onyx Nightly (NVIDIA)",
-				"CPE_NAME":      "cpe:/o:alt-atomic:onyx:20261016:nightly:nvidia",
+				"CPE_NAME":      "cpe:/o:alt-atomic:onyx:20261016-nvidia:nightly:nvidia",
 				"IMAGE_ID":      "alt-atomic-onyx-nvidia-nightly",
 				"IMAGE_VERSION": "20261016-nvidia",
 			},
@@ -158,6 +158,7 @@ func TestNormalizeAtomicOsRelease(t *testing.T) {
 			vars := map[string]string{
 				"NAME":        "ALT Atomic Onyx",
 				"VERSION":     "20261016",
+				"VERSION_ID":  "20261016",
 				"ID":          "onyx",
 				"ID_LIKE":     "alt-atomic altlinux",
 				"PRETTY_NAME": "stale value",
@@ -198,6 +199,7 @@ func TestNormalizeAtomicOsReleasePreservesBrandNamespace(t *testing.T) {
 	vars := map[string]string{
 		"NAME":       "Example Workstation",
 		"VERSION":    "20261016",
+		"VERSION_ID": "20261016",
 		"ID":         "workstation",
 		"ID_LIKE":    "example linux",
 		"CPE_NAME":   "cpe:/o:example:workstation:old:stable",
@@ -213,7 +215,7 @@ func TestNormalizeAtomicOsReleasePreservesBrandNamespace(t *testing.T) {
 	if got, want := vars["ID_LIKE"], "example linux"; got != want {
 		t.Errorf("ID_LIKE = %q, want %q", got, want)
 	}
-	if got, want := vars["CPE_NAME"], "cpe:/o:example:workstation:20261016:edge:enterprise"; got != want {
+	if got, want := vars["CPE_NAME"], "cpe:/o:example:workstation:20261016-enterprise:edge:enterprise"; got != want {
 		t.Errorf("CPE_NAME = %q, want %q", got, want)
 	}
 	if got, want := vars["IMAGE_ID"], "example-workstation-enterprise-edge"; got != want {

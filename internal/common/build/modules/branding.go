@@ -139,9 +139,9 @@ func normalizeAtomicOsRelease(vars map[string]string, buildType string) error {
 		baseID = "org.example.NoName"
 	}
 
-	version := strings.TrimSpace(vars["VERSION"])
-	if version == "" {
-		version = "0.1"
+	versionID := strings.TrimSpace(vars["VERSION_ID"])
+	if versionID == "" {
+		versionID = "0.1"
 	}
 
 	buildType = strings.ToLower(strings.TrimSpace(buildType))
@@ -170,12 +170,11 @@ func normalizeAtomicOsRelease(vars map[string]string, buildType string) error {
 		vars["VARIANT_ID"] = variantID
 	}
 
-	prettyVersion := version
-	if parsed, err := time.Parse("20060102", version); err == nil {
+	prettyVersion := versionID
+	if parsed, err := time.Parse("20060102", versionID); err == nil {
 		prettyVersion = parsed.Format("02.01.2006")
 	}
 
-	versionID := version
 	if variantID != "" {
 		versionID += "-" + variantID
 		prettyVersion += " (" + variant + ")"
@@ -206,7 +205,7 @@ func normalizeAtomicOsRelease(vars map[string]string, buildType string) error {
 	cpeName := strings.TrimSpace(vars["CPE_NAME"])
 	if cpeName != "" {
 		var err error
-		cpeName, err = normalizeCPEName(cpeName, version, buildType, variantID)
+		cpeName, err = normalizeCPEName(cpeName, versionID, buildType, variantID)
 		if err != nil {
 			return err
 		}
