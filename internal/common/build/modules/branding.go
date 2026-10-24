@@ -108,10 +108,8 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 		vars := osrelease.NewFromName(usrLibOsRelease)
 
 		applyReleaseOverrides(vars, b.ReleaseOverrides)
-		if b.BuildType != "" {
-			if err := normalizeAtomicOsRelease(vars, b.BuildType); err != nil {
-				return nil, err
-			}
+		if err := normalizeAtomicOsRelease(vars, b.BuildType); err != nil {
+			return nil, err
 		}
 
 		return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
