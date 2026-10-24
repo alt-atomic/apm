@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -81,6 +82,9 @@ func (dm *databaseManagerImpl) initSystemDB() error {
 	if _, err := os.Stat(dm.systemPath); os.IsNotExist(err) {
 		Log.Warning("System database file not found. It will be created automatically.")
 	}
+	if err := EnsureDir(filepath.Dir(dm.systemPath)); err != nil {
+		return fmt.Errorf(T_("error opening system database: %w"), err)
+	}
 
 	db, err := sql.Open("sqlite3", dm.systemPath)
 	if err != nil {
@@ -103,6 +107,9 @@ func (dm *databaseManagerImpl) initSystemDB() error {
 func (dm *databaseManagerImpl) initUserDB() error {
 	if _, err := os.Stat(dm.userPath); os.IsNotExist(err) {
 		Log.Warning("User database file not found. It will be created automatically.")
+	}
+	if err := EnsureDir(filepath.Dir(dm.userPath)); err != nil {
+		return fmt.Errorf(T_("error opening user database: %w"), err)
 	}
 
 	db, err := sql.Open("sqlite3", dm.userPath)

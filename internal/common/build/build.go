@@ -68,11 +68,11 @@ func NewConfigService(appConfig *app.Config, reporter *reply.Reporter, aptAction
 		}
 		return svc.revertNssAltFiles()
 	})
-	svc.engine.Hook(pkgbuild.PostModules, func(ctx context.Context) error {
+	svc.engine.Hook(pkgbuild.PostModules, func(_ context.Context) error {
 		if !svc.IsAtomic() {
 			return nil
 		}
-		return svc.splitNssAltFiles(ctx)
+		return svc.splitNssAltFiles()
 	})
 	svc.engine.Hook(pkgbuild.PostBuild, func(ctx context.Context) error {
 		if !svc.IsAtomic() {
@@ -94,7 +94,7 @@ func (cfgService *ConfigService) EmitEvent(ctx context.Context, state, name, vie
 }
 
 func (cfgService *ConfigService) IsAtomic() bool {
-	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomic
+	return cfgService.appConfig.ConfigManager.GetConfig().IsAtomicImage
 }
 
 func (cfgService *ConfigService) Runner() command.Runner {

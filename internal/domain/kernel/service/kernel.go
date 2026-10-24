@@ -31,6 +31,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
 	"altlinux.space/alt-atomic/apm/internal/common/helper"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
+	"altlinux.space/alt-atomic/apm/pkg/apt"
 	libApt "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 	"altlinux.space/alt-atomic/apm/pkg/command"
 )
@@ -171,7 +172,7 @@ func (km *Manager) SimulateRemoveKernel(kernel *Info) (*libApt.PackageChanges, e
 		}
 	}
 
-	return km.aptActions.SimulateRemove(packagesToRemove, false, false)
+	return km.aptActions.Plan(apt.TransactionSpec{Remove: packagesToRemove})
 }
 
 // RemoveKernel удаляет указанное ядро
@@ -189,7 +190,8 @@ func (km *Manager) RemoveKernel(kernel *Info, purge bool) error {
 		}
 	}
 
-	return km.aptActions.RemovePackages(packagesToRemove, purge, false, nil)
+	_, err = km.aptActions.Apply(apt.TransactionSpec{Remove: packagesToRemove, Purge: purge}, nil, nil)
+	return err
 }
 
 // GetCurrentKernel возвращает информацию о текущем запущенном ядре
@@ -386,7 +388,7 @@ func (km *Manager) FindAvailableModules(kernel *Info) (modules []ModuleInfo, err
 func (km *Manager) SimulateUpgrade(kernel *Info, modules []string, includeHeaders bool) (preview *UpgradePreview, err error) {
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
 
-	changes, err := km.aptActions.SimulateInstall(installPackages)
+	changes, err := km.aptActions.Plan(apt.TransactionSpec{Install: installPackages})
 	if err != nil {
 		return nil, fmt.Errorf(app.T_("failed to simulate kernel upgrade: %s"), err.Error())
 	}
@@ -409,23 +411,26 @@ func (km *Manager) InstallKernel(ctx context.Context, kernel *Info, modules []st
 
 	installPackages := km.buildPackageList(kernel, modules, includeHeaders)
 
+	spec := apt.TransactionSpec{Install: installPackages}
 	if dryRun {
-		_, err := km.aptActions.SimulateInstall(installPackages)
+		_, err := km.aptActions.Plan(spec)
 		return err
 	}
 
-	return km.aptActions.InstallPackages(installPackages, nil, false)
+	_, err := km.aptActions.Apply(spec, nil, nil)
+	return err
 }
 
 // InstallModules устанавливает или симулирует установку пакетов модулей
 func (km *Manager) InstallModules(ctx context.Context, installPackages []string, dryRun bool) (*libApt.PackageChanges, error) {
 	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventKernelInstallMods))
 	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventKernelInstallMods))
+	spec := apt.TransactionSpec{Install: installPackages}
 	if dryRun {
-		return km.aptActions.SimulateInstall(installPackages)
+		return km.aptActions.Plan(spec)
 	}
 
-	err := km.aptActions.InstallPackages(installPackages, nil, false)
+	_, err := km.aptActions.Apply(spec, nil, nil)
 	return nil, err
 }
 
@@ -439,11 +444,12 @@ func (km *Manager) RemovePackages(ctx context.Context, removePackages []string, 
 	km.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(event))
 	defer km.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(event))
 
+	spec := apt.TransactionSpec{Remove: removePackages}
 	if dryRun {
-		return km.aptActions.SimulateRemove(removePackages, false, false)
+		return km.aptActions.Plan(spec)
 	}
 
-	err := km.aptActions.RemovePackages(removePackages, false, false, nil)
+	_, err := km.aptActions.Apply(spec, nil, nil)
 	return nil, err
 }
 

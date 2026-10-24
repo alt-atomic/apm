@@ -73,12 +73,5 @@ void apt_filelist_fill(pkgCache::VerFileIterator &vf, AptPackageInfo *info,
         return;
 
     info->file_count = files.size();
-    info->files = static_cast<char **>(calloc(info->file_count, sizeof(char *)));
-    if (!info->files) {
-        info->file_count = 0;
-        return;
-    }
-    for (size_t i = 0; i < files.size(); ++i) {
-        info->files[i] = safe_strdup(files[i]);
-    }
+    info->files = dup_string_list(files);
 }

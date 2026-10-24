@@ -52,8 +52,8 @@ jobs:
           echo "release=$(date +%s)" >> $FORGEJO_OUTPUT
 
   rpm-build:
-    name: RPM build for ${{ matrix.branch }} for ${{ matrix.arch }} for and uploading
-    runs-on: ${{ matrix.runner }}
+    name: RPM build for ${{ matrix.branch }} for and uploading
+    runs-on: als-huge
 
     needs:
       - build
@@ -67,14 +67,6 @@ jobs:
         branch:
           - sisyphus
           - p11
-        arch:
-          - amd64
-          - arm64
-        include:
-          - arch: amd64
-            runner: als-huge
-          - arch: arm64
-            runner: self-hosted-arm64-huge
 
     steps:
       - name: Install utils
@@ -94,7 +86,6 @@ jobs:
         name: Build RPMs
         with:
           branch: ${{ matrix.branch }}
-          arch: ${{ matrix.arch }}
 
       - uses: actions/upload-rpm-action@main
         name: Upload RPMs

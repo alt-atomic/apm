@@ -10,6 +10,7 @@ extern "C" {
 typedef struct {
     char *name;
     char *version;
+    char *installed_version;
     char *description;
     char *short_description;
     char *section;

@@ -8,6 +8,7 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	"altlinux.space/alt-atomic/apm/internal/common/testutil"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 )
@@ -60,22 +61,24 @@ func (m *mockRepoService) SimulateRemove(_ context.Context, _ []string, _ string
 }
 
 type mockAptActions struct {
-	updateErr   error
-	findInstall []string
-	findRemove  []string
-	findChanges *aptLib.PackageChanges
-	findErr     error
-	combineErr  error
+	updateErr    error
+	applyChanges *aptLib.PackageChanges
+	applyErr     error
 }
 
 func (m *mockAptActions) Update(_ context.Context, _ ...bool) ([]_package.Package, error) {
 	return nil, m.updateErr
 }
-func (m *mockAptActions) FindPackage(_ context.Context, _ []string, _ []string, _ bool, _ bool, _ bool) ([]string, []string, []_package.Package, *aptLib.PackageChanges, error) {
-	return m.findInstall, m.findRemove, nil, m.findChanges, m.findErr
-}
-func (m *mockAptActions) CombineInstallRemovePackages(_ context.Context, _ []string, _ []string, _ bool, _ bool, _ bool) error {
-	return m.combineErr
+func (m *mockAptActions) Apply(_ context.Context, _ aptBinding.TransactionSpec, confirm aptBinding.Confirm) (*aptLib.PackageChanges, error) {
+	if m.applyErr != nil {
+		return nil, m.applyErr
+	}
+	if confirm != nil {
+		if ok, err := confirm(m.applyChanges); err != nil || !ok {
+			return m.applyChanges, err
+		}
+	}
+	return m.applyChanges, nil
 }
 
 type mockOverlay struct{}
@@ -594,7 +597,7 @@ func TestTestTask(t *testing.T) {
 			taskPackagesResult: []string{"vim"},
 			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
-		apt := &mockAptActions{findErr: errors.New("dependency conflict")}
+		apt := &mockAptActions{applyErr: errors.New("dependency conflict")}
 		actions := newTestActions(repo, apt)
 
 		_, err := actions.TestTask(context.Background(), "123")
@@ -607,7 +610,7 @@ func TestTestTask(t *testing.T) {
 			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{
-			findChanges: &aptLib.PackageChanges{NewInstalledCount: 0, UpgradedCount: 0},
+			applyChanges: &aptLib.PackageChanges{NewInstalledCount: 0, UpgradedCount: 0},
 		}
 		actions := newTestActions(repo, apt)
 
@@ -621,8 +624,7 @@ func TestTestTask(t *testing.T) {
 			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{
-			findInstall: []string{"vim"},
-			findChanges: &aptLib.PackageChanges{NewInstalledCount: 1},
+			applyChanges: &aptLib.PackageChanges{NewInstalledCount: 1},
 		}
 		actions := newTestActions(repo, apt)
 
@@ -644,9 +646,7 @@ func TestTestTask(t *testing.T) {
 			addResult:          []aptrepo.Repository{{URL: "http://git.altlinux.org/repo/370123/", Arch: "x86_64", Components: []string{"task"}, Active: true, Entry: "rpm http://git.altlinux.org/repo/370123/ x86_64 task"}},
 		}
 		apt := &mockAptActions{
-			findInstall: []string{"vim"},
-			findChanges: &aptLib.PackageChanges{NewInstalledCount: 1},
-			combineErr:  errors.New("install failed"),
+			applyErr: errors.New("install failed"),
 		}
 		actions := newTestActions(repo, apt)
 

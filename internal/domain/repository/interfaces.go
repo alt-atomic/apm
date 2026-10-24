@@ -20,6 +20,7 @@ import (
 	"context"
 
 	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
+	aptBinding "altlinux.space/alt-atomic/apm/pkg/apt"
 	aptLib "altlinux.space/alt-atomic/apm/pkg/apt/lib"
 	"altlinux.space/alt-atomic/apm/pkg/aptrepo"
 )
@@ -45,6 +46,5 @@ type overlayService interface {
 // aptActionsService определяет методы APT операций, используемых в TestTask.
 type aptActionsService interface {
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
-	FindPackage(ctx context.Context, installed []string, removed []string, purge bool, depends bool, reinstall bool) ([]string, []string, []_package.Package, *aptLib.PackageChanges, error)
-	CombineInstallRemovePackages(ctx context.Context, install []string, remove []string, purge bool, depends bool, downloadOnly bool) error
+	Apply(ctx context.Context, spec aptBinding.TransactionSpec, confirm aptBinding.Confirm) (*aptLib.PackageChanges, error)
 }

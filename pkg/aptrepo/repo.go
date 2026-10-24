@@ -45,12 +45,12 @@ const (
 	// legacyP10Macro is the legacy p10 macro file.
 	legacyP10Macro = "/etc/rpm/macros.d/p10"
 
-	// repoBaseURL is the base URL for ALT Linux repositories (ftp.altlinux.org).
-	repoBaseURL = "ftp.altlinux.org/pub/distributions/ALTLinux"
+	// repoBaseURL is the base URL for ALT Linux repositories (rsync.altlinux.org).
+	repoBaseURL = "rsync.altlinux.org/pub/distributions/ALTLinux"
 	// repoBaseURLRu is the base URL for ALT Linux repositories (ftp.altlinux.ru).
 	repoBaseURLRu = "ftp.altlinux.ru/pub/distributions/ALTLinux"
 	// repoArchiveURL is the base URL for archived ALT Linux repositories.
-	repoArchiveURL = "ftp.altlinux.org/pub/distributions/archive"
+	repoArchiveURL = "rsync.altlinux.org/pub/distributions/archive"
 	// repoTaskURL is the URL for active task repositories.
 	repoTaskURL = "git.altlinux.org/repo"
 	// repoTasksURL is the URL for task information.

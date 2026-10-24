@@ -49,7 +49,7 @@ func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
 	cfg := appConfig.ConfigManager.GetConfig()
 	runner := command.NewRunner(cfg.CommandPrefix, cfg.Verbose)
 	aptActions := apt.NewActions()
-	aptPackageActions := _package.NewActions(hostPackageDBSvc, appConfig, reporter)
+	aptPackageActions := _package.New(hostPackageDBSvc, appConfig, reporter)
 	kernelManager := service.NewKernelManager(hostPackageDBSvc, aptActions, runner, reporter)
 
 	return &Actions{

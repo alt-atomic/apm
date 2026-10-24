@@ -126,6 +126,7 @@ type Configuration struct {
 	Format         string   `yaml:"-"`
 	Fields         []string `yaml:"-"`
 	IsAtomic       bool     `yaml:"-"`
+	IsAtomicImage  bool     `yaml:"-"`
 	DevMode        bool     `yaml:"-"`
 	Verbose        bool     `yaml:"-"`
 }
@@ -241,27 +242,18 @@ func (cm *configManagerImpl) expandPaths() {
 	cm.config.PathDBSQLSystem = filepath.Clean(expandUser(cm.config.PathDBSQLSystem))
 }
 
-// ensureDirectories создает необходимые директории
+// ensureDirectories создает каталог ресурсов; файлы БД создаются лениво в DatabaseManager
 func (cm *configManagerImpl) ensureDirectories() error {
 	if syscall.Geteuid() != 0 {
-		if err := EnsurePath(cm.config.PathDBSQLUser); err != nil {
-			return err
-		}
-	} else {
-		if err := EnsurePath(cm.config.PathDBSQLSystem); err != nil {
-			return err
-		}
-		if err := EnsureDir(cm.config.PathResourcesDir); err != nil {
-			return err
-		}
+		return nil
 	}
-
-	return nil
+	return EnsureDir(cm.config.PathResourcesDir)
 }
 
 // detectSystemCapabilities определяет доступные системные утилиты
 func (cm *configManagerImpl) detectSystemCapabilities() {
-	cm.config.IsAtomic = fileExists("/usr/bin/bootc")
+	cm.config.IsAtomic = isAtomicBooted()
+	cm.config.IsAtomicImage = fileExists("/usr/bin/bootc")
 	cm.config.ExistStplr = fileExists("/usr/bin/stplr")
 	cm.config.ExistDistrobox = fileExists("/usr/bin/distrobox")
 }
@@ -451,4 +443,43 @@ func expandUser(s string) string {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// isAtomicBooted проверяет наличие bootc и загрузку хоста через ostree или composefs
+func isAtomicBooted() bool {
+	if !fileExists("/usr/bin/bootc") || IsRunningInContainer() {
+		return false
+	}
+
+	if fileExists("/run/ostree-booted") {
+		return true
+	}
+
+	cmdline, err := os.ReadFile("/proc/cmdline")
+	if err != nil {
+		return false
+	}
+	for _, arg := range strings.Fields(string(cmdline)) {
+		if strings.HasPrefix(arg, "composefs=") {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsRunningInContainer проверка, запущен ли apm внутри контейнера
+func IsRunningInContainer() bool {
+	if _, err := os.Stat("/run/.containerenv"); err == nil {
+		return true
+	}
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+
+	if len(os.Getenv("container")) > 0 {
+		return true
+	}
+
+	return false
 }

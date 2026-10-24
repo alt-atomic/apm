@@ -6,6 +6,7 @@
 
 void fill_package_state(pkgCache::PkgIterator &pkg, AptPackageInfo *info) {
     if (!pkg.CurrentVer().end()) {
+        info->installed_version = safe_strdup(pkg.CurrentVer().VerStr());
         switch (pkg->CurrentState) {
             case pkgCache::State::Installed:
                 info->state = APT_PKG_STATE_INSTALLED;
@@ -185,13 +186,8 @@ void fill_package_aliases(pkgCache &cache,
         }
     }
 
-    if (!aliases.empty()) {
-        info->alias_count = aliases.size();
-        info->aliases = static_cast<char **>(calloc(info->alias_count, sizeof(char *)));
-        for (size_t i = 0; i < aliases.size(); ++i) {
-            info->aliases[i] = safe_strdup(aliases[i].c_str());
-        }
-    }
+    info->alias_count = aliases.size();
+    info->aliases = dup_string_list(aliases);
 }
 
 bool resolve_virtual_package(pkgCache::PkgIterator &pkg,

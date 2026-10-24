@@ -29,7 +29,10 @@ import (
 )
 
 // System represents the APT system configuration
-type System struct{ Ptr *C.AptSystem }
+type System struct {
+	Ptr     *C.AptSystem
+	cleanup runtime.Cleanup
+}
 
 // NewSystem initializes the APT system
 func NewSystem() (*System, error) {
@@ -59,7 +62,7 @@ func NewSystem() (*System, error) {
 		return nil, ErrorFromResult(res)
 	}
 	s := &System{Ptr: ptr}
-	runtime.SetFinalizer(s, (*System).Close)
+	s.cleanup = runtime.AddCleanup(s, func(p *C.AptSystem) { C.apt_cleanup_system(p) }, ptr)
 	return s, nil
 }
 
@@ -68,9 +71,9 @@ func (s *System) Close() {
 	if s.Ptr != nil {
 		blockSignals()
 		defer restoreSignals()
+		s.cleanup.Stop()
 		C.apt_cleanup_system(s.Ptr)
 		s.Ptr = nil
-		runtime.SetFinalizer(s, nil)
 	}
 }
 

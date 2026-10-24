@@ -19,6 +19,8 @@ package imagesvc
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -224,22 +226,18 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 		return nil
 	}
 
-	var (
-		remoteDigest  string
-		localDigest   string
-		errCheckImage error
-	)
-
-	remoteDigest, errCheckImage = h.getRemoteImageInfo(ctx, config.Image, false)
-	if errCheckImage != nil {
-		return errCheckImage
-	}
-	localDigest, errCheckImage = h.getRemoteImageInfo(ctx, config.Image, true)
-	if errCheckImage != nil {
-		return errCheckImage
+	remoteID, err := h.getRemoteImageID(ctx, config.Image)
+	if err != nil {
+		return err
 	}
 
-	if remoteDigest == localDigest {
+	current := image.Status.Booted.Image.Image
+	if image.Status.Staged != nil {
+		current = image.Status.Staged.Image.Image
+	}
+
+	// Сравниваем с базой, из которой собран текущий образ
+	if current.Transport == "containers-storage" && remoteID == h.getImageParent(ctx, current.Image) {
 		return nil
 	}
 
@@ -258,20 +256,9 @@ func (h *HostImageService) CheckAndUpdateBaseImage(ctx context.Context, pullImag
 	return h.buildAndSwitchSimple(ctx, pullImage)
 }
 
-type SkopeoInspectInfo struct {
-	Digest string   `json:"Digest"`
-	Layers []string `json:"Layers"`
-}
-
-// getRemoteImageDigest используя skopeo, смотрим Layers удалённого или локально образа для сравнения
-func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName string, checkLocal bool) (string, error) {
-	var args []string
-	if checkLocal {
-		args = []string{"skopeo", "inspect", "containers-storage:" + imageName}
-	} else {
-		args = []string{"skopeo", "inspect", "docker://" + imageName}
-	}
-
+// getRemoteImageID возвращает ID образа в реестре (sha256 конфига)
+func (h *HostImageService) getRemoteImageID(ctx context.Context, imageName string) (string, error) {
+	args := []string{"skopeo", "inspect", "--config", "--raw", "docker://" + imageName}
 	stdout, stderr, err := h.runner.Run(ctx, args, command.WithEnv("LC_ALL=C"), command.WithQuiet())
 	if err != nil {
 		errMsg := strings.TrimSpace(stderr)
@@ -281,17 +268,23 @@ func (h *HostImageService) getRemoteImageInfo(ctx context.Context, imageName str
 		return "", fmt.Errorf(app.T_("Skopeo inspect error: %s"), errMsg)
 	}
 
-	var info SkopeoInspectInfo
-	if err = json.Unmarshal([]byte(stdout), &info); err != nil {
-		return "", fmt.Errorf(app.T_("Failed to parse skopeo inspect: %w"), err)
+	sum := sha256.Sum256([]byte(stdout))
+	return hex.EncodeToString(sum[:]), nil
+}
+
+// getImageParent возвращает ID базового образа локальной сборки, пусто если неизвестен
+func (h *HostImageService) getImageParent(ctx context.Context, imageName string) string {
+	stdout, _, err := h.runner.Run(ctx, []string{"podman", "image", "inspect", "--format", "{{.Parent}}", imageName}, command.WithQuiet())
+	if err != nil {
+		return ""
 	}
 
-	return strings.Join(info.Layers, ","), nil
+	return strings.TrimSpace(stdout)
 }
 
 // VerifyRemoteImage проверяет, что образ доступен в реестре
 func (h *HostImageService) VerifyRemoteImage(ctx context.Context, imageName string) error {
-	_, err := h.getRemoteImageInfo(ctx, imageName, false)
+	_, err := h.getRemoteImageID(ctx, imageName)
 	return err
 }
 

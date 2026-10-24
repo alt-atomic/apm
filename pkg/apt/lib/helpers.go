@@ -91,6 +91,9 @@ func convertPackageChanges(cc *C.AptPackageChanges) *PackageChanges {
 	changes.NewInstalledPackages = convertCStringArray(cc.new_installed_packages, cc.new_installed_count)
 	changes.RemovedPackages = convertCStringArray(cc.removed_packages, cc.removed_count)
 	changes.KeptBackPackages = convertCStringArray(cc.kept_back_packages, cc.kept_back_count)
+	changes.SkippedPackages = convertCStringArray(cc.skipped_packages, cc.skipped_count)
+	changes.RequestedInstall = convertCStringArray(cc.requested_install, cc.requested_install_count)
+	changes.RequestedRemove = convertCStringArray(cc.requested_remove, cc.requested_remove_count)
 
 	// Convert essential packages
 	if cc.essential_packages_count > 0 && cc.essential_packages != nil {
@@ -142,6 +145,6 @@ func openCacheUnsafe(system *System, readOnly bool) (*Cache, error) {
 		return nil, ErrorFromResult(res)
 	}
 	c := &Cache{Ptr: ptr, system: system}
-	runtime.SetFinalizer(c, (*Cache).Close)
+	c.cleanup = runtime.AddCleanup(c, func(p *C.AptCache) { C.apt_cache_close(p) }, ptr)
 	return c, nil
 }

@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -63,18 +62,7 @@ func FilterLinesPrefix(output, prefix string) string {
 
 // IsRunningInContainer проверка, запущен ли apm внутри контейнера
 func IsRunningInContainer() bool {
-	if _, err := os.Stat("/run/.containerenv"); err == nil {
-		return true
-	}
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-
-	if len(os.Getenv("container")) > 0 {
-		return true
-	}
-
-	return false
+	return app.IsRunningInContainer()
 }
 
 // FilterDescription генерирует общее описание фильтра для команд.

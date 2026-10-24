@@ -72,6 +72,7 @@ func ErrorFromResult(res C.AptResult) *AptError {
 type PackageInfo struct {
 	Name             string
 	Version          string
+	InstalledVersion string
 	Description      string
 	ShortDescription string
 	Section          string
@@ -113,6 +114,9 @@ type PackageChanges struct {
 	NewInstalledPackages []string `json:"newInstalledPackages"`
 	RemovedPackages      []string `json:"removedPackages"`
 	KeptBackPackages     []string `json:"keptBackPackages"`
+	SkippedPackages      []string `json:"skippedPackages"`
+	RequestedInstall     []string `json:"requestedInstall"`
+	RequestedRemove      []string `json:"requestedRemove"`
 
 	UpgradedCount     int `json:"upgradedCount"`
 	NewInstalledCount int `json:"newInstalledCount"`
@@ -124,4 +128,7 @@ type PackageChanges struct {
 	InstallSize  int64  `json:"installSize"`
 
 	EssentialPackages []EssentialPackage `json:"essentialPackages"`
+
+	// Inspected holds PackageInfo for TransactionSpec.Inspect names, Go side only
+	Inspected []*PackageInfo `json:"-"`
 }

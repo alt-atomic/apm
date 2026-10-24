@@ -29,8 +29,9 @@ import (
 
 // Cache represents package cache
 type Cache struct {
-	Ptr    *C.AptCache
-	system *System
+	Ptr     *C.AptCache
+	system  *System
+	cleanup runtime.Cleanup
 }
 
 // OpenCache opens the package cache
@@ -46,9 +47,9 @@ func OpenCache(system *System, readOnly bool) (*Cache, error) {
 
 func (c *Cache) Close() {
 	if c.Ptr != nil {
+		c.cleanup.Stop()
 		C.apt_cache_close(c.Ptr)
 		c.Ptr = nil
-		runtime.SetFinalizer(c, nil)
 	}
 }
 
@@ -89,6 +90,7 @@ func cStringToGo(cstr *C.char) string {
 func (p *PackageInfo) fromCStruct(c *C.AptPackageInfo) {
 	p.Name = cStringToGo(c.name)
 	p.Version = cStringToGo(c.version)
+	p.InstalledVersion = cStringToGo(c.installed_version)
 	p.Description = cStringToGo(c.description)
 	p.ShortDescription = cStringToGo(c.short_description)
 	p.Section = cStringToGo(c.section)

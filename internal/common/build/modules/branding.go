@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -93,66 +92,9 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 			}
 			vars := osrelease.NewFromName(usrLibOsRelease)
 
-			maps.Copy(vars, b.ReleaseOverrides)
-
-			curVer := vars["VERSION"]
-			prettyCurVer := vars["VERSION"]
-
-			if _, err := time.Parse("20060102", vars["VERSION"]); err == nil {
-				now := time.Now()
-				curVer = now.Format("20060102")
-				prettyCurVer = now.Format("02.01.2006")
-			}
-
-			bType := b.BuildType
-
-			if bType == "" {
-				bType = "stable"
-			}
-
-			prettyType := ""
-			prettyNameSuffix := ""
-			releaseType := ""
-			versionId := fmt.Sprintf("%s-%s", curVer, bType)
-
-			prettyType = osutils.Capitalize(bType)
-
-			switch bType {
-			case "stable":
-				releaseType = bType
-			case "nightly":
-				prettyNameSuffix = " " + prettyType
-				releaseType = "development"
-			default:
-				prettyNameSuffix = " " + prettyType
-			}
-
-			if value, ok := vars["PRETTY_NAME"]; ok {
-				if !strings.HasSuffix(value, prettyNameSuffix) {
-					vars["PRETTY_NAME"] = value + prettyNameSuffix
-				}
-			}
-			if value, ok := vars["ID"]; ok {
-				// Package was not installed, but installed now
-				if value == "altlinux" {
-					vars["ID_LIKE"] = value
-				}
-				if !strings.HasSuffix(value, fmt.Sprintf("-%s", bType)) {
-					vars["ID"] = fmt.Sprintf("%s-%s", value, bType)
-				}
-			} else {
-				vars["ID"] = "linux"
-			}
-			vars["RELEASE_TYPE"] = releaseType
-			vars["VERSION"] = fmt.Sprintf("%s %s", prettyCurVer, prettyType)
-			vars["VERSION_ID"] = versionId
-			vars["CPE_NAME"] = fmt.Sprintf("cpe:/o:%s:%s", strings.ReplaceAll(vars["ID"], "-", ":"), curVer)
-			vars["IMAGE_ID"] = vars["ID"]
-			vars["IMAGE_VERSION"] = vars["VERSION_ID"]
-			if variant, ok := vars["VARIANT"]; ok {
-				vars["BUILD_ID"] = fmt.Sprintf("%s %s", variant, vars["VERSION_ID"])
-			} else {
-				vars["BUILD_ID"] = fmt.Sprintf("%s %s", vars["NAME"], vars["VERSION_ID"])
+			applyReleaseOverrides(vars, b.ReleaseOverrides)
+			if err := normalizeAtomicOsRelease(vars, b.BuildType); err != nil {
+				return nil, err
 			}
 
 			return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
@@ -165,12 +107,142 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 		}
 		vars := osrelease.NewFromName(usrLibOsRelease)
 
-		maps.Copy(vars, b.ReleaseOverrides)
+		applyReleaseOverrides(vars, b.ReleaseOverrides)
+		if err := normalizeAtomicOsRelease(vars, b.BuildType); err != nil {
+			return nil, err
+		}
 
 		return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
 	}
 
 	return nil, nil
+}
+
+func applyReleaseOverrides(vars, overrides map[string]string) {
+	for name, value := range overrides {
+		if value == "" {
+			delete(vars, name)
+			continue
+		}
+		vars[name] = value
+	}
+}
+
+func normalizeAtomicOsRelease(vars map[string]string, buildType string) error {
+	name := strings.TrimSpace(vars["NAME"])
+	if name == "" {
+		name = "No Name"
+	}
+
+	baseID := strings.TrimSpace(vars["ID"])
+	if baseID == "" {
+		baseID = "org.example.NoName"
+	}
+
+	versionID := strings.TrimSpace(vars["VERSION_ID"])
+	if versionID == "" {
+		versionID = "0.1"
+	}
+
+	buildType = strings.ToLower(strings.TrimSpace(buildType))
+	if buildType == "" {
+		buildType = "stable"
+	}
+
+	releaseType := "development"
+	buildName := osutils.Capitalize(buildType)
+	switch buildType {
+	case "stable":
+		releaseType = "stable"
+		buildName = ""
+	}
+
+	baseID = strings.TrimSuffix(baseID, "-"+buildType)
+
+	variant := strings.TrimSpace(vars["VARIANT"])
+	variantID := strings.TrimSpace(vars["VARIANT_ID"])
+
+	if variantID == "" {
+		delete(vars, "VARIANT")
+		delete(vars, "VARIANT_ID")
+	} else {
+		vars["VARIANT"] = variant
+		vars["VARIANT_ID"] = variantID
+	}
+
+	prettyVersion := versionID
+	if parsed, err := time.Parse("20060102", versionID); err == nil {
+		prettyVersion = parsed.Format("02.01.2006")
+	}
+
+	if variantID != "" {
+		versionID += "-" + variantID
+		prettyVersion += " (" + variant + ")"
+	}
+
+	prettyName := name
+	if buildName != "" {
+		prettyName += " " + buildName
+	}
+	if variant != "" {
+		prettyName += " (" + variant + ")"
+	}
+
+	id := baseID
+	if buildType != "stable" {
+		id += "-" + buildType
+	}
+
+	baseImageID := strings.TrimSpace(vars["IMAGE_ID"])
+	if baseImageID == "" {
+		baseImageID = baseID
+	}
+	imageParts := []string{baseImageID}
+	if buildType != "stable" {
+		imageParts = append(imageParts, buildType)
+	}
+
+	cpeName := strings.TrimSpace(vars["CPE_NAME"])
+	if cpeName != "" {
+		var err error
+		cpeName, err = normalizeCPEName(cpeName, versionID, buildType, variantID)
+		if err != nil {
+			return err
+		}
+	}
+
+	vars["ID"] = id
+	vars["VERSION"] = prettyVersion
+	vars["VERSION_ID"] = versionID
+	vars["RELEASE_TYPE"] = releaseType
+	vars["PRETTY_NAME"] = prettyName
+	if cpeName != "" {
+		vars["CPE_NAME"] = cpeName
+	}
+	vars["IMAGE_ID"] = strings.Join(imageParts, "-")
+	vars["IMAGE_VERSION"] = versionID
+	delete(vars, "BUILD_ID")
+
+	return nil
+}
+
+func normalizeCPEName(cpeName, version, buildType, variantID string) (string, error) {
+	const prefix = "cpe:/"
+	if !strings.HasPrefix(cpeName, prefix) {
+		return "", fmt.Errorf("unsupported CPE_NAME %q", cpeName)
+	}
+
+	parts := strings.SplitN(strings.TrimPrefix(cpeName, prefix), ":", 4)
+	if len(parts) < 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+		return "", fmt.Errorf("unsupported CPE_NAME %q", cpeName)
+	}
+
+	parts = append(parts[:3], version, buildType)
+	if variantID != "" {
+		parts = append(parts, variantID)
+	}
+
+	return prefix + strings.Join(parts, ":"), nil
 }
 
 func saveOsRelease(ctx context.Context, svc DomainContext, vars map[string]string, perm fs.FileMode) error {
