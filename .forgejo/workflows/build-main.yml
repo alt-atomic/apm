@@ -52,21 +52,26 @@ jobs:
           echo "release=$(date +%s)" >> $FORGEJO_OUTPUT
 
   rpm-build:
-    name: RPM build for ${{ matrix.branch }} for and uploading
+    if: github.event_name != 'pull_request'
+    name: RPM build for ${{ matrix.branch }} on ${{ matrix.arch }} and uploading
     runs-on: als-huge
-
-    needs:
-      - build
-      - get-release
-
     container:
       image: altlinux.space/alt-gnome/hasherc:latest
+      options: --platform linux/${{ matrix.arch }}
 
     strategy:
+      fail-fast: false
       matrix:
         branch:
           - sisyphus
           - p11
+        arch:
+          - amd64
+          - arm64
+
+    needs:
+      - build
+      - get-release
 
     steps:
       - name: Install utils
@@ -83,13 +88,13 @@ jobs:
           git add .
 
       - uses: actions/build-rpm-action@main
-        name: Build RPMs
+        name: Build RPM
         with:
           branch: ${{ matrix.branch }}
+          arch: ${{ matrix.arch }}
 
       - uses: actions/upload-rpm-action@main
-        name: Upload RPMs
-        if: github.event_name != 'pull_request'
+        name: Upload RPM
         with:
           directory: ~/.cache/hasherc/apm/out/RPMS
           token: ${{ secrets.REGISTRY_TOKEN }}
