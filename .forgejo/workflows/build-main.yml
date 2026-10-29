@@ -56,7 +56,7 @@ jobs:
     name: RPM build for ${{ matrix.branch }} on ${{ matrix.arch }} and uploading
     runs-on: als-huge
     container:
-      image: altlinux.space/alt-hub/sisyphus/flatpak-builder:latest
+      image: altlinux.space/alt-hub/${{ matrix.branch }}/flatpak-builder:latest
       options: --platform linux/${{ matrix.arch }}
 
     strategy:
@@ -64,7 +64,7 @@ jobs:
       matrix:
         branch:
           - sisyphus
-          - p11
+          # - p11
         arch:
           - amd64
           - arm64
@@ -89,24 +89,7 @@ jobs:
 
       - name: Build RPM
         run: |
-          if [ '${{ matrix.branch }}' = p11 ]; then
-            case '${{ matrix.arch }}' in
-              amd64) rpm_arch=x86_64 ;;
-              arm64) rpm_arch=aarch64 ;;
-              *) exit 1 ;;
-            esac
-
-            apt_config_dir=$(mktemp -d)
-            printf 'rpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/%s classic\nrpm [p11] http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/noarch classic\n' \
-              "$rpm_arch" > "$apt_config_dir/sources.list"
-            printf 'Dir::Etc::SourceList "%s/sources.list";\nDir::Etc::SourceParts "/var/empty";\n' \
-              "$apt_config_dir" > "$apt_config_dir/apt.conf"
-
-            gear-hsh --commit --no-sisyphus-check=gpg,packager \
-              --apt-config="$apt_config_dir/apt.conf"
-          else
-            gear-hsh --commit --no-sisyphus-check=gpg,packager
-          fi
+          gear-hsh --commit --no-sisyphus-check=gpg,packager
 
       - uses: actions/upload-rpm-action@7ed97151a2a1f53a5b97f8a9f20778f771bbae59
         name: Upload RPM
