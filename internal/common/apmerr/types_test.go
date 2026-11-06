@@ -3,7 +3,6 @@ package apmerr
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"testing"
 )
 
@@ -32,9 +31,6 @@ func TestNew_AptNoOperation_ConvertsToNoOperation(t *testing.T) {
 
 	if err.Type != ErrorTypeNoOperation {
 		t.Errorf("APT no-op should be reclassified to NO_OPERATION, got %s", err.Type)
-	}
-	if got := err.HTTPStatus(); got != http.StatusConflict {
-		t.Errorf("HTTPStatus() = %d, want %d", got, http.StatusConflict)
 	}
 	if got := err.DBusErrorName(); got != "org.altlinux.APM.Error.NoOperation" {
 		t.Errorf("DBusErrorName() = %s", got)
@@ -89,33 +85,6 @@ func TestDBusErrorName(t *testing.T) {
 		got := err.DBusErrorName()
 		if got != c.expected {
 			t.Errorf("DBusErrorName(%s) = %s, want %s", c.errorType, got, c.expected)
-		}
-	}
-}
-
-func TestHTTPStatus(t *testing.T) {
-	cases := []struct {
-		errorType  string
-		httpStatus int
-	}{
-		{ErrorTypeValidation, http.StatusBadRequest},
-		{ErrorTypePermission, http.StatusForbidden},
-		{ErrorTypeNotFound, http.StatusNotFound},
-		{ErrorTypeCanceled, http.StatusConflict},
-		{ErrorTypeNoOperation, http.StatusConflict},
-		{ErrorTypeDatabase, http.StatusInternalServerError},
-		{ErrorTypeApt, http.StatusInternalServerError},
-		{ErrorTypeRepository, http.StatusInternalServerError},
-		{ErrorTypeImage, http.StatusInternalServerError},
-		{ErrorTypeKernel, http.StatusInternalServerError},
-		{ErrorTypeContainer, http.StatusInternalServerError},
-	}
-
-	for _, c := range cases {
-		err := New(c.errorType, fmt.Errorf("test"))
-		got := err.HTTPStatus()
-		if got != c.httpStatus {
-			t.Errorf("HTTPStatus(%s) = %d, want %d", c.errorType, got, c.httpStatus)
 		}
 	}
 }

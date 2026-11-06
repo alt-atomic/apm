@@ -52,26 +52,3 @@ func NewDBusCommand(name, usage string, action cli.ActionFunc) *cli.Command {
 		Action:   action,
 	}
 }
-
-// NewHTTPCommand строит CLI команду для запуска HTTP сервиса.
-func NewHTTPCommand(name, usage, defaultListen string, action cli.ActionFunc) *cli.Command {
-	return &cli.Command{
-		Name:     name,
-		Usage:    usage,
-		Category: app.T_("Services"),
-		Action:   action,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "listen",
-				Aliases: []string{"l"},
-				Usage:   app.T_("Listen address (host:port)"),
-				Value:   defaultListen,
-			},
-			&cli.StringFlag{
-				Name:    "api-token",
-				Usage:   app.T_("API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"),
-				Sources: cli.EnvVars("APM_API_TOKEN"),
-			},
-		},
-	}
-}

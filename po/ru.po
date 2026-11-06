@@ -35,18 +35,6 @@ msgstr "Запустить сессионный сервис D-Bus org.altlinux.
 msgid "Start system D-Bus service org.altlinux.APM"
 msgstr "Запустить системный сервис D-Bus org.altlinux.APM"
 
-#: cmd/apm/main.go:125
-msgid "Start system HTTP API server"
-msgstr "Запустить системный HTTP API сервер"
-
-#: cmd/apm/main.go:126
-msgid "Start session HTTP API"
-msgstr "Запустить сессионный HTTP API сервер"
-
-#: cmd/apm/main.go:215
-msgid "Distrobox is not installed"
-msgstr "Distrobox не установлен"
-
 #: cmd/apm/main.go:264
 msgid "failed to close DBus: %w"
 msgstr "Не удалось закрыть DBus: %w"
@@ -880,19 +868,9 @@ msgstr "[команда]"
 msgid "Print version"
 msgstr "Показать версию"
 
-#: internal/common/cli/command.go:51 internal/common/cli/command.go:61
+#: internal/common/cli/command.go:51
 msgid "Services"
 msgstr "Службы"
-
-#: internal/common/cli/command.go:67
-msgid "Listen address (host:port)"
-msgstr "Адрес прослушивания (хост:порт)"
-
-#: internal/common/cli/command.go:72
-msgid "API token in format <read|manage>:<token> (prefer APM_API_TOKEN env)"
-msgstr ""
-"API-токен в формате <read|manage>:<токен> (предпочтительно через "
-"APM_API_TOKEN)"
 
 #: internal/common/cli/flags.go:30
 msgid "Output format: json, text"
@@ -931,10 +909,8 @@ msgid "Supports repository management"
 msgstr "Поддерживает управление репозиториями"
 
 #: internal/common/cli/meta.go:59
-msgid "Works as CLI tool, D-Bus service (system/session) or HTTP API server"
-msgstr ""
-"Работает как CLI утилита, D-Bus сервис (системный/сессионный) или HTTP API "
-"сервер"
+msgid "Works as CLI tool or D-Bus service (system/session)"
+msgstr "Работает как CLI утилита или D-Bus сервис (системный/сессионный)"
 
 #: internal/common/cli/meta.go:60
 msgid ""
@@ -1195,7 +1171,6 @@ msgstr "версия не найдена"
 msgid "%.2f MB"
 msgstr "%.2f МБ"
 
-#: internal/common/http_server/handler.go:98
 #: internal/domain/distrobox/dbus_v1.go:99
 #: internal/domain/distrobox/dbus_v1.go:244
 #: internal/domain/kernel/dbus_v1.go:111 internal/domain/kernel/dbus_v1.go:151
@@ -1211,45 +1186,6 @@ msgstr "%.2f МБ"
 #: internal/domain/system/dbus_v1.go:670
 msgid "Task started in background"
 msgstr "Задача запущена в фоне"
-
-#: internal/common/http_server/server.go:93
-#, c-format
-msgid ""
-"Invalid token format: expected '<permission>:<token>', got '%s'\n"
-"  permission must be '%s' (read-only) or '%s' (full access)\n"
-"  example: --api-token %s:my-secret-token"
-msgstr ""
-"Неверный формат токена: ожидается '<разрешение>:<токен>', получено '%s'\n"
-"  разрешение должно быть '%s' (только чтение) или '%s' (полный доступ)\n"
-"  пример: --api-token %s:my-secret-token"
-
-#: internal/common/http_server/server.go:98
-#, c-format
-msgid ""
-"Unknown permission '%s': must be '%s' (read-only) or '%s' (full access)\n"
-"  example: --api-token %s:%s"
-msgstr ""
-"Неизвестное разрешение '%s': должно быть '%s' (только чтение) или '%s' "
-"(полный доступ)\n"
-"  пример: --api-token %s:%s"
-
-#: internal/common/http_server/server.go:102
-#, c-format
-msgid "Token is too short: minimum %d characters required"
-msgstr "Токен слишком короткий: минимум %d символов"
-
-#: internal/common/http_server/server.go:138
-msgid "Authorization header or token query parameter is required"
-msgstr "Требуется заголовок Authorization или параметр запроса token"
-
-#: internal/common/http_server/server.go:143
-msgid "Invalid API token"
-msgstr "Неверный API-токен"
-
-#: internal/common/http_server/server.go:148
-#, c-format
-msgid "Insufficient permissions. Required: %s, provided: %s"
-msgstr "Недостаточно прав. Требуется: %s, предоставлено: %s"
 
 #: internal/common/icon/database.go:67 internal/common/sandbox/database.go:72
 msgid "failed to get user DB: %w"
@@ -2473,14 +2409,6 @@ msgstr "Не удалось выполнить apt search: %v, ошибка: %s"
 #: internal/common/sandbox/ubuntu.go:62
 msgid "Failed to retrieve installed packages: "
 msgstr "Не удалось извлечь установленные пакеты: "
-
-#: internal/common/service/http.go:70
-msgid ""
-"API token is required for the system HTTP server: set --api-token '<read|"
-"manage>:<token>' or the APM_API_TOKEN environment variable"
-msgstr ""
-"Для системного HTTP-сервера требуется API-токен: задайте --api-token '<read|"
-"manage>:<токен>' или переменную окружения APM_API_TOKEN"
 
 #: internal/common/swcat/database.go:301
 msgid "Component type"

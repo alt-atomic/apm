@@ -1,7 +1,6 @@
 APM supports four operating modes:
 * D-Bus service
 * Console application with TUI
-* HTTP API
 * Support for atomic images (functionality and behavior model are determined automatically)
 
 Two response formats:
@@ -52,8 +51,6 @@ Module:
 Commands:
    dbus-session  Start session D-Bus service org.altlinux.APM
    dbus-system   Start system D-Bus service org.altlinux.APM
-   http-server   Start system HTTP API server
-   http-session  Start session HTTP API server
    system, s     System package management
    repo, r       Repository management
    distrobox, d  Managing packages and containers in distrobox
@@ -131,10 +128,6 @@ In this mode, APM works with system packages. To view all methods, install D-SPY
 sudo apm dbus-system - run
 sudo apm system dbus-doc - online documentation
 ```
-
-## HTTP API
-
-APM provides HTTP servers with REST API, WebSocket events, and Swagger UI. Full documentation: [HTTP_API](docs/HTTP_API.md)
 
 ## Working with system packages
 ```

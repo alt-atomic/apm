@@ -25,7 +25,6 @@ require (
 require (
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/expr-lang/expr v1.17.8
-	github.com/gorilla/websocket v1.5.3
 	github.com/thediveo/osrelease v1.0.4
 	golang.org/x/sys v0.46.0
 	golang.org/x/term v0.44.0

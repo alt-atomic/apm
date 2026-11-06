@@ -22,8 +22,6 @@ internal/common/dbusv1/sink.go
 internal/common/filter/filter.go
 internal/common/helper/cmd.go
 internal/common/helper/text.go
-internal/common/http_server/handler.go
-internal/common/http_server/server.go
 internal/common/icon/database.go
 internal/common/icon/service.go
 internal/common/icon/swcat.go
@@ -41,7 +39,6 @@ internal/common/sandbox/database.go
 internal/common/sandbox/distrobox.go
 internal/common/sandbox/provider.go
 internal/common/sandbox/ubuntu.go
-internal/common/service/http.go
 internal/common/swcat/database.go
 internal/common/swcat/swcat.go
 internal/domain/distrobox/actions.go

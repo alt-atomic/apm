@@ -2,7 +2,6 @@ package apmerr
 
 import (
 	"errors"
-	"net/http"
 	"strings"
 )
 
@@ -66,20 +65,4 @@ func (e APMError) DBusErrorName() string {
 		}
 	}
 	return dbusErrorPrefix + strings.Join(parts, "")
-}
-
-// HTTPStatus возвращает HTTP статус-код для данного типа ошибки.
-func (e APMError) HTTPStatus() int {
-	switch e.Type {
-	case ErrorTypeValidation:
-		return http.StatusBadRequest
-	case ErrorTypePermission:
-		return http.StatusForbidden
-	case ErrorTypeNotFound:
-		return http.StatusNotFound
-	case ErrorTypeCanceled, ErrorTypeNoOperation:
-		return http.StatusConflict
-	default:
-		return http.StatusInternalServerError
-	}
 }

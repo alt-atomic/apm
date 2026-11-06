@@ -23,18 +23,6 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 )
 
-// WebSocketBroadcaster интерфейс для отправки событий через WebSocket
-type WebSocketBroadcaster interface {
-	BroadcastEvent(event interface{})
-}
-
-var wsHub WebSocketBroadcaster
-
-// SetWebSocketHub устанавливает WebSocket hub для отправки событий
-func SetWebSocketHub(hub WebSocketBroadcaster) {
-	wsHub = hub
-}
-
 // EventData содержит данные события.
 type EventData struct {
 	Name            string  `json:"name"`
@@ -182,24 +170,6 @@ func WithProgressDoneText(text string) NotificationOption {
 	return func(ed *EventData) {
 		ed.ProgressDone = text
 	}
-}
-
-// sendWebSocketNotification отправляет событие через WebSocket.
-func sendWebSocketNotification(eventData *EventData) {
-	if wsHub == nil {
-		app.Log.Debug("WebSocket hub is not initialized")
-		return
-	}
-	wsHub.BroadcastEvent(eventData)
-}
-
-// sendTaskResultWebSocket отправляет результат задачи через WebSocket.
-func sendTaskResultWebSocket(event *TaskResultEvent) {
-	if wsHub == nil {
-		app.Log.Debug("WebSocket hub is not initialized")
-		return
-	}
-	wsHub.BroadcastEvent(event)
 }
 
 var (

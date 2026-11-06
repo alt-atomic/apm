@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -43,11 +42,6 @@ import (
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 
 	"github.com/urfave/cli/v3"
-)
-
-const (
-	defaultSystemHTTPListen  = "127.0.0.1:8080"
-	defaultSessionHTTPListen = "127.0.0.1:8082"
 )
 
 type appRuntime struct {
@@ -122,8 +116,6 @@ func (rt *appRuntime) buildCommands() []*cli.Command {
 	commands := []*cli.Command{
 		apmcli.NewDBusCommand("dbus-session", app.T_("Start session D-Bus service org.altlinux.APM"), rt.sessionDbus),
 		apmcli.NewDBusCommand("dbus-system", app.T_("Start system D-Bus service org.altlinux.APM"), rt.systemDbus),
-		apmcli.NewHTTPCommand("http-server", app.T_("Start system HTTP API server"), defaultSystemHTTPListen, rt.httpServer),
-		apmcli.NewHTTPCommand("http-session", app.T_("Start session HTTP API"), defaultSessionHTTPListen, rt.httpSession),
 		system.CommandList(rt.config, rt.reporter),
 		repository.CommandList(rt.config, rt.reporter),
 	}
@@ -190,35 +182,6 @@ func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
 				Reporter: rt.reporter,
 				Modules:  legacyModules,
 			},
-		},
-	}))
-}
-
-func (rt *appRuntime) httpServer(ctx context.Context, cmd *cli.Command) error {
-	cfg := rt.config.ConfigManager.GetConfig()
-	return rt.reportError(service.RunHTTP(ctx, cmd, rt.config, service.HTTPRunConfig{
-		Mode: apmcli.RequireRoot,
-		APIInfo: service.APIInfo{
-			IsAtomic:     cfg.IsAtomic,
-			HasDistrobox: cfg.ExistDistrobox,
-			HasKernel:    !cfg.IsAtomic,
-		},
-		Modules: []service.HTTPModule{
-			system.HTTPFactory(rt.config, rt.reporter, cfg.IsAtomic),
-			repository.HTTPFactory(rt.config, rt.reporter),
-		},
-	}))
-}
-
-func (rt *appRuntime) httpSession(ctx context.Context, cmd *cli.Command) error {
-	if !rt.config.ConfigManager.GetConfig().ExistDistrobox {
-		return rt.reportError(errors.New(app.T_("Distrobox is not installed")))
-	}
-	return rt.reportError(service.RunHTTP(ctx, cmd, rt.config, service.HTTPRunConfig{
-		Mode:    apmcli.ForbidRoot,
-		APIInfo: service.APIInfo{HasDistrobox: true},
-		Modules: []service.HTTPModule{
-			distrobox.HTTPFactory(rt.config, rt.reporter),
 		},
 	}))
 }

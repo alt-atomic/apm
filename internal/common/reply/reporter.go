@@ -18,10 +18,8 @@ package reply
 
 import (
 	"context"
-	"errors"
 	"sync"
 
-	"altlinux.space/alt-atomic/apm/internal/common/apmerr"
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/helper"
 )
@@ -42,7 +40,7 @@ func NewReporter(appConfig *app.Config) *Reporter {
 	}
 }
 
-// CliResponse рендерит APIResponse в выбранном формате (text/json/dbus/http).
+// CliResponse рендерит APIResponse в выбранном формате вывода.
 func (r *Reporter) CliResponse(ctx context.Context, resp APIResponse) error {
 	return r.renderer.CliResponse(ctx, resp)
 }
@@ -67,7 +65,7 @@ func (r *Reporter) CreateEventNotification(ctx context.Context, state string, op
 	r.dispatchEvent(ctx, &ed)
 }
 
-// dispatchEvent отправляет уведомление выбранным транспортом (DBus, WebSocket, лог).
+// dispatchEvent отображает уведомление и передаёт его зарегистрированным приёмникам.
 func (r *Reporter) dispatchEvent(ctx context.Context, eventData *EventData) {
 	if txStr, ok := ctx.Value(helper.TransactionKey).(string); ok {
 		eventData.Transaction = txStr
@@ -81,36 +79,10 @@ func (r *Reporter) dispatchEvent(ctx context.Context, eventData *EventData) {
 		updateTask(r.appConfig, eventData.Type, eventData.Name, eventData.View, eventData.State, eventData.ProgressPercent, eventData.ProgressDone)
 	}
 
-	if config.Format == app.FormatHTTP {
-		sendWebSocketNotification(eventData)
-	}
-
 	r.notifySinks(ctx, eventData)
 }
 
-// SendTaskResult отправляет результат фоновой задачи через DBus или WebSocket.
-func (r *Reporter) SendTaskResult(ctx context.Context, taskName string, data interface{}, taskErr error) {
-	txStr, _ := ctx.Value(helper.TransactionKey).(string)
-
-	event := TaskResultEvent{
-		Type:        EventTypeTaskResult,
-		Name:        taskName,
-		Transaction: txStr,
-		Data:        data,
-	}
-
-	if taskErr != nil {
-		if apmErr, ok := errors.AsType[apmerr.APMError](taskErr); ok {
-			event.Error = &APIError{ErrorCode: apmErr.Type, Message: taskErr.Error()}
-		} else {
-			event.Error = &APIError{Message: taskErr.Error()}
-		}
-		event.Data = nil
-	}
-
-	if r.appConfig.ConfigManager.GetConfig().Format == app.FormatHTTP {
-		sendTaskResultWebSocket(&event)
-	}
-
+// SendTaskResult передаёт результат фоновой задачи зарегистрированным приёмникам.
+func (r *Reporter) SendTaskResult(ctx context.Context, taskName string, data any, taskErr error) {
 	r.taskResultSinks(ctx, taskName, data, taskErr)
 }
