@@ -17,6 +17,7 @@
 package system
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -519,43 +520,23 @@ func (w *HTTPWrapper) ImageGetConfig(rw http.ResponseWriter, r *http.Request) {
 
 // ImageSaveConfig сохраняет конфигурацию образа.
 func (w *HTTPWrapper) ImageSaveConfig(rw http.ResponseWriter, r *http.Request) {
-	var config imagesvc.Config
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		if errors.Is(err, io.EOF) {
-			reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
-			return
-		}
+	document, err := io.ReadAll(r.Body)
+	if err != nil {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("read request body: %w", err)))
+		return
+	}
+	if len(bytes.TrimSpace(document)) == 0 {
+		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, errors.New("request body is required")))
+		return
+	}
+	config, err := imagesvc.ParseJsonConfigData(document)
+	if err != nil {
 		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("invalid JSON: %w", err)))
 		return
 	}
 
 	ctx := w.CtxWithTransaction(r)
 	resp, err := w.actions.ImageSaveConfig(ctx, config)
-	if err != nil {
-		reply.WriteHTTPError(rw, err)
-		return
-	}
-	w.WriteJSON(rw, reply.OK(resp))
-}
-
-// SetAptConfig устанавливает переопределения конфигурации APT.
-func (w *HTTPWrapper) SetAptConfig(rw http.ResponseWriter, r *http.Request) {
-	var body AptConfigResponse
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		reply.WriteHTTPError(rw, apmerr.New(apmerr.ErrorTypeValidation, fmt.Errorf("invalid JSON: %w", err)))
-		return
-	}
-	resp, err := w.actions.SetAptConfigOverrides(body.Options)
-	if err != nil {
-		reply.WriteHTTPError(rw, err)
-		return
-	}
-	w.WriteJSON(rw, reply.OK(resp))
-}
-
-// GetAptConfig возвращает текущие переопределения конфигурации APT.
-func (w *HTTPWrapper) GetAptConfig(rw http.ResponseWriter, r *http.Request) {
-	resp, err := w.actions.GetAptConfigOverrides()
 	if err != nil {
 		reply.WriteHTTPError(rw, err)
 		return
@@ -840,27 +821,6 @@ func (w *HTTPWrapper) GetEndpoints(isAtomic bool) []http_server.Endpoint {
 				{Name: "installed", Type: "boolean", Required: false, Description: "Искать только установленные"},
 				{Name: "full", Type: "boolean", Required: false, Description: "Полный формат вывода"},
 			},
-		},
-
-		// APT Config
-		{
-			Handler:      w.SetAptConfig,
-			HTTPMethod:   "PUT",
-			HTTPPath:     "/api/v1/system/apt-config",
-			RequestType:  reflect.TypeOf(AptConfigResponse{}),
-			ResponseType: reflect.TypeOf(AptConfigResponse{}),
-			Permission:   http_server.PermManage,
-			Summary:      "Установить переопределения конфигурации APT",
-			Tags:         []string{"system"},
-		},
-		{
-			Handler:      w.GetAptConfig,
-			HTTPMethod:   "GET",
-			HTTPPath:     "/api/v1/system/apt-config",
-			ResponseType: reflect.TypeOf(AptConfigResponse{}),
-			Permission:   http_server.PermRead,
-			Summary:      "Получить текущие переопределения конфигурации APT",
-			Tags:         []string{"system"},
 		},
 
 		// System

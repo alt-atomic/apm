@@ -26,6 +26,9 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	aptWrapper "altlinux.space/alt-atomic/apm/internal/common/apt"
 	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv1"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/service"
 	"altlinux.space/alt-atomic/apm/internal/domain/distrobox"
@@ -134,28 +137,60 @@ func (rt *appRuntime) buildCommands() []*cli.Command {
 }
 
 func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	distroboxBus := distrobox.NewDBusServices(rt.config, rt.reporter)
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
 		Bus:  service.BusSession,
 		Mode: apmcli.ForbidRoot,
-		Modules: []service.DBusModule{
-			distrobox.DBusFactory(rt.config, rt.reporter),
+		APIs: []service.DBusAPI{
+			&dbusv2.Setup{
+				Reporter: rt.reporter,
+				Modules:  distroboxBus.V2Modules(),
+			},
+			dbusv1.Setup{
+				Reporter: rt.reporter,
+				Modules:  []dbusv1.Module{distroboxBus.V1Module()},
+			},
 		},
 	}))
 }
 
 func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
 	cfg := rt.config.ConfigManager.GetConfig()
-	modules := []service.DBusModule{
-		system.DBusFactory(rt.config, rt.reporter),
-		repository.DBusFactory(rt.config, rt.reporter),
+	systemBus := system.NewDBusServices(rt.config, rt.reporter)
+	repoBus := repository.NewDBusServices(rt.config, rt.reporter)
+
+	modules := systemBus.V2Modules()
+	modules = append(modules, repoBus.V2Module())
+	legacyModules := []dbusv1.Module{
+		systemBus.V1Module(),
+		repoBus.V1Module(),
 	}
 	if !cfg.IsAtomic {
-		modules = append(modules, kernel.DBusFactory(rt.config, rt.reporter))
+		kernelBus := kernel.NewDBusServices(rt.config, rt.reporter)
+		modules = append(modules, kernelBus.V2Module())
+		legacyModules = append(legacyModules, kernelBus.V1Module())
 	}
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
-		Bus:     service.BusSystem,
-		Mode:    apmcli.RequireRoot,
-		Modules: modules,
+		Bus:  service.BusSystem,
+		Mode: apmcli.RequireRoot,
+		APIs: []service.DBusAPI{
+			&dbusv2.Setup{
+				Reporter:  rt.reporter,
+				UsePolkit: true,
+				Props: map[string]map[string]any{
+					protocol.PackagesIface: {
+						"Version":         rt.config.ConfigManager.GetParsedVersion().Value,
+						"IsAtomic":        cfg.IsAtomic,
+						"KernelSupported": !cfg.IsAtomic,
+					},
+				},
+				Modules: modules,
+			},
+			dbusv1.Setup{
+				Reporter: rt.reporter,
+				Modules:  legacyModules,
+			},
+		},
 	}))
 }
 

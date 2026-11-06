@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package dbus_doc
+package dbusv1
 
 import (
 	"strings"
@@ -22,9 +22,9 @@ import (
 	"github.com/godbus/dbus/v5/introspect"
 )
 
-// GenerateIntrospectXML генерирует XML интроспекции из переданных интерфейсов
+// generateIntrospectXML генерирует XML интроспекции из переданных интерфейсов
 // interfaces - map[interfaceName]wrapperStruct
-func GenerateIntrospectXML(interfaces map[string]any) string {
+func generateIntrospectXML(interfaces map[string]any) string {
 	var sb strings.Builder
 
 	sb.WriteString(`<node>
