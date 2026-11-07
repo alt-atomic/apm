@@ -1,6 +1,11 @@
 package modules
 
 import (
+	"context"
+	"os"
+	"path/filepath"
+
+	"github.com/thediveo/osrelease"
 	"maps"
 	"strings"
 	"testing"
@@ -220,5 +225,127 @@ func TestNormalizeAtomicOsReleasePreservesBrandNamespace(t *testing.T) {
 	}
 	if got, want := vars["IMAGE_ID"], "example-workstation-enterprise-edge"; got != want {
 		t.Errorf("IMAGE_ID = %q, want %q", got, want)
+	}
+}
+
+type brandingTestDomain struct {
+	fakeDomain
+	atomic bool
+}
+
+func (d *brandingTestDomain) IsAtomic() bool { return d.atomic }
+
+func TestBrandingReleaseOverrides(t *testing.T) {
+	for _, tc := range []struct {
+		name                                string
+		atomic, symlink, noEtc, noOverrides bool
+		subpackages                         []string
+	}{
+		{name: "classic separate etc"},
+		{name: "classic symlink", symlink: true},
+		{name: "classic usr fallback", noEtc: true},
+		{name: "classic release package", subpackages: []string{"release"}},
+		{name: "classic other package", subpackages: []string{"graphics"}},
+		{name: "classic release without overrides", subpackages: []string{"release"}, noOverrides: true},
+		{name: "atomic release without overrides", atomic: true, subpackages: []string{"release"}, noOverrides: true},
+		{name: "atomic", atomic: true},
+		{name: "atomic other package", atomic: true, subpackages: []string{"graphics"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			oldUsr, oldEtc := usrLibOsRelease, etcOsRelease
+			usrLibOsRelease = filepath.Join(root, "usr-os-release")
+			etcOsRelease = filepath.Join(root, "etc-os-release")
+			t.Cleanup(func() { usrLibOsRelease, etcOsRelease = oldUsr, oldEtc })
+			const original = "NAME=Original\nID=original\nVERSION_ID=1.0\nBUILD_ID=keep-me\nREMOVE_ME=old\n"
+			if err := os.WriteFile(usrLibOsRelease, []byte(original), 0640); err != nil {
+				t.Fatal(err)
+			}
+			if tc.symlink {
+				if err := os.Symlink(usrLibOsRelease, etcOsRelease); err != nil {
+					t.Fatal(err)
+				}
+			} else if !tc.noEtc {
+				if err := os.WriteFile(etcOsRelease, []byte(original), 0640); err != nil {
+					t.Fatal(err)
+				}
+			}
+			b := &BrandingBody{ReleaseOverrides: map[string]string{"NAME": "Custom OS", "ID": "custom", "NEW_FIELD": "a b", "REMOVE_ME": ""}}
+			if tc.noOverrides {
+				b.ReleaseOverrides = nil
+			}
+			if len(tc.subpackages) > 0 {
+				b.Name = "test"
+				b.Subpackages = tc.subpackages
+			}
+			svc := &brandingTestDomain{atomic: tc.atomic}
+			if _, err := b.applyBranding(context.Background(), svc); err != nil {
+				t.Fatal(err)
+			}
+			target := etcOsRelease
+			if tc.noEtc {
+				target = usrLibOsRelease
+			}
+			vars, err := osrelease.NewFromNameErr(target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantVars := map[string]string{"NAME": "Custom OS", "ID": "custom", "NEW_FIELD": "a b"}
+			if tc.noOverrides {
+				wantVars = map[string]string{"NAME": "Original", "ID": "original"}
+			}
+			for key, want := range wantVars {
+				if vars[key] != want {
+					t.Errorf("%s=%q, want %q", key, vars[key], want)
+				}
+			}
+			if _, exists := vars["REMOVE_ME"]; exists != tc.noOverrides {
+				t.Error("unexpected state of deleted field")
+			}
+			info, err := os.Stat(target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Mode().Perm() != 0640 {
+				t.Errorf("mode changed: %v", info.Mode())
+			}
+			if !tc.atomic {
+				if vars["BUILD_ID"] != "keep-me" {
+					t.Error("classic BUILD_ID was not preserved")
+				}
+				if _, ok := vars["IMAGE_VERSION"]; ok {
+					t.Error("atomic normalization applied to classic system")
+				}
+				if !tc.symlink && !tc.noEtc {
+					data, err := os.ReadFile(usrLibOsRelease)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(data) != original {
+						t.Error("vendor os-release changed instead of etc/os-release")
+					}
+				}
+			} else {
+				if vars["IMAGE_VERSION"] != "1.0" {
+					t.Error("atomic normalization was not applied")
+				}
+				info, err := os.Lstat(etcOsRelease)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if info.Mode()&os.ModeSymlink == 0 {
+					t.Error("atomic etc/os-release is not a symlink")
+				}
+			}
+			if tc.symlink {
+				info, err := os.Lstat(etcOsRelease)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if info.Mode()&os.ModeSymlink == 0 {
+					t.Error("existing classic symlink was replaced")
+				}
+			}
+		})
 	}
 }
