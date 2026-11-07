@@ -3,11 +3,11 @@ package modules
 import (
 	"encoding/xml"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"altlinux.space/alt-atomic/apm/internal/common/metainfo"
 	"github.com/goccy/go-yaml"
 )
 
@@ -94,7 +94,7 @@ func TestBrandingMetainfoYAML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := renderBrandingMetainfo("onyx", map[string]string{"ID": "onyx", "NAME": "Onyx", "VERSION_ID": "0.6"}, b.Metainfo)
+	data, err := metainfo.RenderOperatingSystem(brandingComponent("onyx", map[string]string{"ID": "onyx", "NAME": "Onyx", "VERSION_ID": "0.6"}, b.Metainfo))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,33 +111,13 @@ func TestBrandingMetainfoYAML(t *testing.T) {
 		t.Fatal("description markup escaped")
 	}
 	b.Metainfo.Description = map[string]string{"C": "</description><id>injected</id>"}
-	if _, err := renderBrandingMetainfo("onyx", map[string]string{"ID": "onyx"}, b.Metainfo); err == nil {
+	if _, err := metainfo.RenderOperatingSystem(brandingComponent("onyx", map[string]string{"ID": "onyx"}, b.Metainfo)); err == nil {
 		t.Fatal("invalid XML fragment accepted")
 	}
 }
 
-func TestCurrentDistroComponentID(t *testing.T) {
-	id, err := currentOSComponentID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if id == "" {
-		t.Fatal("libappstream returned an empty OS component ID")
-	}
-}
-
-func TestBrandingComponentMissing(t *testing.T) {
-	found, err := сomponentExists("org.example.apm-test-nonexistent-system-component")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if found {
-		t.Fatal("unexpected operating-system component")
-	}
-}
-
 func TestBrandingMetainfoPartialRelease(t *testing.T) {
-	data, err := renderBrandingMetainfo("onyx", map[string]string{"ID": "onyx", "NAME": "A & B", "VERSION_ID": "0.6"}, &BrandingMetainfo{LatestRelease: &BrandingRelease{Date: "2026-11-07"}})
+	data, err := metainfo.RenderOperatingSystem(brandingComponent("onyx", map[string]string{"ID": "onyx", "NAME": "A & B", "VERSION_ID": "0.6"}, &BrandingMetainfo{LatestRelease: &metainfo.Release{Date: "2026-11-07"}}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,26 +126,24 @@ func TestBrandingMetainfoPartialRelease(t *testing.T) {
 	}
 }
 
-// This checks the generated document against the installed AppStream validator
-// when it is available, in addition to the dependency-free regression tests.
-func TestBrandingMetainfoAppStream(t *testing.T) {
-	cli, err := exec.LookPath("appstreamcli")
-	if err != nil {
-		t.Skip("appstreamcli is not installed")
+func TestBrandingComponentDoesNotRetainDefaults(t *testing.T) {
+	cfg := &BrandingMetainfo{
+		Name:          map[string]string{"ru": "Оникс"},
+		Summary:       map[string]string{"C": "Custom summary"},
+		LatestRelease: &metainfo.Release{Date: "2026-11-07"},
 	}
-	data, err := renderBrandingMetainfo("org.alt_atomic.onyx", map[string]string{"ID": "onyx", "NAME": "ALT Atomic Onyx", "HOME_URL": "https://alt-atomic.org/", "VENDOR_URL": "https://alt-atomic.org/", "VENDOR_NAME": "ALT Atomic Team", "VERSION_ID": "0.6"}, &BrandingMetainfo{
-		Summary:       map[string]string{"C": "Atomic desktop operating system"},
-		Description:   map[string]string{"C": "<p>An atomic desktop operating system with the GNOME desktop environment.</p>", "ru": "<p>Атомарная операционная система с рабочим столом GNOME.</p>"},
-		LatestRelease: &BrandingRelease{Date: "2026-10-10", Description: map[string]string{"C": "<p>Updated system components.</p>", "ru": "<p>Обновлены компоненты системы.</p>"}},
-	})
-	if err != nil {
-		t.Fatal(err)
+	first := brandingComponent("org.example.First", map[string]string{"NAME": "First", "VERSION_ID": "1"}, cfg)
+	second := brandingComponent("org.example.Second", map[string]string{"NAME": "Second", "VERSION_ID": "2"}, cfg)
+	if first.Name["C"] != "First" || second.Name["C"] != "Second" {
+		t.Fatalf("defaults leaked between components: %v, %v", first.Name, second.Name)
 	}
-	path := filepath.Join(t.TempDir(), "org.alt_atomic.onyx.metainfo.xml")
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		t.Fatal(err)
+	if first.Release.Version != "1" || second.Release.Version != "2" {
+		t.Fatalf("release defaults leaked between components: %v, %v", first.Release, second.Release)
 	}
-	if output, err := exec.Command(cli, "validate", "--no-net", path).CombinedOutput(); err != nil {
-		t.Fatalf("AppStream validation failed: %v\n%s\n%s", err, output, data)
+	if second.Name["ru"] != "Оникс" || second.Summary["C"] != "Custom summary" {
+		t.Fatalf("explicit metadata was replaced: %+v", second)
+	}
+	if _, exists := cfg.Name["C"]; exists || cfg.LatestRelease.Version != "" {
+		t.Fatal("resolving defaults modified the branding configuration")
 	}
 }

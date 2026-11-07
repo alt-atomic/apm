@@ -56,21 +56,23 @@ ID=org.alt_atomic.Diamond
 component-id: org.alt_atomic.Diamond
 ``` 
 
-Если компонент `operating-system` с этим ID уже установлен и `metainfo` указан
-(в том числе `{}`), модуль завершится ошибкой. Без `metainfo` существующий
-компонент сохраняется. Если компонента нет, модуль создаёт
-`/usr/share/metainfo/<id>.metainfo.xml`, даже без `metainfo` в YAML, по os-release.
+Если компонент `operating-system` с этим ID найден в локальных metainfo или
+каталогах AppStream, без поля `metainfo` генерация XML пропускается, а с ним
+(включая `{}`) возвращается ошибка конфликта. Иначе создаётся
+`/usr/share/metainfo/<id>.metainfo.xml` с настройками из YAML и значениями
+по умолчанию из os-release. Установка брендинга и изменения os-release
+выполняются до этой проверки.
 
-| Поле XML | Источник |
-|---|---|
-| `id` | Алгоритм выше |
-| `name` без перевода | `NAME`, если ключ `C` отсутствует в YAML |
-| `summary` без перевода | `NAME`, если ключ `C` отсутствует в YAML |
-| `url type="homepage"` | `HOME_URL` |
-| `developer/@id` | Обратный домен `VENDOR_URL` |
-| `developer/name` | `VENDOR_NAME` |
-| `release/@version` | `VERSION_ID`, если версия не задана в YAML |
-| `metadata_license` | `FSFAP` |
+| Поле XML               | Источник                                   |
+|------------------------|--------------------------------------------|
+| `id`                   | Алгоритм выше                              |
+| `name` без перевода    | `NAME`, если ключ `C` отсутствует в YAML   |
+| `summary` без перевода | `NAME`, если ключ `C` отсутствует в YAML   |
+| `url type="homepage"`  | `HOME_URL`                                 |
+| `developer/@id`        | Обратный домен `VENDOR_URL`                |
+| `developer/name`       | `VENDOR_NAME`                              |
+| `release/@version`     | `VERSION_ID`, если версия не задана в YAML |
+| `metadata_license`     | `FSFAP`                                    |
 
 Отсутствующие описания, варианты и дата выпуска не генерируются. Раздел developer
 выводится при наличии `VENDOR_NAME`, раздел releases — при наличии версии.

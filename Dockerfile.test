@@ -30,6 +30,7 @@ RUN apt-get update && \
         libappstream-devel \
         gcc-c++ \
         libstdc++-devel \
+        libappstream-devel \
         git \
         curl \
         wget \

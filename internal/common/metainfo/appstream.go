@@ -1,4 +1,4 @@
-package modules
+package metainfo
 
 /*
 #cgo pkg-config: appstream
@@ -12,8 +12,8 @@ import (
 	"unsafe"
 )
 
-// currentOSComponentID uses the same OS identity as appstreamcli sysinfo.
-func currentOSComponentID() (string, error) {
+// CurrentOSComponentID uses the same OS identity as appstreamcli sysinfo.
+func CurrentOSComponentID() (string, error) {
 	id := C.as_get_current_distro_component_id()
 	if id == nil {
 		return "", fmt.Errorf("libappstream could not determine the operating-system component ID")
@@ -28,7 +28,8 @@ func currentOSComponentID() (string, error) {
 	return value, nil
 }
 
-func сomponentExists(id string) (bool, error) {
+// OSComponentExists checks whether the AppStream pool contains an operating-system component with the given ID.
+func OSComponentExists(id string) (bool, error) {
 	pool := C.as_pool_new()
 	defer C.g_object_unref(C.gpointer(pool))
 

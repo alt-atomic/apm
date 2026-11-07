@@ -14,6 +14,7 @@ import (
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/metainfo"
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 
 	"github.com/thediveo/osrelease"
@@ -58,12 +59,12 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 		return nil, err
 	}
 
-	id, err := currentOSComponentID()
+	id, err := metainfo.CurrentOSComponentID()
 	if err != nil {
 		return nil, err
 	}
 
-	found, err := сomponentExists(id)
+	found, err := metainfo.OSComponentExists(id)
 	if err != nil {
 		return nil, err
 	}
