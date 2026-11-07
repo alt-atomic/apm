@@ -58,6 +58,7 @@ jobs:
             meson \
             gcc-c++ \
             libapt-devel \
+            libappstream-devel \
             'pkgconfig(systemd)'
 
       - name: Checkout repository
