@@ -11,7 +11,7 @@ func TestPackagesBody_BuildsOps(t *testing.T) {
 	d := &fakeDomain{}
 	b := &PackagesBody{Install: []string{"foo", "bar"}, Remove: []string{"baz"}, Depends: true}
 
-	if _, err := b.Execute(context.Background(), d); err != nil {
+	if _, err := b.Execute(t.Context(), d); err != nil {
 		t.Fatalf("Execute() = %v", err)
 	}
 	want := []string{"foo+", "bar+", "baz-"}
@@ -23,22 +23,15 @@ func TestPackagesBody_BuildsOps(t *testing.T) {
 	}
 }
 
-func TestPackagesBody_OptionsSetAndReset(t *testing.T) {
+func TestPackagesBody_OptionsAreRequestScoped(t *testing.T) {
 	d := &fakeDomain{}
 	b := &PackagesBody{Options: map[string]string{"K": "V"}, Install: []string{"x"}}
 
-	if _, err := b.Execute(context.Background(), d); err != nil {
+	if _, err := b.Execute(t.Context(), d); err != nil {
 		t.Fatalf("Execute() = %v", err)
 	}
-	// overrides applied, then reset to nil via defer
-	if len(d.overrideCalls) != 2 {
-		t.Fatalf("overrideCalls = %v, want 2 calls", d.overrideCalls)
-	}
-	if !reflect.DeepEqual(d.overrideCalls[0], map[string]string{"K": "V"}) {
-		t.Errorf("first override = %v", d.overrideCalls[0])
-	}
-	if d.overrideCalls[1] != nil {
-		t.Errorf("second override = %v, want nil reset", d.overrideCalls[1])
+	if !reflect.DeepEqual(d.combineConfig, map[string]string{"K": "V"}) {
+		t.Fatalf("APT config = %v, want map[K:V]", d.combineConfig)
 	}
 }
 

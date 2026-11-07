@@ -9,8 +9,7 @@ import (
 // DBusError создаёт типизированную DBus ошибку на основе APMError.
 // Если ошибка не является APMError, возвращается стандартная dbus.Error.
 func DBusError(err error) *dbus.Error {
-	var apmErr APMError
-	if errors.As(err, &apmErr) {
+	if apmErr, ok := errors.AsType[APMError](err); ok {
 		return &dbus.Error{
 			Name: apmErr.DBusErrorName(),
 			Body: []any{err.Error()},

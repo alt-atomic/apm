@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -26,6 +25,9 @@ import (
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	aptWrapper "altlinux.space/alt-atomic/apm/internal/common/apt"
 	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv1"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv2"
+	"altlinux.space/alt-atomic/apm/internal/common/dbusv2/protocol"
 	"altlinux.space/alt-atomic/apm/internal/common/reply"
 	"altlinux.space/alt-atomic/apm/internal/common/service"
 	"altlinux.space/alt-atomic/apm/internal/domain/distrobox"
@@ -40,11 +42,6 @@ import (
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 
 	"github.com/urfave/cli/v3"
-)
-
-const (
-	defaultSystemHTTPListen  = "127.0.0.1:8080"
-	defaultSessionHTTPListen = "127.0.0.1:8082"
 )
 
 type appRuntime struct {
@@ -119,8 +116,6 @@ func (rt *appRuntime) buildCommands() []*cli.Command {
 	commands := []*cli.Command{
 		apmcli.NewDBusCommand("dbus-session", app.T_("Start session D-Bus service org.altlinux.APM"), rt.sessionDbus),
 		apmcli.NewDBusCommand("dbus-system", app.T_("Start system D-Bus service org.altlinux.APM"), rt.systemDbus),
-		apmcli.NewHTTPCommand("http-server", app.T_("Start system HTTP API server"), defaultSystemHTTPListen, rt.httpServer),
-		apmcli.NewHTTPCommand("http-session", app.T_("Start session HTTP API"), defaultSessionHTTPListen, rt.httpSession),
 		system.CommandList(rt.config, rt.reporter),
 		repository.CommandList(rt.config, rt.reporter),
 	}
@@ -134,56 +129,59 @@ func (rt *appRuntime) buildCommands() []*cli.Command {
 }
 
 func (rt *appRuntime) sessionDbus(ctx context.Context, cmd *cli.Command) error {
+	distroboxBus := distrobox.NewDBusServices(rt.config, rt.reporter)
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
 		Bus:  service.BusSession,
 		Mode: apmcli.ForbidRoot,
-		Modules: []service.DBusModule{
-			distrobox.DBusFactory(rt.config, rt.reporter),
+		APIs: []service.DBusAPI{
+			&dbusv2.Setup{
+				Reporter: rt.reporter,
+				Modules:  distroboxBus.V2Modules(),
+			},
+			dbusv1.Setup{
+				Reporter: rt.reporter,
+				Modules:  []dbusv1.Module{distroboxBus.V1Module()},
+			},
 		},
 	}))
 }
 
 func (rt *appRuntime) systemDbus(ctx context.Context, cmd *cli.Command) error {
 	cfg := rt.config.ConfigManager.GetConfig()
-	modules := []service.DBusModule{
-		system.DBusFactory(rt.config, rt.reporter),
-		repository.DBusFactory(rt.config, rt.reporter),
+	systemBus := system.NewDBusServices(rt.config, rt.reporter)
+	repoBus := repository.NewDBusServices(rt.config, rt.reporter)
+
+	modules := systemBus.V2Modules()
+	modules = append(modules, repoBus.V2Module())
+	legacyModules := []dbusv1.Module{
+		systemBus.V1Module(),
+		repoBus.V1Module(),
 	}
 	if !cfg.IsAtomic {
-		modules = append(modules, kernel.DBusFactory(rt.config, rt.reporter))
+		kernelBus := kernel.NewDBusServices(rt.config, rt.reporter)
+		modules = append(modules, kernelBus.V2Module())
+		legacyModules = append(legacyModules, kernelBus.V1Module())
 	}
 	return rt.reportError(service.RunDBus(ctx, cmd, rt.config, service.DBusRunConfig{
-		Bus:     service.BusSystem,
-		Mode:    apmcli.RequireRoot,
-		Modules: modules,
-	}))
-}
-
-func (rt *appRuntime) httpServer(ctx context.Context, cmd *cli.Command) error {
-	cfg := rt.config.ConfigManager.GetConfig()
-	return rt.reportError(service.RunHTTP(ctx, cmd, rt.config, service.HTTPRunConfig{
+		Bus:  service.BusSystem,
 		Mode: apmcli.RequireRoot,
-		APIInfo: service.APIInfo{
-			IsAtomic:     cfg.IsAtomic,
-			HasDistrobox: cfg.ExistDistrobox,
-			HasKernel:    !cfg.IsAtomic,
-		},
-		Modules: []service.HTTPModule{
-			system.HTTPFactory(rt.config, rt.reporter, cfg.IsAtomic),
-			repository.HTTPFactory(rt.config, rt.reporter),
-		},
-	}))
-}
-
-func (rt *appRuntime) httpSession(ctx context.Context, cmd *cli.Command) error {
-	if !rt.config.ConfigManager.GetConfig().ExistDistrobox {
-		return rt.reportError(errors.New(app.T_("Distrobox is not installed")))
-	}
-	return rt.reportError(service.RunHTTP(ctx, cmd, rt.config, service.HTTPRunConfig{
-		Mode:    apmcli.ForbidRoot,
-		APIInfo: service.APIInfo{HasDistrobox: true},
-		Modules: []service.HTTPModule{
-			distrobox.HTTPFactory(rt.config, rt.reporter),
+		APIs: []service.DBusAPI{
+			&dbusv2.Setup{
+				Reporter:  rt.reporter,
+				UsePolkit: true,
+				Props: map[string]map[string]any{
+					protocol.PackagesIface: {
+						"Version":         rt.config.ConfigManager.GetParsedVersion().Value,
+						"IsAtomic":        cfg.IsAtomic,
+						"KernelSupported": !cfg.IsAtomic,
+					},
+				},
+				Modules: modules,
+			},
+			dbusv1.Setup{
+				Reporter: rt.reporter,
+				Modules:  legacyModules,
+			},
 		},
 	}))
 }

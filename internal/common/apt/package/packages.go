@@ -19,6 +19,7 @@ package _package
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -42,6 +43,28 @@ type Packages struct {
 	serviceAptBinding  *aptBinding.Actions
 }
 
+type aptConfigOverridesKey struct{}
+
+type aptConfigOverridesValue struct {
+	overrides map[string]string
+}
+
+// WithAptConfigOverrides binds APT configuration to one operation tree.
+func WithAptConfigOverrides(ctx context.Context, overrides map[string]string) context.Context {
+	return context.WithValue(ctx, aptConfigOverridesKey{}, aptConfigOverridesValue{
+		overrides: maps.Clone(overrides),
+	})
+}
+
+// AptConfigOverridesFromContext returns a copy of request-scoped APT configuration.
+func AptConfigOverridesFromContext(ctx context.Context) (map[string]string, bool) {
+	value, ok := ctx.Value(aptConfigOverridesKey{}).(aptConfigOverridesValue)
+	if !ok {
+		return nil, false
+	}
+	return maps.Clone(value.overrides), true
+}
+
 func New(serviceAptDatabase *PackageDBService, appConfig *app.Config, reporter *reply.Reporter) *Packages {
 	return &Packages{
 		appConfig:          appConfig,
@@ -51,21 +74,19 @@ func New(serviceAptDatabase *PackageDBService, appConfig *app.Config, reporter *
 	}
 }
 
-// SetAptConfigOverrides устанавливает переопределения конфигурации APT
-func (a *Packages) SetAptConfigOverrides(overrides map[string]string) {
-	a.serviceAptBinding.SetConfigOverrides(overrides)
-}
-
-// GetAptConfigOverrides возвращает текущие переопределения конфигурации APT
-func (a *Packages) GetAptConfigOverrides() map[string]string {
-	return a.serviceAptBinding.GetConfigOverrides()
+func (a *Packages) aptBinding(ctx context.Context) *aptBinding.Actions {
+	overrides, ok := AptConfigOverridesFromContext(ctx)
+	if !ok {
+		return a.serviceAptBinding
+	}
+	return aptBinding.NewActionsWithConfigOverrides(overrides)
 }
 
 func (a *Packages) Upgrade(ctx context.Context, downloadOnly bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemUpgrade))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemUpgrade))
 
-	err := a.serviceAptBinding.DistUpgrade(a.getHandler(ctx), downloadOnly)
+	err := a.aptBinding(ctx).DistUpgrade(a.getHandler(ctx), downloadOnly)
 	if err != nil {
 		return err
 	}
@@ -78,20 +99,20 @@ func (a *Packages) DownloadSource(ctx context.Context, packages []string, destDi
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemWorking))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemWorking))
 
-	return a.serviceAptBinding.DownloadSourcePackages(packages, destDir, a.getHandler(ctx, len(packages)))
+	return a.aptBinding(ctx).DownloadSourcePackages(packages, destDir, a.getHandler(ctx, len(packages)))
 }
 
 // InstallSourcePackages устанавливает .src.rpm файлы в сборочное дерево rpm
 func (a *Packages) InstallSourcePackages(ctx context.Context, files []string) error {
 	prefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
-	return a.serviceAptBinding.RpmInstallSourcePackages(ctx, prefix, files)
+	return a.aptBinding(ctx).RpmInstallSourcePackages(ctx, prefix, files)
 }
 
 func (a *Packages) CheckAutoRemove(ctx context.Context) (packageChanges *aptLib.PackageChanges, err error) {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
-	packageChanges, err = a.serviceAptBinding.SimulateAutoRemove()
+	packageChanges, err = a.aptBinding(ctx).SimulateAutoRemove()
 	return
 }
 
@@ -99,7 +120,7 @@ func (a *Packages) GetInfo(ctx context.Context, packageName string) (packageChan
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
-	packageChanges, err = a.serviceAptBinding.GetInfo(packageName)
+	packageChanges, err = a.aptBinding(ctx).GetInfo(packageName)
 	return
 }
 
@@ -107,7 +128,7 @@ func (a *Packages) CheckUpgrade(ctx context.Context) (packageChanges *aptLib.Pac
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemCheck))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
-	packageChanges, err = a.serviceAptBinding.SimulateDistUpgrade()
+	packageChanges, err = a.aptBinding(ctx).SimulateDistUpgrade()
 	return
 }
 
@@ -120,7 +141,7 @@ func (a *Packages) Update(ctx context.Context, noLock ...bool) ([]Package, error
 		return nil, err
 	}
 
-	aptPackages, err := a.serviceAptBinding.Search("", noLock...)
+	aptPackages, err := a.aptBinding(ctx).Search("", noLock...)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +215,7 @@ func (a *Packages) updateInstalledInfo(ctx context.Context, packages []Package, 
 // GetInstalledPackages возвращает карту, где ключ – имя пакета, а значение – его установленная версия.
 func (a *Packages) GetInstalledPackages(ctx context.Context, noLock ...bool) (map[string]string, error) {
 	commandPrefix := a.appConfig.ConfigManager.GetConfig().CommandPrefix
-	return a.serviceAptBinding.RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
+	return a.aptBinding(ctx).RpmGetInstalledPackages(ctx, commandPrefix, noLock...)
 }
 
 // Plan симулирует транзакцию, система не меняется
@@ -203,7 +224,7 @@ func (a *Packages) Plan(ctx context.Context, spec aptBinding.TransactionSpec) (*
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemCheck))
 
 	spec.Inspect = rpmFiles(spec)
-	changes, err := a.serviceAptBinding.Plan(spec)
+	changes, err := a.aptBinding(ctx).Plan(spec)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +265,7 @@ func (a *Packages) Apply(ctx context.Context, spec aptBinding.TransactionSpec, c
 	}
 
 	total := len(spec.AptGetArgs) + len(spec.Install) + len(spec.Remove) + len(spec.Reinstall)
-	return a.serviceAptBinding.Apply(spec, planned, a.getHandler(ctx, total))
+	return a.aptBinding(ctx).Apply(spec, planned, a.getHandler(ctx, total))
 }
 
 // DescribeChanges собирает карточки пакетов из базы по именам из плана
@@ -306,7 +327,7 @@ func (a *Packages) AptUpdate(ctx context.Context, noLock ...bool) error {
 	a.reporter.CreateEventNotification(ctx, reply.StateBefore, reply.WithEventName(reply.EventSystemAptUpdate))
 	defer a.reporter.CreateEventNotification(ctx, reply.StateAfter, reply.WithEventName(reply.EventSystemAptUpdate))
 
-	err := a.serviceAptBinding.Update(a.getUpdateHandler(ctx), noLock...)
+	err := a.aptBinding(ctx).Update(a.getUpdateHandler(ctx), noLock...)
 	if err == nil {
 		a.touchListsStamp()
 	}

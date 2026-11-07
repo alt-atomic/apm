@@ -8,8 +8,8 @@ import (
 
 func TestRunTmpAnalyzeEmpty(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "run"), 0755)
-	os.MkdirAll(filepath.Join(root, "tmp"), 0755)
+	must(t, os.MkdirAll(filepath.Join(root, "run"), 0755))
+	must(t, os.MkdirAll(filepath.Join(root, "tmp"), 0755))
 
 	a := runTmpAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -22,8 +22,8 @@ func TestRunTmpAnalyzeEmpty(t *testing.T) {
 
 func TestRunTmpAnalyzeFindsContent(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "run", "something"), 0755)
-	os.MkdirAll(filepath.Join(root, "tmp", "leftover"), 0755)
+	must(t, os.MkdirAll(filepath.Join(root, "run", "something"), 0755))
+	must(t, os.MkdirAll(filepath.Join(root, "tmp", "leftover"), 0755))
 
 	a := runTmpAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -36,8 +36,8 @@ func TestRunTmpAnalyzeFindsContent(t *testing.T) {
 
 func TestRunTmpAnalyzeIgnoredPrefixes(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "tmp", "apm-src", "deep", "dir"), 0755)
-	os.MkdirAll(filepath.Join(root, "tmp", "go-cache", "ab"), 0755)
+	must(t, os.MkdirAll(filepath.Join(root, "tmp", "apm-src", "deep", "dir"), 0755))
+	must(t, os.MkdirAll(filepath.Join(root, "tmp", "go-cache", "ab"), 0755))
 
 	a := runTmpAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -52,8 +52,8 @@ func TestRunTmpAnalyzePrunesKnownFiles(t *testing.T) {
 	root := t.TempDir()
 	// Создаём путь до known runtime file
 	resolveDir := filepath.Join(root, "run", "systemd", "resolve")
-	os.MkdirAll(resolveDir, 0755)
-	os.WriteFile(filepath.Join(resolveDir, "stub-resolv.conf"), []byte(""), 0644)
+	must(t, os.MkdirAll(resolveDir, 0755))
+	must(t, os.WriteFile(filepath.Join(resolveDir, "stub-resolv.conf"), []byte(""), 0644))
 
 	a := runTmpAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {

@@ -48,13 +48,13 @@ XML-разметку AppStream (`p`, `ul`, `ol`, `li`); некорректный
 HOME_URL=www.alt-atomic.org
 ID=Diamond
 component-id: org.alt_atomic.Diamond
-``` 
+```
 
 ```
 HOME_URL=www.alt-atomic.org
 ID=org.alt_atomic.Diamond
 component-id: org.alt_atomic.Diamond
-``` 
+```
 
 Если компонент `operating-system` с этим ID найден в локальных metainfo или
 каталогах AppStream, без поля `metainfo` генерация XML пропускается, а с ним

@@ -38,15 +38,19 @@ func (cfg *Config) checkModules() error {
 }
 
 func (cfg *Config) Save(filename string) error {
-	if err := cfg.checkModules(); err != nil {
-		return err
-	}
-
-	data, err := yaml.MarshalWithOptions(cfg, yaml.UseLiteralStyleIfMultiline(true))
+	data, err := cfg.MarshalYaml()
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(filename, data, 0644)
+}
+
+// MarshalYaml renders the config as YAML, same encoding as Save.
+func (cfg *Config) MarshalYaml() ([]byte, error) {
+	if err := cfg.checkModules(); err != nil {
+		return nil, err
+	}
+	return yaml.MarshalWithOptions(cfg, yaml.UseLiteralStyleIfMultiline(true))
 }
 
 type Module struct {

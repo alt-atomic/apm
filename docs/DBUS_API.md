@@ -30,7 +30,8 @@ apm dbus-session
 
 ## Интерактивная документация
 
-Каждый модуль имеет встроенную интерактивную документацию с перечислением всех методов, параметров, примерами команд `dbus-send` и структурами ответов. Документация генерируется автоматически из исходного кода.
+Каждый модуль имеет встроенную интерактивную документацию с перечислением всех методов, параметров, примерами команд
+`dbus-send` и структурами ответов. Документация генерируется автоматически из исходного кода.
 
 ```bash
 apm system dbus-doc
@@ -50,7 +51,7 @@ apm repository dbus-doc
 
 ```json
 {
-  "data": { },
+  "data": {},
   "error": null
 }
 ```
@@ -69,29 +70,30 @@ apm repository dbus-doc
 
 ## Коды ошибок
 
-Ошибки возвращаются как D-Bus Error с типизированным именем. Если ошибка не относится к APM (например, ошибка сериализации JSON или Polkit), возвращается стандартная ошибка `org.freedesktop.DBus.Error.Failed`.
+Ошибки возвращаются как D-Bus Error с типизированным именем. Если ошибка не относится к APM (например, ошибка
+сериализации JSON или Polkit), возвращается стандартная ошибка `org.freedesktop.DBus.Error.Failed`.
 
 **APM ошибки:**
 
-| Код             | D-Bus имя ошибки                     | Описание                                   |
-|-----------------|--------------------------------------|---------------------------------------------|
-| `DATABASE`      | `org.altlinux.APM.Error.Database`    | Ошибка базы данных                          |
-| `REPOSITORY`    | `org.altlinux.APM.Error.Repository`  | Ошибка репозитория                          |
-| `APT`           | `org.altlinux.APM.Error.Apt`         | Ошибка APT                                  |
-| `VALIDATION`    | `org.altlinux.APM.Error.Validation`  | Ошибка валидации параметров                 |
-| `PERMISSION`    | `org.altlinux.APM.Error.Permission`  | Нет прав                                    |
-| `CANCELED`      | `org.altlinux.APM.Error.Canceled`    | Операция отменена                           |
-| `IMAGE`         | `org.altlinux.APM.Error.Image`       | Ошибка работы с образом                     |
-| `KERNEL`        | `org.altlinux.APM.Error.Kernel`      | Ошибка работы с ядром                       |
-| `CONTAINER`     | `org.altlinux.APM.Error.Container`   | Ошибка контейнера                           |
-| `NO_OPERATION`  | `org.altlinux.APM.Error.NoOperation` | Нечего делать (уже в нужном состоянии)      |
-| `NOT_FOUND`     | `org.altlinux.APM.Error.NotFound`    | Ресурс не найден                            |
+| Код            | D-Bus имя ошибки                     | Описание                               |
+|----------------|--------------------------------------|----------------------------------------|
+| `DATABASE`     | `org.altlinux.APM.Error.Database`    | Ошибка базы данных                     |
+| `REPOSITORY`   | `org.altlinux.APM.Error.Repository`  | Ошибка репозитория                     |
+| `APT`          | `org.altlinux.APM.Error.Apt`         | Ошибка APT                             |
+| `VALIDATION`   | `org.altlinux.APM.Error.Validation`  | Ошибка валидации параметров            |
+| `PERMISSION`   | `org.altlinux.APM.Error.Permission`  | Нет прав                               |
+| `CANCELED`     | `org.altlinux.APM.Error.Canceled`    | Операция отменена                      |
+| `IMAGE`        | `org.altlinux.APM.Error.Image`       | Ошибка работы с образом                |
+| `KERNEL`       | `org.altlinux.APM.Error.Kernel`      | Ошибка работы с ядром                  |
+| `CONTAINER`    | `org.altlinux.APM.Error.Container`   | Ошибка контейнера                      |
+| `NO_OPERATION` | `org.altlinux.APM.Error.NoOperation` | Нечего делать (уже в нужном состоянии) |
+| `NOT_FOUND`    | `org.altlinux.APM.Error.NotFound`    | Ресурс не найден                       |
 
 **Стандартная D-Bus ошибка:**
 
-| D-Bus имя ошибки                       | Описание                                         |
-|-----------------------------------------|--------------------------------------------------|
-| `org.freedesktop.DBus.Error.Failed`     | Внутренняя ошибка (сериализация, Polkit и т.д.)  |
+| D-Bus имя ошибки                    | Описание                                        |
+|-------------------------------------|-------------------------------------------------|
+| `org.freedesktop.DBus.Error.Failed` | Внутренняя ошибка (сериализация, Polkit и т.д.) |
 
 ## Transaction ID
 
@@ -143,11 +145,11 @@ apm repository dbus-doc
 
 Через один сигнал приходят три типа сообщений, различаемых по полю `type`:
 
-| Тип              | Описание                                   |
-|------------------|--------------------------------------------|
-| `NOTIFICATION`   | Уведомление о начале/завершении этапа      |
-| `PROGRESS`       | Прогресс выполнения с процентами           |
-| `TASK_RESULT`    | Финальный результат фоновой задачи         |
+| Тип            | Описание                              |
+|----------------|---------------------------------------|
+| `NOTIFICATION` | Уведомление о начале/завершении этапа |
+| `PROGRESS`     | Прогресс выполнения с процентами      |
+| `TASK_RESULT`  | Финальный результат фоновой задачи    |
 
 ### Подписка на сигналы
 
@@ -161,7 +163,8 @@ gdbus monitor --session --dest org.altlinux.APM
 
 ### NOTIFICATION / PROGRESS
 
-Уведомления о ходе выполнения операции. За одну операцию приходит множество таких сигналов - они соответствуют тем же этапам, которые отображаются в CLI (спиннер, прогресс-бар).
+Уведомления о ходе выполнения операции. За одну операцию приходит множество таких сигналов - они соответствуют тем же
+этапам, которые отображаются в CLI (спиннер, прогресс-бар).
 
 ```json
 {
@@ -194,17 +197,17 @@ gdbus monitor --session --dest org.altlinux.APM
   "type": "TASK_RESULT",
   "name": "system.Install",
   "transaction": "...",
-  "data": { },
+  "data": {},
   "error": null
 }
 ```
 
-| Поле          | Тип    | Описание                                             |
-|---------------|--------|------------------------------------------------------|
-| `type`        | string | Всегда `TASK_RESULT`                                 |
-| `name`        | string | Имя события                                          |
-| `transaction` | string | ID транзакции из начального запроса                   |
-| `data`        | object | Данные ответа (те же, что при синхронном вызове)      |
+| Поле          | Тип    | Описание                                            |
+|---------------|--------|-----------------------------------------------------|
+| `type`        | string | Всегда `TASK_RESULT`                                |
+| `name`        | string | Имя события                                         |
+| `transaction` | string | ID транзакции из начального запроса                 |
+| `data`        | object | Данные ответа (те же, что при синхронном вызове)    |
 | `error`       | object | `null` или `{"errorCode": "...", "message": "..."}` |
 
 ---
@@ -213,55 +216,55 @@ gdbus monitor --session --dest org.altlinux.APM
 
 ### System
 
-| Константа                          | Значение                           |
-|------------------------------------|------------------------------------|
-| `EventSystemInstall`               | `system.Install`                   |
-| `EventSystemRemove`                | `system.Remove`                    |
-| `EventSystemUpdate`                | `system.Update`                    |
-| `EventSystemUpgrade`               | `system.Upgrade`                   |
-| `EventSystemCheckInstall`          | `system.CheckInstall`              |
-| `EventSystemCheckRemove`           | `system.CheckRemove`               |
-| `EventSystemCheckUpgrade`          | `system.CheckUpgrade`              |
-| `EventSystemImageUpdate`           | `system.ImageUpdate`               |
-| `EventSystemImageApply`            | `system.ImageApply`                |
-| `EventSystemAptUpdate`             | `system.AptUpdate`                 |
-| `EventSystemSavePackagesToDB`      | `system.SavePackagesToDB`          |
-| `EventSystemSaveImageToDB`         | `system.SaveImageToDB`             |
-| `EventSystemBuildImage`            | `system.BuildImage`                |
-| `EventSystemSwitchImage`           | `system.SwitchImage`               |
-| `EventSystemCheckUpdateBaseImage`  | `system.CheckAndUpdateBaseImage`   |
-| `EventSystemBootcUpgrade`          | `system.bootcUpgrade`              |
-| `EventSystemPruneOldImages`        | `system.pruneOldImages`            |
-| `EventSystemUpdateAllPackagesDB`   | `system.updateAllPackagesDB`       |
-| `EventSystemUpdateAppStream`       | `system.UpdateAppStream`           |
-| `EventSystemDownloadProgress`      | `system.downloadProgress`          |
-| `EventSystemPullImage`             | `system.pullImage`                 |
+| Константа                         | Значение                         |
+|-----------------------------------|----------------------------------|
+| `EventSystemInstall`              | `system.Install`                 |
+| `EventSystemRemove`               | `system.Remove`                  |
+| `EventSystemUpdate`               | `system.Update`                  |
+| `EventSystemUpgrade`              | `system.Upgrade`                 |
+| `EventSystemCheckInstall`         | `system.CheckInstall`            |
+| `EventSystemCheckRemove`          | `system.CheckRemove`             |
+| `EventSystemCheckUpgrade`         | `system.CheckUpgrade`            |
+| `EventSystemImageUpdate`          | `system.ImageUpdate`             |
+| `EventSystemImageApply`           | `system.ImageApply`              |
+| `EventSystemAptUpdate`            | `system.AptUpdate`               |
+| `EventSystemSavePackagesToDB`     | `system.SavePackagesToDB`        |
+| `EventSystemSaveImageToDB`        | `system.SaveImageToDB`           |
+| `EventSystemBuildImage`           | `system.BuildImage`              |
+| `EventSystemSwitchImage`          | `system.SwitchImage`             |
+| `EventSystemCheckUpdateBaseImage` | `system.CheckAndUpdateBaseImage` |
+| `EventSystemBootcUpgrade`         | `system.bootcUpgrade`            |
+| `EventSystemPruneOldImages`       | `system.pruneOldImages`          |
+| `EventSystemUpdateAllPackagesDB`  | `system.updateAllPackagesDB`     |
+| `EventSystemUpdateAppStream`      | `system.UpdateAppStream`         |
+| `EventSystemDownloadProgress`     | `system.downloadProgress`        |
+| `EventSystemPullImage`            | `system.pullImage`               |
 
 ### Kernel
 
-| Константа                       | Значение                             |
-|---------------------------------|--------------------------------------|
-| `EventKernelInstall`            | `kernel.InstallKernel`               |
-| `EventKernelCheckInstall`       | `kernel.CheckInstallKernel`          |
-| `EventKernelUpdate`             | `kernel.UpdateKernel`                |
-| `EventKernelCheckUpdate`        | `kernel.CheckUpdateKernel`           |
-| `EventKernelClean`              | `kernel.CleanOldKernels`             |
-| `EventKernelCheckClean`         | `kernel.CheckCleanOldKernels`        |
-| `EventKernelInstallMods`        | `kernel.InstallKernelModules`        |
-| `EventKernelCheckInstallMods`   | `kernel.CheckInstallKernelModules`   |
-| `EventKernelRemoveMods`         | `kernel.RemoveKernelModules`         |
-| `EventKernelCheckRemoveMods`    | `kernel.CheckRemoveKernelModules`    |
+| Константа                     | Значение                           |
+|-------------------------------|------------------------------------|
+| `EventKernelInstall`          | `kernel.InstallKernel`             |
+| `EventKernelCheckInstall`     | `kernel.CheckInstallKernel`        |
+| `EventKernelUpdate`           | `kernel.UpdateKernel`              |
+| `EventKernelCheckUpdate`      | `kernel.CheckUpdateKernel`         |
+| `EventKernelClean`            | `kernel.CleanOldKernels`           |
+| `EventKernelCheckClean`       | `kernel.CheckCleanOldKernels`      |
+| `EventKernelInstallMods`      | `kernel.InstallKernelModules`      |
+| `EventKernelCheckInstallMods` | `kernel.CheckInstallKernelModules` |
+| `EventKernelRemoveMods`       | `kernel.RemoveKernelModules`       |
+| `EventKernelCheckRemoveMods`  | `kernel.CheckRemoveKernelModules`  |
 
 ### Distrobox
 
-| Константа                      | Значение                   |
-|--------------------------------|----------------------------|
-| `EventDistroUpdate`            | `distrobox.Update`         |
-| `EventDistroContainerAdd`      | `distrobox.ContainerAdd`   |
-| `EventDistroSavePackagesToDB`  | `distro.SavePackagesToDB`  |
-| `EventDistroCreateContainer`   | `distro.CreateContainer`   |
-| `EventDistroRemoveContainer`   | `distro.RemoveContainer`   |
-| `EventDistroInstallPackage`    | `distro.InstallPackage`    |
-| `EventDistroRemovePackage`     | `distro.RemovePackage`     |
-| `EventDistroUpdatePackages`    | `distro.UpdatePackages`    |
-| `EventDistroGetPackages`       | `distro.GetPackages`       |
+| Константа                     | Значение                  |
+|-------------------------------|---------------------------|
+| `EventDistroUpdate`           | `distrobox.Update`        |
+| `EventDistroContainerAdd`     | `distrobox.ContainerAdd`  |
+| `EventDistroSavePackagesToDB` | `distro.SavePackagesToDB` |
+| `EventDistroCreateContainer`  | `distro.CreateContainer`  |
+| `EventDistroRemoveContainer`  | `distro.RemoveContainer`  |
+| `EventDistroInstallPackage`   | `distro.InstallPackage`   |
+| `EventDistroRemovePackage`    | `distro.RemovePackage`    |
+| `EventDistroUpdatePackages`   | `distro.UpdatePackages`   |
+| `EventDistroGetPackages`      | `distro.GetPackages`      |

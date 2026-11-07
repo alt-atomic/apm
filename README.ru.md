@@ -1,7 +1,6 @@
 APM поддерживает четыре режима работы:
 * DBUS-сервис
 * Консольное приложение с TUI
-* HTTP API
 * Поддержка атомарных образов (функционал и модель поведения определяется автоматически)
 
 Два формата ответов:
@@ -52,8 +51,6 @@ apm -h
 Команды:
    dbus-session  Запустить сессионный сервис D-Bus org.altlinux.APM
    dbus-system   Запустить системный сервис D-Bus org.altlinux.APM
-   http-server   Запустить системный HTTP API сервер
-   http-session  Запустить сессионный HTTP API сервер
    system, s     Управление системными пакетами
    repo, r       Управление репозиториями
    distrobox, d  Управление пакетами и контейнерами в distrobox
@@ -113,7 +110,7 @@ colors:
 
 ## D-Bus API
 
-APM экспортирует два D-Bus сервиса с именем `org.altlinux.APM`. Подробная документация: [DBUS_API](docs/DBUS_API.md)
+APM экспортирует D-Bus сервисы с именем `org.altlinux.APM`. Подробная документация: [DBUS_API_V2](docs/DBUS_API_V2.md), слой совместимости — [DBUS_API v1](docs/DBUS_API.md)
 
 ### Пользовательская сессия
 При запуске в пользовательской сессии сервис регистрируется в сессионной шине DBUS, что не требует дополнительных привилегий.
@@ -131,10 +128,6 @@ apm distrobox dbus-doc - онлайн документация
 sudo apm dbus-system - запуск
 sudo apm system dbus-doc - онлайн документация
 ```
-
-## HTTP API
-
-APM предоставляет HTTP-серверы с REST API, WebSocket событиями и Swagger UI. Подробная документация: [HTTP_API](docs/HTTP_API.md)
 
 ## Пример работы с системными пакетами
 ```

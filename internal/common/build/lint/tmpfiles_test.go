@@ -20,6 +20,14 @@ func testReporter() *reply.Reporter {
 	return reply.NewReporter(testutil.DefaultAppConfig())
 }
 
+// must прерывает тест при ошибке подготовки окружения.
+func must(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestExtractPath(t *testing.T) {
 	tests := []struct {
 		line     string
@@ -89,13 +97,13 @@ func TestTmpfilesAnalyze(t *testing.T) {
 	root := t.TempDir()
 
 	// Создаём структуру /var с директориями и симлинком
-	os.MkdirAll(filepath.Join(root, "var", "lib", "test"), 0755)
-	os.Symlink("../target", filepath.Join(root, "var", "lib", "link"))
+	must(t, os.MkdirAll(filepath.Join(root, "var", "lib", "test"), 0755))
+	must(t, os.Symlink("../target", filepath.Join(root, "var", "lib", "link")))
 
 	// Создаём существующий tmpfiles.d
 	tmpDir := filepath.Join(root, "usr", "lib", "tmpfiles.d")
-	os.MkdirAll(tmpDir, 0755)
-	os.WriteFile(filepath.Join(tmpDir, "base.conf"), []byte("d /var/lib 0755 root root - -\n"), 0644)
+	must(t, os.MkdirAll(tmpDir, 0755))
+	must(t, os.WriteFile(filepath.Join(tmpDir, "base.conf"), []byte("d /var/lib 0755 root root - -\n"), 0644))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -131,8 +139,8 @@ func TestTmpfilesAnalyze(t *testing.T) {
 
 func TestTmpfilesAnalyzeRegularFile(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "var", "lib"), 0755)
-	os.WriteFile(filepath.Join(root, "var", "lib", "data.db"), []byte("data"), 0644)
+	must(t, os.MkdirAll(filepath.Join(root, "var", "lib"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "var", "lib", "data.db"), []byte("data"), 0644))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -152,14 +160,14 @@ func TestTmpfilesAnalyzeRegularFile(t *testing.T) {
 
 func TestTmpfilesFactorySkip(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "var", "log"), 0755)
-	os.WriteFile(filepath.Join(root, "var", "log", "lastlog"), []byte(""), 0644)
-	os.MkdirAll(filepath.Join(root, "var", "cache", "ldconfig"), 0755)
-	os.WriteFile(filepath.Join(root, "var", "cache", "ldconfig", "aux-cache"), []byte(""), 0600)
-	os.MkdirAll(filepath.Join(root, "var", "spool", "mail"), 0755)
-	os.WriteFile(filepath.Join(root, "var", "spool", "mail", "root"), []byte(""), 0600)
-	os.MkdirAll(filepath.Join(root, "etc"), 0755)
-	os.WriteFile(filepath.Join(root, "etc", "machine-id"), []byte(""), 0444)
+	must(t, os.MkdirAll(filepath.Join(root, "var", "log"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "var", "log", "lastlog"), []byte(""), 0644))
+	must(t, os.MkdirAll(filepath.Join(root, "var", "cache", "ldconfig"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "var", "cache", "ldconfig", "aux-cache"), []byte(""), 0600))
+	must(t, os.MkdirAll(filepath.Join(root, "var", "spool", "mail"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "var", "spool", "mail", "root"), []byte(""), 0600))
+	must(t, os.MkdirAll(filepath.Join(root, "etc"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "etc", "machine-id"), []byte(""), 0444))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -176,11 +184,11 @@ func TestTmpfilesFactorySkip(t *testing.T) {
 
 func TestTmpfilesSkipFilesKeepsSymlink(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "var", "lib"), 0755)
+	must(t, os.MkdirAll(filepath.Join(root, "var", "lib"), 0755))
 	// rpm — симлинк (как в атомарном образе), apt — каталог с файлами кэша
-	os.Symlink("../../usr/var/lib/rpm", filepath.Join(root, "var", "lib", "rpm"))
-	os.MkdirAll(filepath.Join(root, "var", "lib", "apt", "lists", "partial"), 0755)
-	os.WriteFile(filepath.Join(root, "var", "lib", "apt", "lists", "pkglist.classic"), []byte("x"), 0644)
+	must(t, os.Symlink("../../usr/var/lib/rpm", filepath.Join(root, "var", "lib", "rpm")))
+	must(t, os.MkdirAll(filepath.Join(root, "var", "lib", "apt", "lists", "partial"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "var", "lib", "apt", "lists", "pkglist.classic"), []byte("x"), 0644))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -210,10 +218,10 @@ func TestTmpfilesSkipFilesKeepsSymlink(t *testing.T) {
 
 func TestTmpfilesSkipContentNotInFactory(t *testing.T) {
 	root := t.TempDir()
-	os.MkdirAll(filepath.Join(root, "var", "cache", "apt", "archives"), 0755)
-	os.WriteFile(filepath.Join(root, "var", "cache", "apt", "cache.bin"), []byte("x"), 0644)
-	os.MkdirAll(filepath.Join(root, "etc", "skel"), 0755)
-	os.WriteFile(filepath.Join(root, "etc", "skel", ".bashrc"), []byte("x"), 0644)
+	must(t, os.MkdirAll(filepath.Join(root, "var", "cache", "apt", "archives"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "var", "cache", "apt", "cache.bin"), []byte("x"), 0644))
+	must(t, os.MkdirAll(filepath.Join(root, "etc", "skel"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "etc", "skel", ".bashrc"), []byte("x"), 0644))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -241,10 +249,10 @@ func TestTmpfilesAnalyzeEtcSymlink(t *testing.T) {
 	root := t.TempDir()
 
 	etcDir := filepath.Join(root, "etc")
-	os.MkdirAll(etcDir, 0755)
+	must(t, os.MkdirAll(etcDir, 0755))
 
-	os.WriteFile(filepath.Join(etcDir, "hostname"), []byte("test"), 0644)
-	os.Symlink("/proc/mounts", filepath.Join(etcDir, "mtab"))
+	must(t, os.WriteFile(filepath.Join(etcDir, "hostname"), []byte("test"), 0644))
+	must(t, os.Symlink("/proc/mounts", filepath.Join(etcDir, "mtab")))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
@@ -271,9 +279,9 @@ func TestTmpfilesAnalyzeEtcSymlink(t *testing.T) {
 func TestTmpfilesAnalyzeEtcRecursive(t *testing.T) {
 	root := t.TempDir()
 
-	os.MkdirAll(filepath.Join(root, "etc", "pam.d"), 0755)
-	os.WriteFile(filepath.Join(root, "etc", "pam.d", "login"), []byte("auth"), 0644)
-	os.Symlink("../hostname", filepath.Join(root, "etc", "pam.d", "link"))
+	must(t, os.MkdirAll(filepath.Join(root, "etc", "pam.d"), 0755))
+	must(t, os.WriteFile(filepath.Join(root, "etc", "pam.d", "login"), []byte("auth"), 0644))
+	must(t, os.Symlink("../hostname", filepath.Join(root, "etc", "pam.d", "link")))
 
 	a := tmpFilesAnalysis{reporter: testReporter()}
 	if err := a.Analyze(testContext(), root); err != nil {
