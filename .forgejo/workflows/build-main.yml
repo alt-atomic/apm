@@ -24,6 +24,8 @@ jobs:
             golang \
             gcc-c++ \
             libapt-devel \
+            libappstream-devel \
+            'pkgconfig(systemd)' \
             podman \
             rsync
 
@@ -58,6 +60,7 @@ jobs:
             meson \
             gcc-c++ \
             libapt-devel \
+            libappstream-devel \
             'pkgconfig(systemd)'
 
       - name: Checkout repository

@@ -30,8 +30,10 @@ RUN apt-get update && \
         # Go language
         golang \
         libapt-devel \
+        libappstream-devel \
         gcc-c++ \
         libstdc++-devel \
+        libappstream-devel \
         git \
         curl \
         wget \

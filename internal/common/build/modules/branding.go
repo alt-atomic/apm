@@ -14,6 +14,7 @@ import (
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/metainfo"
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 
 	"github.com/thediveo/osrelease"
@@ -23,6 +24,9 @@ const usrLibOsRelease = "/usr/lib/os-release"
 const etcOsRelease = "/etc/os-release"
 
 type BrandingBody struct {
+	// Метаданные операционной системы; отсутствующие поля берутся из os-release.
+	Metainfo *BrandingMetainfo `yaml:"metainfo,omitempty" json:"metainfo,omitempty"`
+
 	// Имя брендинга для пакетов
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
@@ -41,6 +45,34 @@ func (b *BrandingBody) Execute(ctx context.Context, bc pkgbuild.RuntimeContext) 
 }
 
 func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) {
+	if _, err := b.applyBranding(ctx, svc); err != nil {
+		return nil, err
+	}
+
+	releasePath := etcOsRelease
+	if _, err := os.Stat(releasePath); os.IsNotExist(err) {
+		releasePath = usrLibOsRelease
+	}
+
+	vars, err := osrelease.NewFromNameErr(releasePath)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := metainfo.CurrentOSComponentID()
+	if err != nil {
+		return nil, err
+	}
+
+	found, err := metainfo.OSComponentExists(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, saveBrandingMetainfo("/", id, found, vars, b.Metainfo)
+}
+
+func (b *BrandingBody) applyBranding(ctx context.Context, svc DomainContext) (any, error) {
 	if len(b.ReleaseOverrides) != 0 && !svc.IsAtomic() {
 		app.Log.Warn("release-overrides doesn't work in non-atomic builds. It will be overwritten on branding package update")
 	}

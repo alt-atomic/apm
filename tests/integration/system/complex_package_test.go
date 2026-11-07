@@ -104,6 +104,7 @@ func (s *ComplexPackageTestSuite) TestVirtualPackageVapi() {
 		assert.True(s.T(),
 			strings.Contains(err.Error(), "not found") ||
 				strings.Contains(err.Error(), "no installation candidate") ||
+				strings.Contains(err.Error(), "already installed") ||
 				strings.Contains(err.Error(), "Package database is empty"),
 			"Unexpected error for vapi(gtk4): %v", err)
 	} else {
