@@ -45,9 +45,12 @@ func brandingComponent(id string, vars map[string]string, cfg *BrandingMetainfo)
 		}
 		component.Developer = &metainfo.Developer{ID: vendorID, Name: name}
 	}
-	release := metainfo.Release{}
-	if cfg.LatestRelease != nil {
-		release = *cfg.LatestRelease
+	if cfg.LatestRelease == nil {
+		return component
+	}
+	release := *cfg.LatestRelease
+	if release.Version == "" && release.Date == "" && len(release.Description) == 0 {
+		return component
 	}
 	if release.Version == "" {
 		release.Version = vars["VERSION_ID"]

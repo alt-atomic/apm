@@ -52,10 +52,10 @@ func TestBrandingMetainfoPresence(t *testing.T) {
 					return
 				}
 				var doc struct {
-					XMLName xml.Name
-					ID      string `xml:"id"`
-					Name    string `xml:"name"`
-					Version string `xml:"releases>release>unused"`
+					XMLName  xml.Name
+					ID       string     `xml:"id"`
+					Name     string     `xml:"name"`
+					Releases []struct{} `xml:"releases>release"`
 				}
 				if err := xml.Unmarshal(data, &doc); err != nil {
 					t.Fatal(err)
@@ -63,7 +63,10 @@ func TestBrandingMetainfoPresence(t *testing.T) {
 				if doc.XMLName.Local != "component" || doc.ID != "org.alt_atomic.onyx" || doc.Name != vars["NAME"] {
 					t.Fatalf("unexpected component: %s", data)
 				}
-				for _, want := range []string{`type="operating-system"`, `version="0.6"`, `<metadata_license>FSFAP</metadata_license>`, `<developer id="org.alt_atomic">`} {
+				if len(doc.Releases) != 0 {
+					t.Fatalf("missing latest-release generated releases: %s", data)
+				}
+				for _, want := range []string{`type="operating-system"`, `<metadata_license>FSFAP</metadata_license>`, `<developer id="org.alt_atomic">`} {
 					if !strings.Contains(string(data), want) {
 						t.Errorf("missing %s in %s", want, data)
 					}
@@ -145,5 +148,41 @@ func TestBrandingComponentDoesNotRetainDefaults(t *testing.T) {
 	}
 	if _, exists := cfg.Name["C"]; exists || cfg.LatestRelease.Version != "" {
 		t.Fatal("resolving defaults modified the branding configuration")
+	}
+}
+
+func TestBrandingMetainfoEmptyRelease(t *testing.T) {
+	for _, input := range []string{
+		`{}`,
+		`metainfo: {}`,
+		`metainfo: {latest-release: null}`,
+		`metainfo: {latest-release: {}}`,
+		`metainfo: {latest-release: {version: "", date: "", description: {}}}`,
+	} {
+		t.Run(input, func(t *testing.T) {
+			var b BrandingBody
+			if err := yaml.Unmarshal([]byte(input), &b); err != nil {
+				t.Fatal(err)
+			}
+			component := brandingComponent("onyx", map[string]string{"NAME": "Onyx", "VERSION_ID": "0.6"}, b.Metainfo)
+			if component.Release != nil {
+				t.Errorf("empty latest-release generated a release: %+v", component.Release)
+			}
+			data, err := metainfo.RenderOperatingSystem(component)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var doc struct {
+				Releases []struct {
+					Version string `xml:"version,attr"`
+				} `xml:"releases>release"`
+			}
+			if err := xml.Unmarshal(data, &doc); err != nil {
+				t.Fatal(err)
+			}
+			if len(doc.Releases) != 0 {
+				t.Fatalf("expected empty releases: %s", data)
+			}
+		})
 	}
 }
