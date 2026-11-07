@@ -26,6 +26,7 @@ BuildRequires: rpm-build-golang
 BuildRequires: meson
 BuildRequires: gcc-c++
 BuildRequires: libapt-devel
+BuildRequires: pkgconfig(appstream)
 BuildRequires: pkgconfig(systemd)
 BuildRequires: /proc
 
