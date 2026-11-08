@@ -18,7 +18,7 @@ modules:
             <p>ALT Atomic Onyx is an atomic operating system with GNOME.</p>
           ru: |
             <p>ALT Atomic Onyx — атомарная операционная система с GNOME.</p>
-        x-variants:
+        variants:
           - image: altlinux.space/alt-atomic/onyx/stable:latest
             name:
               C: ALT Atomic Onyx
@@ -39,7 +39,7 @@ modules:
 
 `C` задаёт исходный текст, остальные ключи — переводы. `description` содержит
 XML-разметку AppStream (`p`, `ul`, `ol`, `li`); некорректный XML приводит к ошибке.
-`x-variants` содержит список образов с переводимыми `name`, `summary`, `description`.
+`variants` сохраняется в XML как `x-variants` и содержит список образов с переводимыми `name`, `summary`, `description`.
 
 После установки пакетов брендинга и изменения os-release модуль определяет ID
 компонента из его `HOME_URL` и `ID` из os-release. Примеры:

@@ -84,7 +84,7 @@ func TestBrandingMetainfoYAML(t *testing.T) {
   description:
     C: '<p>A &amp; B</p>'
     ru: '<p>Описание</p>'
-  x-variants:
+  variants:
     - image: registry.example.org/onyx:latest
       name:
         C: Onyx

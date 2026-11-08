@@ -12,7 +12,7 @@ type BrandingMetainfo struct {
 	Name          map[string]string  `yaml:"name,omitempty" json:"name,omitempty"`
 	Summary       map[string]string  `yaml:"summary,omitempty" json:"summary,omitempty"`
 	Description   map[string]string  `yaml:"description,omitempty" json:"description,omitempty"`
-	Variants      []metainfo.Variant `yaml:"x-variants,omitempty" json:"x-variants,omitempty"`
+	Variants      []metainfo.Variant `yaml:"variants,omitempty" json:"variants,omitempty"`
 	LatestRelease *metainfo.Release  `yaml:"latest-release,omitempty" json:"latest-release,omitempty"`
 }
 
