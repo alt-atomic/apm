@@ -8,3 +8,25 @@ option(
   value: 'dev',
   description: 'Working profile'
 )
+
+
+option(
+  'introspection',
+  type: 'boolean',
+  value: true,
+  description: 'Whether to build introspection files'
+)
+
+option(
+  'documentation',
+  type: 'boolean',
+  value: false,
+  description: 'Whether to build API documentation'
+)
+
+option(
+  'integration_tests',
+  type: 'boolean',
+  value: false,
+  description: 'Build and register D-Bus integration tests (enabled by E2E CI)'
+)

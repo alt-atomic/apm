@@ -50,6 +50,8 @@ jobs:
   build:
     name: Build
     runs-on: als-huge
+    container:
+      image: altlinux.space/alt-atomic/builder-image:sisyphus
 
     steps:
       - name: Install build dependencies
@@ -57,20 +59,35 @@ jobs:
           apt-get update
           apt-get install -y \
             golang \
+            graphviz \
             meson \
             gcc-c++ \
             libapt-devel \
             libappstream-devel \
+            libdeser-devel \
+            gobject-introspection-devel \
+            vala \
+            valadoc \
+            'gir(Deser)=0.1' \
             'pkgconfig(systemd)'
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup
-        run: meson setup _build
+        run: meson setup _build -Ddocumentation=true
 
       - name: Build
         run: meson compile -C _build
+
+      - name: Library tests
+        run: meson test -C _build --print-errorlogs
+
+      - name: Deploy pages
+        if: github.event_name != 'pull_request'
+        uses: actions/deploy-pages@v1
+        with:
+          directory: ./_build/doc/apm
 
   get-release:
     name: Get release for RPM package

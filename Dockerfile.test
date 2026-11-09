@@ -31,9 +31,12 @@ RUN apt-get update && \
         golang \
         libapt-devel \
         libappstream-devel \
+        vala \
+        libdeser-devel \
+        gobject-introspection-devel \
+        'gir(Deser)=0.1' \
         gcc-c++ \
         libstdc++-devel \
-        libappstream-devel \
         git \
         curl \
         wget \
