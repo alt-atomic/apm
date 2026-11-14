@@ -127,7 +127,7 @@ podman exec "${CONTAINER_NAME}" bash -c '
         /workspace/ /tmp/apm-src/
     cd /tmp/apm-src
     export GO111MODULE=on
-    meson setup build-e2e --prefix /usr
+    meson setup build-e2e --prefix /usr -Dintegration_tests=true
     meson install -C build-e2e
     systemd-tmpfiles --create /usr/lib/tmpfiles.d/apm.conf
 '
@@ -150,6 +150,16 @@ podman exec "${CONTAINER_NAME}" bash -c '
         rpm -e hello
     fi
 '
+# Exercise the public Vala/C library against the installed service as well as
+# the independent Go protocol client below.
+podman exec "${CONTAINER_NAME}" meson test -C /tmp/apm-src/build-e2e \
+    libapm-models libapm-jobs libapm-api --print-errorlogs
+podman exec --env APM_LIBAPM_E2E=1 "${CONTAINER_NAME}" \
+    timeout 10m /tmp/apm-src/build-e2e/tests/libapm/libapm-e2e-test
+podman exec --env APM_LIBAPM_E2E=1 --env APM_LIBAPM_E2E_DENIED=1 "${CONTAINER_NAME}" \
+    setpriv --reuid=testuser --regid=testuser --init-groups \
+    timeout 30s /tmp/apm-src/build-e2e/tests/libapm/libapm-e2e-test
+
 run_test 10m TestPackagesV2InstallRemove
 run_test_as_user 30s TestPackagesV2PolkitDenied
 
