@@ -1,0 +1,13 @@
+object 307cffcf373cf3a226f2d4d261e8b3665343752b
+type commit
+tag v0.8.0
+tagger Gitea <gitea@fake.local> 1794693401 +0300
+
+Release 0.8.0
+
+- Improved DBus API (`APM2`).
+- Added `libapm` as symbol library for new DBus API.
+- Dropped https API and WebSocker support.
+
+- Added `metainfo` field in `branding` module.
+- Fixed `release-override` in classic systems.
