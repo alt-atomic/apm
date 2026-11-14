@@ -114,7 +114,7 @@ libapm = library(
   libapm_sources,
   dependencies: libapm_dependencies,
   soversion: soversion,
-  version: meson.project_version(),
+  version: libversion,
   vala_header: versioned_libname + '.h',
   vala_vapi: versioned_libname + '.vapi',
   vala_gir: gir_name + '.gir',
@@ -161,6 +161,6 @@ pkgconfig.generate(
   requires: libapm_dependencies,
   subdirs: [ versioned_libname ],
   description: 'APM DBus library',
-  version: meson.project_version(),
+  version: libversion,
   url: 'https://altlinux.space/alt-atomic/apm',
 )

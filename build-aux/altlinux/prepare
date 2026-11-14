@@ -4,6 +4,7 @@ mkdir -p .gear
 cp -a build-aux/altlinux/rules ./.gear/
 
 version=$(./build-aux/get_meson_version)
+project_version=$(./build-aux/get_meson_version --raw)
 release=0.$1
 
 sed -e "s/@VERSION@/${version}/g" \
@@ -17,5 +18,5 @@ go mod vendor
 cat <<EOF > ./scripts/get-version.sh
 #!/bin/bash
 
-echo -n $(./scripts/get-version.sh $version)
+echo -n $(./scripts/get-version.sh "$project_version")
 EOF
