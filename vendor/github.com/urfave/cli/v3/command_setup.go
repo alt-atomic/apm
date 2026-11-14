@@ -24,7 +24,7 @@ func (cmd *Command) setupDefaults(osArgs []string) {
 		cmd.ShellComplete = DefaultCompleteWithFlags
 	}
 
-	if cmd.Name == "" && isRoot {
+	if cmd.Name == "" && isRoot && len(osArgs) > 0 {
 		name := filepath.Base(osArgs[0])
 		tracef("setting cmd.Name from first arg basename (cmd=%[1]q)", name)
 		cmd.Name = name
@@ -99,6 +99,10 @@ func (cmd *Command) setupDefaults(osArgs []string) {
 			var localVersionFlag Flag
 			if globalVersionFlag, ok := VersionFlag.(*BoolFlag); ok {
 				flag := *globalVersionFlag
+				// Drop any alias a user flag already claims (e.g. -v
+				// for --verbose) so the user flag wins but --version
+				// still works. See #2229.
+				flag.Aliases = dropClashingAliases(flag.Aliases, cmd.allFlags(), flag.Name)
 				localVersionFlag = &flag
 			} else {
 				localVersionFlag = VersionFlag
@@ -149,6 +153,7 @@ func (cmd *Command) setupDefaults(osArgs []string) {
 	tracef("setting category on mutually exclusive flags (cmd=%[1]q)", cmd.Name)
 	for _, grp := range cmd.MutuallyExclusiveFlags {
 		grp.propagateCategory()
+		grp.propagateStringer()
 	}
 
 	tracef("setting flag categories (cmd=%[1]q)", cmd.Name)
@@ -192,6 +197,7 @@ func (cmd *Command) setupSubcommand() {
 	tracef("setting category on mutually exclusive flags (cmd=%[1]q)", cmd.Name)
 	for _, grp := range cmd.MutuallyExclusiveFlags {
 		grp.propagateCategory()
+		grp.propagateStringer()
 	}
 
 	tracef("setting flag categories (cmd=%[1]q)", cmd.Name)
@@ -223,6 +229,17 @@ func (cmd *Command) hideHelp() bool {
 	return false
 }
 
+func (cmd *Command) hideHelpCommand() bool {
+	tracef("hide help command (cmd=%[1]q)", cmd.Name)
+	for c := cmd; c != nil; c = c.parent {
+		if c.HideHelpCommand {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (cmd *Command) ensureHelp() {
 	tracef("ensuring help (cmd=%[1]q)", cmd.Name)
 
@@ -230,7 +247,7 @@ func (cmd *Command) ensureHelp() {
 
 	if !cmd.hideHelp() {
 		if cmd.Command(helpCommand.Name) == nil {
-			if !cmd.HideHelpCommand {
+			if !cmd.hideHelpCommand() {
 				tracef("appending helpCommand (cmd=%[1]q)", cmd.Name)
 				cmd.appendCommand(helpCommand)
 			}
@@ -241,17 +258,52 @@ func (cmd *Command) ensureHelp() {
 				var localHelpFlag Flag
 				if globalHelpFlag, ok := HelpFlag.(*BoolFlag); ok {
 					flag := *globalHelpFlag
+					// Drop any alias a user flag already claims (e.g. -h
+					// for --host) so the user flag wins but --help still
+					// works, as for the version flag.
+					flag.Aliases = dropClashingAliases(flag.Aliases, cmd.allFlags(), flag.Name)
 					localHelpFlag = &flag
 				} else {
 					localHelpFlag = HelpFlag
 				}
 
-				tracef("appending HelpFlag (cmd=%[1]q)", cmd.Name)
-				cmd.appendFlag(localHelpFlag)
-				cmd.globaHelpFlagAdded = true
+				if !flagNamesInUse(cmd.allFlags(), localHelpFlag.Names()) {
+					tracef("appending HelpFlag (cmd=%[1]q)", cmd.Name)
+					cmd.appendFlag(localHelpFlag)
+					cmd.helpFlag = localHelpFlag
+					cmd.globaHelpFlagAdded = true
+				}
 			} else {
 				tracef("HelpFlag already added, skip (cmd=%[1]q)", cmd.Name)
 			}
 		}
 	}
+}
+
+// dropClashingAliases removes aliases from `aliases` that are already
+// claimed by a flag in `userFlags` (either as a primary name or as one
+// of its own aliases). Aliases equal to `selfName` are kept so the
+// flag's primary name doesn't accidentally remove itself.
+func dropClashingAliases(aliases []string, userFlags []Flag, selfName string) []string {
+	if len(aliases) == 0 || len(userFlags) == 0 {
+		return aliases
+	}
+	taken := map[string]struct{}{}
+	for _, f := range userFlags {
+		for _, n := range f.Names() {
+			taken[n] = struct{}{}
+		}
+	}
+	kept := aliases[:0:0]
+	for _, a := range aliases {
+		if a == selfName {
+			kept = append(kept, a)
+			continue
+		}
+		if _, ok := taken[a]; ok {
+			continue
+		}
+		kept = append(kept, a)
+	}
+	return kept
 }

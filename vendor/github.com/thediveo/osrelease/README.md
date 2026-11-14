@@ -1,10 +1,9 @@
 <!-- markdownlint-disable-next-line MD022 -->
 # A Pedantic `os-release` Parser
 
+[![PkgGoDev](https://img.shields.io/badge/-reference-blue?logo=go&logoColor=white&labelColor=505050)](https://pkg.go.dev/github.com/thediveo/osrelease)
 [![License](https://img.shields.io/github/license/thediveo/osrelease)](https://img.shields.io/github/license/thediveo/osrelease)
-[![GitHub](https://img.shields.io/github/license/thediveo/osrelease)](https://img.shields.io/github/license/thediveo/osrelease)
 ![build and test](https://github.com/thediveo/osrelease/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/osrelease)](https://goreportcard.com/report/github.com/thediveo/osrelease)
 ![Coverage](https://img.shields.io/badge/Coverage-100.0%25-brightgreen)
 
 `osrelease` is a Go module implementing a slightly pedantic parser for the
@@ -37,6 +36,25 @@ func main() {
     }
 }
 ```
+
+Alternatively, OS identification variables can be read from an fs.FS, like:
+
+```go
+package main
+
+import "github.com/thediveo/osrelease"
+
+func main() {
+    fsys := os.DirFS("/")
+    vars := osrelease.NewFS(fsys)
+    for name, value := range vars {
+        println(name, "=", value)
+    }
+}
+```
+
+This is especially useful when dealing with
+[procfsroot](https://github.com/thediveo/procfsroot) wormholes.
 
 ## DevContainer
 

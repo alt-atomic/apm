@@ -17,25 +17,29 @@ package osrelease
 import (
 	"bufio"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 )
 
 // New returns os-release variables with their assignment values. It looks for
-// /etc/os-release and falls back to /usr/lib/os-release if the former does not
-// exist. Returns nil if neither file exists.
+// “/etc/os-release” and falls back to “/usr/lib/os-release” if the former does
+// not exist. Returns nil if neither file exists.
 func New() map[string]string {
-	return new("/")
+	return NewFS(rootFS)
 }
 
-// new returns os-release variables, looking into the standard locations
-// etc/os-release and usr/lib/os-release inside the specified base path. This
-// function allows unit testing.
-func new(base string) map[string]string {
-	if osrel := NewFromName(base + "/etc/os-release"); osrel != nil {
+var rootFS = os.DirFS("/")
+
+// NewFS returns os-release variables with their assignment values, reading from
+// the specified fs.FS. It looks for “etc/os-release” and falls back to
+// “/usr/lib/os-release” if the former does not exist. Returns nil if neither
+// file exists.
+func NewFS(fsys fs.FS) map[string]string {
+	if osrel := NewFromFSName(fsys, "etc/os-release"); osrel != nil {
 		return osrel
 	}
-	return NewFromName(base + "/usr/lib/os-release")
+	return NewFromFSName(fsys, "usr/lib/os-release")
 }
 
 // NewFromName returns the variable assignments from the file (in os-release
@@ -52,6 +56,22 @@ func NewFromName(name string) map[string]string {
 // cannot be read.
 func NewFromNameErr(name string) (map[string]string, error) {
 	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	return assignmentsFromReader(f)
+}
+
+// NewFromFSName is like [NewFromName] but reading from an fs.FS.
+func NewFromFSName(fsys fs.FS, name string) map[string]string {
+	vars, _ := NewFromFSNameErr(fsys, name)
+	return vars
+}
+
+// NewFromFSNameErr is like [NewFromNameErr] but reading from an fs.FS.
+func NewFromFSNameErr(fsys fs.FS, name string) (map[string]string, error) {
+	f, err := fsys.Open(name)
 	if err != nil {
 		return nil, err
 	}

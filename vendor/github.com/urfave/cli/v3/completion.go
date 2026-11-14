@@ -20,6 +20,12 @@ var (
 	//go:embed autocomplete
 	autoCompleteFS embed.FS
 
+	// completionShells defines the order in which the shell completion
+	// subcommands appear in help output. Iterating shellCompletions directly
+	// would use Go's randomized map order, making the listing nondeterministic.
+	// Keep this in sync with shellCompletions.
+	completionShells = []string{"bash", "zsh", "fish", "pwsh"}
+
 	shellCompletions = map[string]renderCompletion{
 		"bash": func(c *Command, appName string) (string, error) {
 			b, err := autoCompleteFS.ReadFile("autocomplete/bash_autocomplete")
@@ -53,7 +59,7 @@ source <($COMMAND completion zsh)
 $COMMAND completion fish > ~/.config/fish/completions/$COMMAND.fish
 
 # Powershell
-Output the script to path/to/autocomplete/$COMMAND.ps1 an run it.
+Output the script to path/to/autocomplete/$COMMAND.ps1 and run it.
 `
 
 func buildCompletionCommand(appName string) *Command {
@@ -65,8 +71,8 @@ func buildCompletionCommand(appName string) *Command {
 		isCompletionCommand: true,
 	}
 
-	for shell, render := range shellCompletions {
-		cmd.Commands = append(cmd.Commands, buildShellCompletionSubcommand(shell, render, appName))
+	for _, shell := range completionShells {
+		cmd.Commands = append(cmd.Commands, buildShellCompletionSubcommand(shell, shellCompletions[shell], appName))
 	}
 
 	return cmd
