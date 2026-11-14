@@ -12,17 +12,20 @@ import (
 	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 	builtin "altlinux.space/alt-atomic/apm/pkg/build/modules"
 
-	"altlinux.space/alt-atomic/apm/internal/common/app"
 	"altlinux.space/alt-atomic/apm/internal/common/filter"
+	"altlinux.space/alt-atomic/apm/internal/common/metainfo"
 	"altlinux.space/alt-atomic/apm/pkg/osutils"
 
 	"github.com/thediveo/osrelease"
 )
 
-const usrLibOsRelease = "/usr/lib/os-release"
-const etcOsRelease = "/etc/os-release"
+var usrLibOsRelease = "/usr/lib/os-release"
+var etcOsRelease = "/etc/os-release"
 
 type BrandingBody struct {
+	// Метаданные операционной системы; отсутствующие поля берутся из os-release.
+	Metainfo *BrandingMetainfo `yaml:"metainfo,omitempty" json:"metainfo,omitempty"`
+
 	// Имя брендинга для пакетов
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
@@ -41,12 +44,32 @@ func (b *BrandingBody) Execute(ctx context.Context, bc pkgbuild.RuntimeContext) 
 }
 
 func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) {
-	if len(b.ReleaseOverrides) != 0 && !svc.IsAtomic() {
-		app.Log.Warn("release-overrides doesn't work in non-atomic builds. It will be overwritten on branding package update")
+	if _, err := b.applyBranding(ctx, svc); err != nil {
+		return nil, err
 	}
 
-	var info os.FileInfo
-	var err error
+	releasePath := brandingOsReleasePath(false)
+
+	vars, err := osrelease.NewFromNameErr(releasePath)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := metainfo.CurrentOSComponentID()
+	if err != nil {
+		return nil, err
+	}
+
+	found, err := metainfo.OSComponentExists(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, saveBrandingMetainfo("/", id, found, vars, b.Metainfo)
+}
+
+func (b *BrandingBody) applyBranding(ctx context.Context, svc DomainContext) (any, error) {
+	installedRelease := false
 
 	if b.Name != "" {
 		var brandingPackagesPrefix = fmt.Sprintf("branding-%s-", b.Name)
@@ -84,38 +107,41 @@ func (b *BrandingBody) run(ctx context.Context, svc DomainContext) (any, error) 
 			return nil, err
 		}
 
-		// Исправить release файл для атомарной системы
-		if slices.Contains(brandingSubpackages, "release") && svc.IsAtomic() {
-			info, err = os.Stat(usrLibOsRelease)
-			if err != nil {
-				return nil, err
-			}
-			vars := osrelease.NewFromName(usrLibOsRelease)
+		installedRelease = slices.Contains(brandingSubpackages, "release")
+	}
 
-			applyReleaseOverrides(vars, b.ReleaseOverrides)
-			if err := normalizeAtomicOsRelease(vars, b.BuildType); err != nil {
-				return nil, err
-			}
+	if len(b.ReleaseOverrides) == 0 && !(installedRelease && svc.IsAtomic()) {
+		return nil, nil
+	}
 
-			return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
-		}
-
-	} else if len(b.ReleaseOverrides) != 0 && svc.IsAtomic() {
-		info, err = os.Stat(usrLibOsRelease)
-		if err != nil {
-			return nil, err
-		}
-		vars := osrelease.NewFromName(usrLibOsRelease)
-
-		applyReleaseOverrides(vars, b.ReleaseOverrides)
+	releasePath := brandingOsReleasePath(svc.IsAtomic())
+	info, err := os.Stat(releasePath)
+	if err != nil {
+		return nil, err
+	}
+	vars, err := osrelease.NewFromNameErr(releasePath)
+	if err != nil {
+		return nil, err
+	}
+	applyReleaseOverrides(vars, b.ReleaseOverrides)
+	if svc.IsAtomic() {
 		if err := normalizeAtomicOsRelease(vars, b.BuildType); err != nil {
 			return nil, err
 		}
-
-		return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
 	}
+	return nil, saveOsRelease(ctx, svc, vars, info.Mode().Perm())
+}
 
-	return nil, nil
+// Classic systems may have a separate /etc/os-release containing BUILD_ID.
+// Atomic systems keep the canonical file under /usr/lib and link /etc to it.
+func brandingOsReleasePath(atomic bool) string {
+	if atomic {
+		return usrLibOsRelease
+	}
+	if _, err := os.Stat(etcOsRelease); os.IsNotExist(err) {
+		return usrLibOsRelease
+	}
+	return etcOsRelease
 }
 
 func applyReleaseOverrides(vars, overrides map[string]string) {
@@ -246,8 +272,9 @@ func normalizeCPEName(cpeName, version, buildType, variantID string) (string, er
 }
 
 func saveOsRelease(ctx context.Context, svc DomainContext, vars map[string]string, perm fs.FileMode) error {
-	newOsReleaseContent := renderOsRelease(vars, osReleaseKeyOrder(usrLibOsRelease))
-	if err := os.WriteFile(usrLibOsRelease, []byte(newOsReleaseContent), perm); err != nil {
+	releasePath := brandingOsReleasePath(svc.IsAtomic())
+	newOsReleaseContent := renderOsRelease(vars, osReleaseKeyOrder(releasePath))
+	if err := os.WriteFile(releasePath, []byte(newOsReleaseContent), perm); err != nil {
 		return err
 	}
 

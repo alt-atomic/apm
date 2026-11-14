@@ -88,7 +88,11 @@ if ! podman run -d \
     --name "${CONTAINER_NAME}" \
     --privileged \
     --security-opt label=disable \
-    -v "${PROJECT_ROOT}:/workspace:Z" \
+    -e GOCACHE=/go-cache \
+    -e GOMODCACHE=/go-mod \
+    -v apm-test-gocache:/go-cache \
+    -v apm-test-gomod:/go-mod \
+    -v "${PROJECT_ROOT}:/workspace:ro" \
     -w /workspace \
     -e TEST_SUITE="${TEST_SUITE}" \
     "${CONTAINER_IMAGE}" \
@@ -104,16 +108,24 @@ print_info "Building and installing APM in container..."
 # Copy source, build and install inside container
 if ! podman exec --user root "${CONTAINER_NAME}" bash -c "
     # Copy source to temp directory
-    rsync -av --exclude='.cache' --exclude='builddir' /workspace/ /tmp/apm-src/ && \
+    rsync -a \
+        --exclude='/.git/' \
+        --exclude='/.cache/' \
+        --exclude='/build/' \
+        --exclude='/build-e2e/' \
+        --exclude='/builddir/' \
+        --exclude='/cmake-build-debug/' \
+        --exclude='/pkg/apt/apt-source/' \
+        /workspace/ /tmp/apm-src/ && \
     cd /tmp/apm-src && \
     
     # Set Go environment
-    export GOCACHE=/tmp/go-cache && \
-    export GOMODCACHE=/tmp/go-mod && \
+    export GOCACHE=/go-cache && \
+    export GOMODCACHE=/go-mod && \
     export GO111MODULE=on && \
     
     # Build and install directly into container (not build dir)
-    meson setup build --wipe --prefix /usr && \
+    meson setup build --prefix /usr && \
     meson install -C build
 
 "; then
@@ -153,21 +165,23 @@ case "${TEST_SUITE}" in
         print_info "Running system tests (requires root and system packages)..."
         podman exec --user root "${CONTAINER_NAME}" bash -c "
             cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
+            export GOCACHE=/go-cache && \
+            export GOMODCACHE=/go-mod && \
             export GO111MODULE=on && \
             echo 'Running system tests...' && \
             go test ./tests/integration/system/... -v && \
             echo 'Running binding tests...' && \
-            go test ./tests/binding/... -v
+            go test ./tests/binding/... -v && \
+            echo 'Running build tests...' && \
+            go test ./tests/integration/build/... -v
         "
         ;;
     "all")
         print_info "Running all tests..."
         podman exec --user root "${CONTAINER_NAME}" bash -c "
             cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
+            export GOCACHE=/go-cache && \
+            export GOMODCACHE=/go-mod && \
             export GO111MODULE=on && \
             echo 'Running system tests...' && \
             go test ./tests/integration/system/... -v && \
@@ -183,8 +197,8 @@ case "${TEST_SUITE}" in
         print_info "Running build integration tests (requires root)..."
         podman exec --user root "${CONTAINER_NAME}" bash -c "
             cd /tmp/apm-src && \
-            export GOCACHE=/tmp/go-cache && \
-            export GOMODCACHE=/tmp/go-mod && \
+            export GOCACHE=/go-cache && \
+            export GOMODCACHE=/go-mod && \
             export GO111MODULE=on && \
             echo 'Running build tests...' && \
             go test ./tests/integration/build/... -v

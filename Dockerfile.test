@@ -23,10 +23,18 @@ RUN apt-get update && \
         cmake \
         zsh \
         pkg-config \
+        dbus \
+        polkit \
+        systemd \
         systemd-devel \
         # Go language
         golang \
         libapt-devel \
+        libappstream-devel \
+        vala \
+        libdeser-devel \
+        gobject-introspection-devel \
+        'gir(Deser)=0.2' \
         gcc-c++ \
         libstdc++-devel \
         git \

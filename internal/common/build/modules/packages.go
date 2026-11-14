@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	_package "altlinux.space/alt-atomic/apm/internal/common/apt/package"
 	pkgbuild "altlinux.space/alt-atomic/apm/pkg/build"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
@@ -37,8 +38,7 @@ func (b *PackagesBody) Execute(ctx context.Context, bc pkgbuild.RuntimeContext) 
 
 func (b *PackagesBody) run(ctx context.Context, svc DomainContext) (any, error) {
 	if len(b.Options) != 0 {
-		svc.SetAptConfigOverrides(b.Options)
-		defer svc.SetAptConfigOverrides(nil)
+		ctx = _package.WithAptConfigOverrides(ctx, b.Options)
 	}
 
 	if b.Update {

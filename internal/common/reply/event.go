@@ -17,26 +17,11 @@
 package reply
 
 import (
-	"encoding/json"
 	"fmt"
 	"sync"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
-
-	"github.com/godbus/dbus/v5"
 )
-
-// WebSocketBroadcaster интерфейс для отправки событий через WebSocket
-type WebSocketBroadcaster interface {
-	BroadcastEvent(event interface{})
-}
-
-var wsHub WebSocketBroadcaster
-
-// SetWebSocketHub устанавливает WebSocket hub для отправки событий
-func SetWebSocketHub(hub WebSocketBroadcaster) {
-	wsHub = hub
-}
 
 // EventData содержит данные события.
 type EventData struct {
@@ -187,67 +172,6 @@ func WithProgressDoneText(text string) NotificationOption {
 	}
 }
 
-// sendNotificationResponse отправляет ответы через DBus.
-func sendNotificationResponse(eventData *EventData, dbusConn *dbus.Conn) {
-	message, err := json.Marshal(eventData)
-	if err != nil {
-		app.Log.Debug(err.Error())
-	}
-
-	if dbusConn == nil {
-		app.Log.Error(app.T_("DBus connection is not initialized"))
-		return
-	}
-
-	objPath := dbus.ObjectPath("/org/altlinux/APM")
-	signalName := "org.altlinux.APM.Notification"
-
-	err = dbusConn.Emit(objPath, signalName, string(message))
-	if err != nil {
-		app.Log.Error(app.T_("Error sending notification: %v"), err)
-	}
-}
-
-// sendWebSocketNotification отправляет событие через WebSocket.
-func sendWebSocketNotification(eventData *EventData) {
-	if wsHub == nil {
-		app.Log.Debug("WebSocket hub is not initialized")
-		return
-	}
-	wsHub.BroadcastEvent(eventData)
-}
-
-// sendTaskResultWebSocket отправляет результат задачи через WebSocket.
-func sendTaskResultWebSocket(event *TaskResultEvent) {
-	if wsHub == nil {
-		app.Log.Debug("WebSocket hub is not initialized")
-		return
-	}
-	wsHub.BroadcastEvent(event)
-}
-
-// sendTaskResultDBus отправляет результат задачи через D-Bus сигнал.
-func sendTaskResultDBus(event *TaskResultEvent, dbusConn *dbus.Conn) {
-	message, err := json.Marshal(event)
-	if err != nil {
-		app.Log.Debug(err.Error())
-		return
-	}
-
-	if dbusConn == nil {
-		app.Log.Error(app.T_("DBus connection is not initialized"))
-		return
-	}
-
-	objPath := dbus.ObjectPath("/org/altlinux/APM")
-	signalName := "org.altlinux.APM.Notification"
-
-	err = dbusConn.Emit(objPath, signalName, string(message))
-	if err != nil {
-		app.Log.Error(app.T_("Error sending task result: %v"), err)
-	}
-}
-
 var (
 	verboseProgressMu   sync.Mutex
 	verboseProgressLast = make(map[string]int)
@@ -263,7 +187,7 @@ func logVerboseEvent(eventData *EventData) {
 	if eventData.State == StateBefore {
 		app.Log.Info("[RUN] ", eventData.View)
 	} else if eventData.State == StateAfter {
-		app.Log.Info("[OK] ", eventData.View)
+		app.Log.Info("[DONE] ", eventData.View)
 	}
 }
 

@@ -19,18 +19,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"altlinux.space/alt-atomic/apm/internal/common/app"
 	apmcli "altlinux.space/alt-atomic/apm/internal/common/cli"
-	"altlinux.space/alt-atomic/apm/internal/common/dbus_doc"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/godbus/dbus/v5/introspect"
 	"github.com/urfave/cli/v3"
 )
-
-const DBusObjectPath = "/org/altlinux/APM"
 
 type BusType int
 
@@ -39,22 +34,21 @@ const (
 	BusSession
 )
 
-type DBusExport struct {
-	Object     any
-	PostExport func(context.Context)
+type DBusAPI interface {
+	Export(ctx context.Context, conn *dbus.Conn) error
 }
 
-type DBusModule struct {
-	Interface string
-	Build     func(ctx context.Context, conn *dbus.Conn) (DBusExport, error)
+type dbusShutdown interface {
+	Shutdown()
 }
 
 type DBusRunConfig struct {
-	Bus     BusType
-	Mode    apmcli.RootCheckMode
-	Modules []DBusModule
+	Bus  BusType
+	Mode apmcli.RootCheckMode
+	APIs []DBusAPI
 }
 
+// RunDBus поднимает DBus-демон: соединение, экспорт API, ожидание останова.
 func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBusRunConfig) error {
 	appConfig.ConfigManager.SetFormat(app.FormatDBus)
 	appConfig.ConfigManager.EnableVerbose()
@@ -67,41 +61,21 @@ func RunDBus(ctx context.Context, _ *cli.Command, appConfig *app.Config, cfg DBu
 	}
 	conn := appConfig.DBusManager.GetConnection()
 
-	interfaces := make(map[string]any, len(cfg.Modules))
-	var postHooks []func(context.Context)
-	for _, mod := range cfg.Modules {
-		exp, err := mod.Build(ctx, conn)
-		if err != nil {
-			return fmt.Errorf("build %s: %w", mod.Interface, err)
-		}
-		if err = conn.Export(exp.Object, DBusObjectPath, mod.Interface); err != nil {
-			return fmt.Errorf("export %s: %w", mod.Interface, err)
-		}
-		interfaces[mod.Interface] = exp.Object
-		if exp.PostExport != nil {
-			postHooks = append(postHooks, exp.PostExport)
+	for _, api := range cfg.APIs {
+		if err := api.Export(ctx, conn); err != nil {
+			return fmt.Errorf("export dbus api: %w", err)
 		}
 	}
-
-	if err := conn.Export(
-		introspect.Introspectable(dbus_doc.GenerateIntrospectXML(interfaces)),
-		DBusObjectPath,
-		"org.freedesktop.DBus.Introspectable",
-	); err != nil {
-		return fmt.Errorf("export introspectable: %w", err)
-	}
-
-	var wg sync.WaitGroup
-	for _, hook := range postHooks {
-		wg.Add(1)
-		go func(h func(context.Context)) {
-			defer wg.Done()
-			h(ctx)
-		}(hook)
+	if err := appConfig.DBusManager.RequestName(); err != nil {
+		return fmt.Errorf("request dbus service name: %w", err)
 	}
 
 	<-ctx.Done()
-	wg.Wait()
+	for _, api := range cfg.APIs {
+		if shutdown, ok := api.(dbusShutdown); ok {
+			shutdown.Shutdown()
+		}
+	}
 	return nil
 }
 

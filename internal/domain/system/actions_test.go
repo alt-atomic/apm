@@ -19,7 +19,6 @@ import (
 )
 
 type mockAptActions struct {
-	overrides       map[string]string
 	checkUpgradeRes *aptLib.PackageChanges
 	checkUpgradeErr error
 	planChanges     *aptLib.PackageChanges
@@ -27,8 +26,6 @@ type mockAptActions struct {
 	updateErr       error
 }
 
-func (m *mockAptActions) SetAptConfigOverrides(o map[string]string) { m.overrides = o }
-func (m *mockAptActions) GetAptConfigOverrides() map[string]string  { return m.overrides }
 func (m *mockAptActions) CheckUpgrade(_ context.Context) (*aptLib.PackageChanges, error) {
 	return m.checkUpgradeRes, m.checkUpgradeErr
 }
@@ -216,43 +213,6 @@ func newTestActions(aptAct *mockAptActions, aptDB *mockAptDB, hostDB *mockHostDB
 		serviceTemporaryConfig: &mockTempConfig{},
 		serviceAppStreamDB:     &mockAppStream{},
 	}
-}
-
-func TestSetGetAptConfigOverrides(t *testing.T) {
-	t.Run("set and get overrides roundtrip", func(t *testing.T) {
-		apt := &mockAptActions{}
-		actions := newTestActions(apt, &mockAptDB{}, nil)
-
-		overrides := map[string]string{"Acquire::http::Proxy": "http://proxy:8080"}
-		resp, err := actions.SetAptConfigOverrides(overrides)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resp.Options["Acquire::http::Proxy"] != "http://proxy:8080" {
-			t.Error("SetAptConfigOverrides should return the passed options")
-		}
-
-		resp, err = actions.GetAptConfigOverrides()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resp.Options["Acquire::http::Proxy"] != "http://proxy:8080" {
-			t.Error("GetAptConfigOverrides should return previously set options")
-		}
-	})
-
-	t.Run("get returns empty map when nil", func(t *testing.T) {
-		apt := &mockAptActions{overrides: nil}
-		actions := newTestActions(apt, &mockAptDB{}, nil)
-
-		resp, err := actions.GetAptConfigOverrides()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resp.Options == nil {
-			t.Error("should return empty map, not nil")
-		}
-	})
 }
 
 func TestValidateDB_DBEmpty(t *testing.T) {

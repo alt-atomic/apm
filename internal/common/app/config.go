@@ -94,7 +94,6 @@ const (
 	FormatText = "text"
 	FormatJSON = "json"
 	FormatDBus = "dbus"
-	FormatHTTP = "http"
 )
 
 // Константы типов отображения (в рамках FormatText)

@@ -28,6 +28,7 @@ type DBusManager interface {
 	GetConnection() *dbus.Conn
 	ConnectSystemBus() error
 	ConnectSessionBus() error
+	RequestName() error
 	Close() error
 	IsConnected() bool
 }
@@ -72,22 +73,34 @@ func (dm *dbusManagerImpl) connect(isSystem bool) error {
 		return fmt.Errorf(T_("failed to connect to DBus: %w"), err)
 	}
 
-	// Регистрируем имя сервиса
+	dm.connected = true
+	Log.Debug("DBus connection established")
+
+	return nil
+}
+
+// RequestName публикует имя сервиса после экспорта всех D-Bus объектов.
+func (dm *dbusManagerImpl) RequestName() error {
+	if dm.conn == nil {
+		return errors.New(T_("DBus connection is not established"))
+	}
+
 	reply, err := dm.conn.RequestName("org.altlinux.APM", dbus.NameFlagDoNotQueue)
 	if err != nil {
 		_ = dm.conn.Close()
 		dm.conn = nil
+		dm.connected = false
 		return fmt.Errorf(T_("failed to request DBus name: %w"), err)
 	}
 
 	if reply != dbus.RequestNameReplyPrimaryOwner {
 		_ = dm.conn.Close()
 		dm.conn = nil
+		dm.connected = false
 		return errors.New(T_("Interface org.altlinux.APM is already in use"))
 	}
 
-	dm.connected = true
-	Log.Debug("DBus connection established")
+	Log.Debug("DBus service name acquired")
 
 	return nil
 }

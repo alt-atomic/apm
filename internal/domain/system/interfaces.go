@@ -31,8 +31,6 @@ import (
 
 // aptActionsService определяет методы для APT операций с пакетами.
 type aptActionsService interface {
-	SetAptConfigOverrides(overrides map[string]string)
-	GetAptConfigOverrides() map[string]string
 	CheckUpgrade(ctx context.Context) (*aptLib.PackageChanges, error)
 	Update(ctx context.Context, noLock ...bool) ([]_package.Package, error)
 	UpdateDBOnly(ctx context.Context, noLock ...bool) ([]_package.Package, error)

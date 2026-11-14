@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+import sys
 
 def extract_project_version(filename):
     with open(filename, 'r', encoding='utf-8') as f:
@@ -21,4 +22,6 @@ def extract_project_version(filename):
 
 version = extract_project_version('meson.build')
 if version:
+    if '--raw' not in sys.argv[1:]:
+        version = version.replace('.rc', '')
     print(version)

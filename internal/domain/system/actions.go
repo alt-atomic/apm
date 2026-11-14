@@ -81,21 +81,6 @@ func NewActions(appConfig *app.Config, reporter *reply.Reporter) *Actions {
 	}
 }
 
-// SetAptConfigOverrides устанавливает переопределения конфигурации APT
-func (a *Actions) SetAptConfigOverrides(overrides map[string]string) (*AptConfigResponse, error) {
-	a.serviceAptActions.SetAptConfigOverrides(overrides)
-	return &AptConfigResponse{Options: overrides}, nil
-}
-
-// GetAptConfigOverrides возвращает текущие переопределения конфигурации APT
-func (a *Actions) GetAptConfigOverrides() (*AptConfigResponse, error) {
-	overrides := a.serviceAptActions.GetAptConfigOverrides()
-	if overrides == nil {
-		overrides = map[string]string{}
-	}
-	return &AptConfigResponse{Options: overrides}, nil
-}
-
 // checkOverlay проверяет, включен ли overlay
 func (a *Actions) checkOverlay(_ context.Context) error {
 	if a.appConfig.ConfigManager.GetConfig().IsAtomic {
@@ -140,9 +125,4 @@ func (a *Actions) updateAllPackagesDB(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// GenerateOnlineDoc запускает веб-сервер с HTML документацией для DBus API
-func (a *Actions) GenerateOnlineDoc(ctx context.Context) error {
-	return startDocServer(ctx)
 }

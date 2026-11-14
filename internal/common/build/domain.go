@@ -39,10 +39,6 @@ type domainService struct {
 	repoService   *reposervice.RepoService
 }
 
-func (d *domainService) SetAptConfigOverrides(overrides map[string]string) {
-	d.aptActions.SetAptConfigOverrides(overrides)
-}
-
 func (d *domainService) ValidateDB(ctx context.Context) error {
 	if err := d.dbService.PackageDatabaseExist(ctx); err != nil {
 		app.Log.Info("Package database is empty, running update")

@@ -1,0 +1,3 @@
+rpm [apm-e2e] https://example.invalid/apm-e2e/active x86_64 classic
+# rpm [apm-e2e] https://example.invalid/apm-e2e/inactive x86_64 classic
+rpm [apm-e2e] https://example.invalid/apm-e2e/temporary x86_64 task

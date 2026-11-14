@@ -26,6 +26,11 @@ BuildRequires: rpm-build-golang
 BuildRequires: meson
 BuildRequires: gcc-c++
 BuildRequires: libapt-devel
+BuildRequires: pkgconfig(appstream)
+BuildRequires: vala
+BuildRequires: pkgconfig(libdeser-0.2)
+BuildRequires: gobject-introspection-devel
+BuildRequires: gir(Deser) = 0.2
 BuildRequires: pkgconfig(systemd)
 BuildRequires: /proc
 
