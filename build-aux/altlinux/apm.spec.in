@@ -1,16 +1,21 @@
+# If you want to suggest changes, please send PR on
+# https://altlinux.space/alt-atomic/apm to altlinux branch
+
 %define _unpackaged_files_terminate_build 1
 
+%define libname lib%name
+%define gir_name Apm
 %define service_id org.altlinux.APM
 
 Name: apm
 Version: @VERSION@
 Release: alt@RELEASE@
 
-Summary: Atomic Package Manager 
+Summary: Atomic Package Manager
 License: GPL-3.0-or-later
 Group: System/Configuration/Packaging
-Url: https://altlinux.space/alt-atomic/apm
-Vcs: https://altlinux.space/alt-atomic/apm.git
+URL: https://altlinux.space/alt-atomic/apm
+VCS: https://altlinux.space/alt-atomic/apm.git
 
 ExclusiveArch: %go_arches
 
@@ -23,6 +28,7 @@ BuildRequires(pre): rpm-macros-golang
 BuildRequires(pre): rpm-macros-systemd
 BuildRequires(pre): rpm-macros-meson
 BuildRequires: rpm-build-golang
+BuildRequires: rpm-build-vala
 BuildRequires: meson
 BuildRequires: gcc-c++
 BuildRequires: libapt-devel
@@ -39,6 +45,20 @@ APM is a universal application for managing both system packages
 and packages from distrobox. It consolidates all functions into
 a single API, provides interaction via a DBUS service, and offers
 optional support for atomic images based on ALT Linux.
+
+%package -n %libname%sover
+Summary: DBus library of %name
+Group: System/Libraries
+
+%description -n %libname%sover
+%summary.
+
+%package -n %libname%sover-devel
+Summary: Development files for DBus library of %name
+Group: Development/Other
+
+%description -n %libname%sover-devel
+%summary.
 
 %prep
 %setup
@@ -74,6 +94,17 @@ done
 %_sysconfdir/apt/apt.conf.d/99-apm-update.conf
 %_datadir/apt/scripts/update-apm.lua
 %_datadir/%name/grpconf.d
-%doc README.en.md
-%doc README.md
-%doc README.ru.md
+%doc README*
+
+%files -n %libname%sover
+%_libdir/%libname.so.%sover
+%_libdir/%libname.so.%sover.%minor
+%_typelibdir/%gir_name-%sover.typelib
+
+%files -n %libname%sover-devel
+%_libdir/%libname.so
+%_includedir/%libname-%sover.h
+%_pkgconfigdir/%libname-%sover.pc
+%_vapidir/%libname-%sover.vapi
+%_vapidir/%libname-%sover.deps
+%_girdir/%gir_name-%sover.gir
