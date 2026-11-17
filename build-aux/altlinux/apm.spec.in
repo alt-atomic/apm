@@ -7,7 +7,7 @@
 %define gir_name Apm
 %define service_id org.altlinux.APM
 
-%define sover 0.8
+%define sover 0.9
 
 Name: apm
 Version: @VERSION@
