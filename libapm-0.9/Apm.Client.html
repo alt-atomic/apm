@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Apm.Client &ndash; libapm-0.9 &ndash; Vala Binding Reference</title>
+    <link href="../style.css" rel="stylesheet" type="text/css"/><script src="../scripts.js" type="text/javascript">
+    </script>
+  </head>
+  <body>
+    <div class="site_header">Apm.Client &ndash; libapm-0.9 Reference Manual</div>
+    <div class="site_body">
+      <div class="site_navigation">
+        <ul class="navi_main">
+          <li class="package_index"><a href="../index.html">Packages</a></li>
+        </ul>
+        <hr class="navi_hr"/>
+        <ul class="navi_main">
+          <li class="package"><a href="index.htm">libapm-0.9</a></li>
+        </ul>
+        <hr class="navi_hr"/>
+        <ul class="navi_main">
+          <li class="namespace"><a href="Apm.html">Apm</a></li>
+        </ul>
+        <hr class="navi_hr"/>
+        <ul class="navi_main">
+          <li class="class">Client</li>
+        </ul>
+        <hr class="navi_hr"/>
+        <ul class="navi_main">
+          <li class="property"><a href="Apm.Client.applications.html">applications</a></li>
+          <li class="property"><a href="Apm.Client.distrobox.html">distrobox</a></li>
+          <li class="property"><a href="Apm.Client.icons.html">icons</a></li>
+          <li class="property"><a href="Apm.Client.image.html">image</a></li>
+          <li class="property"><a href="Apm.Client.kernel.html">kernel</a></li>
+          <li class="property"><a href="Apm.Client.packages.html">packages</a></li>
+          <li class="property"><a href="Apm.Client.repo.html">repo</a></li>
+          <li class="static_method"><a href="Apm.Client.connect_bus.html">connect_bus</a></li>
+          <li class="static_method"><a href="Apm.Client.from_connection.html">from_connection</a></li>
+        </ul>
+      </div>
+      <div class="site_content">
+        <h1 class="main_title">Client</h1>
+        <hr class="main_hr"/>
+        <h2 class="main_title">Object Hierarchy:</h2>
+        <img class="main_diagram" usemap="#Apm.Client" alt="Object hierarchy for Client" src="img/Apm.Client.png"/>
+
+      <map id="Apm.Client" name="Apm.Client">
+<area shape="rect" id="node1" href="Apm.Client.html" title="Apm.Client" alt="" coords="10,101,132,149"/>
+</map>
+
+        <h2 class="main_title">Description:</h2>
+        <div class="main_code_definition"><span class="main_keyword">public</span> <span class="main_keyword">sealed</span> <span class="main_keyword">class</span> <b><span class="class">Client</span></b> : <span class="main_type"><span class="class">Object</span></span>
+        </div>
+        <div class="description">
+          <p>APM2 client for one bus. Use SYSTEM for Packages, Applications, Image, Kernel and Repo; SESSION for Distrobox and Icons. Connections are 
+            lazy with respect to the service: unavailable interfaces fail on use.</p>
+        </div><br/>
+        <div class="namespace_note"><b>Namespace:</b> <a href="Apm.html">Apm</a>
+        </div>
+        <div class="package_note"><b>Package:</b> <a href="index.htm">libapm-0.9</a>
+        </div>
+        <h2 class="main_title">Content:</h2>
+        <h3 class="main_title">Properties:</h3>
+        <ul class="navi_inline">
+          <li class="property"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_type"><a href="Apm.Applications.html" class="class">Applications</a></span> <b><a href="Apm.Client.applications.html" class="property">applications</a></b> { <span class="main_keyword">get</span>; }
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+          <li class="property"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_type"><a href="Apm.Distrobox.html" class="class">Distrobox</a></span> <b><a href="Apm.Client.distrobox.html" class="property">distrobox</a></b> { <span class="main_keyword">get</span>; }
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+          <li class="property"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_type"><a href="Apm.Icons.html" class="class">Icons</a></span> <b><a href="Apm.Client.icons.html" class="property">icons</a></b> { <span class="main_keyword">get</span>; }
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+          <li class="property"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_type"><a href="Apm.Image.html" class="class">Image</a></span> <b><a href="Apm.Client.image.html" class="property">image</a></b> { <span class="main_keyword">get</span>; }
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+          <li class="property"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_type"><a href="Apm.Kernel.html" class="class">Kernel</a></span> <b><a href="Apm.Client.kernel.html" class="property">kernel</a></b> { <span class="main_keyword">get</span>; }
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+          <li class="property"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_type"><a href="Apm.Packages.html" class="class">Packages</a></span> <b><a href="Apm.Client.packages.html" class="property">packages</a></b> { <span class="main_keyword">get</span>; }
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+          <li class="property"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_type"><a href="Apm.Repo.html" class="class">Repo</a></span> <b><a href="Apm.Client.repo.html" class="property">repo</a></b> { <span class="main_keyword">get</span>; }
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+        </ul>
+        <h3 class="main_title">Static methods:</h3>
+        <ul class="navi_inline">
+          <li class="static_method"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_keyword">static</span> <span class="main_keyword">async</span> <span class="main_type"><span class="class">Client</span></span> <b><a href="Apm.Client.connect_bus.html" class="static_method">connect_bus</a></b> (<span class="main_type"><span class="enum">BusType</span></span> bus_type = <b><span class="enumvalue">SYSTEM</span></b>, <span class="main_basic_type"><span class="struct">bool</span></span> interactive = <span class="main_literal">true</span>) <span class="main_keyword">throws</span> <span class="main_type"><span class="class">Error</span></span>
+            </span>
+            <div class="leaf_brief_description">
+            </div></li>
+          <li class="static_method"><span class="leaf_code_definition"><span class="main_keyword">public</span> <span class="main_keyword">static</span> <span class="main_keyword">async</span> <span class="main_type"><span class="class">Client</span></span> <b><a href="Apm.Client.from_connection.html" class="static_method">from_connection</a></b> (<span class="main_type"><span class="class">DBusConnection</span></span> connection, <span class="main_basic_type"><span class="struct">bool</span></span> interactive = <span class="main_literal">true</span>)
+            </span>
+            <div class="leaf_brief_description"><span class="brief_description">Creates a client using an existing connection without taking 
+                ownership.</span>
+            </div></li>
+        </ul>
+        <h3 class="main_title">Inherited Members:</h3>
+        <div class="box">
+          <div class="headline" onclick="toggle_box (this, 'box-content-1')">All known members inherited from class GLib.Object</div>
+          <div class="content" id="box-content-1">
+            <div class="column">
+              <ul class="navi_inline">
+                <li class="method">@get</li>
+                <li class="static_method">@new</li>
+                <li class="method">@ref</li>
+                <li class="method">@set</li>
+                <li class="method">add_toggle_ref</li>
+                <li class="method">add_weak_pointer</li>
+                <li class="method">bind_property</li>
+                <li class="method">connect</li>
+                <li class="virtual_method">constructed</li>
+                <li class="method">disconnect</li>
+                <li class="virtual_method">dispose</li>
+                <li class="method">dup_data</li>
+                <li class="method">dup_qdata</li>
+                <li class="method">force_floating</li>
+                <li class="method">freeze_notify</li>
+                <li class="method">get_class</li>
+                <li class="method">get_data</li>
+              </ul>
+            </div>
+            <div class="column">
+              <ul class="navi_inline">
+                <li class="method">get_property</li>
+                <li class="method">get_qdata</li>
+                <li class="method">get_type</li>
+                <li class="method">getv</li>
+                <li class="static_method">interface_find_property</li>
+                <li class="static_method">interface_install_property</li>
+                <li class="static_method">interface_list_properties</li>
+                <li class="method">is_floating</li>
+                <li class="static_method">new_valist</li>
+                <li class="static_method">new_with_properties</li>
+                <li class="static_method">newv</li>
+                <li class="signal">notify</li>
+                <li class="method">notify_property</li>
+                <li class="field">ref_count</li>
+                <li class="method">ref_sink</li>
+                <li class="method">remove_toggle_ref</li>
+                <li class="method">remove_weak_pointer</li>
+              </ul>
+            </div>
+            <div class="column">
+              <ul class="navi_inline">
+                <li class="method">replace_data</li>
+                <li class="method">replace_qdata</li>
+                <li class="method">set_data</li>
+                <li class="method">set_data_full</li>
+                <li class="method">set_property</li>
+                <li class="method">set_qdata</li>
+                <li class="method">set_qdata_full</li>
+                <li class="method">set_valist</li>
+                <li class="method">setv</li>
+                <li class="method">steal_data</li>
+                <li class="method">steal_qdata</li>
+                <li class="method">thaw_notify</li>
+                <li class="method">unref</li>
+                <li class="method">watch_closure</li>
+                <li class="method">weak_ref</li>
+                <li class="method">weak_unref</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><br/>
+    <div class="site_footer">Generated by <a href="https://docs.vala.dev"><kbd>valadoc</kbd></a>
+    </div>
+  </body>
+</html>
