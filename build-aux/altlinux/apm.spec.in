@@ -7,6 +7,8 @@
 %define gir_name Apm
 %define service_id org.altlinux.APM
 
+%define sover 0.8
+
 Name: apm
 Version: @VERSION@
 Release: alt@RELEASE@
@@ -98,7 +100,7 @@ done
 
 %files -n %libname%sover
 %_libdir/%libname.so.%sover
-%_libdir/%libname.so.%sover.%minor
+%_libdir/%libname.so.%sover.*
 %_typelibdir/%gir_name-%sover.typelib
 
 %files -n %libname%sover-devel
