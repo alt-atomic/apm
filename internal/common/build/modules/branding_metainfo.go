@@ -56,6 +56,13 @@ func brandingComponent(id string, vars map[string]string, cfg *BrandingMetainfo)
 		release.Version = vars["VERSION_ID"]
 	}
 	if release.Version != "" {
+		// Map os-release types to the values supported by AppStream.
+		switch vars["RELEASE_TYPE"] {
+		case "development", "experiment":
+			release.Type = "development"
+		default:
+			release.Type = "stable"
+		}
 		component.Release = &release
 	}
 	return component

@@ -38,6 +38,7 @@ type Variant struct {
 type Release struct {
 	Version     string            `yaml:"version,omitempty" json:"version,omitempty"`
 	Date        string            `yaml:"date,omitempty" json:"date,omitempty"`
+	Type        string            `yaml:"-" json:"-"`
 	Description map[string]string `yaml:"description,omitempty" json:"description,omitempty"`
 }
 
@@ -78,6 +79,7 @@ type xmlVariant struct {
 type xmlRelease struct {
 	Version     string          `xml:"version,attr"`
 	Date        string          `xml:"date,attr,omitempty"`
+	Type        string          `xml:"type,attr,omitempty"`
 	Description *xmlDescription `xml:"description"`
 }
 
@@ -207,7 +209,12 @@ func RenderOperatingSystem(component OperatingSystem) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		doc.Releases = []xmlRelease{{Version: release.Version, Date: release.Date, Description: description}}
+		doc.Releases = []xmlRelease{{
+			Version:     release.Version,
+			Date:        release.Date,
+			Type:        release.Type,
+			Description: description,
+		}}
 	}
 	data, err := xml.MarshalIndent(doc, "", "  ")
 	if err != nil {

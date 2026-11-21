@@ -72,7 +72,13 @@ component-id: org.alt_atomic.Diamond
 | `developer/@id`        | Обратный домен `VENDOR_URL`                |
 | `developer/name`       | `VENDOR_NAME`                              |
 | `release/@version`     | `VERSION_ID`, если версия не задана в YAML |
+| `release/@type`        | `RELEASE_TYPE` из `os-release`             |
 | `metadata_license`     | `FSFAP`                                    |
+
+Для `release/@type` значения `stable` и `lts` преобразуются в `stable`,
+`development` и `experiment` — в `development`. Если `RELEASE_TYPE` отсутствует
+или неизвестен, используется `stable`, как предусмотрено `os-release`.
+Тип релиза задаётся автоматически, без дополнительного поля в YAML.
 
 Отсутствующие описания, варианты и дата выпуска не генерируются. Раздел developer
 выводится при наличии `VENDOR_NAME`, раздел releases — при наличии версии.

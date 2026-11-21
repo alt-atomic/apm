@@ -186,3 +186,55 @@ func TestBrandingMetainfoEmptyRelease(t *testing.T) {
 		})
 	}
 }
+
+func TestBrandingMetainfoReleaseType(t *testing.T) {
+	tests := []struct {
+		name        string
+		releaseType string
+		want        string
+	}{
+		{"stable", "stable", "stable"},
+		{"development", "development", "development"},
+		{"lts", "lts", "stable"},
+		{"experiment", "experiment", "development"},
+		{"unset", "", "stable"},
+		{"unknown", "unknown", "stable"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &BrandingMetainfo{
+				LatestRelease: &metainfo.Release{Date: "2026-11-07"},
+			}
+			vars := map[string]string{
+				"VERSION_ID":   "0.6",
+				"RELEASE_TYPE": tt.releaseType,
+			}
+			component := brandingComponent("onyx", vars, cfg)
+			data, err := metainfo.RenderOperatingSystem(component)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var doc struct {
+				Releases []struct {
+					Version string `xml:"version,attr"`
+					Type    string `xml:"type,attr"`
+				} `xml:"releases>release"`
+			}
+			if err := xml.Unmarshal(data, &doc); err != nil {
+				t.Fatal(err)
+			}
+			if len(doc.Releases) != 1 {
+				t.Fatalf("expected one release: %s", data)
+			}
+			if got := doc.Releases[0].Type; got != tt.want {
+				t.Errorf("release type = %q, want %q", got, tt.want)
+			}
+			if got := doc.Releases[0].Version; got != "0.6" {
+				t.Errorf("release version = %q, want 0.6", got)
+			}
+			if cfg.LatestRelease.Type != "" {
+				t.Fatal("branding config was modified")
+			}
+		})
+	}
+}
