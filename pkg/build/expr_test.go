@@ -97,6 +97,49 @@ func TestResolveStruct(t *testing.T) {
 	}
 }
 
+type nestedVariant struct {
+	Image   string
+	Summary map[string]string
+}
+
+type nestedMetainfo struct {
+	Variants []nestedVariant
+	Pointers []*nestedVariant
+}
+
+func TestResolveStruct_NestedSlices(t *testing.T) {
+	b := &struct{ Metainfo *nestedMetainfo }{
+		Metainfo: &nestedMetainfo{
+			Variants: []nestedVariant{{
+				Image:   "registry/${{ Env.FOO }}:latest",
+				Summary: map[string]string{"C": "v${{ Version.Major }}"},
+			}},
+			Pointers: []*nestedVariant{
+				nil,
+				{Image: "${{ Env.FOO }}"},
+			},
+		},
+	}
+
+	if err := ResolveStruct(b, testData()); err != nil {
+		t.Fatal(err)
+	}
+	if got := b.Metainfo.Variants[0].Image; got != "registry/bar:latest" {
+		t.Errorf("image = %q, want registry/bar:latest", got)
+	}
+	if got := b.Metainfo.Variants[0].Summary["C"]; got != "v5" {
+		t.Errorf("summary = %q, want v5", got)
+	}
+	if got := b.Metainfo.Pointers[1].Image; got != "bar" {
+		t.Errorf("pointer image = %q, want bar", got)
+	}
+
+	b.Metainfo.Variants[0].Image = "${{ Missing }}"
+	if err := ResolveStruct(b, testData()); err == nil {
+		t.Fatal("expected error from expression in nested slice")
+	}
+}
+
 func TestResolveStruct_RequiresPointer(t *testing.T) {
 	if err := ResolveStruct(sampleBody{}, testData()); err == nil {
 		t.Fatal("expected error for non-pointer argument")
