@@ -119,6 +119,99 @@ func TestBrandingMetainfoYAML(t *testing.T) {
 	}
 }
 
+func TestBrandingMetainfoVariantConditions(t *testing.T) {
+	var b BrandingBody
+	err := yaml.Unmarshal([]byte(`metainfo:
+  variants:
+    - image: registry.example/multi:latest
+      conditions:
+        - type: archs
+          value: x86_64,aarch64
+        - type: gpu-vendor
+          op: ne
+          value: nvidia
+    - image: registry.example/unspecified:latest
+    - image: registry.example/empty:latest
+      conditions: []
+`), &b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Metainfo == nil || len(b.Metainfo.Variants) != 3 {
+		t.Fatalf("unexpected variants: %+v", b.Metainfo)
+	}
+	data, err := metainfo.RenderOperatingSystem(brandingComponent("onyx", map[string]string{"NAME": "Onyx"}, b.Metainfo))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Variants []struct {
+			Image      string `xml:"image"`
+			Conditions *struct {
+				Items []struct {
+					Type  string `xml:"type,attr"`
+					Op    string `xml:"op,attr"`
+					Value string `xml:",chardata"`
+				} `xml:"condition"`
+			} `xml:"conditions"`
+		} `xml:"x-variants>variant"`
+	}
+	if err := xml.Unmarshal(data, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Variants) != 3 {
+		t.Fatalf("expected three variants: %s", data)
+	}
+	first := doc.Variants[0].Conditions
+	if first == nil || len(first.Items) != 2 {
+		t.Fatalf("expected two conditions: %s", data)
+	}
+	if first.Items[0].Type != "archs" || first.Items[0].Value != "x86_64,aarch64" || first.Items[0].Op != "" {
+		t.Errorf("invalid archs condition: %+v", first.Items[0])
+	}
+	if first.Items[1].Type != "gpu-vendor" || first.Items[1].Value != "nvidia" || first.Items[1].Op != "ne" {
+		t.Errorf("invalid gpu-vendor condition: %+v", first.Items[1])
+	}
+	for _, i := range []int{1, 2} {
+		if doc.Variants[i].Conditions != nil {
+			t.Errorf("unexpected conditions for variant %d: %s", i, data)
+		}
+	}
+	if got := strings.Count(string(data), "<conditions>"); got != 1 {
+		t.Errorf("expected one conditions element, got %d: %s", got, data)
+	}
+	if got := strings.Count(string(data), "<condition "); got != 2 {
+		t.Errorf("expected two condition elements, got %d: %s", got, data)
+	}
+	if strings.Contains(string(data), "<archs>") {
+		t.Errorf("unexpected legacy archs element: %s", data)
+	}
+}
+
+func TestBrandingMetainfoInvalidVariantConditions(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		condition metainfo.VariantCondition
+	}{
+		{"no type", metainfo.VariantCondition{Value: "x86_64"}},
+		{"no value", metainfo.VariantCondition{Type: "archs"}},
+		{"blank value", metainfo.VariantCondition{Type: "archs", Value: "  "}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &BrandingMetainfo{
+				Variants: []metainfo.Variant{{
+					Image: "registry.example/image:latest",
+					Conditions: []metainfo.VariantCondition{tc.condition},
+				}},
+			}
+			_, err := metainfo.RenderOperatingSystem(brandingComponent("onyx", nil, cfg))
+			if err == nil || !strings.Contains(err.Error(), "invalid condition") {
+				t.Fatalf("expected invalid condition error, got %v", err)
+			}
+		})
+	}
+}
+
 func TestBrandingMetainfoPartialRelease(t *testing.T) {
 	data, err := metainfo.RenderOperatingSystem(brandingComponent("onyx", map[string]string{"ID": "onyx", "NAME": "A & B", "VERSION_ID": "0.6"}, &BrandingMetainfo{LatestRelease: &metainfo.Release{Date: "2026-11-07"}}))
 	if err != nil {
@@ -182,6 +275,58 @@ func TestBrandingMetainfoEmptyRelease(t *testing.T) {
 			}
 			if len(doc.Releases) != 0 {
 				t.Fatalf("expected empty releases: %s", data)
+			}
+		})
+	}
+}
+
+func TestBrandingMetainfoReleaseType(t *testing.T) {
+	tests := []struct {
+		name        string
+		releaseType string
+		want        string
+	}{
+		{"stable", "stable", "stable"},
+		{"development", "development", "development"},
+		{"lts", "lts", "stable"},
+		{"experiment", "experiment", "development"},
+		{"unset", "", "stable"},
+		{"unknown", "unknown", "stable"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &BrandingMetainfo{
+				LatestRelease: &metainfo.Release{Date: "2026-11-07"},
+			}
+			vars := map[string]string{
+				"VERSION_ID":   "0.6",
+				"RELEASE_TYPE": tt.releaseType,
+			}
+			component := brandingComponent("onyx", vars, cfg)
+			data, err := metainfo.RenderOperatingSystem(component)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var doc struct {
+				Releases []struct {
+					Version string `xml:"version,attr"`
+					Type    string `xml:"type,attr"`
+				} `xml:"releases>release"`
+			}
+			if err := xml.Unmarshal(data, &doc); err != nil {
+				t.Fatal(err)
+			}
+			if len(doc.Releases) != 1 {
+				t.Fatalf("expected one release: %s", data)
+			}
+			if got := doc.Releases[0].Type; got != tt.want {
+				t.Errorf("release type = %q, want %q", got, tt.want)
+			}
+			if got := doc.Releases[0].Version; got != "0.6" {
+				t.Errorf("release version = %q, want 0.6", got)
+			}
+			if cfg.LatestRelease.Type != "" {
+				t.Fatal("branding config was modified")
 			}
 		})
 	}

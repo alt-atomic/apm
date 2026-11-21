@@ -94,6 +94,22 @@ func resolveStructValue(val reflect.Value, data ExprData) error {
 					newSlice.Index(j).SetString(s)
 				}
 				field.Set(newSlice)
+			} else {
+				for j := 0; j < field.Len(); j++ {
+					item := field.Index(j)
+					if item.Kind() == reflect.Ptr {
+						if item.IsNil() {
+							continue
+						}
+						item = item.Elem()
+					}
+					if item.Kind() != reflect.Struct {
+						continue
+					}
+					if err := resolveStructValue(item, data); err != nil {
+						return fmt.Errorf("failed to resolve field %s[%d]: %w", fieldType.Name, j, err)
+					}
+				}
 			}
 
 		case reflect.Map:
