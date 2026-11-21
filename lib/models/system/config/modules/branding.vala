@@ -42,9 +42,21 @@ public sealed class Apm.ModelsConfigModuleBranding : ModelsConfigModule {
         }
     }
 
+    public sealed class VariantCondition : ModelsDataObject {
+
+        [Description (nick = "type")]
+        public string type_ { get; set; }
+
+        public string? op { get; set; }
+
+        public string value { get; set; }
+    }
+
     public sealed class Variant : ModelsDataObject {
 
         public string image { get; set; }
+
+        public GenericArray<VariantCondition>? conditions { get; set; }
 
         public HashTable<string, string>? name { get; set; }
 
@@ -55,6 +67,9 @@ public sealed class Apm.ModelsConfigModuleBranding : ModelsConfigModule {
         public override Deser.ValueCodec get_property_codec (ParamSpec property) throws Deser.Error {
             if (property.name == "name" || property.name == "summary" || property.name == "description") {
                 return Deser.create_codec_for_map<string> ();
+            }
+            if (property.name == "conditions") {
+                return Deser.create_codec_for_array<VariantCondition> ();
             }
             return base.get_property_codec (property);
         }
