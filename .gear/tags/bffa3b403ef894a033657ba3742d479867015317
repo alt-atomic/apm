@@ -1,0 +1,10 @@
+object 7bb676170ca8702c4801978df744ac04cc9e3812
+type commit
+tag v0.9.0
+tagger Gitea <gitea@fake.local> 1795300026 +0300
+
+0.9.0
+
+- Fixed metainfo expr via `${{  }}`.
+- Added release type to `latest-release`.
+- Added `conditions` to `variants` in `metainfo`.
