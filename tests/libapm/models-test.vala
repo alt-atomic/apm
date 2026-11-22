@@ -135,7 +135,7 @@ private void test_branding_metainfo_roundtrip () {
         "name":"onyx","build-type":"desktop","metainfo":{
         "name":{"C":"Onyx","ru":"Оникс"},"summary":{"C":"Operating system"},
         "description":{"C":"<p>System</p>","ru":"<p>Система</p>"},
-        "variants":[{"image":"registry.example/desktop:latest","conditions":[{"type":"archs","op":null,"value":"x86_64,aarch64"},{"type":"gpu-vendor","op":"ne","value":"nvidia"}],"name":{"C":"Desktop"},
+        "variants":[{"image":"registry.example/desktop:latest","name":{"C":"Desktop"},
         "summary":{"ru":"Рабочий стол"},"description":{"C":"<p>Desktop</p>"}}],
         "latest-release":{"version":"0.6","date":"2026-11-07","description":{"C":"<p>Release</p>"}}}}}]}
     """;
@@ -149,13 +149,6 @@ private void test_branding_metainfo_roundtrip () {
         assert (metadata.description.lookup ("ru") == "<p>Система</p>");
         assert (metadata.variants.length == 1);
         assert (metadata.variants[0].image == "registry.example/desktop:latest");
-        assert (metadata.variants[0].conditions.length == 2);
-        assert (metadata.variants[0].conditions[0].type_ == "archs");
-        assert (metadata.variants[0].conditions[0].op == null);
-        assert (metadata.variants[0].conditions[0].value == "x86_64,aarch64");
-        assert (metadata.variants[0].conditions[1].type_ == "gpu-vendor");
-        assert (metadata.variants[0].conditions[1].op == "ne");
-        assert (metadata.variants[0].conditions[1].value == "nvidia");
         assert (metadata.variants[0].name.lookup ("C") == "Desktop");
         assert (metadata.variants[0].summary.lookup ("ru") == "Рабочий стол");
         assert (metadata.variants[0].description.lookup ("C") == "<p>Desktop</p>");

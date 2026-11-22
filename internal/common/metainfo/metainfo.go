@@ -28,18 +28,11 @@ type Developer struct {
 	Name string
 }
 
-type VariantCondition struct {
-	Type  string `yaml:"type" json:"type"`
-	Op    string `yaml:"op,omitempty" json:"op,omitempty"`
-	Value string `yaml:"value" json:"value"`
-}
-
 type Variant struct {
-	Image       string             `yaml:"image" json:"image"`
-	Conditions  []VariantCondition `yaml:"conditions,omitempty" json:"conditions,omitempty"`
-	Name        map[string]string  `yaml:"name,omitempty" json:"name,omitempty"`
-	Summary     map[string]string  `yaml:"summary,omitempty" json:"summary,omitempty"`
-	Description map[string]string  `yaml:"description,omitempty" json:"description,omitempty"`
+	Image       string            `yaml:"image" json:"image"`
+	Name        map[string]string `yaml:"name,omitempty" json:"name,omitempty"`
+	Summary     map[string]string `yaml:"summary,omitempty" json:"summary,omitempty"`
+	Description map[string]string `yaml:"description,omitempty" json:"description,omitempty"`
 }
 
 type Release struct {
@@ -76,22 +69,11 @@ type xmlDescription struct {
 	Markup string `xml:",innerxml"`
 }
 
-type xmlVariantCondition struct {
-	Type  string `xml:"type,attr"`
-	Op    string `xml:"op,attr,omitempty"`
-	Value string `xml:",chardata"`
-}
-
-type xmlVariantConditions struct {
-	Items []xmlVariantCondition `xml:"condition"`
-}
-
 type xmlVariant struct {
-	Image       string                `xml:"image"`
-	Conditions  *xmlVariantConditions `xml:"conditions,omitempty"`
-	Name        []xmlText             `xml:"name"`
-	Summary     []xmlText             `xml:"summary"`
-	Description *xmlDescription       `xml:"description"`
+	Image       string          `xml:"image"`
+	Name        []xmlText       `xml:"name"`
+	Summary     []xmlText       `xml:"summary"`
+	Description *xmlDescription `xml:"description"`
 }
 
 type xmlRelease struct {
@@ -216,27 +198,7 @@ func RenderOperatingSystem(component OperatingSystem) ([]byte, error) {
 				Items []xmlVariant `xml:"variant"`
 			}{}
 		}
-		var conditions *xmlVariantConditions
-		if len(variant.Conditions) > 0 {
-			conditions = &xmlVariantConditions{}
-			for i, condition := range variant.Conditions {
-				if strings.TrimSpace(condition.Type) == "" || strings.TrimSpace(condition.Value) == "" {
-					return nil, fmt.Errorf("invalid condition %d for variant %q: type and value are required", i, variant.Image)
-				}
-				conditions.Items = append(conditions.Items, xmlVariantCondition{
-					Type:  condition.Type,
-					Op:    condition.Op,
-					Value: condition.Value,
-				})
-			}
-		}
-		doc.Variants.Items = append(doc.Variants.Items, xmlVariant{
-			Image:       variant.Image,
-			Conditions:  conditions,
-			Name:        localizedTexts(variant.Name),
-			Summary:     localizedTexts(variant.Summary),
-			Description: description,
-		})
+		doc.Variants.Items = append(doc.Variants.Items, xmlVariant{Image: variant.Image, Name: localizedTexts(variant.Name), Summary: localizedTexts(variant.Summary), Description: description})
 	}
 	release := Release{}
 	if component.Release != nil {
