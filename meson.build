@@ -8,7 +8,7 @@ project('apm', ['c', 'cpp', 'vala'],
   ],
 )
 
-soversion = '0.9'
+soversion = '0.10'
 libversion = meson.project_version().replace('.rc', '')
 
 pkgconfig = import('pkgconfig')
