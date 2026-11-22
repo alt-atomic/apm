@@ -458,8 +458,12 @@ func isAtomicBooted() bool {
 	if err != nil {
 		return false
 	}
-	for _, arg := range strings.Fields(string(cmdline)) {
-		if strings.HasPrefix(arg, "composefs=") {
+	return hasComposefsArg(string(cmdline))
+}
+
+func hasComposefsArg(cmdline string) bool {
+	for arg := range strings.FieldsSeq(cmdline) {
+		if strings.HasPrefix(arg, "composefs=") || strings.HasPrefix(arg, "composefs.digest=") {
 			return true
 		}
 	}
