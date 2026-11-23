@@ -1,0 +1,8 @@
+object 84bda1ada38cbc5d6bbe478fe94e412f3837aded
+type commit
+tag v0.9.1
+tagger Gitea <gitea@fake.local> 1795467225 +0300
+
+0.9.1
+
+- Fixed atomic systems detection (bootc 1.17).
